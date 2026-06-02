@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { isValidEmail } from "@/lib/validation";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface RegisterBody {
   email: string;
@@ -17,6 +18,7 @@ async function getAdminToken(tokenUrl: string, clientId: string, clientSecret: s
       client_id: clientId,
       client_secret: clientSecret,
     }).toString(),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Admin token request failed: ${res.status}`);
   const data = (await res.json()) as { access_token: string };
@@ -24,6 +26,9 @@ async function getAdminToken(tokenUrl: string, clientId: string, clientSecret: s
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(`register:${getClientIp(req)}`, 5, 10 * 60_000);
+  if (!rl.ok) return rl.response;
+
   const issuer = process.env.KEYCLOAK_ISSUER;
   if (!issuer) {
     return NextResponse.json({ error: "Registration not available" }, { status: 503 });
@@ -87,6 +92,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(userRep),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (createRes.status === 409) {
@@ -96,13 +102,7 @@ export async function POST(req: Request) {
       );
     }
     if (!createRes.ok) {
-      const errData = (await createRes.json().catch(() => null)) as {
-        errorMessage?: string;
-      } | null;
-      return NextResponse.json(
-        { error: errData?.errorMessage ?? "Registration failed" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Registration failed" }, { status: 400 });
     }
 
     // Send verification email via the app client so the link returns to cloudless.gr
@@ -117,14 +117,14 @@ export async function POST(req: Request) {
       await globalThis
         .fetch(
           `${kcBase}/admin/realms/${realm}/users/${userId}/send-verify-email?${params.toString()}`,
-          { method: "PUT", headers: { Authorization: `Bearer ${adminToken}` } }
+          { method: "PUT", headers: { Authorization: `Bearer ${adminToken}` }, signal: AbortSignal.timeout(8_000) }
         )
         .catch(() => {});
     }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[auth/register]", err);
+    console.error("[auth/register]", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }
 }

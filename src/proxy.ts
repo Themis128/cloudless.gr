@@ -88,6 +88,11 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/crm/contact": { windowMs: 60_000, max: 3 },
   // LLM proxy — each call hits the Anthropic API and costs money. Tighter cap.
   "/api/chat": { windowMs: 60_000, max: 12 },
+  // Public analytics tracking — writes to Notion on every call. Cap matches in-handler limit.
+  "/api/track": { windowMs: 60_000, max: 30 },
+  // Mass-email sender — shared-secret-authenticated but one call triggers SES
+  // sends to all subscribers. 1 per hour is enough for any legitimate newsletter.
+  "/api/newsletter/send": { windowMs: 3_600_000, max: 1 },
 };
 
 // Admin endpoints are JWT-auth-gated, but we still rate-limit them to cap

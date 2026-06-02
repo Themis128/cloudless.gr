@@ -38,7 +38,8 @@ export async function GET(
 
   const { token } = await params;
 
-  if (!token || token.length < 10) {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!token || !UUID_RE.test(token)) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
