@@ -217,11 +217,13 @@ do_r53() {
   hc_json="$(aws route53 list-health-checks --output json 2>&1)" || true
   if echo "$hc_json" | grep -qi "AccessDenied\|not authorized\|is not authorized"; then
     c_warn "  route53:ListHealthChecks denied — add it to the caller role to audit health checks."
+  elif ! echo "$hc_json" | jq -e '.HealthChecks' > /dev/null 2>&1; then
+    c_warn "  list-health-checks unexpected response: $(echo "$hc_json" | grep -m1 '.' || echo '(empty)')"
   else
     local count
-    count="$(echo "$hc_json" | jq -r '.HealthChecks | length' 2>/dev/null || echo 0)"
+    count="$(echo "$hc_json" | jq -r '.HealthChecks | length')"
     if [[ "$count" == "0" ]]; then
-      c_ok "  No health checks found in account."
+      c_ok "  No health checks found in account (sst.config.ts HC IDs e239ad5c/30a69f1c are stale)."
     else
       while IFS= read -r hc; do
         local hc_id cfg typ interval str_match
