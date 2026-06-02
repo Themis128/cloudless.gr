@@ -43,6 +43,14 @@ HEALTH_PATH="/api/health"
 
 log() { printf '%s\n' "$*"; }
 die() { log "ERROR: $*"; exit 1; }
+# A precondition that's waiting on a human (no token / no LB add-on). In report
+# mode this is informational and exits GREEN; in apply mode it's fatal.
+block() {
+  log "BLOCKED: $*"
+  if [ "${APPLY:-0}" = "1" ]; then exit 1; fi
+  log "(report mode — exiting 0; resolve the above, then re-run / dispatch apply)"
+  exit 0
+}
 
 command -v jq   >/dev/null 2>&1 || die "jq required"
 command -v curl >/dev/null 2>&1 || die "curl required"
@@ -60,7 +68,7 @@ if [ -z "$CF_TOKEN" ] && command -v aws >/dev/null 2>&1; then
   CF_TOKEN="$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN \
               --with-decryption --query Parameter.Value --output text 2>/dev/null || true)"
 fi
-[ -n "$CF_TOKEN" ] || die "no CLOUDFLARE_API_TOKEN (env or SSM)"
+[ -n "$CF_TOKEN" ] || block "no CLOUDFLARE_API_TOKEN — add a repo secret (or SSM /cloudless/production/CLOUDFLARE_API_TOKEN) with scopes: Zone:Read, Load Balancing Monitors/Pools:Edit, Load Balancing Load Balancers:Edit, DNS:Edit (zone cloudless.gr)."
 
 API="https://api.cloudflare.com/client/v4"
 # cf METHOD URL [json-body] -> prints raw response; sets CF_OK / CF_ERR
@@ -91,7 +99,7 @@ PRESP="$(cf GET "${API}/accounts/${ACCT_ID}/load_balancers/pools")"
 if ! ok "$PRESP"; then
   log "Load Balancing API not available:"
   errs "$PRESP"
-  die "the account likely lacks the Load Balancing add-on, or the token lacks LB scope. Enable LB in the Cloudflare dashboard (Traffic -> Load Balancing) and grant the token 'Load Balancing: Monitors and Pools: Edit' + 'Load Balancing: Load Balancers: Edit'."
+  block "the account likely lacks the Load Balancing add-on, or the token lacks LB scope. Enable LB in the Cloudflare dashboard (Traffic -> Load Balancing) and grant the token 'Load Balancing: Monitors and Pools: Edit' + 'Load Balancing: Load Balancers: Edit'."
 fi
 log "Load Balancing entitlement: OK"
 
