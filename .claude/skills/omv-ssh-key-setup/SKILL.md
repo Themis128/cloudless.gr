@@ -56,7 +56,7 @@ chmod 600 ~/.ssh/authorized_keys
 
 From a machine with Tailscale active:
 ```bash
-ssh -i ~/.ssh/id_ed25519 omv@100.113.41.119 "echo connected"
+ssh -i ~/.ssh/id_ed25519 tbaltzakis@100.113.41.119 "echo connected"
 ```
 Should print `connected`. If it fails:
 - Check `sshd` is running: `systemctl status ssh`
@@ -99,7 +99,7 @@ Symptom: cluster doctor shows `connection refused on port 6443`.
 
 **What it does:**
 1. Connects to tailnet via `TS_AUTHKEY`
-2. SSH to `omv@100.113.41.119` using `OMV_SSH_KEY`
+2. SSH to `tbaltzakis@100.113.41.119` using `OMV_SSH_KEY`
 3. Runs `sudo systemctl restart k3s`
 4. Waits up to 90s for port 6443 to respond
 5. Reports to #382
@@ -150,7 +150,7 @@ systemctl show k3s --property=ActiveEnterTimestamp
 
 ## Reference
 
-- Pi SSH: `omv@100.113.41.119` (Tailscale)
+- Pi SSH: `tbaltzakis@100.113.41.119` (Tailscale)
 - k3s service: `k3s.service`
 - Watchdog drop-in: `/etc/systemd/system/k3s.service.d/restart-always.conf`
 - Workflows: `k3s-ssh-restart.yml`, `k3s-watchdog-deploy.yml`
