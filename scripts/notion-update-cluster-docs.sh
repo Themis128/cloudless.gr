@@ -44,9 +44,10 @@ PAGE_TITLE=""
 
 # Known page IDs from previous successful runs (most recent first)
 KNOWN_IDS=(
-  "${CLUSTER_OPS_PAGE_ID:-}"                   # repo variable — canonical
-  "3737d82c-410a-8130-b90d-c55017e86059"       # created 2026-06-02 run 2
-  "3737d82c-410a-81e5-bb2c-fcd31e49d57c"       # created 2026-06-02 run 1 (may be empty)
+  "${CLUSTER_OPS_PAGE_ID:-}"                   # repo variable — canonical (always update this first)
+  "3737d82c-410a-81a2-9b53-c54644d94dce"       # created 2026-06-02 run 3 — current canonical
+  "3737d82c-410a-8130-b90d-c55017e86059"       # created 2026-06-02 run 2 — archived
+  "3737d82c-410a-81e5-bb2c-fcd31e49d57c"       # created 2026-06-02 run 1 — archived
 )
 
 for KID in "${KNOWN_IDS[@]}"; do
