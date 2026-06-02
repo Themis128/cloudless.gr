@@ -11,7 +11,7 @@ Severity ladder:
   ≤  3 days            → CERT_EXPIRING_CRITICAL (critical)
   expired              → CERT_EXPIRED (critical)
 
-Monitored domains (updated 2026-05-24 — retired cloudless.online domains removed):
+Monitored domains:
   cloudless.gr
   manage.cloudless.gr
   grafana.cloudless.gr
