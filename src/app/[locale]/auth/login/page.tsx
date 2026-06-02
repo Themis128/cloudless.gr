@@ -165,6 +165,14 @@ function LoginContent() {
                   ? t("auth.signingIn", "Signing In...")
                   : t("auth.continueWithKeycloak", "Continue with Keycloak")}
               </button>
+              <div className="flex justify-center">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-neon-cyan/70 hover:text-neon-cyan font-mono text-sm transition-colors"
+                >
+                  {t("auth.forgotPassword", "Forgot Password?")}
+                </Link>
+              </div>
             </form>
           ) : (
             <form onSubmit={handleLogin} className="space-y-5">
