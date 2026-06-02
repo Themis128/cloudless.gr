@@ -3,8 +3,9 @@
  */
 import type { APIRequestContext } from "@playwright/test";
 
-export const STANDBY_HOST = process.env.K3S_HOST ?? "pi-origin.cloudless.gr";
-export const PRIMARY_HOST = "cloudless.gr";
+const _apexHost = process.env.K3S_HOST ?? "cloudless.gr";
+export const PRIMARY_HOST = _apexHost;
+export const STANDBY_HOST = process.env.K3S_STANDBY_HOST ?? `pi-origin.${_apexHost}`;
 
 /**
  * Issue a raw GET against the standby's /api/health and return the
