@@ -140,11 +140,12 @@ export default {
     });
 
     const site = new sst.aws.Nextjs("CloudlessSite", {
-      // Domain: cloudless.gr with existing Route53 zone + ACM cert.
-      // dns: false — we manage Route 53 records explicitly below to support
-      // failover routing (PRIMARY=CloudFront, SECONDARY=Pi). If we left this
-      // as `sst.aws.dns()`, SST would create plain alias records and clobber
-      // the failover SetIdentifier on every deploy.
+      // Domain: cloudless.gr, fronted by an ACM cert on CloudFront.
+      // dns: false — cloudless.gr is delegated to Cloudflare (ns: fay/jihoon
+      // .ns.cloudflare.com), NOT Route 53. Cloudflare owns the apex/www records
+      // and HA failover (a Cloudflare Load Balancer steers AWS→Pi; see
+      // scripts/setup-cloudflare-lb.sh). SST must therefore never touch DNS,
+      // or it would try to create alias records in a zone it doesn't control.
       domain: {
         name: isProd ? "cloudless.gr" : `${stage}.cloudless.gr`,
         redirects: isProd ? ["www.cloudless.gr"] : [],
@@ -252,236 +253,25 @@ export default {
     }
 
     // ---------------------------------------------------------------------
-    // Route 53 failover records (production only)
+    // HA / failover
     // ---------------------------------------------------------------------
-    // Architecture: cloudless.gr is dual-homed.
-    //   - PRIMARY: CloudFront distributions (this SST stack), health-checked
-    //     against https://cloudless.gr/api/health
-    //   - SECONDARY: API Gateway HTTP API → Lambda IPv6 proxy → Pi 5
+    // cloudless.gr is dual-homed for high availability:
+    //   - PRIMARY:   this SST stack (CloudFront -> Lambda).
+    //   - SECONDARY: the Pi/k3s cluster, reachable on the public Tailscale
+    //                Funnel (omv.tail8eb71.ts.net:443), serving the SAME
+    //                Next.js image.
     //
-    // Starlink/CGNAT pivot (2026-05-02): the Pi has no public IPv4 (Starlink
-    // CGNAT) but has a global IPv6. The SECONDARY path is now an APIGW HTTP
-    // API (`cloudless-pi-frontend`, id `dwtp9xt4dd`) with custom domains for
-    // cloudless.gr + www.cloudless.gr, fronted by a Lambda function
-    // (`cloudless-pi-proxy`) that runs in a dual-stack VPC and forwards each
-    // request to the Pi over IPv6 on port 18443. The Pi's current global v6
-    // is kept fresh in SSM by `cloudless-ddns-updater` (every 5 min); the
-    // Lambda caches the lookup with a 5 min TTL.
+    // Failover is owned by Cloudflare (where the domain DNS lives), NOT by
+    // Route 53. A Cloudflare Load Balancer health-checks /api/health and steers
+    // traffic AWS -> Pi automatically. Provision/update it with
+    // scripts/setup-cloudflare-lb.sh (CI: .github/workflows/cloudflare-lb.yml).
     //
-    // SECONDARY records are bound to a dedicated R53 health check that
-    // probes the APIGW frontend (NOT CloudFront) so an outage on the AWS
-    // SECONDARY path itself doesn't get masked by the PRIMARY health check.
-    //
-    // Route 53 returns the primary while it's healthy and flips to the
-    // secondary when the PRIMARY health check fails. CloudFront's hosted zone
-    // ID is the well-known constant Z2FDTNDATAQYW2 for all alias records.
-    // APIGW regional has its own well-known zone ID Z1UJRXOUMOOFQ8.
-    //
-    // INCIDENT 2026-06-02: the cloudless.gr hosted zone Z079608614L53CC4EAZM3
-    // was deleted out-of-band (a casualty of concurrent R53 health-check /
-    // cost-cleanup work) between deploy #773 (14:26, last green) and #775
-    // (15:11). With the zone gone, every `import:` below fails to refresh
-    // ("reading Route 53 Hosted Zone ...: couldn't find resource") and blocks
-    // ALL production deploys. These records are therefore gated OFF by default
-    // so deploys can proceed; failover is currently handled at the
-    // Cloudflare/CloudFront layer (see .claude/commands/ha-failover.md).
-    //
-    // TO RE-ENABLE: recreate the hosted zone, update `zoneId` (a recreated zone
-    // gets a NEW id) and the `import:` IDs + `healthCheckId`s to match the live
-    // resources, then set the deploy env var ENABLE_R53_FAILOVER=1.
-    const enableR53Failover = process.env.ENABLE_R53_FAILOVER === "1";
-    if (isProd && enableR53Failover) {
-      const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
-      const healthCheckId = "3805ab54-0238-4ab1-870f-7ad9caf43a91"; // PRIMARY (CloudFront)
-      const secondaryHealthCheckId = "1069b339-6066-4a5c-a1b1-6bc7c9376977"; // SECONDARY (APIGW frontend)
-      const cfZoneId = "Z2FDTNDATAQYW2";
-      const apigwZoneId = "Z1UJRXOUMOOFQ8"; // APIGW regional, us-east-1
-      const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
-      const wwwCfDomain = "dgrxxatzrgxfi.cloudfront.net";
-      const apexApigwDomain =
-        "d-uy6dmk95il.execute-api.us-east-1.amazonaws.com";
-      const wwwApigwDomain = "d-2msx2z5q7d.execute-api.us-east-1.amazonaws.com";
-
-      // IMPORTANT — pre-deploy migration required.
-      // The Route 53 records below are *adopted*, not *created*, on first
-      // deploy. The `import:` resource option tells Pulumi to read state from
-      // R53 instead of creating duplicates. Pulumi import ID format for
-      // Route 53 records: ZONEID_NAME_TYPE_SETIDENTIFIER (underscore-sep).
-      //
-      // SECONDARY records (apex+www × A+AAAA, all 4 alias to APIGW) MUST be
-      // pre-applied to Route 53 before `sst deploy` runs against this branch.
-      // The orchestrator will land them via aws-cli prior to merging this PR.
-      //
-      // PRIMARY records were already migrated by PR #90.
-
-      // Apex — PRIMARY A (CloudFront alias)
-      new aws.route53.Record(
-        "ApexPrimary",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "A",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: apexCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_A_primary` },
-      );
-
-      // Apex — SECONDARY A (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "ApexSecondary",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "A",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: apexApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_A_secondary` },
-      );
-
-      // Apex — SECONDARY AAAA (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "ApexSecondaryAAAA",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: apexApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_AAAA_secondary` },
-      );
-
-      // Apex — PRIMARY AAAA (CloudFront alias).
-      new aws.route53.Record(
-        "ApexPrimaryAAAA",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: apexCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_AAAA_primary` },
-      );
-
-      // www — PRIMARY A (CloudFront alias)
-      new aws.route53.Record(
-        "WwwPrimary",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "A",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: wwwCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_A_primary` },
-      );
-
-      // www — SECONDARY A (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "WwwSecondary",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "A",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: wwwApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_A_secondary` },
-      );
-
-      // www — SECONDARY AAAA (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "WwwSecondaryAAAA",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: wwwApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_AAAA_secondary` },
-      );
-
-      // www — PRIMARY AAAA (CloudFront alias).
-      new aws.route53.Record(
-        "WwwPrimaryAAAA",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: wwwCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_AAAA_primary` },
-      );
-    }
+    // HISTORY: a Route 53 PRIMARY/SECONDARY record set used to live here, but
+    // the domain has never actually been delegated to Route 53 (it resolves via
+    // Cloudflare), so those records served no real traffic. The hosted zone
+    // Z079608614L53CC4EAZM3 was then deleted out-of-band on 2026-06-02, which
+    // broke every sst deploy (pulumi could no longer refresh the imported
+    // records). The dead block was removed in favour of the Cloudflare LB.
 
     return {
       url: site.url,

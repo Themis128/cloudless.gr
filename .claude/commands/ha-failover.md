@@ -63,10 +63,15 @@ If Lambda is genuinely down and CloudFront has NOT automatically failed over:
 | Secondary origin | `omv.tail8eb71.ts.net` |
 | k3s VIP | `192.168.1.200:18443` |
 | cloudflared tunnel | `a82f24a8-f767-4a59-bc77-1d59ad132be2` |
-| Route 53 zone | `Z079608614L53CC4EAZM3` |
+| Cloudflare LB | `cloudless.gr` / `www.cloudless.gr` — pools `cl-aws-*` (primary) + `cl-pi-*` (standby); provisioned by `scripts/setup-cloudflare-lb.sh` (CI: `cloudflare-lb.yml`) |
+| ~~Route 53 zone~~ | `Z079608614L53CC4EAZM3` — **DELETED 2026-06-02**; the domain is on Cloudflare, not R53. R53 failover is decommissioned. |
 
 ## Notes
 
+- **Two failover layers.** (1) Cloudflare Load Balancer at the DNS edge —
+  health-checks `/api/health` and steers `cloudless.gr`/`www` AWS→Pi (survives a
+  full AWS outage). (2) The CloudFront origin group below it (Lambda→Pi on 5xx).
+  Manage the Cloudflare layer with `scripts/setup-cloudflare-lb.sh`.
 - CloudFront health check interval is 30s; failover is not instant.
 - The k3s secondary serves the **same** Next.js app built from the same Docker image — zero config difference.
 - TLS on k3s: Traefik serves the `cloudless.gr` wildcard cert (k8s secret `cloudless-gr-tls` in namespace `cloudless`).
