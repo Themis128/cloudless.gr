@@ -6,8 +6,8 @@ These require access outside GitHub and cannot be automated from a cloud session
 
 | Item | Status | Action |
 |------|--------|--------|
-| `OMV_SSH_KEY` | **AUTO-PROVISIONING** | `setup-omv-ssh-key.yml` runs on Pi runner, reads/generates key, sets secret, installs watchdog. Check #382 for result. If runner is offline, fall back: `cat ~/.ssh/id_ed25519` on Pi → GitHub repo Settings → Secrets → `OMV_SSH_KEY`. |
-| SES SMTP | **AUTO-PROVISIONING** | `provision-ses-smtp.yml` now attempts IAM auto-provision on path trigger. Check #382 for result. If IAM permission missing, fall back: AWS Console → SES → SMTP Settings → Create credentials → `workflow_dispatch` with `smtp_user` + `smtp_password`. |
+| `OMV_SSH_KEY` | **SET** ✅ | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog install pending (run `k3s-watchdog-deploy.yml`). |
+| SES SMTP | **IAM BLOCKED** | `GitHubActionsOIDC` role lacks `iam:CreateUser`. `grant-ses-iam-permissions.yml` tries `iam:PutRolePolicy` to self-grant. If that also fails: AWS Console → IAM → role `GitHubActionsOIDC` → add inline policy for `iam:CreateUser` scoped to `arn:aws:iam::278585680617:user/cloudless-ses-smtp`. Then touch `provision-ses-smtp.yml` to trigger. |
 | ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore. |
 | Admin password | **ACTION REQUIRED** | Temp login posted to GitHub issue #382 (2026-06-02 17:18Z). Login at auth.cloudless.gr with `tbaltzakis@cloudless.gr` + temp password from #382. Keycloak forces password change on first login. |
 
