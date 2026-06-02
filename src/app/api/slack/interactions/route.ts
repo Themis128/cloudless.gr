@@ -336,6 +336,10 @@ async function postDeployAsync(payload: SlackInteractionPayload): Promise<void> 
 }
 
 async function refreshOrdersAsync(responseUrl: string): Promise<void> {
+  // `responseUrl` comes from the (signature-verified) Slack payload, but we
+  // still pin it to Slack's response-URL host so a forged-but-signed payload
+  // can't turn this into an SSRF primitive against an internal target.
+  if (!responseUrl.startsWith("https://hooks.slack.com/")) return;
   try {
     const { orders } = await listRecentCheckoutSessions(5);
     const lines = orders.map((o) => {

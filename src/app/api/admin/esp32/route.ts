@@ -3,6 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ALERT_API = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800";
 
+/**
+ * Device IDs are short slugs. Validate before interpolating into the upstream
+ * proxy URL so a crafted `device_id` (path traversal, encoded slashes) can't
+ * alter the request target. Falls back to the default on anything invalid.
+ */
+function safeDeviceId(raw: string | null): string {
+  const id = raw ?? "esp32-leds";
+  return /^[a-zA-Z0-9_-]{1,64}$/.test(id) ? id : "esp32-leds";
+}
+
 function isPrivateLanUrl(url: string): boolean {
   try {
     const { hostname } = new URL(url);
@@ -50,7 +60,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { searchParams } = request.nextUrl;
   const action = searchParams.get("action");
-  const deviceId = searchParams.get("device_id") ?? "esp32-leds";
+  const deviceId = safeDeviceId(searchParams.get("device_id"));
 
   switch (action) {
     case "devices": {
@@ -109,7 +119,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const { searchParams } = request.nextUrl;
   const action = searchParams.get("action");
-  const deviceId = searchParams.get("device_id") ?? "esp32-leds";
+  const deviceId = safeDeviceId(searchParams.get("device_id"));
   const body = await request.text();
   const headers = { "Content-Type": "application/json" };
 
@@ -135,7 +145,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   }
 
   const { searchParams } = request.nextUrl;
-  const deviceId = searchParams.get("device_id") ?? "esp32-leds";
+  const deviceId = safeDeviceId(searchParams.get("device_id"));
   const body = await request.text();
 
   return proxyRequest(`/api/esp32/${deviceId}/config`, {
