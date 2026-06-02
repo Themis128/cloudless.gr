@@ -33,16 +33,27 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 - Agents return a **single summary message** — raw tool output stays out of the main context.
 - Use `run_in_background: true` only for genuinely independent work that does not block the next step.
 
-## Cloud Session SSH Setup (one-time)
+## Cloud Session Secrets (one-time setup)
 
-The `cloudless-infra` MCP server connects to `omv-main` via SSH. In **local** sessions it reads `~/.ssh/id_ed25519` automatically. In **cloud** sessions (code.claude.com) the key file isn't present — supply it as a base64 secret instead:
+Set these in **Claude Code web UI → Session → Environment → Secrets**. They are injected as env vars and picked up by the `session-start` hook automatically.
 
-1. On your local machine: `base64 -w0 ~/.ssh/id_ed25519 | pbcopy`  (Linux: omit `| pbcopy`, copy manually)
-2. In the Claude Code web UI → session settings → **Environment → Secrets** → add:
-   - Name: `OMV_SSH_KEY_CONTENTS`
-   - Value: the base64 string from step 1
+| Secret name           | Value                                    | Effect                                              |
+|-----------------------|------------------------------------------|-----------------------------------------------------|
+| `GITHUB_PAT`          | GitHub PAT with `repo` scope             | git push/PR/merge work without any manual auth step |
+| `TAILSCALE_AUTH_KEY`  | Tailscale ephemeral auth key             | Pi SSH access via `mcp__cloudless-infra__*` tools   |
+| `OMV_SSH_KEY_CONTENTS`| `base64 -w0 ~/.ssh/id_ed25519`           | SSH private key for Pi cluster                      |
 
-Once set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all other `mcp__cloudless-infra__*` tools become available in every cloud session. The Tailscale IP `100.113.41.119` is already baked into `mcp.json` so no host configuration is needed.
+**Generate a GitHub PAT:** github.com/settings/tokens/new — select `repo` scope, no expiry or 1 year.
+
+The `session-start` hook (`/.claude/hooks/session-start.sh`) auto-configures git credentials the moment a session opens — `git push` requires no extra steps. The stop hook also auto-pushes unpushed commits on session end when `GITHUB_PAT` is set.
+
+For manual push/PR/merge within a session, use the `/github-push` skill.
+
+**Generate Tailscale key:** tailscale.com/admin/settings/keys — ephemeral, pre-authorized.
+
+**Generate OMV SSH key:** On your local machine: `base64 -w0 ~/.ssh/id_ed25519 | pbcopy`
+
+Once all three secrets are set, `cluster_run_command`, `gh_runner_health`, `k3s_get_pods` and all `mcp__cloudless-infra__*` tools are available. The Tailscale IP `100.113.41.119` is baked into `mcp.json`.
 
 ## Deployment to Pi
 
