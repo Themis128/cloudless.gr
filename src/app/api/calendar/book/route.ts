@@ -13,7 +13,9 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function POST(request: Request) {
-  // Rate limit: 5 booking attempts per IP per 10 minutes
+  // Two intentional layers (not a mismatch): proxy.ts caps bursts at 3/60s,
+  // while this in-route limit caps *sustained* booking abuse at 5 per 10 min
+  // (tighter over a 10-min window than the proxy's burst rule).
   const ip = getClientIp(request);
   const rl = rateLimit(`calendar-book:${ip}`, 5, 10 * 60_000);
   if (!rl.ok) return rl.response;
