@@ -1,0 +1,158 @@
+name: Recreate Route 53 health checks
+# One-shot: creates fresh PRIMARY + SECONDARY Route 53 health checks,
+# patches sst.config.ts with the new IDs, opens a PR, and posts to #382.
+#
+# Background: health checks e239ad5c (PRIMARY/CloudFront) and
+# 30a69f1c (SECONDARY/APIGW) were deleted; list-health-checks returned 0.
+# sst.config.ts lines 281-282 reference those stale IDs.
+#
+# New checks: HTTPS, 30s standard interval, no string-matching.
+# Cost: $0.50/check/mo (no $1 fast-interval or $1 string-match surcharges).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  recreate:
+    name: Recreate health checks + patch sst.config.ts
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create health checks
+        id: hc
+        run: |
+          set -euo pipefail
+
+          # PRIMARY — HTTPS probe via cloudless.gr (CloudFront)
+          PRIMARY_JSON=$(aws route53 create-health-check \
+            --caller-reference "cloudless-primary-$(date +%s)" \
+            --health-check-config '{
+              "Type": "HTTPS",
+              "FullyQualifiedDomainName": "cloudless.gr",
+              "Port": 443,
+              "ResourcePath": "/",
+              "RequestInterval": 30,
+              "FailureThreshold": 3
+            }')
+          PRIMARY_ID=$(echo "$PRIMARY_JSON" | jq -r '.HealthCheck.Id')
+          echo "PRIMARY=$PRIMARY_ID"
+
+          # avoid CallerReference collision (timestamp resolution = 1s)
+          sleep 2
+
+          # SECONDARY — HTTPS probe on APIGW custom domain (Pi/k3s path)
+          SECONDARY_JSON=$(aws route53 create-health-check \
+            --caller-reference "cloudless-secondary-$(date +%s)" \
+            --health-check-config '{
+              "Type": "HTTPS",
+              "FullyQualifiedDomainName": "d-uy6dmk95il.execute-api.us-east-1.amazonaws.com",
+              "Port": 443,
+              "ResourcePath": "/",
+              "RequestInterval": 30,
+              "FailureThreshold": 3
+            }')
+          SECONDARY_ID=$(echo "$SECONDARY_JSON" | jq -r '.HealthCheck.Id')
+          echo "SECONDARY=$SECONDARY_ID"
+
+          # Tag for easy identification
+          aws route53 change-tags-for-resource \
+            --resource-type healthcheck --resource-id "$PRIMARY_ID" \
+            --add-tags Key=Name,Value=cloudless-primary-cloudfront Key=Project,Value=cloudless.gr
+
+          aws route53 change-tags-for-resource \
+            --resource-type healthcheck --resource-id "$SECONDARY_ID" \
+            --add-tags Key=Name,Value=cloudless-secondary-apigw Key=Project,Value=cloudless.gr
+
+          echo "primary_id=$PRIMARY_ID"   >> "$GITHUB_OUTPUT"
+          echo "secondary_id=$SECONDARY_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Patch sst.config.ts and open PR
+        run: |
+          set -euo pipefail
+          PRIMARY_ID="${{ steps.hc.outputs.primary_id }}"
+          SECONDARY_ID="${{ steps.hc.outputs.secondary_id }}"
+
+          BRANCH="fix/r53-hc-$(date +%Y%m%d%H%M)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          # Replace the two stale health check ID constants in sst.config.ts
+          sed -i \
+            "s|const healthCheckId = \"[^\"]*\"; // PRIMARY (CloudFront)|const healthCheckId = \"${PRIMARY_ID}\"; // PRIMARY (CloudFront)|" \
+            sst.config.ts
+          sed -i \
+            "s|const secondaryHealthCheckId = \"[^\"]*\"; // SECONDARY (APIGW frontend)|const secondaryHealthCheckId = \"${SECONDARY_ID}\"; // SECONDARY (APIGW frontend)|" \
+            sst.config.ts
+
+          # Verify both subs landed
+          grep "healthCheckId" sst.config.ts | head -2
+
+          git add sst.config.ts
+          git commit -m "fix(r53): replace stale Route 53 health check IDs
+
+          Old checks e239ad5c (PRIMARY) and 30a69f1c (SECONDARY) were deleted;
+          list-health-checks confirmed 0 health checks in account.
+
+          New checks use HTTPS, 30s interval, no string-matching.
+          PRIMARY:   ${PRIMARY_ID}
+          SECONDARY: ${SECONDARY_ID}"
+          git push -u origin "$BRANCH"
+
+          gh pr create \
+            --title "fix(r53): replace stale Route 53 health check IDs" \
+            --body "$(cat <<EOF
+          ## Summary
+          - Health checks \`e239ad5c\` (PRIMARY) and \`30a69f1c\` (SECONDARY) no longer exist — \`list-health-checks\` returned 0.
+          - Creates two new HTTPS checks (30s standard interval, no surcharges = \$0.50/check/mo) and updates \`sst.config.ts\` lines 281-282.
+
+          | Role | New health check ID |
+          |---|---|
+          | PRIMARY (probes \`cloudless.gr\` via CloudFront) | \`${PRIMARY_ID}\` |
+          | SECONDARY (probes APIGW custom domain) | \`${SECONDARY_ID}\` |
+
+          ## Test plan
+          - [ ] Merge this PR
+          - [ ] Trigger \`cost-audit.yml\` \`workflow_dispatch\` — Route 53 section should list the two new checks with \`interval=30s no-match\`
+          - [ ] Confirm both checks show Healthy in Route 53 console after ~90s
+          EOF
+          )"
+
+      - name: Post to tracking issue
+        if: always()
+        run: |
+          {
+            printf '## Route 53 health checks recreated — %s\n\n' "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            if [[ -n "${{ steps.hc.outputs.primary_id }}" ]]; then
+              printf '| Role | New ID |\n|---|---|\n'
+              printf '| PRIMARY (CloudFront probe) | `%s` |\n' "${{ steps.hc.outputs.primary_id }}"
+              printf '| SECONDARY (APIGW probe)    | `%s` |\n' "${{ steps.hc.outputs.secondary_id }}"
+              printf '\n`sst.config.ts` lines 281–282 patched — PR opened for review + merge.\n'
+              printf 'Both checks: HTTPS, 30s interval, no string-match (**$0.50/check/mo**, no surcharges).\n'
+            else
+              printf '**Health check creation failed** — check workflow logs for IAM or API errors.\n'
+            fi
+          } > hc-report.md
+          gh issue comment 382 \
+            --repo "${{ github.repository }}" \
+            --body-file hc-report.md
