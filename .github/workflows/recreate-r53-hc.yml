@@ -11,6 +11,10 @@ name: Recreate Route 53 health checks
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/recreate-r53-hc.yml"
 
 permissions:
   id-token: write
@@ -42,6 +46,26 @@ jobs:
         id: hc
         run: |
           set -euo pipefail
+
+          # Idempotency: if tagged health checks already exist, reuse them.
+          ALL_HCS=$(aws route53 list-health-checks --output json | jq -r '.HealthChecks[].Id')
+          for hc_id in $ALL_HCS; do
+            name_tag=$(aws route53 list-tags-for-resource \
+              --resource-type healthcheck --resource-id "$hc_id" \
+              --query 'ResourceTagSet.Tags[?Key==`Name`].Value' --output text 2>/dev/null || true)
+            if [[ "$name_tag" == "cloudless-primary-cloudfront" ]]; then
+              EXISTING_PRIMARY="$hc_id"
+            elif [[ "$name_tag" == "cloudless-secondary-apigw" ]]; then
+              EXISTING_SECONDARY="$hc_id"
+            fi
+          done
+
+          if [[ -n "${EXISTING_PRIMARY:-}" && -n "${EXISTING_SECONDARY:-}" ]]; then
+            echo "Health checks already exist — skipping creation."
+            echo "primary_id=$EXISTING_PRIMARY"   >> "$GITHUB_OUTPUT"
+            echo "secondary_id=$EXISTING_SECONDARY" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           # PRIMARY — HTTPS probe via cloudless.gr (CloudFront)
           PRIMARY_JSON=$(aws route53 create-health-check \
