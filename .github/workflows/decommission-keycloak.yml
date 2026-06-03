@@ -1,0 +1,87 @@
+name: Decommission Keycloak (remove from cluster)
+
+# Deletes the keycloak namespace from k3s and removes the in-cluster autoheal
+# CronJob. Run AFTER migrating users (migrate-keycloak-to-cognito.yml) and
+# confirming Cognito sign-in works on cloudless.gr.
+#
+# This is IRREVERSIBLE. The confirmation input prevents accidental runs.
+#
+# Also wires the Pi deployment to Cognito (same as wire-pi-cognito.yml) so the
+# k3s standby app stops depending on Keycloak runtime values.
+#
+# Requires: TS_AUTHKEY, KUBECONFIG_B64, AWS_DEPLOY_ROLE_ARN.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "decommission" to confirm (irreversible)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  decommission:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Validate confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "decommission" ]; then
+            echo "::error::Confirmation input must be exactly 'decommission'."
+            exit 1
+          fi
+          echo "Confirmation accepted — proceeding with Keycloak decommission."
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Wait for cluster API
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if kubectl get ns cloudless >/dev/null 2>&1; then
+              echo "cluster reachable (attempt $i)"; break
+            fi
+            echo "not reachable (attempt $i) — retry in ${i}0s"; sleep "${i}0"
+          done
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@ececc3a90d58a371f81a37fcedcc63e9e0e1e78e # v4.1.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Decommission Keycloak
+        run: bash scripts/decommission-keycloak.sh 2>&1 | tee decommission.log
+
+      - name: Wire Pi runtime to Cognito (replace Keycloak env vars)
+        run: bash scripts/wire-pi-cognito.sh 2>&1 | tee -a decommission.log
+        continue-on-error: true
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Keycloak decommission — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat decommission.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
