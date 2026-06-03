@@ -37,7 +37,7 @@
 
 ### Admin panel quick reference
 
-`/admin` is gated by Cognito admin-group membership (server **and** client). Key surfaces:
+`/admin` is gated by `admin` group membership verified server-side and client-side. Key surfaces:
 
 | Section | Path | Notes |
 |---|---|---|

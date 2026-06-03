@@ -85,7 +85,7 @@ GSC_SITE_URL=sc-domain:cloudless.gr
 
 ## Admin API Endpoints
 
-All endpoints require a valid Cognito JWT with the `admin` group (Bearer token in `Authorization` header). Returns 401/403 if unauthenticated. Returns 503 if GSC credentials are not configured.
+All endpoints require a valid admin session or Bearer JWT with the `admin` group. Returns 401/403 if unauthenticated. Returns 503 if GSC credentials are not configured.
 
 All responses include `fetchedAt: ISO8601` and `source: "google-search-console"`.
 
@@ -194,7 +194,7 @@ sequenceDiagram
     participant GSC as GSC Search Analytics API
 
     Admin->>Route: GET with Bearer token
-    Route->>Auth: Verify Cognito JWT
+    Route->>Auth: Verify JWT (requireAdmin)
     Auth-->>Route: ok: true / 401/403
 
     Route->>Route: Check GOOGLE_CLIENT_EMAIL in config
@@ -231,7 +231,7 @@ Test coverage (29 + 33 tests):
 
 ## Security Notes
 
-- **Auth required:** All analytics endpoints are protected by `requireAdmin()` (Cognito JWT with `admin` group). No public GSC data is exposed.
+- **Auth required:** All analytics endpoints are protected by `requireAdmin()` (JWT with `admin` group). No public GSC data is exposed.
 - **Read-only scope:** Token scoped to `webmasters.readonly` — cannot write to GSC.
 - **Shared service account:** Same `GOOGLE_PRIVATE_KEY` as Calendar — store as SecureString in SSM.
 - **Graceful degradation:** All functions catch errors and return `null` / `[]` — a GSC API failure never crashes the admin dashboard.

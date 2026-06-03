@@ -142,7 +142,7 @@ No PII leaves the runtime in Sentry events.
 
 ## Admin API Endpoints
 
-Both endpoints require a valid Cognito JWT with the `admin` group. Return 503 when `SENTRY_AUTH_TOKEN` is not configured.
+Both endpoints require a valid admin session or Bearer JWT with the `admin` group. Return 503 when `SENTRY_AUTH_TOKEN` is not configured.
 
 ### `GET /api/admin/ops/errors`
 
@@ -227,7 +227,7 @@ sequenceDiagram
     participant API as Sentry REST API
 
     Admin->>Route: GET with Bearer token
-    Route->>Auth: Verify Cognito JWT
+    Route->>Auth: Verify JWT (requireAdmin)
     Auth-->>Route: ok / 401
 
     Route->>Lib: await isSentryConfigured()
@@ -267,7 +267,7 @@ Test coverage (15 tests):
 
 ## Security Notes
 
-- **Auth required:** Both admin endpoints protected by `requireAdmin()` (Cognito JWT + `admin` group).
+- **Auth required:** Both admin endpoints protected by `requireAdmin()` (JWT with `admin` group).
 - **Token scopes:** `SENTRY_AUTH_TOKEN` needs `project:read` (list/get issues) and `project:write` (update status). Use an Internal Integration token in Sentry settings, not a personal auth token.
 - **Token in SSM SecureString:** Never commit `SENTRY_AUTH_TOKEN` — store as SecureString.
 - **503 guard fixed:** `isSentryConfigured()` is `async` — both routes use `await` to ensure the 503 path fires correctly when unconfigured.
