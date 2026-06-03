@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
@@ -12,7 +13,17 @@ async function resolvePortal(token: string): Promise<ClientPortal | null> {
     const client = new SSMClient({ region: REGION });
     const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
     const portals: ClientPortal[] = JSON.parse(res.Parameter?.Value ?? "[]");
-    return portals.find((p) => p.token === token) ?? null;
+    return (
+      portals.find((p) => {
+        try {
+          const a = Buffer.from(p.token);
+          const b = Buffer.from(token);
+          return a.length === b.length && timingSafeEqual(a, b);
+        } catch {
+          return false;
+        }
+      }) ?? null
+    );
   } catch {
     return null;
   }
@@ -57,24 +68,22 @@ export async function GET(
     const stripe = await getStripe();
     if (!stripe) return null;
 
-    const customers = await stripe.customers.list({
-      email: portal.clientEmail,
-      limit: 1,
-    });
+    const customers = await stripe.customers.list(
+      { email: portal.clientEmail, limit: 1 },
+      { timeout: 10_000 },
+    );
     const customer = customers.data[0];
     if (!customer) return null;
 
     const [invoices, subs] = await Promise.all([
-      stripe.invoices.list({
-        customer: customer.id,
-        limit: 10,
-        status: "paid",
-      }),
-      stripe.subscriptions.list({
-        customer: customer.id,
-        limit: 5,
-        expand: ["data.items.data.price.product"],
-      }),
+      stripe.invoices.list(
+        { customer: customer.id, limit: 10, status: "paid" },
+        { timeout: 10_000 },
+      ),
+      stripe.subscriptions.list(
+        { customer: customer.id, limit: 5, expand: ["data.items.data.price.product"] },
+        { timeout: 10_000 },
+      ),
     ]);
 
     return {
