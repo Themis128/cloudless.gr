@@ -56,10 +56,8 @@ jobs:
     # runner re-registration. Targeting `[omv, build]` picks up omv-main's
     # Docker+USB-SSD runner correctly.
     #
-    # Why not ubuntu-latest + QEMU: pnpm install alone exceeds 60min under
-    # QEMU emulation. GH-hosted native arm64 runners require the paid
-    # larger-runners plan.
-    runs-on: [self-hosted, omv, build]
+    # GH-hosted runner with QEMU for arm64 cross-compilation.
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1

@@ -21,7 +21,7 @@ concurrency:
 jobs:
   ensure-pi-build:
     if: github.event.workflow_run.conclusion == 'success'
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     # Pi builds can sit queued on the self-hosted runner for 30+ min on a busy
     # day before doing ~1 min of actual work. Job timeout must cover the
     # combined Pi-build wait (max ~45 min, see below) plus the k3s-rollout

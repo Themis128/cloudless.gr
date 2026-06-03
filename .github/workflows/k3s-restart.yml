@@ -1,9 +1,8 @@
 name: k3s restart — recover API server after crash
 
-# Triggered by pushing a change to this file. Runs on the omv build runner
-# (a systemd service on the Pi host — survives k3s crashes). Restarts the
-# k3s server service, waits for the API to become healthy, then posts the
-# result to tracking issue #382.
+# Triggered by pushing a change to this file. Connects to the Pi via
+# Tailscale + SSH, restarts k3s, waits for the API to become healthy,
+# then posts the result to tracking issue #382.
 #
 # ONLY use this when the k3s API server is unresponsive (connection refused
 # on port 6443). Safe to re-run — `systemctl restart k3s` is idempotent.
@@ -20,34 +19,49 @@ permissions:
 
 jobs:
   restart-k3s:
-    # Runs on the Pi host as a systemd service — stays alive when k3s crashes.
-    # If this job queues forever the Pi itself is down; cancel and reboot manually.
-    runs-on: [self-hosted, omv, build]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
+      PI_HOST: "100.113.41.119"
+      PI_USER: "tbaltzakis"
     steps:
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
       - name: Check current k3s status
         run: |
           echo "=== k3s status BEFORE restart ===" | tee k3s.log
-          sudo systemctl status k3s --no-pager 2>&1 | tee -a k3s.log || true
-          echo "" | tee -a k3s.log
-          echo "=== port 6443 check BEFORE ===" | tee -a k3s.log
-          ss -tlnp 2>/dev/null | grep 6443 | tee -a k3s.log || echo "(6443 not listening)" | tee -a k3s.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status k3s --no-pager 2>&1 | head -15; \
+             echo ''; ss -tlnp 2>/dev/null | grep 6443 || echo '(6443 not listening)'" \
+            2>&1 | tee -a k3s.log || true
 
       - name: Restart k3s
         run: |
           echo "" | tee -a k3s.log
           echo "=== restarting k3s ===" | tee -a k3s.log
-          sudo systemctl restart k3s 2>&1 | tee -a k3s.log
-          echo "restart command exited: $?" | tee -a k3s.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl restart k3s 2>&1; echo restart_exit=\$?" \
+            2>&1 | tee -a k3s.log
 
       - name: Wait for API server to become healthy
         run: |
           echo "" | tee -a k3s.log
           echo "=== waiting for port 6443 (up to 60s) ===" | tee -a k3s.log
           for i in $(seq 1 12); do
-            if ss -tlnp 2>/dev/null | grep -q 6443; then
+            if nc -zv -w3 "$PI_HOST" 6443 2>/dev/null; then
               echo "API server listening after ${i}×5s" | tee -a k3s.log
               break
             fi
@@ -57,23 +71,11 @@ jobs:
 
           echo "" | tee -a k3s.log
           echo "=== k3s status AFTER restart ===" | tee -a k3s.log
-          sudo systemctl status k3s --no-pager 2>&1 | tee -a k3s.log || true
-
-          echo "" | tee -a k3s.log
-          echo "=== port 6443 check AFTER ===" | tee -a k3s.log
-          ss -tlnp 2>/dev/null | grep 6443 | tee -a k3s.log || echo "(6443 still not listening — FAIL)" | tee -a k3s.log
-
-      - name: Quick API health check (kubectl)
-        run: |
-          echo "" | tee -a k3s.log
-          echo "=== kubectl cluster-info ===" | tee -a k3s.log
-          # k3s ships kubectl and writes the kubeconfig to /etc/rancher/k3s/k3s.yaml
-          sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml cluster-info 2>&1 | tee -a k3s.log || true
-
-          echo "" | tee -a k3s.log
-          echo "=== all pods (non-Running) ===" | tee -a k3s.log
-          sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get pods -A \
-            --field-selector='status.phase!=Running,status.phase!=Succeeded' \
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status k3s --no-pager 2>&1 | head -15; \
+             echo ''; \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes 2>&1 | head -10" \
             2>&1 | tee -a k3s.log || true
 
       - name: Post result to tracking issue
@@ -86,5 +88,3 @@ jobs:
             cat k3s.log 2>/dev/null || echo "(no log)"
             echo '```'
           } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
-
-# re-trigger-20260602a

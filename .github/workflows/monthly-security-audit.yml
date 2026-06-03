@@ -16,7 +16,7 @@ permissions:
 jobs:
   audit:
     name: Dependency Audit
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
