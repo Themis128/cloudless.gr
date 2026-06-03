@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 const SUBSCRIPTIONS_URL = "http://localhost/api/admin/subscriptions";
-const TEST_SUB_ID = "sub_test_1";
+const TEST_SUB_ID = "sub_Test1";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
@@ -75,7 +75,7 @@ function userReq(url: string): NextRequest {
 
 const MOCK_SUB = {
   id: TEST_SUB_ID,
-  customer: { id: "cus_test_1", email: "customer@test.com", name: "Test Customer" },
+  customer: { id: "cus_Test1", email: "customer@test.com", name: "Test Customer" },
   status: "active",
   items: {
     data: [{
@@ -173,7 +173,7 @@ describe("POST /api/admin/subscriptions", () => {
     const { POST } = await import("@/app/api/admin/subscriptions/route");
     const res = await POST(adminReq(SUBSCRIPTIONS_URL, {
       method: "POST",
-      body: JSON.stringify({ action: "portal", customerId: "cus_test_1" }),
+      body: JSON.stringify({ action: "portal", customerId: "cus_Test1" }),
     }));
     expect(res.status).toBe(200);
     const data = await res.json();
