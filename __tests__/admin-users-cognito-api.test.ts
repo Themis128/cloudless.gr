@@ -191,7 +191,7 @@ describe("/api/admin/users — Cognito path", () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
-  it("POST unknown action surfaces an error without mutating", async () => {
+  it("POST unknown action returns 400 without mutating", async () => {
     sendMock.mockResolvedValue({});
     const { POST } = await import("@/app/api/admin/users/route");
     const res = await POST(
@@ -200,7 +200,7 @@ describe("/api/admin/users — Cognito path", () => {
         body: JSON.stringify({ action: "nuke", username: "u-1" }),
       })
     );
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(400);
     expect(sendMock).not.toHaveBeenCalled();
   });
 
