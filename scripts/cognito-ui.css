@@ -1,0 +1,170 @@
+/*
+  Cloudless.gr — Cognito Hosted UI Theme
+  Targets the *-customizable classes exposed by the Cognito hosted UI.
+  Tokens match src/app/theme-v2.css dark-mode values.
+*/
+
+/* ── Page shell ── */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0b0f15;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Top banner (holds the logo) ── */
+.banner-customizable {
+  background-color: #0b0f15;
+  padding: 32px 0 16px;
+}
+
+/* ── Card that wraps the form ── */
+.modal-content,
+.cognito-asf-modal-content {
+  background-color: #121823 !important;
+  border: 1px solid #27313f !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 40px rgba(34, 211, 230, 0.06) !important;
+}
+
+/* ── Section headings / description ── */
+.textDescription-customizable {
+  color: #9aa7b8;
+  font-size: 14px;
+  padding: 8px 0 12px;
+}
+
+.idpDescription-customizable {
+  color: #9aa7b8;
+  font-size: 13px;
+  padding: 4px 0 8px;
+}
+
+/* ── Labels ── */
+.label-customizable {
+  color: #e6edf3;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ── Input fields ── */
+.inputField-customizable {
+  background-color: #0b0f15;
+  color: #e6edf3;
+  border: 1px solid #27313f;
+  border-radius: 8px;
+  height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.inputField-customizable:focus {
+  border-color: #22d3e6;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(34, 211, 230, 0.15);
+}
+
+.inputField-customizable::placeholder {
+  color: #697587;
+}
+
+/* ── Primary submit button ── */
+.submitButton-customizable {
+  background-color: #22d3e6;
+  color: #06222a;
+  border: none;
+  border-radius: 8px;
+  height: 44px;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  margin: 20px 0 10px;
+  transition: background-color 0.15s;
+}
+
+.submitButton-customizable:hover {
+  background-color: #5be4f0;
+  color: #06222a;
+}
+
+/* ── Social / IDP buttons (e.g. Google) ── */
+.idpButton-customizable {
+  background-color: #1a2230;
+  color: #e6edf3;
+  border: 1px solid #27313f;
+  border-radius: 8px;
+  height: 44px;
+  width: 100%;
+  font-size: 14px;
+  margin-bottom: 12px;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.idpButton-customizable:hover {
+  background-color: #1f2b3d;
+  border-color: #22d3e6;
+  color: #e6edf3;
+}
+
+.socialButton-customizable {
+  border-radius: 8px;
+  height: 44px;
+  margin-bottom: 12px;
+}
+
+/* ── Links (Forgot password, Sign up) ── */
+.redirect-customizable {
+  text-align: center;
+  color: #9aa7b8;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.redirect-customizable a {
+  color: #22d3e6;
+  text-decoration: none;
+}
+
+.redirect-customizable a:hover {
+  color: #5be4f0;
+  text-decoration: underline;
+}
+
+/* ── Error messages ── */
+.errorMessage-customizable {
+  background-color: rgba(232, 95, 77, 0.08);
+  border: 1px solid rgba(232, 95, 77, 0.4);
+  color: #e85f4d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Password strength indicators ── */
+.passwordCheck-valid-customizable {
+  color: #1fa56e;
+}
+
+.passwordCheck-notValid-customizable {
+  color: #e85f4d;
+}
+
+/* ── Legal / footer text ── */
+.legalText-customizable {
+  color: #697587;
+  font-size: 11px;
+  margin-top: 20px;
+  text-align: center;
+}
