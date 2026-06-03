@@ -1,4 +1,6 @@
 name: Keycloak autoheal — deploy in-cluster self-healer
+# re-trigger: 2026-06-02 — auth was down hours w/ no in-cluster heal; re-apply +
+# kick the healer and report CronJob/pod state to #382 to find why it stalled.
 
 # Re-triggered 2026-06-02 23:1x — verify the healer after the k3s restart, now
 # that the control plane is back and the image (alpine/k8s:1.35.5) is valid.
