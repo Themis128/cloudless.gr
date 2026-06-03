@@ -96,7 +96,7 @@ src/
 │   │   │   ├── [id]/page.tsx     ← Product detail + JSON-LD
 │   │   │   └── success/          ← Order confirmation page
 │   │   ├── contact/              ← Contact form (SES + Slack + HubSpot + Notion)
-│   │   ├── auth/                 ← Login · Signup · Forgot Password (Cognito)
+│   │   ├── auth/                 ← Login · Signup · Forgot Password (Keycloak + next-auth)
 │   │   ├── dashboard/            ← Customer portal (auth-protected)
 │   │   │   ├── page.tsx          ← Personalized overview
 │   │   │   ├── profile/          ← Edit name, company, phone
@@ -112,7 +112,7 @@ src/
 │   │       ├── notion/           ← Notion DB explorer (blog, docs, tasks, projects)
 │   │       ├── notifications/    ← Slack test panel
 │   │       ├── settings/         ← App config viewer
-│   │       └── users/            ← Cognito user management
+│   │       └── users/            ← Keycloak user management
 │   └── api/                      ← API Routes (server-only)
 │       ├── contact/              ← POST: SES + Slack + HubSpot + Notion
 │       ├── checkout/             ← POST: Stripe checkout session
@@ -143,7 +143,7 @@ src/
 │           ├── notion/           ← Notion DB queries: blog, docs, tasks, projects, submissions
 │           ├── ops/errors/       ← Sentry issues
 │           ├── orders/           ← Stripe orders summary
-│           └── users/            ← Cognito user list
+│           └── users/            ← Keycloak user list
 │
 ├── components/                   ← Shared UI components
 │   ├── Navbar.tsx
@@ -164,7 +164,7 @@ src/
 │       └── AddToCartButton.tsx
 │
 ├── context/
-│   ├── AuthContext.tsx            ← Cognito auth state + useAuth() hook
+│   ├── AuthContext.tsx            ← Auth state (next-auth session) + useAuth() hook
 │   ├── CartContext.tsx            ← Shopping cart (useReducer, in-memory)
 │   └── CookieConsentContext.tsx
 │
@@ -221,8 +221,9 @@ src/
 | `SES_FROM_EMAIL` | String | All outbound emails |
 | `SES_TO_EMAIL` | String | Contact form recipient |
 | `AWS_SES_REGION` | String | SES client config |
-| `COGNITO_USER_POOL_ID` | String | API JWT verification |
-| `COGNITO_CLIENT_ID` | String | API JWT verification |
+| `KEYCLOAK_ISSUER` | String | Keycloak realm URL (JWKS source) |
+| `KEYCLOAK_CLIENT_ID` | String | Keycloak app client (JWT aud) |
+| `KEYCLOAK_CLIENT_SECRET` | SecureString | Keycloak app client secret |
 | `SLACK_BOT_TOKEN` | SecureString | Slack API calls |
 | `SLACK_SIGNING_SECRET` | SecureString | Inbound Slack verification |
 | `SLACK_WEBHOOK_URL` | SecureString | Outbound Slack notifications |
@@ -242,8 +243,7 @@ src/
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | `https://cloudless.gr` |
 | `NEXT_PUBLIC_STAGE` | `production` |
-| `NEXT_PUBLIC_COGNITO_USER_POOL_ID` | `us-east-1_JQWwFbO9a` |
-| `NEXT_PUBLIC_COGNITO_CLIENT_ID` | `2qq6i24oc48391cmuv4kfl1rm2` |
+| `NEXT_PUBLIC_KEYCLOAK_ISSUER` | `https://auth.cloudless.gr/realms/master` |
 | `NOTION_BLOG_DB_ID` | (Notion DB ID — non-secret) |
 | `NOTION_SUBMISSIONS_DB_ID` | (Notion DB ID — non-secret) |
 | `NOTION_DOCS_DB_ID` | (Notion DB ID — non-secret) |
@@ -256,37 +256,42 @@ src/
 ## 5. Authentication & Authorization
 
 ```
-Browser (Amplify v6)
+Browser
       │
-      │  signIn(email, password)
+      │  click "Sign in" → redirect to Keycloak hosted UI
       ▼
-AWS Cognito User Pool (us-east-1_JQWwFbO9a)
+Keycloak (auth.cloudless.gr)  —  Authorization Code + PKCE
       │
-      │  JWT tokens (ID + Access + Refresh)
+      │  code → /api/auth/callback/keycloak
+      ▼
+next-auth v5 (src/lib/auth.ts)
+      │  exchanges code → access_token + id_token + refresh_token
+      │  stores in signed+encrypted session cookie
       ▼
 AuthContext.tsx  ──► useAuth() hook everywhere
 
-User Groups:
+User Groups (groups claim in id_token):
   - (none)  → regular user → /dashboard
   - admin   → /admin + /dashboard
 
 Page Route Protection (src/proxy.ts middleware):
   - All requests to /dashboard/* and /admin/* without a valid
-    Cognito cookie are redirected to /auth/login server-side.
+    next-auth session cookie are redirected to /auth/login server-side.
   - Locale-prefixed paths (e.g. /en/dashboard, /fr/admin/orders) are
     normalized before auth checks, so localized routes follow the same
     protection rules.
-  - Admin paths with a valid cookie but no admin group are
+  - Admin paths with a valid session but no admin group are
     redirected to /dashboard (with locale preserved).
 
 API Route Protection (src/lib/api-auth.ts):
   requireAuth(req)   → 401 if missing/invalid JWT
   requireAdmin(req)  → 401/403 if not admin group
+  Provider: Keycloak by default; Cognito when COGNITO_ISSUER is set.
 
 JWT Verification (JWKS · RS256):
-  - Issuer:   https://cognito-idp.us-east-1.amazonaws.com/<pool>
-  - Audience: COGNITO_CLIENT_ID (rejects tokens for other apps)
-  - token_use: "id" required (access tokens explicitly rejected)
+  - Issuer:   KEYCLOAK_ISSUER or COGNITO_ISSUER
+  - Audience: KEYCLOAK_CLIENT_ID or COGNITO_CLIENT_ID
+  - Group membership: groups claim (Keycloak) or cognito:groups (Cognito)
   - Key rotation handled automatically (jose in-process JWKS cache)
 ```
 
@@ -315,7 +320,7 @@ graph TB
         UI["Next.js App<br/>React 19 + Tailwind 4"]
         SW["Service Worker<br/>PWA / Offline"]
         Cart["CartContext<br/>(in-memory)"]
-        Auth["AuthContext<br/>(Cognito Amplify v6)"]
+        Auth["AuthContext<br/>(next-auth v5 / Keycloak)"]
     end
 
     subgraph Routes["📡 API Routes (Lambda)"]
@@ -333,7 +338,7 @@ graph TB
     end
 
     subgraph AWS["☁️ AWS (us-east-1)"]
-        Cognito["Cognito<br/>User Pool"]
+        Keycloak["Keycloak<br/>(auth.cloudless.gr)"]
         SES["SES<br/>Transactional Email"]
         SSM["SSM Parameter Store<br/>/cloudless/production/*"]
         CF["CloudFront CDN"]
@@ -374,7 +379,7 @@ graph TB
 
     CF --> Lambda
     UI --> Routes
-    Auth --> Cognito
+    Auth --> Keycloak
     Routes --> SSM
 
     RC --> SES
@@ -493,7 +498,7 @@ graph TB
 | `GET /api/admin/notion/tasks` | Notion | Tasks DB |
 | `GET /api/admin/ops/errors` | Sentry | Unresolved issues |
 | `GET /api/admin/orders` | Stripe | Orders summary |
-| `GET /api/admin/users` | Cognito | User list |
+| `GET /api/admin/users` | Keycloak | User list |
 
 ---
 
@@ -502,7 +507,8 @@ graph TB
 ```
 Integration            Status         Auth Method                    Used In
 ────────────────────────────────────────────────────────────────────────────────────
-AWS Cognito            ✅ Live         JWKS / Amplify v6              Auth, all protected routes
+Keycloak               ✅ Live         OIDC / next-auth v5            Auth, all protected routes
+AWS Cognito            🔶 Optional     OIDC (when COGNITO_ISSUER set) Auth fallback (serverless path)
 AWS SES                ✅ Live         IAM (Lambda role)              Contact, subscribe, webhooks
 AWS SSM                ✅ Live         IAM (Lambda role)              All API routes (secrets)
 Stripe                 ✅ Live         Secret key (SSM)               Store, checkout, webhooks
@@ -543,10 +549,11 @@ All modules live in `src/lib/`. They are **server-side only** unless noted.
 
 | File | Purpose |
 |---|---|
-| `ssm-config.ts` | Loads all secrets from SSM (5-min TTL cache, singleton `SSMClient`, stale-cache fallback on error). Validates `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID` as required. `SSM_PREFIX` uses `||` so an empty string falls back to `/cloudless/production`. |
+| `ssm-config.ts` | Loads all secrets from SSM (5-min TTL cache, singleton `SSMClient`, stale-cache fallback on error). Validates `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as required. `SSM_PREFIX` uses `||` so an empty string falls back to `/cloudless/production`. |
 | `integrations.ts` | Reads integration keys from env. Provides `isConfigured(...keys)` guard. |
-| `api-auth.ts` | `requireAuth()` / `requireAdmin()` — RS256 JWT verification against Cognito JWKS; enforces issuer, audience (client ID), and `token_use: "id"`. |
-| `amplify-config.ts` | Configures Amplify v6 Cognito client (singleton, client-side). |
+| `auth.ts` | next-auth v5 configuration — provider-agnostic (Keycloak default; Cognito when `COGNITO_ISSUER` is set). Handles token refresh and RP-Initiated Logout. |
+| `api-auth.ts` | `requireAuth()` / `requireAdmin()` — RS256 JWT verification against the active provider's JWKS; enforces issuer, audience (client ID), and group membership claims. |
+| `keycloak-auth.ts` | Keycloak auth adapter — implements the `AuthContext` interface using next-auth `signIn`/`signOut`/`getSession`. |
 
 ### Email
 
@@ -625,7 +632,7 @@ All modules live in `src/lib/`. They are **server-side only** unless noted.
 | `server-locale.ts` | `getServerLocale()` — reads `NEXT_LOCALE` cookie server-side. |
 | `use-locale.ts` | `useCurrentLocale()` hook for client components. |
 | `structured-data.ts` | JSON-LD schemas: Organization, BreadcrumbList, FAQPage, Product, BlogPosting. |
-| `fetch-with-auth.ts` | `fetchWithAuth()` — adds Cognito JWT to requests from client components. |
+| `fetch-with-auth.ts` | `fetchWithAuth()` — adds next-auth `idToken` as Bearer header to authenticated API requests from client components. |
 | `sound-effects.ts` | Browser audio effects (UI easter eggs). |
 
 ---
@@ -799,7 +806,7 @@ pnpm test:e2e      # Playwright E2E
 | `e2e/*.spec.ts` | Full browser flows via Playwright + axe-core accessibility |
 
 ### Key testing rules
-- AWS services (SES, SSM, Cognito) are mocked in unit tests
+- AWS services (SES, SSM) are mocked in unit tests
 - `resetSsmCache()` + `vi.stubEnv()` pattern for per-test config
 - `NODE_ENV=test` skips SSM entirely — reads from `process.env`
 
@@ -872,7 +879,7 @@ The analysis runs **in addition to** the following static-analysis workflows def
 ### ✅ Fully Live
 
 - Next.js app deployed on AWS Lambda via SST v4
-- Cognito auth (login, signup, forgot password, admin group)
+- Keycloak + next-auth v5 (login, signup, forgot password, admin group)
 - Stripe store, checkout, subscriptions, webhooks
 - AWS SES email (contact form, order confirmation, newsletter)
 - SES suppression list (unsubscribe)
