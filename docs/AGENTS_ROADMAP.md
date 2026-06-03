@@ -53,7 +53,7 @@ Detail: see [`docs/ANTHROPIC.md`](ANTHROPIC.md#tools-phase-2a-of-docsagents_road
 
 Guardrails:
 
-- Auth required (Cognito ID token via Bearer). Email is forced to the authenticated user's email — the model cannot override it.
+- Auth required (Bearer JWT — authenticated user session). Email is forced to the authenticated user's email — the model cannot override it.
 - Rate-limited 5 / 10 min per IP for both propose and confirm.
 - Re-checks availability at confirm time (409 if slot no longer free).
 

@@ -166,7 +166,7 @@ fields @timestamp, @message
 
 ## Admin AI Routes
 
-All require a valid Cognito JWT with the `admin` group. Return 503 when the API key is not configured.
+All require a valid admin session or Bearer JWT with the `admin` group. Return 503 when the API key is not configured.
 
 ### `POST /api/admin/ai/copy`
 

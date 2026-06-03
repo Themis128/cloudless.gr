@@ -65,7 +65,7 @@ The admin panel gains a **"Marketing Hub"** — a set of new sections alongside 
 ```
 Admin Browser
     │
-    ├── fetchWithAuth() ── Cognito JWT ──► /api/admin/campaigns/**
+    ├── fetchWithAuth() ── Bearer JWT ──► /api/admin/campaigns/**
     │                                           │
     │                                    lib/campaigns/
     │                                    ├── meta.ts         → Meta Marketing API v19

@@ -37,7 +37,7 @@ Fixed critical security vulnerabilities in user and admin API endpoints by addin
 **Solution:**
 - Added `requireAdmin()` check to verify:
   1. User has valid JWT token
-  2. User is in `admin` group (via `cognito:groups` claim)
+  2. User is in `admin` group (via `groups` / `cognito:groups` claim)
 - Returns 401 if no token, 403 if not admin
 - Frontend updated to send JWT tokens
 
@@ -67,7 +67,7 @@ Server-side authentication helper with utilities:
 ### `src/lib/fetch-with-auth.ts`
 Client-side fetch helper:
 - `fetchWithAuth()` - Automatically adds JWT to requests
-- Retrieves token from Amplify session
+- Retrieves token from auth session
 - Falls back to unauthenticated request if needed
 
 ## Frontend Changes
@@ -108,7 +108,7 @@ The JWT token is automatically included in the Authorization header.
 
 1. **Server-side validation** - JWT verified on backend, not client
 2. **User ownership** - Can only access own data (email from JWT)
-3. **Admin verification** - Cognito groups checked for admin role
+3. **Admin verification** - `admin` group claim checked for admin role
 4. **Token expiry** - Expired tokens rejected
 5. **Consistent headers** - Authorization header pattern (Bearer scheme)
 6. **Fallback handling** - Graceful degradation if auth fails

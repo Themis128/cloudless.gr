@@ -11,7 +11,7 @@ Cloudless uses ActiveCampaign for email campaign management, contact lists, and 
 ```
 Admin Browser
     │
-    └── fetchWithAuth() ── Cognito JWT ──► /api/admin/email/**
+    └── fetchWithAuth() ── Bearer JWT ──► /api/admin/email/**
                                                 │
                                         src/lib/activecampaign.ts
                                                 │

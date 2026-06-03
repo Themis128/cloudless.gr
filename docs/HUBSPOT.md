@@ -454,7 +454,7 @@ Deals with no `amount` contribute `0` to the value totals. Returns zeroed stats 
 
 ### Pipeline API Routes
 
-All pipeline routes require a valid Cognito admin JWT (checked by `requireAdmin`) and return `503` when HubSpot is not configured.
+All pipeline routes require a valid admin session or Bearer JWT (checked by `requireAdmin`) and return `503` when HubSpot is not configured.
 
 | Route | Method | Description |
 |---|---|---|
