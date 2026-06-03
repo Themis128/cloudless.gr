@@ -164,6 +164,32 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
       };
       expect(isAdmin(decoded)).toBe(true);
     });
+
+    it("returns true when user is in the Cognito admin group (cognito:groups)", async () => {
+      const { isAdmin } = await import("@/lib/api-auth");
+      const decoded = {
+        sub: "u",
+        aud: "a",
+        iss: "i",
+        iat: 0,
+        exp: 9999999999,
+        "cognito:groups": ["users", "admin"],
+      };
+      expect(isAdmin(decoded)).toBe(true);
+    });
+
+    it("returns false for a non-admin Cognito group", async () => {
+      const { isAdmin } = await import("@/lib/api-auth");
+      const decoded = {
+        sub: "u",
+        aud: "a",
+        iss: "i",
+        iat: 0,
+        exp: 9999999999,
+        "cognito:groups": ["users"],
+      };
+      expect(isAdmin(decoded)).toBe(false);
+    });
   });
 
   describe("requireAuth() — Bearer token path", () => {

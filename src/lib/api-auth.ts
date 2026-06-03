@@ -17,19 +17,28 @@ import { auth } from "@/lib/auth";
  * realm role (realm_access.roles).
  */
 
-function getKcIssuer(): string {
+// Provider-agnostic: Cognito when configured, else Keycloak. Both are OIDC.
+const IS_COGNITO = !!process.env.COGNITO_ISSUER;
+
+function getIssuer(): string {
   return (
+    process.env.COGNITO_ISSUER ??
     process.env.KEYCLOAK_ISSUER ??
     process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ??
     ""
   ).replace(/\/+$/, "");
 }
 
+/** JWKS URL for the active provider (Cognito vs Keycloak path differs). */
+function getCertsUrl(issuer: string): string {
+  return IS_COGNITO ? `${issuer}/.well-known/jwks.json` : `${issuer}/protocol/openid-connect/certs`;
+}
+
 let jwksCache: ReturnType<typeof createRemoteJWKSet> | ReturnType<typeof createLocalJWKSet> | null | undefined;
 
 function getJWKS() {
   if (jwksCache !== undefined) return jwksCache;
-  const issuer = getKcIssuer();
+  const issuer = getIssuer();
   if (!issuer) { jwksCache = null; return null; }
   const raw = process.env.KEYCLOAK_JWKS_JSON;
   if (raw) {
@@ -42,9 +51,7 @@ function getJWKS() {
       // fall through to remote
     }
   }
-  jwksCache = createRemoteJWKSet(
-    new URL(`${issuer}/protocol/openid-connect/certs`),
-  );
+  jwksCache = createRemoteJWKSet(new URL(getCertsUrl(issuer)));
   return jwksCache;
 }
 
@@ -63,6 +70,8 @@ export interface DecodedToken {
   iss?: string;
   aud?: string | string[];
   groups?: string[];
+  /** Cognito conveys group membership under this claim. */
+  "cognito:groups"?: string[];
   realm_access?: { roles?: string[] };
 }
 
@@ -108,7 +117,7 @@ async function readSessionCookie(): Promise<DecodedToken | null> {
  */
 export async function verifyToken(token: string): Promise<DecodedToken | null> {
   const jwks = getJWKS();
-  const issuer = getKcIssuer();
+  const issuer = getIssuer();
   if (jwks) {
     try {
       const { payload } = await jwtVerify(token, jwks, {
@@ -145,7 +154,8 @@ function decodeTokenUnverified(token: string): DecodedToken | null {
  */
 export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
   if (!decoded) return false;
-  const groups = decoded.groups ?? [];
+  // Group membership: Keycloak `groups` or Cognito `cognito:groups`.
+  const groups = [...(decoded.groups ?? []), ...(decoded["cognito:groups"] ?? [])];
   if (groups.includes("admin")) return true;
   const roles = decoded.realm_access?.roles ?? [];
   return roles.includes("admin") || roles.includes("realm:admin");
