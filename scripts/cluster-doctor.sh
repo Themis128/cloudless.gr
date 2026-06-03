@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# triggered: 2026-06-03 session saJbZ — diagnose Pi 502 / runner offline cascade
 #
 # cluster-doctor.sh — comprehensive read-only diagnostics for the omv k3s cluster.
 #
