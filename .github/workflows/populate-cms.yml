@@ -1,0 +1,81 @@
+name: Populate Notion CMS
+
+# Seeds all 4 Notion CMS databases (Testimonials, Case Studies, Services, FAQs)
+# from the static fallback arrays in scripts/populate-cms.mjs.
+# Idempotent — safe to run multiple times; existing entries are skipped.
+#
+# Trigger manually from the Actions tab whenever the Notion DBs need seeding
+# (e.g. after a new Notion workspace is set up or DB IDs change in SSM).
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  seed:
+    name: Seed Notion CMS databases
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write   # OIDC → AWS SSM for NOTION_API_KEY
+      issues: write     # post result to tracking issue #382
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Fetch NOTION_API_KEY from SSM
+        id: ssm
+        run: |
+          KEY=$(aws ssm get-parameter \
+            --name "/cloudless/production/NOTION_API_KEY" \
+            --with-decryption \
+            --query "Parameter.Value" \
+            --output text 2>/dev/null || echo "")
+          echo "::add-mask::$KEY"
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Seed databases
+        id: seed
+        if: steps.ssm.outputs.key != ''
+        env:
+          NOTION_API_KEY: ${{ steps.ssm.outputs.key }}
+        run: |
+          node scripts/populate-cms.mjs 2>&1 | tee /tmp/populate-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Post result to tracking issue #382
+        if: always() && steps.ssm.outputs.key != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          OUTPUT=$(cat /tmp/populate-output.txt 2>/dev/null || echo "(no output)")
+          STATUS="${{ steps.seed.outcome }}"
+          ICON=$([ "$STATUS" = "success" ] && echo "✅" || echo "❌")
+          BODY="${ICON} **Notion CMS Populate — $(date -u +%Y-%m-%d)**
+
+          \`\`\`
+          ${OUTPUT}
+          \`\`\`
+
+          *Run:* \`${{ github.run_id }}\` — triggered by \`${{ github.actor }}\`"
+
+          gh api repos/${{ github.repository }}/issues/382/comments \
+            -f body="$BODY" \
+            -H "Accept: application/vnd.github+json"
+
+      - name: Skip (API key absent)
+        if: steps.ssm.outputs.key == ''
+        run: echo "NOTION_API_KEY not in SSM — skipping seed."
