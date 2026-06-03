@@ -267,6 +267,21 @@ export default {
             "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
           ],
         },
+        {
+          // Admin Users page (/api/admin/users) manages Cognito accounts via the
+          // AWS SDK: list users, read group membership, enable/disable, and
+          // promote/demote (admin group). Scoped to this pool only. Without
+          // these the route 500s with AccessDenied in Cognito production.
+          actions: [
+            "cognito-idp:ListUsers",
+            "cognito-idp:AdminListGroupsForUser",
+            "cognito-idp:AdminEnableUser",
+            "cognito-idp:AdminDisableUser",
+            "cognito-idp:AdminAddUserToGroup",
+            "cognito-idp:AdminRemoveUserFromGroup",
+          ],
+          resources: [userPool.arn],
+        },
       ],
       warm: isProd ? 5 : 0,
       server: {
