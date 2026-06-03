@@ -171,7 +171,16 @@ const analyses = [];
 for (const job of failedJobs.slice(0, 3)) { // cap at 3 jobs
   console.log(`Fetching logs for job: ${job.name} (${job.id})`);
   const logs = await getJobLogs(job.id);
-  const analysis = await analyzeFailure(job.name, logs);
+  let analysis;
+  try {
+    analysis = await analyzeFailure(job.name, logs);
+  } catch (e) {
+    if (e?.status === 401 || e?.type === "authentication_error") {
+      console.warn("ANTHROPIC_API_KEY is invalid or expired — skipping AI analysis.");
+      process.exit(0);
+    }
+    throw e;
+  }
   analyses.push({ name: job.name, url: job.html_url, analysis });
 }
 
