@@ -4,6 +4,7 @@ cloudless.gr uses Claude on two distinct surfaces with different backends:
 
 1. **Public chatbot agent** — `ChatWidget` on every page; calls `/api/chat`. Backed by **AWS Bedrock Converse API** (IAM auth, no API key) with a tool-use loop and three tools (`lookup_product`, `check_calendar_availability`, `book_slot`). The final response is delivered as SSE so the widget keeps its existing event handling.
 2. **Admin AI tools** — copy generation, campaign strategy, audience targeting, and report insights under `/api/admin/ai/*`. Uses the **Anthropic Messages API** directly via `src/lib/anthropic.ts`.
+3. **Admin assistant** — multi-tool chat agent on `/admin/assistant`; calls `/api/admin/ai/assistant`. Tool-use loop (max 4 iterations) with `search_notion`, `get_recent_orders`, `draft_email` tools. See [Phase 2c in AGENTS_ROADMAP.md](AGENTS_ROADMAP.md).
 
 > **Status:** `/api/chat` returns 503 when `AccessDeniedException` is thrown by Bedrock (IAM misconfiguration) or 502 on transient failures. Admin AI routes return 503 when `ANTHROPIC_API_KEY` is absent. The rest of the site is unaffected.
 >
