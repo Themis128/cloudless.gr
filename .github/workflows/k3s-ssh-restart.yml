@@ -17,8 +17,10 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # If OMV_SSH_KEY is not set, the SSH step will fail immediately with a clear
 # message; set the secret and re-trigger.
 #
-# Re-triggered 2026-06-02 22:5x — omv control plane flapping (6443 connection
-# refused in cluster-doctor 22:58), Keycloak 503, new keycloak pod not ready.
+# Re-triggered 2026-06-03 00:1x — omv control plane DOWN: apiserver 6443
+# unreachable (autoheal deploy stuck on "wait for cluster API"), and Cloudflare
+# returns 530 for auth/pi-origin/grafana (all omv-fronted services). Lambda
+# cloudless.gr unaffected. SSH-restart k3s and wait for the apiserver.
 
 on:
   push:
