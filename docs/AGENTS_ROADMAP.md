@@ -99,9 +99,9 @@ On every PR open / push that touches `src/**` or root config files, a workflow d
 
 Implementation: `.github/workflows/pr-review.yml` + `scripts/pr-review.mjs`. Anthropic key fetched from SSM via the existing OIDC role — no new secrets needed. Skipped for `dependabot/*` and `revert/*` branches. Default model: `claude-haiku-4-5` (override with `REVIEW_MODEL` env var). Cost: ~$0.02–0.10 per PR. Use `pr-review-debug` agent to tune.
 
-### 4b — Failing-CI babysitter
+### 4b — Failing-CI babysitter — SHIPPED
 
-When a workflow fails, an agent investigates the logs and posts a comment summarizing the cause and a suggested fix. Replaces ~50% of "the CI is red, why?" Slack pings.
+On CI/Deploy failure a `workflow_run` triggers `ci-babysitter.yml` which fetches failed job logs (capped at 40k chars), calls Claude Haiku for root-cause analysis (root cause + fix + confidence), and posts a comment to the triggering PR or to tracking issue #382 if run on main. Implementation: `scripts/ci-babysitter.mjs` + `.github/workflows/ci-babysitter.yml`. Uses the same OIDC → ANTHROPIC_API_KEY SSM pattern as the PR review agent. Cost: ~$0.02–0.08 per failure.
 
 ### 4c — Auto-cleanup of stale gates
 
