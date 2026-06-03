@@ -34,14 +34,28 @@ vi.mock("jose", async () => {
 
 vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
   CognitoIdentityProviderClient: class {
-    send(cmd: unknown) { return cognitoSendMock(cmd); }
+    send(cmd: unknown) {
+      return cognitoSendMock(cmd);
+    }
   },
-  ListUsersCommand: class { constructor(public input: unknown) {} },
-  AdminDisableUserCommand: class { constructor(public input: unknown) {} },
-  AdminEnableUserCommand: class { constructor(public input: unknown) {} },
-  AdminAddUserToGroupCommand: class { constructor(public input: unknown) {} },
-  AdminRemoveUserFromGroupCommand: class { constructor(public input: unknown) {} },
-  AdminListGroupsForUserCommand: class { constructor(public input: unknown) {} },
+  ListUsersCommand: class {
+    constructor(public input: unknown) {}
+  },
+  AdminDisableUserCommand: class {
+    constructor(public input: unknown) {}
+  },
+  AdminEnableUserCommand: class {
+    constructor(public input: unknown) {}
+  },
+  AdminAddUserToGroupCommand: class {
+    constructor(public input: unknown) {}
+  },
+  AdminRemoveUserFromGroupCommand: class {
+    constructor(public input: unknown) {}
+  },
+  AdminListGroupsForUserCommand: class {
+    constructor(public input: unknown) {}
+  },
 }));
 
 vi.mock("@/lib/stripe", () => ({
@@ -61,7 +75,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "test-client-id",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -89,29 +103,52 @@ function unauthReq(url: string): NextRequest {
 // ---------------------------------------------------------------------------
 describe("GET /api/admin/users", () => {
   const kcUsers = [
-    { id: "uuid-1", username: "u1", email: "user@test.com",
-      firstName: "Test", lastName: "User", emailVerified: true,
-      enabled: true, createdTimestamp: Date.now() },
-    { id: "uuid-admin", username: "adm", email: "admin@cloudless.gr",
-      emailVerified: true, enabled: true, createdTimestamp: Date.now() },
+    {
+      id: "uuid-1",
+      username: "u1",
+      email: "user@test.com",
+      firstName: "Test",
+      lastName: "User",
+      emailVerified: true,
+      enabled: true,
+      createdTimestamp: Date.now(),
+    },
+    {
+      id: "uuid-admin",
+      username: "adm",
+      email: "admin@cloudless.gr",
+      emailVerified: true,
+      enabled: true,
+      createdTimestamp: Date.now(),
+    },
   ];
 
   function mockFetch(adminGroups: string[] = []) {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      if (String(url).includes("/token")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
-      }
-      if (/\/users\?/.exec(String(url))) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUsers) });
-      }
-      if (String(url).includes("/groups")) {
-        const isAdmin = String(url).includes("uuid-admin");
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(
-          isAdmin && adminGroups.length ? [{ id: "g1", name: adminGroups[0] }] : []
-        )});
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("/token")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ access_token: "tok" }),
+          });
+        }
+        if (/\/users\?/.exec(String(url))) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUsers) });
+        }
+        if (String(url).includes("/groups")) {
+          const isAdmin = String(url).includes("uuid-admin");
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve(
+                isAdmin && adminGroups.length ? [{ id: "g1", name: adminGroups[0] }] : []
+              ),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      })
+    );
   }
 
   beforeEach(() => {
@@ -173,19 +210,33 @@ describe("GET /api/admin/users", () => {
 describe("POST /api/admin/users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-import api-auth under the mocked `jose` (setup.ts imports it first,
+    // binding the real jose). Without this, a filtered/standalone run skips the
+    // GET block's resetModules, so verifyToken uses the real jwtVerify → 401 on
+    // the fake-signed test token. Mirrors the GET block.
+    vi.resetModules();
     process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
     process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
     process.env.KEYCLOAK_ADMIN_USER = "admin";
     process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      if (String(url).includes("/token")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
-      }
-      if (String(url).includes("/groups")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "grp-1", name: "admin" }]) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("/token")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ access_token: "tok" }),
+          });
+        }
+        if (String(url).includes("/groups")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([{ id: "grp-1", name: "admin" }]),
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      })
+    );
   });
 
   afterEach(() => {
@@ -202,7 +253,9 @@ describe("POST /api/admin/users", () => {
 
   it("returns 400 when action or username missing", async () => {
     const { POST } = await import("@/app/api/admin/users/route");
-    const res = await POST(adminReq("http://localhost/api/admin/users", { method: "POST", body: { action: "disable" } }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/users", { method: "POST", body: { action: "disable" } })
+    );
     const data = await res.json();
     expect(res.status).toBe(400);
     expect(data.error).toMatch(/required/i);
@@ -210,10 +263,12 @@ describe("POST /api/admin/users", () => {
 
   it("disables a user", async () => {
     const { POST } = await import("@/app/api/admin/users/route");
-    const res = await POST(adminReq("http://localhost/api/admin/users", {
-      method: "POST",
-      body: { action: "disable", username: "00000000-0000-0000-0000-000000000001" },
-    }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/users", {
+        method: "POST",
+        body: { action: "disable", username: "00000000-0000-0000-0000-000000000001" },
+      })
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.success).toBe(true);
@@ -221,10 +276,12 @@ describe("POST /api/admin/users", () => {
 
   it("promotes user to admin", async () => {
     const { POST } = await import("@/app/api/admin/users/route");
-    const res = await POST(adminReq("http://localhost/api/admin/users", {
-      method: "POST",
-      body: { action: "promote", username: "00000000-0000-0000-0000-000000000001" },
-    }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/users", {
+        method: "POST",
+        body: { action: "promote", username: "00000000-0000-0000-0000-000000000001" },
+      })
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.message).toMatch(/admin/i);
@@ -232,10 +289,12 @@ describe("POST /api/admin/users", () => {
 
   it("returns 400 for unknown action", async () => {
     const { POST } = await import("@/app/api/admin/users/route");
-    const res = await POST(adminReq("http://localhost/api/admin/users", {
-      method: "POST",
-      body: { action: "nuke", username: "00000000-0000-0000-0000-000000000001" },
-    }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/users", {
+        method: "POST",
+        body: { action: "nuke", username: "00000000-0000-0000-0000-000000000001" },
+      })
+    );
     const data = await res.json();
     expect(res.status).toBe(400);
     expect(data.error).toMatch(/unknown action/i);
@@ -260,17 +319,21 @@ describe("GET /api/admin/orders", () => {
       checkout: {
         sessions: {
           list: vi.fn().mockResolvedValue({
-            data: [{
-              id: "cs_test_1",
-              customer_email: "buyer@test.com",
-              customer_details: { email: "buyer@test.com" },
-              amount_total: 9900,
-              currency: "eur",
-              payment_status: "paid",
-              mode: "payment",
-              line_items: { data: [{ description: "AI Package", quantity: 1, amount_total: 9900 }] },
-              created: Math.floor(Date.now() / 1000),
-            }],
+            data: [
+              {
+                id: "cs_test_1",
+                customer_email: "buyer@test.com",
+                customer_details: { email: "buyer@test.com" },
+                amount_total: 9900,
+                currency: "eur",
+                payment_status: "paid",
+                mode: "payment",
+                line_items: {
+                  data: [{ description: "AI Package", quantity: 1, amount_total: 9900 }],
+                },
+                created: Math.floor(Date.now() / 1000),
+              },
+            ],
           }),
         },
       },
