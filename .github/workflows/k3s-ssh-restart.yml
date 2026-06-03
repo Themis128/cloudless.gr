@@ -23,6 +23,9 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # cloudless.gr unaffected. SSH-restart k3s and wait for the apiserver.
 # Re-triggered 2026-06-03T01:10Z — cluster still unreachable (i/o timeout on 6443)
 # after 00:08Z outage; all diagnostic workflows timed out; SSH-restart again.
+# Re-triggered 2026-06-03T01:13Z — prior SSH restart failed: SSH handshake timeout
+# on port 22 despite TCP connection accepted; port 6443 never came back after 90s.
+# Pi may be under extreme load; retrying. If same failure, Pi needs power cycle.
 
 on:
   push:
