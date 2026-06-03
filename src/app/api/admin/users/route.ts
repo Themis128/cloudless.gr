@@ -321,7 +321,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "action and username required" }, { status: 400 });
   }
 
+  const ALLOWED_ACTIONS = new Set(["enable", "disable", "promote", "demote"]);
+  if (!ALLOWED_ACTIONS.has(action)) {
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  }
+
   const cognitoIssuer = process.env.COGNITO_ISSUER ?? "";
+
+  // Cognito usernames: alphanumeric, hyphens, dots, +, @, underscore; max 128 chars.
+  if (cognitoIssuer && !/^[\w.@+\-]{1,128}$/.test(username)) {
+    return NextResponse.json({ error: "Invalid username" }, { status: 400 });
+  }
 
   try {
     if (cognitoIssuer) {
@@ -339,7 +349,7 @@ export async function POST(request: NextRequest) {
     const status = (err as { status?: number }).status ?? 500;
     console.error("Failed to modify user:", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to modify user" },
+      { error: status < 500 && err instanceof Error ? err.message : "Failed to modify user" },
       { status }
     );
   }
