@@ -57,7 +57,10 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error("[subscribe] Internal error:", error instanceof Error ? error.name : "UnknownError");
+    console.error(
+      "[subscribe] Internal error:",
+      error instanceof Error ? error.name : "UnknownError"
+    );
     return Response.json({ error: "Failed to subscribe. Please try again." }, { status: 500 });
   }
 }

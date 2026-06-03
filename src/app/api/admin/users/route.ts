@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
 
   const ALLOWED_ACTIONS = new Set(["enable", "disable", "promote", "demote"]);
   if (!ALLOWED_ACTIONS.has(action)) {
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
 
   const cognitoIssuer = process.env.COGNITO_ISSUER ?? "";
