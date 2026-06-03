@@ -222,7 +222,7 @@ export async function createCaseStudy(input: CaseStudyInput): Promise<string | n
   const { NOTION_CASE_STUDIES_DB_ID } = await getIntegrationsAsync();
 
   const metrics = input.metrics ?? [];
-  const id = await createPage(NOTION_CASE_STUDIES_DB_ID, {
+  const id = await createPage(NOTION_CASE_STUDIES_DB_ID!, {
     Title: { title: [{ text: { content: input.title } }] },
     Slug: { rich_text: [{ text: { content: input.slug ?? "" } }] },
     Client: { rich_text: [{ text: { content: input.client ?? "" } }] },

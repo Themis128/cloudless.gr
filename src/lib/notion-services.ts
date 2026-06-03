@@ -205,7 +205,7 @@ export async function createService(input: ServiceInput): Promise<string | null>
   const { NOTION_SERVICES_DB_ID } = await getIntegrationsAsync();
 
   const featuresText = (input.features ?? []).join("\n");
-  const id = await createPage(NOTION_SERVICES_DB_ID, {
+  const id = await createPage(NOTION_SERVICES_DB_ID!, {
     Name: { title: [{ text: { content: input.name } }] },
     Slug: { rich_text: [{ text: { content: input.slug ?? "" } }] },
     Description: { rich_text: [{ text: { content: input.description ?? "" } }] },
