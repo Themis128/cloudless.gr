@@ -36,10 +36,11 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    # Self-hosted arm64 runner. Label set `[omv, pi, build]` is unique to
-    # `omv-build` on omv-main (which has docker + USB-SSD-backed _work).
-    # The `omv` runner stays disabled to relieve SD-card contention.
-    runs-on: [self-hosted, omv, pi, build]
+    # Self-hosted arm64 runner on omv-main. `omv-build` carries labels
+    # `[self-hosted, omv, build]`; the `pi` label was dropped after a
+    # runner re-registration. `[omv, build]` correctly targets the
+    # Docker+USB-SSD-backed runner on omv-main.
+    runs-on: [self-hosted, omv, build]
     outputs:
       short_sha: ${{ steps.check_ecr.outputs.short_sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
