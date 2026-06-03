@@ -25,41 +25,34 @@ Translation dictionaries live in `src/locales/en.json` and `src/locales/el.json`
 sequenceDiagram
     participant U as User
     participant App as Next.js Client
-    participant Cognito as AWS Cognito
+    participant KC as Keycloak (auth.cloudless.gr)
 
-    U->>App: Enter email + password
-    App->>Cognito: signIn(email, password)
-    alt FORCE_CHANGE_PASSWORD
-        Cognito-->>App: Challenge
-        App->>U: Show new password form
-        U->>App: Submit new password
-        App->>Cognito: confirmSignIn(newPassword)
-    end
-    alt Unverified user
-        Cognito-->>App: UserNotConfirmedException
-        App->>U: Redirect to verify page
-    end
-    Cognito-->>App: JWT tokens
-    App->>App: Decode JWT, check cognito:groups
-    alt Admin group
+    U->>App: Click "Sign in"
+    App->>KC: Authorization Code + PKCE redirect
+    KC-->>U: Hosted login page
+    U->>KC: Enter credentials
+    KC-->>App: Authorization code → /api/auth/callback/keycloak
+    App->>KC: Exchange code for tokens
+    KC-->>App: access_token + id_token + refresh_token
+    App->>App: Decode id_token, check groups claim
+    alt admin group
         App->>U: Show admin panel
-    else Regular user
+    else regular user
         App->>U: Show dashboard
     end
 ```
 
-User authentication is powered by **AWS Cognito** via **Amplify v6**. The `AuthProvider` in `src/context/AuthContext.tsx` wraps the entire app and exposes sign-in, sign-up, sign-out, password reset, and admin detection through the `useAuth()` hook.
+User authentication is powered by **Keycloak** (self-hosted at `auth.cloudless.gr`) via **next-auth v5**. The `AuthProvider` in `src/context/AuthContext.tsx` wraps the entire app and exposes sign-in, sign-out, and admin detection through the `useAuth()` hook. The auth backend is provider-agnostic: Keycloak is the default; AWS Cognito is used when `COGNITO_ISSUER` is set (serverless path).
 
 Key features of the auth system:
 
-- Graceful configuration failure — if Cognito env vars are missing, the app sets a `configError` state instead of crashing.
-- Friendly error messages — raw Cognito exceptions (e.g. `NotAuthorizedException`, `CodeMismatchException`) are mapped to plain-language strings via `friendlyAuthError()`.
-- Sign-in edge case handling — `FORCE_CHANGE_PASSWORD` challenge, unverified users (`CONFIRM_SIGN_UP` → redirect to verify), and `UserAlreadyAuthenticatedException` (auto sign-out + retry) are all handled.
-- Password manager support — all auth forms include `autoComplete` attributes (`email`, `current-password`, `new-password`, `one-time-code`).
-- Admin detection — client-side via decoded JWT `cognito:groups` claim. Admin routes redirect non-admins to the dashboard.
+- **OIDC Authorization Code + PKCE** — login redirects to Keycloak's hosted UI; tokens are exchanged server-side and stored in an encrypted next-auth session cookie.
+- **Refresh-token rotation** — the server transparently refreshes expired access tokens before they reach API routes.
+- **RP-Initiated Logout** — sign-out calls Keycloak's end-session endpoint so the SSO session is fully terminated.
+- Admin detection — server-side via `groups` claim in the next-auth JWT (`["admin"]`). Admin routes are checked in `src/proxy.ts` middleware before rendering.
 - Route protection is **server-side** via `src/proxy.ts` middleware (all unauthenticated requests to `/dashboard` and `/admin` are redirected to login before the page renders) and additionally client-side via layout guards. Locale-prefixed routes (e.g. `/en/dashboard`, `/el/admin/orders`) are normalized before authorization checks.
 - Theme preference (`dark` / `light` / `system`) is exposed via a navbar `ThemeSwitcher` (popover on desktop, inline radios on mobile) and the dashboard settings form. Anonymous visitors persist to `localStorage["cloudless-theme-pref"]`; signed-in users also sync to `user.preferences.theme`. Selection priority: admin path (locked dark) → user preference → localStorage → route default. Cross-tab sync via the `storage` event. See `docs/design-system-v2.md` § "Theme switcher".
-- JWT hardening — `verifyToken` in `src/lib/api-auth.ts` enforces `issuer`, `audience` (Cognito client ID), and `token_use: "id"` claims so only ID tokens issued for this app are accepted.
+- JWT hardening — `api-auth.ts` validates Bearer JWTs against the active provider's JWKS endpoint, enforcing `issuer`, `audience`, and group membership claims.
 
 ## Architecture
 
@@ -84,7 +77,7 @@ graph TB
     end
 
     subgraph AWS["AWS"]
-        Cognito["Cognito Auth"]
+        Keycloak["Keycloak OIDC"]
         SES["SES Email"]
         SSM["SSM Parameter Store"]
     end
@@ -97,7 +90,7 @@ graph TB
     end
 
     UI --> Routes
-    UI --> Cognito
+    UI --> Keycloak
     Routes --> SSM
     Contact --> SES
     Contact --> Slack
@@ -125,10 +118,10 @@ src/
 │   ├── blog/               # Blog listing & [slug] detail pages
 │   ├── store/              # E-commerce store, [id] detail, success page
 │   ├── contact/page.tsx    # Contact form (AWS SES)
-│   ├── auth/               # Authentication pages (Cognito)
-│   │   ├── login/page.tsx       # Login with FORCE_CHANGE_PASSWORD support
-│   │   ├── signup/page.tsx      # Two-step: signup form → email verification
-│   │   └── forgot-password/page.tsx # Two-step: email → code + new password
+│   ├── auth/               # Authentication pages (Keycloak + next-auth)
+│   │   ├── login/page.tsx       # Login — redirects to Keycloak hosted UI
+│   │   ├── signup/page.tsx      # Sign-up — redirects to Keycloak registration
+│   │   └── forgot-password/page.tsx # Forgot password — Keycloak self-service flow
 │   ├── dashboard/          # Client dashboard (auth-protected)
 │   ├── admin/              # Admin panel (admin-group-only)
 │   ├── not-found.tsx       # Custom 404
@@ -148,9 +141,10 @@ src/
 │   └── store/              # Cart button, slide-over, grid, add-to-cart
 ├── context/
 │   ├── CartContext.tsx      # Shopping cart state (useReducer)
-│   └── AuthContext.tsx      # Cognito auth state with friendly error mapping
+│   └── AuthContext.tsx      # Auth state (next-auth session) with useAuth() hook
 └── lib/
-    ├── amplify-config.ts   # Amplify v6 Cognito configuration (singleton)
+    ├── keycloak-auth.ts    # Keycloak auth adapter (implements AuthContext interface)
+    ├── auth.ts             # next-auth v5 config (Keycloak + optional Cognito)
     ├── ssm-config.ts       # AWS SSM Parameter Store config loader
     ├── integrations.ts     # Third-party integration config (Slack tokens)
     ├── stripe.ts           # Stripe client initialization
@@ -251,8 +245,8 @@ This project uses **no `.env` files** in production. All secrets are stored in *
 |---|---|---|
 | `STRIPE_SECRET_KEY` | SecureString | Stripe API secret key |
 | `STRIPE_WEBHOOK_SECRET` | SecureString | Stripe webhook signature secret |
-| `COGNITO_USER_POOL_ID` | String | Cognito pool for JWT verification |
-| `COGNITO_CLIENT_ID` | String | Cognito app client for JWT `aud` check |
+| `KEYCLOAK_ISSUER` | String | Keycloak realm URL for JWKS verification |
+| `KEYCLOAK_CLIENT_ID` | String | Keycloak app client for JWT `aud` check |
 
 ### All SSM parameters
 
@@ -264,8 +258,9 @@ This project uses **no `.env` files** in production. All secrets are stored in *
 | `STRIPE_SECRET_KEY`      | SecureString | Stripe API secret key         |
 | `STRIPE_PUBLISHABLE_KEY` | SecureString | Stripe publishable key        |
 | `STRIPE_WEBHOOK_SECRET`  | SecureString | Stripe webhook signature       |
-| `COGNITO_USER_POOL_ID`   | String       | Cognito pool ID               |
-| `COGNITO_CLIENT_ID`      | String       | Cognito app client ID         |
+| `KEYCLOAK_ISSUER`        | String       | Keycloak realm URL            |
+| `KEYCLOAK_CLIENT_ID`     | String       | Keycloak app client ID        |
+| `KEYCLOAK_CLIENT_SECRET` | SecureString | Keycloak app client secret    |
 | `SLACK_BOT_TOKEN`        | SecureString | Slack bot OAuth token         |
 | `SLACK_SIGNING_SECRET`   | SecureString | Slack request signing secret  |
 | `SLACK_WEBHOOK_URL`      | SecureString | Slack incoming webhook URL    |
@@ -325,7 +320,7 @@ All Stripe operations use a lazy singleton from `src/lib/stripe.ts` (`getStripe(
 - Server-side price resolution only — client-submitted prices are ignored; all amounts come from the internal product catalog.
 - Quantity clamped to 1-99.
 - Origin validated against an allowlist to prevent open redirect on `success_url`/`cancel_url`.
-- If the user is authenticated (Bearer token in `Authorization` header), the checkout session is pre-filled with `customer_email` and `metadata.userId` to link the Stripe order to the Cognito account.
+- If the user is authenticated (Bearer token in `Authorization` header), the checkout session is pre-filled with `customer_email` and `metadata.userId` to link the Stripe order to the authenticated account.
 - Every session includes `metadata.source = "cloudless.gr"` for tracing.
 
 ### Webhook (`POST /api/webhooks/stripe`)
@@ -501,7 +496,7 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 - React 19.2.4
 - TypeScript 5
 - Tailwind CSS 4
-- AWS Cognito + Amplify v6 (authentication)
+- Keycloak + next-auth v5 (authentication)
 - AWS SES v2 (transactional email — contact, orders, newsletter, portal approvals)
 - AWS SSM Parameter Store (secrets)
 - Stripe (checkout & payments)
