@@ -156,7 +156,7 @@ Returns zeroed stats on API error.
 
 ## Admin API Routes
 
-All routes require a valid Cognito admin JWT. They all return `503` when ActiveCampaign is not configured.
+All routes require a valid admin session or Bearer JWT with the `admin` group. They all return `503` when ActiveCampaign is not configured.
 
 | Route | Method | Description |
 |---|---|---|
