@@ -16,11 +16,16 @@ TTL = int(os.environ.get("BACKEND_TTL_SEC", "300"))
 TIMEOUT = float(os.environ.get("UPSTREAM_TIMEOUT_SEC", "10"))
 FUNNEL_PORT = int(os.environ.get("FUNNEL_PORT", "443"))
 
+# FUNNEL_HOST env var bypasses SSM lookup entirely — set by deploy-pi-proxy.yml.
+_STATIC_HOST = os.environ.get("FUNNEL_HOST", "")
+
 _ssm = boto3.client("ssm")
 _cache = {"host": None, "exp": 0.0}
 
 
 def _get_funnel_host():
+    if _STATIC_HOST:
+        return _STATIC_HOST
     now = time.time()
     if _cache["host"] and now < _cache["exp"]:
         return _cache["host"]

@@ -47,6 +47,16 @@ jobs:
             --function-name cloudless-pi-proxy \
             --region us-east-1
 
+      - name: Set FUNNEL_HOST env var on Lambda
+        run: |
+          aws lambda update-function-configuration \
+            --function-name cloudless-pi-proxy \
+            --region us-east-1 \
+            --environment "Variables={FUNNEL_HOST=omv.tail8eb71.ts.net,FUNNEL_PORT=443}"
+          aws lambda wait function-updated \
+            --function-name cloudless-pi-proxy \
+            --region us-east-1
+
       - name: Verify deployment
         run: |
           aws lambda get-function-configuration \
