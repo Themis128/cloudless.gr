@@ -13,7 +13,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **3D:** @react-three/fiber + @react-three/drei + three.js
 - **Animation:** GSAP (ScrollTrigger) + Lenis smooth scroll
 - **Command palette:** cmdk
-- **Auth:** AWS Cognito (Amplify v6) with admin group
+- **Auth:** Keycloak + next-auth v5 (default); AWS Cognito optional (when `COGNITO_ISSUER` is set)
 - **Payments:** Stripe (webhooks, checkout)
 - **Email:** AWS SES
 - **Secrets:** AWS SSM Parameter Store (no .env files in prod)
@@ -61,9 +61,9 @@ src/
 │   │   │   ├── [id]/page.tsx    # Product detail + JSON-LD
 │   │   │   └── success/         # Order confirmation
 │   │   ├── contact/             # Contact form (SES + Slack + HubSpot + Notion)
-│   │   ├── auth/                # Login · Signup · Forgot Password (Cognito Amplify v6)
+│   │   ├── auth/                # Login · Signup · Forgot Password (Keycloak + next-auth)
 │   │   ├── dashboard/           # Customer portal (auth-protected, cyan accent)
-│   │   │   ├── profile/         # Edit name, company, phone (Cognito attributes)
+│   │   │   ├── profile/         # Edit name, company, phone
 │   │   │   ├── purchases/       # Stripe order history
 │   │   │   ├── consultations/   # Google Calendar bookings
 │   │   │   └── settings/        # Theme, language, notifications
@@ -75,7 +75,7 @@ src/
 │   │       ├── notion/          # Notion DB explorer
 │   │       ├── notifications/   # Slack test panel
 │   │       ├── settings/        # App config viewer
-│   │       └── users/           # Cognito user management
+│   │       └── users/           # Keycloak user management
 │   └── api/
 │       ├── contact/             # POST → SES + Slack + HubSpot + Notion
 │       ├── checkout/            # POST → Stripe Checkout Session
@@ -106,7 +106,7 @@ src/
 │           ├── notion/          # Blog/docs/tasks/projects/submissions/search
 │           ├── ops/errors/      # Sentry issues
 │           ├── orders/          # Stripe orders summary
-│           └── users/           # Cognito user list
+│           └── users/           # Keycloak user list
 │
 ├── components/
 │   ├── Navbar.tsx · Footer.tsx
@@ -123,15 +123,16 @@ src/
 │       ├── CartButton.tsx · AddToCartButton.tsx · ProductIcon.tsx
 │
 ├── context/
-│   ├── AuthContext.tsx           # Cognito state: signIn/signUp/signOut, admin detection, profile
+│   ├── AuthContext.tsx           # Auth state (next-auth session): signIn/signOut, admin detection, profile
 │   ├── CartContext.tsx           # Cart (useReducer, in-memory)
 │   └── CookieConsentContext.tsx
 │
 ├── lib/                         # Server + shared utilities (see ARCHITECTURE.md §9)
 │   ├── ssm-config.ts            # SSM secrets loader (5-min TTL, fails fast on required keys)
 │   ├── integrations.ts          # isConfigured() guards for all optional integrations
-│   ├── api-auth.ts              # requireAuth() / requireAdmin() — Cognito JWKS verification
-│   ├── amplify-config.ts        # Amplify v6 Cognito client (client-side singleton)
+│   ├── api-auth.ts              # requireAuth() / requireAdmin() — OIDC JWKS verification (Keycloak or Cognito)
+│   ├── auth.ts                  # next-auth v5 config — Keycloak default; Cognito when COGNITO_ISSUER set
+│   ├── keycloak-auth.ts         # Keycloak auth adapter (implements AuthContext interface)
 │   ├── email.ts                 # SES: sendEmail, sendOrderConfirmation, notifyTeam
 │   ├── ses-suppression.ts       # SES suppression list management
 │   ├── stripe.ts                # Stripe client, product/session helpers
@@ -162,7 +163,7 @@ src/
 │   ├── server-locale.ts         # getServerLocale() — reads NEXT_LOCALE cookie server-side
 │   ├── use-locale.ts            # useCurrentLocale() — client hook
 │   ├── locale-defaults.ts       # DEFAULT_LOCALE = 'en-IE' · DEFAULT_CURRENCY = 'EUR'
-│   ├── fetch-with-auth.ts       # Adds Cognito JWT to client-side API calls
+│   ├── fetch-with-auth.ts       # Adds next-auth idToken as Bearer header to client-side API calls
 │   ├── format-price.ts          # Currency formatter (imports from locale-defaults)
 │   ├── validation.ts            # isValidEmail() and other validators
 │   └── escape-html.ts           # HTML sanitiser for email bodies
@@ -193,40 +194,22 @@ __tests__/
 └── service-worker.test.tsx  # SW registration + push notification tests
 ```
 
-## Authentication (Cognito + Amplify v6)
+## Authentication (Keycloak + next-auth v5)
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant App as Next.js Client
-    participant Auth as AuthProvider
-    participant Cognito as AWS Cognito
+    participant KC as Keycloak (auth.cloudless.gr)
 
-    App->>Auth: configureAmplify() on mount
-    Auth->>Auth: Check NEXT_PUBLIC_COGNITO_* env vars
-    alt Missing env vars
-        Auth-->>App: Set configError state
-    end
-
-    U->>App: Navigate to /dashboard
-    App->>Auth: useAuth() hook check
-    alt Not authenticated
-        Auth-->>App: Redirect to /auth/login
-    end
-
-    U->>App: Submit credentials
-    App->>Cognito: signIn(email, password)
-    alt FORCE_CHANGE_PASSWORD
-        Cognito-->>App: Challenge
-        App->>U: New password form
-        U->>App: Submit new password
-        App->>Cognito: confirmSignIn(newPassword)
-    end    alt UserNotConfirmed
-        Cognito-->>App: UserNotConfirmedException
-        App->>U: Redirect /auth/signup?verify=email
-    end
-    Cognito-->>App: JWT tokens
-    App->>App: Decode JWT cognito:groups
+    U->>App: Click "Sign in"
+    App->>KC: Authorization Code + PKCE redirect
+    KC-->>U: Hosted login / registration UI
+    U->>KC: Enter credentials
+    KC-->>App: /api/auth/callback/keycloak
+    App->>KC: Exchange code for tokens
+    KC-->>App: access_token + id_token + refresh_token
+    App->>App: Decode id_token, check groups claim
     alt admin group
         App->>U: Show /admin panel
     else regular user
@@ -234,30 +217,22 @@ sequenceDiagram
     end
 ```
 
-- **User Pool:** `us-east-1_JQWwFbO9a` with App Client `2qq6i24oc48391cmuv4kfl1rm2`
-- **Env vars required:** `NEXT_PUBLIC_COGNITO_USER_POOL_ID` + `NEXT_PUBLIC_COGNITO_CLIENT_ID` (set in `.env.local`)
-- **Admin group:** `admin` — checked via JWT `cognito:groups` claim
-- **AuthProvider:** Wraps entire app in `layout.tsx`, calls `configureAmplify()` on mount with try/catch (sets `configError` state on failure instead of crashing)
-- **Route protection:** Client-side via `useAuth()` hook in dashboard/admin layouts
+- **Provider:** Keycloak (`auth.cloudless.gr`, realm `master`); AWS Cognito is an optional fallback when `COGNITO_ISSUER` is set
+- **Env vars required:** `KEYCLOAK_ISSUER` + `KEYCLOAK_CLIENT_ID` + `KEYCLOAK_CLIENT_SECRET` + `AUTH_SECRET` (see `.env.example`)
+- **Admin group:** `admin` — checked via JWT `groups` claim (Keycloak) or `cognito:groups` (Cognito)
+- **AuthProvider:** Wraps entire app in `layout.tsx`; exposes `signIn`/`signOut`/`useAuth()` via `src/context/AuthContext.tsx` + `src/lib/keycloak-auth.ts`
+- **Route protection:** Server-side via `src/proxy.ts` middleware (before the page renders) + client-side layout guards
   - `/dashboard/*` → redirects to `/auth/login` if not authenticated
   - `/admin/*` → redirects to `/dashboard` if not in admin group, `/auth/login` if not authenticated
-- **Sign-in edge cases:**
-  - `FORCE_CHANGE_PASSWORD` → handled via `confirmSignIn` challenge flow on login page
-  - `CONFIRM_SIGN_UP` → redirects unverified users to `/auth/signup?verify=email`
-  - `UserAlreadyAuthenticatedException` → auto-signs out and retries sign-in
-- **Friendly error mapping:** `friendlyAuthError()` in `AuthContext.tsx` maps raw Cognito error names (`NotAuthorizedException`, `CodeMismatchException`, `LimitExceededException`, etc.) to user-friendly messages across all auth handlers
-- **Form UX:** All auth forms include `autoComplete` attributes (`email`, `current-password`, `new-password`, `one-time-code`) for password manager integration
-- **Navbar integration:** Shows "Sign In" button when logged out, user avatar dropdown when logged in (greets by name, Dashboard, Admin Panel if admin, Sign Out)
+- **Token refresh:** next-auth transparently refreshes expired access tokens at the provider's token endpoint
+- **Logout:** RP-Initiated Logout — terminates the Keycloak SSO session, not just the local cookie
+- **Form UX:** All auth forms include `autoComplete` attributes (`email`, `current-password`, `new-password`) for password manager integration
+- **Navbar integration:** Shows "Sign In" button when logged out, user avatar dropdown when logged in (Dashboard, Admin Panel if admin, Sign Out)
 - **Color coding:** Cyan for user-facing auth, magenta for admin
-- **i18n:** All pages fully translated in 3 locales (en, el, fr) — 195 keys each
+- **i18n:** All pages fully translated in 3 locales (en, el, fr)
 - **User personalization:** AuthUser interface includes `name`, `company`, `phone`, `preferences` (theme, language, notifications)
-  - Profile data stored in Cognito standard attributes (`name`, `phone_number`) and custom attributes (`custom:company`, `custom:preferences`)
-  - `fetchUserAttributes` + `updateUserAttributes` from `aws-amplify/auth` for reading/writing
-  - Preferences stored as JSON string in `custom:preferences` custom attribute
   - `updateProfile()` and `updatePreferences()` methods exposed via `useAuth()` hook
-  - Signup form optionally collects name
   - Dashboard overview shows time-based greeting with user's name + live stats
-  - **Cognito custom attributes required:** `custom:company` (String), `custom:preferences` (String) — must be added in AWS Console
 
 ## SEO
 
