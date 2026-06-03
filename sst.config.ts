@@ -7,16 +7,21 @@ const STAGE_PRODUCTION = "production";
 /**
  * Lambda runtime environment for the Next.js site.
  *
- * Hoisted out of run() so the function stays under the cyclomatic /
- * line-count limit. Returned object is passed verbatim to
- * sst.aws.Nextjs.environment — no Pulumi inputs are wrapped here, so
- * the Output<string> for the DynamoDB table name is passed through.
+ * Provider selection: Cognito (always-up AWS) wins when configured; Keycloak
+ * is the fallback. Swap the active provider by passing/omitting the `cognito`
+ * argument — no code change required at cutover time.
  */
 function buildSiteEnvironment(
   stage: string,
   isProd: boolean,
   stripeTransactionsTableName: $util.Output<string>,
   authSecret?: $util.Output<string>,
+  cognito?: {
+    issuer: $util.Output<string>;
+    clientId: $util.Output<string>;
+    clientSecret: $util.Output<string>;
+    domain: string;
+  }
 ) {
   return {
     // next-auth requires AUTH_SECRET as an env var (reads synchronously at
@@ -29,27 +34,31 @@ function buildSiteEnvironment(
     NODE_ENV: "production",
     SSM_PREFIX: isProd ? "/cloudless/production" : `/cloudless/${stage}`,
     // AWS_REGION is set automatically by Lambda — do not override it
-    NEXT_PUBLIC_SITE_URL: isProd
-      ? "https://cloudless.gr"
-      : `https://${stage}.cloudless.gr`,
+    NEXT_PUBLIC_SITE_URL: isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`,
     NEXT_PUBLIC_STAGE: stage,
     // Carry the deploy SHA into runtime so /api/health.version reports
-    // what's actually deployed (instead of the static "0.1.0" fallback
-    // in src/app/api/health/route.ts). Used by scripts/detect-sha-drift
-    // to compare cloud actual vs SSM expected.
+    // what's actually deployed.
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
-    // Keycloak — replaces Cognito. NEXT_PUBLIC_* baked into client bundle.
-    NEXT_PUBLIC_KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
-    NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: "cloudless-app",
-    // Server-side only (admin REST API + JWT issuer for proxy.ts + next-auth provider)
-    KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
-    KEYCLOAK_CLIENT_ID: "cloudless-app",
-    KEYCLOAK_ADMIN_CLIENT_ID: "admin-cli",
-    // KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD loaded from SSM at runtime
-    // AUTH_SECRET injected from SSM at deploy time (above).
-    // KEYCLOAK_ADMIN_* loaded from SSM at runtime by ssm-config.ts.
-    // Cognito user pools deleted 2026-05-30 — no fallback env vars needed.
+    // Active auth provider — Cognito (always-up AWS) when configured, else Keycloak.
+    // NEXT_PUBLIC_AUTH_PROVIDER drives the login/signup page button label.
+    ...(cognito
+      ? {
+          COGNITO_ISSUER: cognito.issuer,
+          COGNITO_CLIENT_ID: cognito.clientId,
+          COGNITO_CLIENT_SECRET: cognito.clientSecret,
+          COGNITO_DOMAIN: cognito.domain,
+          NEXT_PUBLIC_AUTH_PROVIDER: "cognito",
+        }
+      : {
+          // Keycloak (legacy, Pi-dependent) — fallback when Cognito is not configured.
+          NEXT_PUBLIC_KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
+          NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: "cloudless-app",
+          KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
+          KEYCLOAK_CLIENT_ID: "cloudless-app",
+          KEYCLOAK_ADMIN_CLIENT_ID: "admin-cli",
+          NEXT_PUBLIC_AUTH_PROVIDER: "keycloak",
+        }),
     // Notion database IDs (non-secret, safe to inline)
     NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
     NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
@@ -57,10 +66,8 @@ function buildSiteEnvironment(
     NOTION_PROJECTS_DB_ID: "a9bab34b945e484fb6b0aa6034086e5c",
     NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
     NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
-    // Google Search Console site ownership verification — public token, safe to
-    // inline here; moved out of layout.tsx to keep source files config-free.
-    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION:
-      "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
+    // Google Search Console site ownership verification — public token, safe to inline.
+    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
     // CMS databases (Testimonials, Case Studies, Services, FAQs)
     NOTION_TESTIMONIALS_DB_ID: "157ceb35d0b44661a6c67798f6d87e7b",
     NOTION_CASE_STUDIES_DB_ID: "7c50dc2403054f4a81f85b0a251ac4d7",
@@ -99,7 +106,6 @@ export default {
     // --- SSM secrets are loaded at runtime by src/lib/ssm-config.ts ---
     // Exception: AUTH_SECRET must be a Lambda env var because next-auth reads
     // it synchronously at module load before ssm-config can async-fetch from SSM.
-    // We fetch it from SSM at deploy time and inject it directly.
     const authSecretParam = aws.ssm.getParameterOutput({
       name: "/cloudless/production/AUTH_SECRET",
       withDecryption: true,
@@ -139,6 +145,94 @@ export default {
       },
     });
 
+    // -------------------------------------------------------------------------
+    // Cognito User Pool — always-up AWS auth (migration target from Keycloak)
+    //
+    // Active when COGNITO_ISSUER is set in the Lambda env.
+    // Keycloak is the fallback (KEYCLOAK_ISSUER set instead).
+    // Cutover = passing `cognito` to buildSiteEnvironment (done below).
+    // -------------------------------------------------------------------------
+    const userPool = new aws.cognito.UserPool("CloudlessAuth", {
+      name: isProd ? "cloudless-auth" : `cloudless-auth-${stage}`,
+      usernameAttributes: ["email"],
+      autoVerifiedAttributes: ["email"],
+      passwordPolicy: {
+        minimumLength: 8,
+        requireLowercase: false,
+        requireUppercase: false,
+        requireNumbers: false,
+        requireSymbols: false,
+        temporaryPasswordValidityDays: 7,
+      },
+      accountRecoverySetting: {
+        recoveryMechanisms: [{ name: "verified_email", priority: 1 }],
+      },
+      // Self-registration enabled — Hosted UI shows "Create account" link.
+      adminCreateUserConfig: { allowAdminCreateUserOnly: false },
+      mfaConfiguration: "OFF",
+      tags: {
+        Project: "cloudless",
+        Environment: stage || "unknown",
+        Owner: "tbaltzakis",
+        ManagedBy: "sst",
+      },
+    });
+
+    // Admin group — membership gives admin access in the app.
+    // isAdmin() in api-auth.ts checks cognito:groups claim for "admin".
+    new aws.cognito.UserGroup("CloudlessAdminGroup", {
+      userPoolId: userPool.id,
+      name: "admin",
+      description: "Cloudless administrators",
+    });
+
+    // Hosted UI domain (globally unique within us-east-1 Cognito).
+    const hostedUiPrefix = isProd ? "cloudless-auth" : `cloudless-auth-${stage}`;
+    new aws.cognito.UserPoolDomain("CloudlessAuthDomain", {
+      domain: hostedUiPrefix,
+      userPoolId: userPool.id,
+    });
+
+    const cognitoHostedDomain = `https://${hostedUiPrefix}.auth.us-east-1.amazoncognito.com`;
+
+    // Compute the site base URL without a Pulumi dependency — we know it from
+    // the domain config above, so we can use it in the callback URLs below
+    // without creating a circular dependency between the client and the site.
+    const siteBaseUrl = isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`;
+    // Deduplicate: in production siteBaseUrl === "https://cloudless.gr".
+    const callbackUrls = [
+      ...new Set([
+        `${siteBaseUrl}/api/auth/callback/cognito`,
+        "https://cloudless.gr/api/auth/callback/cognito",
+      ]),
+    ];
+    const logoutUrls = [...new Set([`${siteBaseUrl}/`, "https://cloudless.gr/"])];
+
+    // Confidential app client — next-auth Cognito provider requires a secret.
+    const userPoolClient = new aws.cognito.UserPoolClient("CloudlessAuthClient", {
+      userPoolId: userPool.id,
+      name: "cloudless-app",
+      generateSecret: true,
+      allowedOauthFlows: ["code"],
+      allowedOauthScopes: ["openid", "email", "profile"],
+      allowedOauthFlowsUserPoolClient: true,
+      supportedIdentityProviders: ["COGNITO"],
+      callbackUrls,
+      logoutUrls,
+      explicitAuthFlows: ["ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_SRP_AUTH"],
+      accessTokenValidity: 1,
+      idTokenValidity: 1,
+      refreshTokenValidity: 30,
+      tokenValidityUnits: {
+        accessToken: "hours",
+        idToken: "hours",
+        refreshToken: "days",
+      },
+    });
+
+    // Issuer URL: https://cognito-idp.<region>.amazonaws.com/<poolId>
+    const cognitoIssuer = $util.interpolate`https://cognito-idp.us-east-1.amazonaws.com/${userPool.id}`;
+
     const site = new sst.aws.Nextjs("CloudlessSite", {
       // Domain: cloudless.gr, fronted by an ACM cert on CloudFront.
       // dns: false — cloudless.gr is delegated to Cloudflare (ns: fay/jihoon
@@ -152,12 +246,12 @@ export default {
         dns: false,
         cert: "arn:aws:acm:us-east-1:278585680617:certificate/f505905a-97b4-46b0-a2b0-fb1900f425b2",
       },
-      environment: buildSiteEnvironment(
-        stage,
-        isProd,
-        stripeTransactionsTable.name,
-        authSecret,
-      ),
+      environment: buildSiteEnvironment(stage, isProd, stripeTransactionsTable.name, authSecret, {
+        issuer: cognitoIssuer,
+        clientId: userPoolClient.id,
+        clientSecret: userPoolClient.clientSecret.apply((s) => s ?? ""),
+        domain: cognitoHostedDomain,
+      }),
       link: [stripeTransactionsTable],
       permissions: [
         {
@@ -220,9 +314,7 @@ export default {
         permissions: [
           {
             actions: ["ssm:GetParameter"],
-            resources: [
-              `arn:aws:ssm:us-east-1:278585680617:parameter${ssmPrefix}/CRON_SECRET`,
-            ],
+            resources: [`arn:aws:ssm:us-east-1:278585680617:parameter${ssmPrefix}/CRON_SECRET`],
           },
         ],
       });
@@ -275,6 +367,9 @@ export default {
 
     return {
       url: site.url,
+      cognitoUserPoolId: userPool.id,
+      cognitoClientId: userPoolClient.id,
+      cognitoHostedDomain,
     };
   },
 } satisfies sst.Config;
