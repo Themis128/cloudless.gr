@@ -88,5 +88,22 @@ jobs:
       - name: fail if drifted past grace window
         if: steps.drift.outputs.rc != '0'
         run: |
-          echo "::error::Drift detected (exit ${{ steps.drift.outputs.rc }}). See step summary."
+          rc="${{ steps.drift.outputs.rc }}"
+          if [ "$rc" = "2" ]; then
+            echo "::error::Could not read SSM parameters — check AWS credentials."
+            exit 1
+          fi
+          # rc=1: drift detected. Check if cloud surface is in sync.
+          # Pi-only drift (e.g. cluster OOM/recovery) is a warning, not a failure.
+          cloud_ok=$(python3 -c "
+          import sys, json
+          data = json.load(open('/tmp/drift.json'))
+          cloud = next((s for s in data.get('surfaces', []) if s['name'] == 'cloud'), None)
+          print('yes' if cloud and cloud.get('matches') else 'no')
+          " 2>/dev/null || echo "no")
+          if [ "$cloud_ok" = "yes" ]; then
+            echo "::warning::Pi drift detected but cloud is in sync — Pi cluster may be recovering. No action required until cluster is back."
+            exit 0
+          fi
+          echo "::error::Drift detected (exit $rc). See step summary."
           exit 1
