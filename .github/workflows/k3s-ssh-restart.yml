@@ -21,6 +21,8 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # unreachable (autoheal deploy stuck on "wait for cluster API"), and Cloudflare
 # returns 530 for auth/pi-origin/grafana (all omv-fronted services). Lambda
 # cloudless.gr unaffected. SSH-restart k3s and wait for the apiserver.
+# Re-triggered 2026-06-03T01:10Z — cluster still unreachable (i/o timeout on 6443)
+# after 00:08Z outage; all diagnostic workflows timed out; SSH-restart again.
 
 on:
   push:
