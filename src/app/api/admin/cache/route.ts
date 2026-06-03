@@ -10,7 +10,7 @@ import { mapIntegrationError } from "@/lib/api-errors";
  * to target a specific cache namespace (e.g. "blog", "forms").
  * Without a prefix, the entire cache is cleared.
  *
- * @auth Requires Cognito JWT with `admin` group (401 / 403).
+ * @auth Requires admin session or Keycloak Bearer token (401 / 403).
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);

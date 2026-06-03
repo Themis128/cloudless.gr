@@ -5,7 +5,7 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/portal/me
- * Auth required (Cognito Bearer token).
+ * Auth required (next-auth session or Keycloak Bearer token).
  * Returns the authenticated user's pending-portal status.
  *
  * Response:
