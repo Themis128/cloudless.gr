@@ -7,7 +7,7 @@
  * to actually create the calendar event.
  *
  * Differences from the unauth'd chat book_slot tool:
- *   - email is forced to the authenticated Cognito user (no impersonation)
+ *   - email is forced to the authenticated user (no impersonation)
  *   - two-phase (propose → confirm) so the model can't fire the booking solo
  *   - tighter system prompt scoped to scheduling only
  */
