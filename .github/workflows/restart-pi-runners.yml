@@ -9,6 +9,10 @@ name: Restart Pi self-hosted runners
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/restart-pi-runners.yml"
 
 permissions:
   contents: read
