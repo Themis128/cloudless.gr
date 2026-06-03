@@ -166,7 +166,7 @@ function generateNonce(): string {
  *   - Stripe (checkout + redirect)
  *   - Sentry (browser SDK + ingest)
  *   - Meta Pixel (connect.facebook.net)
- *   - Cognito (Amplify auth flows)
+ *   - Keycloak (auth.cloudless.gr OIDC)
  *   - HubSpot (forms + tracking)
  *   - Google Analytics / GTM
  */

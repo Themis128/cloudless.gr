@@ -2,7 +2,7 @@
 
 /**
  * Keycloak auth module — implements the same interface that AuthContext
- * previously called on aws-amplify/auth, so AuthContext needs no changes.
+ * previously defined by the Amplify adapter, so AuthContext needs no changes.
  *
  * Sign-in / sign-out delegate to next-auth's signIn() / signOut() which
  * redirect through Keycloak's Authorization Code + PKCE flow.
@@ -18,7 +18,7 @@
 
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut, getSession } from "next-auth/react";
 
-// ── Types matching the aws-amplify/auth surface ───────────────────────────
+// ── Auth module types ─────────────────────────────────────────────────────
 
 interface SignInInput {
   username: string;
