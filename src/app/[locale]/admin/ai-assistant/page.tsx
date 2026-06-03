@@ -1,9 +1,15 @@
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-type Mode = "strategy" | "copy";
+type Mode = "chat" | "strategy" | "copy";
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  toolsUsed?: string[];
+}
 
 interface CopyVariant {
   headline: string;
@@ -13,7 +19,12 @@ interface CopyVariant {
 }
 
 export default function AIAssistantPage() {
-  const [mode, setMode] = useState<Mode>("strategy");
+  const [mode, setMode] = useState<Mode>("chat");
+
+  // Chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Strategy
   const [brief, setBrief] = useState("");
@@ -30,6 +41,41 @@ export default function AIAssistantPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function sendChatMessage(e: React.FormEvent) {
+    e.preventDefault();
+    const text = chatInput.trim();
+    if (!text || loading) return;
+    const nextMessages: ChatMessage[] = [...chatMessages, { role: "user", content: text }];
+    setChatMessages(nextMessages);
+    setChatInput("");
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth("/api/admin/ai/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      if (res.status === 503) {
+        setError("ANTHROPIC_API_KEY is not configured in AWS SSM.");
+        return;
+      }
+      if (!res.ok) throw new Error("Assistant request failed");
+      const data = (await res.json()) as { response: string; toolsUsed: string[] };
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.response, toolsUsed: data.toolsUsed },
+      ]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function generateStrategy(e: React.FormEvent) {
     e.preventDefault();
@@ -95,7 +141,7 @@ export default function AIAssistantPage() {
       </div>
 
       <div className="mb-6 flex gap-1 rounded-lg border border-slate-800 bg-slate-900/50 p-1">
-        {(["strategy", "copy"] as Mode[]).map((m) => (
+        {(["chat", "strategy", "copy"] as Mode[]).map((m) => (
           <button
             key={m}
             type="button"
@@ -109,7 +155,7 @@ export default function AIAssistantPage() {
                 : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            {m === "strategy" ? "Campaign Strategy" : "Ad Copy Generator"}
+            {m === "chat" ? "AI Chat" : m === "strategy" ? "Campaign Strategy" : "Ad Copy"}
           </button>
         ))}
       </div>
@@ -117,6 +163,67 @@ export default function AIAssistantPage() {
       {error && (
         <div className="mb-6 rounded-lg border border-red-900/30 bg-red-950/10 px-4 py-3 font-mono text-sm text-red-400">
           {error}
+        </div>
+      )}
+
+      {mode === "chat" && (
+        <div className="bg-void-light/50 flex h-[520px] flex-col rounded-xl border border-slate-800">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+            {chatMessages.length === 0 && (
+              <p className="font-mono text-xs text-slate-500">
+                Ask me anything — I can search Notion, look up recent orders, or draft a team
+                email.
+              </p>
+            )}
+            {chatMessages.map((msg, i) => (
+              <div
+                key={i}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-3 py-2 font-mono text-xs ${
+                    msg.role === "user"
+                      ? "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20"
+                      : "bg-slate-800 text-slate-300 border border-slate-700"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  {msg.toolsUsed && msg.toolsUsed.length > 0 && (
+                    <p className="mt-1 text-slate-500">
+                      Used: {msg.toolsUsed.join(", ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+            {loading && mode === "chat" && (
+              <div className="flex justify-start">
+                <div className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2">
+                  <span className="font-mono text-xs text-slate-500">Thinking…</span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+          <form
+            onSubmit={sendChatMessage}
+            className="flex gap-2 border-t border-slate-800 p-3"
+          >
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Search Notion, check orders, draft an email…"
+              disabled={loading}
+              className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={loading || !chatInput.trim()}
+              className="border-neon-magenta/30 bg-neon-magenta/10 text-neon-magenta hover:bg-neon-magenta/20 rounded-lg border px-4 py-2 font-mono text-xs transition-all disabled:opacity-50"
+            >
+              Send
+            </button>
+          </form>
         </div>
       )}
 
