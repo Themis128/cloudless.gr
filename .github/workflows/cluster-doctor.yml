@@ -3,6 +3,7 @@ name: Cluster doctor (read-only diagnostics)
 # re-triggered 2026-06-03 — post-deploy full-stack verification
 # re-triggered 2026-06-03T00:30Z — post-k3s-restart verification (cluster recovered)
 # re-triggered 2026-06-03T01:2xZ — pi unresponsive (SSH timeout × 3); checking if recovered
+# re-triggered 2026-06-03 — checking stuck Pi runners (deploy pending since 10:13Z)
 
 # Read-only visibility into the omv k3s cluster from CI. Runs scripts/cluster-
 # doctor.sh over Tailscale + KUBECONFIG_B64 and posts the snapshot as a comment
