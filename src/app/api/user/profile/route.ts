@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { getUserProfile, putUserProfile } from "@/lib/user-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -10,102 +11,47 @@ interface ProfileBody {
   preferences?: unknown;
 }
 
-type KcAttributes = Record<string, string[]>;
-interface KcAccount {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  attributes?: KcAttributes;
-}
-
-const JSON_MIME = "application/json";
-
-function splitName(name: string): { firstName: string; lastName?: string } {
-  const [first, ...rest] = name.trim().split(/\s+/);
-  return { firstName: first ?? "", lastName: rest.length ? rest.join(" ") : undefined };
-}
-
 /**
  * GET /api/user/profile
  *
- * Reads the signed-in user's Keycloak profile (name + company/phone/preferences
- * attributes) so the dashboard can display previously-saved values. Without
- * this, the session only carries name/email and the Profile/Settings forms
- * render blank on every load — making saves look like they never stuck.
- *
- * Like POST, this must run server-side: a browser → Keycloak Account API call
- * is cross-origin and CORS-blocked.
+ * Reads the signed-in user's stored profile (name + company/phone/preferences)
+ * from DynamoDB so the dashboard Profile/Settings forms render previously-saved
+ * values. Provider-agnostic: keyed by the OIDC `sub`, so it works identically
+ * for Cognito and Keycloak. `name`/`email` fall back to the session when no
+ * stored record exists yet.
  */
 export async function GET() {
   const session = await auth();
-  const accessToken = session?.accessToken;
-  if (!session?.user || !accessToken) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const KC_ISSUER = process.env.KEYCLOAK_ISSUER ?? process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
-  if (!KC_ISSUER) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 500 });
-  }
-
   try {
-    const res = await globalThis.fetch(`${KC_ISSUER}/account`, {
-      headers: { Authorization: `Bearer ${accessToken}`, Accept: JSON_MIME },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: "Could not read profile", status: res.status },
-        { status: 502 }
-      );
-    }
-    const acct = (await res.json()) as KcAccount;
-    const attrs = acct.attributes ?? {};
-    const name = [acct.firstName, acct.lastName].filter(Boolean).join(" ").trim();
-
-    let preferences: unknown;
-    const rawPrefs = attrs.preferences?.[0];
-    if (rawPrefs) {
-      try {
-        preferences = JSON.parse(rawPrefs);
-      } catch {
-        // Ignore malformed stored preferences — fall back to client defaults.
-      }
-    }
-
+    const profile = await getUserProfile(userId);
     return NextResponse.json({
-      name: name || undefined,
-      email: acct.email ?? session.user.email ?? undefined,
-      company: attrs.company?.[0],
-      phone: attrs.phone?.[0],
-      preferences,
+      name: profile.name ?? session.user.name ?? undefined,
+      email: session.user.email ?? undefined,
+      company: profile.company,
+      phone: profile.phone,
+      preferences: profile.preferences,
     });
   } catch {
-    return NextResponse.json({ error: "Could not reach auth server" }, { status: 502 });
+    return NextResponse.json({ error: "Could not read profile" }, { status: 502 });
   }
 }
 
 /**
  * POST /api/user/profile
  *
- * Updates the signed-in user's Keycloak profile (name + company/phone
- * attributes, and optional preferences). This MUST run server-side: the
- * browser cannot call Keycloak's Account REST API directly because that is a
- * cross-origin request (cloudless.gr → auth.cloudless.gr) which Keycloak does
- * not send CORS headers for — the browser blocks it and the client sees the
- * opaque "Failed to fetch". Server→Keycloak has no CORS constraint, and the
- * user's access_token (aud: account) is accepted by the Account API.
+ * Upserts the signed-in user's profile fields in DynamoDB. Partial update:
+ * only the keys present in the body are written (empty string clears a field).
  */
 export async function POST(req: Request) {
   const session = await auth();
-  const accessToken = session?.accessToken;
-  if (!session?.user || !accessToken) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const KC_ISSUER = process.env.KEYCLOAK_ISSUER ?? process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
-  if (!KC_ISSUER) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 500 });
   }
 
   let body: ProfileBody;
@@ -115,71 +61,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const accountUrl = `${KC_ISSUER}/account`;
-  const authHeader = { Authorization: `Bearer ${accessToken}` };
-
-  // Read the current account FIRST so we merge (not clobber) existing fields.
-  // The Account API POST is a full update — omitting email/attributes can blank
-  // them — so if we can't read the current state we must NOT write.
-  let current: KcAccount;
   try {
-    const res = await globalThis.fetch(accountUrl, {
-      headers: { ...authHeader, Accept: JSON_MIME },
-      signal: AbortSignal.timeout(10_000),
+    await putUserProfile(userId, {
+      name: body.name,
+      company: body.company,
+      phone: body.phone,
+      preferences: body.preferences,
     });
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: "Could not read current profile", status: res.status },
-        { status: 502 }
-      );
-    }
-    current = (await res.json()) as KcAccount;
+    return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json({ error: "Could not reach auth server" }, { status: 502 });
-  }
-
-  // Never blank the email: it is read-only in the UI, so always preserve it
-  // (fall back to the session's email if the account representation omits it).
-  const preservedEmail = current.email ?? session.user.email ?? undefined;
-
-  const attributes: KcAttributes = { ...(current.attributes ?? {}) };
-  if (body.company !== undefined) attributes.company = [body.company];
-  if (body.phone !== undefined && body.phone !== "") attributes.phone = [body.phone];
-  else if (body.phone === "") delete attributes.phone;
-  if (body.preferences !== undefined) {
-    attributes.preferences = [JSON.stringify(body.preferences)];
-  }
-
-  const payload: KcAccount = {
-    firstName: current.firstName,
-    lastName: current.lastName,
-    email: preservedEmail,
-    attributes,
-  };
-  if (body.name) {
-    const { firstName, lastName } = splitName(body.name);
-    payload.firstName = firstName;
-    payload.lastName = lastName;
-  }
-
-  try {
-    const res = await globalThis.fetch(accountUrl, {
-      method: "POST",
-      headers: { ...authHeader, "Content-Type": JSON_MIME },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (res.ok) {
-      return NextResponse.json({ ok: true });
-    }
-    // Surface Keycloak's validation message (e.g. an attribute not allowed by
-    // the realm user profile) instead of an opaque failure.
-    const detail = await res.text().catch(() => "");
-    return NextResponse.json(
-      { error: "Failed to update profile", status: res.status, detail: detail.slice(0, 500) },
-      { status: res.status === 400 ? 400 : 502 }
-    );
-  } catch {
-    return NextResponse.json({ error: "Failed to reach auth server" }, { status: 502 });
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 502 });
   }
 }

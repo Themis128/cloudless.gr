@@ -1,9 +1,10 @@
 /**
- * /api/user/profile — updates the signed-in user's Keycloak profile through a
- * same-origin server route (the browser cannot call Keycloak's Account API
- * directly due to CORS → "Failed to fetch"). These tests verify the auth gate
- * and that name → firstName/lastName + company/phone attributes are sent to
- * Keycloak's Account API, merging existing attributes rather than clobbering.
+ * /api/user/profile — provider-agnostic profile store on DynamoDB.
+ *
+ * The route reads/writes name/company/phone/preferences keyed by the OIDC
+ * `sub`, decoupled from the IdP (works for Cognito and Keycloak). These tests
+ * mock @/lib/user-profile so no AWS call is made, and verify the auth gate,
+ * the session fallback for name/email, and the upsert payload.
  *
  * @vitest-environment node
  */
@@ -11,6 +12,15 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const authMock = vi.fn();
 vi.mock("@/lib/auth", () => ({ auth: authMock }));
+
+const { getUserProfileMock, putUserProfileMock } = vi.hoisted(() => ({
+  getUserProfileMock: vi.fn(),
+  putUserProfileMock: vi.fn(),
+}));
+vi.mock("@/lib/user-profile", () => ({
+  getUserProfile: getUserProfileMock,
+  putUserProfile: putUserProfileMock,
+}));
 
 function makeReq(body: unknown): Request {
   return new Request("http://localhost/api/user/profile", {
@@ -22,38 +32,41 @@ function makeReq(body: unknown): Request {
 
 beforeEach(() => {
   authMock.mockReset();
-  vi.restoreAllMocks();
-  // setup.ts deletes KEYCLOAK_ISSUER in its beforeEach; restore it here.
-  vi.stubEnv("KEYCLOAK_ISSUER", "https://auth.test/realms/master");
+  getUserProfileMock.mockReset();
+  putUserProfileMock.mockReset();
 });
 
 describe("POST /api/user/profile", () => {
-  it("401 when there is no session/accessToken", async () => {
+  it("401 when there is no session", async () => {
     authMock.mockResolvedValue(null);
+    const { POST } = await import("@/app/api/user/profile/route");
+    const res = await POST(makeReq({ name: "A B" }));
+    expect(res.status).toBe(401);
+    expect(putUserProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("401 when the session has no user id (sub)", async () => {
+    authMock.mockResolvedValue({ user: { email: "u@x.gr" } });
     const { POST } = await import("@/app/api/user/profile/route");
     const res = await POST(makeReq({ name: "A B" }));
     expect(res.status).toBe(401);
   });
 
-  it("updates name + attributes and merges existing attributes", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1" }, accessToken: "tok-abc" });
+  it("400 on invalid JSON body", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" } });
+    const { POST } = await import("@/app/api/user/profile/route");
+    const bad = new Request("http://localhost/api/user/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{not json",
+    });
+    const res = await POST(bad);
+    expect(res.status).toBe(400);
+  });
 
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      // 1) GET current account (existing attributes to merge)
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            firstName: "Old",
-            lastName: "Name",
-            email: "u@x.gr",
-            attributes: { locale: ["en"] },
-          }),
-          { status: 200 }
-        )
-      )
-      // 2) POST update
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+  it("upserts the provided fields keyed by sub", async () => {
+    authMock.mockResolvedValue({ user: { id: "sub-123" } });
+    putUserProfileMock.mockResolvedValue(undefined);
 
     const { POST } = await import("@/app/api/user/profile/route");
     const res = await POST(
@@ -62,64 +75,44 @@ describe("POST /api/user/profile", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
-
-    // Inspect the POST call (2nd fetch).
-    const [url, init] = fetchMock.mock.calls[1];
-    expect(url).toBe("https://auth.test/realms/master/account");
-    expect((init as RequestInit).method).toBe("POST");
-    const sent = JSON.parse((init as RequestInit).body as string);
-    expect(sent.firstName).toBe("Baltzakis");
-    expect(sent.lastName).toBe("Themistoklis");
-    expect(sent.attributes).toMatchObject({
-      locale: ["en"], // merged, not clobbered
-      company: ["cloudless.gr"],
-      phone: ["+30123"],
+    expect(putUserProfileMock).toHaveBeenCalledWith("sub-123", {
+      name: "Baltzakis Themistoklis",
+      company: "cloudless.gr",
+      phone: "+30123",
+      preferences: undefined,
     });
   });
 
-  it("surfaces Keycloak validation errors instead of an opaque failure", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1" }, accessToken: "tok-abc" });
-    vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response(JSON.stringify({ attributes: {} }), { status: 200 }))
-      .mockResolvedValueOnce(new Response("attribute not supported", { status: 400 }));
-
+  it("502 when the store write fails", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" } });
+    putUserProfileMock.mockRejectedValue(new Error("dynamo down"));
     const { POST } = await import("@/app/api/user/profile/route");
     const res = await POST(makeReq({ company: "x" }));
-    expect(res.status).toBe(400);
-    expect((await res.json()).error).toMatch(/Failed to update profile/);
+    expect(res.status).toBe(502);
   });
 });
 
 describe("GET /api/user/profile", () => {
-  it("401 when there is no session/accessToken", async () => {
+  it("401 when there is no session", async () => {
     authMock.mockResolvedValue(null);
     const { GET } = await import("@/app/api/user/profile/route");
     const res = await GET();
     expect(res.status).toBe(401);
   });
 
-  it("reads name + company/phone/preferences back from Keycloak", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1", email: "u@x.gr" }, accessToken: "tok" });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          firstName: "Baltzakis",
-          lastName: "Themistoklis",
-          email: "u@x.gr",
-          attributes: {
-            company: ["cloudless.gr"],
-            phone: ["+30123"],
-            preferences: [JSON.stringify({ theme: "light", language: "el" })],
-          },
-        }),
-        { status: 200 }
-      )
-    );
+  it("returns the stored profile merged with session name/email", async () => {
+    authMock.mockResolvedValue({ user: { id: "sub-1", email: "u@x.gr", name: "Session Name" } });
+    getUserProfileMock.mockResolvedValue({
+      name: "Stored Name",
+      company: "cloudless.gr",
+      phone: "+30123",
+      preferences: { theme: "light", language: "el" },
+    });
     const { GET } = await import("@/app/api/user/profile/route");
     const res = await GET();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      name: "Baltzakis Themistoklis",
+      name: "Stored Name",
       email: "u@x.gr",
       company: "cloudless.gr",
       phone: "+30123",
@@ -127,25 +120,21 @@ describe("GET /api/user/profile", () => {
     });
   });
 
-  it("ignores malformed stored preferences and still returns the profile", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1" }, accessToken: "tok" });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ firstName: "A", attributes: { preferences: ["{not-json"] } }),
-        { status: 200 }
-      )
-    );
+  it("falls back to the session name/email when no record exists", async () => {
+    authMock.mockResolvedValue({ user: { id: "sub-1", email: "u@x.gr", name: "Session Name" } });
+    getUserProfileMock.mockResolvedValue({});
     const { GET } = await import("@/app/api/user/profile/route");
     const res = await GET();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.name).toBe("A");
-    expect(body.preferences).toBeUndefined();
+    expect(body.name).toBe("Session Name");
+    expect(body.email).toBe("u@x.gr");
+    expect(body.company).toBeUndefined();
   });
 
-  it("502 when the account cannot be read", async () => {
-    authMock.mockResolvedValue({ user: { id: "u1" }, accessToken: "tok" });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 500 }));
+  it("502 when the store read fails", async () => {
+    authMock.mockResolvedValue({ user: { id: "u1" } });
+    getUserProfileMock.mockRejectedValue(new Error("dynamo down"));
     const { GET } = await import("@/app/api/user/profile/route");
     const res = await GET();
     expect(res.status).toBe(502);

@@ -15,6 +15,7 @@ function buildSiteEnvironment(
   stage: string,
   isProd: boolean,
   stripeTransactionsTableName: $util.Output<string>,
+  userProfileTableName: $util.Output<string>,
   authSecret?: $util.Output<string>,
   cognito?: {
     issuer: $util.Output<string>;
@@ -40,6 +41,7 @@ function buildSiteEnvironment(
     // what's actually deployed.
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
+    USER_PROFILE_TABLE: userProfileTableName,
     // Active auth provider — Cognito (always-up AWS) when configured, else Keycloak.
     // NEXT_PUBLIC_AUTH_PROVIDER drives the login/signup page button label.
     ...(cognito
@@ -145,6 +147,14 @@ export default {
       },
     });
 
+    // Provider-agnostic user-profile store (name/company/phone/preferences),
+    // keyed by the OIDC `sub`. Decouples the dashboard profile from the IdP so
+    // it works identically for Cognito and Keycloak (see src/lib/user-profile.ts).
+    const userProfileTable = new sst.aws.Dynamo("UserProfile", {
+      fields: { userId: "string" },
+      primaryIndex: { hashKey: "userId" },
+    });
+
     // -------------------------------------------------------------------------
     // Cognito User Pool — always-up AWS auth (migration target from Keycloak)
     //
@@ -246,13 +256,20 @@ export default {
         dns: false,
         cert: "arn:aws:acm:us-east-1:278585680617:certificate/f505905a-97b4-46b0-a2b0-fb1900f425b2",
       },
-      environment: buildSiteEnvironment(stage, isProd, stripeTransactionsTable.name, authSecret, {
-        issuer: cognitoIssuer,
-        clientId: userPoolClient.id,
-        clientSecret: userPoolClient.clientSecret.apply((s) => s ?? ""),
-        domain: cognitoHostedDomain,
-      }),
-      link: [stripeTransactionsTable],
+      environment: buildSiteEnvironment(
+        stage,
+        isProd,
+        stripeTransactionsTable.name,
+        userProfileTable.name,
+        authSecret,
+        {
+          issuer: cognitoIssuer,
+          clientId: userPoolClient.id,
+          clientSecret: userPoolClient.clientSecret.apply((s) => s ?? ""),
+          domain: cognitoHostedDomain,
+        }
+      ),
+      link: [stripeTransactionsTable, userProfileTable],
       permissions: [
         {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
