@@ -1,0 +1,74 @@
+name: Restart Pi self-hosted runners
+
+# Pi GitHub Actions runner agents can become inactive after cluster OOM or host
+# stress events. This workflow SSHes into the Pi host via Tailscale and restarts
+# any actions.runner services that are inactive/dead/failed.
+#
+# Runs on ubuntu-latest so it works even when Pi runners are offline.
+# Posts result to tracking issue #382.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  restart-runners:
+    name: Restart runner agents on omv
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: List and restart inactive runner services
+        run: |
+          set -euo pipefail
+          SSH="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.113.41.119"
+
+          echo "=== Runner service status (before) ==="
+          $SSH "sudo systemctl list-units 'actions.runner.*' --no-pager --all" || true
+
+          echo "--- restarting inactive/failed runner services ---"
+          $SSH "
+            set -euo pipefail
+            services=\$(sudo systemctl list-units 'actions.runner.*' --no-pager --all --output=json 2>/dev/null \
+              | python3 -c \"import sys,json; units=json.load(sys.stdin); [print(u['unit']) for u in units if u['activestate'] in ('inactive','failed','dead')]\" 2>/dev/null || true)
+            if [ -z \"\$services\" ]; then
+              echo 'All runner services are already active — nothing to restart.'
+            else
+              for svc in \$services; do
+                echo \"  restarting: \$svc\"
+                sudo systemctl restart \"\$svc\" || echo \"  WARN: failed to restart \$svc\"
+              done
+            fi
+          " || true
+
+          echo "=== Runner service status (after) ==="
+          $SSH "sudo systemctl list-units 'actions.runner.*' --no-pager --all" || true
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# restart-pi-runners — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo "SSH to omv (100.113.41.119) via Tailscale to list/restart inactive \`actions.runner.*\` services."
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
