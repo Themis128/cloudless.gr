@@ -1,7 +1,9 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
 <!-- END:nextjs-agent-rules -->
 
 # Cloudless.gr — Project Architecture
@@ -13,7 +15,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **3D:** @react-three/fiber + @react-three/drei + three.js
 - **Animation:** GSAP (ScrollTrigger) + Lenis smooth scroll
 - **Command palette:** cmdk
-- **Auth:** Keycloak + next-auth v5 (default); AWS Cognito optional (when `COGNITO_ISSUER` is set)
+- **Auth:** AWS Cognito + next-auth v5 (production default, when `COGNITO_ISSUER` is set); Keycloak fallback
 - **Payments:** Stripe (webhooks, checkout)
 - **Email:** AWS SES
 - **Secrets:** AWS SSM Parameter Store (no .env files in prod)
@@ -41,7 +43,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **CTA gradients:** `bg-gradient-to-r from-neon-cyan/10 via-neon-blue/10 to-neon-magenta/10`
 - **FAQ details:** `bg-void border border-slate-800 rounded-xl open:border-neon-cyan/30`
 - **Section borders:** `border-y border-slate-800` (was `border-neon-cyan/10`)
-- **IMPORTANT:** Never use dynamic Tailwind class names (e.g., `` bg-${var}/10 ``). Tailwind 4 JIT cannot detect them. Use a static class mapping object instead.
+- **IMPORTANT:** Never use dynamic Tailwind class names (e.g., `bg-${var}/10`). Tailwind 4 JIT cannot detect them. Use a static class mapping object instead.
 
 ## Project Structure
 
@@ -131,8 +133,7 @@ src/
 │   ├── ssm-config.ts            # SSM secrets loader (5-min TTL, fails fast on required keys)
 │   ├── integrations.ts          # isConfigured() guards for all optional integrations
 │   ├── api-auth.ts              # requireAuth() / requireAdmin() — OIDC JWKS verification (Keycloak or Cognito)
-│   ├── auth.ts                  # next-auth v5 config — Keycloak default; Cognito when COGNITO_ISSUER set
-│   ├── keycloak-auth.ts         # Keycloak auth adapter (implements AuthContext interface)
+│   ├── auth.ts                  # next-auth v5 config — Cognito when COGNITO_ISSUER set, Keycloak fallback
 │   ├── email.ts                 # SES: sendEmail, sendOrderConfirmation, notifyTeam
 │   ├── ses-suppression.ts       # SES suppression list management
 │   ├── stripe.ts                # Stripe client, product/session helpers
@@ -217,10 +218,10 @@ sequenceDiagram
     end
 ```
 
-- **Provider:** Keycloak (`auth.cloudless.gr`, realm `master`); AWS Cognito is an optional fallback when `COGNITO_ISSUER` is set
-- **Env vars required:** `KEYCLOAK_ISSUER` + `KEYCLOAK_CLIENT_ID` + `KEYCLOAK_CLIENT_SECRET` + `AUTH_SECRET` (see `.env.example`)
-- **Admin group:** `admin` — checked via JWT `groups` claim (Keycloak) or `cognito:groups` (Cognito)
-- **AuthProvider:** Wraps entire app in `layout.tsx`; exposes `signIn`/`signOut`/`useAuth()` via `src/context/AuthContext.tsx` + `src/lib/keycloak-auth.ts`
+- **Provider:** AWS Cognito (Hosted UI) when `COGNITO_ISSUER` is set — the production default since the 2026-06 migration; Keycloak (`auth.cloudless.gr`, realm `master`) is the fallback when Cognito is not configured
+- **Env vars required:** `COGNITO_ISSUER` + `COGNITO_CLIENT_ID` + `COGNITO_CLIENT_SECRET` + `COGNITO_DOMAIN` + `AUTH_SECRET` (Cognito); or `KEYCLOAK_ISSUER` + `KEYCLOAK_CLIENT_ID` + `KEYCLOAK_CLIENT_SECRET` + `AUTH_SECRET` (Keycloak fallback). See `.env.example`
+- **Admin group:** `admin` — checked via JWT `cognito:groups` claim (Cognito) or `groups` (Keycloak)
+- **AuthProvider:** Wraps entire app in `layout.tsx`; exposes `signIn`/`signOut`/`useAuth()` via `src/context/AuthContext.tsx` (delegates to next-auth `signIn`/`signOut`)
 - **Route protection:** Server-side via `src/proxy.ts` middleware (before the page renders) + client-side layout guards
   - `/dashboard/*` → redirects to `/auth/login` if not authenticated
   - `/admin/*` → redirects to `/dashboard` if not in admin group, `/auth/login` if not authenticated
@@ -348,15 +349,16 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 
 **Required env vars per integration:**
 
-| Integration        | Env vars                                                     | Lib file            |
-| ------------------ | ------------------------------------------------------------ | ------------------- |
-| Slack              | `SLACK_WEBHOOK_URL`                                          | `slack-notify.ts`   |
-| HubSpot CRM        | `HUBSPOT_API_KEY`                                            | `hubspot.ts`        |
-| Notion CMS         | `NOTION_API_KEY`, `NOTION_BLOG_DB`                           | `notion-blog.ts`    |
-| Google Calendar    | `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID` | `google-calendar.ts` |
-| Sentry             | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`          | (inline in route)   |
+| Integration     | Env vars                                                                   | Lib file             |
+| --------------- | -------------------------------------------------------------------------- | -------------------- |
+| Slack           | `SLACK_WEBHOOK_URL`                                                        | `slack-notify.ts`    |
+| HubSpot CRM     | `HUBSPOT_API_KEY`                                                          | `hubspot.ts`         |
+| Notion CMS      | `NOTION_API_KEY`, `NOTION_BLOG_DB`                                         | `notion-blog.ts`     |
+| Google Calendar | `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID` | `google-calendar.ts` |
+| Sentry          | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`                        | (inline in route)    |
 
 **Integration patterns:**
+
 - **Fire-and-forget:** Contact route uses `Promise.allSettled([slackContactNotify, hubspotUpsert]).catch(() => {})` so the main email flow isn't blocked
 - **Fallback:** Blog API returns static `lib/blog.ts` data when Notion isn't configured
 - **Cache:** Calendar availability is cached 5 minutes; Google OAuth tokens cached until expiry
@@ -399,6 +401,7 @@ The Stripe webhook handler (`api/webhooks/stripe/route.ts`) processes these even
 - **`invoice.payment_succeeded`**: Logs payment (no email)
 
 Email sending is handled by `src/lib/email.ts` which provides:
+
 - `sendEmail()`: Low-level SES wrapper with cached client
 - `sendOrderConfirmation()`: Customer order receipt with cyberpunk-styled HTML
 - `sendPaymentFailureNotice()`: Payment failure alert with support CTA
