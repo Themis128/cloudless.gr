@@ -55,7 +55,7 @@ describe("POST /api/webhooks/notion", () => {
   it("returns 401 when x-webhook-secret header is missing", async () => {
     const { POST } = await import("@/app/api/webhooks/notion/route");
     const response = await POST(
-      makeRequest({ type: "page.updated", database: "blog", page_id: "p1" }),
+      makeRequest({ type: "page.updated", database: "blog", page_id: "p1" })
     );
 
     expect(response.status).toBe(401);
@@ -66,10 +66,7 @@ describe("POST /api/webhooks/notion", () => {
   it("returns 401 when x-webhook-secret is wrong", async () => {
     const { POST } = await import("@/app/api/webhooks/notion/route");
     const response = await POST(
-      makeRequest(
-        { type: "page.updated", database: "blog", page_id: "p1" },
-        "wrong_secret",
-      ),
+      makeRequest({ type: "page.updated", database: "blog", page_id: "p1" }, "wrong_secret")
     );
 
     expect(response.status).toBe(401);
@@ -80,10 +77,7 @@ describe("POST /api/webhooks/notion", () => {
 
     const { POST } = await import("@/app/api/webhooks/notion/route");
     const response = await POST(
-      makeRequest(
-        { type: "page.updated", database: "blog", page_id: "p1" },
-        "test_notion_secret",
-      ),
+      makeRequest({ type: "page.updated", database: "blog", page_id: "p1" }, "test_notion_secret")
     );
 
     expect(response.status).toBe(401);
@@ -108,9 +102,7 @@ describe("POST /api/webhooks/notion", () => {
 
   it("returns 400 when required fields are missing", async () => {
     const { POST } = await import("@/app/api/webhooks/notion/route");
-    const response = await POST(
-      makeRequest({ type: "page.updated" }, "test_notion_secret"),
-    );
+    const response = await POST(makeRequest({ type: "page.updated" }, "test_notion_secret"));
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -120,10 +112,7 @@ describe("POST /api/webhooks/notion", () => {
   it("returns 400 for unknown event type", async () => {
     const { POST } = await import("@/app/api/webhooks/notion/route");
     const response = await POST(
-      makeRequest(
-        { type: "unknown.event", database: "blog", page_id: "p1" },
-        "test_notion_secret",
-      ),
+      makeRequest({ type: "unknown.event", database: "blog", page_id: "p1" }, "test_notion_secret")
     );
 
     expect(response.status).toBe(400);
@@ -136,8 +125,8 @@ describe("POST /api/webhooks/notion", () => {
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "blog", page_id: "p1", slug: "my-post" },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -154,8 +143,8 @@ describe("POST /api/webhooks/notion", () => {
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "docs", page_id: "p2", slug: "my-doc" },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -167,10 +156,7 @@ describe("POST /api/webhooks/notion", () => {
   it("handles page.created for blog — revalidates blog and sitemap", async () => {
     const { POST } = await import("@/app/api/webhooks/notion/route");
     const response = await POST(
-      makeRequest(
-        { type: "page.created", database: "blog", page_id: "p3" },
-        "test_notion_secret",
-      ),
+      makeRequest({ type: "page.created", database: "blog", page_id: "p3" }, "test_notion_secret")
     );
 
     expect(response.status).toBe(200);
@@ -192,8 +178,8 @@ describe("POST /api/webhooks/notion", () => {
           slug: "new-doc",
           data: { title: "New Guide" },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -211,8 +197,8 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p5",
           data: { email: "client@example.com", name: "Alice", status: "Done" },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -235,8 +221,8 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p6",
           data: { email: "client@example.com", name: "Bob", status: "In Progress" },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -255,8 +241,8 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p7",
           data: { name: "Cloud Migration", status: "Completed" },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -275,8 +261,8 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p8",
           data: { name: "SEO Audit", status: "Blocked" },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -294,8 +280,8 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p9",
           data: { task: "Write report", status: "Blocked", assignee: "Themis" },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -314,8 +300,8 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p10",
           data: { type: "error", count: 15 },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
@@ -333,12 +319,84 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p11",
           data: { type: "error", count: 5 },
         },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(200);
     expect(slackContactNotifyMock).not.toHaveBeenCalled();
+  });
+
+  it("handles page.updated for testimonials — invalidates testimonials cache", async () => {
+    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const response = await POST(
+      makeRequest(
+        { type: "page.updated", database: "testimonials", page_id: "t1" },
+        "test_notion_secret"
+      )
+    );
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.ok).toBe(true);
+    expect(data.revalidated).toBe(true);
+    expect(invalidateCacheMock).toHaveBeenCalledWith("testimonials");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/api/testimonials");
+  });
+
+  it("handles page.updated for case-studies — invalidates cache and revalidates slug path", async () => {
+    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const response = await POST(
+      makeRequest(
+        { type: "page.updated", database: "case-studies", page_id: "cs1", slug: "techflow" },
+        "test_notion_secret"
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(invalidateCacheMock).toHaveBeenCalledWith("case-studies");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/api/case-studies");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/api/case-studies/techflow");
+  });
+
+  it("handles page.updated for services — invalidates services cache", async () => {
+    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const response = await POST(
+      makeRequest(
+        { type: "page.updated", database: "services", page_id: "s1" },
+        "test_notion_secret"
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(invalidateCacheMock).toHaveBeenCalledWith("services");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/api/services");
+  });
+
+  it("handles page.updated for faqs — invalidates faqs cache", async () => {
+    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const response = await POST(
+      makeRequest({ type: "page.updated", database: "faqs", page_id: "f1" }, "test_notion_secret")
+    );
+
+    expect(response.status).toBe(200);
+    expect(invalidateCacheMock).toHaveBeenCalledWith("faqs");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/api/faqs");
+  });
+
+  it("handles page.created for case-studies — revalidates sitemap", async () => {
+    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const response = await POST(
+      makeRequest(
+        { type: "page.created", database: "case-studies", page_id: "cs2", slug: "retail-plus" },
+        "test_notion_secret"
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(invalidateCacheMock).toHaveBeenCalledWith("case-studies");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/api/case-studies");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/sitemap.xml");
   });
 
   it("returns 500 when a downstream handler throws", async () => {
@@ -350,8 +408,8 @@ describe("POST /api/webhooks/notion", () => {
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "blog", page_id: "p12", slug: "boom" },
-        "test_notion_secret",
-      ),
+        "test_notion_secret"
+      )
     );
 
     expect(response.status).toBe(500);
