@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       message: "You have been unsubscribed.",
     });
   } catch (error) {
-    console.error("Unsubscribe error:", error);
+    console.error("Unsubscribe error:", error instanceof Error ? error.message : String(error));
     return Response.json(
       { error: "Failed to process unsubscribe request. Please try again." },
       { status: 500 }
