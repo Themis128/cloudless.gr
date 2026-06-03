@@ -19,7 +19,8 @@ export default function ForgotPasswordPage() {
     setError("");
     setSubmitting(true);
     try {
-      // Redirects to Keycloak's reset-credentials page; browser navigates away.
+      // Hands off to the active provider's hosted reset flow (Cognito Hosted UI
+      // or Keycloak reset-credentials); the browser navigates away.
       await forgotPassword(email);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Request failed");
