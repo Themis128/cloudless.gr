@@ -3,7 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
 
-interface CognitoUser {
+interface KeycloakUser {
   username: string;
   email: string;
   name: string;
@@ -37,7 +37,7 @@ const userStatusClasses: Record<string, string> = {
 };
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<CognitoUser[]>([]);
+  const [users, setUsers] = useState<KeycloakUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -117,7 +117,7 @@ export default function AdminUsersPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">User Management</h1>
         <p className="font-body mt-1 text-slate-400">
-          Cognito user pool — manage accounts, roles, and access.
+          Keycloak user directory — manage accounts, roles, and access.
         </p>
       </div>
 
@@ -202,7 +202,7 @@ export default function AdminUsersPage() {
                     Account
                   </th>
                   <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
-                    Cognito Status
+                    Account Status
                   </th>
                   <th className="px-6 py-3 text-left font-mono text-xs font-medium text-slate-500">
                     Joined
@@ -254,7 +254,7 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
 
-                    {/* Cognito status */}
+                    {/* Account status */}
                     <td className="px-6 py-4">
                       <span
                         className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${userStatusClasses[user.userStatus] ?? "bg-slate-800/50 text-slate-400"}`}

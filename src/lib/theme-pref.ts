@@ -9,7 +9,7 @@
  *
  * Selection priority is enforced in ThemePreferenceSync:
  *   admin path (locked dark)
- *     → user.preferences.theme   (authenticated; lives in Cognito + AuthContext)
+ *     → user.preferences.theme   (authenticated; lives in the next-auth session)
  *     → readStoredPref()         (anonymous override, this module)
  *     → themeForRoute(pathname)  (route default)
  */

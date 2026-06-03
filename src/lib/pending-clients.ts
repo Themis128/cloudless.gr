@@ -17,7 +17,7 @@ const ssmClient = new SSMClient({ region: REGION });
 export type PendingStatus = "waiting" | "approved" | "declined";
 
 export interface PendingClient {
-  /** Cognito email (unique key) */
+  /** Email (unique key) */
   email: string;
   name?: string;
   /** Plan selected on the services page (e.g. "bundle", "cloud", "serverless") */
