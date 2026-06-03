@@ -88,8 +88,9 @@ jobs:
 
       - name: Notify Slack — deploy started
         if: env.SLACK_WEBHOOK_URL != ''
+        continue-on-error: true
         run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          curl -s --max-time 10 -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
             -d "{
               \"text\": \":rocket: Deploy started — \`${GITHUB_SHA::7}\` by ${{ github.actor }}\",
@@ -98,7 +99,7 @@ jobs:
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
                 {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
               ]
-            }"
+            }" || true
 
       - name: Clear any stale SST lock
         run: pnpm sst unlock --stage production || true
@@ -129,8 +130,9 @@ jobs:
 
       - name: Notify Slack — deploy succeeded
         if: success() && env.SLACK_WEBHOOK_URL != ''
+        continue-on-error: true
         run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          curl -s --max-time 10 -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
             -d "{
               \"text\": \":white_check_mark: Deploy succeeded — \`${GITHUB_SHA::7}\` is live\",
@@ -143,8 +145,9 @@ jobs:
 
       - name: Notify Slack — deploy failed
         if: failure() && env.SLACK_WEBHOOK_URL != ''
+        continue-on-error: true
         run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          curl -s --max-time 10 -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
             -d "{
               \"text\": \":x: Deploy failed — \`${GITHUB_SHA::7}\` by ${{ github.actor }}\",
