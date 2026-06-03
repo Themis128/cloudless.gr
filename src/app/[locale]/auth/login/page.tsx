@@ -9,7 +9,9 @@ import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
-const USE_KEYCLOAK = !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+const USE_COGNITO = AUTH_PROVIDER === "cognito";
+const USE_KEYCLOAK = AUTH_PROVIDER === "keycloak" || !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
 
 function normalizeRedirectPath(path: string): string {
   if (!path.startsWith("/")) return path;
@@ -48,19 +50,20 @@ function LoginContent() {
     }
   }, [user, isAdmin, isLoading, router, nextParam]);
 
+  const callbackUrl = nextParam?.startsWith("/")
+    ? normalizeRedirectPath(nextParam)
+    : "/auth/post-login";
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
+      if (USE_COGNITO) {
+        await nextAuthSignIn("cognito", { callbackUrl });
+        return;
+      }
       if (USE_KEYCLOAK) {
-        // isAdmin is false here (not signed in yet), so we can't decide the
-        // landing page now. Send users through /auth/post-login, which reads the
-        // established session server-side and routes admins → /admin, else
-        // → /dashboard. A real ?next= deep-link still wins.
-        const callbackUrl = nextParam?.startsWith("/")
-          ? normalizeRedirectPath(nextParam)
-          : "/auth/post-login";
         await nextAuthSignIn("keycloak", { callbackUrl });
         return;
       }
@@ -97,6 +100,8 @@ function LoginContent() {
       </div>
     );
   }
+
+  const isOidcProvider = USE_COGNITO || USE_KEYCLOAK;
 
   return (
     <div className="bg-void flex min-h-screen items-center justify-center px-4 py-20">
@@ -154,7 +159,7 @@ function LoginContent() {
                   : t("auth.resetPassword", "Reset Password")}
               </button>
             </form>
-          ) : USE_KEYCLOAK ? (
+          ) : isOidcProvider ? (
             <form onSubmit={handleLogin} className="space-y-5">
               <button
                 type="submit"
@@ -163,16 +168,20 @@ function LoginContent() {
               >
                 {submitting
                   ? t("auth.signingIn", "Signing In...")
-                  : t("auth.continueWithKeycloak", "Continue with Keycloak")}
+                  : USE_COGNITO
+                    ? t("auth.continueWithCognito", "Continue with AWS")
+                    : t("auth.continueWithKeycloak", "Continue with Keycloak")}
               </button>
-              <div className="flex justify-center">
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-neon-cyan/70 hover:text-neon-cyan font-mono text-sm transition-colors"
-                >
-                  {t("auth.forgotPassword", "Forgot Password?")}
-                </Link>
-              </div>
+              {!USE_COGNITO && (
+                <div className="flex justify-center">
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-neon-cyan/70 hover:text-neon-cyan font-mono text-sm transition-colors"
+                  >
+                    {t("auth.forgotPassword", "Forgot Password?")}
+                  </Link>
+                </div>
+              )}
             </form>
           ) : (
             <form onSubmit={handleLogin} className="space-y-5">
