@@ -154,7 +154,7 @@ export async function createFaq(input: FaqInput): Promise<string | null> {
   await requireIntegrationAsync("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
   const { NOTION_FAQS_DB_ID } = await getIntegrationsAsync();
 
-  const id = await createPage(NOTION_FAQS_DB_ID, {
+  const id = await createPage(NOTION_FAQS_DB_ID!, {
     Question: { title: [{ text: { content: input.question } }] },
     Answer: { rich_text: [{ text: { content: input.answer ?? "" } }] },
     ...(input.category ? { Category: { select: { name: input.category } } } : {}),

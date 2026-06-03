@@ -151,7 +151,7 @@ export async function createTestimonial(input: TestimonialInput): Promise<string
   await requireIntegrationAsync("NOTION_API_KEY", "NOTION_TESTIMONIALS_DB_ID");
   const { NOTION_TESTIMONIALS_DB_ID } = await getIntegrationsAsync();
 
-  const id = await createPage(NOTION_TESTIMONIALS_DB_ID, {
+  const id = await createPage(NOTION_TESTIMONIALS_DB_ID!, {
     Name: { title: [{ text: { content: input.name } }] },
     Company: { rich_text: [{ text: { content: input.company ?? "" } }] },
     Role: { rich_text: [{ text: { content: input.role ?? "" } }] },
