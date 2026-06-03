@@ -84,15 +84,15 @@ jobs:
 
           echo "--- force-deleting pods stuck in ContainerCreating ---"
           kubectl get pods -n cloudless --no-headers 2>/dev/null | \
-            awk '$4 ~ /ContainerCreating/ {print $1}' | \
+            awk '$3 ~ /ContainerCreating/ {print $1}' | \
             while read pod; do
               echo "  force-deleting stuck pod: $pod"
               kubectl delete pod -n cloudless "$pod" --force --grace-period=0 --ignore-not-found=true
             done
 
-          echo "--- force-deleting pods stuck in Unknown state ---"
+          echo "--- force-deleting pods stuck in Unknown/ContainerStatusUnknown state ---"
           kubectl get pods -n cloudless --no-headers 2>/dev/null | \
-            awk '$4 ~ /Unknown/ {print $1}' | \
+            awk '$3 ~ /Unknown/ {print $1}' | \
             while read pod; do
               echo "  force-deleting Unknown pod: $pod"
               kubectl delete pod -n cloudless "$pod" --force --grace-period=0 --ignore-not-found=true
@@ -106,7 +106,7 @@ jobs:
           echo "=== waiting for cloudless deployment to have ≥1 ready pod ==="
           kubectl rollout status deployment/cloudless -n cloudless --timeout=300s || true
           echo "=== final cloudless pod state ==="
-          kubectl get pods -n cloudless
+          kubectl get pods -n cloudless || true
 
       - name: Check pi-origin health
         run: |
