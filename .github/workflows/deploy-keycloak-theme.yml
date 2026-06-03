@@ -1,0 +1,57 @@
+name: Deploy Keycloak theme
+
+# Triggered by editing the workflow or any file under keycloak-theme/.
+# Copies the Cloudless login theme into the k3s Keycloak pod as a ConfigMap
+# + volumeMounts (survives pod restarts without rebuilding the image), then
+# activates it on the master realm via Admin REST API.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-keycloak-theme.yml"
+      - "keycloak-theme/**"
+      - "scripts/deploy-keycloak-theme.sh"
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: deploy-keycloak-theme
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy theme
+        id: deploy
+        env:
+          KEYCLOAK_ADMIN_PASSWORD: ${{ secrets.ADMIN_BOOTSTRAP_PASSWORD }}
+        run: |
+          set -uo pipefail
+          bash scripts/deploy-keycloak-theme.sh 2>&1 | tee theme.log
+          echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Report to tracking issue
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          { echo "# Keycloak theme deploy — $(date -u '+%F %T')Z — ${STATUS}"; echo; echo '```'; cat theme.log 2>/dev/null || echo '(no log)'; echo '```'; } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
