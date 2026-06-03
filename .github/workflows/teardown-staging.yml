@@ -23,7 +23,7 @@ permissions:
 jobs:
   teardown:
     name: Destroy Staging Stack
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:

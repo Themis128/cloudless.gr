@@ -29,16 +29,24 @@ permissions:
 
 jobs:
   restore:
-    # Runs on the Pi host as a systemd service — stays alive when k3s crashes.
-    # Uses local kubectl (/etc/rancher/k3s/k3s.yaml) — no Tailscale needed.
-    # If this job queues forever the Pi itself is down; cancel and reboot manually.
-    runs-on: [self-hosted, omv, build]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
       METABASE_MEM_LIMIT: ${{ github.event.inputs.metabase_mem_limit || '1Gi' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
       - name: Run analytics-restore
         id: restore
