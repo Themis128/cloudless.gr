@@ -34,9 +34,16 @@ import {
   blocksToHtml,
   extractText,
   notionImageProxyUrl,
+  createPage,
+  updatePage,
+  archivePage,
 } from "@/lib/notion";
-import { getIntegrationsAsync, requireIntegrationAsync } from "@/lib/integrations";
-import { cached } from "@/lib/notion-cache";
+import {
+  getIntegrationsAsync,
+  requireIntegrationAsync,
+  isConfiguredAsync,
+} from "@/lib/integrations";
+import { cached, invalidateCache } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -164,6 +171,150 @@ function mapPage(page: any): CaseStudy {
 
 // ---------------------------------------------------------------------------
 // Public API
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Admin write API
+// ---------------------------------------------------------------------------
+
+export interface CaseStudyInput {
+  title: string;
+  slug?: string;
+  client?: string;
+  industry?: string;
+  services?: string[];
+  summary?: string;
+  challenge?: string;
+  solution?: string;
+  results?: string;
+  metrics?: CaseStudyMetric[];
+  coverImage?: string;
+  tags?: string[];
+  published?: boolean;
+  featured?: boolean;
+  date?: string;
+}
+
+/**
+ * List ALL case studies (published + unpublished) for the admin panel.
+ */
+export async function getAllCaseStudiesAdmin(): Promise<CaseStudy[]> {
+  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
+  if (!configured) return staticCaseStudies;
+
+  const { NOTION_CASE_STUDIES_DB_ID } = await getIntegrationsAsync();
+  try {
+    const pages = await notionFetchAll(`/databases/${NOTION_CASE_STUDIES_DB_ID}/query`, {
+      sorts: [{ property: "Date", direction: "descending" }],
+    });
+    return pages.map(mapPage);
+  } catch (err) {
+    console.error("[Notion Case Studies] Admin list failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Create a new case study page in Notion.
+ */
+export async function createCaseStudy(input: CaseStudyInput): Promise<string | null> {
+  await requireIntegrationAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID");
+  const { NOTION_CASE_STUDIES_DB_ID } = await getIntegrationsAsync();
+
+  const metrics = input.metrics ?? [];
+  const id = await createPage(NOTION_CASE_STUDIES_DB_ID, {
+    Title: { title: [{ text: { content: input.title } }] },
+    Slug: { rich_text: [{ text: { content: input.slug ?? "" } }] },
+    Client: { rich_text: [{ text: { content: input.client ?? "" } }] },
+    ...(input.industry ? { Industry: { select: { name: input.industry } } } : {}),
+    ...(input.services?.length
+      ? { Services: { multi_select: input.services.map((s) => ({ name: s })) } }
+      : {}),
+    Summary: { rich_text: [{ text: { content: input.summary ?? "" } }] },
+    Challenge: { rich_text: [{ text: { content: input.challenge ?? "" } }] },
+    Solution: { rich_text: [{ text: { content: input.solution ?? "" } }] },
+    Results: { rich_text: [{ text: { content: input.results ?? "" } }] },
+    ...(metrics[0]
+      ? {
+          Metric1Label: { rich_text: [{ text: { content: metrics[0].label } }] },
+          Metric1Value: { rich_text: [{ text: { content: metrics[0].value } }] },
+        }
+      : {}),
+    ...(metrics[1]
+      ? {
+          Metric2Label: { rich_text: [{ text: { content: metrics[1].label } }] },
+          Metric2Value: { rich_text: [{ text: { content: metrics[1].value } }] },
+        }
+      : {}),
+    ...(metrics[2]
+      ? {
+          Metric3Label: { rich_text: [{ text: { content: metrics[2].label } }] },
+          Metric3Value: { rich_text: [{ text: { content: metrics[2].value } }] },
+        }
+      : {}),
+    ...(input.coverImage ? { CoverImage: { url: input.coverImage } } : {}),
+    ...(input.tags?.length ? { Tags: { multi_select: input.tags.map((t) => ({ name: t })) } } : {}),
+    Published: { checkbox: input.published ?? false },
+    Featured: { checkbox: input.featured ?? false },
+    ...(input.date ? { Date: { date: { start: input.date } } } : {}),
+  });
+
+  if (id) invalidateCache("case-studies");
+  return id;
+}
+
+/**
+ * Update an existing case study's properties.
+ */
+export async function updateCaseStudy(
+  pageId: string,
+  input: Partial<CaseStudyInput>
+): Promise<boolean> {
+  const props: Record<string, unknown> = {};
+  if (input.title != null) props.Title = { title: [{ text: { content: input.title } }] };
+  if (input.slug != null) props.Slug = { rich_text: [{ text: { content: input.slug } }] };
+  if (input.client != null) props.Client = { rich_text: [{ text: { content: input.client } }] };
+  if (input.industry != null) props.Industry = { select: { name: input.industry } };
+  if (input.services != null)
+    props.Services = { multi_select: input.services.map((s) => ({ name: s })) };
+  if (input.summary != null) props.Summary = { rich_text: [{ text: { content: input.summary } }] };
+  if (input.challenge != null)
+    props.Challenge = { rich_text: [{ text: { content: input.challenge } }] };
+  if (input.solution != null)
+    props.Solution = { rich_text: [{ text: { content: input.solution } }] };
+  if (input.results != null) props.Results = { rich_text: [{ text: { content: input.results } }] };
+  if (input.metrics != null) {
+    const m = input.metrics;
+    props.Metric1Label = { rich_text: [{ text: { content: m[0]?.label ?? "" } }] };
+    props.Metric1Value = { rich_text: [{ text: { content: m[0]?.value ?? "" } }] };
+    props.Metric2Label = { rich_text: [{ text: { content: m[1]?.label ?? "" } }] };
+    props.Metric2Value = { rich_text: [{ text: { content: m[1]?.value ?? "" } }] };
+    props.Metric3Label = { rich_text: [{ text: { content: m[2]?.label ?? "" } }] };
+    props.Metric3Value = { rich_text: [{ text: { content: m[2]?.value ?? "" } }] };
+  }
+  if (input.coverImage !== undefined)
+    props.CoverImage = input.coverImage ? { url: input.coverImage } : { url: null };
+  if (input.tags != null) props.Tags = { multi_select: input.tags.map((t) => ({ name: t })) };
+  if (input.published != null) props.Published = { checkbox: input.published };
+  if (input.featured != null) props.Featured = { checkbox: input.featured };
+  if (input.date != null) props.Date = { date: { start: input.date } };
+
+  const ok = await updatePage(pageId, props);
+  if (ok) invalidateCache("case-studies");
+  return ok;
+}
+
+/**
+ * Archive (soft-delete) a case study.
+ */
+export async function deleteCaseStudy(pageId: string): Promise<boolean> {
+  const ok = await archivePage(pageId);
+  if (ok) invalidateCache("case-studies");
+  return ok;
+}
+
+// ---------------------------------------------------------------------------
+// Public read API
 // ---------------------------------------------------------------------------
 
 /**

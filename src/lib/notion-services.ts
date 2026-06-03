@@ -22,9 +22,13 @@
  * └──────────────┴───────────────────────────────────────────────────┘
  */
 
-import { notionFetchAll, extractText } from "@/lib/notion";
-import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
-import { cached } from "@/lib/notion-cache";
+import { notionFetchAll, extractText, createPage, updatePage, archivePage } from "@/lib/notion";
+import {
+  getIntegrationsAsync,
+  isConfiguredAsync,
+  requireIntegrationAsync,
+} from "@/lib/integrations";
+import { cached, invalidateCache } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -154,6 +158,112 @@ function mapPage(page: any): CloudlessService {
 
 // ---------------------------------------------------------------------------
 // Public API
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Admin write API
+// ---------------------------------------------------------------------------
+
+export interface ServiceInput {
+  name: string;
+  slug?: string;
+  description?: string;
+  price?: string;
+  category?: ServiceCategory;
+  features?: string[];
+  cta?: string;
+  icon?: string;
+  stripePriceId?: string;
+  published?: boolean;
+  order?: number;
+}
+
+/**
+ * List ALL services (published + unpublished) for the admin panel.
+ */
+export async function getAllServicesAdmin(): Promise<CloudlessService[]> {
+  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_SERVICES_DB_ID");
+  if (!configured) return staticServices;
+
+  const { NOTION_SERVICES_DB_ID } = await getIntegrationsAsync();
+  try {
+    const pages = await notionFetchAll(`/databases/${NOTION_SERVICES_DB_ID}/query`, {
+      sorts: [{ property: "Order", direction: "ascending" }],
+    });
+    return pages.map(mapPage);
+  } catch (err) {
+    console.error("[Notion Services] Admin list failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Create a new service page in Notion.
+ */
+export async function createService(input: ServiceInput): Promise<string | null> {
+  await requireIntegrationAsync("NOTION_API_KEY", "NOTION_SERVICES_DB_ID");
+  const { NOTION_SERVICES_DB_ID } = await getIntegrationsAsync();
+
+  const featuresText = (input.features ?? []).join("\n");
+  const id = await createPage(NOTION_SERVICES_DB_ID, {
+    Name: { title: [{ text: { content: input.name } }] },
+    Slug: { rich_text: [{ text: { content: input.slug ?? "" } }] },
+    Description: { rich_text: [{ text: { content: input.description ?? "" } }] },
+    Price: { rich_text: [{ text: { content: input.price ?? "" } }] },
+    ...(input.category ? { Category: { select: { name: input.category } } } : {}),
+    Features: { rich_text: [{ text: { content: featuresText } }] },
+    CTA: { rich_text: [{ text: { content: input.cta ?? "Learn more" } }] },
+    Icon: { rich_text: [{ text: { content: input.icon ?? "☁️" } }] },
+    ...(input.stripePriceId
+      ? { StripePriceId: { rich_text: [{ text: { content: input.stripePriceId } }] } }
+      : {}),
+    Published: { checkbox: input.published ?? false },
+    ...(input.order != null ? { Order: { number: input.order } } : {}),
+  });
+
+  if (id) invalidateCache("services");
+  return id;
+}
+
+/**
+ * Update an existing service's properties.
+ */
+export async function updateService(
+  pageId: string,
+  input: Partial<ServiceInput>
+): Promise<boolean> {
+  const props: Record<string, unknown> = {};
+  if (input.name != null) props.Name = { title: [{ text: { content: input.name } }] };
+  if (input.slug != null) props.Slug = { rich_text: [{ text: { content: input.slug } }] };
+  if (input.description != null)
+    props.Description = { rich_text: [{ text: { content: input.description } }] };
+  if (input.price != null) props.Price = { rich_text: [{ text: { content: input.price } }] };
+  if (input.category != null) props.Category = { select: { name: input.category } };
+  if (input.features != null)
+    props.Features = { rich_text: [{ text: { content: input.features.join("\n") } }] };
+  if (input.cta != null) props.CTA = { rich_text: [{ text: { content: input.cta } }] };
+  if (input.icon != null) props.Icon = { rich_text: [{ text: { content: input.icon } }] };
+  if (input.stripePriceId !== undefined)
+    props.StripePriceId = { rich_text: [{ text: { content: input.stripePriceId ?? "" } }] };
+  if (input.published != null) props.Published = { checkbox: input.published };
+  if (input.order != null) props.Order = { number: input.order };
+
+  const ok = await updatePage(pageId, props);
+  if (ok) invalidateCache("services");
+  return ok;
+}
+
+/**
+ * Archive (soft-delete) a service.
+ */
+export async function deleteService(pageId: string): Promise<boolean> {
+  const ok = await archivePage(pageId);
+  if (ok) invalidateCache("services");
+  return ok;
+}
+
+// ---------------------------------------------------------------------------
+// Public read API
 // ---------------------------------------------------------------------------
 
 /**
