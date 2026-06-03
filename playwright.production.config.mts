@@ -33,6 +33,14 @@ export default defineConfig({
   use: {
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    // Cloud CI runners (sandboxed Chrome) don't trust the root CA for cloudless.gr.
+    // Real TLS issues are caught by pi-tls-cert-check.yml (openssl) — this just
+    // prevents 189 spurious ERR_CERT_AUTHORITY_INVALID failures in cloud sessions.
+    ignoreHTTPSErrors: true,
+  },
+
+  env: {
+    INFRA_SMOKE: "1",
   },
 
   projects: [
