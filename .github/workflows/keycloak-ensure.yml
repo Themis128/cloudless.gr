@@ -8,8 +8,9 @@ name: Keycloak ensure (self-heal auth to last working state)
 # clean run stays silent (no noise).
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
+  # Cron disabled — auth migrated to Cognito (always-up AWS).
+  # Keycloak is scheduled for decommission; run decommission-keycloak.yml when ready.
+  # workflow_dispatch remains so the workflow can still be triggered manually if needed.
   workflow_dispatch:
   push:
     branches: [main]

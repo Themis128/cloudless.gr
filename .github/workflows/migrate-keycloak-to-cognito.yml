@@ -1,0 +1,80 @@
+name: Migrate Keycloak users → Cognito
+
+# Exports all users from Keycloak master realm and imports them into the
+# Cognito User Pool (cloudless-auth). Existing Cognito accounts are skipped.
+# Keycloak admin group membership is preserved as Cognito admin group.
+#
+# Users land in FORCE_CHANGE_PASSWORD state — they must reset their password
+# via the Cognito Hosted UI "Forgot password" flow on first sign-in.
+#
+# Run AFTER the SST deploy has created the Cognito User Pool and BEFORE
+# decommissioning Keycloak (so users are not left without access).
+#
+# Requires: TS_AUTHKEY, KUBECONFIG_B64, AWS_DEPLOY_ROLE_ARN.
+# Default: dry_run=true — inspect output before applying.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — log what would happen, make no changes"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Wait for cluster API
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if kubectl get ns keycloak >/dev/null 2>&1; then
+              echo "cluster reachable (attempt $i)"; break
+            fi
+            echo "not reachable (attempt $i) — retry in ${i}0s"; sleep "${i}0"
+          done
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@ececc3a90d58a371f81a37fcedcc63e9e0e1e78e # v4.1.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Migrate users
+        run: |
+          DRY_RUN="${{ inputs.dry_run == true && '1' || '0' }}" \
+            bash scripts/migrate-keycloak-to-cognito.sh 2>&1 | tee migrate.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          DRY="${{ inputs.dry_run == true && 'DRY RUN — ' || '' }}"
+          {
+            echo "# ${DRY}Keycloak → Cognito migration — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat migrate.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
