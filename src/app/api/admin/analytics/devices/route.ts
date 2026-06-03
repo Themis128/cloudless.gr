@@ -9,7 +9,7 @@ import { requireAdmin } from "@/lib/api-auth";
  * Returns organic traffic breakdown by device type (DESKTOP, MOBILE, TABLET)
  * from Google Search Console.
  *
- * @auth Requires Cognito JWT with `admin` group (401 / 403).
+ * @auth Requires admin session or Bearer JWT with `admin` group (401 / 403).
  * @returns 503 if GSC credentials are not configured in SSM.
  */
 export async function GET(request: NextRequest) {

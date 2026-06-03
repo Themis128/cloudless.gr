@@ -10,7 +10,7 @@ import { requireAdmin } from "@/lib/api-auth";
  * Filters pages by URL pattern (default: "/store/").
  * `limit` is clamped to 1–100 (default 50). Non-numeric values fall back to 50.
  *
- * @auth Requires Cognito JWT with `admin` group (401 / 403).
+ * @auth Requires admin session or Bearer JWT with `admin` group (401 / 403).
  * @returns 503 if GSC credentials are not configured in SSM.
  */
 export async function GET(request: NextRequest) {
