@@ -41,7 +41,17 @@ interface WebhookPayload {
     | "project.updated"
     | "task.updated"
     | "analytics.event";
-  database: "blog" | "docs" | "submissions" | "projects" | "tasks" | "analytics";
+  database:
+    | "blog"
+    | "docs"
+    | "submissions"
+    | "projects"
+    | "tasks"
+    | "analytics"
+    | "testimonials"
+    | "case-studies"
+    | "services"
+    | "faqs";
   page_id: string;
   slug?: string;
   data?: Record<string, unknown>;
@@ -65,18 +75,40 @@ async function verifySecret(request: NextRequest): Promise<boolean> {
 async function handlePageUpdated(payload: WebhookPayload) {
   const { database, slug } = payload;
 
-  invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
-
-  if (database === "blog") {
-    revalidatePath("/blog");
-    if (slug) revalidatePath(`/blog/${slug}`);
-    revalidatePath("/api/blog/posts");
-    if (slug) revalidatePath(`/api/blog/${slug}`);
-  } else if (database === "docs") {
-    revalidatePath("/docs");
-    if (slug) revalidatePath(`/docs/${slug}`);
-    revalidatePath("/api/docs");
-    if (slug) revalidatePath(`/api/docs/${slug}`);
+  switch (database) {
+    case "blog":
+      invalidateCache("blog");
+      revalidatePath("/blog");
+      if (slug) revalidatePath(`/blog/${slug}`);
+      revalidatePath("/api/blog/posts");
+      if (slug) revalidatePath(`/api/blog/${slug}`);
+      break;
+    case "docs":
+      invalidateCache("docs");
+      revalidatePath("/docs");
+      if (slug) revalidatePath(`/docs/${slug}`);
+      revalidatePath("/api/docs");
+      if (slug) revalidatePath(`/api/docs/${slug}`);
+      break;
+    case "testimonials":
+      invalidateCache("testimonials");
+      revalidatePath("/api/testimonials");
+      break;
+    case "case-studies":
+      invalidateCache("case-studies");
+      revalidatePath("/api/case-studies");
+      if (slug) revalidatePath(`/api/case-studies/${slug}`);
+      break;
+    case "services":
+      invalidateCache("services");
+      revalidatePath("/api/services");
+      break;
+    case "faqs":
+      invalidateCache("faqs");
+      revalidatePath("/api/faqs");
+      break;
+    default:
+      break;
   }
 
   revalidatePath(SITEMAP_PATH);
@@ -87,16 +119,38 @@ async function handlePageUpdated(payload: WebhookPayload) {
 async function handlePageCreated(payload: WebhookPayload) {
   const { database, slug, data } = payload;
 
-  invalidateCache(database === "blog" ? "blog" : database === "docs" ? "docs" : undefined);
-
-  if (database === "blog") {
-    revalidatePath("/blog");
-    revalidatePath("/api/blog/posts");
-    revalidatePath(SITEMAP_PATH);
-  } else if (database === "docs") {
-    revalidatePath("/docs");
-    revalidatePath("/api/docs");
-    revalidatePath(SITEMAP_PATH);
+  switch (database) {
+    case "blog":
+      invalidateCache("blog");
+      revalidatePath("/blog");
+      revalidatePath("/api/blog/posts");
+      revalidatePath(SITEMAP_PATH);
+      break;
+    case "docs":
+      invalidateCache("docs");
+      revalidatePath("/docs");
+      revalidatePath("/api/docs");
+      revalidatePath(SITEMAP_PATH);
+      break;
+    case "testimonials":
+      invalidateCache("testimonials");
+      revalidatePath("/api/testimonials");
+      break;
+    case "case-studies":
+      invalidateCache("case-studies");
+      revalidatePath("/api/case-studies");
+      revalidatePath(SITEMAP_PATH);
+      break;
+    case "services":
+      invalidateCache("services");
+      revalidatePath("/api/services");
+      break;
+    case "faqs":
+      invalidateCache("faqs");
+      revalidatePath("/api/faqs");
+      break;
+    default:
+      break;
   }
 
   if (database === "docs" && data?.title) {
