@@ -43,8 +43,8 @@ interface AnthropicResponse {
 }
 
 export async function POST(req: NextRequest) {
-  const authError = await requireAdmin(req);
-  if (authError) return authError;
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
 
   if (!(await isAnthropicConfigured())) {
     return NextResponse.json(
