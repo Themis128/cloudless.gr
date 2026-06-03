@@ -171,8 +171,7 @@ export default function AIAssistantPage() {
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
             {chatMessages.length === 0 && (
               <p className="font-mono text-xs text-slate-500">
-                Ask me anything — I can search Notion, look up recent orders, or draft a team
-                email.
+                Ask me anything — I can search Notion, look up recent orders, or draft a team email.
               </p>
             )}
             {chatMessages.map((msg, i) => (
@@ -183,15 +182,13 @@ export default function AIAssistantPage() {
                 <div
                   className={`max-w-[80%] rounded-lg px-3 py-2 font-mono text-xs ${
                     msg.role === "user"
-                      ? "bg-neon-magenta/10 text-neon-magenta border border-neon-magenta/20"
-                      : "bg-slate-800 text-slate-300 border border-slate-700"
+                      ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
+                      : "border border-slate-700 bg-slate-800 text-slate-300"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{msg.content}</p>
                   {msg.toolsUsed && msg.toolsUsed.length > 0 && (
-                    <p className="mt-1 text-slate-500">
-                      Used: {msg.toolsUsed.join(", ")}
-                    </p>
+                    <p className="mt-1 text-slate-500">Used: {msg.toolsUsed.join(", ")}</p>
                   )}
                 </div>
               </div>
@@ -205,10 +202,7 @@ export default function AIAssistantPage() {
             )}
             <div ref={chatEndRef} />
           </div>
-          <form
-            onSubmit={sendChatMessage}
-            className="flex gap-2 border-t border-slate-800 p-3"
-          >
+          <form onSubmit={sendChatMessage} className="flex gap-2 border-t border-slate-800 p-3">
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
