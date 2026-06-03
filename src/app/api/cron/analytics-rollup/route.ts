@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createWeeklyRollup, archiveOldEvents, flushEventQueue } from "@/lib/notion-analytics";
+import { createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
 import { SlackClient } from "@/lib/slack-notify";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
@@ -7,9 +7,6 @@ export async function GET(request: NextRequest) {
   if (!(await isCronAuthorized(request))) {
     return cronUnauthorized();
   }
-
-  // Flush any queued events before creating the rollup so counts are accurate
-  await flushEventQueue();
 
   const [rollupId, archiveResult] = await Promise.all([createWeeklyRollup(), archiveOldEvents(30)]);
 
