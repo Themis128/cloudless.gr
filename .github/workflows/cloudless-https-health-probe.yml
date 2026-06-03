@@ -43,7 +43,7 @@ env:
 jobs:
   probe-primary:
     name: Probe PRIMARY (cloudless.gr via Cloudflare → CloudFront)
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       PROBE_HOST: "cloudless.gr"
@@ -168,7 +168,7 @@ jobs:
 
   probe-standby:
     name: Probe STANDBY (pi-origin.cloudless.gr via Tailscale Funnel → Pi/k3s)
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       PROBE_HOST: "pi-origin.cloudless.gr"

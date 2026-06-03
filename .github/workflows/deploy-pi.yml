@@ -36,11 +36,8 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    # Self-hosted arm64 runner on omv-main. `omv-build` carries labels
-    # `[self-hosted, omv, build]`; the `pi` label was dropped after a
-    # runner re-registration. `[omv, build]` correctly targets the
-    # Docker+USB-SSD-backed runner on omv-main.
-    runs-on: [self-hosted, omv, build]
+    # GH-hosted runner with QEMU for arm64 cross-compilation.
+    runs-on: ubuntu-latest
     outputs:
       short_sha: ${{ steps.check_ecr.outputs.short_sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
@@ -163,7 +160,7 @@ jobs:
     # already inside the local network and can reach the k3s API directly
     # (192.168.1.128:6443) without Tailscale, so the tailnet step becomes a
     # no-op on them.
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
 

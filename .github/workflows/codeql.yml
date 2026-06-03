@@ -32,7 +32,7 @@ concurrency:
 jobs:
   analyze:
     name: Analyze
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
 
     strategy:

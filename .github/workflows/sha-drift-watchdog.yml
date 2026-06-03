@@ -16,7 +16,7 @@ permissions:
 jobs:
   recheck:
     name: recheck-if-drifted
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Re-trigger drift detector if last run failed

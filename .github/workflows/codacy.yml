@@ -28,7 +28,7 @@ concurrency:
 jobs:
   codacy-security-scan:
     name: Codacy Security Scan
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
