@@ -341,6 +341,32 @@ export function notionImageProxyUrl(id: string, type: "block" | "cover" = "block
  * Update page properties via PATCH.
  * Accepts a plain object of property updates.
  */
+/**
+ * Create a new page in a Notion database.
+ * Returns the new page ID on success, null on failure.
+ */
+export async function createPage(
+  databaseId: string,
+  properties: Record<string, unknown>
+): Promise<string | null> {
+  try {
+    const page = await notionFetch<{ id: string }>("/pages", {
+      method: "POST",
+      body: JSON.stringify({
+        parent: { database_id: databaseId },
+        properties,
+      }),
+    });
+    return page.id;
+  } catch (err) {
+    console.error(
+      `[Notion] Failed to create page in ${databaseId}:`,
+      (err as Error)?.message ?? "unknown error"
+    );
+    return null;
+  }
+}
+
 export async function updatePage(
   pageId: string,
   properties: Record<string, unknown>
