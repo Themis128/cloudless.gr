@@ -37,6 +37,10 @@ import {
   Server,
   Cpu,
   ExternalLink,
+  Star,
+  Briefcase,
+  HelpCircle,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -80,6 +84,15 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/docs", label: "Docs", Icon: FileText },
       { href: "/admin/projects", label: "Projects", Icon: FolderKanban },
       { href: "/admin/notion", label: "Submissions", Icon: Inbox },
+    ],
+  },
+  {
+    label: "CMS",
+    links: [
+      { href: "/admin/cms/testimonials", label: "Testimonials", Icon: Star },
+      { href: "/admin/cms/case-studies", label: "Case Studies", Icon: Briefcase },
+      { href: "/admin/cms/services", label: "Services", Icon: Package },
+      { href: "/admin/cms/faqs", label: "FAQs", Icon: HelpCircle },
     ],
   },
   {

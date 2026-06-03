@@ -17,9 +17,13 @@
  * └──────────┴──────────────────────────────────────────────────────┘
  */
 
-import { notionFetchAll, extractText } from "@/lib/notion";
-import { getIntegrationsAsync, isConfiguredAsync } from "@/lib/integrations";
-import { cached } from "@/lib/notion-cache";
+import { notionFetchAll, extractText, createPage, updatePage, archivePage } from "@/lib/notion";
+import {
+  getIntegrationsAsync,
+  isConfiguredAsync,
+  requireIntegrationAsync,
+} from "@/lib/integrations";
+import { cached, invalidateCache } from "@/lib/notion-cache";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,6 +113,91 @@ function mapPage(page: any): Faq {
 
 // ---------------------------------------------------------------------------
 // Public API
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Admin write API
+// ---------------------------------------------------------------------------
+
+export interface FaqInput {
+  question: string;
+  answer?: string;
+  category?: FaqCategory;
+  locales?: string[];
+  published?: boolean;
+  order?: number;
+}
+
+/**
+ * List ALL FAQs (published + unpublished) for the admin panel.
+ */
+export async function getAllFaqsAdmin(): Promise<Faq[]> {
+  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
+  if (!configured) return staticFaqs;
+
+  const { NOTION_FAQS_DB_ID } = await getIntegrationsAsync();
+  try {
+    const pages = await notionFetchAll(`/databases/${NOTION_FAQS_DB_ID}/query`, {
+      sorts: [{ property: "Order", direction: "ascending" }],
+    });
+    return pages.map(mapPage);
+  } catch (err) {
+    console.error("[Notion FAQs] Admin list failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Create a new FAQ page in Notion.
+ */
+export async function createFaq(input: FaqInput): Promise<string | null> {
+  await requireIntegrationAsync("NOTION_API_KEY", "NOTION_FAQS_DB_ID");
+  const { NOTION_FAQS_DB_ID } = await getIntegrationsAsync();
+
+  const id = await createPage(NOTION_FAQS_DB_ID, {
+    Question: { title: [{ text: { content: input.question } }] },
+    Answer: { rich_text: [{ text: { content: input.answer ?? "" } }] },
+    ...(input.category ? { Category: { select: { name: input.category } } } : {}),
+    ...(input.locales?.length
+      ? { Locale: { multi_select: input.locales.map((l) => ({ name: l })) } }
+      : {}),
+    Published: { checkbox: input.published ?? false },
+    ...(input.order != null ? { Order: { number: input.order } } : {}),
+  });
+
+  if (id) invalidateCache("faqs");
+  return id;
+}
+
+/**
+ * Update an existing FAQ's properties.
+ */
+export async function updateFaq(pageId: string, input: Partial<FaqInput>): Promise<boolean> {
+  const props: Record<string, unknown> = {};
+  if (input.question != null) props.Question = { title: [{ text: { content: input.question } }] };
+  if (input.answer != null) props.Answer = { rich_text: [{ text: { content: input.answer } }] };
+  if (input.category != null) props.Category = { select: { name: input.category } };
+  if (input.locales != null)
+    props.Locale = { multi_select: input.locales.map((l) => ({ name: l })) };
+  if (input.published != null) props.Published = { checkbox: input.published };
+  if (input.order != null) props.Order = { number: input.order };
+
+  const ok = await updatePage(pageId, props);
+  if (ok) invalidateCache("faqs");
+  return ok;
+}
+
+/**
+ * Archive (soft-delete) a FAQ.
+ */
+export async function deleteFaq(pageId: string): Promise<boolean> {
+  const ok = await archivePage(pageId);
+  if (ok) invalidateCache("faqs");
+  return ok;
+}
+
+// ---------------------------------------------------------------------------
+// Public read API
 // ---------------------------------------------------------------------------
 
 /**
