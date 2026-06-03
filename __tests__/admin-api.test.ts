@@ -271,29 +271,25 @@ vi.mock("@/lib/gsc", () => ({
     { device: "DESKTOP", clicks: 300, impressions: 6000, ctr: 5, avgPosition: 9 },
     { device: "MOBILE", clicks: 200, impressions: 5000, ctr: 4, avgPosition: 12 },
   ]),
-  getProductPageMetrics: vi
-    .fn()
-    .mockResolvedValue([
-      {
-        page: "https://cloudless.gr/store/pro-plan",
-        clicks: 40,
-        impressions: 900,
-        ctr: 4.44,
-        position: 8,
-      },
-    ]),
-  getQueryPageMapping: vi
-    .fn()
-    .mockResolvedValue([
-      {
-        query: "cloudless hosting",
-        page: "https://cloudless.gr/",
-        clicks: 60,
-        impressions: 1500,
-        ctr: 4,
-        position: 6,
-      },
-    ]),
+  getProductPageMetrics: vi.fn().mockResolvedValue([
+    {
+      page: "https://cloudless.gr/store/pro-plan",
+      clicks: 40,
+      impressions: 900,
+      ctr: 4.44,
+      position: 8,
+    },
+  ]),
+  getQueryPageMapping: vi.fn().mockResolvedValue([
+    {
+      query: "cloudless hosting",
+      page: "https://cloudless.gr/",
+      clicks: 60,
+      impressions: 1500,
+      ctr: 4,
+      position: 6,
+    },
+  ]),
   getSearchIntentBreakdown: vi.fn().mockResolvedValue({
     brand: [{ keyword: "cloudless gr", clicks: 100, impressions: 2000, ctr: 5, position: 3 }],
     product: [],
@@ -436,6 +432,11 @@ describe("GET /api/admin/users", () => {
 describe("POST /api/admin/users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-import api-auth under the mocked `jose` (setup.ts imports it first,
+    // binding the real jose). Without this, a filtered/standalone run of these
+    // tests skips the GET block's resetModules, so verifyToken uses the real
+    // jwtVerify → 401 on the fake-signed test token. Mirrors the GET block.
+    vi.resetModules();
     process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
     process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
     process.env.KEYCLOAK_ADMIN_USER = "admin";
@@ -495,14 +496,20 @@ describe("POST /api/admin/users", () => {
   });
 
   it("disable action succeeds", async () => {
-    const res = await postAction({ action: "disable", username: "00000000-0000-0000-0000-000000000001" });
+    const res = await postAction({
+      action: "disable",
+      username: "00000000-0000-0000-0000-000000000001",
+    });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);
   });
 
   it("enable action succeeds", async () => {
-    const res = await postAction({ action: "enable", username: "00000000-0000-0000-0000-000000000001" });
+    const res = await postAction({
+      action: "enable",
+      username: "00000000-0000-0000-0000-000000000001",
+    });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);
@@ -520,7 +527,10 @@ describe("POST /api/admin/users", () => {
   });
 
   it("returns 400 for unknown action", async () => {
-    const res = await postAction({ action: "nuke", username: "00000000-0000-0000-0000-000000000001" });
+    const res = await postAction({
+      action: "nuke",
+      username: "00000000-0000-0000-0000-000000000001",
+    });
     expect(res.status).toBe(400);
   });
 });
