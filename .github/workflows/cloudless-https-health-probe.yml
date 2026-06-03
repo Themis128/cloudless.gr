@@ -22,6 +22,10 @@ name: cloudless.gr HTTPS health probe
 on:
   schedule:
     - cron: "0 */6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudless-https-health-probe.yml"
   workflow_dispatch:
     inputs:
       skip_tls_floor:
