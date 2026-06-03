@@ -125,7 +125,7 @@ The route-driven default in `themeForRoute()` is what an unfamiliar visitor sees
 ```
 admin path (locked dark)
   ↓
-user.preferences.theme   (authenticated; lives in Cognito + AuthContext)
+user.preferences.theme   (authenticated; lives in next-auth session + AuthContext)
   ↓
 localStorage["cloudless-theme-pref"]   (anonymous override)
   ↓
