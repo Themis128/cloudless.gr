@@ -47,7 +47,11 @@ function cognitoAttr(attrs: Array<{ Name?: string; Value?: string }>, name: stri
   return attrs.find((a) => a.Name === name)?.Value ?? "";
 }
 
-async function listCognitoUsers(issuer: string, limit: number, filter?: string): Promise<AdminUser[]> {
+async function listCognitoUsers(
+  issuer: string,
+  limit: number,
+  filter?: string
+): Promise<AdminUser[]> {
   const client = cognitoClient(issuer);
   const userPoolId = getUserPoolId(issuer);
 
@@ -75,9 +79,10 @@ async function listCognitoUsers(issuer: string, limit: number, filter?: string):
       return {
         username: u.Username ?? "",
         email: cognitoAttr(attrs, "email"),
-        name: [cognitoAttr(attrs, "given_name"), cognitoAttr(attrs, "family_name")]
-          .filter(Boolean)
-          .join(" ") || cognitoAttr(attrs, "name"),
+        name:
+          [cognitoAttr(attrs, "given_name"), cognitoAttr(attrs, "family_name")]
+            .filter(Boolean)
+            .join(" ") || cognitoAttr(attrs, "name"),
         company: cognitoAttr(attrs, "custom:company"),
         phone: cognitoAttr(attrs, "phone_number"),
         emailVerified: cognitoAttr(attrs, "email_verified") === "true",
@@ -101,23 +106,34 @@ async function mutateCognitoUser(
 
   switch (action) {
     case "disable":
-      await client.send(new AdminDisableUserCommand({ UserPoolId: userPoolId, Username: username }));
+      await client.send(
+        new AdminDisableUserCommand({ UserPoolId: userPoolId, Username: username })
+      );
       return { success: true, message: "User disabled" };
     case "enable":
       await client.send(new AdminEnableUserCommand({ UserPoolId: userPoolId, Username: username }));
       return { success: true, message: "User enabled" };
     case "promote":
       await client.send(
-        new AdminAddUserToGroupCommand({ UserPoolId: userPoolId, Username: username, GroupName: "admin" })
+        new AdminAddUserToGroupCommand({
+          UserPoolId: userPoolId,
+          Username: username,
+          GroupName: "admin",
+        })
       );
       return { success: true, message: "User promoted to admin" };
     case "demote":
       await client.send(
-        new AdminRemoveUserFromGroupCommand({ UserPoolId: userPoolId, Username: username, GroupName: "admin" })
+        new AdminRemoveUserFromGroupCommand({
+          UserPoolId: userPoolId,
+          Username: username,
+          GroupName: "admin",
+        })
       );
       return { success: true, message: "User removed from admin group" };
     default:
-      throw new Error(`Unknown action: ${action}`);
+      // 400 (client error), consistent with the Keycloak path's unknown-action.
+      throw Object.assign(new Error(`Unknown action: ${action}`), { status: 400 });
   }
 }
 
@@ -140,8 +156,17 @@ async function getKeycloakAdminToken(): Promise<string> {
   const adminPass = cfg?.KEYCLOAK_ADMIN_PASSWORD || process.env.KEYCLOAK_ADMIN_PASSWORD || "";
 
   const body = clientSecret
-    ? new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret })
-    : new URLSearchParams({ grant_type: "password", client_id: clientId, username: adminUser, password: adminPass });
+    ? new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+      })
+    : new URLSearchParams({
+        grant_type: "password",
+        client_id: clientId,
+        username: adminUser,
+        password: adminPass,
+      });
 
   const res = await globalThis.fetch(`${KC_BASE}/protocol/openid-connect/token`, {
     method: "POST",
@@ -173,8 +198,14 @@ async function listKeycloakUsers(limit: number, filter?: string): Promise<AdminU
   if (!res.ok) throw new Error(`Keycloak list users: ${res.status}`);
 
   interface KcUser {
-    id: string; username: string; email?: string; firstName?: string; lastName?: string;
-    emailVerified?: boolean; enabled?: boolean; createdTimestamp?: number;
+    id: string;
+    username: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    emailVerified?: boolean;
+    enabled?: boolean;
+    createdTimestamp?: number;
     attributes?: Record<string, string[]>;
   }
   const kcUsers = (await res.json()) as KcUser[];
@@ -188,7 +219,9 @@ async function listKeycloakUsers(limit: number, filter?: string): Promise<AdminU
           const groups = (await gr.json()) as Array<{ name: string }>;
           isAdmin = groups.some((g) => g.name === "admin");
         }
-      } catch { /* default non-admin */ }
+      } catch {
+        /* default non-admin */
+      }
 
       const attrs = u.attributes ?? {};
       return {
@@ -217,11 +250,17 @@ async function mutateKeycloakUser(
   const token = await getKeycloakAdminToken();
 
   if (action === "disable") {
-    await kcFetch(`/users/${userId}`, token, { method: "PUT", body: JSON.stringify({ enabled: false }) });
+    await kcFetch(`/users/${userId}`, token, {
+      method: "PUT",
+      body: JSON.stringify({ enabled: false }),
+    });
     return { success: true, message: "User disabled" };
   }
   if (action === "enable") {
-    await kcFetch(`/users/${userId}`, token, { method: "PUT", body: JSON.stringify({ enabled: true }) });
+    await kcFetch(`/users/${userId}`, token, {
+      method: "PUT",
+      body: JSON.stringify({ enabled: true }),
+    });
     return { success: true, message: "User enabled" };
   }
   const grRes = await kcFetch(`/groups?search=admin`, token);
@@ -299,6 +338,9 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const status = (err as { status?: number }).status ?? 500;
     console.error("Failed to modify user:", err instanceof Error ? err.message : String(err));
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to modify user" }, { status });
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to modify user" },
+      { status }
+    );
   }
 }
