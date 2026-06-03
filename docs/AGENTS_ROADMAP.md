@@ -59,9 +59,11 @@ Guardrails:
 
 Implementation: `src/lib/agent-book.ts` + `src/app/api/agent/book/route.ts`. Tests in `__tests__/agent-book-api.test.ts`.
 
-### Phase 2c — admin assistant
+### Phase 2c — admin assistant — SHIPPED
 
-`/admin/assistant` page (already partially scaffolded) becomes a multi-tool agent: `search_notion`, `summarize_recent_orders`, `draft_email`. Admin-only, lower stakes than the public chat.
+`/admin/assistant` page hosts a multi-tool agent: `search_notion`, `get_recent_orders`, `draft_email`. Admin-only, lower stakes than the public chat.
+
+Implementation: `src/lib/admin-assistant-tools.ts` (tool definitions + executors) + `src/app/api/admin/ai/assistant/route.ts` (Anthropic Messages API tool-use loop, max 4 iterations, `requireAdmin` guard) + chat UI on `src/app/[locale]/admin/ai-assistant/page.tsx`. Tests (7 specs) in `__tests__/admin-assistant-api.test.ts`.
 
 **Cost model**: bursty — only used by admins. Probably under $5/month even at heavy use.
 
