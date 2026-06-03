@@ -87,10 +87,11 @@ function isAdminFromSession(user: { groups?: string[]; roles?: string[] }): bool
 }
 
 /**
- * Pull the user's Keycloak profile attributes (company/phone/preferences) that
- * the session token does not carry, merging them onto the base user. Returns
- * the base unchanged on any failure so auth state never depends on it. Without
- * this, the Profile/Settings forms render blank on every load even after a save.
+ * Pull the user's stored profile attributes (company/phone/preferences) that
+ * the session token does not carry, merging them onto the base user. Served by
+ * the provider-agnostic /api/user/profile route (DynamoDB, keyed by sub).
+ * Returns the base unchanged on any failure so auth state never depends on it.
+ * Without this, the Profile/Settings forms render blank on every load.
  */
 async function enrichWithProfile(base: AuthUser): Promise<AuthUser> {
   try {
@@ -159,7 +160,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           preferences: { ...DEFAULT_PREFERENCES },
         };
         setIsAdmin(isAdminFromSession(data.user));
-        // Enrich with Keycloak profile attributes (company/phone/preferences)
+        // Enrich with stored profile attributes (company/phone/preferences)
         // the session JWT doesn't carry, so saved values render instead of
         // blanks. Best-effort — falls back to the session-only user.
         setUser(await enrichWithProfile(base));
@@ -254,10 +255,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     company?: string;
     phone?: string;
   }) => {
-    // Go through our own same-origin API route. A direct browser fetch to
-    // Keycloak's Account API (auth.cloudless.gr) is cross-origin and is blocked
-    // by CORS → the opaque "Failed to fetch". The server route uses the user's
-    // access token to update Keycloak with no CORS constraint.
+    // Go through our own same-origin API route, which persists the profile in
+    // DynamoDB keyed by the user's sub (provider-agnostic — Cognito or Keycloak).
     const res = await globalThis.fetch(PROFILE_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
