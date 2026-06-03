@@ -1,5 +1,6 @@
 name: Keycloak full verify (enable signup + provision + verify login)
 # re-triggered 2026-06-03 — post-deploy full-stack verification
+# re-triggered 2026-06-03T00:30Z — post-k3s-restart verification (cluster recovered)
 
 # Drives the live system to "100%": enables self-service registration on the
 # realm, provisions/verifies a test user, and posts the full result to issue

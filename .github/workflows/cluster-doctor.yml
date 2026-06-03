@@ -1,6 +1,7 @@
 name: Cluster doctor (read-only diagnostics)
 # triggered 2026-06-02T22:5X — auth.cloudless.gr 503 live; confirm Keycloak OOM/limit state
 # re-triggered 2026-06-03 — post-deploy full-stack verification
+# re-triggered 2026-06-03T00:30Z — post-k3s-restart verification (cluster recovered)
 
 # Read-only visibility into the omv k3s cluster from CI. Runs scripts/cluster-
 # doctor.sh over Tailscale + KUBECONFIG_B64 and posts the snapshot as a comment

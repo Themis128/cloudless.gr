@@ -1,5 +1,6 @@
 name: App auth doctor (Pi cloudless deployment wiring)
 # re-triggered 2026-06-03 — post-deploy full-stack verification
+# re-triggered 2026-06-03T00:30Z — post-k3s-restart verification (cluster recovered)
 
 # Read-only: dumps how the k3s `cloudless` app is wired for auth (env names,
 # secrets, configmaps — never values) so we can wire Keycloak onto the standby.
