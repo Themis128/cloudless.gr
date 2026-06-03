@@ -7,13 +7,13 @@ name: Pi TLS Cert Check
 #   4. /api/health returns 200 from behind the Lambda IPv6 proxy
 #   5. Legacy TLS 1.0/1.1 are rejected; TLS 1.2+ remains available
 #
-# Architecture (post PR #100, sst.config.ts:83-200):
+# Architecture (lambda/pi-proxy/index.py + deploy-pi-proxy.yml):
 #   Public client
-#     ↓ DNS: cloudless.gr → R53 alias to APIGW (when PRIMARY/CloudFront red)
+#     ↓ DNS: cloudless.gr → Cloudflare LB → APIGW alias (when PRIMARY/CloudFront red)
 #     ↓ TLS to APIGW custom domain (ACM cert, AWS-managed)
-#     ↓ Lambda 'cloudless-pi-proxy' (dual-stack VPC)
-#     ↓ HTTPS over IPv6:18443
-#   Pi (Starlink CGNAT — IPv4 unusable, IPv6 only)
+#     ↓ Lambda 'cloudless-pi-proxy' (FUNNEL_HOST=omv.tail8eb71.ts.net)
+#     ↓ HTTPS:443 → Tailscale Funnel → Pi Traefik → k3s cloudless service
+#   Pi (Starlink CGNAT — reachable only via Tailscale Funnel)
 #
 # Why probe APIGW directly instead of cloudless.gr: while CloudFront is
 # healthy, R53 returns CloudFront. Probing cloudless.gr would never
@@ -129,11 +129,12 @@ jobs:
           echo "→ GET /api/health via SECONDARY (Host: ${SNI}, target: ${APIGW_HOST})"
           # --resolve forces curl to TCP-connect to APIGW while presenting
           # SNI/Host = cloudless.gr. This is exactly how a failover client
-          # would resolve cloudless.gr when R53 returns the APIGW alias.
+          # would resolve cloudless.gr when Cloudflare routes to the APIGW alias.
           # --retry-all-errors retries on 5xx (e.g. transient 504 from Lambda
-          # cold start or Pi wake-up); 3 attempts × 20 s + 2 × 15 s backoff
-          # = ~90 s max, well within the 3-min job timeout.
-          response=$(timeout 20 curl -fsS \
+          # cold start or Pi wake-up); 3 attempts × --max-time 25s + 2 × 15s
+          # backoff = ~105s max. Outer timeout is 120s to cover this budget.
+          response=$(timeout 120 curl -fsS \
+            --max-time 25 \
             --retry 3 --retry-delay 15 --retry-all-errors \
             --resolve "${SNI}:443:$(getent ahosts "${APIGW_HOST}" | awk 'NR==1{print $1}')" \
             -H "User-Agent: pi-tls-cert-check (gh-actions)" \
