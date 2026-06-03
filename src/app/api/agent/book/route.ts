@@ -8,7 +8,7 @@
  *   2. Confirm: POST { confirm: true, start, end, notes? }
  *      → 200 { status: "confirmed", eventId, meetingLink, slot }
  *
- * Auth: requires a valid Cognito ID token via Bearer header. The booking is
+ * Auth: requires a valid ID token via Bearer header. The booking is
  * always made on behalf of the authenticated email — the model cannot
  * override it.
  */

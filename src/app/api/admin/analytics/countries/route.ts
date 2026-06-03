@@ -9,7 +9,7 @@ import { requireAdmin } from "@/lib/api-auth";
  * Returns organic traffic breakdown by country from Google Search Console.
  * `limit` is clamped to 1–50 (default 30). Non-numeric values fall back to 30.
  *
- * @auth Requires Cognito JWT with `admin` group (401 / 403).
+ * @auth Requires admin session or Bearer JWT with `admin` group (401 / 403).
  * @returns 503 if GSC credentials are not configured in SSM.
  */
 export async function GET(request: NextRequest) {
