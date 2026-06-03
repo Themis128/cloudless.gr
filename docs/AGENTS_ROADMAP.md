@@ -103,9 +103,9 @@ Implementation: `.github/workflows/pr-review.yml` + `scripts/pr-review.mjs`. Ant
 
 On CI/Deploy failure a `workflow_run` triggers `ci-babysitter.yml` which fetches failed job logs (capped at 40k chars), calls Claude Haiku for root-cause analysis (root cause + fix + confidence), and posts a comment to the triggering PR or to tracking issue #382 if run on main. Implementation: `scripts/ci-babysitter.mjs` + `.github/workflows/ci-babysitter.yml`. Uses the same OIDC → ANTHROPIC_API_KEY SSM pattern as the PR review agent. Cost: ~$0.02–0.08 per failure.
 
-### 4c — Auto-cleanup of stale gates
+### 4c — Auto-cleanup of stale gates — SHIPPED
 
-You already use `/schedule` for one-off cleanup of feature flags / experiments. A repeating agent could sweep the codebase weekly for `// remove once X` TODOs whose `X` condition is met (e.g. flag flipped on for 30 days, no reverts). Posts a "ready to clean up" comment to a single triage issue.
+Runs weekly (Monday 09:00 UTC) via `.github/workflows/stale-gate-sweeper.yml` + `scripts/stale-gate-sweeper.mjs`. Scans `src/`, `scripts/`, and `sst.config.ts` for `remove once`, `TODO: remove`, `@deprecated`, `backward-compat`, and similar markers using `git grep`. Gets 4 lines of context per match and recent commits (last 30 days), calls Claude Haiku to evaluate which conditions are met, and posts a two-section triage report (Ready to remove / Not yet) to tracking issue #382. Cap: 40 matches, 30k prompt chars. Override model with `REVIEW_MODEL` env var. Cost: ~$0.01–0.04/run.
 
 ---
 
