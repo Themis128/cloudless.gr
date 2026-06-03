@@ -87,6 +87,13 @@ export async function POST(request: NextRequest) {
     subscriptionId?: string;
   };
 
+  if (customerId && !/^cus_[a-zA-Z0-9]+$/.test(customerId)) {
+    return NextResponse.json({ error: "Invalid customerId format" }, { status: 400 });
+  }
+  if (subscriptionId && !/^sub_[a-zA-Z0-9]+$/.test(subscriptionId)) {
+    return NextResponse.json({ error: "Invalid subscriptionId format" }, { status: 400 });
+  }
+
   try {
     const stripe = await getStripe();
     if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
