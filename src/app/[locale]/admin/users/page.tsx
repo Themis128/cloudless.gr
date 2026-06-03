@@ -3,7 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState, useCallback } from "react";
 
-interface KeycloakUser {
+interface AdminUser {
   username: string;
   email: string;
   name: string;
@@ -37,7 +37,8 @@ const userStatusClasses: Record<string, string> = {
 };
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<KeycloakUser[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [provider, setProvider] = useState<string>("cognito");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -52,6 +53,7 @@ export default function AdminUsersPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setUsers(data.users ?? []);
+      if (data.provider) setProvider(data.provider);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load users");
     } finally {
@@ -117,7 +119,7 @@ export default function AdminUsersPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">User Management</h1>
         <p className="font-body mt-1 text-slate-400">
-          Keycloak user directory — manage accounts, roles, and access.
+          User directory — manage accounts, roles, and access.
         </p>
       </div>
 
@@ -182,8 +184,7 @@ export default function AdminUsersPage() {
         <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
           <p className="font-mono text-sm text-red-400">{error}</p>
           <p className="mt-2 text-xs text-slate-500">
-            Check that KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD are set in SSM and that the
-            Keycloak admin REST API is reachable.
+            Check that the auth provider (Cognito or Keycloak) is configured correctly in SSM.
           </p>
         </div>
       ) : (
@@ -326,7 +327,7 @@ export default function AdminUsersPage() {
       <p className="mt-4 font-mono text-xs text-slate-600">
         Powered by{" "}
         <span className="text-slate-500">
-          Keycloak · {process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "not configured"}
+          {provider === "cognito" ? "AWS Cognito" : provider === "keycloak" ? "Keycloak" : "—"}
         </span>
       </p>
     </div>
