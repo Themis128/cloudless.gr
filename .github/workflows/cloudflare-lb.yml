@@ -9,6 +9,7 @@ name: Cloudflare HA load balancer
 # the token + LB entitlement, prints the live account/zone/DNS/LB state and the
 # plan, writes nothing). To apply — including the apex/www DNS cutover — dispatch
 # with apply=true.
+# Last triggered: 2026-06-03 (status check — verifying token + LB state)
 #
 # Auth: Cloudflare token from the CLOUDFLARE_API_TOKEN repo secret (add in the
 # GitHub UI), falling back to SSM /cloudless/production/CLOUDFLARE_API_TOKEN via
