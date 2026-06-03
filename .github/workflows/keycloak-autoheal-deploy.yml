@@ -20,12 +20,12 @@ name: Keycloak autoheal — deploy in-cluster self-healer
 # other cluster-ops workflows.
 
 on:
+  # Push trigger disabled — auth migrated to Cognito and Keycloak is scheduled
+  # for decommission (decommission-keycloak.yml deletes the keycloak-autoheal
+  # CronJob + the keycloak namespace). Leaving the push trigger active would let
+  # a touch of this file or the manifest resurrect Keycloak. workflow_dispatch
+  # stays so it can still be run manually if a rollback is ever needed.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/keycloak-autoheal-deploy.yml"
-      - "k8s/cluster-protection/keycloak-autoheal.yaml"
 
 permissions:
   contents: read
