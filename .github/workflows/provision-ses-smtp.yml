@@ -3,7 +3,7 @@ name: Provision SES SMTP credentials
 # One-shot provisioner for the SES SMTP credential Keycloak needs to send
 # registration verification emails. Uses the OIDC deploy role (no static keys,
 # no PAT). Idempotent: skips if the SSM params already exist.
-# Last triggered: 2026-06-02 (removed push-guard, now auto-provisions via IAM on push)
+# Last triggered: 2026-06-03 (status check — verifying SSM creds exist)
 #
 # After it succeeds, trigger keycloak-configure-email.yml to apply the creds to
 # the realm (or it runs automatically on its own next push).
