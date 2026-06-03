@@ -231,8 +231,7 @@ jobs:
             APP_VERSION=${{ steps.sha.outputs.full }}
             NEXT_PUBLIC_SITE_URL=https://cloudless.gr
             NEXT_PUBLIC_STAGE=production
-            NEXT_PUBLIC_KEYCLOAK_ISSUER=${{ secrets.NEXT_PUBLIC_KEYCLOAK_ISSUER }}
-            NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=${{ secrets.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID }}
+            NEXT_PUBLIC_AUTH_PROVIDER=cognito
             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
             NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
