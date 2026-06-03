@@ -3,10 +3,15 @@
 # decommission-keycloak.sh — remove Keycloak from the k3s cluster.
 #
 # Deletes:
+#   - The "keycloak-autoheal" CronJob + RBAC in ns/keycloak (the in-cluster
+#     self-healer from k8s/cluster-protection/keycloak-autoheal.yaml, deployed by
+#     keycloak-autoheal-deploy.yml) — removed FIRST so it can't re-size or
+#     un-delete Keycloak mid-decommission.
 #   - The "keycloak" namespace (keycloak + postgres pods, services, PVCs, secrets)
-#   - The "auto-healer" CronJob in ns/cloudless (Keycloak autoheal, deployed by
-#     keycloak-autoheal-deploy.yml) — removed first to prevent it from fighting
-#     the decommission.
+#
+# Note: the GitHub-layer self-heal must also be wound down so it doesn't
+# resurrect Keycloak — keycloak-ensure.yml (cron disabled) and
+# keycloak-autoheal-deploy.yml (push trigger disabled) are both manual-only.
 #
 # This operation is IRREVERSIBLE. Run migrate-keycloak-to-cognito.sh first
 # to preserve user accounts, and confirm Cognito sign-in works before proceeding.
@@ -19,19 +24,22 @@ echo "=== Keycloak decommission starting ==="
 echo "Time: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo ""
 
-# ── 1. Remove the in-cluster autoheal CronJob ─────────────────────────────────
-# It runs every 5 min and would re-size / un-delete Keycloak if left running.
-echo "step 1: deleting auto-healer CronJob from ns/cloudless..."
-kubectl -n cloudless delete cronjob auto-healer --ignore-not-found=true \
-  && echo "  auto-healer CronJob deleted (or was not present)" \
-  || { echo "  ERROR: failed to delete auto-healer CronJob"; exit 1; }
+# ── 1. Remove the in-cluster keycloak-autoheal CronJob ───────────────────────
+# It runs every 5 min (on the cluster's own scheduler) and would re-size /
+# un-delete Keycloak if left running. Delete the CronJob + its RBAC + any
+# in-flight heal jobs before touching the deployment/namespace.
+echo "step 1: deleting keycloak-autoheal CronJob + RBAC from ns/keycloak..."
+kubectl -n keycloak delete cronjob keycloak-autoheal --ignore-not-found=true \
+  && echo "  keycloak-autoheal CronJob deleted (or was not present)"
 
-# Also delete any completed/failed auto-healer jobs lingering in the namespace
-echo "  cleaning up auto-healer job pods..."
-kubectl -n cloudless delete jobs \
-  -l "job-name"  \
-  --field-selector=status.successful=1 \
-  --ignore-not-found=true 2>/dev/null || true
+# Remove its least-privilege RBAC (Role, RoleBinding, ServiceAccount)
+kubectl -n keycloak delete rolebinding keycloak-autoheal --ignore-not-found=true 2>/dev/null || true
+kubectl -n keycloak delete role keycloak-autoheal --ignore-not-found=true 2>/dev/null || true
+kubectl -n keycloak delete serviceaccount keycloak-autoheal --ignore-not-found=true 2>/dev/null || true
+
+# Delete any completed/failed keycloak-autoheal jobs lingering in the namespace
+echo "  cleaning up keycloak-autoheal job pods..."
+kubectl -n keycloak delete jobs -l "job-name" --ignore-not-found=true 2>/dev/null || true
 
 # ── 2. Scale down Keycloak before deleting the namespace ─────────────────────
 echo ""
@@ -66,12 +74,16 @@ kubectl get namespace keycloak 2>/dev/null \
   && echo "WARNING: keycloak namespace still exists (may be stuck terminating)" \
   || echo "keycloak namespace: gone ✓"
 
-kubectl -n cloudless get cronjob auto-healer 2>/dev/null \
-  && echo "WARNING: auto-healer CronJob still present" \
-  || echo "auto-healer CronJob: gone ✓"
+# The keycloak-autoheal CronJob lived in ns/keycloak, so the namespace delete
+# above removed it; this is a belt-and-braces check in case the ns lingers.
+kubectl -n keycloak get cronjob keycloak-autoheal 2>/dev/null \
+  && echo "WARNING: keycloak-autoheal CronJob still present" \
+  || echo "keycloak-autoheal CronJob: gone ✓"
 
 echo ""
 echo "=== Keycloak decommission complete ==="
-echo "Next: run 'decommission-keycloak.yml' workflow with the pi-runtime step"
-echo "      to also update the cloudless-app-auth secret (wire-pi-cognito.yml"
-echo "      replaces the Keycloak values with Cognito values)."
+echo "Reminder: keycloak-autoheal-deploy.yml is now manual-only (push trigger"
+echo "          removed) and keycloak-ensure.yml's cron is disabled — neither"
+echo "          will resurrect Keycloak. The wire-pi-cognito step (run next in"
+echo "          decommission-keycloak.yml) swaps the cloudless-app-auth secret"
+echo "          from Keycloak to Cognito values."
