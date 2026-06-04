@@ -203,12 +203,19 @@ jobs:
             "$PI_USER@$PI_HOST" '
               echo "=== k3s service status ==="
               systemctl is-active k3s || true
-              echo "=== last 30 k3s journal lines ==="
-              sudo journalctl -u k3s -n 30 --no-pager 2>/dev/null || true
+              echo "=== last 20 k3s journal lines ==="
+              sudo journalctl -u k3s -n 20 --no-pager 2>/dev/null || true
               echo "=== memory ==="
               free -m
               echo "=== disk ==="
               df -h /
+              echo "=== etcd defrag (prevent slow raft consensus) ==="
+              sudo k3s etcdctl defrag \
+                --endpoints=https://127.0.0.1:2379 \
+                --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
+                --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
+                --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
+                2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped (not embedded etcd or certs missing)"
               echo "=== restart k3s if not active ==="
               if ! systemctl is-active --quiet k3s; then
                 sudo systemctl restart k3s
@@ -217,35 +224,35 @@ jobs:
                 echo "k3s is active — no restart needed"
               fi
             '
-      - name: Wait for k3s HTTP /readyz (3x stable)
-        env:
-          PI_HOST: "100.113.41.119"
+      - name: Wait for k3s /readyz (3x stable via kubectl)
         run: |
+          # Use kubectl (kubeconfig creds) — anonymous curl returns 401 when
+          # anonymous-auth is disabled; kubectl uses the client cert in KUBECONFIG.
+          # k3s /readyz returns the string "ok" when all checks pass.
           wait_for_api() {
             local stable=0
-            for i in $(seq 1 36); do
-              code=$(curl -k -s -o /dev/null -w "%{http_code}" \
-                --max-time 3 "https://$PI_HOST:6443/readyz" 2>/dev/null)
-              if [ "$code" = "200" ]; then
+            for i in $(seq 1 60); do
+              if kubectl get --raw /readyz --request-timeout=5s 2>/dev/null \
+                  | grep -q 'ok'; then
                 stable=$((stable + 1))
-                echo "  ${i}/36 — /readyz HTTP 200 (stable ${stable}/3)"
+                echo "  ${i}/60 — /readyz ok (stable ${stable}/3)"
                 if [ "$stable" -ge 3 ]; then
                   return 0
                 fi
               else
                 stable=0
-                echo "  ${i}/36 — /readyz returned ${code:-timeout}, waiting 5s..."
+                echo "  ${i}/60 — /readyz not ready, waiting 5s..."
               fi
               sleep 5
             done
             return 1
           }
 
-          echo "Waiting for k3s API to be stable (3x /readyz 200)..."
+          echo "Waiting for k3s API to be stable (3x kubectl /readyz ok)..."
           if wait_for_api; then
             echo "k3s API stable — proceeding to rollout"
           else
-            echo "::error::k3s /readyz never returned 3x 200 in 3 min — aborting"
+            echo "::error::k3s /readyz never returned 3x ok in 5 min — aborting"
             exit 1
           fi
       - name: Set image and roll out
