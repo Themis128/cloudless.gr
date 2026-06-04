@@ -1,0 +1,94 @@
+name: OIDC Trust Policy Diagnostic
+
+# Diagnoses why AWS_DEPLOY_ROLE_ARN fails OIDC.
+# Tests two things independently:
+#   1. cloudless-github-actions (hardcoded — known working)
+#   2. GitHubActionsOIDC       (hardcoded ARN vs secret value)
+# Result posted to job summary so it's visible without log access.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/oidc-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AWS_REGION: us-east-1
+
+jobs:
+  diagnose:
+    name: Diagnose OIDC trust policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume cloudless-github-actions (baseline — should succeed)
+        id: baseline
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Baseline identity
+        if: steps.baseline.outcome == 'success'
+        run: |
+          echo "=== cloudless-github-actions: SUCCESS ===" | tee -a "$GITHUB_STEP_SUMMARY"
+          aws sts get-caller-identity | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Assume GitHubActionsOIDC (hardcoded ARN)
+        id: deploy_hardcoded
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Assume GitHubActionsOIDC via secret (AWS_DEPLOY_ROLE_ARN)
+        id: deploy_secret
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Report results
+        if: always()
+        run: |
+          {
+            echo "## OIDC Diagnostic Results"
+            echo ""
+            echo "| Role | Source | Result |"
+            echo "|------|--------|--------|"
+            echo "| cloudless-github-actions | hardcoded ARN | ${{ steps.baseline.outcome }} |"
+            echo "| GitHubActionsOIDC | hardcoded ARN | ${{ steps.deploy_hardcoded.outcome }} |"
+            echo "| GitHubActionsOIDC | AWS_DEPLOY_ROLE_ARN secret | ${{ steps.deploy_secret.outcome }} |"
+            echo ""
+            HARD="${{ steps.deploy_hardcoded.outcome }}"
+            SEC="${{ steps.deploy_secret.outcome }}"
+            if [ "$HARD" = "success" ] && [ "$SEC" = "failure" ]; then
+              echo "### Diagnosis: **AWS_DEPLOY_ROLE_ARN secret has the wrong ARN**"
+              echo "The role itself works when addressed by its actual name."
+              echo "Fix: GitHub → repo Settings → Secrets → update AWS_DEPLOY_ROLE_ARN"
+              echo "to: \`arn:aws:iam::278585680617:role/GitHubActionsOIDC\`"
+            elif [ "$HARD" = "failure" ] && [ "$SEC" = "failure" ]; then
+              echo "### Diagnosis: **GitHubActionsOIDC trust policy is broken**"
+              echo "Neither hardcoded nor secret value can assume this role."
+              echo "Fix: AWS Console → IAM → Roles → GitHubActionsOIDC → Trust relationships"
+              echo "Ensure the trust policy allows:"
+              echo '```json'
+              echo '"token.actions.githubusercontent.com:sub": "repo:Themis128/cloudless.gr:*"'
+              echo '"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"'
+              echo '```'
+            elif [ "$HARD" = "success" ] && [ "$SEC" = "success" ]; then
+              echo "### Diagnosis: **Both work — intermittent issue resolved**"
+              echo "OIDC appears to be working now. Retry the failing deploy-pi run."
+            elif [ "$HARD" = "failure" ] && [ "$SEC" = "success" ]; then
+              echo "### Diagnosis: **Unexpected — secret works but hardcoded ARN fails**"
+              echo "AWS_DEPLOY_ROLE_ARN may point to a different role than GitHubActionsOIDC."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
