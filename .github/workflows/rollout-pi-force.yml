@@ -1,0 +1,117 @@
+name: Force Pi rollout (existing ECR image, no OIDC)
+
+# Unblock Pi rollout when AWS_DEPLOY_ROLE_ARN OIDC is broken.
+# No AWS credentials needed — uses TS_AUTHKEY + KUBECONFIG_B64 + OMV_SSH_KEY.
+# The image must already exist in ECR (built by a previous successful deploy-pi run).
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Short ECR image tag (12-char SHA already in ECR)'
+        required: true
+        default: '89b57243c994'
+
+env:
+  ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
+  ECR_REPOSITORY: cloudless-pi-app
+  K3S_NAMESPACE: cloudless
+  K3S_DEPLOYMENT: cloudless
+
+jobs:
+  rollout:
+    name: Rollout existing image to Pi k3s
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connect to tailnet
+        continue-on-error: true
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Verify Tailscale path to omv-main
+        run: |
+          tailscale ping -c 3 --timeout=15s 100.113.41.119 \
+            || echo "Note: Tailscale using DERP relay — kubectl will still work"
+          nc -zv -w 10 100.113.41.119 6443 \
+            && echo "Port 6443 directly reachable" \
+            || echo "Port 6443 via nc failed — proceeding over Tailscale relay"
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Diagnose k3s on Pi
+        env:
+          PI_HOST: "100.113.41.119"
+          PI_USER: "tbaltzakis"
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" '
+              echo "=== k3s service status ==="
+              systemctl is-active k3s || true
+              echo "=== last 20 k3s journal lines ==="
+              sudo journalctl -u k3s -n 20 --no-pager 2>/dev/null || true
+              echo "=== memory ==="
+              free -m
+              echo "=== disk ==="
+              df -h /
+              echo "=== etcd defrag ==="
+              sudo k3s etcdctl defrag \
+                --endpoints=https://127.0.0.1:2379 \
+                --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
+                --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
+                --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
+                2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped"
+              echo "=== Restart k3s after defrag ==="
+              sudo systemctl restart k3s
+              echo "k3s restarted — sleeping 30s..."
+              sleep 30
+            '
+
+      - name: Wait for k3s /readyz (3x stable via kubectl)
+        run: |
+          wait_for_api() {
+            local stable=0
+            for i in $(seq 1 120); do
+              if kubectl get --raw /readyz --request-timeout=5s 2>/dev/null \
+                  | grep -q 'ok'; then
+                stable=$((stable + 1))
+                echo "  ${i}/120 — /readyz ok (stable ${stable}/3)"
+                if [ "$stable" -ge 3 ]; then
+                  return 0
+                fi
+              else
+                stable=0
+                echo "  ${i}/120 — /readyz not ready, waiting 5s..."
+              fi
+              sleep 5
+            done
+            return 1
+          }
+
+          echo "Waiting for k3s API to be stable (3x kubectl /readyz ok)..."
+          if wait_for_api; then
+            echo "k3s API stable — proceeding to rollout"
+          else
+            echo "::error::k3s /readyz never returned 3x ok in 10 min — aborting"
+            exit 1
+          fi
+
+      - name: Set image and roll out
+        run: |
+          SHA="${{ github.event.inputs.sha }}"
+          echo "Rolling out image tag: ${SHA}"
+          kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
+            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA} \
+            -n ${{ env.K3S_NAMESPACE }}
+          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
+            -n ${{ env.K3S_NAMESPACE }} --timeout=600s
+          echo "Rollout complete: SHA=${SHA}"
