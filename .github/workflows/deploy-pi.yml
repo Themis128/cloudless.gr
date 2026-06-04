@@ -258,4 +258,4 @@ jobs:
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
             -n ${{ env.K3S_NAMESPACE }}
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=600s
-# re-triggered 2026-06-04T12:45Z — previous QEMU build stuck at 35min
+# re-triggered 2026-06-04T20:50Z — run #319 OIDC auth transient failure
