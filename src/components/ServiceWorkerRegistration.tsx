@@ -11,6 +11,9 @@ interface BeforeInstallPromptEvent extends Event {
 
 let hasRegisteredServiceWorker = false;
 
+const DISMISSED_KEY = "pwa-install-dismissed";
+const DISMISSED_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 export default function ServiceWorkerRegistration() {
   const [locale] = useCurrentLocale();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -48,6 +51,14 @@ export default function ServiceWorkerRegistration() {
     // Listen for install prompt
     const handler = (e: Event) => {
       e.preventDefault();
+
+      // Already running as installed PWA — no banner needed.
+      if (window.matchMedia("(display-mode: standalone)").matches) return;
+
+      // User dismissed within the last 30 days — respect their choice.
+      const dismissed = localStorage.getItem(DISMISSED_KEY);
+      if (dismissed && Date.now() - Number(dismissed) < DISMISSED_TTL_MS) return;
+
       setInstallPrompt(e as BeforeInstallPromptEvent);
       setShowBanner(true);
     };
@@ -64,6 +75,11 @@ export default function ServiceWorkerRegistration() {
       setShowBanner(false);
     }
     setInstallPrompt(null);
+  }
+
+  function handleDismiss() {
+    localStorage.setItem(DISMISSED_KEY, String(Date.now()));
+    setShowBanner(false);
   }
 
   if (!showBanner) return null;
@@ -92,7 +108,7 @@ export default function ServiceWorkerRegistration() {
                 {translate(locale, "pwa.install", "Install")}
               </button>
               <button
-                onClick={() => setShowBanner(false)}
+                onClick={handleDismiss}
                 className="font-mono text-xs text-slate-500 transition-colors hover:text-slate-300"
               >
                 {translate(locale, "pwa.notNow", "Not now")}
