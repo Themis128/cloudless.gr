@@ -190,10 +190,45 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+      - name: Wait for k3s API server (restart via SSH if needed)
+        env:
+          PI_HOST: "100.113.41.119"
+          PI_USER: "tbaltzakis"
+        run: |
+          wait_for_api() {
+            for i in $(seq 1 18); do
+              if nc -zv -w3 "$PI_HOST" 6443 2>/dev/null; then
+                echo "k3s API ready (attempt ${i})"
+                return 0
+              fi
+              echo "  ${i}/18 — API not ready, waiting 5s..."
+              sleep 5
+            done
+            return 1
+          }
+
+          if wait_for_api; then
+            echo "k3s API is up — proceeding to rollout"
+            exit 0
+          fi
+
+          echo "k3s API not ready after 90s — attempting SSH restart"
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" "sudo systemctl restart k3s 2>&1; echo restart_exit=\$?"
+
+          echo "Waiting up to 3 more minutes for API server..."
+          if ! wait_for_api; then
+            echo "::error::k3s API still not reachable after restart — aborting rollout"
+            exit 1
+          fi
+          echo "k3s API is up after restart"
       - name: Set image and roll out
         run: |
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
             -n ${{ env.K3S_NAMESPACE }}
-          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=180s
-# re-triggered 2026-06-04 after k3s apiserver recovery
+          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=300s
