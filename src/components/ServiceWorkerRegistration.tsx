@@ -40,12 +40,8 @@ export default function ServiceWorkerRegistration() {
       hasRegisteredServiceWorker = true;
       navigator.serviceWorker
         .register("/sw.js")
-        .then((reg) => {
-          console.warn("[SW] Registered:", reg.scope);
-        })
-        .catch((err) => {
-          console.warn("[SW] Registration failed:", err);
-        });
+        .then(() => {})
+        .catch(() => {});
     }
 
     // Listen for install prompt

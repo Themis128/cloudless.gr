@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { headers } from "next/headers";
@@ -82,6 +82,15 @@ export const metadata: Metadata = {
     description:
       "Educational & portfolio project only — not a commercial service. Cloud architecture, serverless, analytics & AI marketing on Next.js & AWS.",
   },
+};
+
+// Separated from metadata per Next.js 14+ requirement — avoids deprecation
+// warning and ensures <meta name="theme-color"> + viewport-fit are emitted.
+export const viewport: Viewport = {
+  themeColor: "#0a7785",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({

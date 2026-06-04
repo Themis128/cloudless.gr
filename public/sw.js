@@ -1,12 +1,20 @@
 /* global Response, URL, caches, fetch, self */
 
 // Bump CACHE_VERSION on each deploy to invalidate stale caches
-const CACHE_VERSION = "4";
+const CACHE_VERSION = "5";
 const CACHE_NAME = `cloudless-v${CACHE_VERSION}`;
 const STATIC_CACHE = `cloudless-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `cloudless-dynamic-v${CACHE_VERSION}`;
 
-const STATIC_ASSETS = ["/", "/offline.html"];
+// Precached on install — critical shell assets that must be available offline
+const STATIC_ASSETS = [
+  "/",
+  "/offline.html",
+  "/manifest.webmanifest",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/icon-512-maskable.png",
+];
 
 const STATIC_EXTENSIONS = [
   ".png",
