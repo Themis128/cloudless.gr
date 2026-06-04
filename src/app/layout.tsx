@@ -58,6 +58,15 @@ export const metadata: Metadata = {
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
+  // iOS PWA support — apple-touch-icon + status bar style
+  appleWebApp: {
+    capable: true,
+    title: "Cloudless",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
   openGraph: {
     title: "Cloudless — Training & Portfolio Project",
     description:
