@@ -5,7 +5,7 @@
   "description": "Cloud architecture, serverless development, data analytics, and AI-powered marketing for startups and SMBs.",
   "start_url": "/?source=pwa",
   "scope": "/",
-  "lang": "el",
+  "lang": "en",
   "dir": "ltr",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
@@ -30,15 +30,15 @@
     {
       "name": "Our Services",
       "short_name": "Services",
-      "url": "/#services?source=pwa-shortcut",
-      "description": "Explore our cloud services",
+      "url": "/services",
+      "description": "Cloud, serverless, analytics & AI marketing",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Read Blog",
       "short_name": "Blog",
-      "url": "/blog?source=pwa-shortcut",
-      "description": "Cloud computing insights and guides",
+      "url": "/blog",
+      "description": "Tech insights and guides",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
