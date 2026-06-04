@@ -70,17 +70,35 @@ jobs:
               free -m
               echo "=== disk ==="
               df -h /
-              echo "=== etcd defrag ==="
+              echo "=== etcd defrag (while k3s is running) ==="
+              # Ensure k3s is running before attempting defrag
+              if ! systemctl is-active --quiet k3s; then
+                echo "k3s not active — starting it first for etcd defrag..."
+                sudo systemctl start k3s
+                sleep 15
+              fi
               sudo k3s etcdctl defrag \
                 --endpoints=https://127.0.0.1:2379 \
                 --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
                 --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
                 --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
                 2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped"
-              echo "=== Restart k3s after defrag ==="
+              echo "=== Kill leftover containerd-shim processes ==="
+              # Orphaned shims from previous k3s crashes consume memory and
+              # cause k3s to OOM on reconciliation. Kill them before restart
+              # so k3s starts with a clean container slate.
+              SHIM_PIDS=$(pgrep containerd-shim 2>/dev/null | tr '\n' ' ' || true)
+              if [ -n "$SHIM_PIDS" ]; then
+                echo "Killing containerd-shim PIDs: $SHIM_PIDS"
+                sudo kill -9 $SHIM_PIDS 2>/dev/null || true
+                sleep 2
+              else
+                echo "No leftover containerd-shim processes found"
+              fi
+              echo "=== Restart k3s after defrag + cleanup ==="
               sudo systemctl restart k3s
-              echo "k3s restarted — sleeping 30s..."
-              sleep 30
+              echo "k3s restarted — sleeping 45s..."
+              sleep 45
             '
 
       - name: Wait for k3s /readyz (3x stable via kubectl)
@@ -120,5 +138,5 @@ jobs:
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA} \
             -n ${{ env.K3S_NAMESPACE }}
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
-            -n ${{ env.K3S_NAMESPACE }} --timeout=600s
+            -n ${{ env.K3S_NAMESPACE }} --timeout=1800s
           echo "Rollout complete: SHA=${SHA}"
