@@ -5,6 +5,10 @@ name: Force Pi rollout (existing ECR image, no OIDC)
 # The image must already exist in ECR (built by a previous successful deploy-pi run).
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/rollout-pi-force.yml"
   workflow_dispatch:
     inputs:
       sha:
@@ -13,6 +17,9 @@ on:
         default: '89b57243c994'
 
 env:
+  # SHA used when triggered by push (no workflow_dispatch input available).
+  # Update this value to re-trigger a rollout to a different image.
+  DEFAULT_ROLLOUT_SHA: '89b57243c994'
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
   K3S_NAMESPACE: cloudless
@@ -107,7 +114,7 @@ jobs:
 
       - name: Set image and roll out
         run: |
-          SHA="${{ github.event.inputs.sha }}"
+          SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
           echo "Rolling out image tag: ${SHA}"
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA} \
