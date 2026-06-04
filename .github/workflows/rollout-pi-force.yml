@@ -97,8 +97,39 @@ jobs:
               fi
               echo "=== Restart k3s after defrag + cleanup ==="
               sudo systemctl restart k3s
-              echo "k3s restarted — sleeping 45s..."
-              sleep 45
+              echo "k3s restarted — waiting 30s for etcd to initialise..."
+              sleep 30
+              echo "=== Compact + defrag etcd to clear NOSPACE condition ==="
+              ETCD_EP="https://127.0.0.1:2379"
+              ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
+              ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
+              ETCD_KEY="/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
+              REV=$(sudo k3s etcdctl endpoint status \
+                --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                --write-out=json 2>/dev/null \
+                | grep -o '"revision":[0-9]*' | head -1 | cut -d: -f2 || echo "")
+              if [ -n "$REV" ] && [ "$REV" -gt 0 ] 2>/dev/null; then
+                echo "Compacting to revision $REV..."
+                sudo k3s etcdctl compact "$REV" \
+                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                  2>/dev/null && echo "compact done" || echo "compact skipped"
+                echo "Defragmenting after compact..."
+                sudo k3s etcdctl defrag \
+                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                  2>/dev/null && echo "defrag done" || echo "defrag skipped"
+                echo "Disarming NOSPACE alarm if set..."
+                sudo k3s etcdctl alarm disarm \
+                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                  2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
+              else
+                echo "etcd not ready for compact (rev=$REV) — skipping"
+              fi
+              echo "Sleeping 15s after etcd maintenance..."
+              sleep 15
             '
 
       - name: Wait for k3s /readyz (3x stable via kubectl)
@@ -135,20 +166,29 @@ jobs:
           SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
           echo "Rolling out image tag: ${SHA}"
 
-          # Extend progress deadline so a stale DeadlineExceeded from a prior
-          # failed rollout doesn't cause an immediate exit on rollout status.
-          kubectl patch deployment/${{ env.K3S_DEPLOYMENT }} \
-            -n ${{ env.K3S_NAMESPACE }} \
-            -p '{"spec":{"progressDeadlineSeconds":3600}}'
+          # Retry loop: etcd may still be settling after startup maintenance
+          # (compact / defrag / alarm-disarm). Retry up to 3× with 60s gaps.
+          for attempt in 1 2 3; do
+            echo "=== kubectl attempt ${attempt}/3 ==="
 
-          kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
-            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA} \
-            -n ${{ env.K3S_NAMESPACE }}
+            kubectl patch deployment/${{ env.K3S_DEPLOYMENT }} \
+              -n ${{ env.K3S_NAMESPACE }} \
+              -p '{"spec":{"progressDeadlineSeconds":3600}}' \
+            && kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
+                 ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA} \
+                 -n ${{ env.K3S_NAMESPACE }} \
+            && kubectl rollout restart deployment/${{ env.K3S_DEPLOYMENT }} \
+                 -n ${{ env.K3S_NAMESPACE }} \
+            && break
 
-          # Force a new rollout generation (clears stale DeadlineExceeded even
-          # when the image tag didn't change between runs).
-          kubectl rollout restart deployment/${{ env.K3S_DEPLOYMENT }} \
-            -n ${{ env.K3S_NAMESPACE }}
+            if [ "$attempt" -lt 3 ]; then
+              echo "kubectl failed — waiting 60s before retry..."
+              sleep 60
+            else
+              echo "::error::kubectl failed after 3 attempts"
+              exit 1
+            fi
+          done
 
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
             -n ${{ env.K3S_NAMESPACE }} --timeout=1800s
