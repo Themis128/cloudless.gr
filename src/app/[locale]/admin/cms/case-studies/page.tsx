@@ -62,7 +62,7 @@ export default function AdminCaseStudiesPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [load]);
 
   const openCreate = () => {
