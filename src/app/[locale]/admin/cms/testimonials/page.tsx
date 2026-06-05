@@ -44,7 +44,7 @@ export default function AdminTestimonialsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [load]);
 
   const openCreate = () => {

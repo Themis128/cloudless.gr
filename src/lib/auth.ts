@@ -1,24 +1,4 @@
-/**
- * next-auth v5 configuration — provider-agnostic (Cognito OR Keycloak).
- *
- * The OIDC provider is chosen at runtime by environment:
- *   - If COGNITO_ISSUER is set        → AWS Cognito (the always-up AWS path).
- *   - Otherwise, if KEYCLOAK_ISSUER   → Keycloak (legacy / Pi).
- * This lets both providers ship in one build so the cutover is a safe env
- * flip with no code change. Cognito is the migration target (auth must be
- * always-up; Keycloak ran on a single fragile Pi).
- *
- * Token storage: next-auth stores the session in a signed+encrypted JWT
- * cookie. The provider access_token + id_token + refresh_token are kept on
- * the JWT so proxy.ts can validate the id_token directly and the server can
- * refresh transparently when the access_token expires.
- *
- * Refresh-token rotation follows the Auth.js documented pattern:
- *   https://authjs.dev/guides/refresh-token-rotation
- */
-
 import NextAuth, { type DefaultSession } from "next-auth";
-import Keycloak from "next-auth/providers/keycloak";
 import Cognito from "next-auth/providers/cognito";
 
 const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
@@ -49,24 +29,23 @@ declare module "next-auth/jwt" {
   }
 }
 
-// ── Provider selection ──────────────────────────────────────────────────────
-// Cognito wins when configured; else Keycloak. Both are OIDC, so the rest of
-// the wiring (callbacks, proxy.ts, api-auth.ts) is shared — only the issuer,
-// client creds, and the groups claim name differ.
-type OidcProvider = "cognito" | "keycloak";
-const PROVIDER: OidcProvider = process.env.COGNITO_ISSUER ? "cognito" : "keycloak";
-const IS_COGNITO = PROVIDER === "cognito";
+// Cognito exposes group membership under "cognito:groups".
+const GROUPS_CLAIM = "cognito:groups";
 
-const ISSUER = (IS_COGNITO ? process.env.COGNITO_ISSUER : process.env.KEYCLOAK_ISSUER) ?? "";
+// Derive issuer / client ID from NEXT_PUBLIC_* vars when the server-side
+// COGNITO_ISSUER / COGNITO_CLIENT_ID vars are not set. The pool ID encodes
+// the region: us-east-1_Abc123 → issuer https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Abc123
+function cognitoIssuer(poolId: string): string {
+  const region = poolId.split("_")[0];
+  return `https://cognito-idp.${region}.amazonaws.com/${poolId}`;
+}
+
+const poolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
+const ISSUER = process.env.COGNITO_ISSUER || (poolId ? cognitoIssuer(poolId) : "");
 const CLIENT_ID =
-  (IS_COGNITO ? process.env.COGNITO_CLIENT_ID : process.env.KEYCLOAK_CLIENT_ID) ?? "";
-const CLIENT_SECRET =
-  (IS_COGNITO ? process.env.COGNITO_CLIENT_SECRET : process.env.KEYCLOAK_CLIENT_SECRET) ?? "";
-
-// Cognito exposes group membership under "cognito:groups"; Keycloak under
-// "groups" (via the group-membership protocol mapper, full.path=false).
-const GROUPS_CLAIM = IS_COGNITO ? "cognito:groups" : "groups";
-const KC_CLAIM_REALM_ACCESS = "realm_access";
+  process.env.COGNITO_CLIENT_ID || process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "";
+// Public PKCE app client — no client secret.
+const CLIENT_SECRET = "";
 
 // Cognito's hosted-UI domain (e.g.
 // https://cloudless-auth.auth.us-east-1.amazoncognito.com) for RP-initiated
@@ -92,20 +71,10 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   }
 }
 
-// Provider token / logout endpoints. Explicit per provider (no discovery
-// round-trip) so the Keycloak path is unchanged and Cognito uses its hosted
-// domain. Cognito's token endpoint is {domain}/oauth2/token; Keycloak's is
-// {issuer}/protocol/openid-connect/token.
-function tokenEndpoint(): string {
-  return IS_COGNITO ? `${COGNITO_DOMAIN}/oauth2/token` : `${ISSUER}/protocol/openid-connect/token`;
-}
-
-const hasAuthSecret = !!process.env.AUTH_SECRET;
-
 /**
- * Exchange the refresh_token at the provider's token endpoint. Throws on
- * failure so the jwt callback can flag the session. Cognito does not rotate
- * refresh tokens, so the caller keeps the existing one when none is returned.
+ * Exchange the refresh_token at Cognito's token endpoint. Throws on failure.
+ * Cognito does not rotate refresh tokens, so the caller keeps the existing one
+ * when none is returned.
  */
 async function refreshAccessToken(refreshToken: string): Promise<{
   access_token: string;
@@ -113,27 +82,15 @@ async function refreshAccessToken(refreshToken: string): Promise<{
   id_token?: string;
   expires_in: number;
 }> {
-  const token_endpoint = tokenEndpoint();
-
+  const token_endpoint = `${COGNITO_DOMAIN}/oauth2/token`;
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
     client_id: CLIENT_ID,
   });
-  // Cognito app clients with a secret require HTTP Basic auth on /oauth2/token;
-  // Keycloak accepts the secret in the body. Send the appropriate form.
-  const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
-  if (CLIENT_SECRET) {
-    if (IS_COGNITO) {
-      headers.Authorization = `Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`;
-    } else {
-      body.set("client_secret", CLIENT_SECRET);
-    }
-  }
-
   const res = await globalThis.fetch(token_endpoint, {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: body.toString(),
   });
   if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
@@ -158,29 +115,13 @@ function readGroups(
   );
 }
 
-function readRoles(
-  accessPayload: Record<string, unknown>,
-  profile?: Record<string, unknown>
-): string[] {
-  // Realm roles are Keycloak-only; Cognito conveys authorization via groups.
-  const realmAccess = (accessPayload[KC_CLAIM_REALM_ACCESS] ?? profile?.[KC_CLAIM_REALM_ACCESS]) as
-    | { roles?: string[] }
-    | undefined;
-  return realmAccess?.roles ?? [];
-}
-
-const providers = [
-  IS_COGNITO
-    ? Cognito({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, issuer: ISSUER })
-    : Keycloak({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, issuer: ISSUER }),
-];
+const hasAuthSecret = !!process.env.AUTH_SECRET;
 
 const nextAuthResult = hasAuthSecret
   ? NextAuth({
-      providers,
+      providers: [Cognito({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, issuer: ISSUER })],
       callbacks: {
         async jwt({ token, account, profile }) {
-          // Initial sign-in: persist provider tokens onto the JWT.
           if (account) {
             token.accessToken = account.access_token;
             token.idToken = account.id_token;
@@ -197,17 +138,15 @@ const nextAuthResult = hasAuthSecret
             const p = profile as Record<string, unknown> | undefined;
 
             token.groups = readGroups(idPayload, accessPayload, p);
-            token.roles = readRoles(accessPayload, p);
+            token.roles = [];
             return token;
           }
 
-          // Subsequent calls: if access token still valid, reuse.
           const now = Math.floor(Date.now() / 1000);
           if (token.expiresAt && now < token.expiresAt - 30) {
             return token;
           }
 
-          // Access token expired (or near-expired) — rotate via refresh_token.
           if (!token.refreshToken) {
             token.error = REFRESH_TOKEN_ERROR;
             return token;
@@ -221,7 +160,6 @@ const nextAuthResult = hasAuthSecret
             token.expiresAt = now + refreshed.expires_in;
             const payload = decodeJwtPayload(refreshed.access_token);
             token.groups = (payload[GROUPS_CLAIM] as string[] | undefined) ?? token.groups ?? [];
-            token.roles = readRoles(payload).length ? readRoles(payload) : (token.roles ?? []);
             delete token.error;
             return token;
           } catch {
@@ -234,32 +172,22 @@ const nextAuthResult = hasAuthSecret
           session.idToken = token.idToken;
           session.user.id = token.sub ?? "";
           session.user.groups = token.groups ?? [];
-          session.user.roles = token.roles ?? [];
+          session.user.roles = [];
           if (token.error) session.error = token.error;
           return session;
         },
       },
       events: {
         /**
-         * RP-Initiated Logout: end the provider's SSO session so the next
-         * signIn() shows the login page instead of silently re-authenticating.
-         *   - Keycloak: standard end_session_endpoint + id_token_hint.
-         *   - Cognito: non-standard {domain}/logout?client_id&logout_uri.
+         * RP-Initiated Logout: end Cognito's SSO session via the hosted-UI
+         * /logout endpoint so the next signIn() shows the login page.
          */
-        async signOut(message) {
-          const idToken = "token" in message ? message.token?.idToken : undefined;
+        async signOut() {
           try {
-            if (IS_COGNITO) {
-              if (!COGNITO_DOMAIN) return;
-              const url = new URL(`${COGNITO_DOMAIN}/logout`);
-              url.searchParams.set("client_id", CLIENT_ID);
-              url.searchParams.set("logout_uri", `${AUTH_URL}/`);
-              await globalThis.fetch(url.toString(), { method: "GET" });
-              return;
-            }
-            if (!idToken || !ISSUER) return;
-            const url = new URL(`${ISSUER}/protocol/openid-connect/logout`);
-            url.searchParams.set("id_token_hint", idToken);
+            if (!COGNITO_DOMAIN) return;
+            const url = new URL(`${COGNITO_DOMAIN}/logout`);
+            url.searchParams.set("client_id", CLIENT_ID);
+            url.searchParams.set("logout_uri", `${AUTH_URL}/`);
             await globalThis.fetch(url.toString(), { method: "GET" });
           } catch {
             // Best-effort — the cookie is already cleared; SSO ages out.
@@ -269,14 +197,11 @@ const nextAuthResult = hasAuthSecret
       session: { strategy: "jwt" },
       // Suppress the benign next-auth "Configuration" error that fires on a bare
       // GET to /api/auth/signin/<provider> (health probes, crawlers, link
-      // unfurlers). Real sign-in POSTs with CSRF and is unaffected. That log
-      // line is what the CloudWatch `CloudlessApp/ServerlessErrors` metric
-      // filter counts. We only swallow it when the provider is actually
-      // configured — a missing issuer is a real misconfig and still logs.
+      // unfurlers). Real sign-in POSTs with CSRF and is unaffected.
       logger: {
         error(error: Error) {
           const tag = `${error?.name ?? ""} ${(error as { type?: string })?.type ?? ""}`;
-          const configured = !!(ISSUER && CLIENT_ID && CLIENT_SECRET);
+          const configured = !!(ISSUER && CLIENT_ID);
           if (tag.includes("Configuration") && configured) return;
           console.error(`[auth][error] ${error?.message ?? error}`);
         },
@@ -296,5 +221,5 @@ export const signIn = nextAuthResult?.signIn ?? (async () => undefined);
 export const signOut = nextAuthResult?.signOut ?? (async () => undefined);
 export const auth = nextAuthResult?.auth ?? (async () => null);
 
-/** The active OIDC provider id ("cognito" | "keycloak"), for callers/UI. */
-export const authProvider: OidcProvider = PROVIDER;
+/** The active OIDC provider id — always "cognito". */
+export const authProvider = "cognito" as const;

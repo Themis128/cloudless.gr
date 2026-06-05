@@ -172,12 +172,12 @@ describe("AuthProvider — authenticated session", () => {
     expect(screen.getByTestId("admin").textContent).toBe("true");
   });
 
-  it("isAdmin=true when session user has roles: ['admin']", async () => {
+  it("isAdmin=true when session user has groups: ['admin']", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       if (String(input).includes("/api/auth/session")) {
         return makeSessionResponse({
           id: "role-admin",
-          roles: ["admin"],
+          groups: ["admin"],
         });
       }
       return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));

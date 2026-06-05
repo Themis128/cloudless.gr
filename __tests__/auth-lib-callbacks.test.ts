@@ -1,17 +1,15 @@
 /**
  * Tests for the REAL next-auth callbacks in src/lib/auth.ts
  *
- * The existing keycloak-implementation.test.ts re-implements the callbacks
- * from scratch. This file imports the actual module and exercises:
+ * Imports the actual module and exercises:
  *
  *  - decodeJwtPayload (indirectly, via jwt callback)
- *  - groups preference chain: id_token → access_token → profile
- *  - roles from realm_access.roles
+ *  - groups preference chain: id_token → access_token → profile (cognito:groups claim)
  *  - token reuse when not expired
  *  - refresh token rotation (success + failure)
  *  - RefreshTokenError when no refresh_token is present
  *  - session callback: accessToken, idToken, groups, roles, error propagation
- *  - RP-initiated logout (signOut event hits the end_session_endpoint)
+ *  - signOut event (no-op when COGNITO_DOMAIN is not configured)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -29,10 +27,6 @@ vi.mock("next-auth", () => ({
       auth: vi.fn(),
     };
   },
-}));
-
-vi.mock("next-auth/providers/keycloak", () => ({
-  default: (opts: Record<string, unknown>) => ({ ...opts, name: "keycloak" }),
 }));
 
 // ── JWT helper: build a valid-looking (but unsigned) HS256 token ──────────────
@@ -76,14 +70,13 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
     vi.resetModules();
     capturedConfig = {};
     process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
-    process.env.KEYCLOAK_ISSUER = "https://auth.test/realms/master";
-    process.env.KEYCLOAK_CLIENT_ID = "cloudless-app";
-    process.env.KEYCLOAK_CLIENT_SECRET = "client-secret";
+    process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
     await import("@/lib/auth");
   });
 
   afterEach(() => {
     globalThis.fetch = origFetch;
+    delete process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
   });
 
   // ── groups extraction ──────────────────────────────────────────────────────
@@ -93,8 +86,8 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
     >;
-    const idToken = buildToken({ groups: ["admin"] });
-    const accessToken = buildToken({ groups: ["other"] });
+    const idToken = buildToken({ "cognito:groups": ["admin"] });
+    const accessToken = buildToken({ "cognito:groups": ["other"] });
     const result = await jwt.jwt({
       token: {},
       account: {
@@ -113,7 +106,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
       (a: JwtInput) => Promise<Record<string, unknown>>
     >;
     const idToken = buildToken({ sub: "u1" });
-    const accessToken = buildToken({ groups: ["member"] });
+    const accessToken = buildToken({ "cognito:groups": ["member"] });
     const result = await jwt.jwt({
       token: {},
       account: {
@@ -141,7 +134,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
         expires_at: Math.floor(Date.now() / 1000) + 3600,
         expires_in: 3600,
       },
-      profile: { groups: ["viewer"] },
+      profile: { "cognito:groups": ["viewer"] },
     });
     expect(result.groups).toEqual(["viewer"]);
   });
@@ -161,7 +154,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
         expires_in: 3600,
       },
     });
-    expect(result.roles).toContain("admin");
+    expect(result.roles).toEqual([]);
   });
 
   it("handles a malformed JWT segment without throwing (returns empty claims)", async () => {
@@ -271,7 +264,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
         accessToken: "atk",
         idToken: "itk",
         groups: ["admin"],
-        roles: ["offline_access"],
+        roles: [],
       },
     });
     expect(out.user.id).toBe("u-1");
@@ -279,7 +272,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
     expect(out.idToken).toBe("itk");
     expect((out as Record<string, unknown>).user).toMatchObject({
       groups: ["admin"],
-      roles: ["offline_access"],
+      roles: [],
     });
   });
 
@@ -296,7 +289,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
 
   // ── RP-Initiated Logout (signOut event) ───────────────────────────────────
 
-  it("signOut event calls Keycloak end_session_endpoint with id_token_hint", async () => {
+  it("signOut event is a no-op when COGNITO_DOMAIN is not configured", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
     globalThis.fetch = fetchMock;
 
@@ -305,10 +298,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
     };
     await signOutEvent({ token: { idToken: "id-tok-123" } });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const url = fetchMock.mock.calls[0][0] as string;
-    expect(url).toContain("protocol/openid-connect/logout");
-    expect(url).toContain("id_token_hint=id-tok-123");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("signOut event is a no-op when there is no id_token", async () => {
