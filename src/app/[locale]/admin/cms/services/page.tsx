@@ -47,7 +47,7 @@ export default function AdminServicesPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    load().catch(() => {});
   }, [load]);
 
   const openCreate = () => {

@@ -62,7 +62,7 @@ export default function AdminCaseStudiesPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    load().catch(() => {});
   }, [load]);
 
   const openCreate = () => {

@@ -42,7 +42,7 @@ export default function AdminFaqsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    load().catch(() => {});
   }, [load]);
 
   const openCreate = () => {
