@@ -219,7 +219,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     phone?: string;
   }) => {
     // Go through our own same-origin API route, which persists the profile in
-    // DynamoDB keyed by the user's sub (provider-agnostic — Cognito or Keycloak).
+    // DynamoDB keyed by the Cognito user sub.
     const res = await globalThis.fetch(PROFILE_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

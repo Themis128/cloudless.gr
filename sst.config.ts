@@ -42,8 +42,7 @@ function buildSiteEnvironment(
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
     USER_PROFILE_TABLE: userProfileTableName,
-    // Active auth provider — Cognito (always-up AWS) when configured, else Keycloak.
-    // NEXT_PUBLIC_AUTH_PROVIDER drives the login/signup page button label.
+    // Auth provider — Cognito (AWS). NEXT_PUBLIC_AUTH_PROVIDER drives the login button label.
     ...(cognito
       ? {
           COGNITO_ISSUER: cognito.issuer,
@@ -52,15 +51,7 @@ function buildSiteEnvironment(
           COGNITO_DOMAIN: cognito.domain,
           NEXT_PUBLIC_AUTH_PROVIDER: "cognito",
         }
-      : {
-          // Keycloak (legacy, Pi-dependent) — fallback when Cognito is not configured.
-          NEXT_PUBLIC_KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
-          NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: "cloudless-app",
-          KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
-          KEYCLOAK_CLIENT_ID: "cloudless-app",
-          KEYCLOAK_ADMIN_CLIENT_ID: "admin-cli",
-          NEXT_PUBLIC_AUTH_PROVIDER: "keycloak",
-        }),
+      : {}),
     // Notion database IDs (non-secret, safe to inline)
     NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
     NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
