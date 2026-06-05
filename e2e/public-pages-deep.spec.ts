@@ -60,11 +60,10 @@ for (const route of AUTH_PAGES) {
     await page.goto(route);
     await page.waitForLoadState("networkidle").catch(() => {});
     await expect(page.locator("body")).toBeVisible();
-    // login page shows Keycloak SSO button when NEXT_PUBLIC_KEYCLOAK_ISSUER is set;
-    // signup and forgot-password always show an email field.
+    // login page shows "Continue with AWS" SSO button; signup/forgot-password show an email field.
     const hasEmail = await page.getByLabel(/email/i).first().isVisible({ timeout: 10_000 }).catch(() => false);
-    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasEmail || hasKeycloak, `${route} has no email input or Keycloak SSO button`).toBeTruthy();
+    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 5_000 }).catch(() => false);
+    expect(hasEmail || hasAws, `${route} has no email input or Continue with AWS button`).toBeTruthy();
   });
 }
 

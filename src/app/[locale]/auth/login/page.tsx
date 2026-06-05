@@ -9,9 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
-const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-const USE_COGNITO = AUTH_PROVIDER === "cognito";
-const USE_KEYCLOAK = AUTH_PROVIDER === "keycloak" || !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+const USE_COGNITO = true;
 
 function normalizeRedirectPath(path: string): string {
   if (!path.startsWith("/")) return path;
@@ -59,20 +57,7 @@ function LoginContent() {
     setError("");
     setSubmitting(true);
     try {
-      if (USE_COGNITO) {
-        await nextAuthSignIn("cognito", { callbackUrl });
-        return;
-      }
-      if (USE_KEYCLOAK) {
-        await nextAuthSignIn("keycloak", { callbackUrl });
-        return;
-      }
-      const result = await signIn(email, password);
-      if (result.needsNewPassword) {
-        setNeedsNewPassword(true);
-      } else if (result.needsConfirmation) {
-        router.push(`/auth/signup?verify=${encodeURIComponent(email)}`);
-      }
+      await nextAuthSignIn("cognito", { callbackUrl });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -101,8 +86,6 @@ function LoginContent() {
     );
   }
 
-  const isOidcProvider = USE_COGNITO || USE_KEYCLOAK;
-
   return (
     <div className="bg-void flex min-h-screen items-center justify-center px-4 py-20">
       <div className="w-full max-w-md">
@@ -128,39 +111,7 @@ function LoginContent() {
             </div>
           )}
 
-          {needsNewPassword ? (
-            <form onSubmit={handleNewPassword} className="space-y-5">
-              <div>
-                <label
-                  htmlFor="login-new-password"
-                  className="mb-2 block font-mono text-sm text-slate-400"
-                >
-                  {t("auth.newPassword", "New Password")}
-                </label>
-                <input
-                  id="login-new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm text-white transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
-                  placeholder="Enter new password"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
-              >
-                {submitting
-                  ? t("auth.settingPassword", "Setting Password...")
-                  : t("auth.resetPassword", "Reset Password")}
-              </button>
-            </form>
-          ) : isOidcProvider ? (
-            <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5">
               <button
                 type="submit"
                 disabled={submitting}
@@ -168,76 +119,9 @@ function LoginContent() {
               >
                 {submitting
                   ? t("auth.signingIn", "Signing In...")
-                  : USE_COGNITO
-                    ? t("auth.continueWithCognito", "Continue with AWS")
-                    : t("auth.continueWithKeycloak", "Continue with Keycloak")}
-              </button>
-              {!USE_COGNITO && (
-                <div className="flex justify-center">
-                  <Link
-                    href="/auth/forgot-password"
-                    className="text-neon-cyan/70 hover:text-neon-cyan font-mono text-sm transition-colors"
-                  >
-                    {t("auth.forgotPassword", "Forgot Password?")}
-                  </Link>
-                </div>
-              )}
-            </form>
-          ) : (
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <label
-                  htmlFor="login-email"
-                  className="mb-2 block font-mono text-sm text-slate-400"
-                >
-                  {t("auth.email", "Email")}
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm text-white transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
-                  placeholder="your@email.com"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="login-password"
-                  className="mb-2 block font-mono text-sm text-slate-400"
-                >
-                  {t("auth.password", "Password")}
-                </label>
-                <input
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm text-white transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
-                  placeholder="••••••••"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Link
-                  href="/auth/forgot-password"
-                  className="text-neon-cyan/70 hover:text-neon-cyan font-mono text-sm transition-colors"
-                >
-                  {t("auth.forgotPassword", "Forgot Password?")}
-                </Link>
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
-              >
-                {submitting ? t("auth.signingIn", "Signing In...") : t("auth.login", "Sign In")}
+                  : t("auth.continueWithCognito", "Continue with AWS")}
               </button>
             </form>
-          )}
 
           {!needsNewPassword && (
             <p className="mt-6 text-center font-mono text-sm text-slate-500">

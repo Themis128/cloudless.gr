@@ -115,40 +115,6 @@ spec:
             limits:   { memory: 400Mi, cpu: 1 }
 
 ---
-# Keycloak — size the container to FIT the JVM heap, do not starve it.
-#
-# Verified in-cluster (cluster-doctor snapshot, issue #382): the live keycloak
-# Deployment runs its heap via JAVA_OPTS_APPEND="-Xms192m -Xmx512m …", NOT via
-# JAVA_OPTS_KC_HEAP. The original memory-relief capped the container at 384Mi
-# WITHOUT lowering that 512Mi heap, so the JVM could never fit → OOMKilled on
-# startup (exit 137), 79 restarts over ~8h, auth.cloudless.gr 503. An earlier
-# attempt to patch JAVA_OPTS_KC_HEAP was a no-op because that variable is not
-# what this deployment uses.
-#
-# Fix: set the operative variable (JAVA_OPTS_APPEND) explicitly and size the
-# container to hold a 512Mi heap plus ~200Mi of JVM non-heap (Quarkus metaspace,
-# thread stacks, code cache, GC, plus a startup-augmentation spike). The pod's
-# actual RSS is ~500Mi regardless of the ceiling, and the node has no memory
-# pressure, so raising the limit does not increase real usage — it only stops
-# the kernel OOMKill. (-Xms reduced 192m→128m so idle commits less.)
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: keycloak
-  namespace: keycloak
-spec:
-  template:
-    spec:
-      containers:
-        - name: keycloak
-          env:
-            - name: JAVA_OPTS_APPEND
-              value: "-Xms128m -Xmx512m -Djdk.reflect.useDirectMethodHandle=false -Dquarkus.http.limits.max-header-size=64K"
-          resources:
-            requests: { memory: 384Mi, cpu: 100m }
-            limits:   { memory: 768Mi, cpu: 1 }
-
----
 # n8n — 117 Mi → 256 Mi cap (keep headroom for workflow spikes)
 apiVersion: apps/v1
 kind: Deployment
