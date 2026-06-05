@@ -20,13 +20,11 @@ function stripLocale(pathname: string): string {
 async function readAuthToken(
   req: NextRequest,
 ): Promise<{ valid: boolean; isAdmin: boolean }> {
-  // The session JWT stores the Keycloak access/id/refresh tokens, so it
-  // exceeds the 4096-byte cookie limit and next-auth CHUNKS it into
-  // `<name>.0`, `<name>.1`, … — the unchunked `<name>` cookie then does not
-  // exist. Detect either form (base cookie OR first chunk) before paying for
-  // the getToken dynamic import; getToken's SessionStore reassembles the
-  // chunks itself. Checking only the base name treated logged-in admins as
-  // anonymous and bounced them to /auth/login instead of /admin.
+  // The session JWT can exceed the 4096-byte cookie limit when next-auth
+  // CHUNKS it into `<name>.0`, `<name>.1`, … — the unchunked `<name>` cookie
+  // then does not exist. Detect either form (base cookie OR first chunk) before
+  // paying for the getToken dynamic import; getToken's SessionStore reassembles
+  // the chunks itself.
   const baseNames = ["__Secure-authjs.session-token", "authjs.session-token"];
   const hasSession = baseNames.some(
     (n) => req.cookies.get(n) ?? req.cookies.get(`${n}.0`),
@@ -48,11 +46,7 @@ async function readAuthToken(
     if (!token) return { valid: false, isAdmin: false };
 
     const groups = (token.groups as string[]) ?? [];
-    const roles = (token.roles as string[]) ?? [];
-    const admin =
-      groups.includes("admin") ||
-      roles.includes("admin") ||
-      roles.includes("realm:admin");
+    const admin = groups.includes("admin");
     return { valid: true, isAdmin: admin };
   } catch {
     return { valid: false, isAdmin: false };
@@ -78,9 +72,8 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/contact": { windowMs: 60_000, max: 3 },
   "/api/subscribe": { windowMs: 60_000, max: 2 },
   "/api/unsubscribe": { windowMs: 60_000, max: 3 },
-  // Public, unauthenticated account creation: each call hits the Keycloak Admin
-  // API to create a user AND fires an SES verification email. Without a cap it
-  // is an email-bombing / SES-cost / user-table-flood vector. Keep it tight.
+  // Public, unauthenticated account creation: each call fires an SES
+  // verification email — email-bombing / SES-cost vector. Keep it tight.
   "/api/auth/register": { windowMs: 60_000, max: 3 },
   "/api/checkout": { windowMs: 60_000, max: 6 },
   "/api/calendar/book": { windowMs: 60_000, max: 3 },
@@ -166,7 +159,6 @@ function generateNonce(): string {
  *   - Stripe (checkout + redirect)
  *   - Sentry (browser SDK + ingest)
  *   - Meta Pixel (connect.facebook.net)
- *   - Keycloak (auth.cloudless.gr OIDC)
  *   - HubSpot (forms + tracking)
  *   - Google Analytics / GTM
  */
@@ -179,8 +171,8 @@ function buildCSP(nonce: string): string {
     ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`
     : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`;
   const connectSrc = isDev
-    ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com"
-    : "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com";
+    ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com"
+    : "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com";
 
   return [
     "default-src 'self'",
@@ -339,9 +331,8 @@ async function handlePageRoute(
   const locale = getLocaleFromPath(pathname);
   const prefix = `/${locale}`;
 
-  // Post-login resolver: the Keycloak sign-in callbackUrl can't know isAdmin
-  // before the session exists, so it lands here. Decide in middleware (clean
-  // 307, no page render) — admins → /admin, everyone else → /dashboard.
+  // Post-login resolver: the OIDC callbackUrl routes here; we read the session
+  // and redirect admins → /admin, everyone else → /dashboard.
   if (bare === "/auth/post-login") {
     const { valid, isAdmin: hasAdminGroup } = await readAuthToken(request);
     if (!valid) {
