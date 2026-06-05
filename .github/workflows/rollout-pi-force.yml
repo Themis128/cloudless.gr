@@ -173,6 +173,9 @@ jobs:
           fi
 
       - name: Set image and roll out
+        env:
+          PI_HOST: "100.113.41.119"
+          PI_USER: "tbaltzakis"
         run: |
           SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
           echo "Rolling out image tag: ${SHA}"
@@ -231,6 +234,34 @@ jobs:
           kubectl scale deployment/${{ env.K3S_DEPLOYMENT }} \
             -n ${{ env.K3S_NAMESPACE }} --replicas=1
 
-          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} \
-            -n ${{ env.K3S_NAMESPACE }} --timeout=1800s
+          # Run rollout readiness check via SSH on the Pi itself (local kubeconfig,
+          # 127.0.0.1:6443). Run #7 timed out because kubectl rollout status run
+          # from the Actions runner over the Tailscale relay sees disconnections
+          # whenever k3s restarts during image pull + container startup. Each SSH
+          # poll is a fresh short-lived connection — k3s crashes between polls are
+          # handled transparently; the next poll just sees readyReplicas=0.
+          echo "Waiting for rollout via SSH on Pi (local kubeconfig, up to 20 min)..."
+          for i in $(seq 1 120); do
+            READY=$(ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=3 \
+              "$PI_USER@$PI_HOST" \
+              "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                get deployment/${{ env.K3S_DEPLOYMENT }} \
+                -n ${{ env.K3S_NAMESPACE }} \
+                -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0" \
+              2>/dev/null || echo "0")
+            if [ "${READY:-0}" = "1" ]; then
+              echo "Rollout complete — 1/1 replicas ready (attempt ${i})"
+              break
+            fi
+            if [ "$i" -eq 120 ]; then
+              echo "::error::Rollout timed out — pod not ready after 20 min"
+              exit 1
+            fi
+            echo "  ${i}/120 — readyReplicas=${READY:-0}, waiting 10s..."
+            sleep 10
+          done
           echo "Rollout complete: SHA=${SHA}"
