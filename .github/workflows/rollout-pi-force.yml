@@ -206,8 +206,26 @@ jobs:
           echo "Scaling down to 0 to free RAM before image pull..."
           kubectl scale deployment/${{ env.K3S_DEPLOYMENT }} \
             -n ${{ env.K3S_NAMESPACE }} --replicas=0
-          echo "Sleeping 60s for old pod to terminate and RAM to settle..."
-          sleep 60
+
+          # Poll /readyz instead of blind sleep: k3s can crash after the
+          # scale-to-0 write (etcd + reconciliation pressure). Wait up to
+          # 3 min for 3× stable /readyz before issuing scale-to-1.
+          echo "Waiting for k3s to stay stable after scale-to-0 (up to 3 min)..."
+          stable=0
+          for i in $(seq 1 36); do
+            if kubectl get --raw /readyz --request-timeout=5s 2>/dev/null \
+                | grep -q 'ok'; then
+              stable=$((stable + 1))
+              echo "  ${i}/36 — /readyz ok (stable ${stable}/3)"
+              if [ "$stable" -ge 3 ]; then
+                break
+              fi
+            else
+              stable=0
+              echo "  ${i}/36 — k3s not ready, waiting 5s..."
+            fi
+            sleep 5
+          done
 
           echo "Scaling back up to 1 with new image..."
           kubectl scale deployment/${{ env.K3S_DEPLOYMENT }} \
