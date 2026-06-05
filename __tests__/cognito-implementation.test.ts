@@ -8,8 +8,8 @@
  *
  *   1. Provider selection — authProvider === "cognito" when COGNITO_ISSUER set
  *   2. cognito:groups claim extraction (id_token preferred over access_token)
- *   3. Refresh hits {COGNITO_DOMAIN}/oauth2/token with HTTP Basic auth
- *      (client_id:client_secret) — NOT client_secret in the body
+ *   3. Refresh hits {COGNITO_DOMAIN}/oauth2/token with client_id in the body
+ *      (public PKCE — no Authorization header, no client_secret)
  *   4. Cognito does not rotate refresh tokens — the existing one is kept
  *      when the refresh response omits refresh_token
  *   5. RP-initiated logout hits {COGNITO_DOMAIN}/logout?client_id&logout_uri
@@ -148,7 +148,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
 
   // ── 3. refresh hits the Cognito token endpoint with HTTP Basic auth ─────────
 
-  it("refreshes at {domain}/oauth2/token using HTTP Basic auth (not body secret)", async () => {
+  it("refreshes at {domain}/oauth2/token — public PKCE, no Authorization header", async () => {
     await import("@/lib/auth");
     const jwt = capturedConfig.callbacks as Record<
       string,
@@ -176,9 +176,9 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     expect(url).toBe(`${COGNITO_DOMAIN}/oauth2/token`);
 
     const headers = init.headers as Record<string, string>;
-    expect(headers.Authorization).toBe(`Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`);
+    expect(headers.Authorization).toBeUndefined();
 
-    // The secret must travel in the Basic header, never in the body.
+    // Public PKCE: client_id goes in the body, never a client_secret.
     const body = String(init.body);
     expect(body).toContain("grant_type=refresh_token");
     expect(body).toContain("refresh_token=rtk-cognito");

@@ -22,11 +22,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 /** Same-origin route that reads (GET) and writes (POST) user profile attributes. */
 const PROFILE_ENDPOINT = "/api/user/profile";
 
-// Active OIDC provider, chosen at build time. Cognito (always-up AWS) wins when
-// NEXT_PUBLIC_AUTH_PROVIDER === "cognito"; Keycloak is the fallback. This drives
-// which next-auth provider the sign-in / sign-up / reset flows hand off to.
-const USE_COGNITO = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
-const OIDC_PROVIDER = USE_COGNITO ? "cognito" : "keycloak";
+const OIDC_PROVIDER = "cognito";
 
 export interface AuthUser {
   username: string;
@@ -78,12 +74,8 @@ const DEFAULT_AUTH_CONTEXT: AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>(DEFAULT_AUTH_CONTEXT);
 
-function isAdminFromSession(user: { groups?: string[]; roles?: string[] }): boolean {
-  return (
-    (user.groups ?? []).includes("admin") ||
-    (user.roles ?? []).includes("admin") ||
-    (user.roles ?? []).includes("realm:admin")
-  );
+function isAdminFromSession(user: { groups?: string[] }): boolean {
+  return (user.groups ?? []).includes("admin");
 }
 
 /**
@@ -180,36 +172,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [checkAuth]);
 
-  // Sign-in delegates entirely to the active OIDC provider's hosted flow.
-  // The email/password arguments are ignored — the provider (Cognito Hosted UI
-  // or Keycloak) shows its own login page. They're kept in the signature for
-  // interface compat with any callers that pass them (e.g. legacy login form).
+  // Sign-in delegates to Cognito's hosted flow. The email/password arguments
+  // are ignored — Cognito Hosted UI shows its own login page. They're kept in
+  // the signature for interface compat with any callers that pass them.
   const handleSignIn = async (_email: string, _password: string): Promise<SignInResult> => {
     await nextAuthSignIn(OIDC_PROVIDER, { redirect: true });
     return {};
   };
 
   const handleSignUp = async (_email: string, _password: string, _name?: string) => {
-    if (USE_COGNITO) {
-      // Cognito Hosted UI handles registration. Route through next-auth so it
-      // manages the OAuth state/PKCE on the callback (a bare Hosted UI deep-link
-      // would fail next-auth's state check on return). The hosted login page
-      // carries the "Sign up" link.
-      await nextAuthSignIn("cognito", { callbackUrl: "/auth/post-login" });
-      return;
-    }
-    const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
-    const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ?? "cloudless-app";
-    if (!issuer) return;
-    const url = new URL(`${issuer}/protocol/openid-connect/registrations`);
-    url.searchParams.set("client_id", clientId);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set(
-      "redirect_uri",
-      `${globalThis.location?.origin ?? ""}/api/auth/callback/keycloak`
-    );
-    url.searchParams.set("scope", "openid profile email");
-    globalThis.location.href = url.toString();
+    // Cognito Hosted UI handles registration. Route through next-auth so it
+    // manages the OAuth state/PKCE on the callback.
+    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
   };
 
   const handleSignOut = async () => {
@@ -222,20 +196,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // The provider handles email verification via its own hosted flow.
   };
 
-  const handleForgotPassword = async (email: string) => {
-    if (USE_COGNITO) {
-      // Cognito Hosted UI carries the "Forgot your password?" link. Route
-      // through next-auth so it manages OAuth state/PKCE on return.
-      await nextAuthSignIn("cognito", { callbackUrl: "/auth/post-login" });
-      return;
-    }
-    const issuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
-    const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ?? "cloudless-app";
-    if (!issuer) return;
-    const url = new URL(`${issuer}/login-actions/reset-credentials`);
-    url.searchParams.set("client_id", clientId);
-    if (email) url.searchParams.set("username", email);
-    globalThis.location.href = url.toString();
+  const handleForgotPassword = async (_email: string) => {
+    // Cognito Hosted UI carries the "Forgot your password?" link.
+    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
   };
 
   const handleConfirmForgotPassword = async (
@@ -243,11 +206,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     _code: string,
     _newPassword: string
   ) => {
-    // Handled by Keycloak hosted page — no client-side step needed.
+    // Handled by Cognito Hosted UI — no client-side step needed.
   };
 
   const handleCompleteNewPassword = async (_newPassword: string) => {
-    // Keycloak handles forced password reset via its hosted flow.
+    // Handled by Cognito Hosted UI.
   };
 
   const handleUpdateProfile = async (attrs: {
@@ -285,7 +248,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       ...prefs,
     };
     setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
-    // Persist via our same-origin route (browser → Keycloak is CORS-blocked).
+    // Persist via our same-origin route.
     try {
       await globalThis.fetch(PROFILE_ENDPOINT, {
         method: "POST",

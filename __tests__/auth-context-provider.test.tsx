@@ -97,13 +97,13 @@ describe("AuthContext provider handoff", () => {
     );
   });
 
-  it("default (keycloak): signIn hands off to the keycloak provider", async () => {
+  it("default (no provider set): signIn hands off to the cognito provider", async () => {
     const get = await mountWith(undefined);
     await act(async () => {
       await get().signIn("e@x.com", "pw");
     });
     expect(signInMock).toHaveBeenCalledWith(
-      "keycloak",
+      "cognito",
       expect.objectContaining({ redirect: true })
     );
   });
