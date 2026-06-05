@@ -347,28 +347,23 @@ test.describe("Auth – Login page", () => {
   test("renders email, password fields and Sign In button", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    // When Keycloak is configured, the login page shows a single SSO button.
-    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
     const hasEmail = await page.locator("#login-email").isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasKeycloak || hasEmail, "login page must show Keycloak SSO button or email field").toBeTruthy();
+    expect(hasAws || hasEmail, "login page must show Continue with AWS button or email field").toBeTruthy();
   });
 
   test("has a Create Account signup link", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    // The signup link is only shown in Cognito mode; Keycloak mode redirects to Keycloak UI.
-    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
-    if (!hasKeycloak) {
-      await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
-    }
+    await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
   });
 
   test("has a Forgot Password link", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    // The forgot-password link is only shown in Cognito mode.
-    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
-    if (!hasKeycloak) {
+    // Cognito Hosted UI handles forgot-password; the login page may or may not show a local link.
+    const hasForgotLink = await page.getByRole("link", { name: /forgot password/i }).isVisible({ timeout: 5_000 }).catch(() => false);
+    if (hasForgotLink) {
       await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
     }
   });

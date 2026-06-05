@@ -1,3 +1,15 @@
+/**
+ * next-auth v5 configuration — Cognito OIDC provider.
+ *
+ * Token storage: next-auth stores the session in a signed+encrypted JWT
+ * cookie. The provider access_token + id_token + refresh_token are kept on
+ * the JWT so proxy.ts can validate the id_token directly and the server can
+ * refresh transparently when the access_token expires.
+ *
+ * Refresh-token rotation follows the Auth.js documented pattern:
+ *   https://authjs.dev/guides/refresh-token-rotation
+ */
+
 import NextAuth, { type DefaultSession } from "next-auth";
 import Cognito from "next-auth/providers/cognito";
 
@@ -29,29 +41,17 @@ declare module "next-auth/jwt" {
   }
 }
 
+const ISSUER = process.env.COGNITO_ISSUER ?? "";
+const CLIENT_ID = process.env.COGNITO_CLIENT_ID ?? "";
+const CLIENT_SECRET = process.env.COGNITO_CLIENT_SECRET ?? "";
+
 // Cognito exposes group membership under "cognito:groups".
 const GROUPS_CLAIM = "cognito:groups";
-
-// Derive issuer / client ID from NEXT_PUBLIC_* vars when the server-side
-// COGNITO_ISSUER / COGNITO_CLIENT_ID vars are not set. The pool ID encodes
-// the region: us-east-1_Abc123 → issuer https://cognito-idp.us-east-1.amazonaws.com/us-east-1_Abc123
-function cognitoIssuer(poolId: string): string {
-  const region = poolId.split("_")[0];
-  return `https://cognito-idp.${region}.amazonaws.com/${poolId}`;
-}
-
-const poolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
-const ISSUER = process.env.COGNITO_ISSUER || (poolId ? cognitoIssuer(poolId) : "");
-const CLIENT_ID =
-  process.env.COGNITO_CLIENT_ID || process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "";
-// Public PKCE app client — no client secret.
-const CLIENT_SECRET = "";
 
 // Cognito's hosted-UI domain (e.g.
 // https://cloudless-auth.auth.us-east-1.amazoncognito.com) for RP-initiated
 // logout, which Cognito implements as a non-standard
-// /logout?client_id=…&logout_uri=… endpoint (not advertised in its OIDC
-// discovery document). Optional — logout is best-effort.
+// /logout?client_id=…&logout_uri=… endpoint.
 const COGNITO_DOMAIN = (process.env.COGNITO_DOMAIN ?? "").replace(/\/+$/, "");
 const AUTH_URL = (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(
   /\/+$/,
@@ -72,9 +72,9 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
 }
 
 /**
- * Exchange the refresh_token at Cognito's token endpoint. Throws on failure.
- * Cognito does not rotate refresh tokens, so the caller keeps the existing one
- * when none is returned.
+ * Exchange the refresh_token at Cognito's token endpoint. Throws on failure
+ * so the jwt callback can flag the session. Cognito does not rotate refresh
+ * tokens, so the caller keeps the existing one when none is returned.
  */
 async function refreshAccessToken(refreshToken: string): Promise<{
   access_token: string;
@@ -82,15 +82,19 @@ async function refreshAccessToken(refreshToken: string): Promise<{
   id_token?: string;
   expires_in: number;
 }> {
-  const token_endpoint = `${COGNITO_DOMAIN}/oauth2/token`;
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
     client_id: CLIENT_ID,
   });
-  const res = await globalThis.fetch(token_endpoint, {
+  const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
+  if (CLIENT_SECRET) {
+    headers.Authorization = `Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`;
+  }
+
+  const res = await globalThis.fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers,
     body: body.toString(),
   });
   if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
@@ -138,7 +142,6 @@ const nextAuthResult = hasAuthSecret
             const p = profile as Record<string, unknown> | undefined;
 
             token.groups = readGroups(idPayload, accessPayload, p);
-            token.roles = [];
             return token;
           }
 
@@ -172,19 +175,17 @@ const nextAuthResult = hasAuthSecret
           session.idToken = token.idToken;
           session.user.id = token.sub ?? "";
           session.user.groups = token.groups ?? [];
-          session.user.roles = [];
+          session.user.roles = token.roles ?? [];
           if (token.error) session.error = token.error;
           return session;
         },
       },
       events: {
-        /**
-         * RP-Initiated Logout: end Cognito's SSO session via the hosted-UI
-         * /logout endpoint so the next signIn() shows the login page.
-         */
-        async signOut() {
+        async signOut(message) {
+          if (!COGNITO_DOMAIN) return;
+          const idToken = "token" in message ? message.token?.idToken : undefined;
+          void idToken; // Cognito logout uses client_id + logout_uri, not id_token_hint
           try {
-            if (!COGNITO_DOMAIN) return;
             const url = new URL(`${COGNITO_DOMAIN}/logout`);
             url.searchParams.set("client_id", CLIENT_ID);
             url.searchParams.set("logout_uri", `${AUTH_URL}/`);
@@ -195,13 +196,10 @@ const nextAuthResult = hasAuthSecret
         },
       },
       session: { strategy: "jwt" },
-      // Suppress the benign next-auth "Configuration" error that fires on a bare
-      // GET to /api/auth/signin/<provider> (health probes, crawlers, link
-      // unfurlers). Real sign-in POSTs with CSRF and is unaffected.
       logger: {
         error(error: Error) {
           const tag = `${error?.name ?? ""} ${(error as { type?: string })?.type ?? ""}`;
-          const configured = !!(ISSUER && CLIENT_ID);
+          const configured = !!(ISSUER && CLIENT_ID && CLIENT_SECRET);
           if (tag.includes("Configuration") && configured) return;
           console.error(`[auth][error] ${error?.message ?? error}`);
         },
@@ -220,6 +218,3 @@ export const handlers = nextAuthResult?.handlers ?? {
 export const signIn = nextAuthResult?.signIn ?? (async () => undefined);
 export const signOut = nextAuthResult?.signOut ?? (async () => undefined);
 export const auth = nextAuthResult?.auth ?? (async () => null);
-
-/** The active OIDC provider id — always "cognito". */
-export const authProvider = "cognito" as const;
