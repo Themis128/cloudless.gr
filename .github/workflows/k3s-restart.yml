@@ -79,10 +79,17 @@ jobs:
         run: |
           echo "" | tee -a k3s.log
           echo "=== restarting k3s ===" | tee -a k3s.log
+          # Only evict stale port holder when 6443 is actually down — never kill a running k3s.
+          if nc -zv -w3 "$PI_HOST" 6443 2>/dev/null; then
+            echo "(port 6443 is already up — skipping fuser, doing clean restart)" | tee -a k3s.log
+            FUSER_CMD="echo '(fuser skipped)'"
+          else
+            FUSER_CMD="sudo fuser -k 6443/tcp 2>/dev/null || true"
+          fi
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             "$PI_USER@$PI_HOST" \
             "sudo systemctl reset-failed k3s 2>/dev/null || true; \
-             sudo fuser -k 6443/tcp 2>/dev/null || true; \
+             $FUSER_CMD; \
              sudo systemctl restart k3s 2>&1; echo restart_exit=\$?" \
             2>&1 | tee -a k3s.log
 
