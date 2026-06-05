@@ -1,0 +1,65 @@
+name: Cluster health ping (healthchecks.io)
+
+# Pings healthchecks.io every 10 minutes so a dead-man's alert fires if the
+# k3s API server on omv stops responding. The check URL is stored as the repo
+# secret HEALTHCHECKS_CLUSTER_URL (e.g. https://hc-ping.com/<uuid>).
+#
+# healthchecks.io check config:
+#   Period:  10 min
+#   Grace:   5 min  → alert fires after 15 min of silence
+#   Alert:   email / Slack (configure in healthchecks.io dashboard)
+#
+# To set up the secret: go to healthchecks.io, create a new check with
+# period=10min, copy the ping URL, and add it as repo secret
+# HEALTHCHECKS_CLUSTER_URL.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HC_URL: ${{ secrets.HEALTHCHECKS_CLUSTER_URL }}
+      PI_HOST: "100.113.41.119"
+    steps:
+      - name: Skip if secret not configured
+        if: ${{ env.HC_URL == '' }}
+        run: |
+          echo "HEALTHCHECKS_CLUSTER_URL is not set — skipping ping."
+          exit 0
+
+      - name: Connect to tailnet
+        if: ${{ env.HC_URL != '' }}
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Ping /start
+        if: ${{ env.HC_URL != '' }}
+        run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null || true
+
+      - name: Check cluster reachability (port 6443)
+        if: ${{ env.HC_URL != '' }}
+        id: check
+        run: |
+          if nc -zv -w5 "$PI_HOST" 6443 2>/dev/null; then
+            echo "exit_code=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "exit_code=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ping result (0=up, 1=down)
+        if: ${{ env.HC_URL != '' }}
+        run: |
+          EXIT="${{ steps.check.outputs.exit_code }}"
+          curl -fsS --retry 3 --max-time 10 "${HC_URL}/${EXIT}" > /dev/null || true
+          if [ "$EXIT" = "1" ]; then
+            echo "::warning::Cluster port 6443 is unreachable — failure ping sent to healthchecks.io"
+          fi
