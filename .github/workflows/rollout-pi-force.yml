@@ -95,6 +95,11 @@ jobs:
               else
                 echo "No leftover containerd-shim processes found"
               fi
+              echo "=== Stop cloudless app containers before restart (free RAM) ==="
+              sudo crictl ps 2>/dev/null | grep cloudless | awk '{print $1}' \
+                | xargs -r sudo crictl stop --timeout 10 2>/dev/null || true
+              sudo crictl ps -a 2>/dev/null | grep cloudless | awk '{print $1}' \
+                | xargs -r sudo crictl rm -f 2>/dev/null || true
               echo "=== Restart k3s after defrag + cleanup ==="
               sudo systemctl restart k3s
               echo "k3s restarted — waiting 30s for etcd to initialise..."
@@ -130,6 +135,12 @@ jobs:
               fi
               echo "Sleeping 15s after etcd maintenance..."
               sleep 15
+              echo "=== Scale cloudless to 0 replicas (free RAM for /readyz polling) ==="
+              sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                scale deployment/cloudless -n cloudless --replicas=0 \
+                2>/dev/null && echo "scale to 0: done" || echo "scale to 0: skipped (k3s not ready)"
+              echo "Sleeping 20s for pod to terminate..."
+              sleep 20
             '
 
       - name: Wait for k3s /readyz (3x stable via kubectl)
