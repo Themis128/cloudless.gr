@@ -235,6 +235,35 @@ jobs:
               fi
             " 2>/dev/null || echo "ECR pre-pull SSH step failed — continuing"
 
+      - name: Wire imagePullSecrets onto cloudless Deployment
+        env:
+          PI_HOST: "100.113.41.119"
+          PI_USER: "tbaltzakis"
+        run: |
+          # Permanently fix ErrImagePull: patch the Deployment so pods reference
+          # the k8s docker-registry Secret that ecr-heal keeps fresh, instead of
+          # relying on stale node-level containerd credentials.
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            "$PI_USER@$PI_HOST" '
+              SECRET_NAME=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                get secret -n cloudless -o name 2>/dev/null \
+                | grep ecr | head -1 | sed "s|secret/||")
+              if [ -n "$SECRET_NAME" ]; then
+                echo "Patching imagePullSecrets → $SECRET_NAME"
+                sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                  patch deployment/cloudless -n cloudless \
+                  -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
+                  && echo "imagePullSecrets patched successfully" \
+                  || echo "patch failed — continuing"
+              else
+                echo "No ECR secret found — skipping imagePullSecrets patch"
+              fi
+            ' 2>/dev/null || echo "imagePullSecrets patch SSH step failed — continuing"
+
       - name: Set image and roll out
         env:
           PI_HOST: "100.113.41.119"
