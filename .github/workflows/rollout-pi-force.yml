@@ -235,13 +235,13 @@ jobs:
             -n ${{ env.K3S_NAMESPACE }} --replicas=1
 
           # Run rollout readiness check via SSH on the Pi itself (local kubeconfig,
-          # 127.0.0.1:6443). Run #7 timed out because kubectl rollout status run
-          # from the Actions runner over the Tailscale relay sees disconnections
-          # whenever k3s restarts during image pull + container startup. Each SSH
-          # poll is a fresh short-lived connection — k3s crashes between polls are
-          # handled transparently; the next poll just sees readyReplicas=0.
-          echo "Waiting for rollout via SSH on Pi (local kubeconfig, up to 20 min)..."
-          for i in $(seq 1 120); do
+          # 127.0.0.1:6443). Each SSH poll is a fresh short-lived connection —
+          # k3s crashes between polls are handled transparently.
+          # Every 6 iterations (~1 min) print pod status so we can see what's
+          # blocking readiness (ContainerCreating, CrashLoopBackOff, etc.).
+          echo "Waiting for rollout via SSH on Pi (local kubeconfig, up to 30 min)..."
+          ROLLOUT_DONE=0
+          for i in $(seq 1 180); do
             READY=$(ssh -i ~/.ssh/id_ed25519 \
               -o StrictHostKeyChecking=no \
               -o ConnectTimeout=10 \
@@ -255,13 +255,38 @@ jobs:
               2>/dev/null || echo "0")
             if [ "${READY:-0}" = "1" ]; then
               echo "Rollout complete — 1/1 replicas ready (attempt ${i})"
+              ROLLOUT_DONE=1
               break
             fi
-            if [ "$i" -eq 120 ]; then
-              echo "::error::Rollout timed out — pod not ready after 20 min"
-              exit 1
+            echo "  ${i}/180 — readyReplicas=${READY:-0}, waiting 10s..."
+            # Every 6 polls (~1 min) show pod status to surface the blocking condition
+            if [ $((i % 6)) -eq 0 ]; then
+              echo "--- pod status (attempt ${i}) ---"
+              ssh -i ~/.ssh/id_ed25519 \
+                -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+                "$PI_USER@$PI_HOST" \
+                "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                  get pod -n ${{ env.K3S_NAMESPACE }} -o wide 2>/dev/null || true" \
+                2>/dev/null || true
             fi
-            echo "  ${i}/120 — readyReplicas=${READY:-0}, waiting 10s..."
             sleep 10
           done
+
+          if [ "$ROLLOUT_DONE" -ne 1 ]; then
+            echo "::error::Rollout timed out after 30 min — dumping pod details"
+            ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+              "$PI_USER@$PI_HOST" \
+              "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                get pod -n ${{ env.K3S_NAMESPACE }} -o wide 2>/dev/null || true; \
+               echo '---'; \
+               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                describe pod -n ${{ env.K3S_NAMESPACE }} 2>/dev/null | tail -60 || true; \
+               echo '---'; \
+               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                logs -n ${{ env.K3S_NAMESPACE }} -l app=${{ env.K3S_DEPLOYMENT }} \
+                --tail=30 --previous 2>/dev/null || true" \
+              2>/dev/null || true
+            exit 1
+          fi
           echo "Rollout complete: SHA=${SHA}"
