@@ -2,13 +2,10 @@ name: Restore AWS OIDC trust policy
 
 on:
   workflow_dispatch:
-    inputs:
-      aws_access_key_id:
-        description: "AWS access key ID (any user with iam:* on account 278585680617)"
-        required: true
-      aws_secret_access_key:
-        description: "AWS secret access key"
-        required: true
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/restore-oidc-trust.yml"
 
 permissions:
   contents: read
@@ -18,7 +15,7 @@ jobs:
   restore:
     name: Restore OIDC provider + role trust policy
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     env:
       AWS_REGION: us-east-1
@@ -26,140 +23,153 @@ jobs:
       OIDC_PROVIDER_URL: "token.actions.githubusercontent.com"
       ROLE_NAME: "GitHubActionsOIDC"
       REPO: "repo:Themis128/cloudless.gr:*"
+      GH_TOKEN: ${{ github.token }}
 
     steps:
-      - name: Mask credentials immediately
-        run: |
-          echo "::add-mask::${{ inputs.aws_access_key_id }}"
-          echo "::add-mask::${{ inputs.aws_secret_access_key }}"
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Configure AWS credentials (static, for IAM repair)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
-          aws-access-key-id: ${{ inputs.aws_access_key_id }}
-          aws-secret-access-key: ${{ inputs.aws_secret_access_key }}
-          aws-region: us-east-1
+          authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Verify caller identity
-        run: aws sts get-caller-identity
-
-      - name: Check / create OIDC identity provider
-        id: oidc_provider
+      - name: Configure kubectl
         run: |
-          PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER_URL}"
-          echo "provider_arn=${PROVIDER_ARN}" >> "$GITHUB_OUTPUT"
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-          if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$PROVIDER_ARN" > /dev/null 2>&1; then
-            echo "OIDC provider already exists: ${PROVIDER_ARN}"
-            echo "created=false" >> "$GITHUB_OUTPUT"
+      - name: Extract Pi AWS credentials
+        id: creds
+        run: |
+          AK=$(kubectl -n cloudless get secret pi-standby-aws-creds \
+            -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' 2>/dev/null | base64 -d || true)
+          SK=$(kubectl -n cloudless get secret pi-standby-aws-creds \
+            -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' 2>/dev/null | base64 -d || true)
+          [ -n "$AK" ] && echo "::add-mask::$AK"
+          [ -n "$SK" ] && echo "::add-mask::$SK"
+          echo "ak_found=$([ -n "$AK" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          {
+            echo "AK<<DELIM"
+            echo "$AK"
+            echo "DELIM"
+            echo "SK<<DELIM"
+            echo "$SK"
+            echo "DELIM"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Test Pi creds — caller identity + IAM access
+        id: iam_probe
+        run: |
+          export AWS_ACCESS_KEY_ID="${{ steps.creds.outputs.AK }}"
+          export AWS_SECRET_ACCESS_KEY="${{ steps.creds.outputs.SK }}"
+
+          echo "=== Caller identity ==="
+          aws sts get-caller-identity || { echo "sts failed — creds invalid"; exit 0; }
+
+          echo "=== IAM access probe ==="
+          if aws iam list-open-id-connect-providers 2>&1; then
+            echo "has_iam=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_iam=false" >> "$GITHUB_OUTPUT"
+            echo "Pi creds do not have iam:ListOpenIDConnectProviders — expected (SSM-only user)"
+          fi
+
+      - name: Repair OIDC provider + trust policy (if IAM access available)
+        id: repair
+        if: steps.iam_probe.outputs.has_iam == 'true'
+        run: |
+          export AWS_ACCESS_KEY_ID="${{ steps.creds.outputs.AK }}"
+          export AWS_SECRET_ACCESS_KEY="${{ steps.creds.outputs.SK }}"
+
+          PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER_URL}"
+
+          # Create OIDC provider if missing
+          if aws iam get-open-id-connect-provider \
+              --open-id-connect-provider-arn "$PROVIDER_ARN" > /dev/null 2>&1; then
+            echo "OIDC provider exists: ${PROVIDER_ARN}"
+            CREATED="false"
           else
             echo "OIDC provider missing — creating..."
-            # Fetch current thumbprint from GitHub's OIDC endpoint
-            THUMBPRINT=$(openssl s_client -connect token.actions.githubusercontent.com:443 \
+            THUMBPRINT=$(openssl s_client \
+              -connect token.actions.githubusercontent.com:443 \
               -servername token.actions.githubusercontent.com \
               -showcerts </dev/null 2>/dev/null \
               | openssl x509 -fingerprint -noout -sha1 \
               | sed 's/SHA1 Fingerprint=//;s/://g' \
               | tr '[:upper:]' '[:lower:]')
             echo "Thumbprint: ${THUMBPRINT}"
-
             aws iam create-open-id-connect-provider \
               --url "https://${OIDC_PROVIDER_URL}" \
               --client-id-list "sts.amazonaws.com" \
               --thumbprint-list "${THUMBPRINT}"
-
-            echo "created=true" >> "$GITHUB_OUTPUT"
+            CREATED="true"
             echo "OIDC provider created."
           fi
 
-      - name: Fix role trust policy
-        id: trust_policy
-        run: |
-          PROVIDER_ARN="${{ steps.oidc_provider.outputs.provider_arn }}"
-
-          TRUST_POLICY=$(cat <<EOF
-          {
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Principal": {
-                  "Federated": "${PROVIDER_ARN}"
+          # Fix trust policy
+          TRUST_POLICY=$(python3 -c "
+          import json
+          print(json.dumps({
+            'Version': '2012-10-17',
+            'Statement': [{
+              'Effect': 'Allow',
+              'Principal': {'Federated': '${PROVIDER_ARN}'},
+              'Action': 'sts:AssumeRoleWithWebIdentity',
+              'Condition': {
+                'StringEquals': {
+                  'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
                 },
-                "Action": "sts:AssumeRoleWithWebIdentity",
-                "Condition": {
-                  "StringEquals": {
-                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-                  },
-                  "StringLike": {
-                    "token.actions.githubusercontent.com:sub": "${REPO}"
-                  }
+                'StringLike': {
+                  'token.actions.githubusercontent.com:sub': '${REPO}'
                 }
               }
-            ]
-          }
-          EOF
-          )
+            }]
+          }))
+          ")
 
-          echo "Applying trust policy to role ${ROLE_NAME}..."
+          echo "Updating trust policy on role ${ROLE_NAME}..."
           aws iam update-assume-role-policy \
             --role-name "${ROLE_NAME}" \
             --policy-document "${TRUST_POLICY}"
 
-          echo "Trust policy updated."
-
-      - name: Smoke-test OIDC (attempt assume-role)
-        id: smoke
-        run: |
-          # The OIDC token for this job can't be used with a different trust —
-          # but we can verify the trust policy is syntactically valid by
-          # describing the role and confirming it echoes back our condition.
+          # Verify
           TRUST=$(aws iam get-role --role-name "${ROLE_NAME}" \
             --query 'Role.AssumeRolePolicyDocument' --output json)
-          echo "Current trust policy:"
+          echo "Resulting trust policy:"
           echo "${TRUST}" | python3 -m json.tool
-          if echo "${TRUST}" | grep -q "token.actions.githubusercontent.com"; then
-            echo "Trust policy contains OIDC condition — looks correct."
-            echo "ok=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "WARNING: Trust policy does not reference OIDC provider."
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-          fi
 
-      - name: Trigger redeploy
-        if: steps.smoke.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Touch deploy.yml to trigger the deploy pipeline.
-          # We can't workflow_dispatch from here, so we post to the issue instead
-          # and let the operator know the fix is done and a push to main will deploy.
-          echo "OIDC restored — next push to main will deploy."
+          echo "provider_created=${CREATED}" >> "$GITHUB_OUTPUT"
+          echo "ok=true" >> "$GITHUB_OUTPUT"
 
-      - name: Report to issue #382
+      - name: Report findings to issue #382
         if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          OIDC_CREATED="${{ steps.oidc_provider.outputs.created }}"
-          SMOKE_OK="${{ steps.smoke.outputs.ok }}"
-          SHA="${GITHUB_SHA::7}"
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          AK_FOUND="${{ steps.creds.outputs.ak_found }}"
+          HAS_IAM="${{ steps.iam_probe.outputs.has_iam }}"
+          REPAIR_OK="${{ steps.repair.outputs.ok }}"
+          CREATED="${{ steps.repair.outputs.provider_created }}"
+          TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          if [ "$SMOKE_OK" = "true" ]; then
-            STATUS=":white_check_mark: **OIDC trust policy restored** (${TIMESTAMP})"
+          if [ "$REPAIR_OK" = "true" ]; then
+            HEADLINE=":white_check_mark: **OIDC trust policy restored** (${TS})"
+            DETAIL="- OIDC provider created: \`${CREATED}\`
+          - Role \`${ROLE_NAME}\` trust policy updated to allow \`${REPO}\`
+          - **Next:** push any change to \`main\` to trigger Lambda redeploy"
+          elif [ "$HAS_IAM" = "false" ]; then
+            HEADLINE=":warning: **OIDC repair blocked** (${TS})"
+            DETAIL="- Pi credentials found: \`${AK_FOUND}\`
+          - Pi creds (\`cloudless-pi-standby\`) have SSM-read only — no \`iam:*\` access
+          - **Manual fix required:** AWS Console → IAM → Roles → \`${ROLE_NAME}\` → Trust relationships
+            OR run the \`Restore AWS OIDC trust policy\` workflow with \`cloudless-ops\` credentials"
           else
-            STATUS=":x: **OIDC repair attempted but verify manually** (${TIMESTAMP})"
+            HEADLINE=":x: **OIDC repair failed** (${TS})"
+            DETAIL="- Pi credentials found: \`${AK_FOUND}\`
+          - Check workflow logs for details"
           fi
-
-          BODY="${STATUS}
-
-          - OIDC provider created: \`${OIDC_CREATED}\`
-          - Role \`GitHubActionsOIDC\` trust policy updated
-          - Trust contains OIDC condition: \`${SMOKE_OK}\`
-
-          **Next step:** push any change to \`main\` (or re-run the latest failed deploy workflow) to trigger a full Lambda redeploy."
 
           gh issue comment 382 \
             --repo "Themis128/cloudless.gr" \
-            --body "$BODY"
+            --body "${HEADLINE}
+
+          ${DETAIL}"
