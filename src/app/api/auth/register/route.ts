@@ -19,11 +19,17 @@ function secretHash(username: string): string | undefined {
 }
 
 export async function POST(req: NextRequest) {
-  const { email, password, fullName } = (await req.json()) as {
-    email?: string;
-    password?: string;
-    fullName?: string;
-  };
+  let email: string | undefined;
+  let password: string | undefined;
+  let fullName: string | undefined;
+  try {
+    const body = (await req.json()) as { email?: string; password?: string; fullName?: string };
+    email = body.email;
+    password = body.password;
+    fullName = body.fullName;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
   if (!email || !password)
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });

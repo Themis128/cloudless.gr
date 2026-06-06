@@ -59,9 +59,7 @@ describe("auth/public accessibility", () => {
   it("login page exposes labeled, autocomplete-enabled credentials fields", () => {
     render(<LoginPage />);
 
-    // When Keycloak is configured (NEXT_PUBLIC_KEYCLOAK_ISSUER is set in test env),
-    // the login page shows a single SSO button instead of email/password fields.
-    const kcButton = screen.getByRole("button", { name: /continue with keycloak/i });
+    const kcButton = screen.getByRole("button", { name: /continue with aws/i });
     expect(kcButton).toBeTruthy();
   });
 
