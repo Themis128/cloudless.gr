@@ -1,10 +1,11 @@
 name: OIDC Trust Policy Diagnostic
 
-# Diagnoses why AWS_DEPLOY_ROLE_ARN fails OIDC.
-# Tests two things independently:
-#   1. cloudless-github-actions (hardcoded — known working)
-#   2. GitHubActionsOIDC       (hardcoded ARN vs secret value)
-# Result posted to job summary so it's visible without log access.
+# Decodes the OIDC JWT to show actual sub/aud claims, probes IAM via the
+# cloudless-github-actions baseline role, compares claims against the
+# GitHubActionsOIDC trust policy, and auto-repairs mismatches it can fix.
+#
+# v2: upgraded to configure-aws-credentials v6.2.0, inline JWT decoder,
+#     IAM analysis table, auto-repair via baseline role.
 
 on:
   push:
@@ -20,75 +21,310 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   AWS_REGION: us-east-1
+  ACCOUNT_ID: "278585680617"
+  ROLE_DEPLOY: "GitHubActionsOIDC"
+  ROLE_BASELINE: "cloudless-github-actions"
 
 jobs:
   diagnose:
     name: Diagnose OIDC trust policy
     runs-on: ubuntu-latest
+
     steps:
-      - name: Assume cloudless-github-actions (baseline — should succeed)
+      - name: Decode OIDC token claims
+        id: token
+        run: |
+          TOKEN=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" \
+            | jq -r '.value')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "::error::Failed to obtain OIDC token — check id-token: write permission"
+            exit 1
+          fi
+
+          CLAIMS=$(python3 - "$TOKEN" <<'PYEOF'
+import base64, json, sys
+payload = sys.argv[1].split('.')[1]
+payload += '=' * (4 - len(payload) % 4)
+print(json.dumps(json.loads(base64.urlsafe_b64decode(payload)), indent=2))
+PYEOF
+)
+
+          SUB=$(echo "$CLAIMS" | jq -r '.sub')
+          AUD=$(echo "$CLAIMS" | jq -r '.aud // "unknown"')
+          ISS=$(echo "$CLAIMS" | jq -r '.iss')
+          REPO=$(echo "$CLAIMS" | jq -r '.repository // "unknown"')
+          REF=$(echo "$CLAIMS" | jq -r '.ref // "unknown"')
+          EVENT=$(echo "$CLAIMS" | jq -r '.event_name // "unknown"')
+          ACTOR=$(echo "$CLAIMS" | jq -r '.actor // "unknown"')
+
+          echo "sub=$SUB" >> "$GITHUB_OUTPUT"
+          echo "aud=$AUD" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## OIDC Token Claims"
+            echo ""
+            echo "| Claim | Value |"
+            echo "|-------|-------|"
+            echo "| \`sub\` | \`$SUB\` |"
+            echo "| \`aud\` | \`$AUD\` |"
+            echo "| \`iss\` | \`$ISS\` |"
+            echo "| \`repository\` | \`$REPO\` |"
+            echo "| \`ref\` | \`$REF\` |"
+            echo "| \`event_name\` | \`$EVENT\` |"
+            echo "| \`actor\` | \`$ACTOR\` |"
+            echo ""
+            echo "<details><summary>Full payload</summary>"
+            echo ""
+            echo '```json'
+            echo "$CLAIMS"
+            echo '```'
+            echo ""
+            echo "</details>"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Assume cloudless-github-actions (baseline)
         id: baseline
         continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
-          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
+          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.ROLE_BASELINE }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Baseline identity
+      - name: Baseline identity check
         if: steps.baseline.outcome == 'success'
+        run: aws sts get-caller-identity
+
+      - name: Probe IAM via baseline role
+        id: iam_probe
+        if: steps.baseline.outcome == 'success'
+        continue-on-error: true
         run: |
-          echo "=== cloudless-github-actions: SUCCESS ===" | tee -a "$GITHUB_STEP_SUMMARY"
-          aws sts get-caller-identity | tee -a "$GITHUB_STEP_SUMMARY"
+          PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+
+          PROVIDERS=$(aws iam list-open-id-connect-providers \
+            --query 'OpenIDConnectProviderList[*].Arn' --output json 2>/dev/null || echo "[]")
+
+          if echo "$PROVIDERS" | grep -q "token.actions.githubusercontent.com"; then
+            PROVIDER_EXISTS="true"
+          else
+            PROVIDER_EXISTS="false"
+          fi
+          echo "provider_exists=$PROVIDER_EXISTS" >> "$GITHUB_OUTPUT"
+
+          TRUST=$(aws iam get-role --role-name "${ROLE_DEPLOY}" \
+            --query 'Role.AssumeRolePolicyDocument' --output json 2>/dev/null || echo '{}')
+
+          TRUST_SUB=$(echo "$TRUST" | python3 -c "
+import json, sys
+t = json.load(sys.stdin)
+for s in t.get('Statement', []):
+  c = s.get('Condition', {})
+  v = (c.get('StringLike') or c.get('StringEquals') or {}).get(
+    'token.actions.githubusercontent.com:sub')
+  if v:
+    print(v if isinstance(v, str) else v[0])
+    sys.exit(0)
+print('NOT_FOUND')
+" 2>/dev/null || echo "NOT_FOUND")
+
+          TRUST_AUD=$(echo "$TRUST" | python3 -c "
+import json, sys
+t = json.load(sys.stdin)
+for s in t.get('Statement', []):
+  v = s.get('Condition', {}).get('StringEquals', {}).get(
+    'token.actions.githubusercontent.com:aud')
+  if v:
+    print(v if isinstance(v, str) else v[0])
+    sys.exit(0)
+print('NOT_FOUND')
+" 2>/dev/null || echo "NOT_FOUND")
+
+          TRUST_PRINCIPAL=$(echo "$TRUST" | python3 -c "
+import json, sys
+t = json.load(sys.stdin)
+for s in t.get('Statement', []):
+  p = s.get('Principal', {}).get('Federated')
+  if p:
+    print(p if isinstance(p, str) else p[0])
+    sys.exit(0)
+print('NOT_FOUND')
+" 2>/dev/null || echo "NOT_FOUND")
+
+          echo "trust_sub=$TRUST_SUB"   >> "$GITHUB_OUTPUT"
+          echo "trust_aud=$TRUST_AUD"   >> "$GITHUB_OUTPUT"
+          echo "trust_principal=$TRUST_PRINCIPAL" >> "$GITHUB_OUTPUT"
+
+          TOKEN_SUB="${{ steps.token.outputs.sub }}"
+          TOKEN_AUD="${{ steps.token.outputs.aud }}"
+
+          SUB_MATCH=$(python3 -c "
+import fnmatch, sys
+print('true' if fnmatch.fnmatch(sys.argv[1], sys.argv[2]) else 'false')
+" "$TOKEN_SUB" "$TRUST_SUB" 2>/dev/null || echo "false")
+
+          AUD_MATCH=$([[ "$TRUST_AUD" == "$TOKEN_AUD" ]] && echo "true" || echo "false")
+          PROVIDER_MATCH=$([[ "$TRUST_PRINCIPAL" == "$PROVIDER_ARN" ]] && echo "true" || echo "false")
+
+          echo "sub_match=$SUB_MATCH"         >> "$GITHUB_OUTPUT"
+          echo "aud_match=$AUD_MATCH"         >> "$GITHUB_OUTPUT"
+          echo "provider_match=$PROVIDER_MATCH" >> "$GITHUB_OUTPUT"
+
+          tick() { [[ "$1" == "true" ]] && echo "✅" || echo "❌"; }
+
+          {
+            echo "## IAM Analysis — \`$ROLE_DEPLOY\`"
+            echo ""
+            echo "**OIDC provider exists:** $(tick $PROVIDER_EXISTS) \`$PROVIDER_ARN\`"
+            echo ""
+            echo "### Trust policy vs token claims"
+            echo ""
+            echo "| Field | Trust policy condition | Token value | Match |"
+            echo "|-------|----------------------|-------------|-------|"
+            echo "| \`sub\` | \`$TRUST_SUB\` | \`$TOKEN_SUB\` | $(tick $SUB_MATCH) |"
+            echo "| \`aud\` | \`$TRUST_AUD\` | \`$TOKEN_AUD\` | $(tick $AUD_MATCH) |"
+            echo "| principal | \`$TRUST_PRINCIPAL\` | — | $(tick $PROVIDER_MATCH) |"
+            echo ""
+            echo "<details><summary>Full trust policy</summary>"
+            echo ""
+            echo '```json'
+            echo "$TRUST" | python3 -m json.tool
+            echo '```'
+            echo ""
+            echo "</details>"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Auto-repair GitHubActionsOIDC trust policy
+        id: repair
+        if: >
+          steps.baseline.outcome == 'success' &&
+          steps.iam_probe.outcome == 'success' &&
+          (steps.iam_probe.outputs.sub_match != 'true' ||
+           steps.iam_probe.outputs.aud_match != 'true' ||
+           steps.iam_probe.outputs.provider_match != 'true' ||
+           steps.iam_probe.outputs.provider_exists != 'true')
+        run: |
+          PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+          REPO_GLOB="repo:Themis128/cloudless.gr:*"
+
+          if [ "${{ steps.iam_probe.outputs.provider_exists }}" != "true" ]; then
+            echo "OIDC provider missing — recreating..."
+            THUMBPRINT=$(openssl s_client \
+              -connect token.actions.githubusercontent.com:443 \
+              -servername token.actions.githubusercontent.com \
+              -showcerts </dev/null 2>/dev/null \
+              | openssl x509 -fingerprint -noout -sha1 \
+              | sed 's/SHA1 Fingerprint=//;s/://g' \
+              | tr '[:upper:]' '[:lower:]')
+            aws iam create-open-id-connect-provider \
+              --url "https://token.actions.githubusercontent.com" \
+              --client-id-list "sts.amazonaws.com" \
+              --thumbprint-list "$THUMBPRINT"
+            echo "Created provider with thumbprint: $THUMBPRINT"
+          fi
+
+          TRUST_POLICY=$(python3 -c "
+import json, sys
+print(json.dumps({
+  'Version': '2012-10-17',
+  'Statement': [{
+    'Effect': 'Allow',
+    'Principal': {'Federated': sys.argv[1]},
+    'Action': 'sts:AssumeRoleWithWebIdentity',
+    'Condition': {
+      'StringEquals': {
+        'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
+      },
+      'StringLike': {
+        'token.actions.githubusercontent.com:sub': sys.argv[2]
+      }
+    }
+  }]
+}))
+" "$PROVIDER_ARN" "$REPO_GLOB")
+
+          echo "Applying corrected trust policy to ${ROLE_DEPLOY}..."
+          aws iam update-assume-role-policy \
+            --role-name "${ROLE_DEPLOY}" \
+            --policy-document "$TRUST_POLICY"
+
+          UPDATED=$(aws iam get-role --role-name "${ROLE_DEPLOY}" \
+            --query 'Role.AssumeRolePolicyDocument' --output json)
+
+          echo "Verified trust policy after repair:"
+          echo "$UPDATED" | python3 -m json.tool
+
+          {
+            echo "## ✅ Auto-Repair Applied"
+            echo ""
+            echo "Trust policy on \`${ROLE_DEPLOY}\` was corrected:"
+            echo "- Principal: \`$PROVIDER_ARN\`"
+            echo "- \`aud\` condition: \`sts.amazonaws.com\`"
+            echo "- \`sub\` condition: \`$REPO_GLOB\` (StringLike)"
+            echo ""
+            echo "**Next:** re-run \`deploy.yml\` to verify OIDC is working end-to-end."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "repaired=true" >> "$GITHUB_OUTPUT"
 
       - name: Assume GitHubActionsOIDC (hardcoded ARN)
         id: deploy_hardcoded
         continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
-          role-to-assume: arn:aws:iam::278585680617:role/GitHubActionsOIDC
+          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/${{ env.ROLE_DEPLOY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Assume GitHubActionsOIDC via secret (AWS_DEPLOY_ROLE_ARN)
         id: deploy_secret
         continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Report results
+      - name: Verdict
         if: always()
         run: |
+          BASELINE="${{ steps.baseline.outcome }}"
+          HARD="${{ steps.deploy_hardcoded.outcome }}"
+          SEC="${{ steps.deploy_secret.outcome }}"
+          REPAIRED="${{ steps.repair.outputs.repaired }}"
+
           {
-            echo "## OIDC Diagnostic Results"
+            echo "## Role Assumption Results"
             echo ""
-            echo "| Role | Source | Result |"
-            echo "|------|--------|--------|"
-            echo "| cloudless-github-actions | hardcoded ARN | ${{ steps.baseline.outcome }} |"
-            echo "| GitHubActionsOIDC | hardcoded ARN | ${{ steps.deploy_hardcoded.outcome }} |"
-            echo "| GitHubActionsOIDC | AWS_DEPLOY_ROLE_ARN secret | ${{ steps.deploy_secret.outcome }} |"
+            echo "| Role | Source | Outcome |"
+            echo "|------|--------|---------|"
+            echo "| \`$ROLE_BASELINE\` | hardcoded ARN | $BASELINE |"
+            echo "| \`$ROLE_DEPLOY\` | hardcoded ARN | $HARD |"
+            echo "| \`$ROLE_DEPLOY\` | \`AWS_DEPLOY_ROLE_ARN\` secret | $SEC |"
             echo ""
-            HARD="${{ steps.deploy_hardcoded.outcome }}"
-            SEC="${{ steps.deploy_secret.outcome }}"
-            if [ "$HARD" = "success" ] && [ "$SEC" = "failure" ]; then
-              echo "### Diagnosis: **AWS_DEPLOY_ROLE_ARN secret has the wrong ARN**"
-              echo "The role itself works when addressed by its actual name."
-              echo "Fix: GitHub → repo Settings → Secrets → update AWS_DEPLOY_ROLE_ARN"
-              echo "to: \`arn:aws:iam::278585680617:role/GitHubActionsOIDC\`"
-            elif [ "$HARD" = "failure" ] && [ "$SEC" = "failure" ]; then
-              echo "### Diagnosis: **GitHubActionsOIDC trust policy is broken**"
-              echo "Neither hardcoded nor secret value can assume this role."
-              echo "Fix: AWS Console → IAM → Roles → GitHubActionsOIDC → Trust relationships"
-              echo "Ensure the trust policy allows:"
-              echo '```json'
-              echo '"token.actions.githubusercontent.com:sub": "repo:Themis128/cloudless.gr:*"'
-              echo '"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"'
-              echo '```'
+
+            if [ "$REPAIRED" = "true" ] && [ "$HARD" = "success" ]; then
+              echo "### ✅ Trust policy repaired and verified — re-run \`deploy.yml\`"
+            elif [ "$REPAIRED" = "true" ] && [ "$HARD" != "success" ]; then
+              echo "### ⚠️ Repair was applied but role still fails — IAM propagation may be slow; retry in ~30s"
             elif [ "$HARD" = "success" ] && [ "$SEC" = "success" ]; then
-              echo "### Diagnosis: **Both work — intermittent issue resolved**"
-              echo "OIDC appears to be working now. Retry the failing deploy-pi run."
-            elif [ "$HARD" = "failure" ] && [ "$SEC" = "success" ]; then
-              echo "### Diagnosis: **Unexpected — secret works but hardcoded ARN fails**"
-              echo "AWS_DEPLOY_ROLE_ARN may point to a different role than GitHubActionsOIDC."
+              echo "### ✅ OIDC is healthy — both methods succeed"
+            elif [ "$BASELINE" = "success" ] && [ "$HARD" = "failure" ]; then
+              echo "### ❌ \`$ROLE_DEPLOY\` trust policy broken — baseline works but deploy role fails"
+              echo "Check the IAM Analysis section above for the mismatch."
+              if [ "$REPAIRED" != "true" ]; then
+                echo "Repair was not attempted (baseline may lack iam:UpdateAssumeRolePolicy)."
+                echo "Manual fix: AWS Console → IAM → Roles → \`$ROLE_DEPLOY\` → Trust relationships"
+              fi
+            elif [ "$HARD" = "success" ] && [ "$SEC" = "failure" ]; then
+              echo "### ❌ \`AWS_DEPLOY_ROLE_ARN\` secret has wrong ARN"
+              echo "Role works via hardcoded ARN. Update the secret to:"
+              echo "\`arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_DEPLOY}\`"
+            elif [ "$BASELINE" = "failure" ]; then
+              echo "### ❌ Baseline role also fails — OIDC provider may be deleted"
+              echo "Check the token claims above. If \`sub\`/\`aud\` look correct, the provider may be gone."
+              echo "Manual fix: AWS Console → IAM → Identity providers → verify \`token.actions.githubusercontent.com\`"
             fi
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
