@@ -172,44 +172,68 @@ jobs:
             exit 1
           fi
 
-      - name: Refresh ECR pull credentials on Pi
+      - name: Pre-pull ECR image on Pi via crictl
         env:
           PI_HOST: "100.113.41.119"
           PI_USER: "tbaltzakis"
         run: |
-          # ECR tokens expire after 12h. The ecr-heal cronjob refreshes them
-          # every 5 min, but it may not have run yet when the new pod tries to
-          # pull — causing ImagePullBackOff. Trigger it explicitly and wait.
-          echo "Triggering ecr-heal job to refresh ECR pull credentials..."
+          # The cloudless Deployment has no imagePullSecrets, so pods use node-level
+          # containerd credentials which expire every 12h. ecr-heal refreshes the k8s
+          # docker-registry Secret but that Secret is never used by the pod.
+          # Fix: extract the fresh ECR token from that Secret and crictl-pull directly
+          # into containerd's local cache — the pod finds the image already present and
+          # starts without any pull.
+          SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
+          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
+          echo "Pre-pulling image on Pi: ${IMAGE}"
           ssh -i ~/.ssh/id_ed25519 \
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=15 \
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=3 \
-            "$PI_USER@$PI_HOST" '
+            "$PI_USER@$PI_HOST" "
               JOB=ecr-refresh-pre-rollout
               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                delete job "$JOB" -n cloudless --ignore-not-found 2>/dev/null || true
+                delete job \"\$JOB\" -n cloudless --ignore-not-found 2>/dev/null || true
               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                create job "$JOB" --from=cronjob/ecr-heal \
+                create job \"\$JOB\" --from=cronjob/ecr-heal \
                 -n cloudless 2>/dev/null \
-                && echo "ecr-heal job created" \
-                || echo "ecr-heal cronjob not found — skipping credential refresh"
-              for i in $(seq 1 24); do
-                STATUS=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                  get job "$JOB" -n cloudless \
-                  -o jsonpath="{.status.conditions[?(@.type==\"Complete\")].status}" \
-                  2>/dev/null || echo "")
-                if [ "$STATUS" = "True" ]; then
-                  echo "ECR credentials refreshed (attempt ${i})"
-                  break
-                fi
-                echo "  ${i}/24 — waiting for ecr-heal job..."
+                && echo 'ecr-heal job created' \
+                || echo 'ecr-heal cronjob not found — skipping'
+              for i in \$(seq 1 24); do
+                STATUS=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                  get job \"\$JOB\" -n cloudless \
+                  -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' \
+                  2>/dev/null || echo '')
+                [ \"\$STATUS\" = 'True' ] && { echo \"ECR job done (attempt \${i})\"; break; }
+                echo \"  \${i}/24 — waiting for ecr-heal job...\"
                 sleep 5
               done
               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                delete job "$JOB" -n cloudless --ignore-not-found 2>/dev/null || true
-            ' 2>/dev/null || echo "ECR credential refresh SSH step failed — continuing"
+                delete job \"\$JOB\" -n cloudless --ignore-not-found 2>/dev/null || true
+              SECRET_NAME=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                get secret -n cloudless -o name 2>/dev/null \
+                | grep ecr | head -1 | sed 's|secret/||')
+              if [ -n \"\$SECRET_NAME\" ]; then
+                DOCKER_JSON=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                  get secret \"\$SECRET_NAME\" -n cloudless \
+                  -o jsonpath='{.data.\.dockerconfigjson}' 2>/dev/null | base64 -d)
+                AUTH_B64=\$(echo \"\$DOCKER_JSON\" | grep -o '\"auth\":\"[^\"]*\"' | cut -d'\"' -f4)
+                if [ -n \"\$AUTH_B64\" ]; then
+                  CREDS=\$(echo \"\$AUTH_B64\" | base64 -d)
+                  ECR_USER=\$(echo \"\$CREDS\" | cut -d: -f1)
+                  ECR_PASS=\$(echo \"\$CREDS\" | cut -d: -f2-)
+                  echo 'Pre-pulling image via crictl...'
+                  sudo crictl pull --creds \"\$ECR_USER:\$ECR_PASS\" '${IMAGE}' \
+                    && echo 'crictl pull succeeded — image cached locally' \
+                    || echo 'crictl pull failed — pod will attempt pull on startup'
+                else
+                  echo 'Could not extract ECR auth token — skipping crictl pre-pull'
+                fi
+              else
+                echo 'No ECR secret found — skipping crictl pre-pull'
+              fi
+            " 2>/dev/null || echo "ECR pre-pull SSH step failed — continuing"
 
       - name: Set image and roll out
         env:
