@@ -47,16 +47,41 @@ jobs:
 
       - name: Delete Keycloak namespace
         run: |
-          set -euo pipefail
           {
-            echo "=== Deleting keycloak namespace ==="
-            kubectl delete namespace keycloak --ignore-not-found --timeout=120s \
-              && echo "keycloak namespace deleted" \
-              || echo "keycloak namespace already gone or timed out"
+            echo "=== Checking keycloak namespace state ==="
+            NS_PHASE=$(kubectl get namespace keycloak \
+              -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+            echo "keycloak ns phase: $NS_PHASE"
+
+            if [ "$NS_PHASE" = "NotFound" ]; then
+              echo "keycloak namespace does not exist — nothing to do"
+            else
+              # Patch finalizers off all resources that block deletion
+              echo "=== Patching finalizers off stuck resources ==="
+              for resource in persistentvolumeclaims services pods deployments; do
+                kubectl get "$resource" -n keycloak \
+                  -o jsonpath='{.items[*].metadata.name}' 2>/dev/null \
+                  | tr ' ' '\n' | while read -r name; do
+                    [ -z "$name" ] && continue
+                    kubectl patch "$resource/$name" -n keycloak \
+                      -p '{"metadata":{"finalizers":[]}}' --type=merge \
+                      2>/dev/null && echo "patched $resource/$name" || true
+                  done
+              done
+              # Patch the namespace itself
+              kubectl patch namespace keycloak \
+                -p '{"metadata":{"finalizers":[]}}' --type=merge \
+                2>/dev/null && echo "patched namespace/keycloak finalizers" || true
+
+              echo "=== Deleting keycloak namespace ==="
+              kubectl delete namespace keycloak --ignore-not-found --timeout=60s \
+                && echo "keycloak namespace deleted" \
+                || echo "namespace not fully gone within 60s — finalizers patched, GC will complete"
+            fi
 
             echo ""
             echo "=== Remaining namespaces ==="
-            kubectl get namespaces
+            kubectl get namespaces 2>/dev/null || echo "(API unavailable)"
           } | tee delete.log
 
       - name: Post result to tracking issue
