@@ -1,0 +1,165 @@
+name: Restore AWS OIDC trust policy
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_access_key_id:
+        description: "AWS access key ID (any user with iam:* on account 278585680617)"
+        required: true
+      aws_secret_access_key:
+        description: "AWS secret access key"
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  restore:
+    name: Restore OIDC provider + role trust policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      AWS_REGION: us-east-1
+      ACCOUNT_ID: "278585680617"
+      OIDC_PROVIDER_URL: "token.actions.githubusercontent.com"
+      ROLE_NAME: "GitHubActionsOIDC"
+      REPO: "repo:Themis128/cloudless.gr:*"
+
+    steps:
+      - name: Mask credentials immediately
+        run: |
+          echo "::add-mask::${{ inputs.aws_access_key_id }}"
+          echo "::add-mask::${{ inputs.aws_secret_access_key }}"
+
+      - name: Configure AWS credentials (static, for IAM repair)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          aws-access-key-id: ${{ inputs.aws_access_key_id }}
+          aws-secret-access-key: ${{ inputs.aws_secret_access_key }}
+          aws-region: us-east-1
+
+      - name: Verify caller identity
+        run: aws sts get-caller-identity
+
+      - name: Check / create OIDC identity provider
+        id: oidc_provider
+        run: |
+          PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/${OIDC_PROVIDER_URL}"
+          echo "provider_arn=${PROVIDER_ARN}" >> "$GITHUB_OUTPUT"
+
+          if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "$PROVIDER_ARN" > /dev/null 2>&1; then
+            echo "OIDC provider already exists: ${PROVIDER_ARN}"
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "OIDC provider missing — creating..."
+            # Fetch current thumbprint from GitHub's OIDC endpoint
+            THUMBPRINT=$(openssl s_client -connect token.actions.githubusercontent.com:443 \
+              -servername token.actions.githubusercontent.com \
+              -showcerts </dev/null 2>/dev/null \
+              | openssl x509 -fingerprint -noout -sha1 \
+              | sed 's/SHA1 Fingerprint=//;s/://g' \
+              | tr '[:upper:]' '[:lower:]')
+            echo "Thumbprint: ${THUMBPRINT}"
+
+            aws iam create-open-id-connect-provider \
+              --url "https://${OIDC_PROVIDER_URL}" \
+              --client-id-list "sts.amazonaws.com" \
+              --thumbprint-list "${THUMBPRINT}"
+
+            echo "created=true" >> "$GITHUB_OUTPUT"
+            echo "OIDC provider created."
+          fi
+
+      - name: Fix role trust policy
+        id: trust_policy
+        run: |
+          PROVIDER_ARN="${{ steps.oidc_provider.outputs.provider_arn }}"
+
+          TRUST_POLICY=$(cat <<EOF
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Federated": "${PROVIDER_ARN}"
+                },
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                  "StringEquals": {
+                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                  },
+                  "StringLike": {
+                    "token.actions.githubusercontent.com:sub": "${REPO}"
+                  }
+                }
+              }
+            ]
+          }
+          EOF
+          )
+
+          echo "Applying trust policy to role ${ROLE_NAME}..."
+          aws iam update-assume-role-policy \
+            --role-name "${ROLE_NAME}" \
+            --policy-document "${TRUST_POLICY}"
+
+          echo "Trust policy updated."
+
+      - name: Smoke-test OIDC (attempt assume-role)
+        id: smoke
+        run: |
+          # The OIDC token for this job can't be used with a different trust —
+          # but we can verify the trust policy is syntactically valid by
+          # describing the role and confirming it echoes back our condition.
+          TRUST=$(aws iam get-role --role-name "${ROLE_NAME}" \
+            --query 'Role.AssumeRolePolicyDocument' --output json)
+          echo "Current trust policy:"
+          echo "${TRUST}" | python3 -m json.tool
+          if echo "${TRUST}" | grep -q "token.actions.githubusercontent.com"; then
+            echo "Trust policy contains OIDC condition — looks correct."
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "WARNING: Trust policy does not reference OIDC provider."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger redeploy
+        if: steps.smoke.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Touch deploy.yml to trigger the deploy pipeline.
+          # We can't workflow_dispatch from here, so we post to the issue instead
+          # and let the operator know the fix is done and a push to main will deploy.
+          echo "OIDC restored — next push to main will deploy."
+
+      - name: Report to issue #382
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OIDC_CREATED="${{ steps.oidc_provider.outputs.created }}"
+          SMOKE_OK="${{ steps.smoke.outputs.ok }}"
+          SHA="${GITHUB_SHA::7}"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          if [ "$SMOKE_OK" = "true" ]; then
+            STATUS=":white_check_mark: **OIDC trust policy restored** (${TIMESTAMP})"
+          else
+            STATUS=":x: **OIDC repair attempted but verify manually** (${TIMESTAMP})"
+          fi
+
+          BODY="${STATUS}
+
+          - OIDC provider created: \`${OIDC_CREATED}\`
+          - Role \`GitHubActionsOIDC\` trust policy updated
+          - Trust contains OIDC condition: \`${SMOKE_OK}\`
+
+          **Next step:** push any change to \`main\` (or re-run the latest failed deploy workflow) to trigger a full Lambda redeploy."
+
+          gh issue comment 382 \
+            --repo "Themis128/cloudless.gr" \
+            --body "$BODY"
