@@ -19,7 +19,13 @@ function secretHash(username: string): string | undefined {
 }
 
 export async function POST(req: NextRequest) {
-  const { email } = (await req.json()) as { email?: string };
+  let email: string | undefined;
+  try {
+    const body = (await req.json()) as { email?: string };
+    email = body.email;
+  } catch {
+    return NextResponse.json({ ok: true });
+  }
   const clientId = process.env.COGNITO_CLIENT_ID;
 
   if (email && clientId) {
