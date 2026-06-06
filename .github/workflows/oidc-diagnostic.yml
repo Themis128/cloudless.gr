@@ -1,11 +1,12 @@
 name: OIDC Trust Policy Diagnostic
 
-# Decodes the OIDC JWT to show actual sub/aud claims, probes IAM via the
-# cloudless-github-actions baseline role, compares claims against the
-# GitHubActionsOIDC trust policy, and auto-repairs mismatches it can fix.
+# Decodes the OIDC JWT (bash+awk, no Python heredoc), probes IAM via the
+# cloudless-github-actions baseline role, compares token claims vs trust
+# policy side-by-side, and auto-repairs the GitHubActionsOIDC trust policy
+# using jq when a mismatch is detected.
 #
-# v2: upgraded to configure-aws-credentials v6.2.0, inline JWT decoder,
-#     IAM analysis table, auto-repair via baseline role.
+# v3: fixed YAML parse error (Python heredoc lines at col-0 ended block scalar)
+#     rewritten as bash + awk + jq only.
 
 on:
   push:
@@ -44,13 +45,19 @@ jobs:
             exit 1
           fi
 
-          CLAIMS=$(python3 - "$TOKEN" <<'PYEOF'
-import base64, json, sys
-payload = sys.argv[1].split('.')[1]
-payload += '=' * (4 - len(payload) % 4)
-print(json.dumps(json.loads(base64.urlsafe_b64decode(payload)), indent=2))
-PYEOF
-)
+          # base64url decode the JWT payload (middle section)
+          PAYLOAD_B64=$(echo "$TOKEN" | cut -d. -f2 | tr -- '-_' '+/')
+          CLAIMS=$(echo "$PAYLOAD_B64" | awk '{
+            n = length($0) % 4
+            if (n == 2) print $0 "=="
+            else if (n == 3) print $0 "="
+            else print $0
+          }' | base64 --decode 2>/dev/null | jq .)
+
+          if [ -z "$CLAIMS" ] || [ "$CLAIMS" = "null" ]; then
+            echo "::error::Failed to decode OIDC token payload"
+            exit 1
+          fi
 
           SUB=$(echo "$CLAIMS" | jq -r '.sub')
           AUD=$(echo "$CLAIMS" | jq -r '.aud // "unknown"')
@@ -60,8 +67,8 @@ PYEOF
           EVENT=$(echo "$CLAIMS" | jq -r '.event_name // "unknown"')
           ACTOR=$(echo "$CLAIMS" | jq -r '.actor // "unknown"')
 
-          echo "sub=$SUB" >> "$GITHUB_OUTPUT"
-          echo "aud=$AUD" >> "$GITHUB_OUTPUT"
+          echo "sub=$SUB"   >> "$GITHUB_OUTPUT"
+          echo "aud=$AUD"   >> "$GITHUB_OUTPUT"
 
           {
             echo "## OIDC Token Claims"
@@ -104,73 +111,60 @@ PYEOF
         continue-on-error: true
         run: |
           PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+          TOKEN_SUB="${{ steps.token.outputs.sub }}"
+          TOKEN_AUD="${{ steps.token.outputs.aud }}"
 
+          # Check OIDC provider exists
           PROVIDERS=$(aws iam list-open-id-connect-providers \
             --query 'OpenIDConnectProviderList[*].Arn' --output json 2>/dev/null || echo "[]")
-
-          if echo "$PROVIDERS" | grep -q "token.actions.githubusercontent.com"; then
+          if echo "$PROVIDERS" | jq -e --arg a "$PROVIDER_ARN" '. | map(select(. == $a)) | length > 0' > /dev/null 2>&1; then
             PROVIDER_EXISTS="true"
           else
             PROVIDER_EXISTS="false"
           fi
           echo "provider_exists=$PROVIDER_EXISTS" >> "$GITHUB_OUTPUT"
 
+          # Get GitHubActionsOIDC trust policy
           TRUST=$(aws iam get-role --role-name "${ROLE_DEPLOY}" \
             --query 'Role.AssumeRolePolicyDocument' --output json 2>/dev/null || echo '{}')
 
-          TRUST_SUB=$(echo "$TRUST" | python3 -c "
-import json, sys
-t = json.load(sys.stdin)
-for s in t.get('Statement', []):
-  c = s.get('Condition', {})
-  v = (c.get('StringLike') or c.get('StringEquals') or {}).get(
-    'token.actions.githubusercontent.com:sub')
-  if v:
-    print(v if isinstance(v, str) else v[0])
-    sys.exit(0)
-print('NOT_FOUND')
-" 2>/dev/null || echo "NOT_FOUND")
+          # Extract sub condition (StringLike or StringEquals)
+          TRUST_SUB=$(echo "$TRUST" | jq -r '
+            [.Statement[]? | .Condition? |
+              ((.StringLike // .StringEquals // {}) |
+              .["token.actions.githubusercontent.com:sub"] // empty)] |
+            first // "NOT_FOUND"
+          ' 2>/dev/null || echo "NOT_FOUND")
 
-          TRUST_AUD=$(echo "$TRUST" | python3 -c "
-import json, sys
-t = json.load(sys.stdin)
-for s in t.get('Statement', []):
-  v = s.get('Condition', {}).get('StringEquals', {}).get(
-    'token.actions.githubusercontent.com:aud')
-  if v:
-    print(v if isinstance(v, str) else v[0])
-    sys.exit(0)
-print('NOT_FOUND')
-" 2>/dev/null || echo "NOT_FOUND")
+          # Extract aud condition
+          TRUST_AUD=$(echo "$TRUST" | jq -r '
+            [.Statement[]? | .Condition?.StringEquals? |
+              .["token.actions.githubusercontent.com:aud"] // empty] |
+            first // "NOT_FOUND"
+          ' 2>/dev/null || echo "NOT_FOUND")
 
-          TRUST_PRINCIPAL=$(echo "$TRUST" | python3 -c "
-import json, sys
-t = json.load(sys.stdin)
-for s in t.get('Statement', []):
-  p = s.get('Principal', {}).get('Federated')
-  if p:
-    print(p if isinstance(p, str) else p[0])
-    sys.exit(0)
-print('NOT_FOUND')
-" 2>/dev/null || echo "NOT_FOUND")
+          # Extract principal
+          TRUST_PRINCIPAL=$(echo "$TRUST" | jq -r '
+            [.Statement[]? | .Principal?.Federated // empty] |
+            first // "NOT_FOUND"
+          ' 2>/dev/null || echo "NOT_FOUND")
 
-          echo "trust_sub=$TRUST_SUB"   >> "$GITHUB_OUTPUT"
-          echo "trust_aud=$TRUST_AUD"   >> "$GITHUB_OUTPUT"
+          echo "trust_sub=$TRUST_SUB"           >> "$GITHUB_OUTPUT"
+          echo "trust_aud=$TRUST_AUD"           >> "$GITHUB_OUTPUT"
           echo "trust_principal=$TRUST_PRINCIPAL" >> "$GITHUB_OUTPUT"
 
-          TOKEN_SUB="${{ steps.token.outputs.sub }}"
-          TOKEN_AUD="${{ steps.token.outputs.aud }}"
-
-          SUB_MATCH=$(python3 -c "
-import fnmatch, sys
-print('true' if fnmatch.fnmatch(sys.argv[1], sys.argv[2]) else 'false')
-" "$TOKEN_SUB" "$TRUST_SUB" 2>/dev/null || echo "false")
-
+          # Evaluate matches
+          # sub: bash glob match (trust_sub may contain *)
+          if [[ "$TOKEN_SUB" == $TRUST_SUB ]]; then
+            SUB_MATCH="true"
+          else
+            SUB_MATCH="false"
+          fi
           AUD_MATCH=$([[ "$TRUST_AUD" == "$TOKEN_AUD" ]] && echo "true" || echo "false")
           PROVIDER_MATCH=$([[ "$TRUST_PRINCIPAL" == "$PROVIDER_ARN" ]] && echo "true" || echo "false")
 
-          echo "sub_match=$SUB_MATCH"         >> "$GITHUB_OUTPUT"
-          echo "aud_match=$AUD_MATCH"         >> "$GITHUB_OUTPUT"
+          echo "sub_match=$SUB_MATCH"           >> "$GITHUB_OUTPUT"
+          echo "aud_match=$AUD_MATCH"           >> "$GITHUB_OUTPUT"
           echo "provider_match=$PROVIDER_MATCH" >> "$GITHUB_OUTPUT"
 
           tick() { [[ "$1" == "true" ]] && echo "✅" || echo "❌"; }
@@ -178,9 +172,9 @@ print('true' if fnmatch.fnmatch(sys.argv[1], sys.argv[2]) else 'false')
           {
             echo "## IAM Analysis — \`$ROLE_DEPLOY\`"
             echo ""
-            echo "**OIDC provider exists:** $(tick $PROVIDER_EXISTS) \`$PROVIDER_ARN\`"
+            echo "**OIDC provider:** $(tick $PROVIDER_EXISTS) \`$PROVIDER_ARN\`"
             echo ""
-            echo "### Trust policy vs token claims"
+            echo "### Trust policy vs token"
             echo ""
             echo "| Field | Trust policy condition | Token value | Match |"
             echo "|-------|----------------------|-------------|-------|"
@@ -191,7 +185,7 @@ print('true' if fnmatch.fnmatch(sys.argv[1], sys.argv[2]) else 'false')
             echo "<details><summary>Full trust policy</summary>"
             echo ""
             echo '```json'
-            echo "$TRUST" | python3 -m json.tool
+            echo "$TRUST" | jq .
             echo '```'
             echo ""
             echo "</details>"
@@ -227,25 +221,26 @@ print('true' if fnmatch.fnmatch(sys.argv[1], sys.argv[2]) else 'false')
             echo "Created provider with thumbprint: $THUMBPRINT"
           fi
 
-          TRUST_POLICY=$(python3 -c "
-import json, sys
-print(json.dumps({
-  'Version': '2012-10-17',
-  'Statement': [{
-    'Effect': 'Allow',
-    'Principal': {'Federated': sys.argv[1]},
-    'Action': 'sts:AssumeRoleWithWebIdentity',
-    'Condition': {
-      'StringEquals': {
-        'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
-      },
-      'StringLike': {
-        'token.actions.githubusercontent.com:sub': sys.argv[2]
-      }
-    }
-  }]
-}))
-" "$PROVIDER_ARN" "$REPO_GLOB")
+          # Build corrected trust policy with jq (no Python needed)
+          TRUST_POLICY=$(jq -n \
+            --arg provider "$PROVIDER_ARN" \
+            --arg repo "$REPO_GLOB" \
+            '{
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Federated": $provider},
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                  "StringEquals": {
+                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                  },
+                  "StringLike": {
+                    "token.actions.githubusercontent.com:sub": $repo
+                  }
+                }
+              }]
+            }')
 
           echo "Applying corrected trust policy to ${ROLE_DEPLOY}..."
           aws iam update-assume-role-policy \
@@ -256,7 +251,7 @@ print(json.dumps({
             --query 'Role.AssumeRolePolicyDocument' --output json)
 
           echo "Verified trust policy after repair:"
-          echo "$UPDATED" | python3 -m json.tool
+          echo "$UPDATED" | jq .
 
           {
             echo "## ✅ Auto-Repair Applied"
@@ -304,27 +299,24 @@ print(json.dumps({
             echo "| \`$ROLE_DEPLOY\` | hardcoded ARN | $HARD |"
             echo "| \`$ROLE_DEPLOY\` | \`AWS_DEPLOY_ROLE_ARN\` secret | $SEC |"
             echo ""
-
             if [ "$REPAIRED" = "true" ] && [ "$HARD" = "success" ]; then
               echo "### ✅ Trust policy repaired and verified — re-run \`deploy.yml\`"
             elif [ "$REPAIRED" = "true" ] && [ "$HARD" != "success" ]; then
-              echo "### ⚠️ Repair was applied but role still fails — IAM propagation may be slow; retry in ~30s"
+              echo "### ⚠️ Repair applied but role still fails — IAM propagation delay; retry in 30s"
             elif [ "$HARD" = "success" ] && [ "$SEC" = "success" ]; then
               echo "### ✅ OIDC is healthy — both methods succeed"
             elif [ "$BASELINE" = "success" ] && [ "$HARD" = "failure" ]; then
               echo "### ❌ \`$ROLE_DEPLOY\` trust policy broken — baseline works but deploy role fails"
-              echo "Check the IAM Analysis section above for the mismatch."
               if [ "$REPAIRED" != "true" ]; then
                 echo "Repair was not attempted (baseline may lack iam:UpdateAssumeRolePolicy)."
                 echo "Manual fix: AWS Console → IAM → Roles → \`$ROLE_DEPLOY\` → Trust relationships"
               fi
             elif [ "$HARD" = "success" ] && [ "$SEC" = "failure" ]; then
-              echo "### ❌ \`AWS_DEPLOY_ROLE_ARN\` secret has wrong ARN"
-              echo "Role works via hardcoded ARN. Update the secret to:"
+              echo "### ❌ \`AWS_DEPLOY_ROLE_ARN\` secret has wrong ARN — update it to:"
               echo "\`arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_DEPLOY}\`"
             elif [ "$BASELINE" = "failure" ]; then
-              echo "### ❌ Baseline role also fails — OIDC provider may be deleted"
-              echo "Check the token claims above. If \`sub\`/\`aud\` look correct, the provider may be gone."
-              echo "Manual fix: AWS Console → IAM → Identity providers → verify \`token.actions.githubusercontent.com\`"
+              echo "### ❌ Baseline role also fails — OIDC provider may be deleted or both roles broken"
+              echo "Check the token claims above — if \`sub\`/\`aud\` look correct, the OIDC provider is gone."
+              echo "Manual fix: AWS Console → IAM → Identity providers"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
