@@ -45,6 +45,8 @@ const ISSUER = process.env.COGNITO_ISSUER ?? "";
 const CLIENT_ID = process.env.COGNITO_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.COGNITO_CLIENT_SECRET ?? "";
 
+export const authProvider: "cognito" | null = ISSUER ? "cognito" : null;
+
 // Cognito exposes group membership under "cognito:groups".
 const GROUPS_CLAIM = "cognito:groups";
 
@@ -88,9 +90,6 @@ async function refreshAccessToken(refreshToken: string): Promise<{
     client_id: CLIENT_ID,
   });
   const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
-  if (CLIENT_SECRET) {
-    headers.Authorization = `Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`;
-  }
 
   const res = await globalThis.fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
     method: "POST",
@@ -142,6 +141,7 @@ const nextAuthResult = hasAuthSecret
             const p = profile as Record<string, unknown> | undefined;
 
             token.groups = readGroups(idPayload, accessPayload, p);
+            token.roles = [];
             return token;
           }
 
