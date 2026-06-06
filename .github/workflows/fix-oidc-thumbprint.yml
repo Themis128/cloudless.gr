@@ -1,0 +1,92 @@
+name: Fix OIDC thumbprint + redeploy
+
+# Unblocks deploy.yml when GitHub rotates their OIDC certificate and AWS IAM
+# still has the old thumbprint pinned (error: "Not authorized to perform
+# sts:AssumeRoleWithWebIdentity").
+#
+# Prerequisites — add these two GitHub repository secrets once:
+#   AWS_ACCESS_KEY_ID_TEMP     IAM user key with iam:UpdateOpenIDConnectProvider
+#                               + the same permissions as GitHubActionsOIDC
+#   AWS_SECRET_ACCESS_KEY_TEMP corresponding secret key
+#
+# Delete both secrets after this workflow has run successfully and deploy.yml
+# is green again (OIDC will carry all future deploys from that point).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  actions: write   # needed to re-trigger deploy.yml
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  refresh-oidc-and-deploy:
+    name: Refresh OIDC thumbprint + deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Verify static credentials are configured
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID_TEMP }}" ] || \
+             [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY_TEMP }}" ]; then
+            echo "::error::AWS_ACCESS_KEY_ID_TEMP or AWS_SECRET_ACCESS_KEY_TEMP not set."
+            echo "::error::Add both as GitHub repository secrets, then re-run this workflow."
+            exit 1
+          fi
+          echo "Static credentials are configured — proceeding"
+
+      - name: Configure AWS (static credentials)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_TEMP }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_TEMP }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Fetch current GitHub OIDC thumbprint
+        id: thumbprint
+        run: |
+          # GitHub's OIDC cert chain — get the root CA thumbprint the same way
+          # AWS Console "Get thumbprint" does it.
+          THUMBPRINT=$(echo | openssl s_client \
+            -connect token.actions.githubusercontent.com:443 \
+            -servername token.actions.githubusercontent.com \
+            -showcerts 2>/dev/null \
+            | awk '/-----BEGIN CERTIFICATE-----/{p=1; cert=""} p{cert=cert"\n"$0} /-----END CERTIFICATE-----/{last=cert; p=0} END{print last}' \
+            | openssl x509 -fingerprint -sha1 -noout 2>/dev/null \
+            | cut -d= -f2 | tr -d ':' | tr '[:upper:]' '[:lower:]')
+          echo "Current thumbprint: $THUMBPRINT"
+          echo "thumbprint=$THUMBPRINT" >> "$GITHUB_OUTPUT"
+
+      - name: Update OIDC provider thumbprint in AWS IAM
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+          echo "Provider ARN: $PROVIDER_ARN"
+          echo "New thumbprint: ${{ steps.thumbprint.outputs.thumbprint }}"
+
+          aws iam update-open-id-connect-provider-thumbprint \
+            --open-id-connect-provider-arn "$PROVIDER_ARN" \
+            --thumbprint-list "${{ steps.thumbprint.outputs.thumbprint }}"
+
+          echo "OIDC thumbprint updated successfully"
+
+      - name: Verify OIDC now works
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: OIDC verified — trigger production deploy
+        run: |
+          echo "OIDC working. Triggering deploy.yml..."
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/deploy.yml/dispatches" \
+            -d '{"ref":"main"}'
+          echo "deploy.yml dispatched — check Actions for the deploy run"
