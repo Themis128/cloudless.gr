@@ -2,6 +2,13 @@ name: Restore AWS OIDC trust policy
 
 on:
   workflow_dispatch:
+    inputs:
+      aws_access_key_id:
+        description: "AWS access key ID with iam:* (e.g. cloudless-ops). Leave blank to try Pi cluster creds."
+        required: false
+      aws_secret_access_key:
+        description: "AWS secret access key"
+        required: false
   push:
     branches: [main]
     paths:
@@ -28,19 +35,41 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
+      - name: Mask provided credentials immediately
+        if: inputs.aws_access_key_id != ''
+        run: |
+          echo "::add-mask::${{ inputs.aws_access_key_id }}"
+          echo "::add-mask::${{ inputs.aws_secret_access_key }}"
+
+      - name: Use provided credentials (skip Pi cluster)
+        id: provided_creds
+        if: inputs.aws_access_key_id != ''
+        run: |
+          echo "Using workflow_dispatch credentials."
+          echo "AK<<DELIM" >> "$GITHUB_OUTPUT"
+          echo "${{ inputs.aws_access_key_id }}" >> "$GITHUB_OUTPUT"
+          echo "DELIM" >> "$GITHUB_OUTPUT"
+          echo "SK<<DELIM" >> "$GITHUB_OUTPUT"
+          echo "${{ inputs.aws_secret_access_key }}" >> "$GITHUB_OUTPUT"
+          echo "DELIM" >> "$GITHUB_OUTPUT"
+          echo "ak_found=true" >> "$GITHUB_OUTPUT"
+
       - name: Connect to tailnet
+        if: inputs.aws_access_key_id == ''
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
       - name: Configure kubectl
+        if: inputs.aws_access_key_id == ''
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Extract Pi AWS credentials
-        id: creds
+      - name: Extract Pi AWS credentials (fallback)
+        id: pi_creds
+        if: inputs.aws_access_key_id == ''
         run: |
           AK=$(kubectl -n cloudless get secret pi-standby-aws-creds \
             -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' 2>/dev/null | base64 -d || true)
@@ -57,6 +86,27 @@ jobs:
             echo "$SK"
             echo "DELIM"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Merge credential outputs
+        id: creds
+        run: |
+          if [ -n "${{ inputs.aws_access_key_id }}" ]; then
+            echo "ak_found=${{ steps.provided_creds.outputs.ak_found }}" >> "$GITHUB_OUTPUT"
+            echo "AK<<DELIM" >> "$GITHUB_OUTPUT"
+            echo "${{ steps.provided_creds.outputs.AK }}" >> "$GITHUB_OUTPUT"
+            echo "DELIM" >> "$GITHUB_OUTPUT"
+            echo "SK<<DELIM" >> "$GITHUB_OUTPUT"
+            echo "${{ steps.provided_creds.outputs.SK }}" >> "$GITHUB_OUTPUT"
+            echo "DELIM" >> "$GITHUB_OUTPUT"
+          else
+            echo "ak_found=${{ steps.pi_creds.outputs.ak_found }}" >> "$GITHUB_OUTPUT"
+            echo "AK<<DELIM" >> "$GITHUB_OUTPUT"
+            echo "${{ steps.pi_creds.outputs.AK }}" >> "$GITHUB_OUTPUT"
+            echo "DELIM" >> "$GITHUB_OUTPUT"
+            echo "SK<<DELIM" >> "$GITHUB_OUTPUT"
+            echo "${{ steps.pi_creds.outputs.SK }}" >> "$GITHUB_OUTPUT"
+            echo "DELIM" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Test Pi creds — caller identity + IAM access
         id: iam_probe
