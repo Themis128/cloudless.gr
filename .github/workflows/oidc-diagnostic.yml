@@ -8,6 +8,8 @@ name: OIDC Trust Policy Diagnostic
 # v3: fixed YAML parse error (Python heredoc lines at col-0 ended block scalar)
 #     rewritten as bash + awk + jq only.
 # v4: triggered 2026-06-07 to auto-repair GitHubActionsOIDC trust policy
+# v5: fix auto-repair — skip provider creation when baseline OIDC succeeded (proves
+#     provider exists), add thumbprint fallback, add continue-on-error to repair step
 
 on:
   push:
@@ -195,6 +197,7 @@ jobs:
 
       - name: Auto-repair GitHubActionsOIDC trust policy
         id: repair
+        continue-on-error: true
         if: >
           steps.baseline.outcome == 'success' &&
           steps.iam_probe.outcome == 'success' &&
@@ -206,20 +209,32 @@ jobs:
           PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
           REPO_GLOB="repo:Themis128/cloudless.gr:*"
 
-          if [ "${{ steps.iam_probe.outputs.provider_exists }}" != "true" ]; then
-            echo "OIDC provider missing — recreating..."
+          # If provider_exists is false but baseline OIDC assumed successfully, the provider
+          # exists but cloudless-github-actions lacks iam:ListOpenIDConnectProviders.
+          # Skip recreation — a successful OIDC assume is proof the provider exists.
+          if [ "${{ steps.iam_probe.outputs.provider_exists }}" != "true" ] && \
+             [ "${{ steps.baseline.outcome }}" != "success" ]; then
+            echo "OIDC provider missing and baseline OIDC failed — recreating..."
+            # Use known-good GitHub OIDC thumbprint; fall back if openssl produces different length
             THUMBPRINT=$(openssl s_client \
               -connect token.actions.githubusercontent.com:443 \
               -servername token.actions.githubusercontent.com \
               -showcerts </dev/null 2>/dev/null \
-              | openssl x509 -fingerprint -noout -sha1 \
-              | sed 's/SHA1 Fingerprint=//;s/://g' \
-              | tr '[:upper:]' '[:lower:]')
+              | openssl x509 -fingerprint -noout -sha1 2>/dev/null \
+              | sed 's/.*Fingerprint=//;s/://g' \
+              | tr '[:upper:]' '[:lower:]' \
+              | tr -d '[:space:]')
+            if [ "${#THUMBPRINT}" -ne 40 ]; then
+              echo "openssl thumbprint was ${#THUMBPRINT} chars — using known-good fallback"
+              THUMBPRINT="6938fd4d98bab03faadb97b34396831e3780aea1"
+            fi
             aws iam create-open-id-connect-provider \
               --url "https://token.actions.githubusercontent.com" \
               --client-id-list "sts.amazonaws.com" \
               --thumbprint-list "$THUMBPRINT"
             echo "Created provider with thumbprint: $THUMBPRINT"
+          elif [ "${{ steps.iam_probe.outputs.provider_exists }}" != "true" ]; then
+            echo "provider_exists=false but baseline OIDC succeeded — provider exists, skipping recreation"
           fi
 
           # Build corrected trust policy with jq (no Python needed)
