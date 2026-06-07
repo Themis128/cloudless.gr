@@ -1,3 +1,4 @@
+# last-verified: 2026-06-07
 name: Restore AWS OIDC trust policy
 
 on:
