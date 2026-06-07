@@ -140,7 +140,9 @@ export default function AdminServicesPage() {
             <span className="text-neon-green font-mono text-xs">CMS_SERVICES</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Services</h1>
-          <p className="font-body mt-1 text-slate-400">Manage the service catalog shown on the services page.</p>
+          <p className="font-body mt-1 text-slate-400">
+            Manage the service catalog shown on the services page.
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -152,7 +154,7 @@ export default function AdminServicesPage() {
           </button>
           <button
             onClick={openCreate}
-            className="rounded-lg border border-neon-green/30 bg-neon-green/10 px-3 py-1.5 font-mono text-xs text-neon-green hover:bg-neon-green/20"
+            className="border-neon-green/30 bg-neon-green/10 text-neon-green hover:bg-neon-green/20 rounded-lg border px-3 py-1.5 font-mono text-xs"
           >
             + New
           </button>
@@ -167,7 +169,7 @@ export default function AdminServicesPage() {
 
       {form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-void-dark p-6 shadow-2xl">
+          <div className="bg-void-dark max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 p-6 shadow-2xl">
             <h2 className="font-heading mb-4 text-lg font-bold text-white">
               {form.pageId ? "Edit Service" : "New Service"}
             </h2>
@@ -175,11 +177,12 @@ export default function AdminServicesPage() {
               {(["name", "slug", "price", "icon", "cta"] as const).map((k) => (
                 <label key={k} className="flex flex-col gap-1">
                   <span className="font-mono text-xs text-slate-400 capitalize">
-                    {k}{k === "name" ? " *" : ""}
+                    {k}
+                    {k === "name" ? " *" : ""}
                   </span>
                   <input
                     type="text"
-                    className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-green focus:outline-none"
+                    className="bg-void font-body focus:border-neon-green rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                     value={(form[k] as string) ?? ""}
                     onChange={(e) => setForm((f) => f && { ...f, [k]: e.target.value })}
                   />
@@ -189,7 +192,7 @@ export default function AdminServicesPage() {
                 <span className="font-mono text-xs text-slate-400">Description</span>
                 <textarea
                   rows={3}
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-green focus:outline-none"
+                  className="bg-void font-body focus:border-neon-green rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                   value={form.description ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, description: e.target.value })}
                 />
@@ -198,7 +201,7 @@ export default function AdminServicesPage() {
                 <span className="font-mono text-xs text-slate-400">Features (one per line)</span>
                 <textarea
                   rows={4}
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-green focus:outline-none"
+                  className="bg-void font-body focus:border-neon-green rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                   value={form.featuresText ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, featuresText: e.target.value })}
                 />
@@ -206,7 +209,7 @@ export default function AdminServicesPage() {
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-xs text-slate-400">Category</span>
                 <select
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-mono text-xs text-white focus:outline-none"
+                  className="bg-void rounded border border-slate-700 px-3 py-1.5 font-mono text-xs text-white focus:outline-none"
                   value={form.category ?? "consulting"}
                   onChange={(e) =>
                     setForm((f) => f && { ...f, category: e.target.value as ServiceCategory })
@@ -223,7 +226,7 @@ export default function AdminServicesPage() {
                 <span className="font-mono text-xs text-slate-400">Stripe Price ID</span>
                 <input
                   type="text"
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-green focus:outline-none"
+                  className="bg-void font-body focus:border-neon-green rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                   value={form.stripePriceId ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, stripePriceId: e.target.value })}
                 />
@@ -249,7 +252,7 @@ export default function AdminServicesPage() {
               <button
                 onClick={submitForm}
                 disabled={saving}
-                className="rounded-lg border border-neon-green/40 bg-neon-green/20 px-4 py-1.5 font-mono text-xs text-neon-green hover:bg-neon-green/30 disabled:opacity-50"
+                className="border-neon-green/40 bg-neon-green/20 text-neon-green hover:bg-neon-green/30 rounded-lg border px-4 py-1.5 font-mono text-xs disabled:opacity-50"
               >
                 {saving ? "Saving…" : form.pageId ? "Save Changes" : "Create"}
               </button>
@@ -261,13 +264,16 @@ export default function AdminServicesPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl border border-slate-800 bg-void-light/50" />
+            <div
+              key={i}
+              className="bg-void-light/50 h-20 animate-pulse rounded-xl border border-slate-800"
+            />
           ))}
         </div>
       )}
 
       {!loading && !error && items.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">No services yet. Click + New to add one.</p>
         </div>
       )}
@@ -275,9 +281,9 @@ export default function AdminServicesPage() {
       {!loading && items.length > 0 && (
         <div className="space-y-3">
           {items.map((s) => (
-            <div key={s.id} className="rounded-xl border border-slate-800 bg-void-light/50 p-4">
+            <div key={s.id} className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-lg">{s.icon}</span>
                     <span className="font-heading font-semibold text-white">{s.name}</span>
@@ -287,12 +293,12 @@ export default function AdminServicesPage() {
                       {s.category}
                     </span>
                     <span className="font-mono text-xs text-slate-500">{s.price}</span>
-                    {s.slug && (
-                      <span className="font-mono text-xs text-slate-600">/{s.slug}</span>
-                    )}
+                    {s.slug && <span className="font-mono text-xs text-slate-600">/{s.slug}</span>}
                   </div>
                   {s.description && (
-                    <p className="mt-1 font-body text-sm text-slate-400 line-clamp-1">{s.description}</p>
+                    <p className="font-body mt-1 line-clamp-1 text-sm text-slate-400">
+                      {s.description}
+                    </p>
                   )}
                   {s.features.length > 0 && (
                     <p className="mt-1 font-mono text-xs text-slate-600">
