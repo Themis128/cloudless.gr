@@ -142,49 +142,39 @@ jobs:
               sleep 10
             '
 
-      - name: Wait for k3s /readyz (3x stable via SSH)
+      - name: Wait for k3s API to accept kubectl
         env:
           PI_HOST: "100.113.41.119"
           PI_USER: "tbaltzakis"
         run: |
-          # Poll k3s /readyz via SSH to the Pi. Uses curl with --max-time 8 so
-          # each probe is strictly bounded. kubectl has no default request timeout
-          # and can hang for the entire SSH ServerAlive window (20s+) when the API
-          # is slow, preventing stable from ever reaching 3.
-          # /readyz does not require authentication in Kubernetes — curl -k is sufficient.
-          wait_for_api() {
-            local stable=0
-            for i in $(seq 1 72); do
-              CODE=$(ssh -i ~/.ssh/id_ed25519 \
-                -o StrictHostKeyChecking=no \
-                -o ConnectTimeout=10 \
-                -o ServerAliveInterval=15 \
-                -o ServerAliveCountMax=3 \
-                "$PI_USER@$PI_HOST" \
-                "curl -k -s -o /dev/null -w '%{http_code}' --max-time 8 https://127.0.0.1:6443/readyz 2>/dev/null" \
-                2>/dev/null || echo "")
-              if [ "$CODE" = "200" ]; then
-                stable=$((stable + 1))
-                echo "  ${i}/72 — /readyz HTTP 200 via SSH (stable ${stable}/3)"
-                if [ "$stable" -ge 3 ]; then
-                  return 0
-                fi
-              else
-                stable=0
-                echo "  ${i}/72 — /readyz returned ${CODE:-timeout/err}, waiting 5s..."
-              fi
-              sleep 5
-            done
-            return 1
-          }
-
-          echo "Waiting for k3s API to be stable (3x SSH /readyz HTTP 200)..."
-          if wait_for_api; then
-            echo "k3s API stable — proceeding to rollout"
-          else
-            echo "::error::k3s /readyz never returned 3x HTTP 200 in time via SSH — aborting"
-            exit 1
-          fi
+          # One successful kubectl get nodes is enough — step 5 already confirmed
+          # k3s is running via kubectl scale. Give k3s 20s to reconnect to etcd
+          # after step 5's defrag/compact before polling.
+          # curl /readyz is avoided: k3s may require auth even for health endpoints,
+          # and curl --max-time 8 fires before the API responds under memory pressure.
+          # kubectl --request-timeout=20s is bounded and uses the correct credentials.
+          echo "Waiting 20s for k3s to stabilise after etcd maintenance..."
+          sleep 20
+          for i in $(seq 1 36); do
+            RESP=$(ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              -o ServerAliveInterval=25 \
+              -o ServerAliveCountMax=2 \
+              "$PI_USER@$PI_HOST" \
+              "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                get nodes --request-timeout=20s 2>/dev/null && echo KUBECTL_OK" \
+              2>/dev/null || echo "")
+            if echo "$RESP" | grep -q "KUBECTL_OK"; then
+              echo "  ${i}/36 — kubectl get nodes succeeded"
+              echo "k3s API ready — proceeding to rollout"
+              exit 0
+            fi
+            echo "  ${i}/36 — kubectl not ready (${RESP:0:40}...), waiting 5s..."
+            sleep 5
+          done
+          echo "::error::k3s API never responded to kubectl in 15 min — aborting"
+          exit 1
 
       - name: Pre-pull ECR image on Pi via crictl
         env:
