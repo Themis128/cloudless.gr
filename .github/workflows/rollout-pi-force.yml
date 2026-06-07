@@ -143,37 +143,21 @@ jobs:
             '
 
       - name: Wait for k3s API to accept kubectl
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
         run: |
-          # One successful kubectl get nodes is enough — step 5 already confirmed
-          # k3s is running via kubectl scale. Give k3s 20s to reconnect to etcd
-          # after step 5's defrag/compact before polling.
-          # curl /readyz is avoided: k3s may require auth even for health endpoints,
-          # and curl --max-time 8 fires before the API responds under memory pressure.
-          # kubectl --request-timeout=20s is bounded and uses the correct credentials.
-          echo "Waiting 20s for k3s to stabilise after etcd maintenance..."
-          sleep 20
+          # Use runner-side kubectl (kubeconfig from step 4 KUBECONFIG_B64) to probe
+          # the Pi k3s API directly over Tailscale — eliminates SSH overhead (~3s per
+          # iteration) that made the effective 20s kubectl window too small. One
+          # success is sufficient; step 5 already confirmed k3s is running.
           for i in $(seq 1 36); do
-            RESP=$(ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=10 \
-              -o ServerAliveInterval=25 \
-              -o ServerAliveCountMax=2 \
-              "$PI_USER@$PI_HOST" \
-              "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                get nodes --request-timeout=20s 2>/dev/null && echo KUBECTL_OK" \
-              2>/dev/null || echo "")
-            if echo "$RESP" | grep -q "KUBECTL_OK"; then
-              echo "  ${i}/36 — kubectl get nodes succeeded"
+            if kubectl get nodes --request-timeout=30s 2>/dev/null | grep -q "Ready"; then
+              echo "  ${i}/36 — k3s node Ready"
               echo "k3s API ready — proceeding to rollout"
               exit 0
             fi
-            echo "  ${i}/36 — kubectl not ready (${RESP:0:40}...), waiting 5s..."
-            sleep 5
+            echo "  ${i}/36 — k3s not ready, waiting 10s..."
+            sleep 10
           done
-          echo "::error::k3s API never responded to kubectl in 15 min — aborting"
+          echo "::error::k3s API never responded in ~24 min — aborting"
           exit 1
 
       - name: Pre-pull ECR image on Pi via crictl
