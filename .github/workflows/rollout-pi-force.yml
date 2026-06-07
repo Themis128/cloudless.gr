@@ -19,7 +19,7 @@ on:
 env:
   # SHA used when triggered by push (no workflow_dispatch input available).
   # Update this value to re-trigger a rollout to a different image.
-  # run-23-trigger: 2026-06-07
+  # run-24-trigger: 2026-06-07
   DEFAULT_ROLLOUT_SHA: '89b57243c994'
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
@@ -245,6 +245,12 @@ jobs:
           echo "Rolling out image tag: ${SHA}"
           IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
 
+          # Give Pi SSH daemon 20s to settle after step 8's kubectl patch.
+          # Step 8 triggers k3s reconciliation; the resulting memory pressure
+          # can push SSH connection time above ConnectTimeout=15s.
+          echo "Waiting 20s for Pi to settle after imagePullSecrets patch..."
+          sleep 20
+
           # Retry loop: etcd may still be settling after startup maintenance.
           # All kubectl calls go via SSH (local k3s.yaml on Pi) to avoid the
           # Tailscale DERP TCP hang that causes remote kubectl to stall ~90s per call.
@@ -253,8 +259,8 @@ jobs:
 
             if ssh -i ~/.ssh/id_ed25519 \
                  -o StrictHostKeyChecking=no \
-                 -o ConnectTimeout=15 \
-                 -o ServerAliveInterval=15 \
+                 -o ConnectTimeout=30 \
+                 -o ServerAliveInterval=30 \
                  -o ServerAliveCountMax=3 \
                  "$PI_USER@$PI_HOST" \
                  "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
