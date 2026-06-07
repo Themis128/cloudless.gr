@@ -10,6 +10,9 @@ name: OIDC Trust Policy Diagnostic
 # v4: triggered 2026-06-07 to auto-repair GitHubActionsOIDC trust policy
 # v5: fix auto-repair — skip provider creation when baseline OIDC succeeded (proves
 #     provider exists), add thumbprint fallback, add continue-on-error to repair step
+# v6: add role-chain self-repair — when cloudless-github-actions lacks
+#     iam:UpdateAssumeRolePolicy, try sts:AssumeRole chain into GitHubActionsOIDC
+#     and use its own (broader) IAM permissions to fix its trust policy
 
 on:
   push:
@@ -107,6 +110,77 @@ jobs:
       - name: Baseline identity check
         if: steps.baseline.outcome == 'success'
         run: aws sts get-caller-identity
+
+      - name: Role-chain self-repair (sts:AssumeRole + GitHubActionsOIDC IAM)
+        id: chain_repair
+        if: steps.baseline.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_DEPLOY}"
+          PROVIDER_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+          REPO_GLOB="repo:Themis128/cloudless.gr:*"
+
+          echo "Attempting sts:AssumeRole chain from ${ROLE_BASELINE} into ${ROLE_DEPLOY}..."
+          CREDS_JSON=$(aws sts assume-role \
+            --role-arn "$ROLE_ARN" \
+            --role-session-name chain-self-repair \
+            --duration-seconds 900 \
+            --output json 2>&1) || {
+            echo "sts:AssumeRole failed — trust policy has no AssumeRole principal for ${ROLE_BASELINE}"
+            echo "chain_works=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          echo "chain_works=true" >> "$GITHUB_OUTPUT"
+          echo "✅ sts:AssumeRole chain succeeded — ${ROLE_DEPLOY} trusts ${ROLE_BASELINE}"
+          echo "Now using ${ROLE_DEPLOY} credentials to repair its own OIDC trust policy..."
+
+          export AWS_ACCESS_KEY_ID=$(echo "$CREDS_JSON" | jq -r '.Credentials.AccessKeyId')
+          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS_JSON" | jq -r '.Credentials.SecretAccessKey')
+          export AWS_SESSION_TOKEN=$(echo "$CREDS_JSON" | jq -r '.Credentials.SessionToken')
+          echo "::add-mask::$AWS_ACCESS_KEY_ID"
+          echo "::add-mask::$AWS_SECRET_ACCESS_KEY"
+          echo "::add-mask::$AWS_SESSION_TOKEN"
+
+          TRUST_POLICY=$(jq -n \
+            --arg provider "$PROVIDER_ARN" \
+            --arg repo "$REPO_GLOB" \
+            '{
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Federated": $provider},
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                  "StringEquals": {
+                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                  },
+                  "StringLike": {
+                    "token.actions.githubusercontent.com:sub": $repo
+                  }
+                }
+              }]
+            }')
+
+          aws iam update-assume-role-policy \
+            --role-name "${ROLE_DEPLOY}" \
+            --policy-document "$TRUST_POLICY"
+
+          echo "✅ Trust policy updated via role-chain self-repair!"
+          echo "chain_repaired=true" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## ✅ Role-Chain Self-Repair Applied"
+            echo ""
+            echo "- \`${ROLE_BASELINE}\` assumed \`${ROLE_DEPLOY}\` via \`sts:AssumeRole\`"
+            echo "- \`${ROLE_DEPLOY}\` updated its own trust policy:"
+            echo "  - Principal: \`$PROVIDER_ARN\`"
+            echo "  - \`aud\`: \`sts.amazonaws.com\` (StringEquals)"
+            echo "  - \`sub\`: \`$REPO_GLOB\` (StringLike)"
+            echo ""
+            echo "**Next:** re-run \`deploy.yml\` — OIDC should succeed now."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Probe IAM via baseline role
         id: iam_probe
@@ -302,6 +376,8 @@ jobs:
         if: always()
         run: |
           BASELINE="${{ steps.baseline.outcome }}"
+          CHAIN_WORKS="${{ steps.chain_repair.outputs.chain_works }}"
+          CHAIN_REPAIRED="${{ steps.chain_repair.outputs.chain_repaired }}"
           HARD="${{ steps.deploy_hardcoded.outcome }}"
           SEC="${{ steps.deploy_secret.outcome }}"
           REPAIRED="${{ steps.repair.outputs.repaired }}"
@@ -311,21 +387,42 @@ jobs:
             echo ""
             echo "| Role | Source | Outcome |"
             echo "|------|--------|---------|"
-            echo "| \`$ROLE_BASELINE\` | hardcoded ARN | $BASELINE |"
-            echo "| \`$ROLE_DEPLOY\` | hardcoded ARN | $HARD |"
-            echo "| \`$ROLE_DEPLOY\` | \`AWS_DEPLOY_ROLE_ARN\` secret | $SEC |"
+            echo "| \`$ROLE_BASELINE\` | OIDC hardcoded ARN | $BASELINE |"
+            echo "| \`$ROLE_DEPLOY\` | sts:AssumeRole chain | ${CHAIN_WORKS:-not attempted} |"
+            echo "| \`$ROLE_DEPLOY\` | OIDC hardcoded ARN | $HARD |"
+            echo "| \`$ROLE_DEPLOY\` | OIDC \`AWS_DEPLOY_ROLE_ARN\` secret | $SEC |"
             echo ""
-            if [ "$REPAIRED" = "true" ] && [ "$HARD" = "success" ]; then
+            if [ "$CHAIN_REPAIRED" = "true" ]; then
+              echo "### ✅ Self-repair via role chain succeeded — re-run \`deploy.yml\` now"
+            elif [ "$REPAIRED" = "true" ] && [ "$HARD" = "success" ]; then
               echo "### ✅ Trust policy repaired and verified — re-run \`deploy.yml\`"
             elif [ "$REPAIRED" = "true" ] && [ "$HARD" != "success" ]; then
               echo "### ⚠️ Repair applied but role still fails — IAM propagation delay; retry in 30s"
             elif [ "$HARD" = "success" ] && [ "$SEC" = "success" ]; then
               echo "### ✅ OIDC is healthy — both methods succeed"
             elif [ "$BASELINE" = "success" ] && [ "$HARD" = "failure" ]; then
-              echo "### ❌ \`$ROLE_DEPLOY\` trust policy broken — baseline works but deploy role fails"
+              echo "### ❌ \`$ROLE_DEPLOY\` OIDC trust policy broken — baseline works but deploy role fails"
+              if [ "$CHAIN_WORKS" = "false" ]; then
+                echo ""
+                echo "Role-chain self-repair also failed (\`${ROLE_BASELINE}\` cannot \`sts:AssumeRole\` on \`${ROLE_DEPLOY}\`)."
+              fi
               if [ "$REPAIRED" != "true" ]; then
-                echo "Repair was not attempted (baseline may lack iam:UpdateAssumeRolePolicy)."
-                echo "Manual fix: AWS Console → IAM → Roles → \`$ROLE_DEPLOY\` → Trust relationships"
+                echo ""
+                echo "**Manual fix required** — AWS Console → IAM → Roles → \`$ROLE_DEPLOY\` → Trust relationships:"
+                echo '```json'
+                echo '{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"Federated": "arn:aws:iam::'"${ACCOUNT_ID}"':oidc-provider/token.actions.githubusercontent.com"},
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"},
+      "StringLike": {"token.actions.githubusercontent.com:sub": "repo:Themis128/cloudless.gr:*"}
+    }
+  }]
+}'
+                echo '```'
               fi
             elif [ "$HARD" = "success" ] && [ "$SEC" = "failure" ]; then
               echo "### ❌ \`AWS_DEPLOY_ROLE_ARN\` secret has wrong ARN — update it to:"
