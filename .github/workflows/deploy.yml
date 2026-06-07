@@ -37,10 +37,6 @@ jobs:
     # docs/runners.md "Workflows that stay GitHub-hosted".
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    environment:
-      name: production
-      url: https://cloudless.gr
-
     env:
       NEXT_PUBLIC_HUBSPOT_PORTAL_ID: ${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
