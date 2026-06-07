@@ -7,6 +7,7 @@ name: OIDC Trust Policy Diagnostic
 #
 # v3: fixed YAML parse error (Python heredoc lines at col-0 ended block scalar)
 #     rewritten as bash + awk + jq only.
+# v4: triggered 2026-06-07 to auto-repair GitHubActionsOIDC trust policy
 
 on:
   push:

@@ -4,7 +4,11 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
 import type { CaseStudy, CaseStudyInput, CaseStudyMetric } from "@/lib/notion-case-studies";
 
-const EMPTY_FORM: CaseStudyInput & { metricsText?: string; tagsText?: string; servicesText?: string } = {
+const EMPTY_FORM: CaseStudyInput & {
+  metricsText?: string;
+  tagsText?: string;
+  servicesText?: string;
+} = {
   title: "",
   slug: "",
   client: "",
@@ -106,8 +110,14 @@ export default function AdminCaseStudiesPage() {
     try {
       const { pageId, metricsText, tagsText, servicesText, ...input } = form;
       input.metrics = parseMetrics(metricsText ?? "");
-      input.tags = (tagsText ?? "").split(",").map((t) => t.trim()).filter(Boolean);
-      input.services = (servicesText ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+      input.tags = (tagsText ?? "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      input.services = (servicesText ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
       const res = await fetchWithAuth("/api/admin/notion/case-studies", {
@@ -154,7 +164,9 @@ export default function AdminCaseStudiesPage() {
             <span className="text-neon-magenta font-mono text-xs">CMS_CASE_STUDIES</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Case Studies</h1>
-          <p className="font-body mt-1 text-slate-400">Manage client success stories and case studies.</p>
+          <p className="font-body mt-1 text-slate-400">
+            Manage client success stories and case studies.
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -166,7 +178,7 @@ export default function AdminCaseStudiesPage() {
           </button>
           <button
             onClick={openCreate}
-            className="rounded-lg border border-neon-magenta/30 bg-neon-magenta/10 px-3 py-1.5 font-mono text-xs text-neon-magenta hover:bg-neon-magenta/20"
+            className="border-neon-magenta/30 bg-neon-magenta/10 text-neon-magenta hover:bg-neon-magenta/20 rounded-lg border px-3 py-1.5 font-mono text-xs"
           >
             + New
           </button>
@@ -181,19 +193,23 @@ export default function AdminCaseStudiesPage() {
 
       {form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-700 bg-void-dark p-6 shadow-2xl">
+          <div className="bg-void-dark max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-700 p-6 shadow-2xl">
             <h2 className="font-heading mb-4 text-lg font-bold text-white">
               {form.pageId ? "Edit Case Study" : "New Case Study"}
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {(["title", "slug", "client", "industry", "date"] as const).map((k) => (
-                <label key={k} className={`flex flex-col gap-1 ${k === "title" ? "col-span-2" : ""}`}>
+                <label
+                  key={k}
+                  className={`flex flex-col gap-1 ${k === "title" ? "col-span-2" : ""}`}
+                >
                   <span className="font-mono text-xs text-slate-400 capitalize">
-                    {k}{k === "title" ? " *" : ""}
+                    {k}
+                    {k === "title" ? " *" : ""}
                   </span>
                   <input
                     type={k === "date" ? "date" : "text"}
-                    className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-magenta focus:outline-none"
+                    className="bg-void font-body focus:border-neon-magenta rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                     value={(form[k] as string) ?? ""}
                     onChange={(e) => setForm((f) => f && { ...f, [k]: e.target.value })}
                   />
@@ -203,7 +219,7 @@ export default function AdminCaseStudiesPage() {
                 <span className="font-mono text-xs text-slate-400">Services (comma-separated)</span>
                 <input
                   type="text"
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-magenta focus:outline-none"
+                  className="bg-void font-body focus:border-neon-magenta rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                   value={form.servicesText ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, servicesText: e.target.value })}
                 />
@@ -212,7 +228,7 @@ export default function AdminCaseStudiesPage() {
                 <span className="font-mono text-xs text-slate-400">Tags (comma-separated)</span>
                 <input
                   type="text"
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-magenta focus:outline-none"
+                  className="bg-void font-body focus:border-neon-magenta rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                   value={form.tagsText ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, tagsText: e.target.value })}
                 />
@@ -222,7 +238,7 @@ export default function AdminCaseStudiesPage() {
                   <span className="font-mono text-xs text-slate-400 capitalize">{k}</span>
                   <textarea
                     rows={3}
-                    className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-magenta focus:outline-none"
+                    className="bg-void font-body focus:border-neon-magenta rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                     value={(form[k] as string) ?? ""}
                     onChange={(e) => setForm((f) => f && { ...f, [k]: e.target.value })}
                   />
@@ -235,7 +251,7 @@ export default function AdminCaseStudiesPage() {
                 <textarea
                   rows={3}
                   placeholder={"Cost reduction | 55%\nTime to results | 30 days"}
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-mono text-xs text-white placeholder-slate-700 focus:border-neon-magenta focus:outline-none"
+                  className="bg-void focus:border-neon-magenta rounded border border-slate-700 px-3 py-1.5 font-mono text-xs text-white placeholder-slate-700 focus:outline-none"
                   value={form.metricsText ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, metricsText: e.target.value })}
                 />
@@ -244,14 +260,17 @@ export default function AdminCaseStudiesPage() {
                 <span className="font-mono text-xs text-slate-400">Cover Image URL</span>
                 <input
                   type="text"
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-neon-magenta focus:outline-none"
+                  className="bg-void font-body focus:border-neon-magenta rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
                   value={form.coverImage ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, coverImage: e.target.value })}
                 />
               </label>
               <div className="col-span-2 flex gap-4">
                 {(["published", "featured"] as const).map((k) => (
-                  <label key={k} className="flex items-center gap-2 font-mono text-xs text-slate-400">
+                  <label
+                    key={k}
+                    className="flex items-center gap-2 font-mono text-xs text-slate-400"
+                  >
                     <input
                       type="checkbox"
                       checked={(form[k] as boolean) ?? false}
@@ -274,7 +293,7 @@ export default function AdminCaseStudiesPage() {
               <button
                 onClick={submitForm}
                 disabled={saving}
-                className="rounded-lg border border-neon-magenta/40 bg-neon-magenta/20 px-4 py-1.5 font-mono text-xs text-neon-magenta hover:bg-neon-magenta/30 disabled:opacity-50"
+                className="border-neon-magenta/40 bg-neon-magenta/20 text-neon-magenta hover:bg-neon-magenta/30 rounded-lg border px-4 py-1.5 font-mono text-xs disabled:opacity-50"
               >
                 {saving ? "Saving…" : form.pageId ? "Save Changes" : "Create"}
               </button>
@@ -286,13 +305,16 @@ export default function AdminCaseStudiesPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl border border-slate-800 bg-void-light/50" />
+            <div
+              key={i}
+              className="bg-void-light/50 h-24 animate-pulse rounded-xl border border-slate-800"
+            />
           ))}
         </div>
       )}
 
       {!loading && !error && items.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">No case studies yet. Click + New to add one.</p>
         </div>
       )}
@@ -300,9 +322,9 @@ export default function AdminCaseStudiesPage() {
       {!loading && items.length > 0 && (
         <div className="space-y-3">
           {items.map((cs) => (
-            <div key={cs.id} className="rounded-xl border border-slate-800 bg-void-light/50 p-4">
+            <div key={cs.id} className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-heading font-semibold text-white">{cs.title}</span>
                     {cs.client && (
@@ -325,12 +347,14 @@ export default function AdminCaseStudiesPage() {
                     )}
                   </div>
                   {cs.summary && (
-                    <p className="mt-1 font-body text-sm text-slate-400 line-clamp-1">{cs.summary}</p>
+                    <p className="font-body mt-1 line-clamp-1 text-sm text-slate-400">
+                      {cs.summary}
+                    </p>
                   )}
                   {cs.metrics.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-3">
                       {cs.metrics.map((m, i) => (
-                        <span key={i} className="font-mono text-xs text-neon-magenta">
+                        <span key={i} className="text-neon-magenta font-mono text-xs">
                           {m.label}: {m.value}
                         </span>
                       ))}
