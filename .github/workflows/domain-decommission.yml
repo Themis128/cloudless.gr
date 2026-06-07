@@ -3,6 +3,7 @@ name: Domain decommission (Route 53 + Cloudflare)
 # Retire a domain's Route 53 health checks + Cloudflare DNS records, scoped
 # strictly to that domain. Built to wind down cloudless.online (migrated to
 # cloudless.gr) and stop the recurring DNS-monitor alerts.
+# report-trigger: 2026-06-07
 #
 # SAFE BY DEFAULT: a push to this file / the script runs in REPORT mode (lists
 # what would be removed, deletes nothing). To actually delete, dispatch with
