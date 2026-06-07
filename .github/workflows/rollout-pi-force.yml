@@ -19,7 +19,7 @@ on:
 env:
   # SHA used when triggered by push (no workflow_dispatch input available).
   # Update this value to re-trigger a rollout to a different image.
-  # run-20-trigger: 2026-06-07
+  # run-21-trigger: 2026-06-07
   DEFAULT_ROLLOUT_SHA: '89b57243c994'
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
@@ -166,33 +166,20 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=3 \
             "$PI_USER@$PI_HOST" "
-              JOB=ecr-refresh-pre-rollout
-              sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                delete job \"\$JOB\" -n cloudless --ignore-not-found 2>/dev/null || true
-              sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                create job \"\$JOB\" --from=cronjob/ecr-heal \
-                -n cloudless 2>/dev/null \
-                && echo 'ecr-heal job created' \
-                || echo 'ecr-heal cronjob not found — skipping'
-              for i in \$(seq 1 24); do
-                STATUS=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                  get job \"\$JOB\" -n cloudless \
-                  -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' \
-                  2>/dev/null || echo '')
-                [ \"\$STATUS\" = 'True' ] && { echo \"ECR job done (attempt \${i})\"; break; }
-                echo \"  \${i}/24 — waiting for ecr-heal job...\"
-                sleep 5
-              done
-              sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                delete job \"\$JOB\" -n cloudless --ignore-not-found 2>/dev/null || true
               SECRET_NAME=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                get secret -n cloudless -o name 2>/dev/null \
-                | grep ecr | head -1 | sed 's|secret/||')
+                get secret -n cloudless -o json 2>/dev/null | python3 -c \
+                \"import json,sys; d=json.load(sys.stdin); \
+                 items=[i['metadata']['name'] for i in d.get('items',[]) \
+                   if i.get('type')=='kubernetes.io/dockerconfigjson']; \
+                 print(items[0] if items else '')\" 2>/dev/null || echo '')
               if [ -n \"\$SECRET_NAME\" ]; then
                 DOCKER_JSON=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
                   get secret \"\$SECRET_NAME\" -n cloudless \
                   -o jsonpath='{.data.\.dockerconfigjson}' 2>/dev/null | base64 -d)
-                AUTH_B64=\$(echo \"\$DOCKER_JSON\" | grep -o '\"auth\":\"[^\"]*\"' | cut -d'\"' -f4)
+                AUTH_B64=\$(echo \"\$DOCKER_JSON\" | python3 -c \
+                  \"import json,sys; d=json.load(sys.stdin); \
+                   auths=d.get('auths',{}); k=list(auths.keys())[0] if auths else ''; \
+                   print(auths[k].get('auth','') if k else '')\" 2>/dev/null || echo '')
                 if [ -n \"\$AUTH_B64\" ]; then
                   CREDS=\$(echo \"\$AUTH_B64\" | base64 -d)
                   ECR_USER=\$(echo \"\$CREDS\" | cut -d: -f1)
@@ -205,7 +192,7 @@ jobs:
                   echo 'Could not extract ECR auth token — skipping crictl pre-pull'
                 fi
               else
-                echo 'No ECR secret found — skipping crictl pre-pull'
+                echo 'No docker-registry Secret found — skipping crictl pre-pull'
               fi
             " 2>/dev/null || echo "ECR pre-pull SSH step failed — continuing"
 
@@ -224,8 +211,8 @@ jobs:
             -o ServerAliveCountMax=3 \
             "$PI_USER@$PI_HOST" '
               SECRET_NAME=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                get secret -n cloudless -o name 2>/dev/null \
-                | grep ecr | head -1 | sed "s|secret/||")
+                get secret -n cloudless -o json 2>/dev/null | python3 -c \
+                "import json,sys; d=json.load(sys.stdin); items=[i[\"metadata\"][\"name\"] for i in d.get(\"items\",[]) if i.get(\"type\")==\"kubernetes.io/dockerconfigjson\"]; print(items[0] if items else \"\")" 2>/dev/null || echo "")
               if [ -n "$SECRET_NAME" ]; then
                 echo "Patching imagePullSecrets → $SECRET_NAME"
                 sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
@@ -234,7 +221,7 @@ jobs:
                   && echo "imagePullSecrets patched successfully" \
                   || echo "patch failed — continuing"
               else
-                echo "No ECR secret found — skipping imagePullSecrets patch"
+                echo "No docker-registry Secret found — skipping imagePullSecrets patch"
               fi
             ' 2>/dev/null || echo "imagePullSecrets patch SSH step failed — continuing"
 
