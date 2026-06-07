@@ -89,25 +89,10 @@ jobs:
                   --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
                   --cert="$ETCD_CRT" --key="$ETCD_KEY" \
                   2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped"
-                REV=$(sudo k3s etcdctl endpoint status \
+                sudo k3s etcdctl alarm disarm \
                   --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
                   --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                  --write-out=json 2>/dev/null \
-                  | grep -o '"revision":[0-9]*' | head -1 | cut -d: -f2 || echo "")
-                if [ -n "$REV" ] && [ "$REV" -gt 0 ] 2>/dev/null; then
-                  sudo k3s etcdctl compact "$REV" \
-                    --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                    --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                    2>/dev/null && echo "compact to rev $REV done" || echo "compact skipped"
-                  sudo k3s etcdctl defrag \
-                    --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                    --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                    2>/dev/null && echo "post-compact defrag done" || echo "defrag skipped"
-                  sudo k3s etcdctl alarm disarm \
-                    --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                    --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                    2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
-                fi
+                  2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
               else
                 echo "k3s not active — skipping etcd maintenance"
               fi
