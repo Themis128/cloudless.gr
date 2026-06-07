@@ -408,21 +408,12 @@ jobs:
               fi
               if [ "$REPAIRED" != "true" ]; then
                 echo ""
-                echo "**Manual fix required** — AWS Console → IAM → Roles → \`$ROLE_DEPLOY\` → Trust relationships:"
-                echo '```json'
-                echo '{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {"Federated": "arn:aws:iam::'"${ACCOUNT_ID}"':oidc-provider/token.actions.githubusercontent.com"},
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"},
-      "StringLike": {"token.actions.githubusercontent.com:sub": "repo:Themis128/cloudless.gr:*"}
-    }
-  }]
-}'
-                echo '```'
+                echo "**Manual fix required** — AWS Console → IAM → Roles → \`$ROLE_DEPLOY\` → Trust relationships"
+                echo ""
+                echo "- Principal Federated: \`arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com\`"
+                echo "- Action: \`sts:AssumeRoleWithWebIdentity\`"
+                echo "- StringEquals aud: \`sts.amazonaws.com\`"
+                echo "- StringLike sub: \`repo:Themis128/cloudless.gr:*\`"
               fi
             elif [ "$HARD" = "success" ] && [ "$SEC" = "failure" ]; then
               echo "### ❌ \`AWS_DEPLOY_ROLE_ARN\` secret has wrong ARN — update it to:"
