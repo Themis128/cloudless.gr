@@ -19,6 +19,7 @@ on:
 env:
   # SHA used when triggered by push (no workflow_dispatch input available).
   # Update this value to re-trigger a rollout to a different image.
+  # run-20-trigger: 2026-06-07
   DEFAULT_ROLLOUT_SHA: '89b57243c994'
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
