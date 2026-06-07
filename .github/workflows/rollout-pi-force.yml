@@ -75,23 +75,43 @@ jobs:
               free -m
               echo "=== disk ==="
               df -h /
-              echo "=== etcd defrag (while k3s is running) ==="
-              # Ensure k3s is running before attempting defrag
-              if ! systemctl is-active --quiet k3s; then
-                echo "k3s not active — starting it first for etcd defrag..."
-                sudo systemctl start k3s
-                sleep 15
+              echo "=== Full etcd maintenance BEFORE any restart ==="
+              # Doing maintenance while k3s is already running avoids the
+              # network disruption caused by systemctl restart k3s (k3s
+              # manages the CNI/network interfaces and briefly takes them
+              # down during restart, which drops the SSH session).
+              ETCD_EP="https://127.0.0.1:2379"
+              ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
+              ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
+              ETCD_KEY="/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
+              if systemctl is-active --quiet k3s; then
+                sudo k3s etcdctl defrag \
+                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                  2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped"
+                REV=$(sudo k3s etcdctl endpoint status \
+                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                  --write-out=json 2>/dev/null \
+                  | grep -o '"revision":[0-9]*' | head -1 | cut -d: -f2 || echo "")
+                if [ -n "$REV" ] && [ "$REV" -gt 0 ] 2>/dev/null; then
+                  sudo k3s etcdctl compact "$REV" \
+                    --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                    --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                    2>/dev/null && echo "compact to rev $REV done" || echo "compact skipped"
+                  sudo k3s etcdctl defrag \
+                    --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                    --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                    2>/dev/null && echo "post-compact defrag done" || echo "defrag skipped"
+                  sudo k3s etcdctl alarm disarm \
+                    --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
+                    --cert="$ETCD_CRT" --key="$ETCD_KEY" \
+                    2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
+                fi
+              else
+                echo "k3s not active — skipping etcd maintenance"
               fi
-              sudo k3s etcdctl defrag \
-                --endpoints=https://127.0.0.1:2379 \
-                --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
-                --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
-                --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
-                2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped"
               echo "=== Kill leftover containerd-shim processes ==="
-              # Orphaned shims from previous k3s crashes consume memory and
-              # cause k3s to OOM on reconciliation. Kill them before restart
-              # so k3s starts with a clean container slate.
               SHIM_PIDS=$(pgrep containerd-shim 2>/dev/null | tr '\n' ' ' || true)
               if [ -n "$SHIM_PIDS" ]; then
                 echo "Killing containerd-shim PIDs: $SHIM_PIDS"
@@ -100,52 +120,26 @@ jobs:
               else
                 echo "No leftover containerd-shim processes found"
               fi
-              echo "=== Stop cloudless app containers before restart (free RAM) ==="
+              echo "=== Stop cloudless containers to free RAM ==="
               sudo crictl ps 2>/dev/null | grep cloudless | awk '{print $1}' \
                 | xargs -r sudo crictl stop --timeout 10 2>/dev/null || true
               sudo crictl ps -a 2>/dev/null | grep cloudless | awk '{print $1}' \
                 | xargs -r sudo crictl rm -f 2>/dev/null || true
-              echo "=== Restart k3s after defrag + cleanup ==="
-              sudo systemctl restart k3s
-              echo "k3s restarted — waiting 30s for etcd to initialise..."
-              sleep 30
-              echo "=== Compact + defrag etcd to clear NOSPACE condition ==="
-              ETCD_EP="https://127.0.0.1:2379"
-              ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
-              ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
-              ETCD_KEY="/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
-              REV=$(sudo k3s etcdctl endpoint status \
-                --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                --write-out=json 2>/dev/null \
-                | grep -o '"revision":[0-9]*' | head -1 | cut -d: -f2 || echo "")
-              if [ -n "$REV" ] && [ "$REV" -gt 0 ] 2>/dev/null; then
-                echo "Compacting to revision $REV..."
-                sudo k3s etcdctl compact "$REV" \
-                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                  2>/dev/null && echo "compact done" || echo "compact skipped"
-                echo "Defragmenting after compact..."
-                sudo k3s etcdctl defrag \
-                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                  2>/dev/null && echo "defrag done" || echo "defrag skipped"
-                echo "Disarming NOSPACE alarm if set..."
-                sudo k3s etcdctl alarm disarm \
-                  --endpoints="$ETCD_EP" --cacert="$ETCD_CA" \
-                  --cert="$ETCD_CRT" --key="$ETCD_KEY" \
-                  2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
+              echo "=== Start k3s only if not active (no restart — avoids network disruption) ==="
+              if ! systemctl is-active --quiet k3s; then
+                echo "k3s not active — starting it..."
+                sudo systemctl start k3s
+                echo "k3s started — waiting 45s to initialise..."
+                sleep 45
               else
-                echo "etcd not ready for compact (rev=$REV) — skipping"
+                echo "k3s already active — no restart needed"
               fi
-              echo "Sleeping 15s after etcd maintenance..."
-              sleep 15
-              echo "=== Scale cloudless to 0 replicas (free RAM for /readyz polling) ==="
+              echo "=== Scale cloudless to 0 replicas (free RAM) ==="
               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
                 scale deployment/cloudless -n cloudless --replicas=0 \
                 2>/dev/null && echo "scale to 0: done" || echo "scale to 0: skipped (k3s not ready)"
-              echo "Sleeping 20s for pod to terminate..."
-              sleep 20
+              echo "Sleeping 10s for pod to terminate..."
+              sleep 10
             '
 
       - name: Wait for k3s /readyz (3x stable via SSH)
