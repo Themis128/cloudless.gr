@@ -30,6 +30,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy
+    environment: production
     # Pinned to ubuntu-latest. SST + CDK synth + Sentry sourcemap upload
     # do not fit on an ARM Pi runner under cold-deploy conditions — the
     # Deploy (SST) step hung past the 40 min timeout when we tried the
