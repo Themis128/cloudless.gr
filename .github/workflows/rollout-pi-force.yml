@@ -26,7 +26,7 @@ on:
 env:
   # SHA used when triggered by push (no workflow_dispatch input available).
   # Update this value to re-trigger a rollout to a different image.
-  # run-25-trigger: 2026-06-07
+  # run-26-trigger: 2026-06-07
   DEFAULT_ROLLOUT_SHA: '89b57243c994'
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
@@ -123,6 +123,26 @@ jobs:
                 sleep 30
               fi
             ' 2>/dev/null || echo "SSH diagnostics partial — continuing"
+
+      - name: Restart omv-build runner service (best-effort)
+        continue-on-error: true
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=20 \
+            "$PI_USER@$PI_HOST" '
+              SVC="actions.runner.Themis128-cloudless.gr.omv-build.service"
+              STATUS=$(systemctl is-active "$SVC" 2>/dev/null || echo "unknown")
+              echo "Runner service status: $STATUS"
+              if [ "$STATUS" != "active" ]; then
+                echo "Restarting runner service..."
+                sudo systemctl restart "$SVC" && echo "Restart issued" || echo "Restart failed"
+                sleep 5
+                systemctl is-active "$SVC" && echo "Runner now active" || echo "Runner still not active"
+              else
+                echo "Runner already active — no restart needed"
+              fi
+            ' 2>/dev/null || echo "Runner restart SSH step failed — will continue"
 
       - name: SSH crictl pre-pull (best-effort)
         continue-on-error: true
