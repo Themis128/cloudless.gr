@@ -61,7 +61,11 @@ jobs:
           printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=5 \
             "$PI_USER@$PI_HOST" '
               echo "=== k3s service status ==="
               systemctl is-active k3s || true
@@ -144,32 +148,46 @@ jobs:
               sleep 20
             '
 
-      - name: Wait for k3s /readyz (3x stable via kubectl)
+      - name: Wait for k3s /readyz (3x stable via SSH)
+        env:
+          PI_HOST: "100.113.41.119"
+          PI_USER: "tbaltzakis"
         run: |
+          # Poll k3s /readyz via SSH to the Pi rather than from the runner via
+          # Tailscale. The Pi's local kubectl is always reliable; the Tailscale
+          # tunnel to port 6443 can be intermittent under memory pressure.
           wait_for_api() {
             local stable=0
-            for i in $(seq 1 120); do
-              if kubectl get --raw /readyz --request-timeout=5s 2>/dev/null \
-                  | grep -q 'ok'; then
+            for i in $(seq 1 72); do
+              STATUS=$(ssh -i ~/.ssh/id_ed25519 \
+                -o StrictHostKeyChecking=no \
+                -o ConnectTimeout=10 \
+                -o ServerAliveInterval=10 \
+                -o ServerAliveCountMax=2 \
+                "$PI_USER@$PI_HOST" \
+                "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                  get --raw /readyz 2>/dev/null" \
+                2>/dev/null || echo "")
+              if echo "$STATUS" | grep -q 'ok'; then
                 stable=$((stable + 1))
-                echo "  ${i}/120 — /readyz ok (stable ${stable}/3)"
+                echo "  ${i}/72 — /readyz ok via SSH (stable ${stable}/3)"
                 if [ "$stable" -ge 3 ]; then
                   return 0
                 fi
               else
                 stable=0
-                echo "  ${i}/120 — /readyz not ready, waiting 5s..."
+                echo "  ${i}/72 — /readyz not ready via SSH, waiting 5s..."
               fi
               sleep 5
             done
             return 1
           }
 
-          echo "Waiting for k3s API to be stable (3x kubectl /readyz ok)..."
+          echo "Waiting for k3s API to be stable (3x SSH /readyz ok)..."
           if wait_for_api; then
             echo "k3s API stable — proceeding to rollout"
           else
-            echo "::error::k3s /readyz never returned 3x ok in 10 min — aborting"
+            echo "::error::k3s /readyz never returned 3x ok in 6 min via SSH — aborting"
             exit 1
           fi
 
