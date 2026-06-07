@@ -120,7 +120,7 @@ export default function AdminFaqsPage() {
     <div>
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <div className="bg-yellow-500/10 border-yellow-500/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1.5">
             <span className="h-2 w-2 animate-pulse rounded-full bg-yellow-400" />
             <span className="font-mono text-xs text-yellow-400">CMS_FAQS</span>
           </div>
@@ -153,7 +153,7 @@ export default function AdminFaqsPage() {
       {/* Modal form */}
       {form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-void-dark p-6 shadow-2xl">
+          <div className="bg-void-dark w-full max-w-lg rounded-2xl border border-slate-700 p-6 shadow-2xl">
             <h2 className="font-heading mb-4 text-lg font-bold text-white">
               {form.pageId ? "Edit FAQ" : "New FAQ"}
             </h2>
@@ -162,7 +162,7 @@ export default function AdminFaqsPage() {
                 <span className="font-mono text-xs text-slate-400">Question *</span>
                 <input
                   type="text"
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-yellow-500 focus:outline-none"
+                  className="bg-void font-body rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:border-yellow-500 focus:outline-none"
                   value={form.question}
                   onChange={(e) => setForm((f) => f && { ...f, question: e.target.value })}
                 />
@@ -171,7 +171,7 @@ export default function AdminFaqsPage() {
                 <span className="font-mono text-xs text-slate-400">Answer</span>
                 <textarea
                   rows={4}
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:border-yellow-500 focus:outline-none"
+                  className="bg-void font-body rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:border-yellow-500 focus:outline-none"
                   value={form.answer ?? ""}
                   onChange={(e) => setForm((f) => f && { ...f, answer: e.target.value })}
                 />
@@ -179,7 +179,7 @@ export default function AdminFaqsPage() {
               <label className="flex flex-col gap-1">
                 <span className="font-mono text-xs text-slate-400">Category</span>
                 <select
-                  className="rounded border border-slate-700 bg-void px-3 py-1.5 font-mono text-xs text-white focus:outline-none"
+                  className="bg-void rounded border border-slate-700 px-3 py-1.5 font-mono text-xs text-white focus:outline-none"
                   value={form.category ?? "general"}
                   onChange={(e) =>
                     setForm((f) => f && { ...f, category: e.target.value as FaqCategory })
@@ -225,13 +225,16 @@ export default function AdminFaqsPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl border border-slate-800 bg-void-light/50" />
+            <div
+              key={i}
+              className="bg-void-light/50 h-16 animate-pulse rounded-xl border border-slate-800"
+            />
           ))}
         </div>
       )}
 
       {!loading && !error && items.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">No FAQs yet. Click + New to add one.</p>
         </div>
       )}
@@ -239,9 +242,9 @@ export default function AdminFaqsPage() {
       {!loading && items.length > 0 && (
         <div className="space-y-3">
           {items.map((f) => (
-            <div key={f.id} className="rounded-xl border border-slate-800 bg-void-light/50 p-4">
+            <div key={f.id} className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-heading font-semibold text-white">{f.question}</span>
                     <span
@@ -256,7 +259,7 @@ export default function AdminFaqsPage() {
                     )}
                   </div>
                   {f.answer && (
-                    <p className="mt-1 font-body text-sm text-slate-400 line-clamp-2">{f.answer}</p>
+                    <p className="font-body mt-1 line-clamp-2 text-sm text-slate-400">{f.answer}</p>
                   )}
                 </div>
                 <div className="flex shrink-0 gap-2">

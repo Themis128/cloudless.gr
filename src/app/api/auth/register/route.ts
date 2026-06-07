@@ -15,7 +15,9 @@ function secretHash(username: string): string | undefined {
   const secret = process.env.COGNITO_CLIENT_SECRET;
   const clientId = process.env.COGNITO_CLIENT_ID ?? "";
   if (!secret) return undefined;
-  return createHmac("sha256", secret).update(username + clientId).digest("base64");
+  return createHmac("sha256", secret)
+    .update(username + clientId)
+    .digest("base64");
 }
 
 export async function POST(req: NextRequest) {
@@ -35,8 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
 
   const clientId = process.env.COGNITO_CLIENT_ID;
-  if (!clientId)
-    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  if (!clientId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
 
   try {
     await makeClient().send(
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
           { Name: "email", Value: email },
           ...(fullName ? [{ Name: "name", Value: fullName }] : []),
         ],
-      }),
+      })
     );
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
@@ -57,12 +58,12 @@ export async function POST(req: NextRequest) {
     if (name === "UsernameExistsException")
       return NextResponse.json(
         { error: "An account with this email already exists" },
-        { status: 409 },
+        { status: 409 }
       );
     if (name === "InvalidPasswordException" || name === "InvalidParameterException")
       return NextResponse.json(
         { error: "Password does not meet requirements (min 8 chars, mixed case, number, symbol)" },
-        { status: 400 },
+        { status: 400 }
       );
     return NextResponse.json({ error: "Sign up failed" }, { status: 500 });
   }

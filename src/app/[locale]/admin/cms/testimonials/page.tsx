@@ -120,7 +120,7 @@ export default function AdminTestimonialsPage() {
       <span className="font-mono text-xs text-slate-400">{label}</span>
       <input
         type={type}
-        className="rounded border border-slate-700 bg-void px-3 py-1.5 font-body text-sm text-white focus:outline-none focus:border-neon-cyan"
+        className="bg-void font-body focus:border-neon-cyan rounded border border-slate-700 px-3 py-1.5 text-sm text-white focus:outline-none"
         value={(form?.[key] as string) ?? ""}
         onChange={(e) => setForm((f) => f && { ...f, [key]: e.target.value })}
       />
@@ -136,7 +136,9 @@ export default function AdminTestimonialsPage() {
             <span className="text-neon-cyan font-mono text-xs">CMS_TESTIMONIALS</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Testimonials</h1>
-          <p className="font-body mt-1 text-slate-400">Manage customer testimonials shown on the site.</p>
+          <p className="font-body mt-1 text-slate-400">
+            Manage customer testimonials shown on the site.
+          </p>
         </div>
         <div className="flex gap-2">
           <button
@@ -148,7 +150,7 @@ export default function AdminTestimonialsPage() {
           </button>
           <button
             onClick={openCreate}
-            className="rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 px-3 py-1.5 font-mono text-xs text-neon-cyan hover:bg-neon-cyan/20"
+            className="bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan hover:bg-neon-cyan/20 rounded-lg border px-3 py-1.5 font-mono text-xs"
           >
             + New
           </button>
@@ -164,7 +166,7 @@ export default function AdminTestimonialsPage() {
       {/* Modal form */}
       {form && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-void-dark p-6 shadow-2xl">
+          <div className="bg-void-dark w-full max-w-lg rounded-2xl border border-slate-700 p-6 shadow-2xl">
             <h2 className="font-heading mb-4 text-lg font-bold text-white">
               {form.pageId ? "Edit Testimonial" : "New Testimonial"}
             </h2>
@@ -197,9 +199,7 @@ export default function AdminTestimonialsPage() {
                 </label>
               </div>
             </div>
-            {formError && (
-              <p className="mt-3 font-mono text-xs text-red-400">{formError}</p>
-            )}
+            {formError && <p className="mt-3 font-mono text-xs text-red-400">{formError}</p>}
             <div className="mt-5 flex justify-end gap-2">
               <button
                 onClick={() => setForm(null)}
@@ -210,7 +210,7 @@ export default function AdminTestimonialsPage() {
               <button
                 onClick={submitForm}
                 disabled={saving}
-                className="rounded-lg bg-neon-cyan/20 border border-neon-cyan/40 px-4 py-1.5 font-mono text-xs text-neon-cyan hover:bg-neon-cyan/30 disabled:opacity-50"
+                className="bg-neon-cyan/20 border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/30 rounded-lg border px-4 py-1.5 font-mono text-xs disabled:opacity-50"
               >
                 {saving ? "Saving…" : form.pageId ? "Save Changes" : "Create"}
               </button>
@@ -223,14 +223,17 @@ export default function AdminTestimonialsPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl border border-slate-800 bg-void-light/50" />
+            <div
+              key={i}
+              className="bg-void-light/50 h-20 animate-pulse rounded-xl border border-slate-800"
+            />
           ))}
         </div>
       )}
 
       {/* Empty state */}
       {!loading && !error && items.length === 0 && (
-        <div className="rounded-xl border border-slate-800 bg-void-light/30 p-12 text-center">
+        <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">No testimonials yet. Click + New to add one.</p>
         </div>
       )}
@@ -239,17 +242,15 @@ export default function AdminTestimonialsPage() {
       {!loading && items.length > 0 && (
         <div className="space-y-3">
           {items.map((t) => (
-            <div key={t.id} className="rounded-xl border border-slate-800 bg-void-light/50 p-4">
+            <div key={t.id} className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-heading font-semibold text-white">{t.name}</span>
                     {t.company && (
                       <span className="font-mono text-xs text-slate-500">{t.company}</span>
                     )}
-                    {t.role && (
-                      <span className="font-mono text-xs text-slate-600">· {t.role}</span>
-                    )}
+                    {t.role && <span className="font-mono text-xs text-slate-600">· {t.role}</span>}
                     {t.featured && (
                       <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 font-mono text-xs text-yellow-400">
                         Featured
@@ -265,10 +266,12 @@ export default function AdminTestimonialsPage() {
                       {t.featured ? "Published" : "Draft"}
                     </span>
                     {t.rating != null && (
-                      <span className="font-mono text-xs text-yellow-400">{"★".repeat(t.rating)}</span>
+                      <span className="font-mono text-xs text-yellow-400">
+                        {"★".repeat(t.rating)}
+                      </span>
                     )}
                   </div>
-                  <p className="mt-1 font-body text-sm text-slate-400 line-clamp-2">
+                  <p className="font-body mt-1 line-clamp-2 text-sm text-slate-400">
                     &ldquo;{t.quote}&rdquo;
                   </p>
                   {t.service && (
