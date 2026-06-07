@@ -1,4 +1,5 @@
 /* global Response, URL, caches, fetch, self */
+/* deploy-trigger: 2026-06-07 — post OIDC trust policy repair */
 
 // Bump CACHE_VERSION on each deploy to invalidate stale caches
 const CACHE_VERSION = "5";
