@@ -3,6 +3,13 @@ name: Force Pi rollout (existing ECR image, no OIDC)
 # Unblock Pi rollout when AWS_DEPLOY_ROLE_ARN OIDC is broken.
 # No AWS credentials needed — uses TS_AUTHKEY + KUBECONFIG_B64 + OMV_SSH_KEY.
 # The image must already exist in ECR (built by a previous successful deploy-pi run).
+#
+# Architecture:
+#   job 1 `prep`    — ubuntu-latest, Tailscale SSH, best-effort diagnostics only.
+#                     All steps are continue-on-error. If Pi SSH is unreachable
+#                     (e.g. Tailscale node key expired) prep silently skips.
+#   job 2 `rollout` — [self-hosted, omv, pi], direct k3s access via local kubeconfig.
+#                     No SSH or Tailscale needed. Runs even when prep fails.
 
 on:
   push:
@@ -19,7 +26,7 @@ on:
 env:
   # SHA used when triggered by push (no workflow_dispatch input available).
   # Update this value to re-trigger a rollout to a different image.
-  # run-24-trigger: 2026-06-07
+  # run-25-trigger: 2026-06-07
   DEFAULT_ROLLOUT_SHA: '89b57243c994'
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
@@ -27,9 +34,16 @@ env:
   K3S_DEPLOYMENT: cloudless
 
 jobs:
-  rollout:
-    name: Rollout existing image to Pi k3s
+  # ─── Job 1: Best-effort diagnostics via Tailscale SSH ─────────────────────
+  # All steps are continue-on-error. The job itself is continue-on-error so
+  # a Tailscale key expiry or any other SSH failure never blocks job 2.
+  prep:
+    name: SSH prep (Tailscale diagnostics — best-effort)
     runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      PI_HOST: "100.113.41.119"
+      PI_USER: "tbaltzakis"
 
     steps:
       - name: Connect to tailnet
@@ -39,29 +53,42 @@ jobs:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
       - name: Verify Tailscale path to omv-main
+        continue-on-error: true
         run: |
           tailscale ping -c 3 --timeout=15s 100.113.41.119 \
-            || echo "Note: Tailscale using DERP relay — kubectl will still work"
+            || echo "Note: Tailscale using DERP relay — will try SSH anyway"
           nc -zv -w 10 100.113.41.119 6443 \
             && echo "Port 6443 directly reachable" \
-            || echo "Port 6443 via nc failed — proceeding over Tailscale relay"
+            || echo "Port 6443 via nc failed"
 
-      - name: Configure kubectl
+      - name: Configure kubectl (remote via Tailscale)
+        continue-on-error: true
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Diagnose k3s on Pi
+      - name: SSH setup + connectivity probe
         continue-on-error: true
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Quick probe — report result but never fail the step
+          if ssh -i ~/.ssh/id_ed25519 \
+               -o StrictHostKeyChecking=no \
+               -o ConnectTimeout=20 \
+               "$PI_USER@$PI_HOST" 'echo ssh-probe-ok' 2>/dev/null | grep -q ssh-probe-ok; then
+            echo "Pi SSH: REACHABLE — running full diagnostics"
+          else
+            echo "::warning::Pi SSH unreachable via Tailscale (node key may be expired)."
+            echo "Diagnostics skipped. Job 2 (rollout via Pi runner) will handle the rollout."
+            exit 0
+          fi
+
+          # Full diagnostics and etcd maintenance (only when SSH is working)
           ssh -i ~/.ssh/id_ed25519 \
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=30 \
@@ -76,11 +103,7 @@ jobs:
               free -m
               echo "=== disk ==="
               df -h /
-              echo "=== Full etcd maintenance BEFORE any restart ==="
-              # Doing maintenance while k3s is already running avoids the
-              # network disruption caused by systemctl restart k3s (k3s
-              # manages the CNI/network interfaces and briefly takes them
-              # down during restart, which drops the SSH session).
+              echo "=== Etcd maintenance ==="
               ETCD_EP="https://127.0.0.1:2379"
               ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
               ETCD_CRT="/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
@@ -95,88 +118,28 @@ jobs:
                   --cert="$ETCD_CRT" --key="$ETCD_KEY" \
                   2>/dev/null && echo "alarm disarm done" || echo "alarm disarm skipped"
               else
-                echo "k3s not active — skipping etcd maintenance"
-              fi
-              echo "=== Kill leftover containerd-shim processes ==="
-              SHIM_PIDS=$(pgrep containerd-shim 2>/dev/null | tr '\n' ' ' || true)
-              if [ -n "$SHIM_PIDS" ]; then
-                echo "Killing containerd-shim PIDs: $SHIM_PIDS"
-                sudo kill -9 $SHIM_PIDS 2>/dev/null || true
-                sleep 2
-              else
-                echo "No leftover containerd-shim processes found"
-              fi
-              echo "=== Stop cloudless containers to free RAM ==="
-              sudo crictl ps 2>/dev/null | grep cloudless | awk '{print $1}' \
-                | xargs -r sudo crictl stop --timeout 10 2>/dev/null || true
-              sudo crictl ps -a 2>/dev/null | grep cloudless | awk '{print $1}' \
-                | xargs -r sudo crictl rm -f 2>/dev/null || true
-              echo "=== Start k3s only if not active (no restart — avoids network disruption) ==="
-              if ! systemctl is-active --quiet k3s; then
-                echo "k3s not active — starting it..."
+                echo "k3s not active — starting..."
                 sudo systemctl start k3s
-                echo "k3s started — waiting 45s to initialise..."
-                sleep 45
-              else
-                echo "k3s already active — no restart needed"
+                sleep 30
               fi
-              echo "=== Scale cloudless to 0 replicas (free RAM) ==="
-              sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                scale deployment/cloudless -n cloudless --replicas=0 \
-                2>/dev/null && echo "scale to 0: done" || echo "scale to 0: skipped (k3s not ready)"
-              echo "Sleeping 10s for pod to terminate..."
-              sleep 10
-            '
+            ' 2>/dev/null || echo "SSH diagnostics partial — continuing"
 
-      - name: Wait for k3s API to accept kubectl
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
+      - name: SSH crictl pre-pull (best-effort)
+        continue-on-error: true
         run: |
-          # SSH-based kubectl (local k3s.yaml on Pi) — avoids Tailscale DERP TCP hang
-          # that causes remote kubectl to wait for OS TCP timeout (~60-90s) instead of
-          # the --request-timeout value. Step 5 already confirmed k3s is active, so
-          # 3 minutes is more than enough. Exit 0 always — step 9 has its own retry.
-          for i in $(seq 1 18); do
-            if ssh -i ~/.ssh/id_ed25519 \
-                 -o StrictHostKeyChecking=no \
-                 -o ConnectTimeout=10 \
-                 -o ServerAliveInterval=10 \
-                 -o ServerAliveCountMax=3 \
-                 "$PI_USER@$PI_HOST" \
-                 "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                   get nodes --request-timeout=10s 2>/dev/null | grep -q 'Ready'" \
-                 2>/dev/null; then
-              echo "  ${i}/18 — k3s node Ready (via SSH kubectl)"
-              echo "k3s API ready — proceeding to rollout"
-              exit 0
-            fi
-            echo "  ${i}/18 — not ready, waiting 10s..."
-            sleep 10
-          done
-          echo "::warning::k3s API not Ready after 3 min — step 5 confirmed k3s active, proceeding anyway"
-          exit 0
-
-      - name: Pre-pull ECR image on Pi via crictl
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
-        run: |
-          # The cloudless Deployment has no imagePullSecrets, so pods use node-level
-          # containerd credentials which expire every 12h. ecr-heal refreshes the k8s
-          # docker-registry Secret but that Secret is never used by the pod.
-          # Fix: extract the fresh ECR token from that Secret and crictl-pull directly
-          # into containerd's local cache — the pod finds the image already present and
-          # starts without any pull.
           SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
           IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
-          echo "Pre-pulling image on Pi: ${IMAGE}"
+          echo "Attempting SSH crictl pre-pull: ${IMAGE}"
           ssh -i ~/.ssh/id_ed25519 \
             -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=15 \
-            -o ServerAliveInterval=15 \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=20 \
             -o ServerAliveCountMax=3 \
             "$PI_USER@$PI_HOST" "
+              if sudo crictl images 2>/dev/null | grep -q '${SHA}'; then
+                echo 'Image already cached locally — skipping pull'
+                exit 0
+              fi
               SECRET_NAME=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
                 get secret -n cloudless -o json 2>/dev/null | python3 -c \
                 \"import json,sys; d=json.load(sys.stdin); \
@@ -186,7 +149,7 @@ jobs:
               if [ -n \"\$SECRET_NAME\" ]; then
                 DOCKER_JSON=\$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
                   get secret \"\$SECRET_NAME\" -n cloudless \
-                  -o jsonpath='{.data.\.dockerconfigjson}' 2>/dev/null | base64 -d)
+                  -o jsonpath='{.data.\\.dockerconfigjson}' 2>/dev/null | base64 -d)
                 AUTH_B64=\$(echo \"\$DOCKER_JSON\" | python3 -c \
                   \"import json,sys; d=json.load(sys.stdin); \
                    auths=d.get('auths',{}); k=list(auths.keys())[0] if auths else ''; \
@@ -195,202 +158,183 @@ jobs:
                   CREDS=\$(echo \"\$AUTH_B64\" | base64 -d)
                   ECR_USER=\$(echo \"\$CREDS\" | cut -d: -f1)
                   ECR_PASS=\$(echo \"\$CREDS\" | cut -d: -f2-)
-                  echo 'Pre-pulling image via crictl...'
                   sudo crictl pull --creds \"\$ECR_USER:\$ECR_PASS\" '${IMAGE}' \
-                    && echo 'crictl pull succeeded — image cached locally' \
-                    || echo 'crictl pull failed — pod will attempt pull on startup'
+                    && echo 'crictl pull succeeded — image cached' \
+                    || echo 'crictl pull failed — Pi runner will retry'
                 else
-                  echo 'Could not extract ECR auth token — skipping crictl pre-pull'
+                  echo 'No ECR auth found in Secret'
                 fi
               else
-                echo 'No docker-registry Secret found — skipping crictl pre-pull'
+                echo 'No docker-registry Secret found'
               fi
-            " 2>/dev/null || echo "ECR pre-pull SSH step failed — continuing"
+            " 2>/dev/null || echo "SSH crictl pre-pull failed — Pi runner will handle it"
 
-      - name: Wire imagePullSecrets onto cloudless Deployment
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
+      - name: SSH imagePullSecrets patch (best-effort)
+        continue-on-error: true
         run: |
-          # Permanently fix ErrImagePull: patch the Deployment so pods reference
-          # the k8s docker-registry Secret that ecr-heal keeps fresh, instead of
-          # relying on stale node-level containerd credentials.
           ssh -i ~/.ssh/id_ed25519 \
             -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=15 \
-            -o ServerAliveInterval=15 \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=20 \
             -o ServerAliveCountMax=3 \
             "$PI_USER@$PI_HOST" '
               SECRET_NAME=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
                 get secret -n cloudless -o json 2>/dev/null | python3 -c \
                 "import json,sys; d=json.load(sys.stdin); items=[i[\"metadata\"][\"name\"] for i in d.get(\"items\",[]) if i.get(\"type\")==\"kubernetes.io/dockerconfigjson\"]; print(items[0] if items else \"\")" 2>/dev/null || echo "")
               if [ -n "$SECRET_NAME" ]; then
-                echo "Patching imagePullSecrets → $SECRET_NAME"
-                sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                  patch deployment/cloudless -n cloudless \
-                  -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
-                  && echo "imagePullSecrets patched successfully" \
-                  || echo "patch failed — continuing"
+                CURRENT=$(sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                  get deployment/cloudless -n cloudless \
+                  -o jsonpath="{.spec.template.spec.imagePullSecrets[0].name}" 2>/dev/null || echo "")
+                if [ "$CURRENT" = "$SECRET_NAME" ]; then
+                  echo "imagePullSecrets already set to $SECRET_NAME"
+                else
+                  sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+                    patch deployment/cloudless -n cloudless \
+                    -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
+                    && echo "imagePullSecrets patched → $SECRET_NAME" \
+                    || echo "patch failed"
+                fi
               else
-                echo "No docker-registry Secret found — skipping imagePullSecrets patch"
+                echo "No docker-registry Secret found"
               fi
-            ' 2>/dev/null || echo "imagePullSecrets patch SSH step failed — continuing"
+            ' 2>/dev/null || echo "imagePullSecrets SSH patch failed — Pi runner will handle it"
 
-      - name: Set image and roll out
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
+  # ─── Job 2: Direct rollout via Pi self-hosted runner ──────────────────────
+  # Runs ON the Pi — no SSH or Tailscale needed.
+  # Uses the local k3s kubeconfig at /etc/rancher/k3s/k3s.yaml (127.0.0.1:6443).
+  # timeout-minutes: 35 = up to 10 min queue wait + 25 min rollout.
+  # if: always() ensures this runs even when prep job fails (e.g. Tailscale broken).
+  rollout:
+    name: Direct rollout via Pi runner
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 35
+    needs: prep
+    if: always()
+
+    steps:
+      - name: Pre-pull ECR image via crictl (direct, no SSH)
         run: |
           SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
-          echo "Rolling out image tag: ${SHA}"
           IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
+          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
 
-          # Give Pi SSH daemon 20s to settle after step 8's kubectl patch.
-          # Step 8 triggers k3s reconciliation; the resulting memory pressure
-          # can push SSH connection time above ConnectTimeout=15s.
-          echo "Waiting 20s for Pi to settle after imagePullSecrets patch..."
-          sleep 20
+          if sudo crictl images 2>/dev/null | grep -q "${SHA}"; then
+            echo "Image ${SHA} already in local containerd cache — skipping pull"
+            exit 0
+          fi
 
-          # Retry loop: etcd may still be settling after startup maintenance.
-          # All kubectl calls go via SSH (local k3s.yaml on Pi) to avoid the
-          # Tailscale DERP TCP hang that causes remote kubectl to stall ~90s per call.
-          for attempt in 1 2 3; do
-            echo "=== kubectl attempt ${attempt}/3 (SSH) ==="
+          echo "Image not cached — pulling: ${IMAGE}"
+          SECRET_NAME=$($KUBECTL get secret -n cloudless -o json 2>/dev/null | python3 -c \
+            "import json,sys; d=json.load(sys.stdin); items=[i['metadata']['name'] for i in d.get('items',[]) if i.get('type')=='kubernetes.io/dockerconfigjson']; print(items[0] if items else '')" \
+            2>/dev/null || echo "")
 
-            if ssh -i ~/.ssh/id_ed25519 \
-                 -o StrictHostKeyChecking=no \
-                 -o ConnectTimeout=30 \
-                 -o ServerAliveInterval=30 \
-                 -o ServerAliveCountMax=3 \
-                 "$PI_USER@$PI_HOST" \
-                 "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                   patch deployment/${{ env.K3S_DEPLOYMENT }} \
-                   -n ${{ env.K3S_NAMESPACE }} \
-                   -p '{\"spec\":{\"progressDeadlineSeconds\":3600}}' \
-                 && sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                   set image deployment/${{ env.K3S_DEPLOYMENT }} \
-                   ${{ env.K3S_DEPLOYMENT }}=${IMAGE} \
-                   -n ${{ env.K3S_NAMESPACE }}" \
-                 2>/dev/null; then
-              echo "patch + set image: done"
-              break
-            fi
+          if [ -z "$SECRET_NAME" ]; then
+            echo "No docker-registry Secret found — skipping pre-pull (pod will attempt pull on startup)"
+            exit 0
+          fi
 
-            if [ "$attempt" -lt 3 ]; then
-              echo "kubectl via SSH failed — waiting 60s before retry..."
-              sleep 60
-            else
-              echo "::error::kubectl failed after 3 attempts (SSH)"
-              exit 1
-            fi
-          done
+          DOCKER_JSON=$($KUBECTL get secret "$SECRET_NAME" -n cloudless \
+            -o jsonpath='{.data.\.dockerconfigjson}' 2>/dev/null | base64 -d)
+          AUTH_B64=$(echo "$DOCKER_JSON" | python3 -c \
+            "import json,sys; d=json.load(sys.stdin); auths=d.get('auths',{}); k=list(auths.keys())[0] if auths else ''; print(auths[k].get('auth','') if k else '')" \
+            2>/dev/null || echo "")
 
-          # Scale to 0 before pod start: stops the running Next.js pod (frees
-          # ~500 MB Pi RAM) so containerd can start the new image without
-          # OOM-killing k3s.
-          echo "Scaling down to 0 to free RAM before pod start..."
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=15 \
-            -o ServerAliveInterval=15 \
-            -o ServerAliveCountMax=3 \
-            "$PI_USER@$PI_HOST" \
-            "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-              scale deployment/${{ env.K3S_DEPLOYMENT }} \
-              -n ${{ env.K3S_NAMESPACE }} --replicas=0 2>/dev/null" \
-            2>/dev/null && echo "scale to 0: done" || echo "scale to 0: skipped"
+          if [ -z "$AUTH_B64" ]; then
+            echo "Could not extract ECR auth from Secret — skipping pre-pull"
+            exit 0
+          fi
 
-          # Poll /readyz via SSH + curl on Pi's localhost (no Tailscale DERP).
-          # k3s can crash after the scale-to-0 write (etcd + reconciliation pressure).
-          # Wait up to 3 min for 3× stable 200 before issuing scale-to-1.
-          echo "Waiting for k3s to stay stable after scale-to-0 (up to 3 min)..."
-          stable=0
-          for i in $(seq 1 36); do
-            code=$(ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=10 \
-              -o ServerAliveInterval=10 \
-              -o ServerAliveCountMax=3 \
-              "$PI_USER@$PI_HOST" \
-              "curl -k -s -o /dev/null -w '%{http_code}' \
-                --max-time 5 https://127.0.0.1:6443/readyz 2>/dev/null" \
-              2>/dev/null || echo "0")
-            if [ "$code" = "200" ]; then
-              stable=$((stable + 1))
-              echo "  ${i}/36 — /readyz 200 (stable ${stable}/3)"
-              [ "$stable" -ge 3 ] && break
-            else
-              stable=0
-              echo "  ${i}/36 — /readyz returned ${code:-timeout}, waiting 5s..."
-            fi
-            sleep 5
-          done
+          CREDS=$(echo "$AUTH_B64" | base64 -d)
+          ECR_USER=$(echo "$CREDS" | cut -d: -f1)
+          ECR_PASS=$(echo "$CREDS" | cut -d: -f2-)
+          sudo crictl pull --creds "$ECR_USER:$ECR_PASS" "$IMAGE" \
+            && echo "crictl pull succeeded — image cached locally" \
+            || echo "crictl pull failed — pod will attempt pull on startup"
 
-          echo "Scaling back up to 1 with new image..."
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=15 \
-            -o ServerAliveInterval=15 \
-            -o ServerAliveCountMax=3 \
-            "$PI_USER@$PI_HOST" \
-            "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-              scale deployment/${{ env.K3S_DEPLOYMENT }} \
-              -n ${{ env.K3S_NAMESPACE }} --replicas=1 2>/dev/null" \
-            2>/dev/null && echo "scale to 1: done" || echo "scale to 1: check status"
+      - name: Wire imagePullSecrets (idempotent)
+        run: |
+          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
+          SECRET_NAME=$($KUBECTL get secret -n cloudless -o json 2>/dev/null | python3 -c \
+            "import json,sys; d=json.load(sys.stdin); items=[i['metadata']['name'] for i in d.get('items',[]) if i.get('type')=='kubernetes.io/dockerconfigjson']; print(items[0] if items else '')" \
+            2>/dev/null || echo "")
 
-          # Run rollout readiness check via SSH on the Pi itself (local kubeconfig,
-          # 127.0.0.1:6443). Each SSH poll is a fresh short-lived connection —
-          # k3s crashes between polls are handled transparently.
-          # Every 6 iterations (~1 min) print pod status so we can see what's
-          # blocking readiness (ContainerCreating, CrashLoopBackOff, etc.).
-          echo "Waiting for rollout via SSH on Pi (local kubeconfig, up to 30 min)..."
+          if [ -z "$SECRET_NAME" ]; then
+            echo "No docker-registry Secret found — skipping imagePullSecrets patch"
+            exit 0
+          fi
+
+          CURRENT=$($KUBECTL get deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} \
+            -o jsonpath='{.spec.template.spec.imagePullSecrets[0].name}' 2>/dev/null || echo "")
+
+          if [ "$CURRENT" = "$SECRET_NAME" ]; then
+            echo "imagePullSecrets already set to $SECRET_NAME — no patch needed"
+          else
+            $KUBECTL patch deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} \
+              -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"$SECRET_NAME\"}]}}}}" \
+              && echo "imagePullSecrets → $SECRET_NAME: patched" \
+              || echo "imagePullSecrets patch failed (continuing)"
+          fi
+
+      - name: Set image and trigger rollout
+        run: |
+          SHA="${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
+          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHA}"
+          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
+          NS="${{ env.K3S_NAMESPACE }}"
+          DEPLOY="${{ env.K3S_DEPLOYMENT }}"
+
+          echo "Rolling out: ${IMAGE}"
+
+          # Scale to 0 to free RAM for the new pod start
+          $KUBECTL scale deployment/$DEPLOY -n $NS --replicas=0 2>/dev/null \
+            && echo "Scaled to 0" || echo "Scale-to-0 skipped (k3s not ready yet)"
+          sleep 5
+
+          # Extend progress deadline so rollout monitor doesn't time out prematurely
+          $KUBECTL patch deployment/$DEPLOY -n $NS \
+            -p '{"spec":{"progressDeadlineSeconds":3600}}' 2>/dev/null \
+            && echo "Progress deadline: 3600s" || true
+
+          # Set the new image
+          $KUBECTL set image deployment/$DEPLOY ${DEPLOY}=${IMAGE} -n $NS
+          echo "Image set: ${DEPLOY}=${IMAGE}"
+
+          # Scale back to 1
+          sleep 5
+          $KUBECTL scale deployment/$DEPLOY -n $NS --replicas=1 2>/dev/null \
+            && echo "Scaled to 1" || echo "Scale-to-1 skipped"
+
+      - name: Wait for rollout readiness (up to 25 min)
+        run: |
+          KUBECTL="sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml"
+          NS="${{ env.K3S_NAMESPACE }}"
+          DEPLOY="${{ env.K3S_DEPLOYMENT }}"
+
+          echo "Waiting for pod to become ready (up to 25 min)..."
           ROLLOUT_DONE=0
-          for i in $(seq 1 180); do
-            READY=$(ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=10 \
-              -o ServerAliveInterval=15 \
-              -o ServerAliveCountMax=3 \
-              "$PI_USER@$PI_HOST" \
-              "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                get deployment/${{ env.K3S_DEPLOYMENT }} \
-                -n ${{ env.K3S_NAMESPACE }} \
-                -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0" \
-              2>/dev/null || echo "0")
+          for i in $(seq 1 150); do
+            READY=$($KUBECTL get deployment/$DEPLOY -n $NS \
+              -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo 0)
             if [ "${READY:-0}" = "1" ]; then
               echo "Rollout complete — 1/1 replicas ready (attempt ${i})"
               ROLLOUT_DONE=1
               break
             fi
-            echo "  ${i}/180 — readyReplicas=${READY:-0}, waiting 10s..."
-            # Every 6 polls (~1 min) show pod status to surface the blocking condition
+            echo "  ${i}/150 — readyReplicas=${READY:-0}, waiting 10s..."
             if [ $((i % 6)) -eq 0 ]; then
               echo "--- pod status (attempt ${i}) ---"
-              ssh -i ~/.ssh/id_ed25519 \
-                -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-                "$PI_USER@$PI_HOST" \
-                "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                  get pod -n ${{ env.K3S_NAMESPACE }} -o wide 2>/dev/null || true" \
-                2>/dev/null || true
+              $KUBECTL get pod -n $NS -o wide 2>/dev/null || true
             fi
             sleep 10
           done
 
           if [ "$ROLLOUT_DONE" -ne 1 ]; then
-            echo "::error::Rollout timed out after 30 min — dumping pod details"
-            ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-              "$PI_USER@$PI_HOST" \
-              "sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                get pod -n ${{ env.K3S_NAMESPACE }} -o wide 2>/dev/null || true; \
-               echo '---'; \
-               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                describe pod -n ${{ env.K3S_NAMESPACE }} 2>/dev/null | tail -60 || true; \
-               echo '---'; \
-               sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
-                logs -n ${{ env.K3S_NAMESPACE }} -l app=${{ env.K3S_DEPLOYMENT }} \
-                --tail=30 --previous 2>/dev/null || true" \
-              2>/dev/null || true
+            echo "::error::Rollout timed out after 25 min — dumping pod details"
+            $KUBECTL get pod -n $NS -o wide 2>/dev/null || true
+            echo "---"
+            $KUBECTL describe pod -n $NS 2>/dev/null | tail -60 || true
+            echo "---"
+            $KUBECTL logs -n $NS -l app=$DEPLOY --tail=30 --previous 2>/dev/null || true
             exit 1
           fi
-          echo "Rollout complete: SHA=${SHA}"
+          echo "Rollout complete: SHA=${{ github.event.inputs.sha || env.DEFAULT_ROLLOUT_SHA }}"
