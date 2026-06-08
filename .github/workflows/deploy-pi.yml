@@ -88,8 +88,12 @@ jobs:
       - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'
         run: |
-          sudo mkdir -p /opt/docker-cache
-          sudo chmod 777 /opt/docker-cache
+          # /opt/docker-cache is a symlink to a USB-SSD-backed dir on the Pi.
+          # If the target dir is pruned, mkdir -p on the dangling symlink
+          # fails. Resolve and create the actual target.
+          TARGET=$(readlink -f /opt/docker-cache || echo /opt/docker-cache)
+          sudo mkdir -p "$TARGET"
+          sudo chmod 777 "$TARGET"
 
       - name: warm base image into Docker daemon cache
         if: steps.check_ecr.outputs.exists != 'true'
