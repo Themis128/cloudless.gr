@@ -266,9 +266,11 @@ let memoizedConfigured = false;
 function getNextAuth(): NextAuthResult | null {
   if (memoizedConfigured) return memoizedResult;
   const env = resolveAuthEnv();
-  if (!env.authSecret) {
-    // Don't memoize: AUTH_SECRET may still be hydrating on a cold start, so a
-    // later request should retry rather than be permanently locked to null.
+  if (!env.authSecret || !env.issuer) {
+    // Don't memoize: values may still be hydrating on a cold start or dev-server
+    // restart, so a later request should retry rather than be permanently locked
+    // to a broken instance.  (next-auth throws "missing issuer" when issuer is
+    // empty — memoizing that would poison all subsequent requests.)
     return null;
   }
   memoizedResult = buildNextAuth(env);
