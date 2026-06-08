@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CognitoReadOnlyForMigrationVerification",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:DescribeUserPool",
+        "cognito-idp:ListUserPoolClients",
+        "cognito-idp:DescribeUserPoolClient",
+        "cognito-idp:ListGroups",
+        "cognito-idp:GetGroup",
+        "cognito-idp:DescribeUserPoolDomain"
+      ],
+      "Resource": "arn:aws:cognito-idp:us-east-1:278585680617:userpool/us-east-1_1Bq3Mpqer"
+    }
+  ]
+}
