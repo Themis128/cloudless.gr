@@ -1,5 +1,9 @@
 # Claude Code — Project Memory
 
+## Working Style
+
+- **Never use placeholders.** No `<paste-output-here>`, no `TODO`, no `# TODO`, no `# fill in`, no `# replace this`, no `your-value-here`, no `xxx`, no `???`. If a value isn't known, fetch it, ask one direct question, or stop — do not write code/configs/docs that contain placeholders the user has to find and replace.
+
 ## Pending One-Time Setup (human action required)
 
 These require access outside GitHub and cannot be automated from a cloud session.
