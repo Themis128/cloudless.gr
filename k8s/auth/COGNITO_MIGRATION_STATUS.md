@@ -2,6 +2,28 @@
 
 Status of the values PR #730 needs before merge/deploy.
 
+## Live verification (2026-06-08, against deployed `main` image ba22858)
+
+Probed production to confirm the breakage before the pipeline fix lands:
+
+- `GET https://cloudless.gr/api/auth/providers` returns **HTML, not JSON** →
+  next-auth Cognito provider is not resolving server-side on the deployed app.
+- `GET /en/auth/login` bundle mentions `Cognito` but contains **no** `us-east-1_…`
+  pool ID, no `amazoncognito.com` domain → `NEXT_PUBLIC_COGNITO_*` are **empty in the
+  shipped client bundle**. Confirms the Keycloak-build-arg root cause; fixed in the
+  pipeline commit on `chore/keycloak-to-cognito` (redeploy required to take effect).
+
+### Open contradiction to resolve (needs AWS)
+
+GitHub repo secrets `NEXT_PUBLIC_COGNITO_CLIENT_ID` and `NEXT_PUBLIC_COGNITO_USER_POOL_ID`
+**already exist** (set 2026-05-09) — yet the table below says the app client "does NOT
+exist in SSM." Before trusting the handoff, verify the secret values:
+- `NEXT_PUBLIC_COGNITO_USER_POOL_ID` should equal `us-east-1_1Bq3Mpqer`.
+- `NEXT_PUBLIC_COGNITO_CLIENT_ID` should be a real app client in that pool whose callback
+  list includes `https://cloudless.gr/api/auth/callback/cognito`.
+Secret values can't be read via `gh`; check the Cognito console or re-`gh secret set` with
+known-good values.
+
 ## Confirmed (from SSM + public OIDC discovery)
 
 | Value | Source | Status |
