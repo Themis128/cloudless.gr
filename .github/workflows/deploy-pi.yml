@@ -196,24 +196,49 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+      - name: Diagnose kubectl reachability
+        # FAIL-FAST: the old "Wait for k3s /readyz" step swallowed kubectl
+        # stderr with `2>/dev/null`, so any auth/TLS/network error looped
+        # silently for 10 minutes as "not ready". Surface the real error
+        # before polling so failures are diagnosable in seconds, not minutes.
+        run: |
+          set +e
+          echo "==> kubeconfig (minified)"
+          kubectl config view --minify || echo "(kubectl config view failed)"
+          echo
+          echo "==> First /readyz call WITH stderr"
+          kubectl get --raw /readyz --request-timeout=10s
+          rc=$?
+          echo "kubectl exit code: $rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::kubectl could not reach the k3s API. Likely causes:"
+            echo "::error::  - KUBECONFIG_B64 secret is stale or wrong cluster CA"
+            echo "::error::  - Tailscale tunnel didn't come up (see prior step)"
+            echo "::error::  - k3s server cert was rotated (refresh KUBECONFIG_B64)"
+            exit 1
+          fi
       - name: Wait for k3s /readyz (3x stable via kubectl)
         run: |
-          # Use kubectl (kubeconfig creds) — anonymous curl returns 401 when
-          # anonymous-auth is disabled; kubectl uses the client cert in KUBECONFIG.
           # k3s /readyz returns the string "ok" when all checks pass.
+          # We do NOT suppress stderr — if kubectl starts failing, we want
+          # to see why immediately, not after a silent loop.
           wait_for_api() {
             local stable=0
-            for i in $(seq 1 120); do
-              if kubectl get --raw /readyz --request-timeout=5s 2>/dev/null \
-                  | grep -q 'ok'; then
+            local last_err=""
+            for i in $(seq 1 60); do
+              # Capture stderr to a temp so we can surface it on failure
+              out=$(kubectl get --raw /readyz --request-timeout=5s 2>/tmp/k_err)
+              rc=$?
+              if [ "$rc" -eq 0 ] && echo "$out" | grep -q 'ok'; then
                 stable=$((stable + 1))
-                echo "  ${i}/120 — /readyz ok (stable ${stable}/3)"
+                echo "  ${i}/60 — /readyz ok (stable ${stable}/3)"
                 if [ "$stable" -ge 3 ]; then
                   return 0
                 fi
               else
                 stable=0
-                echo "  ${i}/120 — /readyz not ready, waiting 5s..."
+                last_err=$(cat /tmp/k_err 2>/dev/null | head -3)
+                echo "  ${i}/60 — /readyz not ready (rc=$rc): ${last_err}"
               fi
               sleep 5
             done
@@ -224,7 +249,7 @@ jobs:
           if wait_for_api; then
             echo "k3s API stable — proceeding to rollout"
           else
-            echo "::error::k3s /readyz never returned 3x ok in 10 min — aborting"
+            echo "::error::k3s /readyz never returned 3x ok in 5 min — aborting"
             exit 1
           fi
       - name: Set image and roll out
