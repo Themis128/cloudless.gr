@@ -1,8 +1,8 @@
 /**
- * amplify-config shim tests — Keycloak era.
+ * amplify-config shim tests — Cognito era.
  *
- * The shim no longer calls Amplify.configure() — it checks NEXT_PUBLIC_KEYCLOAK_ISSUER
- * and routes getAuthModule() to keycloak-auth.ts.
+ * The shim no longer calls Amplify.configure() — it checks NEXT_PUBLIC_COGNITO_USER_POOL_ID
+ * and routes getAuthModule() to cognito-auth.ts.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -10,34 +10,34 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 describe("amplify-config.ts", () => {
   beforeEach(() => {
     vi.resetModules();
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   });
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("configureAmplifyWith returns false when NEXT_PUBLIC_KEYCLOAK_ISSUER is absent", async () => {
+  it("configureAmplifyWith returns false when NEXT_PUBLIC_COGNITO_USER_POOL_ID is absent", async () => {
     const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(false);
     expect(isAmplifyConfigured()).toBe(false);
   });
 
-  it("configureAmplifyWith returns true when NEXT_PUBLIC_KEYCLOAK_ISSUER is set", async () => {
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+  it("configureAmplifyWith returns true when NEXT_PUBLIC_COGNITO_USER_POOL_ID is set", async () => {
+    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
     const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(true);
     expect(isAmplifyConfigured()).toBe(true);
   });
 
   it("configureAmplifyWith is idempotent", async () => {
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
     const { configureAmplifyWith } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(true);
     expect(configureAmplifyWith({ userPoolId: "x", userPoolClientId: "y" })).toBe(true);
   });
 
-  it("getAuthModule returns keycloakAuthModule shape", async () => {
-    vi.mock("@/lib/keycloak-auth", () => ({
-      keycloakAuthModule: {
+  it("getAuthModule returns cognitoAuthModule shape", async () => {
+    vi.mock("@/lib/cognito-auth", () => ({
+      cognitoAuthModule: {
         signIn: vi.fn(), signOut: vi.fn(), getCurrentUser: vi.fn(),
         fetchAuthSession: vi.fn(), fetchUserAttributes: vi.fn(),
         updateUserAttributes: vi.fn(), signUp: vi.fn(), confirmSignUp: vi.fn(),

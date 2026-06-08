@@ -8,8 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_testPool";
   process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
-  // Clear Keycloak issuer so proxy.ts uses the Cognito fallback path in tests
-  process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "";
+  // proxy.ts validates Cognito JWTs; ensure the pool is set for tests
+  process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "us-east-1_TESTPOOL";
 });
 
 // Mock next-auth/jwt so getToken always returns null (Cognito path runs)
