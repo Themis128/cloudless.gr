@@ -41,7 +41,23 @@ declare module "next-auth/jwt" {
   }
 }
 
-const ISSUER = process.env.COGNITO_ISSUER ?? "";
+// Cognito's OIDC issuer is deterministic:
+//   https://cognito-idp.{region}.amazonaws.com/{userPoolId}
+// Derive it from COGNITO_USER_POOL_ID when COGNITO_ISSUER isn't set explicitly,
+// so a deploy that only carries the pool ID (the common case in SSM / .env)
+// still produces a valid provider instead of Auth.js's "missing both issuer and
+// authorization endpoint config" Configuration error. Mirrors the derivation in
+// proxy.ts and api-auth.ts.
+function resolveCognitoIssuer(): string {
+  const explicit = (process.env.COGNITO_ISSUER ?? "").replace(/\/+$/, "");
+  if (explicit) return explicit;
+  const poolId = process.env.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
+  if (!poolId) return "";
+  const region = process.env.AWS_REGION || poolId.split("_")[0] || "us-east-1";
+  return `https://cognito-idp.${region}.amazonaws.com/${poolId}`;
+}
+
+const ISSUER = resolveCognitoIssuer();
 const CLIENT_ID = process.env.COGNITO_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.COGNITO_CLIENT_SECRET ?? "";
 
