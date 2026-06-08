@@ -61,6 +61,15 @@ type JwtInput = {
   profile?: Record<string, unknown> | null;
 };
 
+// auth.ts builds the next-auth instance lazily (on first request), so importing
+// the module no longer calls NextAuth() / populates capturedConfig. Trigger the
+// lazy build by invoking a handler, then return the module.
+async function loadAuth(): Promise<typeof import("@/lib/auth")> {
+  const mod = await import("@/lib/auth");
+  await mod.handlers.GET(new Request("https://cloudless.gr/api/auth/session"));
+  return mod;
+}
+
 const COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
 const COGNITO_DOMAIN = "https://cloudless-auth.auth.us-east-1.amazoncognito.com";
 const CLIENT_ID = "cognito-client-id";
@@ -97,8 +106,8 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   // ── 1. provider selection ──────────────────────────────────────────────────
 
   it("selects Cognito as the active provider when COGNITO_ISSUER is set", async () => {
-    const mod = await import("@/lib/auth");
-    expect(mod.authProvider).toBe("cognito");
+    const mod = await loadAuth();
+    expect(mod.getAuthProvider()).toBe("cognito");
     const providers = capturedConfig.providers as Array<{ id?: string }>;
     expect(providers[0]?.id).toBe("cognito");
   });
@@ -106,7 +115,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   // ── 2. cognito:groups extraction ───────────────────────────────────────────
 
   it("extracts groups from the cognito:groups claim in the id_token", async () => {
-    await import("@/lib/auth");
+    await loadAuth();
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
@@ -126,7 +135,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   });
 
   it("ignores the Keycloak `groups` claim name when in Cognito mode", async () => {
-    await import("@/lib/auth");
+    await loadAuth();
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
@@ -149,7 +158,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   // ── 3. refresh hits the Cognito token endpoint with HTTP Basic auth ─────────
 
   it("refreshes at {domain}/oauth2/token — public PKCE, no Authorization header", async () => {
-    await import("@/lib/auth");
+    await loadAuth();
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
@@ -188,7 +197,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   // ── 4. Cognito does not rotate refresh tokens ───────────────────────────────
 
   it("keeps the existing refresh_token when the response omits one", async () => {
-    await import("@/lib/auth");
+    await loadAuth();
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
@@ -217,7 +226,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   // ── 5. RP-initiated logout via Cognito's non-standard /logout ───────────────
 
   it("signOut event calls {domain}/logout with client_id and logout_uri", async () => {
-    await import("@/lib/auth");
+    await loadAuth();
     const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
     globalThis.fetch = fetchMock;
 
@@ -239,7 +248,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     delete process.env.COGNITO_DOMAIN;
     vi.resetModules();
     capturedConfig = {};
-    await import("@/lib/auth");
+    await loadAuth();
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock;
 

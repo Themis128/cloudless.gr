@@ -58,24 +58,47 @@ function resolveCognitoIssuer(): string {
   return `https://cognito-idp.${region}.amazonaws.com/${poolId}`;
 }
 
-const ISSUER = resolveCognitoIssuer();
-const CLIENT_ID = process.env.COGNITO_CLIENT_ID ?? "";
-const CLIENT_SECRET = process.env.COGNITO_CLIENT_SECRET ?? "";
-
-export const authProvider: "cognito" | null = ISSUER ? "cognito" : null;
-
 // Cognito exposes group membership under "cognito:groups".
 const GROUPS_CLAIM = "cognito:groups";
 
-// Cognito's hosted-UI domain (e.g.
-// https://cloudless-auth.auth.us-east-1.amazoncognito.com) for RP-initiated
-// logout, which Cognito implements as a non-standard
-// /logout?client_id=…&logout_uri=… endpoint.
-const COGNITO_DOMAIN = (process.env.COGNITO_DOMAIN ?? "").replace(/\/+$/, "");
-const AUTH_URL = (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(
-  /\/+$/,
-  ""
-);
+/**
+ * Auth config resolved from the environment.
+ *
+ * IMPORTANT: every value here is read from `process.env` *lazily*, the first
+ * time the next-auth instance is actually needed (a request), NOT at module
+ * load. On Lambda the auth secrets (AUTH_SECRET, COGNITO_CLIENT_SECRET, …)
+ * are not in the SST environment block — they are hydrated into process.env
+ * by `instrumentation.register()`, which runs asynchronously on cold start.
+ * If we froze this config at module-evaluation time we'd race that hydration:
+ * the auth module is often evaluated before register() resolves, so ISSUER /
+ * AUTH_SECRET would be "" and next-auth would build a provider-less, secret-less
+ * instance that returns `{}` / throws `Configuration` for the entire life of
+ * the warm container. Reading lazily guarantees we see the hydrated values.
+ * proxy.ts and api-auth.ts read the same env lazily for the same reason.
+ */
+interface AuthEnv {
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+  cognitoDomain: string;
+  authUrl: string;
+  authSecret: string;
+}
+
+function resolveAuthEnv(): AuthEnv {
+  return {
+    issuer: resolveCognitoIssuer(),
+    clientId: process.env.COGNITO_CLIENT_ID ?? "",
+    clientSecret: process.env.COGNITO_CLIENT_SECRET ?? "",
+    // Cognito's hosted-UI domain (e.g.
+    // https://cloudless-auth.auth.us-east-1.amazoncognito.com) for RP-initiated
+    // logout, which Cognito implements as a non-standard
+    // /logout?client_id=…&logout_uri=… endpoint.
+    cognitoDomain: (process.env.COGNITO_DOMAIN ?? "").replace(/\/+$/, ""),
+    authUrl: (process.env.AUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/+$/, ""),
+    authSecret: process.env.AUTH_SECRET ?? "",
+  };
+}
 
 /** Decode a JWT without verification — used only to read provider claims. */
 function decodeJwtPayload(token: string): Record<string, unknown> {
@@ -95,7 +118,10 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
  * so the jwt callback can flag the session. Cognito does not rotate refresh
  * tokens, so the caller keeps the existing one when none is returned.
  */
-async function refreshAccessToken(refreshToken: string): Promise<{
+async function refreshAccessToken(
+  refreshToken: string,
+  env: Pick<AuthEnv, "clientId" | "cognitoDomain">
+): Promise<{
   access_token: string;
   refresh_token?: string;
   id_token?: string;
@@ -104,11 +130,11 @@ async function refreshAccessToken(refreshToken: string): Promise<{
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
-    client_id: CLIENT_ID,
+    client_id: env.clientId,
   });
   const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
 
-  const res = await globalThis.fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
+  const res = await globalThis.fetch(`${env.cognitoDomain}/oauth2/token`, {
     method: "POST",
     headers,
     body: body.toString(),
@@ -135,103 +161,164 @@ function readGroups(
   );
 }
 
-const hasAuthSecret = !!process.env.AUTH_SECRET;
+type NextAuthResult = ReturnType<typeof NextAuth>;
 
-const nextAuthResult = hasAuthSecret
-  ? NextAuth({
-      providers: [Cognito({ clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, issuer: ISSUER })],
-      callbacks: {
-        async jwt({ token, account, profile }) {
-          if (account) {
-            token.accessToken = account.access_token;
-            token.idToken = account.id_token;
-            token.refreshToken = account.refresh_token;
-            token.expiresAt =
-              typeof account.expires_at === "number"
-                ? account.expires_at
-                : Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 0);
+function buildNextAuth(env: AuthEnv): NextAuthResult {
+  const { issuer, clientId, clientSecret, cognitoDomain, authUrl } = env;
+  return NextAuth({
+    providers: [Cognito({ clientId, clientSecret, issuer })],
+    callbacks: {
+      async jwt({ token, account, profile }) {
+        if (account) {
+          token.accessToken = account.access_token;
+          token.idToken = account.id_token;
+          token.refreshToken = account.refresh_token;
+          token.expiresAt =
+            typeof account.expires_at === "number"
+              ? account.expires_at
+              : Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 0);
 
-            const accessPayload = account.access_token
-              ? decodeJwtPayload(account.access_token as string)
-              : {};
-            const idPayload = account.id_token ? decodeJwtPayload(account.id_token as string) : {};
-            const p = profile as Record<string, unknown> | undefined;
+          const accessPayload = account.access_token
+            ? decodeJwtPayload(account.access_token as string)
+            : {};
+          const idPayload = account.id_token ? decodeJwtPayload(account.id_token as string) : {};
+          const p = profile as Record<string, unknown> | undefined;
 
-            token.groups = readGroups(idPayload, accessPayload, p);
-            token.roles = [];
-            return token;
-          }
+          token.groups = readGroups(idPayload, accessPayload, p);
+          token.roles = [];
+          return token;
+        }
 
-          const now = Math.floor(Date.now() / 1000);
-          if (token.expiresAt && now < token.expiresAt - 30) {
-            return token;
-          }
+        const now = Math.floor(Date.now() / 1000);
+        if (token.expiresAt && now < token.expiresAt - 30) {
+          return token;
+        }
 
-          if (!token.refreshToken) {
-            token.error = REFRESH_TOKEN_ERROR;
-            return token;
-          }
+        if (!token.refreshToken) {
+          token.error = REFRESH_TOKEN_ERROR;
+          return token;
+        }
 
-          try {
-            const refreshed = await refreshAccessToken(token.refreshToken);
-            token.accessToken = refreshed.access_token;
-            if (refreshed.refresh_token) token.refreshToken = refreshed.refresh_token;
-            if (refreshed.id_token) token.idToken = refreshed.id_token;
-            token.expiresAt = now + refreshed.expires_in;
-            const payload = decodeJwtPayload(refreshed.access_token);
-            token.groups = (payload[GROUPS_CLAIM] as string[] | undefined) ?? token.groups ?? [];
-            delete token.error;
-            return token;
-          } catch {
-            token.error = REFRESH_TOKEN_ERROR;
-            return token;
-          }
-        },
-        async session({ session, token }) {
-          session.accessToken = token.accessToken;
-          session.idToken = token.idToken;
-          session.user.id = token.sub ?? "";
-          session.user.groups = token.groups ?? [];
-          session.user.roles = token.roles ?? [];
-          if (token.error) session.error = token.error;
-          return session;
-        },
+        try {
+          const refreshed = await refreshAccessToken(token.refreshToken, env);
+          token.accessToken = refreshed.access_token;
+          if (refreshed.refresh_token) token.refreshToken = refreshed.refresh_token;
+          if (refreshed.id_token) token.idToken = refreshed.id_token;
+          token.expiresAt = now + refreshed.expires_in;
+          const payload = decodeJwtPayload(refreshed.access_token);
+          token.groups = (payload[GROUPS_CLAIM] as string[] | undefined) ?? token.groups ?? [];
+          delete token.error;
+          return token;
+        } catch {
+          token.error = REFRESH_TOKEN_ERROR;
+          return token;
+        }
       },
-      events: {
-        async signOut(message) {
-          if (!COGNITO_DOMAIN) return;
-          const idToken = "token" in message ? message.token?.idToken : undefined;
-          void idToken; // Cognito logout uses client_id + logout_uri, not id_token_hint
-          try {
-            const url = new URL(`${COGNITO_DOMAIN}/logout`);
-            url.searchParams.set("client_id", CLIENT_ID);
-            url.searchParams.set("logout_uri", `${AUTH_URL}/`);
-            await globalThis.fetch(url.toString(), { method: "GET" });
-          } catch {
-            // Best-effort — the cookie is already cleared; SSO ages out.
-          }
-        },
+      async session({ session, token }) {
+        session.accessToken = token.accessToken;
+        session.idToken = token.idToken;
+        session.user.id = token.sub ?? "";
+        session.user.groups = token.groups ?? [];
+        session.user.roles = token.roles ?? [];
+        if (token.error) session.error = token.error;
+        return session;
       },
-      session: { strategy: "jwt" },
-      logger: {
-        error(error: Error) {
-          const tag = `${error?.name ?? ""} ${(error as { type?: string })?.type ?? ""}`;
-          const configured = !!(ISSUER && CLIENT_ID && CLIENT_SECRET);
-          if (tag.includes("Configuration") && configured) return;
-          console.error(`[auth][error] ${error?.message ?? error}`);
-        },
+    },
+    events: {
+      async signOut(message) {
+        if (!cognitoDomain) return;
+        const idToken = "token" in message ? message.token?.idToken : undefined;
+        void idToken; // Cognito logout uses client_id + logout_uri, not id_token_hint
+        try {
+          const url = new URL(`${cognitoDomain}/logout`);
+          url.searchParams.set("client_id", clientId);
+          url.searchParams.set("logout_uri", `${authUrl}/`);
+          await globalThis.fetch(url.toString(), { method: "GET" });
+        } catch {
+          // Best-effort — the cookie is already cleared; SSO ages out.
+        }
       },
-      pages: {
-        signIn: "/auth/login",
-        error: "/auth/login",
+    },
+    session: { strategy: "jwt" },
+    logger: {
+      error(error: Error) {
+        const tag = `${error?.name ?? ""} ${(error as { type?: string })?.type ?? ""}`;
+        const configured = !!(issuer && clientId && clientSecret);
+        if (tag.includes("Configuration") && configured) return;
+        console.error(`[auth][error] ${error?.message ?? error}`);
       },
-    })
-  : null;
+    },
+    pages: {
+      signIn: "/auth/login",
+      error: "/auth/login",
+    },
+  });
+}
 
-export const handlers = nextAuthResult?.handlers ?? {
-  GET: () => Response.json({}),
-  POST: () => Response.json({}),
+/**
+ * Lazily-built, memoized next-auth instance. Built on first use (a request),
+ * by which time instrumentation.register() has hydrated process.env from SSM.
+ * Returns null when AUTH_SECRET is still unset (auth genuinely unconfigured).
+ */
+let memoizedResult: NextAuthResult | null = null;
+let memoizedConfigured = false;
+
+function getNextAuth(): NextAuthResult | null {
+  if (memoizedConfigured) return memoizedResult;
+  const env = resolveAuthEnv();
+  if (!env.authSecret) {
+    // Don't memoize: AUTH_SECRET may still be hydrating on a cold start, so a
+    // later request should retry rather than be permanently locked to null.
+    return null;
+  }
+  memoizedResult = buildNextAuth(env);
+  memoizedConfigured = true;
+  return memoizedResult;
+}
+
+/** The active auth provider, resolved lazily. null when unconfigured. */
+export function getAuthProvider(): "cognito" | null {
+  return resolveCognitoIssuer() ? "cognito" : null;
+}
+
+const EMPTY_JSON = () => Response.json({});
+
+/**
+ * Stable handlers object. GET/POST resolve the real next-auth handler lazily
+ * per request, so the route module (`export const { POST } = handlers`) can
+ * destructure at import time while the underlying instance is built on demand.
+ */
+export const handlers: {
+  GET: (req: Request) => Response | Promise<Response>;
+  POST: (req: Request) => Response | Promise<Response>;
+} = {
+  GET: (req: Request) => {
+    const h = getNextAuth()?.handlers.GET as
+      | ((req: Request) => Response | Promise<Response>)
+      | undefined;
+    return h ? h(req) : EMPTY_JSON();
+  },
+  POST: (req: Request) => {
+    const h = getNextAuth()?.handlers.POST as
+      | ((req: Request) => Response | Promise<Response>)
+      | undefined;
+    return h ? h(req) : EMPTY_JSON();
+  },
 };
-export const signIn = nextAuthResult?.signIn ?? (async () => undefined);
-export const signOut = nextAuthResult?.signOut ?? (async () => undefined);
-export const auth = nextAuthResult?.auth ?? (async () => null);
+
+export const signIn: NextAuthResult["signIn"] = (...args: Parameters<NextAuthResult["signIn"]>) => {
+  const fn = getNextAuth()?.signIn;
+  return (fn ? fn(...args) : Promise.resolve(undefined)) as ReturnType<NextAuthResult["signIn"]>;
+};
+
+export const signOut: NextAuthResult["signOut"] = (
+  ...args: Parameters<NextAuthResult["signOut"]>
+) => {
+  const fn = getNextAuth()?.signOut;
+  return (fn ? fn(...args) : Promise.resolve(undefined)) as ReturnType<NextAuthResult["signOut"]>;
+};
+
+export const auth: NextAuthResult["auth"] = ((...args: unknown[]) => {
+  const fn = getNextAuth()?.auth as ((...a: unknown[]) => unknown) | undefined;
+  return fn ? fn(...args) : Promise.resolve(null);
+}) as NextAuthResult["auth"];
