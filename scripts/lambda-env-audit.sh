@@ -69,13 +69,15 @@ check() {
 }
 
 echo ""
-echo "▸ Required for next-auth (Keycloak):"
+echo "▸ Required for next-auth (Cognito):"
 check "AUTH_SECRET" required "next-auth JWT encryption — 500 if missing"
 check "AUTH_TRUST_HOST" required "must be 'true' behind CloudFront"
 check "AUTH_URL" required "callback URL construction"
-check "KEYCLOAK_ISSUER" required "server-side JWT verify (proxy.ts)"
-check "NEXT_PUBLIC_KEYCLOAK_ISSUER" required "client OIDC init"
-check "NEXT_PUBLIC_KEYCLOAK_CLIENT_ID" required "client OIDC init"
+check "COGNITO_USER_POOL_ID" required "server-side JWT verify (proxy.ts + api-auth.ts)"
+check "COGNITO_CLIENT_ID" required "next-auth Cognito provider"
+check "NEXT_PUBLIC_COGNITO_USER_POOL_ID" required "client OIDC init + USE_HOSTED_UI gate"
+check "NEXT_PUBLIC_COGNITO_CLIENT_ID" required "client OIDC init"
+check "NEXT_PUBLIC_COGNITO_DOMAIN" required "Hosted UI signup / forgot-password redirects"
 
 echo ""
 echo "▸ Required for SSM-loaded secrets:"
