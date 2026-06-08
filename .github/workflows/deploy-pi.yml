@@ -36,8 +36,10 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    # GH-hosted runner with QEMU for arm64 cross-compilation.
-    runs-on: ubuntu-latest
+    # Self-hosted arm64 runner (omv-build on omv-main). Native arm64 build —
+    # no QEMU emulation needed. GH-hosted QEMU build hangs past 60 min on
+    # pnpm install; the Pi runner finishes in 3-5 min.
+    runs-on: [self-hosted, omv, pi, build]
     outputs:
       short_sha: ${{ steps.check_ecr.outputs.short_sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
