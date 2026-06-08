@@ -26,7 +26,12 @@ kubectl -n "$NS" get deploy "$DEP" -o jsonpath='{range .spec.template.spec.conta
 echo
 echo "## auth-critical env present in the deployment?"
 ENVNAMES=$(kubectl -n "$NS" get deploy "$DEP" -o jsonpath='{.spec.template.spec.containers[0].env[*].name}' 2>/dev/null | tr ' ' '\n')
-for v in AUTH_SECRET KEYCLOAK_ISSUER KEYCLOAK_CLIENT_ID KEYCLOAK_CLIENT_SECRET NEXT_PUBLIC_KEYCLOAK_ISSUER; do
+# Cognito is the active provider (auth.ts gates next-auth on AUTH_SECRET +
+# COGNITO_ISSUER/CLIENT_ID at module load). Keycloak vars kept for fallback visibility.
+for v in AUTH_SECRET AUTH_TRUST_HOST AUTH_URL \
+         COGNITO_ISSUER COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET COGNITO_DOMAIN \
+         NEXT_PUBLIC_AUTH_PROVIDER \
+         KEYCLOAK_ISSUER NEXT_PUBLIC_KEYCLOAK_ISSUER; do
   printf '  %-30s %s\n' "$v" "$(printf '%s\n' "$ENVNAMES" | grep -qx "$v" && echo PRESENT || echo MISSING)"
 done
 
