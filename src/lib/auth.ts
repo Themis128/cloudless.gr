@@ -51,7 +51,8 @@ declare module "next-auth/jwt" {
 function resolveCognitoIssuer(): string {
   const explicit = (process.env.COGNITO_ISSUER ?? "").replace(/\/+$/, "");
   if (explicit) return explicit;
-  const poolId = process.env.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
+  const poolId =
+    process.env.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
   if (!poolId) return "";
   const region = process.env.AWS_REGION || poolId.split("_")[0] || "us-east-1";
   return `https://cognito-idp.${region}.amazonaws.com/${poolId}`;
