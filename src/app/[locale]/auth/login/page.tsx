@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
-const USE_KEYCLOAK = !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+const USE_HOSTED_UI = !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
 
 function normalizeRedirectPath(path: string): string {
   if (!path.startsWith("/")) return path;
@@ -53,13 +53,13 @@ function LoginContent() {
     setError("");
     setSubmitting(true);
     try {
-      if (USE_KEYCLOAK) {
+      if (USE_HOSTED_UI) {
         const callbackUrl = nextParam?.startsWith("/")
           ? normalizeRedirectPath(nextParam)
           : isAdmin
             ? "/admin"
             : "/dashboard";
-        await nextAuthSignIn("keycloak", { callbackUrl });
+        await nextAuthSignIn("cognito", { callbackUrl });
         return;
       }
       const result = await signIn(email, password);
@@ -154,7 +154,7 @@ function LoginContent() {
                   : t("auth.resetPassword", "Reset Password")}
               </button>
             </form>
-          ) : USE_KEYCLOAK ? (
+          ) : USE_HOSTED_UI ? (
             <form onSubmit={handleLogin} className="space-y-5">
               <button
                 type="submit"
@@ -163,7 +163,7 @@ function LoginContent() {
               >
                 {submitting
                   ? t("auth.signingIn", "Signing In...")
-                  : t("auth.continueWithKeycloak", "Continue with Keycloak")}
+                  : t("auth.continueWithCognito", "Continue with AWS")}
               </button>
             </form>
           ) : (

@@ -1,30 +1,31 @@
 "use client";
 
 /**
- * Auth configuration shim — Keycloak via next-auth replaces aws-amplify/Cognito.
+ * Auth configuration shim — AWS Cognito (via next-auth) is the auth backend.
  *
  * Exports the same interface as the old amplify-config so AuthContext and
- * other callers require zero changes.  The actual auth work is done by
- * next-auth (src/lib/auth.ts) and the Keycloak OIDC provider.
+ * other callers require zero changes. The actual auth work is done by
+ * next-auth (src/lib/auth.ts) and the Cognito OIDC provider.
  */
 
 export interface AmplifyAuthConfig {
-  /** Kept for interface compatibility — unused with Keycloak. */
+  /** Kept for interface compatibility. */
   userPoolId: string;
-  /** Kept for interface compatibility — unused with Keycloak. */
+  /** Kept for interface compatibility. */
   userPoolClientId: string;
 }
 
 let configured = false;
 
 /**
- * No-op with Keycloak — next-auth reads KEYCLOAK_* env vars at module load.
- * Returns true as long as KEYCLOAK_ISSUER is set (both credentials are SSR-only).
+ * Returns true as long as the Cognito user pool is configured.
+ * next-auth reads COGNITO_* env vars at module load (SSR-only).
  */
 export function configureAmplifyWith(_config: AmplifyAuthConfig): boolean {
   if (configured) return true;
-  const hasIssuer = typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
-  configured = hasIssuer;
+  const hasPool =
+    typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  configured = hasPool;
   return configured;
 }
 
@@ -33,7 +34,7 @@ export function isAmplifyConfigured(): boolean {
 }
 
 /**
- * Returns a Keycloak-backed auth module that matches the subset of
+ * Returns a Cognito-backed auth module that matches the subset of
  * aws-amplify/auth used by AuthContext:
  *   signIn, signOut, signUp, confirmSignUp,
  *   resetPassword, confirmResetPassword, confirmSignIn,
@@ -41,6 +42,6 @@ export function isAmplifyConfigured(): boolean {
  *   updateUserAttributes
  */
 export async function getAuthModule() {
-  const { keycloakAuthModule } = await import("@/lib/keycloak-auth");
-  return keycloakAuthModule;
+  const { cognitoAuthModule } = await import("@/lib/cognito-auth");
+  return cognitoAuthModule;
 }

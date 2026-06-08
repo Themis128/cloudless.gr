@@ -1,16 +1,23 @@
 /**
- * next-auth v5 configuration wired to Keycloak.
+ * next-auth v5 configuration wired to AWS Cognito.
  *
- * Replaces aws-amplify / Cognito as the auth backend for both the
- * k3s (Pi) cluster deployment and the AWS Lambda (serverless) deployment.
+ * Replaces the previous Keycloak provider. Cognito is the auth backend for
+ * both the k3s (Pi) cluster deployment and the AWS Lambda (serverless)
+ * deployment.
  *
  * Token storage: next-auth stores the session in a signed+encrypted JWT
- * cookie (no server-side DB needed). The access token from Keycloak is
- * forwarded to the browser so proxy.ts can validate it directly.
+ * cookie (no server-side DB needed). The id/access tokens from Cognito are
+ * forwarded to the browser so proxy.ts can validate them directly.
  */
 
 import NextAuth, { type DefaultSession } from "next-auth";
-import Keycloak from "next-auth/providers/keycloak";
+import Cognito from "next-auth/providers/cognito";
+
+const COGNITO_REGION = process.env.AWS_REGION ?? "us-east-1";
+const COGNITO_POOL_ID = process.env.COGNITO_USER_POOL_ID ?? "";
+const COGNITO_ISSUER = COGNITO_POOL_ID
+  ? `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/${COGNITO_POOL_ID}`
+  : "";
 
 declare module "next-auth" {
   interface Session {
@@ -25,10 +32,10 @@ declare module "next-auth" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Keycloak({
-      clientId: process.env.KEYCLOAK_CLIENT_ID ?? "",
-      clientSecret: "",
-      issuer: process.env.KEYCLOAK_ISSUER ?? "",
+    Cognito({
+      clientId: process.env.COGNITO_CLIENT_ID ?? "",
+      clientSecret: process.env.COGNITO_CLIENT_SECRET ?? "",
+      issuer: COGNITO_ISSUER,
     }),
   ],
   callbacks: {
@@ -37,7 +44,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.accessToken = account.access_token;
         token.idToken = account.id_token;
         const p = profile as Record<string, unknown> | undefined;
-        token.groups = (p?.["groups"] as string[]) ?? [];
+        token.groups = (p?.["cognito:groups"] as string[]) ?? [];
       }
       return token;
     },

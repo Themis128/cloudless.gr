@@ -120,7 +120,7 @@ interface AuthProviderProps {
   children: ReactNode;
   /**
    * Kept for backwards-compatibility with the layout Server Component.
-   * With Keycloak these values are unused — next-auth reads KEYCLOAK_*
+   * With Cognito these values are unused — next-auth reads COGNITO_*
    * env vars server-side.  Pass empty strings if migrating gradually.
    */
   cognitoConfig?: { userPoolId: string; userPoolClientId: string };
@@ -235,12 +235,12 @@ export function AuthProvider({
           setIsAdmin(groups.includes("admin"));
           return;
         } catch {
-          // No Cognito session — fall through to next-auth/Keycloak check.
+          // No legacy Cognito cookie — fall through to next-auth session check.
         }
       }
 
-      // Keycloak/next-auth path: read the server-side session cookie via the
-      // next-auth session endpoint. This is active after the Cognito→Keycloak
+      // next-auth path: read the server-side session cookie via the
+      // next-auth session endpoint. This is active for the Cognito OIDC
       // migration and coexists with Amplify during the rollout.
       try {
         const res = await globalThis.fetch("/api/auth/session");
@@ -325,7 +325,7 @@ export function AuthProvider({
   };
 
   const handleSignOut = async () => {
-    if (process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER) {
+    if (process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID) {
       const { signOut: nextAuthSignOut } = await import("next-auth/react");
       setUser(null);
       setIsAdmin(false);

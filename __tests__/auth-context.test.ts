@@ -1,9 +1,9 @@
 /**
- * amplify-config shim + keycloak-auth module tests.
+ * amplify-config shim + cognito-auth module tests.
  *
  * The "amplify-config" module is now a thin shim that:
- *   - configureAmplifyWith() returns true when NEXT_PUBLIC_KEYCLOAK_ISSUER is set
- *   - getAuthModule() returns keycloak-auth's module (not aws-amplify)
+ *   - configureAmplifyWith() returns true when NEXT_PUBLIC_COGNITO_USER_POOL_ID is set
+ *   - getAuthModule() returns cognito-auth's module (not aws-amplify)
  *
  * These tests verify the shim contract that AuthContext depends on.
  */
@@ -12,43 +12,43 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ── configureAmplifyWith ──────────────────────────────────────────────────────
 
-describe("configureAmplifyWith() — Keycloak shim", () => {
+describe("configureAmplifyWith() — Cognito shim", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
   });
 
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns false when NEXT_PUBLIC_KEYCLOAK_ISSUER is absent", async () => {
+  it("returns false when NEXT_PUBLIC_COGNITO_USER_POOL_ID is absent", async () => {
     const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(false);
     expect(isAmplifyConfigured()).toBe(false);
   });
 
-  it("returns false when NEXT_PUBLIC_KEYCLOAK_ISSUER is empty string", async () => {
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "";
+  it("returns false when NEXT_PUBLIC_COGNITO_USER_POOL_ID is empty string", async () => {
+    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "";
     const { configureAmplifyWith } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(false);
   });
 
-  it("returns true when NEXT_PUBLIC_KEYCLOAK_ISSUER is set", async () => {
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+  it("returns true when NEXT_PUBLIC_COGNITO_USER_POOL_ID is set", async () => {
+    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
     const { configureAmplifyWith, isAmplifyConfigured } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(true);
     expect(isAmplifyConfigured()).toBe(true);
   });
 
   it("is idempotent — repeated calls return true without re-configuring", async () => {
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
     const { configureAmplifyWith } = await import("@/lib/amplify-config");
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(true);
     expect(configureAmplifyWith({ userPoolId: "", userPoolClientId: "" })).toBe(true);
   });
 
   it("cognitoConfig params are ignored (kept only for interface compatibility)", async () => {
-    // With Cognito values set but no Keycloak issuer → still false
+    // With Cognito pool unset → false
     const { configureAmplifyWith } = await import("@/lib/amplify-config");
     expect(
       configureAmplifyWith({ userPoolId: "us-east-1_Pool", userPoolClientId: "clientId" })
@@ -58,7 +58,7 @@ describe("configureAmplifyWith() — Keycloak shim", () => {
 
 // ── getAuthModule ─────────────────────────────────────────────────────────────
 
-describe("getAuthModule() — returns Keycloak auth module", () => {
+describe("getAuthModule() — returns Cognito auth module", () => {
   beforeEach(() => {
     vi.resetModules();
   });
@@ -66,8 +66,8 @@ describe("getAuthModule() — returns Keycloak auth module", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("resolves with all auth functions expected by AuthContext", async () => {
-    vi.mock("@/lib/keycloak-auth", () => ({
-      keycloakAuthModule: {
+    vi.mock("@/lib/cognito-auth", () => ({
+      cognitoAuthModule: {
         signIn: vi.fn(),
         signOut: vi.fn(),
         signUp: vi.fn(),

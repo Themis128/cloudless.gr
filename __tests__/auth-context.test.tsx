@@ -26,9 +26,9 @@ vi.mock("@/lib/amplify-config", () => ({
   getAuthModule: () => mockGetAuthModule(),
 }));
 
-// Prevent keycloak-auth from loading next-auth/react (network calls in jsdom)
-vi.mock("@/lib/keycloak-auth", () => ({
-  keycloakAuthModule: {
+// Prevent cognito-auth from loading next-auth/react (network calls in jsdom)
+vi.mock("@/lib/cognito-auth", () => ({
+  cognitoAuthModule: {
     signIn: vi.fn(),
     signOut: vi.fn(),
     signUp: vi.fn(),

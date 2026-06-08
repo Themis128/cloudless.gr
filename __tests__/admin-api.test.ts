@@ -200,9 +200,8 @@ function unauthRequest(url: string): NextRequest {
 // Mocks — set up before any dynamic import
 // ---------------------------------------------------------------------------
 
-// Keycloak Admin REST API — mocked via globalThis.fetch
-// (the route no longer uses @aws-sdk/client-cognito-identity-provider)
-const mockCognitoSend = vi.fn(); // kept so references below don't break
+// Cognito Admin API — route uses @aws-sdk/client-cognito-identity-provider
+const mockCognitoSend = vi.fn();
 vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
   CognitoIdentityProviderClient: class {
     send = mockCognitoSend;
@@ -320,16 +319,17 @@ vi.mock("@/lib/sentry", () => ({
 // ---------------------------------------------------------------------------
 
 describe("GET /api/admin/users", () => {
-  const kcUserList = [
+  const cognitoUserList = [
     {
-      id: "uuid-user-1",
-      username: "user1",
-      email: "user1@example.com",
-      firstName: "User",
-      lastName: "One",
-      emailVerified: true,
-      enabled: true,
-      createdTimestamp: new Date("2024-01-01").getTime(),
+      Username: "uuid-user-1",
+      Enabled: true,
+      UserStatus: "CONFIRMED",
+      UserCreateDate: new Date("2024-01-01"),
+      Attributes: [
+        { Name: "email", Value: "user1@example.com" },
+        { Name: "email_verified", Value: "true" },
+        { Name: "name", Value: "User One" },
+      ],
     },
   ];
 
@@ -337,31 +337,25 @@ describe("GET /api/admin/users", () => {
     vi.clearAllMocks();
     vi.resetModules();
     resetIntegrationCache();
-    // Set Keycloak env so the route doesn't return 503
-    process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.KEYCLOAK_ADMIN_USER = "admin";
-    process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
+    // Set Cognito env so the route does not return 503
+    process.env.COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
+    process.env.AWS_REGION = "us-east-1";
 
-    // Mock globalThis.fetch for Keycloak Admin REST API calls
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      if (String(url).includes("/token")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
+    // Drive the Cognito SDK mock: ListUsers then AdminListGroupsForUser
+    mockCognitoSend.mockImplementation((cmd: { input: unknown }) => {
+      const name = cmd.constructor.name;
+      if (name === "ListUsersCommand") {
+        return Promise.resolve({ Users: cognitoUserList });
       }
-      if (String(url).includes("/users?")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUserList) });
+      if (name === "AdminListGroupsForUserCommand") {
+        return Promise.resolve({ Groups: [] });
       }
-      if (String(url).includes("/groups")) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    }));
+      return Promise.resolve({});
+    });
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+    delete process.env.COGNITO_USER_POOL_ID;
   });
 
   it("returns 401 when no token is provided", async () => {
@@ -376,9 +370,8 @@ describe("GET /api/admin/users", () => {
     expect(res.status).toBe(403);
   });
 
-  it("returns 503 when Keycloak is not configured", async () => {
-    process.env.KEYCLOAK_ISSUER = "";
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "";
+  it("returns 503 when Cognito is not configured", async () => {
+    process.env.COGNITO_USER_POOL_ID = "";
     const { GET } = await import("@/app/api/admin/users/route");
     const res = await GET(adminRequest("http://localhost/api/admin/users"));
     expect(res.status).toBe(503);
@@ -412,10 +405,8 @@ describe("GET /api/admin/users", () => {
 describe("POST /api/admin/users", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.KEYCLOAK_ADMIN_USER = "admin";
-    process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
+    process.env.COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
+    process.env.AWS_REGION = "us-east-1";
     vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
       if (String(url).includes("/token")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ access_token: "tok" }) });
@@ -429,8 +420,7 @@ describe("POST /api/admin/users", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+    delete process.env.COGNITO_USER_POOL_ID;
   });
 
   async function postAction(body: object) {

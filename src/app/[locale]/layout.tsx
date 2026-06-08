@@ -67,7 +67,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Load messages for NextIntlClientProvider
   const messages = await getMessages();
 
-  // cognitoConfig kept for backwards compatibility — unused with Keycloak.
+  // cognitoConfig kept for backwards compatibility — unused with next-auth Cognito.
   const cognitoConfig = { userPoolId: "", userPoolClientId: "" };
 
   return (
