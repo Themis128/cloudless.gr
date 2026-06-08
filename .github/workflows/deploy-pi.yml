@@ -190,37 +190,6 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
-      - name: Diagnose k3s on Pi
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-            "$PI_USER@$PI_HOST" '
-              echo "=== k3s service status ==="
-              systemctl is-active k3s || true
-              echo "=== last 20 k3s journal lines ==="
-              sudo journalctl -u k3s -n 20 --no-pager 2>/dev/null || true
-              echo "=== memory ==="
-              free -m
-              echo "=== disk ==="
-              df -h /
-              echo "=== etcd defrag (prevent slow raft consensus) ==="
-              sudo k3s etcdctl defrag \
-                --endpoints=https://127.0.0.1:2379 \
-                --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
-                --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
-                --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
-                2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped (not embedded etcd or certs missing)"
-              echo "=== Restart k3s after defrag for clean etcd state ==="
-              sudo systemctl restart k3s
-              echo "k3s restarted — sleeping 30s for process to die and come back..."
-              sleep 30
-            '
       - name: Wait for k3s /readyz (3x stable via kubectl)
         run: |
           # Use kubectl (kubeconfig creds) — anonymous curl returns 401 when
