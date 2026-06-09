@@ -45,7 +45,7 @@ jobs:
       - name: Run etcd defrag
         run: |
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-            "$PI_USER@$PI_HOST" bash <<'REMOTE'
+            "$PI_USER@$PI_HOST" bash <<'REMOTE' 2>&1 | tee defrag.log
           set -e
           ETCD_EP="https://127.0.0.1:2379"
           ETCD_CA="/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
@@ -79,7 +79,6 @@ jobs:
           echo "=== endpoint status AFTER ==="
           $ETCDCTL endpoint status -w table 2>&1 || echo "(status failed)"
           REMOTE
-          2>&1 | tee defrag.log
 
       - name: Post result to tracking issue
         if: always()
