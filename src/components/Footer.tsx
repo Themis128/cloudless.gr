@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import NewsletterForm from "@/components/NewsletterForm";
 import Logo from "@/components/Logo";
@@ -11,6 +12,22 @@ import { useCookieConsent } from "@/context/CookieConsentContext";
 export default function Footer() {
   const [locale] = useCurrentLocale();
   const { openSettings } = useCookieConsent();
+  // The page is ISR-cached (revalidate = 3600 + generateStaticParams), so the
+  // server HTML carries the year from the last build/revalidation. Reading
+  // `new Date().getFullYear()` during render — on the server OR in the initial
+  // client render — risks a different year than the cached HTML across a
+  // revalidation/year boundary → React #418 (hydration text mismatch). Mirror
+  // the useStoredPref() idiom: both sides render no year on the first pass,
+  // then a post-mount flip swaps in the live year (client-only). See
+  // src/lib/theme-pref.ts and e2e/k3s/assets.spec.ts.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    // Intentional post-hydration flip to swap from the SSR-matching empty
+    // snapshot to the real year. See React error #418 context above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+  const year = mounted ? new Date().getFullYear() : null;
 
   return (
     <footer
@@ -174,8 +191,8 @@ export default function Footer() {
         </div>
 
         <div className="border-neon-cyan/10 mt-4 flex flex-col items-center justify-between gap-4 border-t pt-5 font-mono text-xs sm:flex-row">
-          <p className="text-slate-400" suppressHydrationWarning>
-            &copy; {new Date().getFullYear()} Cloudless.{" "}
+          <p className="text-slate-400">
+            &copy; {year ?? ""} Cloudless.{" "}
             {translate(locale, "footer.rightsReserved", "All rights reserved.")}
           </p>
           <p className="text-slate-400">
