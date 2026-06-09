@@ -36,8 +36,10 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    # GH-hosted runner with QEMU for arm64 cross-compilation.
-    runs-on: ubuntu-latest
+    # Self-hosted arm64 runner (omv-build on omv-main). Native arm64 build —
+    # no QEMU emulation needed. GH-hosted QEMU build hangs past 60 min on
+    # pnpm install; the Pi runner finishes in 3-5 min.
+    runs-on: [self-hosted, omv, pi, build]
     outputs:
       short_sha: ${{ steps.check_ecr.outputs.short_sha }}
       image_exists: ${{ steps.check_ecr.outputs.exists }}
@@ -86,8 +88,12 @@ jobs:
       - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'
         run: |
-          sudo mkdir -p /opt/docker-cache
-          sudo chmod 777 /opt/docker-cache
+          # /opt/docker-cache is a symlink to a USB-SSD-backed dir on the Pi.
+          # If the target dir is pruned, mkdir -p on the dangling symlink
+          # fails. Resolve and create the actual target.
+          TARGET=$(readlink -f /opt/docker-cache || echo /opt/docker-cache)
+          sudo mkdir -p "$TARGET"
+          sudo chmod 777 "$TARGET"
 
       - name: warm base image into Docker daemon cache
         if: steps.check_ecr.outputs.exists != 'true'
@@ -154,13 +160,13 @@ jobs:
     name: Rollout restart on k3s
     # GH-hosted runner joins tailnet, uses KUBECONFIG_B64 to call k3s API
     # directly over Tailscale — no SSH hop required.
-    # Failover-capable: when GH-hosted billing is broken, flip
-    #   .github/scripts/toggle-runner.sh pi
-    # to route this onto the self-hosted Pi build runners. The Pi runners are
-    # already inside the local network and can reach the k3s API directly
-    # (192.168.1.128:6443) without Tailscale, so the tailnet step becomes a
-    # no-op on them.
-    runs-on: ubuntu-latest
+    # Failover-capable: when the GH-hosted runner's Tailscale path to the
+    # k3s API breaks (DERP relay failures, packet drops, billing issues),
+    # flip vars.RUNNER_GENERIC to ["self-hosted","omv","build"] via
+    # `.github/scripts/toggle-runner.sh pi`. The Pi runners can reach the
+    # k3s API over the LAN; the Tailscale step is a no-op on them.
+    # Default stays ubuntu-latest for cost (Pi runner busy with build job).
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
 
@@ -190,55 +196,49 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
-      - name: Diagnose k3s on Pi
-        env:
-          PI_HOST: "100.113.41.119"
-          PI_USER: "tbaltzakis"
+      - name: Diagnose kubectl reachability
+        # FAIL-FAST: the old "Wait for k3s /readyz" step swallowed kubectl
+        # stderr with `2>/dev/null`, so any auth/TLS/network error looped
+        # silently for 10 minutes as "not ready". Surface the real error
+        # before polling so failures are diagnosable in seconds, not minutes.
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-            "$PI_USER@$PI_HOST" '
-              echo "=== k3s service status ==="
-              systemctl is-active k3s || true
-              echo "=== last 20 k3s journal lines ==="
-              sudo journalctl -u k3s -n 20 --no-pager 2>/dev/null || true
-              echo "=== memory ==="
-              free -m
-              echo "=== disk ==="
-              df -h /
-              echo "=== etcd defrag (prevent slow raft consensus) ==="
-              sudo k3s etcdctl defrag \
-                --endpoints=https://127.0.0.1:2379 \
-                --cacert=/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt \
-                --cert=/var/lib/rancher/k3s/server/tls/etcd/server-client.crt \
-                --key=/var/lib/rancher/k3s/server/tls/etcd/server-client.key \
-                2>/dev/null && echo "etcd defrag done" || echo "etcd defrag skipped (not embedded etcd or certs missing)"
-              echo "=== Restart k3s after defrag for clean etcd state ==="
-              sudo systemctl restart k3s
-              echo "k3s restarted — sleeping 30s for process to die and come back..."
-              sleep 30
-            '
+          set +e
+          echo "==> kubeconfig (minified)"
+          kubectl config view --minify || echo "(kubectl config view failed)"
+          echo
+          echo "==> First /readyz call WITH stderr"
+          kubectl get --raw /readyz --request-timeout=10s
+          rc=$?
+          echo "kubectl exit code: $rc"
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::kubectl could not reach the k3s API. Likely causes:"
+            echo "::error::  - KUBECONFIG_B64 secret is stale or wrong cluster CA"
+            echo "::error::  - Tailscale tunnel didn't come up (see prior step)"
+            echo "::error::  - k3s server cert was rotated (refresh KUBECONFIG_B64)"
+            exit 1
+          fi
       - name: Wait for k3s /readyz (3x stable via kubectl)
         run: |
-          # Use kubectl (kubeconfig creds) — anonymous curl returns 401 when
-          # anonymous-auth is disabled; kubectl uses the client cert in KUBECONFIG.
           # k3s /readyz returns the string "ok" when all checks pass.
+          # We do NOT suppress stderr — if kubectl starts failing, we want
+          # to see why immediately, not after a silent loop.
           wait_for_api() {
             local stable=0
-            for i in $(seq 1 120); do
-              if kubectl get --raw /readyz --request-timeout=5s 2>/dev/null \
-                  | grep -q 'ok'; then
+            local last_err=""
+            for i in $(seq 1 60); do
+              # Capture stderr to a temp so we can surface it on failure
+              out=$(kubectl get --raw /readyz --request-timeout=5s 2>/tmp/k_err)
+              rc=$?
+              if [ "$rc" -eq 0 ] && echo "$out" | grep -q 'ok'; then
                 stable=$((stable + 1))
-                echo "  ${i}/120 — /readyz ok (stable ${stable}/3)"
+                echo "  ${i}/60 — /readyz ok (stable ${stable}/3)"
                 if [ "$stable" -ge 3 ]; then
                   return 0
                 fi
               else
                 stable=0
-                echo "  ${i}/120 — /readyz not ready, waiting 5s..."
+                last_err=$(cat /tmp/k_err 2>/dev/null | head -3)
+                echo "  ${i}/60 — /readyz not ready (rc=$rc): ${last_err}"
               fi
               sleep 5
             done
@@ -249,7 +249,7 @@ jobs:
           if wait_for_api; then
             echo "k3s API stable — proceeding to rollout"
           else
-            echo "::error::k3s /readyz never returned 3x ok in 10 min — aborting"
+            echo "::error::k3s /readyz never returned 3x ok in 5 min — aborting"
             exit 1
           fi
       - name: Set image and roll out

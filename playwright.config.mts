@@ -26,6 +26,7 @@ const adminStorage = path.join(rootDir, "e2e", ".auth", "admin.json");
  *   npx playwright test --ui
  */
 export default defineConfig({
+  globalSetup: "./e2e/global-setup.mts",
   globalTeardown: "./e2e/coverage/server-teardown.mts",
   testDir: path.join(rootDir, "e2e"),
   testIgnore: ["**/k3s/**"],
