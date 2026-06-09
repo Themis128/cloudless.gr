@@ -231,7 +231,9 @@ jobs:
           echo "trust_principal=$TRUST_PRINCIPAL" >> "$GITHUB_OUTPUT"
 
           # Evaluate matches
-          # sub: bash glob match (trust_sub may contain *)
+          # sub: bash glob match (trust_sub may contain *) — the unquoted RHS is
+          # intentional so the trust-policy wildcard is treated as a glob pattern.
+          # shellcheck disable=SC2053
           if [[ "$TOKEN_SUB" == $TRUST_SUB ]]; then
             SUB_MATCH="true"
           else
