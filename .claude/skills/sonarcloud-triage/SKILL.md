@@ -108,11 +108,17 @@ globalThis.fetch(...)
 
 ## SonarCloud project identifiers
 
-- **Organization:** `baltzakisthemiscom`
-- **Project key:** `cloudless-gr`
-- **Dashboard:** `sonarcloud.io/project/overview?id=cloudless-gr`
+- **Organization:** `Themis128` (NOT `baltzakisthemiscom` — that is the Sentry org)
+- **Project key:** `Themis128_cloudless.gr`
+- **Dashboard:** `sonarcloud.io/dashboard?id=Themis128_cloudless.gr`
 
-Hotspot acknowledgement URL pattern:
-`sonarcloud.io/project/security_hotspots?id=cloudless-gr&hotspots=<hotspot-key>`
+Analysis runs via SonarCloud's **automatic analysis** (the GitHub App) — there is no
+`sonar-project.properties` or Sonar step in the workflows, so the project key is only
+discoverable from the bot comment's dashboard URL (`?id=...`). SonarCloud keys follow the
+`{org}_{repo}` convention, hence org `Themis128`.
 
-The hotspot key is in the SonarCloud API response — the UI is the simplest path.
+Hotspot review URL for a PR:
+`sonarcloud.io/project/security_hotspots?id=Themis128_cloudless.gr&pullRequest=<PR#>&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true`
+
+The hotspot key is in the SonarCloud API response — but the API requires a `SONAR_TOKEN`
+(not present in cloud sessions), so the **UI is the only path** to enumerate and acknowledge.
