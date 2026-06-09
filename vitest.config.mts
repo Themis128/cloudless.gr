@@ -100,11 +100,15 @@ export default defineConfig({
         "src/**/types.ts",
         "src/**/index.ts",
       ],
+      // Ratchet thresholds: set a few points below the current measured
+      // coverage so CI fails on a regression but tolerates normal variance.
+      // Measured 2026-06-09: lines 49.98 / stmts 48.51 / funcs 39.01 / branches 39.27.
+      // Raise these as coverage improves; never lower them.
       thresholds: {
-        lines: 0,
-        functions: 0,
-        branches: 0,
-        statements: 0,
+        lines: 47,
+        functions: 37,
+        branches: 37,
+        statements: 46,
       },
     },
   },

@@ -7,11 +7,17 @@ vi.mock("@/lib/notion-cache", () => ({
 }));
 
 const mockNotionFetchAll = vi.fn();
+const mockCreatePage = vi.fn();
+const mockUpdatePage = vi.fn();
+const mockArchivePage = vi.fn();
 
 vi.mock("@/lib/notion", () => ({
   notionFetchAll: (...args: unknown[]) => mockNotionFetchAll(...args),
   extractText: (rt: { plain_text: string }[] | undefined) =>
     (rt ?? []).map((t) => t.plain_text).join(""),
+  createPage: (...args: unknown[]) => mockCreatePage(...args),
+  updatePage: (...args: unknown[]) => mockUpdatePage(...args),
+  archivePage: (...args: unknown[]) => mockArchivePage(...args),
 }));
 
 function makeTestimonialPage(overrides: Record<string, unknown> = {}) {
@@ -176,6 +182,125 @@ describe("notion-testimonials.ts", () => {
         quote: expect.any(String),
         featured: expect.any(Boolean),
       });
+    });
+  });
+
+  describe("getAllTestimonialsAdmin", () => {
+    it("returns static fallback when not configured", async () => {
+      process.env.NOTION_API_KEY = "";
+      resetIntegrationCache();
+      const { getAllTestimonialsAdmin, staticTestimonials } = await import("@/lib/notion-testimonials");
+      const result = await getAllTestimonialsAdmin();
+      expect(result).toEqual(staticTestimonials);
+      expect(mockNotionFetchAll).not.toHaveBeenCalled();
+    });
+
+    it("lists every page sorted by Order (no Published filter)", async () => {
+      mockNotionFetchAll.mockResolvedValueOnce([
+        makeTestimonialPage(),
+        makeTestimonialPage({ id: "t-2", properties: { ...makeTestimonialPage().properties, Published: { checkbox: false } } }),
+      ]);
+      const { getAllTestimonialsAdmin } = await import("@/lib/notion-testimonials");
+      const result = await getAllTestimonialsAdmin();
+      expect(result).toHaveLength(2);
+      const [, body] = mockNotionFetchAll.mock.calls[0];
+      expect(body.filter).toBeUndefined();
+      expect(body.sorts).toEqual([{ property: "Order", direction: "ascending" }]);
+    });
+
+    it("returns empty array on fetch error", async () => {
+      mockNotionFetchAll.mockRejectedValueOnce(new Error("boom"));
+      const { getAllTestimonialsAdmin } = await import("@/lib/notion-testimonials");
+      expect(await getAllTestimonialsAdmin()).toEqual([]);
+    });
+  });
+
+  describe("createTestimonial", () => {
+    it("maps input to Notion props and invalidates cache on success", async () => {
+      mockCreatePage.mockResolvedValueOnce("new-page-id");
+      const { createTestimonial } = await import("@/lib/notion-testimonials");
+      const { invalidateCache } = await import("@/lib/notion-cache");
+      const id = await createTestimonial({
+        name: "Maria K.", company: "Acme", role: "CEO", quote: "Great work",
+        avatar: "https://x/a.png", service: "Audit", rating: 4, featured: true, published: true, order: 2,
+      });
+      expect(id).toBe("new-page-id");
+      const [dbId, props] = mockCreatePage.mock.calls[0];
+      expect(dbId).toBe("test-testimonials-db");
+      expect(props.Name).toEqual({ title: [{ text: { content: "Maria K." } }] });
+      expect(props.Rating).toEqual({ number: 4 });
+      expect(props.Avatar).toEqual({ url: "https://x/a.png" });
+      expect(props.Featured).toEqual({ checkbox: true });
+      expect(invalidateCache).toHaveBeenCalledWith("testimonials");
+    });
+
+    it("omits optional props when absent and does not invalidate on null id", async () => {
+      mockCreatePage.mockResolvedValueOnce(null);
+      const { createTestimonial } = await import("@/lib/notion-testimonials");
+      const { invalidateCache } = await import("@/lib/notion-cache");
+      const id = await createTestimonial({ name: "No Extras", quote: "ok" });
+      expect(id).toBeNull();
+      const [, props] = mockCreatePage.mock.calls[0];
+      expect(props.Avatar).toBeUndefined();
+      expect(props.Service).toBeUndefined();
+      expect(props.Rating).toBeUndefined();
+      expect(props.Featured).toEqual({ checkbox: false });
+      expect(invalidateCache).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("updateTestimonial", () => {
+    it("builds a partial prop set and invalidates cache when update succeeds", async () => {
+      mockUpdatePage.mockResolvedValueOnce(true);
+      const { updateTestimonial } = await import("@/lib/notion-testimonials");
+      const { invalidateCache } = await import("@/lib/notion-cache");
+      const ok = await updateTestimonial("page-7", { quote: "Updated", rating: 5 });
+      expect(ok).toBe(true);
+      const [pageId, props] = mockUpdatePage.mock.calls[0];
+      expect(pageId).toBe("page-7");
+      expect(props.Quote).toEqual({ rich_text: [{ text: { content: "Updated" } }] });
+      expect(props.Rating).toEqual({ number: 5 });
+      expect(props.Name).toBeUndefined();
+      expect(invalidateCache).toHaveBeenCalledWith("testimonials");
+    });
+
+    it("clears avatar/service via null when explicitly set empty", async () => {
+      mockUpdatePage.mockResolvedValueOnce(true);
+      const { updateTestimonial } = await import("@/lib/notion-testimonials");
+      await updateTestimonial("page-8", { avatar: "", service: "" });
+      const [, props] = mockUpdatePage.mock.calls[0];
+      expect(props.Avatar).toEqual({ url: null });
+      expect(props.Service).toEqual({ select: null });
+    });
+
+    it("does not invalidate cache when update fails", async () => {
+      mockUpdatePage.mockResolvedValueOnce(false);
+      const { updateTestimonial } = await import("@/lib/notion-testimonials");
+      const { invalidateCache } = await import("@/lib/notion-cache");
+      const ok = await updateTestimonial("page-9", { name: "X" });
+      expect(ok).toBe(false);
+      expect(invalidateCache).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteTestimonial", () => {
+    it("archives the page and invalidates cache on success", async () => {
+      mockArchivePage.mockResolvedValueOnce(true);
+      const { deleteTestimonial } = await import("@/lib/notion-testimonials");
+      const { invalidateCache } = await import("@/lib/notion-cache");
+      const ok = await deleteTestimonial("page-del");
+      expect(ok).toBe(true);
+      expect(mockArchivePage).toHaveBeenCalledWith("page-del");
+      expect(invalidateCache).toHaveBeenCalledWith("testimonials");
+    });
+
+    it("returns false and skips cache invalidation when archive fails", async () => {
+      mockArchivePage.mockResolvedValueOnce(false);
+      const { deleteTestimonial } = await import("@/lib/notion-testimonials");
+      const { invalidateCache } = await import("@/lib/notion-cache");
+      const ok = await deleteTestimonial("page-x");
+      expect(ok).toBe(false);
+      expect(invalidateCache).not.toHaveBeenCalled();
     });
   });
 });
