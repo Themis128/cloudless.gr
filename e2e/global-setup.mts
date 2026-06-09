@@ -18,13 +18,14 @@ const BASE_URL = "http://localhost:4000";
 
 async function probe(
   pathname: string,
+  accept: string,
   expect: (res: Response, body: string) => string | null
 ): Promise<void> {
   const url = `${BASE_URL}${pathname}`;
   let res: Response;
   let body: string;
   try {
-    res = await fetch(url, { headers: { accept: "application/json" } });
+    res = await fetch(url, { headers: { accept } });
     body = await res.text();
   } catch (err) {
     throw new Error(
@@ -48,7 +49,7 @@ async function probe(
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
   // /api/health — proves API route handlers resolve (not the 404 HTML page).
-  await probe("/api/health", (res, body) => {
+  await probe("/api/health", "application/json", (res, body) => {
     if (res.status !== 200) return "expected HTTP 200 from the health route";
     try {
       const json = JSON.parse(body) as { status?: string };
@@ -60,7 +61,10 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   });
 
   // /en — proves the proxy ran and next-intl resolved the locale-prefixed page.
-  await probe("/en", (res) => {
+  // Request HTML (not JSON) — this is a page route, so we send what a real
+  // browser navigation sends; an `application/json` Accept would misrepresent
+  // the request and could trip content negotiation.
+  await probe("/en", "text/html", (res) => {
     if (res.status >= 400) return "expected the home page to render (proxy + next-intl not wired?)";
     return null;
   });
