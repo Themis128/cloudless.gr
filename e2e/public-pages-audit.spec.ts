@@ -111,22 +111,21 @@ for (const locale of LOCALES) {
 
       expect(status, `${route} → HTTP ${status}`).toBeLessThan(400);
 
-      // Check for actual content (h1 or main)
-      const hasH1 = await page
-        .locator("h1")
+      // Check for actual content (h1 or main). Actively wait for either to
+      // become visible — a fixed isVisible() timeout resolves false the instant
+      // the element isn't mounted yet, racing Turbopack's first-compile streaming
+      // of a cold route in dev mode (the cause of the /el/services flake).
+      const hasContent = await page
+        .locator("h1, main")
         .first()
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
-      const hasMain = await page
-        .locator("main")
-        .first()
-        .isVisible({ timeout: 5_000 })
+        .waitFor({ state: "visible", timeout: 15_000 })
+        .then(() => true)
         .catch(() => false);
 
-      if (!hasH1 && !hasMain) {
+      if (!hasContent) {
         issues.push({ route, type: "missing", detail: "no <h1> or <main> element" });
       }
-      expect(hasH1 || hasMain, `${route}: no <h1> or <main> element`).toBeTruthy();
+      expect(hasContent, `${route}: no <h1> or <main> element`).toBeTruthy();
     });
   }
 }

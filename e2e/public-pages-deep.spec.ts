@@ -27,10 +27,16 @@ for (const route of PUBLIC_PAGES) {
     const status = resp?.status() ?? 0;
     expect(isAcceptableStatus(status), `got HTTP ${status} for ${route}`).toBeTruthy();
 
-    // Either an h1 or main content exists
-    const hasH1 = await page.locator("h1").first().isVisible({ timeout: 10_000 }).catch(() => false);
-    const hasMain = await page.locator("main").first().isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasH1 || hasMain, `${route} has no h1 or main`).toBeTruthy();
+    // Either an h1 or main content exists. waitFor() actively waits for the
+    // element to appear rather than sampling visibility at a fixed deadline,
+    // which avoids racing Turbopack's first-compile streaming of a cold dev route.
+    const hasContent = await page
+      .locator("h1, main")
+      .first()
+      .waitFor({ state: "visible", timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    expect(hasContent, `${route} has no h1 or main`).toBeTruthy();
 
     // Title present
     const title = await page.title();
