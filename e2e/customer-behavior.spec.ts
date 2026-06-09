@@ -63,15 +63,16 @@ test.describe("Homepage", () => {
 
   test("desktop: homepage → blog navigation works", async ({ page, isMobile }) => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     const link = page.getByRole("navigation").first().getByRole("link", { name: /blog/i });
     await link.waitFor({ state: "visible" });
     await Promise.all([
-      page.waitForURL(/\/blog/, { timeout: 10000 }),
+      page.waitForURL(/\/blog/, { timeout: 15000 }),
       link.click(),
     ]);
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // The URL flips before the cold blog route finishes streaming in dev mode;
+    // give the heading room to paint rather than asserting at the default deadline.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 15000 });
   });
 });
 
