@@ -1,8 +1,11 @@
 /**
- * HA failover path validation — verifies the dual-origin architecture
- * (CloudFront → Lambda primary, APIGW → Lambda → Pi standby).
+ * HA failover path validation — verifies the dual-origin architecture behind
+ * the Cloudflare edge (Cloudflare → CloudFront → Lambda primary; Cloudflare →
+ * Pi k3s standby). Cloudflare fronts both paths, so the client sees cf-ray on
+ * each; the primary-vs-standby backend split is asserted by the APIGW
+ * request-id check in standby-path.spec.ts, not by edge headers here.
  *
- * Catches: standby drift (different SHA), CloudFront origin misconfiguration,
+ * Catches: standby drift (different SHA), edge/DNS misconfiguration,
  * APIGW timeout, Lambda Funnel routing failure, Pi k3s pod crash.
  */
 import { test, expect } from "../coverage";
@@ -33,24 +36,33 @@ test.describe("HA failover readiness", () => {
     expect(typeof sBody.timestamp).toBe("string");
   });
 
-  test("primary path goes through CloudFront (x-cache header)", async ({ request }) => {
+  test("primary path goes through the Cloudflare edge (cf-ray header)", async ({ request }) => {
+    // The apex front door is Cloudflare, which proxies CloudFront → Lambda.
+    // Cloudflare terminates the client connection and strips the upstream
+    // x-amz-cf-* / x-cache headers, so the client only ever sees cf-ray here
+    // (same edge contract asserted in cloudflare-tunnel.spec.ts and
+    // tls-certificates.spec.ts). A missing cf-ray means the apex isn't behind
+    // Cloudflare — a real routing/DNS regression.
     const r = await request.get(`https://${PRIMARY_HOST}/api/health`, {
       failOnStatusCode: false,
     });
-    const headers = r.headers();
-    const isCloudFront =
-      !!headers["x-cache"] ||
-      !!headers["x-amz-cf-id"] ||
-      !!headers["x-amz-cf-pop"];
-    expect(isCloudFront, "primary path should route through CloudFront").toBe(true);
+    const cfRay = r.headers()["cf-ray"] ?? "";
+    expect(cfRay.length, "primary path should route through the Cloudflare edge").toBeGreaterThan(
+      0
+    );
   });
 
-  test("standby path does NOT go through CloudFront", async ({ request }) => {
+  test("standby path also routes through the Cloudflare edge", async ({ request }) => {
+    // The Pi standby is fronted by Cloudflare too (cf-ray present); it is NOT a
+    // raw origin exposed to the internet. The primary/standby distinction is the
+    // backend (CloudFront→Lambda vs Pi k3s), verified in standby-path.spec.ts.
     const r = await request.get(`https://${STANDBY_HOST}/api/health`, {
       failOnStatusCode: false,
     });
-    const server = (r.headers()["server"] ?? "").toLowerCase();
-    expect(server).not.toContain("cloudfront");
+    const cfRay = r.headers()["cf-ray"] ?? "";
+    expect(cfRay.length, "standby path should route through the Cloudflare edge").toBeGreaterThan(
+      0
+    );
   });
 
   test("Pi origin direct path is alive", async ({ request }) => {
@@ -75,7 +87,7 @@ test.describe("HA failover readiness", () => {
     const delta = Math.abs(standbyMs - primaryMs);
     expect(
       delta,
-      `latency delta ${delta}ms — primary ${primaryMs}ms, standby ${standbyMs}ms`,
+      `latency delta ${delta}ms — primary ${primaryMs}ms, standby ${standbyMs}ms`
     ).toBeLessThan(5_000);
   });
 });
