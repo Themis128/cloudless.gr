@@ -27,7 +27,9 @@ echo
 echo "## auth-critical env present in the deployment?"
 ENVNAMES=$(kubectl -n "$NS" get deploy "$DEP" -o jsonpath='{.spec.template.spec.containers[0].env[*].name}' 2>/dev/null | tr ' ' '\n')
 # Cognito is the active provider (auth.ts gates next-auth on AUTH_SECRET +
-# COGNITO_ISSUER/CLIENT_ID at module load). Keycloak vars kept for fallback visibility.
+# COGNITO_ISSUER/CLIENT_ID, resolved lazily on first request — after
+# instrumentation.register() hydrates these from SSM). Keycloak vars kept for
+# fallback visibility.
 for v in AUTH_SECRET AUTH_TRUST_HOST AUTH_URL \
          COGNITO_ISSUER COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET COGNITO_DOMAIN \
          NEXT_PUBLIC_AUTH_PROVIDER \
