@@ -258,4 +258,73 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     await signOutEvent({ token: { idToken: "id-tok" } });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  // ── 6. issuer derivation from COGNITO_USER_POOL_ID ──────────────────────────
+  //
+  // The deploy env / SSM commonly carry only the pool ID, not COGNITO_ISSUER.
+  // resolveCognitoIssuer() must derive the canonical OIDC issuer
+  //   https://cognito-idp.{region}.amazonaws.com/{poolId}
+  // so the provider still builds — otherwise Auth.js throws "missing both
+  // issuer and authorization endpoint" and every /api/auth/* request 500s.
+
+  const providerIssuer = () =>
+    (capturedConfig.providers as Array<{ id?: string; issuer?: string }>)[0]?.issuer;
+
+  it("derives the issuer from COGNITO_USER_POOL_ID when COGNITO_ISSUER is unset", async () => {
+    delete process.env.COGNITO_ISSUER;
+    process.env.COGNITO_USER_POOL_ID = "us-east-1_DERIVED";
+    delete process.env.AWS_REGION;
+    vi.resetModules();
+    capturedConfig = {};
+    const mod = await loadAuth();
+    expect(mod.getAuthProvider()).toBe("cognito");
+    // Region falls back to the pool ID's prefix ("us-east-1").
+    expect(providerIssuer()).toBe("https://cognito-idp.us-east-1.amazonaws.com/us-east-1_DERIVED");
+    delete process.env.COGNITO_USER_POOL_ID;
+  });
+
+  it("prefers AWS_REGION over the pool ID prefix when deriving the issuer", async () => {
+    delete process.env.COGNITO_ISSUER;
+    process.env.COGNITO_USER_POOL_ID = "us-east-1_DERIVED";
+    process.env.AWS_REGION = "eu-central-1";
+    vi.resetModules();
+    capturedConfig = {};
+    await loadAuth();
+    expect(providerIssuer()).toBe(
+      "https://cognito-idp.eu-central-1.amazonaws.com/us-east-1_DERIVED"
+    );
+    delete process.env.COGNITO_USER_POOL_ID;
+    delete process.env.AWS_REGION;
+  });
+
+  it("falls back to NEXT_PUBLIC_COGNITO_USER_POOL_ID for derivation", async () => {
+    delete process.env.COGNITO_ISSUER;
+    delete process.env.COGNITO_USER_POOL_ID;
+    process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-west-2_PUBLIC";
+    delete process.env.AWS_REGION;
+    vi.resetModules();
+    capturedConfig = {};
+    const mod = await loadAuth();
+    expect(mod.getAuthProvider()).toBe("cognito");
+    expect(providerIssuer()).toBe("https://cognito-idp.us-west-2.amazonaws.com/us-west-2_PUBLIC");
+    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+  });
+
+  it("strips a trailing slash from an explicit COGNITO_ISSUER", async () => {
+    process.env.COGNITO_ISSUER = `${COGNITO_ISSUER}/`;
+    vi.resetModules();
+    capturedConfig = {};
+    await loadAuth();
+    expect(providerIssuer()).toBe(COGNITO_ISSUER); // no trailing slash
+  });
+
+  it("resolves no provider when neither issuer nor pool ID is present", async () => {
+    delete process.env.COGNITO_ISSUER;
+    delete process.env.COGNITO_USER_POOL_ID;
+    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+    vi.resetModules();
+    capturedConfig = {};
+    const mod = await import("@/lib/auth");
+    expect(mod.getAuthProvider()).toBeNull();
+  });
 });
