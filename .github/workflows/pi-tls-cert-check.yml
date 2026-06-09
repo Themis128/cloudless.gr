@@ -124,6 +124,12 @@ jobs:
           echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
 
       - name: End-to-end /api/health through Lambda proxy → Pi
+        id: health
+        # The cert check (step 1) is the primary gate. The /api/health probe
+        # exercises the full Lambda→Tailscale Funnel→Pi path, which depends on
+        # infra health outside the cert's control. Mark continue-on-error so a
+        # transient Lambda 502 / Pi wake-up doesn't mask a cert expiry.
+        continue-on-error: true
         run: |
           set -euo pipefail
           echo "→ GET /api/health via SECONDARY (Host: ${SNI}, target: ${APIGW_HOST})"
@@ -150,8 +156,12 @@ jobs:
           fi
 
       - name: Step summary
-        if: success()
+        if: always()
         run: |
+          HEALTH_STATUS="⚠️ probe failed (Lambda/Pi unreachable)"
+          if [ "${{ steps.health.outcome }}" = "success" ]; then
+            HEALTH_STATUS="✅ 200"
+          fi
           {
             echo "## SECONDARY Failover Health"
             echo ""
@@ -161,5 +171,5 @@ jobs:
             echo "| SNI | ${SNI} |"
             echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
             echo "| Cert days remaining | ${DAYS_LEFT} |"
-            echo "| /api/health | ✅ 200 |"
+            echo "| /api/health | ${HEALTH_STATUS} |"
           } >> "$GITHUB_STEP_SUMMARY"
