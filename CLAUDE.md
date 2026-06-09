@@ -20,6 +20,33 @@ These require access outside GitHub and cannot be automated from a cloud session
 
 **Never fix test failures by adding mock code.** When a test fails, fix the actual production code so the test passes naturally. Do not add `vi.mocked(...)`, `mockReturnValue`, `mockResolvedValue`, or any other mock overrides to patch a failing test. If the test expectation is wrong (e.g. it expects old behavior that changed), update the expectation — but never shim production behavior with mocks.
 
+### Coverage (read before any "combined coverage" work)
+
+There are **two separate, non-mergeable** coverage numbers — this is a tooling
+constraint, not a TODO. Do not try to produce a single server-inclusive %.
+
+- **Unit (Vitest, v8):** `pnpm test:unit:coverage`. This is the **enforced** number —
+  ratchet thresholds in `vitest.config.mts` (lines/stmts/funcs/branches) fail CI on
+  regression. Raise them as coverage grows; never lower them. Baseline 2026-06-09:
+  lines 49.98 / stmts 48.51 / funcs 39.01 / branches 39.27.
+- **E2E client-side (Playwright CDP):** `pnpm test:coverage:full` then
+  `pnpm coverage:merge` (`scripts/coverage-merge.mjs`). Source-resolvable because
+  `/_next/static` chunks carry browser source maps (`productionBrowserSourceMaps` in
+  coverage mode). This is the *only* e2e coverage that maps to `src/`.
+- **E2E server-side V8 is NOT source-resolvable post-hoc** — do not chase it. Next
+  records app code against ephemeral `webpack-internal:///(rsc|ssr)/./src/...` bundle
+  URLs with no on-disk source/map, so monocart drops them → a report that *looks* 0%.
+  The trailing comment in `scripts/coverage-merge.mjs` documents this; the guard there
+  warns when it happens.
+- **Build-time instrumentation is a dead end here (both paths checked):** Babel/Istanbul
+  needs Babel, which breaks App Router Server Actions (vercel/next.js#53901 — see the
+  note in `next.config.ts`); `swc-plugin-coverage-instrument` is ABI-pinned to an old
+  `swc_core` and won't load under Next 16's swc. So server coverage stays V8-only.
+- **Don't run coverage against a production build.** `next start` 308-redirects http→https
+  (`proxy.ts`) and prod bundle URLs are *less* resolvable than dev's. The harness targets
+  `next dev --webpack`. COVERAGE-mode e2e failures (theme-switcher 45s timeouts, etc.) are
+  dev-server-under-instrumentation **artifacts**, not bugs — verify against a normal run.
+
 ## Git Workflow
 
 - **Commit and push regularly** — after every logical unit of work (a bug fix, a set of related changes, a completed feature). Do not batch unrelated changes into one large commit.
