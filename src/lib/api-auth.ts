@@ -111,6 +111,22 @@ export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
 
 /** Require authentication — returns user or 401 response. */
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
+  // E2E test bypass: only active when BOTH NEXT_PUBLIC_E2E=1 AND a matching
+  // E2E_ADMIN_TOKEN is configured. Production never sets these.
+  if (process.env.NEXT_PUBLIC_E2E === "1" && process.env.E2E_ADMIN_TOKEN) {
+    const token = getTokenFromHeader(request);
+    if (token && token === process.env.E2E_ADMIN_TOKEN) {
+      return {
+        ok: true,
+        user: {
+          sub: "e2e-admin",
+          email: "e2e-admin@cloudless.test",
+          "cognito:groups": ["admin"],
+        } as DecodedToken,
+      };
+    }
+  }
+
   const token = getTokenFromHeader(request);
   if (!token) {
     return {

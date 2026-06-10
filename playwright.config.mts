@@ -47,6 +47,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       NEXT_PUBLIC_E2E: "1",
+      E2E_ADMIN_TOKEN: "e2e-admin-token-do-not-use-in-prod",
     },
   },
 });
