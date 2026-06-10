@@ -87,7 +87,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Plan Artifacts
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35165aeaeca8e020 # v4.4.0
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-plans
           path: |
