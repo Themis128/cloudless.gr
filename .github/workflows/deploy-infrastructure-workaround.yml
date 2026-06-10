@@ -63,7 +63,7 @@ jobs:
             FUNCTION_URL=$(aws lambda create-function-url-config \
               --function-name $FUNCTION_NAME \
               --auth-type NONE \
-              --cors "AllowCredentials=true,AllowHeaders=*,AllowMethods=GET;POST;PUT;DELETE;OPTIONS,AllowOrigins=*,MaxAge=86400" \
+              --cors '{"AllowCredentials":true,"AllowHeaders":["*"],"AllowMethods":["GET","HEAD","POST","PUT","DELETE","OPTIONS"],"AllowOrigins":["*"],"MaxAge":86400}' \
               --query 'FunctionUrl' \
               --output text)
           fi
