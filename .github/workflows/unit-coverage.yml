@@ -76,17 +76,16 @@ jobs:
       - name: Seed LocalStack (SSM params + DynamoDB tables)
         run: bash scripts/localstack-seed.sh
 
-      - name: Run Vitest with coverage
+      - name: Run integration tests against LocalStack
         run: |
           pnpm exec vitest run \
+            --config vitest.integration.config.mts \
             --coverage \
             --coverage.provider=v8 \
             --coverage.reporter=text-summary \
             --coverage.reporter=json-summary \
             --coverage.include='src/lib/ssm-config.ts' \
             --coverage.include='src/lib/stripe-transactions.ts' \
-            --coverage.include='src/lib/api-auth.ts' \
-            --coverage.include='src/proxy.ts' \
             --reporter=default
 
       - name: Upload coverage report
