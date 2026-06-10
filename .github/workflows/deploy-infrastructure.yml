@@ -47,25 +47,25 @@ jobs:
 
       - name: Pre-download AWS provider (bypass GPG verification)
         run: |
-          PROVIDER_DIR="/home/runner/.terraform.d/plugins/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64"
+          PROVIDER_DIR="/home/runner/.terraform.d/plugins/registry.terraform.io/hashicorp/aws/5.80.0/linux_amd64"
           mkdir -p "$PROVIDER_DIR"
           cd "$PROVIDER_DIR"
 
           # Download AWS provider binary directly (no signature verification)
-          echo "Downloading AWS provider 5.0.0..."
-          curl -sLO https://releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip
+          echo "Downloading AWS provider 5.80.0..."
+          curl -sLO https://releases.hashicorp.com/terraform-provider-aws/5.80.0/terraform-provider-aws_5.80.0_linux_amd64.zip
 
           echo "Extracting..."
-          unzip -q terraform-provider-aws_5.0.0_linux_amd64.zip
+          unzip -q terraform-provider-aws_5.80.0_linux_amd64.zip
 
           # Make binary executable
-          chmod +x terraform-provider-aws_v5.0.0_x5
+          chmod +x terraform-provider-aws_v5.80.0_x5
 
           # Clean up zip
-          rm terraform-provider-aws_5.0.0_linux_amd64.zip
+          rm terraform-provider-aws_5.80.0_linux_amd64.zip
 
           echo "✅ Provider ready at: $PROVIDER_DIR"
-          ls -lh "$PROVIDER_DIR"/terraform-provider-aws_v5.0.0_x5
+          ls -lh "$PROVIDER_DIR"/terraform-provider-aws_v5.80.0_x5
 
       - name: Configure Terraform to use local provider
         run: |
@@ -159,25 +159,25 @@ jobs:
 
       - name: Pre-download AWS provider (bypass GPG verification)
         run: |
-          PROVIDER_DIR="/home/runner/.terraform.d/plugins/registry.terraform.io/hashicorp/aws/5.0.0/linux_amd64"
+          PROVIDER_DIR="/home/runner/.terraform.d/plugins/registry.terraform.io/hashicorp/aws/5.80.0/linux_amd64"
           mkdir -p "$PROVIDER_DIR"
           cd "$PROVIDER_DIR"
 
           # Download AWS provider binary directly (no signature verification)
-          echo "Downloading AWS provider 5.0.0..."
-          curl -sLO https://releases.hashicorp.com/terraform-provider-aws/5.0.0/terraform-provider-aws_5.0.0_linux_amd64.zip
+          echo "Downloading AWS provider 5.80.0..."
+          curl -sLO https://releases.hashicorp.com/terraform-provider-aws/5.80.0/terraform-provider-aws_5.80.0_linux_amd64.zip
 
           echo "Extracting..."
-          unzip -q terraform-provider-aws_5.0.0_linux_amd64.zip
+          unzip -q terraform-provider-aws_5.80.0_linux_amd64.zip
 
           # Make binary executable
-          chmod +x terraform-provider-aws_v5.0.0_x5
+          chmod +x terraform-provider-aws_v5.80.0_x5
 
           # Clean up zip
-          rm terraform-provider-aws_5.0.0_linux_amd64.zip
+          rm terraform-provider-aws_5.80.0_linux_amd64.zip
 
           echo "✅ Provider ready at: $PROVIDER_DIR"
-          ls -lh "$PROVIDER_DIR"/terraform-provider-aws_v5.0.0_x5
+          ls -lh "$PROVIDER_DIR"/terraform-provider-aws_v5.80.0_x5
 
       - name: Configure Terraform to use local provider
         run: |
