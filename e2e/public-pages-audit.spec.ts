@@ -114,11 +114,13 @@ for (const locale of LOCALES) {
       // Check for actual content (h1 or main). Actively wait for either to
       // become visible — a fixed isVisible() timeout resolves false the instant
       // the element isn't mounted yet, racing Turbopack's first-compile streaming
-      // of a cold route in dev mode (the cause of the /el/services flake).
+      // of a cold route in dev mode. Dev first compiles + Suspense streaming can
+      // keep the route-level loading.tsx fallback on screen past 15s under
+      // parallel workers, so use a generous 30s deadline.
       const hasContent = await page
         .locator("h1, main")
         .first()
-        .waitFor({ state: "visible", timeout: 15_000 })
+        .waitFor({ state: "visible", timeout: 30_000 })
         .then(() => true)
         .catch(() => false);
 
