@@ -108,16 +108,19 @@ export default function Footer() {
             </p>
             <ul className="space-y-2 font-mono text-sm">
               <li>
-                {/* Cloudflare's Scrape Shield rewrites mailto: links at the edge,
-                    inserting data-cfemail attributes that don't match SSR output.
-                    suppressHydrationWarning tells React the divergence is intentional
-                    so React #418 doesn't fire on /en (caught by k3s-e2e). */}
+                {/* Defeat Cloudflare's Email Address Obfuscation by emitting the
+                    email in pieces that don't form a contiguous "x@y.z" string
+                    in the rendered HTML. CF's edge regex only rewrites if it
+                    sees a recognisable email pattern. Splitting at "@" via
+                    separate text nodes (with HTML comments between) prevents
+                    detection — the visible result reads tbaltzakis@cloudless.gr
+                    just like before, no React #418, no [email protected]
+                    placeholder, no CSP-blocked decode script. */}
                 <a
-                  href="mailto:tbaltzakis@cloudless.gr"
+                  href={`mailto:${"tbaltzakis"}@${"cloudless.gr"}`}
                   className="hover:text-neon-cyan active:text-neon-cyan text-xs text-slate-400 transition-colors"
-                  suppressHydrationWarning
                 >
-                  <span suppressHydrationWarning>tbaltzakis@cloudless.gr</span>
+                  {"tbaltzakis"}<span aria-hidden="true">{"@"}</span>{"cloudless.gr"}
                 </a>
               </li>
               <li className="text-xs text-slate-400">
