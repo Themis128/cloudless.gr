@@ -1,0 +1,71 @@
+name: Decommission cloudless.online
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DELETE to confirm'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  decommission:
+    if: ${{ github.event.inputs.confirm == 'DELETE' }}
+    runs-on: [self-hosted, omv, pi]
+    env:
+      AWS_REGION: us-east-1
+      ZONE_ID: Z04620301I2V4SU2RF1RV
+      ACM_ARN: arn:aws:acm:us-east-1:278585680617:certificate/172fc7be-1975-4526-9589-7d470fcaace2
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Delete API Gateway custom domains
+        run: |
+          set +e
+          for d in cloudless.online www.cloudless.online; do
+            echo "--- $d ---"
+            aws apigatewayv2 delete-domain-name --domain-name "$d" 2>&1 | tee -a out.log
+            aws apigateway delete-domain-name --domain-name "$d" 2>&1 | tee -a out.log
+          done
+      - name: Delete ACM cert
+        run: |
+          set +e
+          aws acm delete-certificate --certificate-arn "$ACM_ARN" 2>&1 | tee -a out.log
+      - name: Empty Route53 records and delete zone
+        run: |
+          set -e
+          aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" --query 'ResourceRecordSets[?Type != `NS` && Type != `SOA`]' > rrs.json
+          python3 -c "
+          import json
+          rrs = json.load(open('rrs.json'))
+          changes = [{'Action': 'DELETE', 'ResourceRecordSet': r} for r in rrs]
+          json.dump({'Changes': changes}, open('change.json', 'w'))
+          print(f'records to delete: {len(changes)}')
+          "
+          NCHANGES=$(python3 -c "import json; print(len(json.load(open('change.json'))['Changes']))")
+          if [ "$NCHANGES" -gt 0 ]; then
+            aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" --change-batch file://change.json 2>&1 | tee -a out.log
+          fi
+          aws route53 delete-hosted-zone --id "$ZONE_ID" 2>&1 | tee -a out.log
+      - name: Post result
+        if: always()
+        run: |
+          {
+            echo "# Decommission cloudless.online — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo '```'
+            cat out.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
