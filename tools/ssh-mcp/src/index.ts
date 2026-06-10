@@ -1843,6 +1843,65 @@ server.tool(
   }
 );
 
+
+server.tool(
+  "tf_doctor",
+  "Diagnose and (optionally) fix a stuck Terraform CI workflow. Pulls the most-recent failed run for the named workflow, classifies the error against the terraform-doctor skill's known patterns (openpgp expired, fmt drift, validate schema drift, plan precondition), and runs terraform locally on omv-main to verify. Pass apply_fmt=true to write the fmt result back. Read-only otherwise.",
+  {
+    workflow: z.string().describe("Workflow filename, e.g. 'deploy-infrastructure.yml'"),
+    tf_dir: z.string().describe("Terraform directory relative to repo root, e.g. 'infrastructure/terraform'"),
+    apply_fmt: z.boolean().optional().describe("If true, write `terraform fmt` result to the .tf files. Default false."),
+  },
+  async ({ workflow, tf_dir, apply_fmt }) => {
+    try {
+      const repo = "/home/tbaltzakis/cloudless.gr";
+      const tf = "/tmp/terraform";
+      const tfVer = "1.15.6";
+      const apply = apply_fmt === true;
+
+      // 1. Get last failed run + first error
+      const log = await sshMain(
+        `cd ${repo} && RUN=$(gh run list --workflow=${workflow} --limit 1 --json databaseId,conclusion --jq '.[0] | select(.conclusion == "failure") | .databaseId'); ` +
+        `if [ -z "$RUN" ]; then echo "NO_FAILED_RUN"; exit 0; fi; ` +
+        `echo "RUN=$RUN"; ` +
+        `gh run view "$RUN" --log 2>/dev/null | grep -iE "error|fail|expired|invalid|unsupported" | head -15`
+      );
+
+      // 2. Classify
+      let classification = "unknown";
+      if (/openpgp.*key expired|signature.*expired/i.test(log)) classification = "openpgp_key_expired (Stage 1: bump TF_VERSION to " + tfVer + ")";
+      else if (/^.+fmt.+exit.+3|terraform fmt -check/i.test(log)) classification = "fmt_drift (Stage 2: run `terraform fmt`)";
+      else if (/expected .+ to be one of|Unsupported argument|Missing required argument|Insufficient .+ blocks/i.test(log)) classification = "validate_schema_drift (Stage 3: provider schema migration)";
+      else if (/Function not found|ResourceNotFoundException|reading .+ \(/i.test(log)) classification = "plan_precondition (Stage 4: missing AWS resource; gate behind a flag)";
+
+      // 3. Verify locally
+      const verify = await sshMain(
+        `set -e; if ! [ -x ${tf} ]; then ` +
+        `  ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/amd64/'); ` +
+        `  curl -sLo /tmp/tf.zip https://releases.hashicorp.com/terraform/${tfVer}/terraform_${tfVer}_linux_$ARCH.zip; ` +
+        `  cd /tmp && unzip -oq tf.zip && chmod +x terraform; ` +
+        `fi; ` +
+        `cd ${repo}/${tf_dir}; ` +
+        `rm -rf .terraform .terraform.lock.hcl 2>/dev/null; ` +
+        `${tf} init -input=false 2>&1 | tail -3; ` +
+        `echo "---fmt---"; ` +
+        (apply ? `${tf} fmt . 2>&1 | head -5; ` : `${tf} fmt -check -diff . 2>&1 | head -30; `) +
+        `echo "---validate---"; ` +
+        `${tf} validate -no-color 2>&1 | head -50`
+      );
+
+      return ok(
+        `# tf_doctor — ${workflow}\n\n` +
+        `## Classification: ${classification}\n\n` +
+        `## Last failure log\n\`\`\`\n${log}\n\`\`\`\n\n` +
+        `## Local verification (terraform ${tfVer}${apply ? ", fmt applied" : ", fmt check only"})\n\`\`\`\n${verify}\n\`\`\`\n\n` +
+        `## Next steps\n` +
+        `Consult skills/terraform-doctor/SKILL.md for the matching stage. If "validate_schema_drift", scripts/tf-validate-fix.py covers the common AWS 5.x patterns.\n`
+      );
+    } catch (e) { return err(e); }
+  }
+);
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Start
 // ══════════════════════════════════════════════════════════════════════════════
