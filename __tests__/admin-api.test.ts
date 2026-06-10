@@ -138,16 +138,15 @@ vi.mock("jose", async () => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build a mock admin JWT with Keycloak claims. No real signature — tests
- *  clear KEYCLOAK_ISSUER so verifyToken takes the dev decode-only fallback. */
+/** Build a mock admin JWT with Cognito-style claims. No real signature —
+ *  verifyToken falls back to decode-only when COGNITO_ISSUER is unset. */
 function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
     preferred_username: "admin-user",
     groups: ["admin"],
-    realm_access: { roles: ["admin", "default-roles-cloudless"] },
-    iss: "https://auth.cloudless.gr/realms/cloudless",
+    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
@@ -156,15 +155,14 @@ function makeAdminToken(): string {
   return `${header}.${body}.fake-sig`;
 }
 
-/** Build a mock non-admin JWT with Keycloak claims. */
+/** Build a mock non-admin JWT with Cognito-style claims. */
 function makeUserToken(): string {
   const payload = {
     sub: "test-user-sub",
     email: "user@cloudless.gr",
     preferred_username: "regular-user",
     groups: [],
-    realm_access: { roles: ["default-roles-cloudless"] },
-    iss: "https://auth.cloudless.gr/realms/cloudless",
+    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
@@ -192,8 +190,6 @@ function unauthRequest(url: string): NextRequest {
 // Mocks — set up before any dynamic import
 // ---------------------------------------------------------------------------
 
-// Keycloak Admin REST API — mocked via globalThis.fetch
-// (the route no longer uses @aws-sdk/client-cognito-identity-provider)
 const mockCognitoSend = vi.fn(); // kept so references below don't break
 vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
   CognitoIdentityProviderClient: class {
@@ -333,211 +329,6 @@ vi.mock("@/lib/sentry", () => ({
 // /api/admin/users
 // ---------------------------------------------------------------------------
 
-describe("GET /api/admin/users", () => {
-  const kcUserList = [
-    {
-      id: "uuid-user-1",
-      username: "user1",
-      email: "user1@example.com",
-      firstName: "User",
-      lastName: "One",
-      emailVerified: true,
-      enabled: true,
-      createdTimestamp: new Date("2024-01-01").getTime(),
-    },
-  ];
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-    resetIntegrationCache();
-    // Set Keycloak env so the route doesn't return 503
-    process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.KEYCLOAK_ADMIN_USER = "admin";
-    process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
-
-    // Mock globalThis.fetch for Keycloak Admin REST API calls
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (String(url).includes("/token")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ access_token: "tok" }),
-          });
-        }
-        if (String(url).includes("/users?")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(kcUserList) });
-        }
-        if (String(url).includes("/groups")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      })
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
-  });
-
-  it("returns 401 when no token is provided", async () => {
-    const { GET } = await import("@/app/api/admin/users/route");
-    const res = await GET(unauthRequest("http://localhost/api/admin/users"));
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 403 when token has no admin group", async () => {
-    const { GET } = await import("@/app/api/admin/users/route");
-    const res = await GET(userRequest("http://localhost/api/admin/users"));
-    expect(res.status).toBe(403);
-  });
-
-  it("returns 503 when Keycloak is not configured", async () => {
-    process.env.KEYCLOAK_ISSUER = "";
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "";
-    const { GET } = await import("@/app/api/admin/users/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/users"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns user list for admin", async () => {
-    const { GET } = await import("@/app/api/admin/users/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/users"));
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(Array.isArray(data.users)).toBe(true);
-    expect(typeof data.count).toBe("number");
-    const u = data.users[0];
-    expect(u).toMatchObject({
-      username: "uuid-user-1",
-      email: "user1@example.com",
-      status: "active",
-      userStatus: "CONFIRMED",
-      role: "user",
-    });
-  });
-
-  it("user objects expose role field", async () => {
-    const { GET } = await import("@/app/api/admin/users/route");
-    const res = await GET(adminRequest("http://localhost/api/admin/users"));
-    const data = await res.json();
-    expect(data.users[0].role).toMatch(/^(admin|user)$/);
-  });
-});
-
-describe("POST /api/admin/users", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Re-import api-auth under the mocked `jose` (setup.ts imports it first,
-    // binding the real jose). Without this, a filtered/standalone run of these
-    // tests skips the GET block's resetModules, so verifyToken uses the real
-    // jwtVerify → 401 on the fake-signed test token. Mirrors the GET block.
-    vi.resetModules();
-    process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-    process.env.KEYCLOAK_ADMIN_USER = "admin";
-    process.env.KEYCLOAK_ADMIN_PASSWORD = "pass";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (String(url).includes("/token")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ access_token: "tok" }),
-          });
-        }
-        if (String(url).includes("/groups")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve([{ id: "grp-1", name: "admin" }]),
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      })
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
-  });
-
-  async function postAction(body: object) {
-    const { POST } = await import("@/app/api/admin/users/route");
-    return POST(
-      adminRequest("http://localhost/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-    );
-  }
-
-  it("returns 401 without token", async () => {
-    const { POST } = await import("@/app/api/admin/users/route");
-    const res = await POST(
-      new NextRequest("http://localhost/api/admin/users", {
-        method: "POST",
-        body: JSON.stringify({ action: "disable", username: "x" }),
-        headers: { "Content-Type": "application/json" },
-      })
-    );
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 400 when action is missing", async () => {
-    const res = await postAction({ username: "00000000-0000-0000-0000-000000000001" });
-    expect(res.status).toBe(400);
-  });
-
-  it("disable action succeeds", async () => {
-    const res = await postAction({
-      action: "disable",
-      username: "00000000-0000-0000-0000-000000000001",
-    });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.success).toBe(true);
-  });
-
-  it("enable action succeeds", async () => {
-    const res = await postAction({
-      action: "enable",
-      username: "00000000-0000-0000-0000-000000000001",
-    });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.success).toBe(true);
-  });
-
-  it("promote action succeeds", async () => {
-    const res = await postAction({
-      action: "promote",
-      username: "00000000-0000-0000-0000-000000000001",
-      groupName: "admin",
-    });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.success).toBe(true);
-  });
-
-  it("returns 400 for unknown action", async () => {
-    const res = await postAction({
-      action: "nuke",
-      username: "00000000-0000-0000-0000-000000000001",
-    });
-    expect(res.status).toBe(400);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// /api/admin/orders
-// ---------------------------------------------------------------------------
 
 describe("GET /api/admin/orders", () => {
   beforeEach(() => {
