@@ -15,8 +15,7 @@ let configured = false;
 
 export function configureAmplifyWith(_config: AmplifyAuthConfig): boolean {
   if (configured) return true;
-  const hasProvider =
-    typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+  const hasProvider = typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_AUTH_PROVIDER;
   configured = hasProvider;
   return configured;
 }

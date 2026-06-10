@@ -326,9 +326,7 @@ export default function AdminUsersPage() {
 
       <p className="mt-4 font-mono text-xs text-slate-600">
         Powered by{" "}
-        <span className="text-slate-500">
-          {provider === "cognito" ? "AWS Cognito" : "—"}
-        </span>
+        <span className="text-slate-500">{provider === "cognito" ? "AWS Cognito" : "—"}</span>
       </p>
     </div>
   );

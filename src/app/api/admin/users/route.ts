@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { getConfig } from "@/lib/ssm-config";
 import {
   CognitoIdentityProviderClient,
   ListUsersCommand,
@@ -11,7 +12,7 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 
 // ---------------------------------------------------------------------------
-// Shared user shape
+// Shared user shape (compatible with both Cognito and Keycloak)
 // ---------------------------------------------------------------------------
 
 interface AdminUser {
@@ -131,8 +132,152 @@ async function mutateCognitoUser(
       );
       return { success: true, message: "User removed from admin group" };
     default:
+      // 400 (client error), consistent with the Keycloak path's unknown-action.
       throw Object.assign(new Error(`Unknown action: ${action}`), { status: 400 });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Keycloak helpers (legacy fallback)
+// ---------------------------------------------------------------------------
+
+const KC_BASE = process.env.KEYCLOAK_ISSUER ?? process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
+const KC_REALM = KC_BASE ? (KC_BASE.split("/realms/")[1] ?? "master") : "master";
+const KC_ADMIN = KC_BASE ? KC_BASE.replace(`/realms/${KC_REALM}`, "") : "";
+const ADMIN_URL = `${KC_ADMIN}/admin/realms/${KC_REALM}`;
+
+async function getKeycloakAdminToken(): Promise<string> {
+  const cfg = await getConfig().catch(() => null);
+  const clientId =
+    cfg?.KEYCLOAK_ADMIN_CLIENT_ID || process.env.KEYCLOAK_ADMIN_CLIENT_ID || "admin-cli";
+  const clientSecret =
+    cfg?.KEYCLOAK_ADMIN_CLIENT_SECRET || process.env.KEYCLOAK_ADMIN_CLIENT_SECRET || "";
+  const adminUser = cfg?.KEYCLOAK_ADMIN_USER || process.env.KEYCLOAK_ADMIN_USER || "";
+  const adminPass = cfg?.KEYCLOAK_ADMIN_PASSWORD || process.env.KEYCLOAK_ADMIN_PASSWORD || "";
+
+  const body = clientSecret
+    ? new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+      })
+    : new URLSearchParams({
+        grant_type: "password",
+        client_id: clientId,
+        username: adminUser,
+        password: adminPass,
+      });
+
+  const res = await globalThis.fetch(`${KC_BASE}/protocol/openid-connect/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) throw new Error(`Keycloak admin token failed: ${res.status}`);
+  return ((await res.json()) as { access_token: string }).access_token;
+}
+
+function kcFetch(path: string, token: string, init?: RequestInit) {
+  return globalThis.fetch(`${ADMIN_URL}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(init?.headers as Record<string, string> | undefined),
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+}
+
+async function listKeycloakUsers(limit: number, filter?: string): Promise<AdminUser[]> {
+  const token = await getKeycloakAdminToken();
+  const qs = new URLSearchParams({ max: String(limit) });
+  if (filter) qs.set("search", filter);
+  const res = await kcFetch(`/users?${qs}`, token);
+  if (!res.ok) throw new Error(`Keycloak list users: ${res.status}`);
+
+  interface KcUser {
+    id: string;
+    username: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    emailVerified?: boolean;
+    enabled?: boolean;
+    createdTimestamp?: number;
+    attributes?: Record<string, string[]>;
+  }
+  const kcUsers = (await res.json()) as KcUser[];
+
+  return Promise.all(
+    kcUsers.map(async (u) => {
+      let isAdmin = false;
+      try {
+        const gr = await kcFetch(`/users/${u.id}/groups`, token);
+        if (gr.ok) {
+          const groups = (await gr.json()) as Array<{ name: string }>;
+          isAdmin = groups.some((g) => g.name === "admin");
+        }
+      } catch {
+        /* default non-admin */
+      }
+
+      const attrs = u.attributes ?? {};
+      return {
+        username: u.id,
+        email: u.email ?? "",
+        name: [u.firstName, u.lastName].filter(Boolean).join(" "),
+        company: attrs["company"]?.[0] ?? "",
+        phone: attrs["phone"]?.[0] ?? "",
+        emailVerified: u.emailVerified ?? false,
+        status: u.enabled ? "active" : "disabled",
+        userStatus: u.enabled ? "CONFIRMED" : "DISABLED",
+        role: isAdmin ? "admin" : "user",
+        created: u.createdTimestamp ? new Date(u.createdTimestamp).toISOString() : undefined,
+      } satisfies AdminUser;
+    })
+  );
+}
+
+async function mutateKeycloakUser(
+  userId: string,
+  action: string
+): Promise<{ success: boolean; message: string }> {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(userId)) throw Object.assign(new Error("Invalid user id"), { status: 400 });
+
+  const token = await getKeycloakAdminToken();
+
+  if (action === "disable") {
+    await kcFetch(`/users/${userId}`, token, {
+      method: "PUT",
+      body: JSON.stringify({ enabled: false }),
+    });
+    return { success: true, message: "User disabled" };
+  }
+  if (action === "enable") {
+    await kcFetch(`/users/${userId}`, token, {
+      method: "PUT",
+      body: JSON.stringify({ enabled: true }),
+    });
+    return { success: true, message: "User enabled" };
+  }
+  const grRes = await kcFetch(`/groups?search=admin`, token);
+  if (!grRes.ok) throw new Error("Could not fetch groups");
+  const groups = (await grRes.json()) as Array<{ id: string; name: string }>;
+  const adminGroup = groups.find((g) => g.name === "admin");
+  if (!adminGroup) throw new Error("admin group not found");
+
+  if (action === "promote") {
+    await kcFetch(`/users/${userId}/groups/${adminGroup.id}`, token, { method: "PUT" });
+    return { success: true, message: "User promoted to admin" };
+  }
+  if (action === "demote") {
+    await kcFetch(`/users/${userId}/groups/${adminGroup.id}`, token, { method: "DELETE" });
+    return { success: true, message: "User removed from admin group" };
+  }
+  throw Object.assign(new Error(`Unknown action: ${action}`), { status: 400 });
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +298,11 @@ export async function GET(request: NextRequest) {
     if (cognitoIssuer) {
       const users = await listCognitoUsers(cognitoIssuer, limit, filter || undefined);
       return NextResponse.json({ users, count: users.length, provider: "cognito" });
+    }
+
+    if (KC_BASE) {
+      const users = await listKeycloakUsers(limit, filter || undefined);
+      return NextResponse.json({ users, count: users.length, provider: "keycloak" });
     }
 
     return NextResponse.json({ error: "Auth provider not configured" }, { status: 503 });
@@ -186,6 +336,11 @@ export async function POST(request: NextRequest) {
   try {
     if (cognitoIssuer) {
       const result = await mutateCognitoUser(cognitoIssuer, username, action);
+      return NextResponse.json(result);
+    }
+
+    if (KC_BASE) {
+      const result = await mutateKeycloakUser(username, action);
       return NextResponse.json(result);
     }
 
