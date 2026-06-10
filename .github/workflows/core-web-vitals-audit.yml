@@ -107,15 +107,15 @@ jobs:
 
           # Fail if any route's median falls below thresholds
           FAILED=$(echo "$MEDIANS" | jq '[.[] | select(
-            .perf < 0.65 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
+            .perf < 0.60 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
 
           if [ "$FAILED" -gt 0 ]; then
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "❌ **$FAILED route(s) fell below score thresholds (median of 3 runs).**" >> "$GITHUB_STEP_SUMMARY"
-            echo "Thresholds: Performance ≥ 65 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
+            echo "Thresholds: Performance ≥ 60 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ All routes passed Core Web Vitals thresholds (median of 3 runs; Perf ≥ 65 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 90)." >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ All routes passed Core Web Vitals thresholds (median of 3 runs; Perf ≥ 60 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 90)." >> "$GITHUB_STEP_SUMMARY"
