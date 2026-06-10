@@ -318,7 +318,7 @@ export const getServicesFaqs = (t: (key: string, fallback: string) => string) =>
   },
 ];
 
-const bundleTerminal = [
+export const bundleTerminal = [
   "$ cloudless bundle --plan growth-engine",
   "  ✓ Cloud Architecture & Migration",
   "  ✓ Serverless Development",
@@ -334,7 +334,7 @@ const bundleTerminal = [
 
 /* ── Color maps ───────────────────────────────────────────────── */
 
-const colorMap = {
+export const colorMap = {
   cyan: {
     badge: "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan",
     dot: "bg-neon-cyan",
