@@ -108,11 +108,16 @@ export default function Footer() {
             </p>
             <ul className="space-y-2 font-mono text-sm">
               <li>
+                {/* Cloudflare's Scrape Shield rewrites mailto: links at the edge,
+                    inserting data-cfemail attributes that don't match SSR output.
+                    suppressHydrationWarning tells React the divergence is intentional
+                    so React #418 doesn't fire on /en (caught by k3s-e2e). */}
                 <a
                   href="mailto:tbaltzakis@cloudless.gr"
                   className="hover:text-neon-cyan active:text-neon-cyan text-xs text-slate-400 transition-colors"
+                  suppressHydrationWarning
                 >
-                  tbaltzakis@cloudless.gr
+                  <span suppressHydrationWarning>tbaltzakis@cloudless.gr</span>
                 </a>
               </li>
               <li className="text-xs text-slate-400">
