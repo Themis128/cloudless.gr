@@ -117,10 +117,12 @@ export default function Footer() {
                     just like before, no React #418, no [email protected]
                     placeholder, no CSP-blocked decode script. */}
                 <a
-                  href={`mailto:${"tbaltzakis"}@${"cloudless.gr"}`}
+                  href={mounted ? `mailto:${"tbaltzakis"}@${"cloudless.gr"}` : "#"}
                   className="hover:text-neon-cyan active:text-neon-cyan text-xs text-slate-400 transition-colors"
                 >
-                  {"tbaltzakis"}<span aria-hidden="true">{"@"}</span>{"cloudless.gr"}
+                  {"tbaltzakis"}
+                  <span aria-hidden="true">{"@"}</span>
+                  {"cloudless.gr"}
                 </a>
               </li>
               <li className="text-xs text-slate-400">
