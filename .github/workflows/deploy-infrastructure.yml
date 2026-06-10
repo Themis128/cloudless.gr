@@ -1,3 +1,5 @@
+# Infrastructure optimization deployment workflow
+# Phases: cloudfront, lambda-concurrency, rds-proxy, k8s-tuning, all
 name: Deploy Infrastructure
 
 on:
