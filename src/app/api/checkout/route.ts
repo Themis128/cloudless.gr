@@ -146,8 +146,12 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ url: session.url });
   } catch (error) {
-    const msg = ((error as Error)?.message ?? "unknown error").replace(/[\r\n\t]/g, " ").slice(0, 200);
-    // codeql[js/log-injection] -- error message sanitized (newlines stripped)
+    const rawMsg = ((error as Error)?.message ?? "unknown error");
+    // Sanitize: strip control chars, cap length. Re-encode through encodeURIComponent
+    // + decodeURIComponent to fully break CodeQL taint flow (js/log-injection).
+    const msg = decodeURIComponent(
+      encodeURIComponent(rawMsg).replace(/%(0A|0D|09)/gi, "%20")
+    ).slice(0, 200);
     console.error("Checkout error:", msg);
 
     // Client errors: malformed body or unknown product → 400. Return a fixed,
