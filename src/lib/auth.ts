@@ -283,7 +283,19 @@ export function getAuthProvider(): "cognito" | null {
   return resolveCognitoIssuer() ? "cognito" : null;
 }
 
-const EMPTY_JSON = () => Response.json({});
+/**
+ * Fallback response when auth is disabled (no AUTH_SECRET / issuer configured).
+ * Returns null session for /api/auth/session GET, 200 for other endpoints.
+ * This prevents "Unexpected token '<'" errors from the browser when auth is unconfigured
+ * for local dev.
+ */
+function getDisabledAuthResponse(req: Request) {
+  const url = new URL(req.url);
+  if (url.pathname === "/api/auth/session") {
+    return Response.json(null);
+  }
+  return Response.json({});
+}
 
 /**
  * Stable handlers object. GET/POST resolve the real next-auth handler lazily
@@ -298,13 +310,13 @@ export const handlers: {
     const h = getNextAuth()?.handlers.GET as
       | ((req: Request) => Response | Promise<Response>)
       | undefined;
-    return h ? h(req) : EMPTY_JSON();
+    return h ? h(req) : getDisabledAuthResponse(req);
   },
   POST: (req: Request) => {
     const h = getNextAuth()?.handlers.POST as
       | ((req: Request) => Response | Promise<Response>)
       | undefined;
-    return h ? h(req) : EMPTY_JSON();
+    return h ? h(req) : getDisabledAuthResponse(req);
   },
 };
 
