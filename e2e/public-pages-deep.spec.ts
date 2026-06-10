@@ -29,11 +29,13 @@ for (const route of PUBLIC_PAGES) {
 
     // Either an h1 or main content exists. waitFor() actively waits for the
     // element to appear rather than sampling visibility at a fixed deadline,
-    // which avoids racing Turbopack's first-compile streaming of a cold dev route.
+    // which avoids racing Turbopack's first-compile streaming of a cold dev
+    // route. Dev first compiles + Suspense streaming can keep the route-level
+    // loading.tsx fallback visible past 15s, so use a generous 30s deadline.
     const hasContent = await page
       .locator("h1, main")
       .first()
-      .waitFor({ state: "visible", timeout: 15_000 })
+      .waitFor({ state: "visible", timeout: 30_000 })
       .then(() => true)
       .catch(() => false);
     expect(hasContent, `${route} has no h1 or main`).toBeTruthy();
