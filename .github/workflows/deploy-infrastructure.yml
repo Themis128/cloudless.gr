@@ -45,9 +45,21 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Setup Terraform provider verification bypass
+        run: |
+          mkdir -p ~/.terraform.d
+          cat > ~/.terraformrc << 'TFRC_EOF'
+          disable_checkpoint = true
+          provider_installation {
+            direct {
+              unset = true
+            }
+          }
+          TFRC_EOF
+
       - name: Terraform Init
         working-directory: infrastructure/terraform
-        run: terraform init -skip-provider-verification
+        run: terraform init -upgrade
 
       - name: Terraform Format Check
         working-directory: infrastructure/terraform
@@ -119,9 +131,21 @@ jobs:
           name: terraform-plans
           path: infrastructure/terraform/
 
+      - name: Setup Terraform provider verification bypass
+        run: |
+          mkdir -p ~/.terraform.d
+          cat > ~/.terraformrc << 'TFRC_EOF'
+          disable_checkpoint = true
+          provider_installation {
+            direct {
+              unset = true
+            }
+          }
+          TFRC_EOF
+
       - name: Terraform Init
         working-directory: infrastructure/terraform
-        run: terraform init -skip-provider-verification
+        run: terraform init -upgrade
 
       - name: Apply CloudFront
         if: ${{ github.event.inputs.phase == 'cloudfront' || github.event.inputs.phase == 'all' }}
