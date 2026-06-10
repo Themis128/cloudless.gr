@@ -45,21 +45,22 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Terraform provider verification bypass
+      - name: Setup .terraformrc to allow unsigned providers
         run: |
           mkdir -p ~/.terraform.d
           cat > ~/.terraformrc << 'TFRC_EOF'
           disable_checkpoint = true
-          provider_installation {
-            direct {
-              unset = true
-            }
-          }
+          plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"
           TFRC_EOF
+          mkdir -p ~/.terraform.d/plugin-cache
 
       - name: Terraform Init
         working-directory: infrastructure/terraform
-        run: terraform init -upgrade
+        env:
+          TF_PLUGIN_CACHE_DIR: ~/.terraform.d/plugin-cache
+        run: |
+          # Use the official hashicorp/setup-terraform action result
+          terraform init
 
       - name: Terraform Format Check
         working-directory: infrastructure/terraform
@@ -131,21 +132,22 @@ jobs:
           name: terraform-plans
           path: infrastructure/terraform/
 
-      - name: Setup Terraform provider verification bypass
+      - name: Setup .terraformrc to allow unsigned providers
         run: |
           mkdir -p ~/.terraform.d
           cat > ~/.terraformrc << 'TFRC_EOF'
           disable_checkpoint = true
-          provider_installation {
-            direct {
-              unset = true
-            }
-          }
+          plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"
           TFRC_EOF
+          mkdir -p ~/.terraform.d/plugin-cache
 
       - name: Terraform Init
         working-directory: infrastructure/terraform
-        run: terraform init -upgrade
+        env:
+          TF_PLUGIN_CACHE_DIR: ~/.terraform.d/plugin-cache
+        run: |
+          # Use the official hashicorp/setup-terraform action result
+          terraform init
 
       - name: Apply CloudFront
         if: ${{ github.event.inputs.phase == 'cloudfront' || github.event.inputs.phase == 'all' }}
