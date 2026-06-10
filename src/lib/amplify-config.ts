@@ -2,7 +2,7 @@
 
 /**
  * Legacy shim — kept so existing callers don't break.
- * All authentication is now handled by next-auth + Cognito (or Keycloak fallback).
+ * All authentication is now handled by next-auth + Cognito.
  * configureAmplifyWith returns true when an OIDC provider is configured.
  */
 
@@ -16,8 +16,7 @@ let configured = false;
 export function configureAmplifyWith(_config: AmplifyAuthConfig): boolean {
   if (configured) return true;
   const hasProvider =
-    typeof process !== "undefined" &&
-    (!!process.env.NEXT_PUBLIC_AUTH_PROVIDER || !!process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER);
+    typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_AUTH_PROVIDER;
   configured = hasProvider;
   return configured;
 }

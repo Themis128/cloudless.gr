@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 export const { POST } = handlers;
 
 // A bare GET to /api/auth/signin/<provider> is NOT a real sign-in — Auth.js v5
-// sign-in is POST + CSRF (the app uses signIn("keycloak"), which POSTs). next-auth
+// sign-in is POST + CSRF (the app uses signIn("cognito"), which POSTs). next-auth
 // logs an `[auth][error] Configuration` for such GETs, and crawlers / uptime
 // probes hit them — that ERROR line is what drives the CloudWatch
 // `SERVERLESS-APP_MAIN-Errors` (CloudlessApp/ServerlessErrors) alarm.
