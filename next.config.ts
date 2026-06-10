@@ -123,7 +123,7 @@ nextConfig.rewrites = async () => ({
     ...LOCALE_REWRITE_PATHS.map((path) => ({
       source: path,
       destination: `/en${path}`,
-      missing: [{ type: "cookie", key: "NEXT_LOCALE" }],
+      missing: [{ type: "cookie" as const, key: "NEXT_LOCALE" }],
     })),
   ],
   afterFiles: [],
