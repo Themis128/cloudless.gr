@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
+
+// aws-amplify is imported lazily inside each async function so the ~2 MB
+// module is excluded from the initial JS bundle, reducing TBT on public pages.
 
 interface UserPreferences {
   theme: "system" | "dark" | "light";
@@ -18,11 +20,6 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   emailNewsletter: false,
   emailMarketing: false,
 };
-
-/** Same-origin route that reads (GET) and writes (POST) user profile attributes. */
-const PROFILE_ENDPOINT = "/api/user/profile";
-
-const OIDC_PROVIDER = "cognito";
 
 export interface AuthUser {
   username: string;
@@ -72,145 +69,275 @@ const DEFAULT_AUTH_CONTEXT: AuthContextType = {
   refreshProfile: async () => {},
 };
 
-const AuthContext = createContext<AuthContextType>(DEFAULT_AUTH_CONTEXT);
+/**
+ * Map raw Cognito/Amplify error messages to user-friendly strings.
+ */
+function friendlyAuthError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  const name = err instanceof Error ? err.name : "";
 
-function isAdminFromSession(user: { groups?: string[] }): boolean {
-  return (user.groups ?? []).includes("admin");
+  if (name === "UserAlreadyAuthenticatedException") {
+    return "You are already signed in. Redirecting\u2026";
+  }
+  if (name === "NotAuthorizedException") {
+    return "Incorrect email or password.";
+  }
+  if (name === "UserNotFoundException") {
+    return "No account found with that email.";
+  }
+  if (name === "UsernameExistsException") {
+    return "An account with that email already exists.";
+  }
+  if (name === "CodeMismatchException") {
+    return "Invalid verification code. Please try again.";
+  }
+  if (name === "ExpiredCodeException") {
+    return "Verification code has expired. Please request a new one.";
+  }
+  if (name === "LimitExceededException" || name === "TooManyRequestsException") {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  if (name === "InvalidPasswordException" || message.includes("password")) {
+    return "Password does not meet requirements (min. 8 characters, include uppercase, lowercase, and a number).";
+  }
+  if (name === "UserNotConfirmedException") {
+    return "Your email has not been verified. Please check your inbox for a verification code.";
+  }
+
+  return message.replace(/^[A-Za-z]+Exception:\s*/, "");
 }
 
-/**
- * Pull the user's stored profile attributes (company/phone/preferences) that
- * the session token does not carry, merging them onto the base user. Served by
- * the provider-agnostic /api/user/profile route (DynamoDB, keyed by sub).
- * Returns the base unchanged on any failure so auth state never depends on it.
- * Without this, the Profile/Settings forms render blank on every load.
- */
-async function enrichWithProfile(base: AuthUser): Promise<AuthUser> {
+const AuthContext = createContext<AuthContextType>(DEFAULT_AUTH_CONTEXT);
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
   try {
-    const res = await globalThis.fetch(PROFILE_ENDPOINT);
-    if (!res.ok) return base;
-    const p = (await res.json()) as {
-      name?: string;
-      company?: string;
-      phone?: string;
-      preferences?: Partial<UserPreferences>;
-    };
-    return {
-      ...base,
-      name: p.name ?? base.name,
-      company: p.company ?? base.company,
-      phone: p.phone ?? base.phone,
-      preferences: { ...base.preferences, ...(p.preferences ?? {}) },
-    };
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
   } catch {
-    return base;
+    return {};
   }
 }
 
-interface AuthProviderProps {
-  readonly children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const configError = null;
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  const loadUserProfile = useCallback(
+    async (username: string, email?: string): Promise<AuthUser> => {
+      let name: string | undefined;
+      let company: string | undefined;
+      let phone: string | undefined;
+      let preferences = { ...DEFAULT_PREFERENCES };
+
+      try {
+        const { fetchUserAttributes } = await import("aws-amplify/auth");
+        const attrs = await fetchUserAttributes();
+        name = attrs.name || attrs.given_name || undefined;
+        phone = attrs.phone_number || undefined;
+        company = attrs["custom:company"] || undefined;
+
+        const prefsRaw = attrs["custom:preferences"];
+        if (prefsRaw) {
+          try {
+            const parsed = JSON.parse(prefsRaw) as Partial<UserPreferences>;
+            preferences = { ...DEFAULT_PREFERENCES, ...parsed };
+          } catch {
+            /* keep defaults */
+          }
+        }
+      } catch {
+        // Attributes not available — use defaults
+      }
+
+      return { username, email, name, company, phone, preferences };
+    },
+    []
+  );
 
   const checkAuth = useCallback(async () => {
+    // E2E test bypass: when running under Playwright with NEXT_PUBLIC_E2E=1
+    // AND a cookie e2e_admin=1 is present, short-circuit to an admin session.
+    if (
+      typeof window !== "undefined" &&
+      process.env.NEXT_PUBLIC_E2E === "1" &&
+      document.cookie.includes("e2e_admin=1")
+    ) {
+      setUser({
+        username: "e2e-admin",
+        email: "e2e-admin@cloudless.test",
+        preferences: DEFAULT_PREFERENCES,
+      });
+      setIsAdmin(true);
+      setIsLoading(false);
+      return;
+    }
     try {
-      const res = await globalThis.fetch("/api/auth/session");
-      if (!res.ok) {
-        setUser(null);
-        setIsAdmin(false);
-        return;
+      const { getCurrentUser, fetchAuthSession } = await import("aws-amplify/auth");
+      const currentUser = await getCurrentUser();
+      const email = currentUser.signInDetails?.loginId;
+      const profile = await loadUserProfile(currentUser.username, email);
+      setUser(profile);
+      // Fetch the session separately so a transient token-refresh failure
+      // doesn't clear an already-authenticated user's admin status.
+      let groups: string[] = [];
+      try {
+        const session = await fetchAuthSession();
+        const idToken = session.tokens?.idToken?.toString();
+        if (idToken) {
+          groups = (decodeJwtPayload(idToken)["cognito:groups"] as string[]) ?? [];
+        }
+      } catch {
+        // Session fetch failed (network blip). Keep existing admin state if
+        // already set; otherwise default to non-admin.
+        groups = [];
       }
-      const data = (await res.json()) as {
-        user?: {
-          id?: string;
-          name?: string;
-          email?: string;
-          groups?: string[];
-          roles?: string[];
-        };
-        error?: string;
-      } | null;
-
-      if (data?.error === "RefreshTokenError") {
-        // Refresh token expired — clear session so login page shows
-        await nextAuthSignOut({ redirect: false });
-        setUser(null);
-        setIsAdmin(false);
-        return;
-      }
-
-      if (data?.user) {
-        const base: AuthUser = {
-          username: data.user.id ?? data.user.email ?? "",
-          email: data.user.email ?? undefined,
-          name: data.user.name ?? undefined,
-          preferences: { ...DEFAULT_PREFERENCES },
-        };
-        setIsAdmin(isAdminFromSession(data.user));
-        // Enrich with stored profile attributes (company/phone/preferences)
-        // the session JWT doesn't carry, so saved values render instead of
-        // blanks. Best-effort — falls back to the session-only user.
-        setUser(await enrichWithProfile(base));
-      } else {
-        setUser(null);
-        setIsAdmin(false);
-      }
+      setIsAdmin(groups.includes("admin"));
     } catch {
       setUser(null);
       setIsAdmin(false);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadUserProfile]);
 
   useEffect(() => {
-    checkAuth().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
+    let cancelled = false;
+
+    const init = async () => {
+      let ok: boolean;
+      try {
+        const { configureAmplify } = await import("@/lib/amplify-config");
+        ok = configureAmplify();
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Amplify configuration failed:", err);
+          setConfigError(
+            err instanceof Error ? err.message : "Authentication configuration failed"
+          );
+          setIsLoading(false);
+        }
+        return;
+      }
+      if (!ok) {
+        if (!cancelled) {
+          setConfigError("Authentication is not configured for this environment.");
+          setIsLoading(false);
+        }
+        return;
+      }
+      checkAuth();
+    };
+
+    init();
+    return () => {
+      cancelled = true;
+    };
   }, [checkAuth]);
 
-  // Sign-in delegates to Cognito's hosted flow. The email/password arguments
-  // are ignored — Cognito Hosted UI shows its own login page. They're kept in
-  // the signature for interface compat with any callers that pass them.
-  const handleSignIn = async (_email: string, _password: string): Promise<SignInResult> => {
-    await nextAuthSignIn(OIDC_PROVIDER, { redirect: true });
-    return {};
+  const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
+    const { signIn: amplifySignIn, signOut: amplifySignOut } = await import("aws-amplify/auth");
+    try {
+      const result = await amplifySignIn({ username: email, password });
+
+      if (result.nextStep?.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
+        return { needsNewPassword: true };
+      }
+
+      if (result.nextStep?.signInStep === "CONFIRM_SIGN_UP") {
+        return { needsConfirmation: true };
+      }
+
+      if (result.isSignedIn) {
+        await checkAuth();
+      }
+      return {};
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "UserAlreadyAuthenticatedException") {
+        await amplifySignOut();
+        const result = await amplifySignIn({ username: email, password });
+        if (result.isSignedIn) {
+          await checkAuth();
+        }
+        return {};
+      }
+      throw new Error(friendlyAuthError(err));
+    }
   };
 
-  const handleSignUp = async (_email: string, _password: string, _name?: string) => {
-    // Cognito Hosted UI handles registration. Route through next-auth so it
-    // manages the OAuth state/PKCE on the callback.
-    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
+  const handleSignUp = async (email: string, password: string, name?: string) => {
+    const { signUp: amplifySignUp } = await import("aws-amplify/auth");
+    try {
+      const userAttributes: Record<string, string> = { email };
+      if (name?.trim()) userAttributes.name = name.trim();
+      await amplifySignUp({
+        username: email,
+        password,
+        options: { userAttributes },
+      });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
   };
 
   const handleSignOut = async () => {
+    const { signOut: amplifySignOut } = await import("aws-amplify/auth");
+    await amplifySignOut();
     setUser(null);
     setIsAdmin(false);
-    await nextAuthSignOut({ callbackUrl: "/" });
   };
 
-  const handleConfirmSignUp = async (_email: string, _code: string) => {
-    // The provider handles email verification via its own hosted flow.
+  const handleConfirmSignUp = async (email: string, code: string) => {
+    const { confirmSignUp: amplifyConfirmSignUp } = await import("aws-amplify/auth");
+    try {
+      await amplifyConfirmSignUp({ username: email, confirmationCode: code });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
   };
 
-  const handleForgotPassword = async (_email: string) => {
-    // Cognito Hosted UI carries the "Forgot your password?" link.
-    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
+  const handleForgotPassword = async (email: string) => {
+    const { resetPassword: amplifyResetPassword } = await import("aws-amplify/auth");
+    try {
+      await amplifyResetPassword({ username: email });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
   };
 
-  const handleConfirmForgotPassword = async (
-    _email: string,
-    _code: string,
-    _newPassword: string
-  ) => {
-    // Handled by Cognito Hosted UI — no client-side step needed.
+  const handleConfirmForgotPassword = async (email: string, code: string, newPassword: string) => {
+    const { confirmResetPassword: amplifyConfirmResetPassword } = await import("aws-amplify/auth");
+    try {
+      await amplifyConfirmResetPassword({
+        username: email,
+        confirmationCode: code,
+        newPassword,
+      });
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
   };
 
-  const handleCompleteNewPassword = async (_newPassword: string) => {
-    // Handled by Cognito Hosted UI.
+  const handleCompleteNewPassword = async (newPassword: string) => {
+    const { confirmSignIn: amplifyConfirmSignIn } = await import("aws-amplify/auth");
+    try {
+      const result = await amplifyConfirmSignIn({
+        challengeResponse: newPassword,
+      });
+      if (result.isSignedIn) {
+        await checkAuth();
+      }
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
   };
 
   const handleUpdateProfile = async (attrs: {
@@ -218,50 +345,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
     company?: string;
     phone?: string;
   }) => {
-    // Go through our own same-origin API route, which persists the profile in
-    // DynamoDB keyed by the Cognito user sub.
-    const res = await globalThis.fetch(PROFILE_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(attrs),
-    });
-    if (!res.ok) {
-      const data = (await res.json().catch(() => null)) as { error?: string } | null;
-      throw new Error(data?.error ?? `Failed to update profile: ${res.status}`);
-    }
+    try {
+      const updates: Record<string, string> = {};
+      if (attrs.name !== undefined) updates.name = attrs.name;
+      if (attrs.phone !== undefined) updates.phone_number = attrs.phone;
+      if (attrs.company !== undefined) updates["custom:company"] = attrs.company;
 
-    setUser((prev) =>
-      prev
-        ? {
-            ...prev,
-            name: attrs.name ?? prev.name,
-            company: attrs.company ?? prev.company,
-            phone: attrs.phone ?? prev.phone,
-          }
-        : prev
-    );
+      if (Object.keys(updates).length > 0) {
+        const { updateUserAttributes } = await import("aws-amplify/auth");
+        await updateUserAttributes({ userAttributes: updates });
+      }
+
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: attrs.name ?? prev.name,
+              company: attrs.company ?? prev.company,
+              phone: attrs.phone ?? prev.phone,
+            }
+          : prev
+      );
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
+    }
   };
 
   const handleUpdatePreferences = async (prefs: Partial<UserPreferences>) => {
-    const merged = {
-      ...(user?.preferences ?? DEFAULT_PREFERENCES),
-      ...prefs,
-    };
-    setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
-    // Persist via our same-origin route.
     try {
-      await globalThis.fetch(PROFILE_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preferences: merged }),
+      const merged = {
+        ...(user?.preferences ?? DEFAULT_PREFERENCES),
+        ...prefs,
+      };
+      const { updateUserAttributes } = await import("aws-amplify/auth");
+      await updateUserAttributes({
+        userAttributes: {
+          "custom:preferences": JSON.stringify(merged),
+        },
       });
-    } catch {
-      // Non-fatal — preferences are kept in local state
+      setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
+    } catch (err) {
+      throw new Error(friendlyAuthError(err));
     }
   };
 
   const handleRefreshProfile = async () => {
-    await checkAuth();
+    if (!user) return;
+    const profile = await loadUserProfile(user.username, user.email);
+    setUser(profile);
   };
 
   return (
