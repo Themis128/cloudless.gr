@@ -29,13 +29,43 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-      - name: Delete API Gateway custom domains
+      - name: Discover ACM cert in-use
+        run: |
+          echo "=== ACM cert in-use ===" | tee -a out.log
+          aws acm describe-certificate --certificate-arn "$ACM_ARN" --query 'Certificate.InUseBy' --output json 2>&1 | tee -a out.log
+      - name: Delete APIGW v2 mappings and domains
         run: |
           set +e
-          for d in cloudless.online www.cloudless.online; do
-            echo "--- $d ---"
+          for d in $(aws apigatewayv2 get-domain-names --query 'Items[?contains(DomainName, `cloudless.online`)].DomainName' --output text); do
+            echo "--- v2 $d ---" | tee -a out.log
+            for mid in $(aws apigatewayv2 get-api-mappings --domain-name "$d" --query 'Items[].ApiMappingId' --output text 2>/dev/null); do
+              aws apigatewayv2 delete-api-mapping --domain-name "$d" --api-mapping-id "$mid" 2>&1 | tee -a out.log
+              sleep 2
+            done
+            sleep 3
             aws apigatewayv2 delete-domain-name --domain-name "$d" 2>&1 | tee -a out.log
+            sleep 5
+          done
+      - name: Delete APIGW v1 mappings and domains
+        run: |
+          set +e
+          for d in $(aws apigateway get-domain-names --query 'items[?contains(domainName, `cloudless.online`)].domainName' --output text); do
+            echo "--- v1 $d ---" | tee -a out.log
+            for bp in $(aws apigateway get-base-path-mappings --domain-name "$d" --query 'items[].basePath' --output text 2>/dev/null); do
+              aws apigateway delete-base-path-mapping --domain-name "$d" --base-path "$bp" 2>&1 | tee -a out.log
+              sleep 2
+            done
+            sleep 3
             aws apigateway delete-domain-name --domain-name "$d" 2>&1 | tee -a out.log
+            sleep 5
+          done
+      - name: Wait for ACM cert to detach
+        run: |
+          for i in 1 2 3 4 5 6; do
+            INUSE=$(aws acm describe-certificate --certificate-arn "$ACM_ARN" --query 'Certificate.InUseBy' --output text)
+            echo "[$i] InUseBy: $INUSE" | tee -a out.log
+            if [ -z "$INUSE" ]; then echo "cert detached" | tee -a out.log; break; fi
+            sleep 30
           done
       - name: Delete ACM cert
         run: |
@@ -52,8 +82,8 @@ jobs:
           json.dump({'Changes': changes}, open('change.json', 'w'))
           print(f'records to delete: {len(changes)}')
           "
-          NCHANGES=$(python3 -c "import json; print(len(json.load(open('change.json'))['Changes']))")
-          if [ "$NCHANGES" -gt 0 ]; then
+          N=$(python3 -c "import json; print(len(json.load(open('change.json'))['Changes']))")
+          if [ "$N" -gt 0 ]; then
             aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" --change-batch file://change.json 2>&1 | tee -a out.log
           fi
           aws route53 delete-hosted-zone --id "$ZONE_ID" 2>&1 | tee -a out.log
@@ -62,7 +92,6 @@ jobs:
         run: |
           {
             echo "# Decommission cloudless.online — $(date -u '+%F %T')Z"
-            echo ""
             echo "**Job:** ${{ job.status }}"
             echo '```'
             cat out.log 2>/dev/null || echo '(no log)'
