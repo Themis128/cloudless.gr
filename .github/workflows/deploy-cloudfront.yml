@@ -1,0 +1,259 @@
+name: Deploy CloudFront (AWS CLI)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-cloudfront:
+    name: Deploy CloudFront + Lambda@Edge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.1.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get Lambda function URL
+        id: lambda
+        run: |
+          FUNCTION_NAME="cloudless-app-production"
+          FUNCTION_URL=$(aws lambda get-function-url-config \
+            --function-name $FUNCTION_NAME \
+            --query 'FunctionUrl' \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$FUNCTION_URL" ]; then
+            echo "Creating Lambda function URL..."
+            FUNCTION_URL=$(aws lambda create-function-url-config \
+              --function-name $FUNCTION_NAME \
+              --auth-type NONE \
+              --cors AllowCredentials=true,AllowHeaders=*,AllowMethods=GET;POST;PUT;DELETE;OPTIONS,AllowOrigins=*,MaxAge=86400 \
+              --query 'FunctionUrl' \
+              --output text)
+          fi
+
+          echo "function_url=$FUNCTION_URL" >> $GITHUB_OUTPUT
+          echo "Lambda URL: $FUNCTION_URL"
+
+      - name: Create CloudFront Function (Lambda@Edge)
+        id: cf-function
+        run: |
+          # CloudFront Function to rewrite /services → /en/services
+          cat > /tmp/cf-function.js << 'JS_EOF'
+          function handler(event) {
+            var request = event.request;
+            var uri = request.uri;
+
+            if (uri === '/services' || uri === '/services/') {
+              request.uri = '/en/services';
+            } else if (uri === '/contact' || uri === '/contact/') {
+              request.uri = '/en/contact';
+            } else if (uri === '/store' || uri === '/store/') {
+              request.uri = '/en/store';
+            } else if (uri === '/' || uri === '') {
+              request.uri = '/en';
+            }
+
+            return request;
+          }
+          JS_EOF
+
+          # Check if function exists
+          FUNCTION_ID=$(aws cloudfront list-functions \
+            --query "FunctionList[?Name=='rewrite-locale-prefix'].Id" \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$FUNCTION_ID" ]; then
+            echo "Creating CloudFront Function..."
+            aws cloudfront create-function \
+              --name rewrite-locale-prefix \
+              --auto-publish \
+              --function-config EventType=viewer-request,Runtime=cloudfront-js-1.0 \
+              --function-code fileb:///tmp/cf-function.js \
+              > /dev/null
+
+            sleep 5
+            FUNCTION_ID=$(aws cloudfront list-functions \
+              --query "FunctionList[?Name=='rewrite-locale-prefix'].Id" \
+              --output text)
+          fi
+
+          echo "function_id=$FUNCTION_ID" >> $GITHUB_OUTPUT
+          echo "CloudFront Function ID: $FUNCTION_ID"
+
+      - name: Create CloudFront Distribution
+        id: cloudfront
+        run: |
+          LAMBDA_URL="${{ steps.lambda.outputs.function_url }}"
+          FUNCTION_ID="${{ steps.cf-function.outputs.function_id }}"
+
+          # Extract domain from Lambda URL (remove https:// and trailing /)
+          ORIGIN_DOMAIN=$(echo "$LAMBDA_URL" | sed 's|https://||' | sed 's|/||')
+
+          # Check if distribution exists
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Origins.Items[0].DomainName=='$ORIGIN_DOMAIN'].Id" \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$DIST_ID" ]; then
+            echo "Creating CloudFront distribution..."
+
+            # Create distribution config
+            cat > /tmp/dist-config.json << 'CONFIG_EOF'
+            {
+              "CallerReference": "cloudless-$(date +%s)",
+              "Enabled": true,
+              "Origins": {
+                "Quantity": 1,
+                "Items": [
+                  {
+                    "Id": "lambda-origin",
+                    "DomainName": "ORIGIN_DOMAIN_PLACEHOLDER",
+                    "CustomOriginConfig": {
+                      "HTTPPort": 80,
+                      "HTTPSPort": 443,
+                      "OriginProtocolPolicy": "https-only",
+                      "OriginSSLProtocols": {
+                        "Quantity": 1,
+                        "Items": ["TLSv1.2"]
+                      }
+                    }
+                  }
+                ]
+              },
+              "DefaultCacheBehavior": {
+                "TargetOriginId": "lambda-origin",
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                  "Quantity": 3,
+                  "Items": ["GET", "HEAD", "OPTIONS"]
+                },
+                "CachedMethods": {
+                  "Quantity": 2,
+                  "Items": ["GET", "HEAD"]
+                },
+                "Compress": true,
+                "DefaultTTL": 86400,
+                "MaxTTL": 31536000,
+                "ForwardedValues": {
+                  "QueryString": false,
+                  "Cookies": {
+                    "Forward": "none"
+                  }
+                }
+              },
+              "CacheBehaviors": [
+                {
+                  "PathPattern": "/en/*",
+                  "TargetOriginId": "lambda-origin",
+                  "ViewerProtocolPolicy": "redirect-to-https",
+                  "AllowedMethods": {
+                    "Quantity": 3,
+                    "Items": ["GET", "HEAD", "OPTIONS"]
+                  },
+                  "CachedMethods": {
+                    "Quantity": 2,
+                    "Items": ["GET", "HEAD"]
+                  },
+                  "Compress": true,
+                  "DefaultTTL": 300,
+                  "MaxTTL": 3600,
+                  "ForwardedValues": {
+                    "QueryString": true,
+                    "Cookies": {
+                      "Forward": "all"
+                    }
+                  },
+                  "FunctionAssociations": {
+                    "Quantity": 1,
+                    "Items": [
+                      {
+                        "EventType": "origin-request",
+                        "FunctionARN": "FUNCTION_ARN_PLACEHOLDER"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Restrictions": {
+                "GeoRestriction": {
+                  "RestrictionType": "none",
+                  "Quantity": 0
+                }
+              },
+              "ViewerCertificate": {
+                "CloudFrontDefaultCertificate": true
+              }
+            }
+            CONFIG_EOF
+
+            # Replace placeholders
+            sed -i "s|ORIGIN_DOMAIN_PLACEHOLDER|$ORIGIN_DOMAIN|g" /tmp/dist-config.json
+            sed -i "s|FUNCTION_ARN_PLACEHOLDER|arn:aws:cloudfront::$AWS_ACCOUNT_ID:function/$FUNCTION_ID|g" /tmp/dist-config.json
+
+            # Create distribution
+            RESPONSE=$(aws cloudfront create-distribution \
+              --distribution-config file:///tmp/dist-config.json \
+              --output json)
+
+            DIST_ID=$(echo "$RESPONSE" | jq -r '.Distribution.Id')
+          fi
+
+          echo "distribution_id=$DIST_ID" >> $GITHUB_OUTPUT
+          echo "CloudFront Distribution ID: $DIST_ID"
+
+      - name: Get CloudFront Domain
+        run: |
+          DIST_ID="${{ steps.cloudfront.outputs.distribution_id }}"
+
+          DOMAIN=$(aws cloudfront get-distribution \
+            --id "$DIST_ID" \
+            --query 'Distribution.DomainName' \
+            --output text)
+
+          echo "✅ CloudFront distribution created!"
+          echo ""
+          echo "CloudFront Domain: $DOMAIN"
+          echo "Lambda Origin: ${{ steps.lambda.outputs.function_url }}"
+          echo ""
+          echo "📝 Next steps:"
+          echo "1. Update DNS CNAME: cloudless.gr → $DOMAIN"
+          echo "2. Wait 5-10 minutes for DNS propagation"
+          echo "3. Re-run Lighthouse: pnpm exec lighthouse https://cloudless.gr/en/services"
+          echo "4. Expected improvement: +5-6 Lighthouse points, 600ms LCP reduction"
+
+      - name: Post to Issue #773
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const domain = '${{ steps.cloudfront.outputs.distribution_domain || "pending" }}';
+            github.rest.issues.createComment({
+              issue_number: 773,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✅ CloudFront Deployment Started
+
+**Distribution ID:** ${{ steps.cloudfront.outputs.distribution_id }}
+**Lambda Origin:** ${{ steps.lambda.outputs.function_url }}
+
+### Next Steps
+1. Update DNS CNAME to CloudFront domain (check workflow logs)
+2. Wait 5-10 minutes for DNS propagation
+3. Re-run Lighthouse to verify +5-6 point improvement
+
+### Expected Results
+- LCP: -600ms
+- TTFB: -300ms
+- Lighthouse: 64 → 71 (+7 points) on /services, 63 → 70 on /store`
+            })
