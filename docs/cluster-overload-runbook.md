@@ -1,3 +1,5 @@
+> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was Keycloak. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
+
 # Cluster Overload Runbook
 
 When the omv k3s node enters a crash-restart loop driven by memory pressure

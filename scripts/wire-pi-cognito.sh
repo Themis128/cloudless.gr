@@ -2,7 +2,7 @@
 #
 # wire-pi-cognito.sh — give the k3s `cloudless` app working Cognito auth.
 #
-# Mirrors wire-pi-keycloak.sh but for AWS Cognito. Looks up the pool/client
+# Looks up the Cognito pool/client
 # from Cognito by name, fetches AUTH_SECRET from SSM (same as Lambda so
 # failover sessions stay valid), stores everything in the cloudless-app-auth
 # k8s Secret, and restarts the deployment.

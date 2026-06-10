@@ -4,7 +4,7 @@
 # cluster-doctor.sh — comprehensive read-only diagnostics for the omv k3s cluster.
 #
 # Covers every service tier:
-#   Tier 1 — Auth     : Keycloak, PostgreSQL
+#   Tier 1 — Auth     : Cognito (managed AWS)
 #   Tier 2 — App      : cloudless, ntfy, n8n
 #   Tier 3 — Monitoring: Prometheus, Grafana, Alertmanager, Loki
 #   Tier 4 — Analytics : Metabase, DuckDB API
@@ -22,8 +22,6 @@
 
 set -uo pipefail
 
-KC_NS="${KC_NS:-keycloak}"
-KC_DEPLOY="${KC_DEPLOY:-keycloak}"
 PROM_NS="${PROM_NS:-monitoring}"
 ANALYTICS_NS="${ANALYTICS_NS:-analytics}"
 CLOUDLESS_NS="${CLOUDLESS_NS:-cloudless}"
@@ -57,47 +55,6 @@ printf "# Cluster snapshot — %s\n" "$(date -u '+%Y-%m-%d %H:%M:%SZ')"
 section "auth.cloudless.gr"
 kc_http=$(http_check "$DISCOVERY")
 printf "OIDC discovery: **HTTP %s** (200 = up)\n" "$kc_http"
-
-section "Keycloak: deployment"
-k -n "$KC_NS" get deploy "$KC_DEPLOY" -o wide | fence
-printf "Limits + heap:\n"
-deploy_limits "$KC_NS" "$KC_DEPLOY" | fence
-
-section "Keycloak: pods"
-k -n "$KC_NS" get pods -o wide | fence
-printf "Container states:\n"
-pod_states "$KC_NS" "app=${KC_DEPLOY}" | fence
-
-section "Keycloak: recent events"
-kubectl -n "$KC_NS" get events --sort-by=.lastTimestamp 2>/dev/null | tail -15 | fence
-
-section "Keycloak: logs (last 30 lines)"
-k -n "$KC_NS" logs "deploy/$KC_DEPLOY" --tail=30 | fence
-
-section "Keycloak: previous container logs (crash cause)"
-pod=$(kubectl -n "$KC_NS" get pods -l app="$KC_DEPLOY" -o name 2>/dev/null | head -1)
-[ -n "$pod" ] \
-  && k -n "$KC_NS" logs "$pod" --previous --tail=30 | fence \
-  || printf "_no pod found via label app=%s_\n" "$KC_DEPLOY"
-
-section "Keycloak: memory limit drift"
-live=$(kubectl -n "$KC_NS" get deploy "$KC_DEPLOY" \
-  -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' 2>&1)
-last_applied=$(kubectl -n "$KC_NS" get deploy "$KC_DEPLOY" \
-  -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
-  2>/dev/null | grep -oE '"memory":"[^"]*"' | tail -1)
-printf "live limit: %s\n" "$live"
-printf "last-applied limit: %s\n" "$last_applied"
-[ "$live" = "384Mi" ] && printf "\n**WARNING: Keycloak is still at 384Mi — will OOMKill. Run keycloak:restore.**\n"
-
-section "PostgreSQL (keycloak/postgres)"
-k -n "$KC_NS" get pods -l app=postgres -o wide | fence
-printf "Container states:\n"
-pod_states "$KC_NS" "app=postgres" | fence
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# TIER 2 — APP SERVICES
-# ═══════════════════════════════════════════════════════════════════════════════
 
 section "cloudless app (k3s standby — ns ${CLOUDLESS_NS})"
 k -n "$CLOUDLESS_NS" get deploy cloudless -o wide | fence
@@ -260,10 +217,7 @@ k -n "$PROM_NS" get jobs -l app=cluster-alerts \
 section "Public HTTP surfaces"
 for entry in \
   "Lambda /api/health|${LAMBDA_URL}" \
-  "Lambda /api/auth/session|https://cloudless.gr/api/auth/session" \
-  "Keycloak OIDC|${DISCOVERY}" \
-  "Keycloak JWKS|https://auth.cloudless.gr/realms/master/protocol/openid-connect/certs" \
-  "Grafana|${GRAFANA_URL}"
+  "Lambda /api/auth/session|https://cloudless.gr/api/auth/session" \  "Grafana|${GRAFANA_URL}"
 do
   IFS='|' read -r label url <<< "$entry"
   code=$(http_check "$url")

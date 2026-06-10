@@ -1,5 +1,5 @@
 /**
- * Provision SES SMTP credentials for Keycloak email verification — AWS SDK v3
+ * Provision SES SMTP credentials for SES transactional email — AWS SDK v3
  * version of scripts/provision-ses-smtp.sh (no AWS CLI needed, just node creds).
  *
  *   pnpm ses:provision        # uses your ambient AWS creds (env / SSO / profile)
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
           UserName: IAM_USER,
           Tags: [
             { Key: "managed-by", Value: "provision-ses-smtp" },
-            { Key: "purpose", Value: "keycloak-smtp" },
+            { Key: "purpose", Value: "ses-smtp" },
           ],
         })
       );
@@ -144,7 +144,7 @@ async function main(): Promise<void> {
       Type: "String",
       Overwrite: true,
       Value: akId,
-      Description: "SES SMTP username (IAM access key id) for Keycloak — provision-ses-smtp",
+      Description: "SES SMTP username (IAM access key id) for SES SMTP — provision-ses-smtp",
     })
   );
   await ssm.send(
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
       Type: "SecureString",
       Overwrite: true,
       Value: smtpPassword,
-      Description: "SES SMTP password (derived) for Keycloak — provision-ses-smtp",
+      Description: "SES SMTP password (derived) for SES SMTP — provision-ses-smtp",
     })
   );
   if (!(await ssmGet(P_FROM))) {
@@ -163,7 +163,7 @@ async function main(): Promise<void> {
         Type: "String",
         Overwrite: true,
         Value: FROM_DEFAULT,
-        Description: "SES verified From address for Keycloak verification emails",
+        Description: "SES verified From address for transactional emails",
       })
     );
     console.log(`  • set ${P_FROM}=${FROM_DEFAULT}`);
@@ -171,7 +171,7 @@ async function main(): Promise<void> {
 
   console.log(
     `✓ SES SMTP credentials provisioned to SSM (user=${akId}).\n` +
-      `  Next: trigger keycloak-configure-email.yml to apply them to the realm.`
+      `  Next: wire to SMTP-using workloads as needed.`
   );
 }
 
