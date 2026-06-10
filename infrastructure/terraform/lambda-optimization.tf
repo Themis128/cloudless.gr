@@ -30,8 +30,8 @@ data "aws_lambda_function" "main_app" {
 }
 
 resource "aws_lambda_function_url" "main_app" {
-  function_name          = data.aws_lambda_function.main_app.function_name
-  authorization_type    = "NONE"
+  function_name      = data.aws_lambda_function.main_app.function_name
+  authorization_type = "NONE"
   cors {
     allow_credentials = true
     allow_headers     = ["*"]
@@ -95,9 +95,9 @@ resource "aws_cloudfront_distribution" "main_app" {
     target_origin_id = "lambda-origin"
     compress         = true
 
-    cache_policy_id            = aws_cloudfront_cache_policy.html_pages.id
-    origin_request_policy_id   = aws_cloudfront_origin_request_policy.forward_auth.id
-    viewer_protocol_policy     = "redirect-to-https"
+    cache_policy_id          = aws_cloudfront_cache_policy.html_pages.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.forward_auth.id
+    viewer_protocol_policy   = "redirect-to-https"
 
     # Lambda@Edge function to rewrite /services → /en/services at edge
     function_association {
@@ -113,9 +113,9 @@ resource "aws_cloudfront_distribution" "main_app" {
     cached_methods   = []
     target_origin_id = "lambda-origin"
 
-    cache_policy_id            = aws_cloudfront_cache_policy.api_bypass.id
-    origin_request_policy_id   = aws_cloudfront_origin_request_policy.forward_all.id
-    viewer_protocol_policy     = "redirect-to-https"
+    cache_policy_id          = aws_cloudfront_cache_policy.api_bypass.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.forward_all.id
+    viewer_protocol_policy   = "redirect-to-https"
   }
 
   restrictions {
@@ -131,11 +131,11 @@ resource "aws_cloudfront_distribution" "main_app" {
 
 # CloudFront Cache Policy - Static Assets (1 year TTL)
 resource "aws_cloudfront_cache_policy" "static_assets" {
-  name            = "static-assets-1year"
-  comment         = "Cache static assets for 1 year"
-  default_ttl     = 31536000  # 1 year
-  max_ttl         = 31536000
-  min_ttl         = 0
+  name        = "static-assets-1year"
+  comment     = "Cache static assets for 1 year"
+  default_ttl = 31536000 # 1 year
+  max_ttl     = 31536000
+  min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
     headers_config {
@@ -154,11 +154,11 @@ resource "aws_cloudfront_cache_policy" "static_assets" {
 
 # CloudFront Cache Policy - HTML Pages (5 minutes TTL)
 resource "aws_cloudfront_cache_policy" "html_pages" {
-  name            = "html-pages-5min"
-  comment         = "Cache HTML pages for 5 minutes"
-  default_ttl     = 300   # 5 minutes
-  max_ttl         = 3600  # 1 hour
-  min_ttl         = 0
+  name        = "html-pages-5min"
+  comment     = "Cache HTML pages for 5 minutes"
+  default_ttl = 300  # 5 minutes
+  max_ttl     = 3600 # 1 hour
+  min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
     headers_config {
@@ -180,11 +180,11 @@ resource "aws_cloudfront_cache_policy" "html_pages" {
 
 # CloudFront Cache Policy - API (no cache, but connection reuse)
 resource "aws_cloudfront_cache_policy" "api_bypass" {
-  name            = "api-no-cache"
-  comment         = "API routes - no caching"
-  default_ttl     = 0
-  max_ttl         = 0
-  min_ttl         = 0
+  name        = "api-no-cache"
+  comment     = "API routes - no caching"
+  default_ttl = 0
+  max_ttl     = 0
+  min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
     headers_config {
@@ -201,8 +201,8 @@ resource "aws_cloudfront_cache_policy" "api_bypass" {
 
 # CloudFront Origin Request Policy - Forward Auth Headers
 resource "aws_cloudfront_origin_request_policy" "forward_auth" {
-  name            = "forward-auth-headers"
-  comment         = "Forward authentication headers to origin"
+  name    = "forward-auth-headers"
+  comment = "Forward authentication headers to origin"
 
   headers_config {
     header_behavior = "whitelist"
@@ -220,8 +220,8 @@ resource "aws_cloudfront_origin_request_policy" "forward_auth" {
 
 # CloudFront Origin Request Policy - Forward All (for API)
 resource "aws_cloudfront_origin_request_policy" "forward_all" {
-  name            = "forward-all"
-  comment         = "Forward all headers, cookies, query strings"
+  name    = "forward-all"
+  comment = "Forward all headers, cookies, query strings"
 
   headers_config {
     header_behavior = "all"
@@ -265,22 +265,22 @@ resource "aws_cloudfront_function" "rewrite_locale" {
 # Problem: Database queries serialize in getServerSideProps, blocking TTFB
 # Solution: RDS Proxy for connection pooling (multiplexing 100 connections to 5)
 resource "aws_db_proxy" "main" {
-  name                   = "cloudless-app-proxy"
-  debug_logging          = false
-  engine_family          = "POSTGRESQL"
-  role_arn               = aws_iam_role.db_proxy.arn
+  name          = "cloudless-app-proxy"
+  debug_logging = false
+  engine_family = "POSTGRESQL"
+  role_arn      = aws_iam_role.db_proxy.arn
 
   # Target DB cluster (adjust to your actual cluster)
   target {
-    db_instance_identifiers = ["cloudless-db"]  # Replace with actual DB instance
+    db_instance_identifiers = ["cloudless-db"] # Replace with actual DB instance
   }
 
   # Connection pooling: 1 minute idle timeout, 100 max connections
-  connection_borrow_timeout          = 120
-  session_pinning_filters            = []
-  max_idle_connections               = 5
-  max_connections                    = 100
-  require_tls                        = true
+  connection_borrow_timeout = 120
+  session_pinning_filters   = []
+  max_idle_connections      = 5
+  max_connections           = 100
+  require_tls               = true
 }
 
 # IAM Role for RDS Proxy
