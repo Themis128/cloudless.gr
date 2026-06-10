@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createLocalJWKSet, createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { auth } from "@/lib/auth";
 
 /**
@@ -10,47 +10,27 @@ import { auth } from "@/lib/auth";
  *      carry the `authjs.session-token` cookie automatically. We read it
  *      via `auth()` from src/lib/auth.ts. No Bearer header needed.
  *   2. Bearer token (fallback) -- external callers (cron, Slack, scripts)
- *      send `Authorization: Bearer <token>`. Verified against the Keycloak
- *      JWKS at `${KEYCLOAK_ISSUER}/protocol/openid-connect/certs`.
+ *      send `Authorization: Bearer <token>`. Verified against the Cognito
+ *      JWKS at `${COGNITO_ISSUER}/.well-known/jwks.json`.
  *
- * Admin check: Keycloak `admin` group (groups claim) OR `admin` / `realm:admin`
- * realm role (realm_access.roles).
+ * Admin check: Cognito `admin` group (cognito:groups claim).
  */
 
-// Provider-agnostic: Cognito when configured, else Keycloak. Both are OIDC.
-const IS_COGNITO = !!process.env.COGNITO_ISSUER;
-
 function getIssuer(): string {
-  return (
-    process.env.COGNITO_ISSUER ??
-    process.env.KEYCLOAK_ISSUER ??
-    process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ??
-    ""
-  ).replace(/\/+$/, "");
+  return (process.env.COGNITO_ISSUER ?? "").replace(/\/+$/, "");
 }
 
-/** JWKS URL for the active provider (Cognito vs Keycloak path differs). */
+/** JWKS URL for Cognito. */
 function getCertsUrl(issuer: string): string {
-  return IS_COGNITO ? `${issuer}/.well-known/jwks.json` : `${issuer}/protocol/openid-connect/certs`;
+  return `${issuer}/.well-known/jwks.json`;
 }
 
-let jwksCache: ReturnType<typeof createRemoteJWKSet> | ReturnType<typeof createLocalJWKSet> | null | undefined;
+let jwksCache: ReturnType<typeof createRemoteJWKSet> | null | undefined;
 
 function getJWKS() {
   if (jwksCache !== undefined) return jwksCache;
   const issuer = getIssuer();
   if (!issuer) { jwksCache = null; return null; }
-  const raw = process.env.KEYCLOAK_JWKS_JSON;
-  if (raw) {
-    try {
-      jwksCache = createLocalJWKSet(
-        JSON.parse(raw) as Parameters<typeof createLocalJWKSet>[0],
-      );
-      return jwksCache;
-    } catch {
-      // fall through to remote
-    }
-  }
   jwksCache = createRemoteJWKSet(new URL(getCertsUrl(issuer)));
   return jwksCache;
 }
@@ -109,11 +89,11 @@ async function readSessionCookie(): Promise<DecodedToken | null> {
 }
 
 /**
- * Verify a Keycloak JWT with full RS256 signature verification against the
- * realm JWKS, enforcing the issuer.
+ * Verify a Cognito JWT with full RS256 signature verification against the
+ * user pool JWKS, enforcing the issuer.
  *
  * Falls back to decode + expiry only when no issuer is configured AND the
- * runtime is not production (dev/test environments without Keycloak).
+ * runtime is not production (dev/test environments without Cognito).
  */
 export async function verifyToken(token: string): Promise<DecodedToken | null> {
   const jwks = getJWKS();
@@ -149,12 +129,13 @@ function decodeTokenUnverified(token: string): DecodedToken | null {
 }
 
 /**
- * Check if a decoded token grants admin. Admin is granted by Keycloak `admin`
- * group membership, or an `admin` / `realm:admin` realm role.
+ * Check if a decoded token grants admin. Admin is granted by Cognito `admin`
+ * group membership (cognito:groups claim).
  */
 export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
   if (!decoded) return false;
-  // Group membership: Keycloak `groups` or Cognito `cognito:groups`.
+  // Group membership: Cognito `cognito:groups`. Legacy `groups` claim is still
+  // honoured for the session-cookie path, which projects them to the same key.
   const groups = [...(decoded.groups ?? []), ...(decoded["cognito:groups"] ?? [])];
   if (groups.includes("admin")) return true;
   const roles = decoded.realm_access?.roles ?? [];
@@ -168,7 +149,7 @@ export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
  * Returns user or 401.
  *
  * Bearer is checked first because all admin page JS sends it via
- * fetchWithAuth, and it carries the full Keycloak JWT with groups/roles.
+ * fetchWithAuth, and it carries the full Cognito JWT with groups.
  * The session cookie fallback handles edge cases where the browser hits
  * an API route directly (e.g. form action, link).
  */
