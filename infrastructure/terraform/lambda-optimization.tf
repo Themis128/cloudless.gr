@@ -188,13 +188,13 @@ resource "aws_cloudfront_cache_policy" "api_bypass" {
 
   parameters_in_cache_key_and_forwarded_to_origin {
     headers_config {
-      header_behavior = "all"
+      header_behavior = "none"
     }
     cookies_config {
-      cookie_behavior = "all"
+      cookie_behavior = "none"
     }
     query_strings_config {
-      query_string_behavior = "all"
+      query_string_behavior = "none"
     }
   }
 }
@@ -224,7 +224,7 @@ resource "aws_cloudfront_origin_request_policy" "forward_all" {
   comment = "Forward all headers, cookies, query strings"
 
   headers_config {
-    header_behavior = "all"
+    header_behavior = "allViewer"
   }
   cookies_config {
     cookie_behavior = "all"
@@ -261,26 +261,48 @@ resource "aws_cloudfront_function" "rewrite_locale" {
   EOL
 }
 
-# RDS Connection Pooling - Reduce Serial Query Execution
-# Problem: Database queries serialize in getServerSideProps, blocking TTFB
-# Solution: RDS Proxy for connection pooling (multiplexing 100 connections to 5)
+# RDS Connection Pooling — gated behind var.enable_rds_proxy
+variable "enable_rds_proxy" {
+  type    = bool
+  default = false
+}
+
+variable "rds_proxy_vpc_subnet_ids" {
+  type    = list(string)
+  default = []
+}
+
+variable "rds_proxy_secret_arn" {
+  type    = string
+  default = ""
+}
+
 resource "aws_db_proxy" "main" {
-  name          = "cloudless-app-proxy"
-  debug_logging = false
-  engine_family = "POSTGRESQL"
-  role_arn      = aws_iam_role.db_proxy.arn
+  count          = var.enable_rds_proxy ? 1 : 0
+  name           = "cloudless-app-proxy"
+  debug_logging  = false
+  engine_family  = "POSTGRESQL"
+  role_arn       = aws_iam_role.db_proxy.arn
+  vpc_subnet_ids = var.rds_proxy_vpc_subnet_ids
+  require_tls    = true
 
-  # Target DB cluster (adjust to your actual cluster)
-  target {
-    db_instance_identifiers = ["cloudless-db"] # Replace with actual DB instance
+  auth {
+    auth_scheme = "SECRETS"
+    iam_auth    = "DISABLED"
+    secret_arn  = var.rds_proxy_secret_arn
   }
+}
 
-  # Connection pooling: 1 minute idle timeout, 100 max connections
-  connection_borrow_timeout = 120
-  session_pinning_filters   = []
-  max_idle_connections      = 5
-  max_connections           = 100
-  require_tls               = true
+resource "aws_db_proxy_default_target_group" "main" {
+  count         = var.enable_rds_proxy ? 1 : 0
+  db_proxy_name = aws_db_proxy.main[0].name
+
+  connection_pool_config {
+    connection_borrow_timeout    = 120
+    max_connections_percent      = 100
+    max_idle_connections_percent = 50
+    session_pinning_filters      = []
+  }
 }
 
 # IAM Role for RDS Proxy
