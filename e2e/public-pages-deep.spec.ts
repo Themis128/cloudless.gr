@@ -27,9 +27,12 @@ for (const route of PUBLIC_PAGES) {
     const status = resp?.status() ?? 0;
     expect(isAcceptableStatus(status), `got HTTP ${status} for ${route}`).toBeTruthy();
 
-    // Either an h1 or main content exists
-    const hasH1 = await page.locator("h1").first().isVisible({ timeout: 10_000 }).catch(() => false);
-    const hasMain = await page.locator("main").first().isVisible({ timeout: 5_000 }).catch(() => false);
+    // Either an h1 or main content exists. Wait on the combined locator first:
+    // dev-mode first compiles + Suspense streaming can keep the route-level
+    // loading.tsx fallback visible past 15s, so use one generous deadline.
+    await page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => {});
+    const hasH1 = await page.locator("h1").first().isVisible().catch(() => false);
+    const hasMain = await page.locator("main").first().isVisible().catch(() => false);
     expect(hasH1 || hasMain, `${route} has no h1 or main`).toBeTruthy();
 
     // Title present
