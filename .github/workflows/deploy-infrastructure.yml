@@ -251,26 +251,5 @@ jobs:
               issue_number: 773,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🚀 Infrastructure Deployment Started
-
-**Phase:** ${{ github.event.inputs.phase }}
-**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-### ✅ Deployed Components
-${{ github.event.inputs.phase == 'cloudfront' && '- CloudFront distribution + Lambda@Edge\n- Redirect rewrite (/services → /en/services)\n- Gzip/Brotli compression enabled' || '' }}
-${{ github.event.inputs.phase == 'lambda-concurrency' && '- Lambda provisioned concurrency (10 instances)\n- Cold-start elimination\n- Expected TTFB: 2.1s → 1.3s' || '' }}
-${{ github.event.inputs.phase == 'rds-proxy' && '- RDS Proxy for connection pooling\n- 100 client → 5 DB connection multiplexing\n- Enable parallel queries' || '' }}
-${{ github.event.inputs.phase == 'all' && '- All phases deployed simultaneously' || '' }}
-
-### 📋 Next Steps
-1. Check AWS console to verify deployment
-2. Update DNS / app config as needed
-3. Re-run Lighthouse in 5-10 minutes
-4. Verify Lighthouse scores improved
-
-**Expected Impact (all phases):**
-- LCP: 6.4s → 4.8s (-1.6s, -25%)
-- TTFB: 2.1s → 1.3s (-0.8s, -38%)
-- /services: 64 → 71 (+7 points) ✅
-- /store: 63 → 70 (+7 points) ✅`
+              body: "## Infrastructure Deployment Status\n\n**Phase:** cloudfront\n**Status:** In Progress\n\nCheck the workflow logs above for details."
             })
