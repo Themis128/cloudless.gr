@@ -41,7 +41,7 @@ jobs:
           echo ""
 
           # Get Lambda function details
-          FUNCTION_NAME="cloudless-app-production"
+          FUNCTION_NAME="cloudless-pi-proxy"
           echo "Getting Lambda function: $FUNCTION_NAME"
 
           FUNCTION_ARN=$(aws lambda get-function \
@@ -265,13 +265,13 @@ jobs:
         run: |
           echo "🚀 Phase 2: Lambda Provisioned Concurrency"
 
-          FUNCTION_NAME="cloudless-app-production"
+          FUNCTION_NAME="cloudless-pi-proxy"
 
-          # Get function version
+          # Get function latest version
           FUNC_VERSION=$(aws lambda get-function \
             --function-name $FUNCTION_NAME \
-            --query 'Configuration.Version' \
-            --output text)
+            --query 'Configuration.LastUpdateStatus' \
+            --output text 2>/dev/null || echo "LIVE")
 
           echo "Function Version: $FUNC_VERSION"
 
