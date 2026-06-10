@@ -173,6 +173,23 @@ export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
  * an API route directly (e.g. form action, link).
  */
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
+  // E2E test bypass: only active when BOTH NEXT_PUBLIC_E2E=1 AND a matching
+  // E2E_ADMIN_TOKEN env var are configured AND the Bearer token matches.
+  // Production sets neither env var, so this is dead code in prod.
+  if (process.env.NEXT_PUBLIC_E2E === "1" && process.env.E2E_ADMIN_TOKEN) {
+    const e2eToken = getTokenFromHeader(request);
+    if (e2eToken && e2eToken === process.env.E2E_ADMIN_TOKEN) {
+      return {
+        ok: true,
+        user: {
+          sub: "e2e-admin",
+          email: "e2e-admin@cloudless.test",
+          "cognito:groups": ["admin"],
+        } as DecodedToken,
+      };
+    }
+  }
+
   const token = getTokenFromHeader(request);
   if (token) {
     const decoded = await verifyToken(token);

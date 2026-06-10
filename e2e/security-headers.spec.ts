@@ -73,16 +73,12 @@ test.describe("security headers — cloud", () => {
     expect(pp).toContain("fullscreen=(self)");
   });
 
-  test("CSP report-only header is set with all expected directives", async ({
+  test("CSP header is set with all expected directives", async ({
     request,
   }) => {
     const r = await request.get(PROBE);
-    const csp = r.headers()["content-security-policy-report-only"] ?? "";
-    test.skip(
-      csp.length === 0,
-      "CSP header not present — src/proxy.ts middleware not active in local dev"
-    );
-    expect(csp.length, "expected CSP-Report-Only header").toBeGreaterThan(0);
+    const csp = r.headers()["content-security-policy"] ?? "";
+    expect(csp.length, "expected CSP header").toBeGreaterThan(0);
     // Pinned directives — changes here are deliberate edits to src/proxy.ts.
     for (const piece of [
       "default-src 'self'",
@@ -99,11 +95,7 @@ test.describe("security headers — cloud", () => {
 
   test("CSP allows Google Analytics and GTM hosts", async ({ request }) => {
     const r = await request.get(PROBE);
-    const csp = r.headers()["content-security-policy-report-only"] ?? "";
-    test.skip(
-      csp.length === 0,
-      "CSP header not present — src/proxy.ts middleware not active in local dev"
-    );
+    const csp = r.headers()["content-security-policy"] ?? "";
     // script-src must allow the GTM loader
     expect(csp).toContain("https://www.googletagmanager.com");
     // connect-src must allow GA4 collection endpoints

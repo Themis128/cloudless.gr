@@ -118,6 +118,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const configError = null;
 
   const checkAuth = useCallback(async () => {
+    // E2E test bypass: when running under Playwright with NEXT_PUBLIC_E2E=1
+    // AND a cookie e2e_admin=1 is present, short-circuit to an admin session.
+    // Production never sets NEXT_PUBLIC_E2E, so this branch is dead code in prod.
+    if (
+      typeof window !== "undefined" &&
+      process.env.NEXT_PUBLIC_E2E === "1" &&
+      document.cookie.includes("e2e_admin=1")
+    ) {
+      setUser({
+        username: "e2e-admin",
+        email: "e2e-admin@cloudless.test",
+        preferences: DEFAULT_PREFERENCES,
+      });
+      setIsAdmin(true);
+      setIsLoading(false);
+      return;
+    }
     try {
       const res = await globalThis.fetch("/api/auth/session");
       if (!res.ok) {
