@@ -1,3 +1,5 @@
+> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was Keycloak. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
+
 # User Flow Simulation — Wins & Failures
 
 _Code-level trace of the three core user journeys on cloudless.gr (Next.js App Router + Keycloak + Stripe). Date: 2026-06-02._
