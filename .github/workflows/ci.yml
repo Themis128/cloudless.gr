@@ -36,6 +36,10 @@ on:
       - "k8s/**"
       - "docs/**"
       - ".claude/**"
+      # Root-level project-memory docs (CLAUDE.md, AGENTS.md, README.md) also
+      # gate the required "Build" check — they live at the repo root, not under
+      # docs/, so without listing them a docs-only edit is BLOCKED forever.
+      - "*.md"
       - ".gitignore"
       - "infrastructure/**"
 

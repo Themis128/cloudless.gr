@@ -8,8 +8,6 @@ name: Cluster cleanup — stuck pods, CronJob residue, deployment restarts (retr
 #   2. maintenance — delete Error CronJob pods (cluster-health-check residue)
 #   3. cloudless ns — rollout restart cloudless-manager + oauth2-proxy
 #                     (resets restart counters accumulated from node reboots)
-#   4. keycloak — re-pin last-applied annotation to match live 768Mi limit
-#                 (prevents a future kubectl apply from rolling back to 384Mi)
 
 on:
   push:
@@ -116,56 +114,6 @@ jobs:
           echo "=== cloudless ns — after ===" | tee -a cloudless.log
           kubectl -n cloudless get pods -o wide 2>&1 | tee -a cloudless.log || true
 
-      - name: 4. keycloak — fix last-applied annotation (384Mi → 768Mi)
-        run: |
-          set -uo pipefail
-          echo "=== keycloak annotation ===" | tee keycloak.log
-
-          echo "" | tee -a keycloak.log
-          echo "live limit:" | tee -a keycloak.log
-          kubectl -n keycloak get deployment keycloak \
-            -o jsonpath='{.spec.template.spec.containers[0].resources.limits.memory}' \
-            2>&1 | tee -a keycloak.log || true
-
-          echo "" | tee -a keycloak.log
-          echo "last-applied limit (before):" | tee -a keycloak.log
-          kubectl -n keycloak get deployment keycloak \
-            -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
-            2>/dev/null \
-            | jq -r '.spec.template.spec.containers[0].resources.limits.memory' \
-            2>&1 | tee -a keycloak.log || true
-
-          echo "" | tee -a keycloak.log
-          echo "building annotation from live state..." | tee -a keycloak.log
-          KC_ANN=$(kubectl -n keycloak get deployment keycloak -o json 2>/dev/null \
-            | jq -c '{
-                apiVersion: "apps/v1",
-                kind: "Deployment",
-                metadata: {name: .metadata.name, namespace: .metadata.namespace, annotations: {}},
-                spec: {template: {spec: {containers: [{
-                  name: .spec.template.spec.containers[0].name,
-                  image: .spec.template.spec.containers[0].image,
-                  env: .spec.template.spec.containers[0].env,
-                  resources: .spec.template.spec.containers[0].resources
-                }]}}}
-              }' 2>/dev/null || true)
-
-          if [ -n "${KC_ANN}" ]; then
-            kubectl -n keycloak annotate deployment keycloak \
-              "kubectl.kubernetes.io/last-applied-configuration=${KC_ANN}" \
-              --overwrite 2>&1 | tee -a keycloak.log || true
-            echo "annotation updated." | tee -a keycloak.log
-          else
-            echo "could not build annotation payload — skipping." | tee -a keycloak.log
-          fi
-
-          echo "" | tee -a keycloak.log
-          echo "last-applied limit (after):" | tee -a keycloak.log
-          kubectl -n keycloak get deployment keycloak \
-            -o jsonpath='{.metadata.annotations.kubectl\.kubernetes\.io/last-applied-configuration}' \
-            2>/dev/null \
-            | jq -r '.spec.template.spec.containers[0].resources.limits.memory' \
-            2>&1 | tee -a keycloak.log || true
 
       - name: Post results to tracking issue
         if: always()
@@ -173,7 +121,7 @@ jobs:
           {
             echo "# Cluster cleanup — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
             echo ""
-            for section in ntfy maintenance cloudless keycloak; do
+            for section in ntfy maintenance cloudless; do
               echo "## ${section}"
               echo '```'
               cat "${section}.log" 2>/dev/null || echo "(no log)"

@@ -5,7 +5,7 @@
 #   e2e-user@cloudless.gr   — regular user (no group)
 #   e2e-admin@cloudless.gr  — member of the "admin" group → isAdmin() returns true
 #
-# Cognito replacement for the retired e2e-keycloak-provision.sh. Both users get
+# Cognito provisioning for e2e users. Both users get
 # a PERMANENT password (admin-set-user-password --permanent) so Playwright can
 # drive the Cognito Hosted UI login directly — no FORCE_CHANGE_PASSWORD step.
 #

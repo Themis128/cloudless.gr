@@ -1,0 +1,42 @@
+name: Retry delete cloudless.online ACM cert
+
+# ACM has a known cache lag on InUseBy after APIGW custom domains are deleted.
+# This cron retries the delete every hour until it succeeds, then disables itself.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'  # hourly
+
+permissions:
+  id-token: write
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  retry:
+    runs-on: [self-hosted, omv, pi]
+    env:
+      AWS_REGION: us-east-1
+      ACM_ARN: arn:aws:acm:us-east-1:278585680617:certificate/172fc7be-1975-4526-9589-7d470fcaace2
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Try delete
+        id: del
+        run: |
+          set +e
+          OUT=$(aws acm delete-certificate --certificate-arn "$ACM_ARN" 2>&1)
+          RC=$?
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Disable self if succeeded
+        if: steps.del.outputs.ok == 'true'
+        run: |
+          gh workflow disable retry-delete-cloudless-online-cert.yml --repo "${{ github.repository }}"
+          gh issue comment 382 --repo "${{ github.repository }}" --body "✅ cloudless.online ACM cert deleted at $(date -u). Disabling retry workflow."

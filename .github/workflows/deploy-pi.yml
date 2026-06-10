@@ -105,7 +105,7 @@ jobs:
       # manifest-HEAD bug that caused the 2026-05-29 401 failures.
       - name: Build and load to dockerd
         if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           platforms: linux/arm64
@@ -160,13 +160,13 @@ jobs:
     name: Rollout restart on k3s
     # GH-hosted runner joins tailnet, uses KUBECONFIG_B64 to call k3s API
     # directly over Tailscale — no SSH hop required.
-    # Failover-capable: when GH-hosted billing is broken, flip
-    #   .github/scripts/toggle-runner.sh pi
-    # to route this onto the self-hosted Pi build runners. The Pi runners are
-    # already inside the local network and can reach the k3s API directly
-    # (192.168.1.128:6443) without Tailscale, so the tailnet step becomes a
-    # no-op on them.
-    runs-on: ubuntu-latest
+    # Failover-capable: when the GH-hosted runner's Tailscale path to the
+    # k3s API breaks (DERP relay failures, packet drops, billing issues),
+    # flip vars.RUNNER_GENERIC to ["self-hosted","omv","build"] via
+    # `.github/scripts/toggle-runner.sh pi`. The Pi runners can reach the
+    # k3s API over the LAN; the Tailscale step is a no-op on them.
+    # Default stays ubuntu-latest for cost (Pi runner busy with build job).
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
 

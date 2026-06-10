@@ -71,7 +71,10 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
     capturedConfig = {};
     process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
     process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
-    await import("@/lib/auth");
+    // auth.ts builds next-auth lazily on first request — trigger it so
+    // capturedConfig (the config passed to NextAuth) is populated.
+    const mod = await import("@/lib/auth");
+    await mod.handlers.GET(new Request("https://cloudless.gr/api/auth/session"));
   });
 
   afterEach(() => {

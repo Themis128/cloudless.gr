@@ -315,3 +315,122 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
     });
   });
 });
+
+// ===========================================================================
+// Coverage backfill — exercise remaining code paths in api-auth.ts
+// ===========================================================================
+
+describe("api-auth.ts (coverage backfill)", () => {
+  beforeEach(() => {
+    authMock.mockReset();
+    authMock.mockResolvedValue(null);
+    delete process.env.COGNITO_ISSUER;
+    delete process.env.COGNITO_USER_POOL_ID;
+    delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+    delete process.env.AWS_REGION;
+  });
+
+  describe("verifyToken with COGNITO_ISSUER configured (JWKS branch)", () => {
+    it("returns payload when jwtVerify succeeds", async () => {
+      vi.resetModules();
+      vi.doMock("jose", async () => {
+        const real = await vi.importActual<typeof import("jose")>("jose");
+        return {
+          ...real,
+          jwtVerify: vi.fn().mockResolvedValue({
+            payload: { sub: "verified-user", email: "v@cloudless.gr" },
+          }),
+          createRemoteJWKSet: vi.fn(() => "jwks-stub" as unknown),
+        };
+      });
+      process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
+      const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const decoded = await verifyToken("any.fake.jwt");
+      expect(decoded?.sub).toBe("verified-user");
+      vi.doUnmock("jose");
+    });
+
+    it("returns null when jwtVerify throws", async () => {
+      vi.resetModules();
+      vi.doMock("jose", async () => {
+        const real = await vi.importActual<typeof import("jose")>("jose");
+        return {
+          ...real,
+          jwtVerify: vi.fn().mockRejectedValue(new Error("invalid sig")),
+          createRemoteJWKSet: vi.fn(() => "jwks-stub" as unknown),
+        };
+      });
+      process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
+      const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const decoded = await verifyToken("any.fake.jwt");
+      expect(decoded).toBeNull();
+      vi.doUnmock("jose");
+    });
+  });
+
+  describe("decodeTokenUnverified (JSON.parse catch branch)", () => {
+    it("returns null when payload is not valid base64-encoded JSON", async () => {
+      vi.resetModules();
+      const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const bogus = "aGVhZGVy." + Buffer.from("not-json-at-all").toString("base64url") + ".sig";
+      const decoded = await verifyToken(bogus);
+      expect(decoded).toBeNull();
+    });
+  });
+
+  describe("isAdmin via realm_access.roles (legacy claim)", () => {
+    it("returns true when realm_access.roles contains 'admin'", async () => {
+      const { isAdmin } = await import("@/lib/api-auth");
+      expect(isAdmin({ sub: "u", realm_access: { roles: ["admin"] } })).toBe(true);
+    });
+
+    it("returns true when realm_access.roles contains 'realm:admin'", async () => {
+      const { isAdmin } = await import("@/lib/api-auth");
+      expect(isAdmin({ sub: "u", realm_access: { roles: ["realm:admin"] } })).toBe(true);
+    });
+
+    it("returns false when no admin role/group is present", async () => {
+      const { isAdmin } = await import("@/lib/api-auth");
+      expect(isAdmin({ sub: "u", groups: ["user"], realm_access: { roles: ["viewer"] } })).toBe(false);
+    });
+  });
+});
+
+  describe("requireAuth E2E_ADMIN_TOKEN bypass (test-only)", () => {
+    beforeEach(() => {
+      delete process.env.NEXT_PUBLIC_E2E;
+      delete process.env.E2E_ADMIN_TOKEN;
+    });
+
+    it("returns admin user when E2E env + matching Bearer token are set", async () => {
+      vi.resetModules();
+      process.env.NEXT_PUBLIC_E2E = "1";
+      process.env.E2E_ADMIN_TOKEN = "e2e-secret-abc";
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const result = await requireAuth(makeRequest("e2e-secret-abc"));
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.user.sub).toBe("e2e-admin");
+        expect(result.user["cognito:groups"]).toEqual(["admin"]);
+      }
+      delete process.env.NEXT_PUBLIC_E2E;
+      delete process.env.E2E_ADMIN_TOKEN;
+    });
+
+    it("does NOT bypass when Bearer token doesn't match E2E_ADMIN_TOKEN", async () => {
+      vi.resetModules();
+      process.env.NEXT_PUBLIC_E2E = "1";
+      process.env.E2E_ADMIN_TOKEN = "e2e-secret-abc";
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const result = await requireAuth(makeRequest("wrong-token"));
+      // Falls through to normal auth which will 401 (no valid session)
+      expect(result.ok).toBe(false);
+      delete process.env.NEXT_PUBLIC_E2E;
+      delete process.env.E2E_ADMIN_TOKEN;
+    });
+  });

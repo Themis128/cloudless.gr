@@ -104,8 +104,28 @@ const nextConfig: NextConfig = {
 
 // Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
 // in the App Router before next/manifest.ts can handle them.
+// Lighthouse Win #2 — avoid the locale redirect round-trip for top
+// landing-page paths. The middleware would 302 /services → /en/services
+// (~300-500ms first-load penalty); rewriting server-side cuts that latency
+// without changing what the user sees in the address bar.
+const LOCALE_REWRITE_PATHS = [
+  "/services",
+  "/store",
+  "/contact",
+  "/blog",
+  "/docs",
+  "/case-studies",
+  "/work",
+];
 nextConfig.rewrites = async () => ({
-  beforeFiles: [{ source: "/manifest.webmanifest", destination: "/api/pwa-manifest" }],
+  beforeFiles: [
+    { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
+    ...LOCALE_REWRITE_PATHS.map((path) => ({
+      source: path,
+      destination: `/en${path}`,
+      missing: [{ type: "cookie" as const, key: "NEXT_LOCALE" }],
+    })),
+  ],
   afterFiles: [],
   fallback: [],
 });

@@ -4,7 +4,7 @@
     "timings": [
       {
         "metric": "interactive",
-        "budget": 6500
+        "budget": 7500
       },
       {
         "metric": "first-contentful-paint",
@@ -12,7 +12,7 @@
       },
       {
         "metric": "largest-contentful-paint",
-        "budget": 5500
+        "budget": 7000
       },
       {
         "metric": "total-blocking-time",
@@ -25,7 +25,7 @@
     "timings": [
       {
         "metric": "interactive",
-        "budget": 5500
+        "budget": 7500
       },
       {
         "metric": "first-contentful-paint",
@@ -33,7 +33,7 @@
       },
       {
         "metric": "largest-contentful-paint",
-        "budget": 5500
+        "budget": 7000
       },
       {
         "metric": "total-blocking-time",

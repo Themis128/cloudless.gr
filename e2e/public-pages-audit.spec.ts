@@ -111,30 +111,23 @@ for (const locale of LOCALES) {
 
       expect(status, `${route} → HTTP ${status}`).toBeLessThan(400);
 
-      // Check for actual content (h1 or main). Wait on the combined locator
-      // first: dev-mode first compiles + Suspense streaming can keep the
-      // route-level loading.tsx fallback on screen well past 15s under
-      // parallel workers, so give real content a single generous deadline.
-      await page
+      // Check for actual content (h1 or main). Actively wait for either to
+      // become visible — a fixed isVisible() timeout resolves false the instant
+      // the element isn't mounted yet, racing Turbopack's first-compile streaming
+      // of a cold route in dev mode. Dev first compiles + Suspense streaming can
+      // keep the route-level loading.tsx fallback on screen past 15s under
+      // parallel workers, so use a generous 30s deadline.
+      const hasContent = await page
         .locator("h1, main")
         .first()
         .waitFor({ state: "visible", timeout: 30_000 })
-        .catch(() => {});
-      const hasH1 = await page
-        .locator("h1")
-        .first()
-        .isVisible()
-        .catch(() => false);
-      const hasMain = await page
-        .locator("main")
-        .first()
-        .isVisible()
+        .then(() => true)
         .catch(() => false);
 
-      if (!hasH1 && !hasMain) {
+      if (!hasContent) {
         issues.push({ route, type: "missing", detail: "no <h1> or <main> element" });
       }
-      expect(hasH1 || hasMain, `${route}: no <h1> or <main> element`).toBeTruthy();
+      expect(hasContent, `${route}: no <h1> or <main> element`).toBeTruthy();
     });
   }
 }

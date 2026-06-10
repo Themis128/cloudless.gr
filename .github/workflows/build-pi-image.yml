@@ -210,7 +210,7 @@ jobs:
       #             not a token-staleness one.
       - name: build (load to dockerd)
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           file: ./Dockerfile
@@ -251,7 +251,24 @@ jobs:
           IFS=',' read -ra TAGS <<< "${{ steps.tags.outputs.tags }}"
           for tag in "${TAGS[@]}"; do
             echo "==> docker push ${tag}"
-            docker push "${tag}"
+            # The repo has immutable tags. A *concurrent* build for the SAME
+            # commit (e.g. push + orchestrator dispatch both firing) can push
+            # this exact SHA tag while our long arm64 build is still running —
+            # the existence check at step start missed it. The losing push then
+            # fails "tag ... already exists ... immutable". Because the tag is
+            # content-addressed by commit SHA, the image is byte-identical, so
+            # that specific conflict is a no-op success, not a failure. Any
+            # OTHER push error still fails the step.
+            if ! out="$(docker push "${tag}" 2>&1)"; then
+              echo "${out}"
+              if echo "${out}" | grep -qiE "already exists.*immutable|tag.*immutable"; then
+                echo "==> ${tag} already present (immutable, identical SHA) — treating as success"
+                continue
+              fi
+              echo "::error::docker push ${tag} failed" >&2
+              exit 1
+            fi
+            echo "${out}"
           done
 
       # Record the pushed image digest in SSM so the Pi's image-sync CronJob
