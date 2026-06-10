@@ -1,5 +1,8 @@
 # Cloudless.gr — System Architecture
 
+> **NOTE — auth is Cognito.** This repo migrated from Cognito (formerly Keycloak) to Cognito on 2026-06-08 (PR #677). Any references to Keycloak below are historical context. App admin = membership in the Cognito group `admin`.
+
+
 > **Purpose:** Digital solutions business providing cloud computing, AI marketing, serverless development, and e-commerce services to startups and SMBs.
 >
 > **Stack:** Next.js 16 · React 19 · Tailwind CSS 4 · TypeScript · AWS · Stripe · Notion · HubSpot

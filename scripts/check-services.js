@@ -1,6 +1,6 @@
 // Service connectivity check script for Cloudless.gr
 // Checks actual connectivity for AWS SSM, SES, Stripe, Notion, HubSpot, Google Calendar, Slack, Sentry,
-// Keycloak OIDC (when KEYCLOAK_ISSUER is set), and Cognito (when COGNITO_ISSUER is set).
+// Cognito OIDC (when COGNITO_ISSUER is set).
 
 const fs = require('fs');
 const path = require('path');
@@ -87,7 +87,7 @@ async function checkGoogleCalendar() {
 
 async function checkCognito() {
   if (!process.env.COGNITO_ISSUER) {
-    console.log('  (Cognito: skipped — COGNITO_ISSUER not set; Keycloak is the active provider)');
+    console.log('  (Cognito: skipped — COGNITO_ISSUER not set)');
     return;
   }
   const {
@@ -99,10 +99,7 @@ async function checkCognito() {
   await client.send(new ListUserPoolsCommand({ MaxResults: 1 }));
 }
 
-async function checkKeycloak() {
-  const issuer = process.env.KEYCLOAK_ISSUER;
   if (!issuer) {
-    console.log('  (Keycloak: skipped — KEYCLOAK_ISSUER not set)');
     return;
   }
   const res = await fetch(`${issuer}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(5000) });
@@ -157,7 +154,6 @@ async function main() {
     [checkHubSpot, 'HubSpot', false],
     [checkNotion, 'Notion', false],
     [checkGoogleCalendar, 'Google Calendar', false],
-    [checkKeycloak, 'Keycloak', false],
     [checkCognito, 'Cognito', false],
     [checkSES, 'SES', true],
     [checkSSM, 'SSM', true],

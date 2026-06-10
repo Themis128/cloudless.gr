@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Provision SES SMTP credentials for Keycloak email verification and store them
-# in SSM, so keycloak-configure-email.yml can apply them to the realm.
+# Provision SES SMTP credentials for SES transactional email and store them
+# in SSM, for SES SMTP-using workloads.
 #
 # Runs in CI under the OIDC deploy role (AWS_DEPLOY_ROLE_ARN) — no static keys,
 # no PAT. It:
@@ -67,7 +67,7 @@ if [ -n "$MANUAL_USER" ] && [ -n "$MANUAL_PASS" ]; then
       --description "SES verified From address — default" >/dev/null
     echo "  • set ${P_FROM}=${FROM_DEFAULT} (default)"
   fi
-  echo "✓ SES SMTP credentials written to SSM (user=${MANUAL_USER}). Trigger keycloak-configure-email to apply."
+  echo "✓ SES SMTP credentials written to SSM (user=${MANUAL_USER}). Wire to consumers as needed."
   exit 0
 fi
 
@@ -78,7 +78,7 @@ if aws iam get-user --user-name "$IAM_USER" >/dev/null 2>&1; then
   echo "  • IAM user ${IAM_USER} already exists"
 else
   if ! aws iam create-user --user-name "$IAM_USER" \
-        --tags Key=managed-by,Value=provision-ses-smtp.yml Key=purpose,Value=keycloak-smtp >/dev/null 2>err.txt; then
+        --tags Key=managed-by,Value=provision-ses-smtp.yml Key=purpose,Value=ses-smtp >/dev/null 2>err.txt; then
     echo "::error::Could not create IAM user ${IAM_USER}."
     echo "The OIDC deploy role (AWS_DEPLOY_ROLE_ARN) lacks iam:CreateUser. Either grant"
     echo "iam:CreateUser/CreateAccessKey/PutUserPolicy + ssm:PutParameter to that role,"
@@ -126,12 +126,12 @@ echo "::add-mask::$SMTP_PASSWORD"
 
 # 6) Write SSM params.
 aws ssm put-parameter --name "$P_USER" --type String --overwrite --value "$AK_ID" \
-  --description "SES SMTP username (IAM access key id) for Keycloak — provision-ses-smtp.yml" >/dev/null
+  --description "SES SMTP username (IAM access key id) for SES SMTP — provision-ses-smtp.yml" >/dev/null
 aws ssm put-parameter --name "$P_PASS" --type SecureString --overwrite --value "$SMTP_PASSWORD" \
-  --description "SES SMTP password (derived) for Keycloak — provision-ses-smtp.yml" >/dev/null
+  --description "SES SMTP password (derived) for SES SMTP — provision-ses-smtp.yml" >/dev/null
 if [ -z "$(ssm_get "$P_FROM")" ]; then
   aws ssm put-parameter --name "$P_FROM" --type String --overwrite --value "$FROM_DEFAULT" \
-    --description "SES verified From address for Keycloak verification emails" >/dev/null
+    --description "SES verified From address for transactional emails" >/dev/null
   echo "  • set ${P_FROM}=${FROM_DEFAULT}"
 fi
 

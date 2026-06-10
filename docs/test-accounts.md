@@ -8,7 +8,7 @@ guards), which is the source of truth.
 ## Identity provider
 
 - **AWS Cognito** Hosted UI (production default since the 2026-06 migration),
-  pool **`cloudless-auth`**, app client **`cloudless-app`**. Keycloak
+  pool **`cloudless-auth`**, app client **`cloudless-app`**. Cognito
   (realm `master`, `https://auth.cloudless.gr`) remains the fallback when
   `COGNITO_ISSUER` is not set.
 - The session is a **next-auth (Auth.js) v5** JWT carried in the
@@ -21,7 +21,7 @@ guards), which is the source of truth.
 ## How "admin" is decided (group membership, not a role)
 
 Admin status is **`admin` group membership**, surfaced into the next-auth
-token as a groups claim (`cognito:groups` on Cognito, `groups` on Keycloak):
+token as a groups claim (`cognito:groups` on Cognito, `groups` on Cognito):
 
 - **Page routes** — `src/proxy.ts` reads the next-auth JWT and treats a user
   as admin if the groups claim includes `"admin"`.
@@ -31,7 +31,7 @@ token as a groups claim (`cognito:groups` on Cognito, `groups` on Keycloak):
 
 > On Cognito the `cognito:groups` claim is emitted automatically for any
 > user added to the `admin` group — no protocol mapper needed (unlike
-> Keycloak). The provisioning script below adds the admin test user to that
+> Cognito). The provisioning script below adds the admin test user to that
 > group.
 
 ## Access tiers

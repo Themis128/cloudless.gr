@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Comprehensive cluster health check — Lambda, k3s, Keycloak, Grafana,
+# Comprehensive cluster health check — Lambda, k3s, Grafana,
 # GitHub runners, SSH paths. Run before deciding "is it me or is it broken?"
 #
 # Usage: bash scripts/cluster-health-snapshot.sh
@@ -22,10 +22,7 @@ echo ""
 echo "▸ Public surfaces"
 for entry in \
   "Lambda /api/health|https://cloudless.gr/api/health|200" \
-  "Lambda /api/auth/session|https://cloudless.gr/api/auth/session|200" \
-  "Keycloak OIDC discovery|https://auth.cloudless.gr/realms/master/.well-known/openid-configuration|200" \
-  "Keycloak JWKS|https://auth.cloudless.gr/realms/master/protocol/openid-connect/certs|200" \
-  "Grafana|https://grafana.cloudless.gr/api/health|200"
+  "Lambda /api/auth/session|https://cloudless.gr/api/auth/session|200" \  "Grafana|https://grafana.cloudless.gr/api/health|200"
 do
   IFS='|' read -r label url expected <<< "$entry"
   code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$url" 2>/dev/null)

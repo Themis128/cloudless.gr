@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Audit the production Lambda's env vars vs. expected post-Keycloak baseline.
+# Audit the production Lambda's env vars vs. expected baseline.
 # Flags missing/stale vars that cause 500s on /api/auth/*.
 #
 # Usage: bash scripts/lambda-env-audit.sh
@@ -69,13 +69,10 @@ check() {
 }
 
 echo ""
-echo "▸ Required for next-auth (Keycloak):"
+echo "▸ Required for next-auth (Cognito):"
 check "AUTH_SECRET" required "next-auth JWT encryption — 500 if missing"
 check "AUTH_TRUST_HOST" required "must be 'true' behind CloudFront"
 check "AUTH_URL" required "callback URL construction"
-check "KEYCLOAK_ISSUER" required "server-side JWT verify (proxy.ts)"
-check "NEXT_PUBLIC_KEYCLOAK_ISSUER" required "client OIDC init"
-check "NEXT_PUBLIC_KEYCLOAK_CLIENT_ID" required "client OIDC init"
 
 echo ""
 echo "▸ Required for SSM-loaded secrets:"

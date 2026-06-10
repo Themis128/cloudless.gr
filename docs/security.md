@@ -10,7 +10,7 @@ same image, so all controls below apply identically to both).
 |---|---|---|
 | Transport | HTTPS at every public edge (ACM certs on CloudFront + APIGW), HSTS preload | `src/proxy.ts`, AWS infra |
 | Transport | Production HTTP→HTTPS 308 redirect | `src/proxy.ts` |
-| Auth (user) | OIDC JWT (Keycloak or Cognito), RS256-verified against provider JWKS | `src/lib/api-auth.ts` |
+| Auth (user) | OIDC JWT (Cognito or Cognito), RS256-verified against provider JWKS | `src/lib/api-auth.ts` |
 | Auth (admin) | All 71 `/api/admin/*` routes gated by `requireAdmin`/`requireAuth` | `src/app/api/admin/**` |
 | Auth (cron) | `Bearer ${CRON_SECRET}`, constant-time compare | `src/lib/cron-auth.ts` |
 | Auth (webhook) | Stripe `constructEvent`, HubSpot v3 timing-safe HMAC, Notion HMAC, Pi-sync HMAC-SHA256 | `src/app/api/webhooks/**`, `.github/workflows/build-pi-image.yml` |
@@ -33,12 +33,12 @@ same image, so all controls below apply identically to both).
 
 ### Authentication
 
-- **User auth** uses Keycloak (default, `auth.cloudless.gr` realm `master`) or
+- **User auth** uses Cognito (default, `auth.cloudless.gr` realm `master`) or
   AWS Cognito (when `COGNITO_ISSUER` is set — serverless path). Tokens are
   verified against the active provider's JWKS (`createRemoteJWKSet`), with
   issuer + audience asserted.
 - **Admin gate** — `requireAdmin()` decodes the verified token and asserts
-  the user is in the admin group (`groups` claim for Keycloak,
+  the user is in the admin group (`groups` claim for Cognito,
   `cognito:groups` for Cognito). Used by every route under
   `src/app/api/admin/*` (verified by audit script in this repo).
 - **Admin UI guard** — `AdminLayoutClient` checks `isAdmin` from
@@ -51,7 +51,7 @@ same image, so all controls below apply identically to both).
   `manage.cloudless.gr` (Cluster Manager). These links open in a new
   tab and carry no credentials or tokens from cloudless.gr. Each tool
   enforces its own independent authentication: Grafana uses its built-in
-  login; Cluster Manager is behind oauth2-proxy → Keycloak SSO.
+  login; Cluster Manager is behind oauth2-proxy → Cognito SSO.
 - **Cron / scheduled jobs** — protected by `CRON_SECRET` Bearer token,
   compared with `safeEqual` (constant time) to defeat timing oracles.
 

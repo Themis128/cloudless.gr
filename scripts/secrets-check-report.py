@@ -23,7 +23,6 @@ descriptions = {
     "SES_SMTP_USER": "SES SMTP username — email verification (AWS Console → SES → SMTP Settings)",
     "SES_SMTP_PASSWORD": "SES SMTP password — email verification",
     "GH_PAT": "GitHub PAT repo scope — cloud session auto-push on stop hook",
-    "ADMIN_BOOTSTRAP_PASSWORD": "Keycloak admin bootstrap password for keycloak-bootstrap-admin workflow",
 }
 
 print(f"# Secrets health check — {timestamp}")
