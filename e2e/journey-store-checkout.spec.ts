@@ -38,7 +38,9 @@ test.describe("Store checkout flow", () => {
       const href = await productLink.getAttribute("href");
       if (href) {
         await productLink.click();
-        await page.waitForURL(new RegExp(href.replace(/\//g, "\\/")));
+        // Proper regex-escape (also escapes backslashes, dots, brackets, etc.)
+        const escapedHref = href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        await page.waitForURL(new RegExp(escapedHref));
         await expect(page.locator("h1, h2").first()).toBeVisible();
       }
     }
