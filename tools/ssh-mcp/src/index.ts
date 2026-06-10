@@ -1869,10 +1869,10 @@ server.tool(
 
       // 2. Classify
       let classification = "unknown";
-      if (/openpgp.*key expired|signature.*expired/i.test(log)) classification = "openpgp_key_expired (Stage 1: bump TF_VERSION to " + tfVer + ")";
-      else if (/^.+fmt.+exit.+3|terraform fmt -check/i.test(log)) classification = "fmt_drift (Stage 2: run `terraform fmt`)";
-      else if (/expected .+ to be one of|Unsupported argument|Missing required argument|Insufficient .+ blocks/i.test(log)) classification = "validate_schema_drift (Stage 3: provider schema migration)";
-      else if (/Function not found|ResourceNotFoundException|reading .+ \(/i.test(log)) classification = "plan_precondition (Stage 4: missing AWS resource; gate behind a flag)";
+      if (/\bopenpgp[\s\S]{0,200}?key expired\b|\bsignature[\s\S]{0,200}?expired\b/i.test(log)) classification = "openpgp_key_expired (Stage 1: bump TF_VERSION to " + tfVer + ")";
+      else if (/\bterraform fmt(?:\s|[-]check)/i.test(log)) classification = "fmt_drift (Stage 2: run `terraform fmt`)";
+      else if (/\bexpected\b[\s\S]{0,80}?\bto be one of\b|\bUnsupported argument\b|\bMissing required argument\b|\bInsufficient\b[\s\S]{0,40}?\bblocks\b/i.test(log)) classification = "validate_schema_drift (Stage 3: provider schema migration)";
+      else if (/\bFunction not found\b|\bResourceNotFoundException\b|\breading\b[\s\S]{0,80}?\(/i.test(log)) classification = "plan_precondition (Stage 4: missing AWS resource; gate behind a flag)";
 
       // 3. Verify locally
       const verify = await sshMain(

@@ -19,6 +19,11 @@ function safeId(id: string): string {
   return String(id).replace(/[\r\n\t]/g, "").slice(0, 64);
 }
 
+function safeMsg(msg: string): string {
+  return String(msg).replace(/[\r\n\t]/g, " ").slice(0, 200);
+}
+
+
 
 export const NOTION_API = "https://api.notion.com/v1";
 export const NOTION_VERSION = "2022-06-28";
@@ -372,7 +377,7 @@ export async function createPage(
     console.error(
       "[Notion] Failed to create page in %s:",
       safeId(databaseId),
-      (err as Error)?.message ?? "unknown error"
+      safeMsg((err as Error)?.message ?? "unknown error")
     );
     return null;
   }
@@ -392,7 +397,7 @@ export async function updatePage(
     console.error(
       "[Notion] Failed to update page %s:",
       safeId(pageId),
-      (err as Error)?.message ?? "unknown error"
+      safeMsg((err as Error)?.message ?? "unknown error")
     );
     return false;
   }
@@ -412,7 +417,7 @@ export async function archivePage(pageId: string): Promise<boolean> {
     console.error(
       "[Notion] Failed to archive page %s:",
       safeId(pageId),
-      (err as Error)?.message ?? "unknown error"
+      safeMsg((err as Error)?.message ?? "unknown error")
     );
     return false;
   }
@@ -432,7 +437,7 @@ export async function restorePage(pageId: string): Promise<boolean> {
     console.error(
       "[Notion] Failed to restore page %s:",
       safeId(pageId),
-      (err as Error)?.message ?? "unknown error"
+      safeMsg((err as Error)?.message ?? "unknown error")
     );
     return false;
   }
@@ -459,7 +464,7 @@ export async function appendBlocks(parentId: string, children: any[]): Promise<b
     console.error(
       "[Notion] Failed to append blocks to %s:",
       safeId(parentId),
-      (err as Error)?.message ?? "unknown error"
+      safeMsg((err as Error)?.message ?? "unknown error")
     );
     return false;
   }
@@ -476,7 +481,7 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
     console.error(
       "[Notion] Failed to delete block %s:",
       safeId(blockId),
-      (err as Error)?.message ?? "unknown error"
+      safeMsg((err as Error)?.message ?? "unknown error")
     );
     return false;
   }
