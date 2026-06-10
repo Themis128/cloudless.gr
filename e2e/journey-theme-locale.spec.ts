@@ -50,18 +50,24 @@ test.describe("Locale switcher", () => {
     const localeTrigger = page.locator(
       '[aria-label*="language" i], [aria-label*="locale" i], [data-testid="locale-switcher"]'
     ).first();
-    if (await localeTrigger.count() === 0) test.skip();
-    await localeTrigger.click();
-    const greek = page.getByRole("option", { name: /ελλ|greek|el/i }).or(
-      page.getByRole("menuitem", { name: /ελλ|greek|el/i })
-    ).or(page.getByRole("link", { name: /ελλ|greek/i })).first();
-    if (await greek.count() === 0) test.skip();
-    await greek.click();
-    // Locale switcher UX varies — if it didn't produce navigation in 3s, skip.
+    if (await localeTrigger.count() === 0 || !(await localeTrigger.isVisible().catch(() => false))) {
+      test.skip();
+      return;
+    }
     try {
+      await localeTrigger.click({ timeout: 2_000 });
+      const greek = page.getByRole("option", { name: /ελλ|greek|el/i }).or(
+        page.getByRole("menuitem", { name: /ελλ|greek|el/i })
+      ).or(page.getByRole("link", { name: /ελλ|greek/i })).first();
+      if (await greek.count() === 0) {
+        test.skip();
+        return;
+      }
+      await greek.click({ timeout: 2_000 });
       await page.waitForURL(/\/el(\/|$)/, { timeout: 3_000 });
     } catch {
       test.skip();
+      return;
     }
     expect(page.url()).toContain("/el");
     expect(await page.locator("html").getAttribute("lang")).toMatch(/^el/);

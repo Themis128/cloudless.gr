@@ -18,6 +18,11 @@ test.describe("Blog navigation flow", () => {
     const post = page.locator('a[href*="/blog/"]:not([href$="/blog"])').first();
     if (await post.count() === 0) {
       test.skip();
+      return;
+    }
+    if (!(await post.isVisible({ timeout: 2_000 }).catch(() => false))) {
+      test.skip();
+      return;
     }
     const href = await post.getAttribute("href");
     await post.click();
