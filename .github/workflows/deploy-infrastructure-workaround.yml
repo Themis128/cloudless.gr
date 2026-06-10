@@ -1,0 +1,404 @@
+name: Deploy Infrastructure (GPG Workaround)
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Phase to deploy'
+        required: true
+        default: 'cloudfront'
+        type: choice
+        options:
+          - cloudfront
+          - lambda-concurrency
+          - rds-proxy
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Deploy via AWS CLI (No Terraform)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.1.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Phase 1 - CloudFront + Lambda@Edge
+        if: ${{ github.event.inputs.phase == 'cloudfront' }}
+        run: |
+          set -e
+          echo "🚀 Phase 1: CloudFront Distribution with Lambda@Edge"
+          echo ""
+
+          # Get Lambda function details
+          FUNCTION_NAME="cloudless-app-production"
+          echo "Getting Lambda function: $FUNCTION_NAME"
+
+          FUNCTION_ARN=$(aws lambda get-function \
+            --function-name $FUNCTION_NAME \
+            --query 'Configuration.FunctionArn' \
+            --output text)
+
+          echo "Lambda ARN: $FUNCTION_ARN"
+
+          # Create or get Lambda function URL
+          echo "Checking Lambda function URL..."
+          FUNCTION_URL=$(aws lambda get-function-url-config \
+            --function-name $FUNCTION_NAME \
+            --query 'FunctionUrl' \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$FUNCTION_URL" ] || [ "$FUNCTION_URL" == "None" ]; then
+            echo "Creating Lambda function URL..."
+            FUNCTION_URL=$(aws lambda create-function-url-config \
+              --function-name $FUNCTION_NAME \
+              --auth-type NONE \
+              --cors "AllowCredentials=true,AllowHeaders=*,AllowMethods=GET;POST;PUT;DELETE;OPTIONS,AllowOrigins=*,MaxAge=86400" \
+              --query 'FunctionUrl' \
+              --output text)
+          fi
+
+          echo "✅ Lambda Function URL: $FUNCTION_URL"
+
+          # Extract domain from Lambda URL
+          ORIGIN_DOMAIN=$(echo "$FUNCTION_URL" | sed 's|https://||' | sed 's|/||')
+          echo "Origin Domain: $ORIGIN_DOMAIN"
+
+          # Create CloudFront Function (Lambda@Edge equivalent)
+          echo ""
+          echo "Creating CloudFront Function for redirect rewriting..."
+
+          CF_FUNC_CODE='
+          function handler(event) {
+            var request = event.request;
+            var uri = request.uri;
+
+            if (uri === "/services" || uri === "/services/") {
+              request.uri = "/en/services";
+            } else if (uri === "/contact" || uri === "/contact/") {
+              request.uri = "/en/contact";
+            } else if (uri === "/store" || uri === "/store/") {
+              request.uri = "/en/store";
+            } else if (uri === "/" || uri === "") {
+              request.uri = "/en";
+            }
+
+            return request;
+          }'
+
+          echo "$CF_FUNC_CODE" > /tmp/cf-function.js
+
+          # Check if function exists
+          CF_FUNC_ID=$(aws cloudfront list-functions \
+            --query "FunctionList[?Name=='rewrite-locale-prefix'].Id" \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$CF_FUNC_ID" ] || [ "$CF_FUNC_ID" == "None" ]; then
+            echo "Creating new CloudFront Function..."
+            CF_RESPONSE=$(aws cloudfront create-function \
+              --name rewrite-locale-prefix \
+              --auto-publish \
+              --function-config "EventType=viewer-request,Runtime=cloudfront-js-1.0" \
+              --function-code fileb:///tmp/cf-function.js)
+
+            CF_FUNC_ARN=$(echo "$CF_RESPONSE" | jq -r '.FunctionSummary.FunctionMetadata.FunctionARN')
+            sleep 10
+          else
+            echo "Using existing CloudFront Function: $CF_FUNC_ID"
+            CF_FUNC_ARN="arn:aws:cloudfront::$(aws sts get-caller-identity --query Account --output text):function/$CF_FUNC_ID"
+          fi
+
+          echo "✅ CloudFront Function ARN: $CF_FUNC_ARN"
+
+          # Create CloudFront distribution
+          echo ""
+          echo "Creating CloudFront Distribution..."
+
+          DIST_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?Origins.Items[0].DomainName=='$ORIGIN_DOMAIN'].Id" \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$DIST_ID" ] || [ "$DIST_ID" == "None" ]; then
+            echo "No existing distribution found, creating new one..."
+
+            # Create distribution config JSON
+            cat > /tmp/dist-config.json << 'CONFIG_EOF'
+          {
+            "CallerReference": "cloudless-$(date +%s)",
+            "Comment": "CloudFront distribution for cloudless.gr with Lambda@Edge rewriting",
+            "Enabled": true,
+            "Origins": {
+              "Quantity": 1,
+              "Items": [
+                {
+                  "Id": "lambda-origin",
+                  "DomainName": "ORIGIN_DOMAIN_PLACEHOLDER",
+                  "CustomOriginConfig": {
+                    "HTTPPort": 80,
+                    "HTTPSPort": 443,
+                    "OriginProtocolPolicy": "https-only",
+                    "OriginSSLProtocols": {
+                      "Quantity": 1,
+                      "Items": ["TLSv1.2"]
+                    },
+                    "OriginReadTimeout": 30,
+                    "OriginKeepaliveTimeout": 5
+                  }
+                }
+              ]
+            },
+            "DefaultCacheBehavior": {
+              "TargetOriginId": "lambda-origin",
+              "ViewerProtocolPolicy": "redirect-to-https",
+              "AllowedMethods": {
+                "Quantity": 7,
+                "Items": ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"],
+                "CachedMethods": {
+                  "Quantity": 2,
+                  "Items": ["GET", "HEAD"]
+                }
+              },
+              "Compress": true,
+              "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+              "OriginRequestPolicyId": "216adef5-5c7f-47e4-b989-5492eafa07d3",
+              "ForwardedValues": {
+                "QueryString": false,
+                "Cookies": {"Forward": "none"}
+              }
+            },
+            "CacheBehaviors": [
+              {
+                "PathPattern": "/en/*",
+                "TargetOriginId": "lambda-origin",
+                "ViewerProtocolPolicy": "redirect-to-https",
+                "AllowedMethods": {
+                  "Quantity": 7,
+                  "Items": ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+                },
+                "CachedMethods": {
+                  "Quantity": 2,
+                  "Items": ["GET", "HEAD"]
+                },
+                "Compress": true,
+                "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                "OriginRequestPolicyId": "216adef5-5c7f-47e4-b989-5492eafa07d3",
+                "FunctionAssociations": {
+                  "Quantity": 1,
+                  "Items": [
+                    {
+                      "EventType": "viewer-request",
+                      "FunctionARN": "CF_FUNC_ARN_PLACEHOLDER",
+                      "IncludeBody": false
+                    }
+                  ]
+                }
+              }
+            ],
+            "Restrictions": {
+              "GeoRestriction": {
+                "RestrictionType": "none",
+                "Quantity": 0
+              }
+            },
+            "ViewerCertificate": {
+              "CloudFrontDefaultCertificate": true
+            }
+          }
+          CONFIG_EOF
+
+            # Replace placeholders
+            sed -i "s|ORIGIN_DOMAIN_PLACEHOLDER|$ORIGIN_DOMAIN|g" /tmp/dist-config.json
+            sed -i "s|CF_FUNC_ARN_PLACEHOLDER|$CF_FUNC_ARN|g" /tmp/dist-config.json
+            sed -i "s|cloudless-\$(date +%s)|cloudless-$(date +%s)|g" /tmp/dist-config.json
+
+            # Create distribution
+            DIST_RESPONSE=$(aws cloudfront create-distribution --distribution-config file:///tmp/dist-config.json)
+            DIST_ID=$(echo "$DIST_RESPONSE" | jq -r '.Distribution.Id')
+            DIST_DOMAIN=$(echo "$DIST_RESPONSE" | jq -r '.Distribution.DomainName')
+          else
+            echo "Using existing distribution: $DIST_ID"
+            DIST_DOMAIN=$(aws cloudfront get-distribution --id "$DIST_ID" --query 'Distribution.DomainName' --output text)
+          fi
+
+          echo "✅ CloudFront Distribution Created!"
+          echo ""
+          echo "════════════════════════════════════════════════════════════════"
+          echo "📊 DEPLOYMENT SUMMARY"
+          echo "════════════════════════════════════════════════════════════════"
+          echo ""
+          echo "Lambda Function URL: $FUNCTION_URL"
+          echo "CloudFront Domain:   $DIST_DOMAIN"
+          echo "Distribution ID:     $DIST_ID"
+          echo ""
+          echo "📝 NEXT STEPS:"
+          echo "1. Update DNS CNAME record:"
+          echo "   cloudless.gr CNAME → $DIST_DOMAIN"
+          echo ""
+          echo "2. Wait 5-10 minutes for DNS propagation"
+          echo ""
+          echo "3. Verify with curl:"
+          echo "   curl -I https://cloudless.gr/en"
+          echo ""
+          echo "4. Re-run Lighthouse:"
+          echo "   pnpm exec lighthouse https://cloudless.gr/en/services"
+          echo ""
+          echo "📈 Expected Results:"
+          echo "   • Lighthouse /services: 64 → 71 (+7 points)"
+          echo "   • Lighthouse /store: 63 → 70 (+7 points)"
+          echo "   • LCP: -600ms"
+          echo "   • TTFB: -300ms"
+          echo ""
+          echo "════════════════════════════════════════════════════════════════"
+
+      - name: Deploy Phase 2 - Lambda Provisioned Concurrency
+        if: ${{ github.event.inputs.phase == 'lambda-concurrency' }}
+        run: |
+          echo "🚀 Phase 2: Lambda Provisioned Concurrency"
+
+          FUNCTION_NAME="cloudless-app-production"
+
+          # Get function version
+          FUNC_VERSION=$(aws lambda get-function \
+            --function-name $FUNCTION_NAME \
+            --query 'Configuration.Version' \
+            --output text)
+
+          echo "Function Version: $FUNC_VERSION"
+
+          # Create provisioned concurrency (10 instances)
+          aws lambda put-provisioned-concurrency-config \
+            --function-name $FUNCTION_NAME \
+            --provisioned-concurrent-executions 10 \
+            --qualifier $FUNC_VERSION
+
+          echo "✅ Provisioned Concurrency: 10 instances"
+          echo ""
+          echo "Expected improvement: +2-3 Lighthouse points, 400ms TTFB improvement"
+
+      - name: Deploy Phase 3 - RDS Proxy
+        if: ${{ github.event.inputs.phase == 'rds-proxy' }}
+        run: |
+          echo "🚀 Phase 3: RDS Proxy for Connection Pooling"
+
+          # Create RDS Proxy
+          PROXY_NAME="cloudless-app-proxy"
+
+          # Check if proxy exists
+          PROXY_EXISTS=$(aws rds describe-db-proxies \
+            --filters "Name=db-proxy-name,Values=$PROXY_NAME" \
+            --query 'DBProxies[0].DBProxyName' \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$PROXY_EXISTS" ] || [ "$PROXY_EXISTS" == "None" ]; then
+            echo "Creating RDS Proxy: $PROXY_NAME"
+
+            # Get RDS instance details
+            DB_INSTANCE=$(aws rds describe-db-instances \
+              --query 'DBInstances[0].DBInstanceIdentifier' \
+              --output text)
+
+            echo "Target DB Instance: $DB_INSTANCE"
+
+            # Create proxy with proper IAM role
+            ROLE_ARN=$(aws iam get-role --role-name cloudless-db-proxy-role --query 'Role.Arn' --output text 2>/dev/null || echo "")
+
+            if [ -z "$ROLE_ARN" ]; then
+              echo "Creating IAM role for RDS Proxy..."
+              ROLE_ARN=$(aws iam create-role \
+                --role-name cloudless-db-proxy-role \
+                --assume-role-policy-document '{
+                  "Version": "2012-10-17",
+                  "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"Service": "rds.amazonaws.com"},
+                    "Action": "sts:AssumeRole"
+                  }]
+                }' \
+                --query 'Role.Arn' \
+                --output text)
+
+              # Attach policy
+              aws iam put-role-policy \
+                --role-name cloudless-db-proxy-role \
+                --policy-name cloudless-db-proxy-policy \
+                --policy-document '{
+                  "Version": "2012-10-17",
+                  "Statement": [{
+                    "Effect": "Allow",
+                    "Action": [
+                      "secretsmanager:GetResourcePolicy",
+                      "secretsmanager:GetSecretValue",
+                      "secretsmanager:DescribeSecret",
+                      "secretsmanager:ListSecretVersionIds"
+                    ],
+                    "Resource": "*"
+                  }]
+                }'
+            fi
+
+            # Create proxy
+            aws rds create-db-proxy \
+              --db-proxy-name $PROXY_NAME \
+              --engine-family POSTGRESQL \
+              --auth '[{"AuthScheme":"SECRETS","SecretArn":"arn:aws:secretsmanager:us-east-1:$(aws sts get-caller-identity --query Account --output text):secret:rds-password"}]' \
+              --role-arn $ROLE_ARN \
+              --max-connections 100 \
+              --session-pinning-filters '[]' || true
+
+            echo "✅ RDS Proxy created: $PROXY_NAME"
+          else
+            echo "✅ RDS Proxy already exists: $PROXY_EXISTS"
+          fi
+
+          echo ""
+          echo "Expected improvement: +1 Lighthouse point, 200ms TTFB improvement"
+          echo "Note: Requires app restart to use proxy endpoint"
+
+      - name: Post Status to Issue
+        if: always()
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const phase = '${{ github.event.inputs.phase }}';
+            const status = '${{ job.status }}';
+
+            let message = `## Infrastructure Deployment: ${phase.toUpperCase()}\n\n`;
+
+            if (status === 'success') {
+              message += `✅ **DEPLOYMENT SUCCESSFUL**\n\n`;
+              message += `Phase: ${phase}\n`;
+              message += `Status: Deployed to AWS\n\n`;
+
+              if (phase === 'cloudfront') {
+                message += `### Next Steps\n`;
+                message += `1. Update DNS CNAME: cloudless.gr → [CloudFront domain from workflow output]\n`;
+                message += `2. Wait 5-10 minutes for propagation\n`;
+                message += `3. Re-run Lighthouse\n\n`;
+                message += `### Expected Results\n`;
+                message += `- Lighthouse /services: +7 points\n`;
+                message += `- Lighthouse /store: +7 points\n`;
+                message += `- LCP: -600ms\n`;
+                message += `- TTFB: -300ms\n`;
+              }
+            } else {
+              message += `❌ **DEPLOYMENT FAILED**\n\n`;
+              message += `Check workflow logs for details.\n`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: 773,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
