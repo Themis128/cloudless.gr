@@ -59,7 +59,7 @@ function Arrow({ className = "" }: { className?: string }) {
 /* ── Service data ─────────────────────────────────────────────── */
 
 
-import { getServices, getServicesFaqs } from "@/lib/services-data";
+import { getServices, getServicesFaqs, colorMap, bundleTerminal } from "@/lib/services-data";
 
 export default async function ServicesPage() {
   const locale = await getServerLocale();
