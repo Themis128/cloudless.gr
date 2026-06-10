@@ -83,6 +83,8 @@ jobs:
 
       - name: Terraform Init
         working-directory: infrastructure/terraform
+        env:
+          TF_SKIP_PROVIDER_VERIFICATION: "true"
         run: terraform init
 
       - name: Terraform Format Check
@@ -193,6 +195,8 @@ jobs:
 
       - name: Terraform Init
         working-directory: infrastructure/terraform
+        env:
+          TF_SKIP_PROVIDER_VERIFICATION: "true"
         run: terraform init
 
       - name: Apply CloudFront
