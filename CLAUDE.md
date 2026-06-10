@@ -312,3 +312,34 @@ Notion, etc.), the right fix is either (a) widen the assertion to
 when preconditions aren't met. Both are honest reflections of the
 missing data; the test still proves the surface exists. Real bugs would
 still fail the spec on a fully-configured environment.
+
+## Pi Housekeeping
+
+Daily disk cleanup runs at **03:00 EEST** on `omv-main` via systemd timer
+`cloudless-cleanup.timer` (installed 2026-06-10).
+
+**What it prunes:**
+- `journalctl --vacuum-time=14d`
+- `apt-get clean`
+- `pnpm store prune` (as user `tbaltzakis`)
+- All `buildx_buildkit_builder-*` Docker volumes (orphaned from arm64 builds)
+- `docker image prune -af` + `docker builder prune -af`
+- Stale VS Code Insiders / Server folders (keeps newest 2)
+- `k3s crictl rmi --prune`
+
+**Files:**
+- `/usr/local/sbin/cloudless-cleanup.sh` — the script
+- `/etc/systemd/system/cloudless-cleanup.service`
+- `/etc/systemd/system/cloudless-cleanup.timer` (daily 03:00 + 10min random delay)
+- `/var/log/cloudless-cleanup.log` — output log
+
+**Manual run:**
+```bash
+sudo systemctl start cloudless-cleanup.service
+sudo tail -f /var/log/cloudless-cleanup.log
+```
+
+**Disable:**
+```bash
+sudo systemctl disable --now cloudless-cleanup.timer
+```
