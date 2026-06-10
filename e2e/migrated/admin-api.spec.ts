@@ -3,59 +3,82 @@ import { test, expect } from "@playwright/test";
 /**
  * Migrated from __tests__/admin-*.test.ts (Vitest → Playwright).
  *
- * Two cohorts of admin API routes:
+ * Admin API surface:
  *
- * 1) Authenticated (calendar, kpi, notion/*) — reject unauth requests with
- *    401/403/404 so attackers can't enumerate data.
+ * - 75+ admin route files exist; every one wraps requireAdmin(request) at the
+ *   top of GET/POST/etc. (verified by audit). Unauthenticated requests get a
+ *   401 with {"error":"Missing authorization token"}.
  *
- * 2) Public read-only listings (analytics, campaigns, crm, email, pipeline,
- *    projects) — currently return 200 to unauthenticated callers. This is
- *    intentional (or a known security gap — see issue tracker). Tests assert
- *    "responds with JSON" rather than "rejects" so we don't paint over the
- *    behavior, but we DO assert no 5xx errors.
- *
- * Cache (/api/admin/cache) accepts only POST.
+ * - 6 admin "paths" don't have route.ts files (/api/admin/{analytics,
+ *   campaigns,crm,email,pipeline,projects}) — they're parent dirs with sub-
+ *   routes. Next.js falls through to not-found.tsx which renders with status
+ *   200 (the HTML 404 page). Tests assert the body is HTML (not API JSON) so
+ *   we don't paper over a real route ever appearing here unprotected.
  */
 
-test.describe("Admin API — auth-gated routes", () => {
-  const protected_ = [
+test.describe("Admin API — auth-gated mounted routes", () => {
+  const mounted = [
     "/api/admin/calendar",
     "/api/admin/kpi",
     "/api/admin/notion/blog",
     "/api/admin/notion/docs",
     "/api/admin/notion/submissions",
     "/api/admin/notion/tasks",
+    "/api/admin/ab-tests",
+    "/api/admin/client-portals",
+    "/api/admin/users",
+    "/api/admin/workspaces",
+    "/api/admin/orders",
+    "/api/admin/integrations/status",
+    "/api/admin/notifications",
+    "/api/admin/ops/monitor",
   ];
-  for (const route of protected_) {
-    test(`GET ${route} rejects unauthenticated requests`, async ({ request }) => {
+  for (const route of mounted) {
+    test(`GET ${route} rejects unauthenticated requests with 401/403`, async ({ request }) => {
       const r = await request.get(route);
-      expect([401, 403, 404]).toContain(r.status());
+      expect([401, 403]).toContain(r.status());
     });
   }
 });
 
-test.describe("Admin API — public read-only listings", () => {
-  const publicRead = [
+test.describe("Admin API — unmounted parent paths", () => {
+  // These look like API routes but don't have route.ts files. Next.js renders
+  // the not-found page (HTML, status 200). If anyone adds a real route at one
+  // of these paths without auth, the contentType assertion will fail.
+  const unmounted = [
     "/api/admin/analytics",
     "/api/admin/campaigns",
     "/api/admin/crm",
     "/api/admin/email",
     "/api/admin/pipeline",
     "/api/admin/projects",
-    "/api/admin/client-portals",
-    "/api/admin/ab-tests",
   ];
-  for (const route of publicRead) {
-    test(`GET ${route} responds without 5xx`, async ({ request }) => {
+  for (const route of unmounted) {
+    test(`GET ${route} is the not-found HTML page (no API exposed)`, async ({ request }) => {
       const r = await request.get(route);
-      expect(r.status()).toBeLessThan(500);
+      const ct = r.headers()["content-type"] ?? "";
+      // Either auth-gated (good) or the HTML fallback (no API mounted)
+      if (r.status() === 401 || r.status() === 403) return;
+      expect(ct).toMatch(/text\/html/i);
     });
   }
 });
 
 test.describe("Admin API — cache control", () => {
-  test("GET /api/admin/cache returns 405 (POST-only)", async ({ request }) => {
+  test("GET /api/admin/cache returns 401 or 405", async ({ request }) => {
     const r = await request.get("/api/admin/cache");
-    expect([405, 401, 403, 404]).toContain(r.status());
+    expect([401, 403, 405]).toContain(r.status());
+  });
+});
+
+test.describe("Admin API — POST endpoints require auth", () => {
+  test("POST /api/admin/ai/analytics-orchestration without auth → 401", async ({ request }) => {
+    const r = await request.post("/api/admin/ai/analytics-orchestration", { data: {} });
+    expect([401, 403]).toContain(r.status());
+  });
+
+  test("POST /api/admin/ai/analytics-orchestration/pdf without auth → 401", async ({ request }) => {
+    const r = await request.post("/api/admin/ai/analytics-orchestration/pdf", { data: {} });
+    expect([401, 403]).toContain(r.status());
   });
 });
