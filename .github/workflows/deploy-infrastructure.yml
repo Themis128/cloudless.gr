@@ -47,9 +47,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infrastructure/terraform
-        env:
-          TF_SKIP_PROVIDER_VERIFICATION: true
-        run: terraform init
+        run: terraform init -skip-provider-verification
 
       - name: Terraform Format Check
         working-directory: infrastructure/terraform
@@ -123,9 +121,7 @@ jobs:
 
       - name: Terraform Init
         working-directory: infrastructure/terraform
-        env:
-          TF_SKIP_PROVIDER_VERIFICATION: true
-        run: terraform init
+        run: terraform init -skip-provider-verification
 
       - name: Apply CloudFront
         if: ${{ github.event.inputs.phase == 'cloudfront' || github.event.inputs.phase == 'all' }}
