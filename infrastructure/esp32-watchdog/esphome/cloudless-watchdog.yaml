@@ -50,8 +50,6 @@ esphome:
   #
   # To update: `pio pkg install --global --platform "https://...zip"` then bump
   # the version constraints below to match.
-  platformio_options:
-    platform: espressif32@~55.3.38
   on_boot:
     priority: -100
     then:
@@ -458,10 +456,10 @@ interval:
             Content-Type: application/json
           json:
             ip: "192.168.1.201"
-            rssi: !lambda "return (int)id(wifi_signal_sensor).state;"
+            rssi: !lambda "return to_string((int)id(wifi_signal_sensor).state);"
             firmware_ver: "esphome-2026.5"
-            uptime_s: !lambda "return (int)id(uptime_sensor).state;"
-            free_ram_bytes: !lambda "return (int)ESP.getFreeHeap();"
+            uptime_s: !lambda "return to_string((int)id(uptime_sensor).state);"
+            free_ram_bytes: !lambda "return to_string((int)ESP.getFreeHeap());"
           on_error:
             then:
               - logger.log:
