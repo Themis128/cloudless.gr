@@ -370,7 +370,8 @@ export async function createPage(
     return page.id;
   } catch (err) {
     console.error(
-      `[Notion] Failed to create page in ${safeId(databaseId)}:`,
+      "[Notion] Failed to create page in %s:",
+      safeId(databaseId),
       (err as Error)?.message ?? "unknown error"
     );
     return null;
@@ -389,7 +390,8 @@ export async function updatePage(
     return true;
   } catch (err) {
     console.error(
-      `[Notion] Failed to update page ${safeId(pageId)}:`,
+      "[Notion] Failed to update page %s:",
+      safeId(pageId),
       (err as Error)?.message ?? "unknown error"
     );
     return false;
@@ -408,7 +410,8 @@ export async function archivePage(pageId: string): Promise<boolean> {
     return true;
   } catch (err) {
     console.error(
-      `[Notion] Failed to archive page ${safeId(pageId)}:`,
+      "[Notion] Failed to archive page %s:",
+      safeId(pageId),
       (err as Error)?.message ?? "unknown error"
     );
     return false;
@@ -427,7 +430,8 @@ export async function restorePage(pageId: string): Promise<boolean> {
     return true;
   } catch (err) {
     console.error(
-      `[Notion] Failed to restore page ${safeId(pageId)}:`,
+      "[Notion] Failed to restore page %s:",
+      safeId(pageId),
       (err as Error)?.message ?? "unknown error"
     );
     return false;
@@ -453,7 +457,8 @@ export async function appendBlocks(parentId: string, children: any[]): Promise<b
     return true;
   } catch (err) {
     console.error(
-      `[Notion] Failed to append blocks to ${safeId(parentId)}:`,
+      "[Notion] Failed to append blocks to %s:",
+      safeId(parentId),
       (err as Error)?.message ?? "unknown error"
     );
     return false;
@@ -469,7 +474,8 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
     return true;
   } catch (err) {
     console.error(
-      `[Notion] Failed to delete block ${safeId(blockId)}:`,
+      "[Notion] Failed to delete block %s:",
+      safeId(blockId),
       (err as Error)?.message ?? "unknown error"
     );
     return false;
