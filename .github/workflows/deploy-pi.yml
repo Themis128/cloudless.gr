@@ -42,7 +42,10 @@ jobs:
     runs-on: [self-hosted, omv, pi, build]
     outputs:
       short_sha: ${{ steps.check_ecr.outputs.short_sha }}
-      image_exists: ${{ steps.check_ecr.outputs.exists }}
+      # Image is in ECR if the pre-build check found it OR our push step
+      # observed it already present (concurrent build-pi-image.yml won the
+      # race to the immutable tag). Either way the rollout can proceed.
+      image_exists: ${{ steps.check_ecr.outputs.exists == 'true' && 'true' || steps.push_ecr.outputs.pushed_or_exists }}
 
     steps:
       - name: Checkout
@@ -137,15 +140,35 @@ jobs:
       # `aws ecr get-login-password | docker login --password-stdin` writes
       # directly to config.json, bypassing any credential helper.
       - name: Push to ECR
+        id: push_ecr
         if: steps.check_ecr.outputs.exists != 'true'
         run: |
-          set -euo pipefail
+          set -uo pipefail
           TAG="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}"
           echo "==> docker login via get-login-password"
           aws ecr get-login-password --region ${{ env.AWS_REGION }} \
             | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
           echo "==> docker push ${TAG}"
-          docker push "${TAG}"
+          # Capture output so we can distinguish the immutable-tag race (the
+          # concurrent build-pi-image.yml already pushed this exact SHA) from a
+          # genuine push failure. ECR repos use immutable tags, so a same-SHA
+          # re-push returns: "tag invalid: ... already exists ... cannot be
+          # overwritten because the tag is immutable." That means the image IS
+          # in ECR — success for our purposes, so the rollout must still run.
+          push_log=$(docker push "${TAG}" 2>&1)
+          rc=$?
+          echo "${push_log}"
+          if [ "${rc}" -eq 0 ]; then
+            echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
+            echo "Pushed ${TAG}."
+          elif echo "${push_log}" | grep -qiE 'already exists.*immutable|tag.*immutable'; then
+            echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tag already present (immutable) — concurrent build won the race; image is in ECR, proceeding to rollout."
+          else
+            echo "pushed_or_exists=false" >> "$GITHUB_OUTPUT"
+            echo "::error::docker push failed for a reason other than the immutable-tag race."
+            exit 1
+          fi
 
       - name: Update SSM Pi image tracking
         run: |
