@@ -92,20 +92,23 @@ export default async function ServicesPage() {
         <div className="cyber-grid absolute inset-0 opacity-20" />
         <div className="bg-neon-cyan/5 animate-float absolute top-0 right-0 h-[400px] w-[400px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
-          <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan animate-fade-in-up mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-sm font-medium">
+          {/* Above-the-fold hero text renders at full opacity on first paint
+              (no entrance animation) — the h1 is the LCP element and a
+              fade-in delays LCP past the Lighthouse measurement point. */}
+          <div className="bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan mb-6 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-sm font-medium">
             <span className="relative flex h-2 w-2">
               <span className="bg-neon-green animate-ping-slow absolute inline-flex h-full w-full rounded-full opacity-75" />
               <span className="bg-neon-green relative inline-flex h-2 w-2 rounded-full" />
             </span>
             {t("servicesPage.badge", "Transparent Pricing")}
           </div>
-          <h1 className="animate-fade-in-up font-heading text-3xl leading-tight font-bold delay-100 md:text-5xl">
+          <h1 className="font-heading text-3xl leading-tight font-bold md:text-5xl">
             {t("servicesPage.title", "No hidden fees.")}{" "}
             <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
               {t("servicesPage.titleHighlight", "Real results.")}
             </span>
           </h1>
-          <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
+          <p className="mt-4 max-w-xl text-lg text-slate-400">
             {t(
               "servicesPage.subtitle",
               "Pick what you need or bundle everything for 30% savings. No lock-in contracts — your code is always yours."
