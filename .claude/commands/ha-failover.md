@@ -30,6 +30,7 @@ This requires temporarily breaking the Lambda origin. **Do not do this in produc
 Ask: "This will cause ~30s of downtime while CloudFront switches origins. Confirm? (yes/no)"
 
 If confirmed:
+
 1. Note the current CloudFront distribution ID from `ha_check_cloudfront_failover` output.
 2. Use `mcp__AWS_API_MCP_Server__call_aws` to temporarily disable the primary origin's health check or update its domain to a broken endpoint.
 3. Wait 60 seconds for CloudFront health check TTL.
@@ -43,9 +44,11 @@ If Lambda is genuinely down and CloudFront has NOT automatically failed over:
 1. Check CloudFront logs: `mcp__cloudless-infra__aws_get_lambda_logs` for error patterns.
 2. If primary origin is returning 5xx: CloudFront should auto-failover within 30s (health check interval = 30s, threshold = 3 failures).
 3. If auto-failover did not trigger, check the origin group failover criteria:
+
    ```
    aws cloudfront get-distribution --id <DIST_ID> --query 'Distribution.DistributionConfig.Origins'
    ```
+
 4. To force traffic to k3s: update the origin group to remove the primary and use only the secondary via `mcp__AWS_API_MCP_Server__call_aws`.
 
 ### D. Recovery (restore primary)

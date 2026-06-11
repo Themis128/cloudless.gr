@@ -47,7 +47,6 @@ import json
 import os
 import re
 import sys
-from typing import List
 
 import boto3
 from botocore.exceptions import ClientError
@@ -112,9 +111,7 @@ DEPLOY_POLICY = {
 }
 
 PI_IMAGE_POLICY_NAME = "CICDEcrUntagLatest"
-PI_IMAGE_RESOURCE_ARN = (
-    f"arn:aws:ecr:{PI_IMAGE_REGION}:{ACCOUNT_ID}:repository/{PI_IMAGE_REPO}"
-)
+PI_IMAGE_RESOURCE_ARN = f"arn:aws:ecr:{PI_IMAGE_REGION}:{ACCOUNT_ID}:repository/{PI_IMAGE_REPO}"
 PI_IMAGE_POLICY: dict[str, object] = {
     "Version": "2012-10-17",
     "Statement": [
@@ -159,7 +156,7 @@ def put_inline(iam, role_arn: str, policy_name: str, policy_doc: dict, dry: bool
         raise
 
 
-def verify(iam, role_arn: str, actions: List[str], resources: List[str]) -> bool:
+def verify(iam, role_arn: str, actions: list[str], resources: list[str]) -> bool:
     """Simulate the given IAM actions against role_arn and print per-action decisions."""
     print(f"\n→ Simulating {actions} on {role_arn}")
     try:
@@ -233,13 +230,22 @@ def main() -> int:
 
     if not args.skip_deploy:
         sst_actions = [
-            "iam:GetRole", "iam:ListRoleTags", "iam:ListRolePolicies",
-            "iam:GetRolePolicy", "iam:ListAttachedRolePolicies",
-            "iam:TagRole", "iam:UntagRole",
-            "iam:PutRolePolicy", "iam:DeleteRolePolicy",
-            "iam:AttachRolePolicy", "iam:DetachRolePolicy",
-            "iam:CreateRole", "iam:DeleteRole", "iam:UpdateRole",
-            "iam:UpdateAssumeRolePolicy", "iam:PassRole",
+            "iam:GetRole",
+            "iam:ListRoleTags",
+            "iam:ListRolePolicies",
+            "iam:GetRolePolicy",
+            "iam:ListAttachedRolePolicies",
+            "iam:TagRole",
+            "iam:UntagRole",
+            "iam:PutRolePolicy",
+            "iam:DeleteRolePolicy",
+            "iam:AttachRolePolicy",
+            "iam:DetachRolePolicy",
+            "iam:CreateRole",
+            "iam:DeleteRole",
+            "iam:UpdateRole",
+            "iam:UpdateAssumeRolePolicy",
+            "iam:PassRole",
         ]
         deploy_ok = verify(
             iam,

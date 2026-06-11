@@ -1,8 +1,7 @@
 # Cloudless.gr — System Architecture
 
 > **NOTE — auth is Cognito.** Migrated from Keycloak to Cognito on 2026-06-08 (PR #677); Keycloak is fully removed. App admin = membership in the Cognito group `admin`.
-
-
+>
 > **Purpose:** Digital solutions business providing cloud computing, AI marketing, serverless development, and e-commerce services to startups and SMBs.
 >
 > **Stack:** Next.js 16 · React 19 · Tailwind CSS 4 · TypeScript · AWS · Stripe · Notion · HubSpot
@@ -41,6 +40,7 @@ Cloudless.gr is a **digital solutions agency** that sells services AND digital p
 | **You (Admin)** | `/admin` | Monitor orders, CRM, SEO, errors |
 
 The business model has three revenue streams:
+
 1. **Services** — Cloud, AI marketing, digital marketing consulting (sold via consultation booking)
 2. **Digital Products** — Templates, scripts, tools (sold via Stripe store)
 3. **Subscriptions** — Recurring service packages (Stripe subscriptions)
@@ -548,7 +548,7 @@ All modules live in `src/lib/`. They are **server-side only** unless noted.
 
 | File | Purpose |
 |---|---|
-| `ssm-config.ts` | Loads all secrets from SSM (5-min TTL cache, singleton `SSMClient`, stale-cache fallback on error). Validates `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as required. `SSM_PREFIX` uses `||` so an empty string falls back to `/cloudless/production`. |
+| `ssm-config.ts` | Loads all secrets from SSM (5-min TTL cache, singleton `SSMClient`, stale-cache fallback on error). Validates `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as required. `SSM_PREFIX` uses `\|\|` so an empty string falls back to `/cloudless/production`. |
 | `integrations.ts` | Reads integration keys from env. Provides `isConfigured(...keys)` guard. |
 | `auth.ts` | next-auth v5 configuration — Cognito. Handles token refresh and RP-Initiated Logout. |
 | `api-auth.ts` | `requireAuth()` / `requireAdmin()` — RS256 JWT verification against the active provider's JWKS; enforces issuer, audience (client ID), and group membership claims. |
@@ -746,21 +746,25 @@ Redirect to /store/success
 These are the recommended next layers to build toward an AI-powered marketing platform:
 
 ### Phase 1 — Foundation (Data Collection)
+
 - [ ] Activate Meta Pixel + CAPI (see `meta-account-runbook.md`) — blocked by Meta advertising restriction
 - [x] Wire `notion-analytics.ts` `trackEvent()` to all key user actions (blog views, doc views, form submits) — done 2026-04-21
 - [x] Set up weekly GSC digest to Slack — `weekly-gsc-sync.yml` runs `scripts/weekly-gsc-sync.ts` on a Monday cron and posts a Block Kit success/failure digest to Slack (`SLACK_WEBHOOK_URL`); data lands in `NOTION_GSC_REPORTS_DB_ID`
 
 ### Phase 2 — Lead Intelligence
+
 - [x] HubSpot deal automation: contact form → contact upsert already live; deal creation via `createDeal()` added 2026-04-21
 - [x] Google Calendar → HubSpot: create deal on consultation booking — done 2026-04-21
 - [x] Stripe → HubSpot: create deal on checkout (via `checkout.session.completed` webhook) — done 2026-04-21
 
 ### Phase 3 — AI Content & Automation
+
 - [x] AI blog post generation pipeline: `weekly-article-draft.yml` runs `scripts/generate-weekly-article.ts` (Anthropic → `NOTION_BLOG_DB_ID`) on a Monday cron, three hours ahead of the publisher window for human review
 - [ ] AI-powered SEO suggestions: GSC data → LLM analysis → content recommendations in admin
 - [ ] Automated email sequences (post-signup, post-purchase) via SES templates
 
 ### Phase 4 — Advanced Marketing
+
 - [ ] Meta Ads integration (campaign management via Meta Marketing API)
 - [ ] HubSpot email sequences for lead nurturing
 - [ ] A/B testing on landing page CTAs (using feature flags or edge middleware)
@@ -804,6 +808,7 @@ pnpm test:e2e      # Playwright E2E
 | `e2e/*.spec.ts` | Full browser flows via Playwright + axe-core accessibility |
 
 ### Key testing rules
+
 - AWS services (SES, SSM) are mocked in unit tests
 - `resetSsmCache()` + `vi.stubEnv()` pattern for per-test config
 - `NODE_ENV=test` skips SSM entirely — reads from `process.env`

@@ -91,6 +91,7 @@ per violation: `[csp-violation] dir=<directive> blocked=<uri> source=<file>
 doc=<documentURL> disp=<enforce|report>`.
 
 **Roadmap to enforce**:
+
 1. Run with `Report-Only` for ~1 week of representative traffic.
 2. Group reports by `(directive, blocked-uri)` from the log stream.
 3. Allowlist any legitimate sources that surface; remove anything that
@@ -185,6 +186,7 @@ Coverage is locked in by `__tests__/sentry-scrub.test.ts` (8 tests).
 ### CSP report endpoint contract
 
 `POST /api/csp-report`
+
 - Accepts both `application/csp-report` (legacy) and `application/reports+json`
   (modern Reporting-API) shapes.
 - Returns `204 No Content` always (errors are silently ignored to avoid

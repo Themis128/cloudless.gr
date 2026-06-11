@@ -24,12 +24,15 @@ Reviews IAM roles, inline/managed policies, and ACM certificate status for the c
    - Is not in use by any resource (orphaned)
 
 4. **IAM permission escalation cleanup check** — verify no temporary inline policies remain on `cloudless-ops-role`:
+
    ```
    aws iam list-role-policies --role-name cloudless-ops-role
    ```
+
    If any inline policy exists, report it as a security concern and ask the user whether to revoke it.
 
 5. Print a summary:
+
    ```
    IAM Users:     N found, N expected
    IAM Roles:     cloudless-ops-role — OK / inline policies present

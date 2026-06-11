@@ -17,6 +17,7 @@ Manages Grafana on the k3s cluster: health checks, dashboard listing, datasource
 4. **Firing alerts** — call `mcp__cloudless-infra__grafana_check_alerts`. Report any alerts not in `OK` state.
 
 5. Print summary:
+
    ```
    Grafana health:   OK / ERROR
    Datasources:      N found, N healthy
@@ -38,9 +39,11 @@ If Grafana admin password is lost or needs rotation:
 
 1. Fetch current password from SSM: `aws ssm get-parameter --name /cloudless/production/GRAFANA_ADMIN_PASSWORD --with-decryption --output text --query Parameter.Value`
 2. To reset via CLI (inside the pod):
+
    ```
    kubectl exec -n monitoring deployment/kube-prom-grafana -- grafana-cli admin reset-admin-password <new-password>
    ```
+
 3. Update SSM parameter with the new password.
 4. Confirm login works with `grafana_check_health`.
 

@@ -11,8 +11,8 @@ Or from anywhere:
     python3 -m unittest discover infrastructure/pi-alert-api/tests
 """
 
-import sys
 import os
+import sys
 import unittest
 from unittest import mock
 
@@ -20,9 +20,18 @@ from unittest import mock
 # for testing a pure function. Stub them out before import so the test can run
 # in any clean Python environment without installing the full requirements.txt.
 for stub in (
-    "httpx", "fastapi", "fastapi.middleware", "fastapi.middleware.cors",
-    "pydantic", "database", "slack_notify", "flap_guard",
-    "tls_check", "healthchecks_ping", "mqtt_publish", "esp32_command_routes",
+    "httpx",
+    "fastapi",
+    "fastapi.middleware",
+    "fastapi.middleware.cors",
+    "pydantic",
+    "database",
+    "slack_notify",
+    "flap_guard",
+    "tls_check",
+    "healthchecks_ping",
+    "mqtt_publish",
+    "esp32_command_routes",
 ):
     sys.modules.setdefault(stub, mock.MagicMock())
 
@@ -33,10 +42,10 @@ sys.path.insert(0, ROOT)
 
 # fastapi.FastAPI() needs to behave like a usable object — give the mock a no-op
 # add_middleware so the top-of-module `app.add_middleware(...)` doesn't blow up.
-sys.modules["fastapi"].FastAPI = lambda **kw: mock.MagicMock()
+sys.modules["fastapi"].FastAPI = lambda **kw: mock.MagicMock()  # type: ignore[attr-defined]
 
 # Now we can import the function under test.
-from main import _render_alertmanager_message, _PRIMARY_LABELS  # noqa: E402
+from main import _PRIMARY_LABELS, _render_alertmanager_message  # noqa: E402
 
 
 class RenderAlertmanagerMessageTest(unittest.TestCase):
@@ -113,15 +122,15 @@ class RenderAlertmanagerMessageTest(unittest.TestCase):
     def test_extra_labels_footer_appears_for_unknown_keys(self):
         out = self._render(
             labels={
-                "alertname": "X",            # primary — should NOT appear in footer
-                "severity": "warning",       # primary
-                "instance": "host:9100",     # primary
-                "namespace": "monitoring",   # primary
-                "node": "omv",               # primary
-                "job": "node-exporter",      # primary
-                "pod": "node-exporter-xx",   # primary
-                "component": "etcd",         # extra
-                "cluster": "homelab",        # extra
+                "alertname": "X",  # primary — should NOT appear in footer
+                "severity": "warning",  # primary
+                "instance": "host:9100",  # primary
+                "namespace": "monitoring",  # primary
+                "node": "omv",  # primary
+                "job": "node-exporter",  # primary
+                "pod": "node-exporter-xx",  # primary
+                "component": "etcd",  # extra
+                "cluster": "homelab",  # extra
             },
             annotations={"summary": "x"},
         )
@@ -201,8 +210,11 @@ class RenderAlertmanagerMessageTest(unittest.TestCase):
             },
             am_alert={"value": "42", "generatorURL": "https://g"},
         )
+
         # Order: summary → description → facts → other-labels → refs
-        idx = lambda needle: out.index(needle)
+        def idx(needle):
+            return out.index(needle)
+
         self.assertLess(idx("S"), idx("D"))
         self.assertLess(idx("D"), idx("*Value:*"))
         self.assertLess(idx("*Value:*"), idx("📖 *Runbook:*"))

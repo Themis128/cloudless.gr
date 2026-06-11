@@ -12,6 +12,7 @@ X / Twitter v2 API: ads runs on its own host with **OAuth1.0a** signing
 (not bearer tokens).
 
 **Implementation:**
+
 - `src/lib/campaigns/x-ads.ts` — REST client with manual OAuth1 signing
 - `scripts/x-ads-setup.ts` — first-run env wiring
 - `src/app/api/admin/campaigns/x/route.ts` — admin route
@@ -53,6 +54,7 @@ Signing recipe (already implemented):
    percent-encoded values, double-quoted, comma+space separated.
 
 **Pitfalls:**
+
 - The URL in the base string must NOT include the query string. Query params
   go into the param-collection step alongside the oauth_* params (we don't
   currently send query params in the body of POSTs — sticking to URL-only is
@@ -122,11 +124,13 @@ GET /accounts/{id}/stats?
 ```
 
 Or for the account roll-up (what `getXStats` does):
+
 ```
 GET /stats/accounts/{id}?granularity=DAY&metric_groups=ENGAGEMENT,BILLING&...
 ```
 
 Response shape:
+
 ```
 { "data": { "id_data": [{ "id_data": [{ impressions, clicks, billed_charge_local_micro, engagements }] }] } }
 ```

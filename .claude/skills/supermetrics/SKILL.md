@@ -51,6 +51,7 @@ Query analytics data from any connected marketing platform.
 ### 2. Campaign Management (5 platforms)
 
 Create and manage ad campaigns on:
+
 - **AW** — Google Ads
 - **FA** — Meta/Facebook Ads
 - **AC** — Microsoft/Bing Ads
@@ -117,6 +118,7 @@ campaign_and_resource_get(ds_id="FA", account_id="act_657781691826702",
 ```
 
 `campaign_detail_level` options for campaign view:
+
 - `"full"`: everything (default) — campaign, ad groups, ads with creatives
 - `"campaign"`: campaign-level only (fastest)
 - `"ad_group"`: campaign + ad groups, no individual ads
@@ -180,10 +182,12 @@ campaign_update(ds_id="FA", account_id="act_657781691826702",
 ## Connected Accounts (cloudless.gr)
 
 ### Known Account IDs
+
 - **Facebook Ads**: Themistoklis Baltzakis — `act_657781691826702` (ds_id: `FA`)
 - **LinkedIn Ads**: Baltzakis Ad Account — `512642510` (ds_id: `LIA`)
 
 ### Data Sources for Analytics
+
 - **FA** — Facebook Ads (campaign + analytics)
 - **FAM** — Facebook Organic (page insights, NOT for campaigns)
 - **GAWA** — Google Analytics 4
@@ -195,6 +199,7 @@ Always verify account IDs with `accounts_discovery` before querying.
 ## Common Queries for cloudless.gr
 
 ### Facebook Ads performance (last 30 days)
+
 ```
 data_query(ds_id="FA", ds_accounts="act_657781691826702",
            fields="campaign_name,impressions,clicks,spend,ctr,cpc",
@@ -202,15 +207,18 @@ data_query(ds_id="FA", ds_accounts="act_657781691826702",
 ```
 
 ### Google Analytics traffic overview
+
 ```
 data_query(ds_id="GAWA", fields="sessions,users,pageviews,bounceRate",
            date_range_type="last_30_days")
 ```
 
 ### Cross-platform spend comparison
+
 Query each source separately (FA, LIA) and combine results.
 
 ### Keyword research for Google Ads
+
 ```
 campaign_and_resource_get(ds_id="AW", account_id="<google_ads_id>",
                           resource_type="keyword_ideas",

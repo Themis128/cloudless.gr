@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Fix lambda-optimization.tf to pass terraform validate (aws provider 5.80)."""
-import sys, re
+
+import re
+import sys
 
 p = sys.argv[1] if len(sys.argv) > 1 else "infrastructure/terraform/lambda-optimization.tf"
 s = open(p).read()
 
-old1 = '''      header_behavior = "all"
+old1 = """      header_behavior = "all"
     }
     cookies_config {
       cookie_behavior = "all"
@@ -16,8 +18,8 @@ old1 = '''      header_behavior = "all"
   }
 }
 
-# CloudFront Origin Request Policy'''
-new1 = '''      header_behavior = "none"
+# CloudFront Origin Request Policy"""
+new1 = """      header_behavior = "none"
     }
     cookies_config {
       cookie_behavior = "none"
@@ -28,14 +30,14 @@ new1 = '''      header_behavior = "none"
   }
 }
 
-# CloudFront Origin Request Policy'''
+# CloudFront Origin Request Policy"""
 if old1 in s:
     s = s.replace(old1, new1)
     print("OK: fix 1")
 else:
     print("WARN: fix 1 not found")
 
-old2 = '''  headers_config {
+old2 = """  headers_config {
     header_behavior = "all"
   }
   cookies_config {
@@ -44,8 +46,8 @@ old2 = '''  headers_config {
   query_strings_config {
     query_string_behavior = "all"
   }
-}'''
-new2 = '''  headers_config {
+}"""
+new2 = """  headers_config {
     header_behavior = "allViewer"
   }
   cookies_config {
@@ -54,16 +56,16 @@ new2 = '''  headers_config {
   query_strings_config {
     query_string_behavior = "all"
   }
-}'''
+}"""
 if old2 in s:
     s = s.replace(old2, new2, 1)
     print("OK: fix 2")
 else:
     print("WARN: fix 2 not found")
 
-m = re.search(r'# RDS Connection Pooling.*?^\}', s, re.M | re.S)
+m = re.search(r"# RDS Connection Pooling.*?^\}", s, re.M | re.S)
 if m:
-    new3 = '''# RDS Connection Pooling — gated behind var.enable_rds_proxy
+    new3 = """# RDS Connection Pooling — gated behind var.enable_rds_proxy
 variable "enable_rds_proxy" {
   type    = bool
   default = false
@@ -105,8 +107,8 @@ resource "aws_db_proxy_default_target_group" "main" {
     max_idle_connections_percent = 50
     session_pinning_filters      = []
   }
-}'''
-    s = s[:m.start()] + new3 + s[m.end():]
+}"""
+    s = s[: m.start()] + new3 + s[m.end() :]
     print("OK: fix 3")
 else:
     print("WARN: fix 3 not found")

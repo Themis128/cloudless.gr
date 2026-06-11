@@ -16,6 +16,7 @@
 ## Phase 1: Days 1–2 (Hours 1–3.5)
 
 ### Win #1: Extract Service Data ⏳
+
 - [ ] Create `src/lib/services-data.ts`
   - Copy `getServices()` function from `services/page.tsx` (lines 61–332)
   - Copy `getServicesFaqs()` function (lines 334–373)
@@ -28,7 +29,9 @@
 - [ ] Verify bundle shrinkage: `pnpm build && du -sh .next/static/chunks/app*services*.js`
 
 ### Win #2: Fix Locale Redirects ⏳
+
 - [ ] Update `next.config.ts` rewrites (line ~107–111)
+
   ```typescript
   beforeFiles: [
     { source: "/services", destination: "/en/services" },
@@ -36,6 +39,7 @@
     { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
   ]
   ```
+
 - [ ] Test redirects:
   - `curl -i http://localhost:3000/services` → expect 200 (rewrite)
   - `curl -i http://localhost:3000/en/services` → expect 200
@@ -47,6 +51,7 @@
 ## Phase 2: Days 3–4 (Hours 4–7)
 
 ### Win #3: Compress ProductIcon SVGs ⏳
+
 - [ ] Create `public/icons/store/` directory
 - [ ] Export each icon from `ProductIcon.tsx` as `.svg` file:
   - [ ] `cloud-audit.svg` (from `CloudAuditIcon`)
@@ -57,6 +62,7 @@
   - [ ] `hosting.svg` (from `HostingIcon`)
 - [ ] Minify all SVGs: `pnpm add -D svgo && svgo --multipass public/icons/store/*.svg`
 - [ ] Rewrite `ProductIcon.tsx`:
+
   ```typescript
   const iconMap: Record<string, string> = {
     // Map product IDs to SVG paths
@@ -65,10 +71,12 @@
     <img src={iconMap[productId]} alt="" className="h-full w-full" />
   );
   ```
+
 - [ ] Test: `/en/store` should render with same visual appearance
 - [ ] Verify size: `du -sh public/icons/store/` should be ~10 KB total
 
 ### Win #4: Defer Non-Critical JS ⏳
+
 - [ ] Create `src/components/DeferredRender.tsx` (copy from plan)
 - [ ] In `src/app/[locale]/services/page.tsx`:
   - [ ] Import `DeferredRender` (new)
@@ -85,13 +93,17 @@
 ## Phase 3: Day 5 (Hours 7.5–8.5)
 
 ### Win #5: Optimize Icon Assets ⏳
+
 - [ ] Convert PNG icons to WebP:
+
   ```bash
   cwebp -q 90 public/icons/icon-192.png -o public/icons/icon-192.webp
   cwebp -q 90 public/icons/icon-512.png -o public/icons/icon-512.webp
   cwebp -q 90 public/icons/icon-512-maskable.png -o public/icons/icon-512-maskable.webp
   ```
+
 - [ ] Update `src/app/layout.tsx` icons metadata:
+
   ```typescript
   icons: {
     apple: [
@@ -100,6 +112,7 @@
     ],
   }
   ```
+
 - [ ] Verify manifest endpoint includes correct icon URLs:
   - `curl http://localhost:3000/manifest.webmanifest | jq .icons`
 
@@ -108,6 +121,7 @@
 ## Validation Checklist ✅
 
 ### Local Testing
+
 - [ ] No console errors in DevTools
 - [ ] All interactive elements (buttons, modals, accordions) work
 - [ ] `/en/services` renders all 6 service cards with correct text
@@ -115,6 +129,7 @@
 - [ ] PWA install prompt still appears (manifest is valid)
 
 ### Performance Verification
+
 - [ ] Run Lighthouse on both routes after each phase
 - [ ] `/en/services` score ≥66 (was 64)
 - [ ] `/en/store` score ≥66 (was 63)
@@ -123,6 +138,7 @@
 - [ ] Total JS size reduction ≥10% bundle-wide
 
 ### Git Workflow
+
 - [ ] Phase 1: Commit to `claude/lighthouse-phase-1`, push, create draft PR
 - [ ] Phase 2: Commit to `claude/lighthouse-phase-2`, push
 - [ ] Phase 3: Commit to `claude/lighthouse-phase-3`, push

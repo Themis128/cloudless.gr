@@ -21,6 +21,7 @@ Check AWS credentials and authenticate if needed.
 **Input:** None
 
 **Output:**
+
 ```json
 {
   "success": true,
@@ -36,6 +37,7 @@ Check AWS credentials and authenticate if needed.
 ```
 
 **Error Handling:**
+
 - If credentials invalid: attempts SSO login
 - If SSO unavailable: returns helpful error message
 
@@ -48,6 +50,7 @@ Fetch Cognito credentials from AWS SSM Parameter Store.
 **Input:** None
 
 **Output:**
+
 ```json
 {
   "success": true,
@@ -61,6 +64,7 @@ Fetch Cognito credentials from AWS SSM Parameter Store.
 ```
 
 **SSM Parameters:**
+
 - `/cloudless/production/COGNITO_CLIENT_ID` (required)
 - `/cloudless/production/COGNITO_CLIENT_SECRET` (optional, for public clients)
 
@@ -71,6 +75,7 @@ Fetch Cognito credentials from AWS SSM Parameter Store.
 Update `.env.local` with fetched credentials.
 
 **Input:**
+
 ```json
 {
   "clientId": "4qmvj6c7n00bmq4spl0eshvqvp",
@@ -79,6 +84,7 @@ Update `.env.local` with fetched credentials.
 ```
 
 **Output:**
+
 ```json
 {
   "success": true,
@@ -91,6 +97,7 @@ Update `.env.local` with fetched credentials.
 ```
 
 **Side Effects:**
+
 - Backs up existing `.env.local` to `.env.local.backup.TIMESTAMP`
 - Updates these lines:
   - `NEXT_PUBLIC_COGNITO_CLIENT_ID=...`
@@ -104,6 +111,7 @@ Update `.env.local` with fetched credentials.
 Start dev server and verify Cognito auth works.
 
 **Input:**
+
 ```json
 {
   "timeout": 30 // seconds (optional, default 30)
@@ -111,6 +119,7 @@ Start dev server and verify Cognito auth works.
 ```
 
 **Output:**
+
 ```json
 {
   "success": true,
@@ -119,6 +128,7 @@ Start dev server and verify Cognito auth works.
 ```
 
 **Process:**
+
 1. Kill any existing `next dev` processes
 2. Start `pnpm dev` in background
 3. Wait up to `timeout` seconds for server to be reachable
@@ -132,6 +142,7 @@ Start dev server and verify Cognito auth works.
 Run the complete setup workflow.
 
 **Input:**
+
 ```json
 {
   "skipVerify": false,  // Skip dev server test
@@ -140,6 +151,7 @@ Run the complete setup workflow.
 ```
 
 **Output:**
+
 ```json
 {
   "success": true,
@@ -168,11 +180,13 @@ Run the complete setup workflow.
 ```
 
 **Dry Run Mode:**
+
 - Shows what would be changed
 - No actual file modifications
 - Useful for previewing changes
 
 **Skip Verify Mode:**
+
 - Faster setup (skips dev server test)
 - Useful when you know it works
 - Still validates all credentials
@@ -197,6 +211,7 @@ Add to `mcp.json`:
 ```
 
 Then in Claude Code:
+
 ```
 /cognito-setup   # or call tools directly
 ```

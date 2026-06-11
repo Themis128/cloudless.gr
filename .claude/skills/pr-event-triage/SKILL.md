@@ -44,6 +44,7 @@ Use `AskUserQuestion` (with all required fields including `question`). Don't waf
 ### 4. SKIP + STATE BLOCKED ONCE — needs the user, but only once
 
 For events that require admin action *outside* your reach:
+
 - Branch protection rule changes (only repo admins).
 - GitHub-hosted runner billing / capacity issues.
 - Sonar private-project authenticated-only operations.
@@ -119,6 +120,7 @@ Things you literally cannot resolve from inside the session (no tool, no auth):
 ## Class-1 silent skip protocol
 
 When you decide an event is class 1:
+
 - Do not write a reply.
 - Do not call any tool.
 - End your turn with no output.

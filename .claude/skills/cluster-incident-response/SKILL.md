@@ -108,6 +108,7 @@ offline during cluster incidents and the job queues forever).
 ## SSH recovery path (requires `OMV_SSH_KEY` repo secret)
 
 **Add the secret once:**
+
 1. GitHub → Settings → Secrets → Actions → New repository secret
 2. Name: `OMV_SSH_KEY`
 3. Value: `cat ~/.ssh/id_ed25519` on the Pi (`omv@100.113.41.119`)
@@ -131,6 +132,7 @@ offline during cluster incidents and the job queues forever).
 mcp__github__issue_read(method="get_comments", owner="themis128",
   repo="cloudless.gr", issue_number=382, perPage=1, page=<last>)
 ```
+
 Comments are chronological; newest snapshot/log is the last page.
 
 ## Reference

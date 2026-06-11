@@ -29,14 +29,19 @@ sys.modules["httpx"] = mock.MagicMock()
 # cached in sys.modules and our `import slack_notify` below would just return
 # the mock. Force a fresh real import.
 sys.modules.pop("slack_notify", None)
-import importlib
+import importlib  # noqa: E402
+
 import slack_notify  # noqa: E402
+
 slack_notify = importlib.reload(slack_notify)
 
 
 def _run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro) if sys.version_info < (3, 10) \
+    return (
+        asyncio.get_event_loop().run_until_complete(coro)
+        if sys.version_info < (3, 10)
         else asyncio.run(coro)
+    )
 
 
 class SeverityEmojiTest(unittest.TestCase):
@@ -95,7 +100,8 @@ class ProposedSolutionTest(unittest.TestCase):
 class SlackDateTokenTest(unittest.TestCase):
     def test_slack_date_token_format(self):
         import datetime
-        ts = datetime.datetime(2026, 5, 29, 12, 0, 0, tzinfo=datetime.timezone.utc)
+
+        ts = datetime.datetime(2026, 5, 29, 12, 0, 0, tzinfo=datetime.UTC)
         out = slack_notify._slack_date(ts)
         # <!date^EPOCH^{date_short_pretty} at {time}|fallback>
         self.assertTrue(out.startswith("<!date^"))
@@ -105,10 +111,18 @@ class SlackDateTokenTest(unittest.TestCase):
 class SendAlertTest(unittest.TestCase):
     def test_returns_false_without_webhook_url(self):
         with mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", ""):
-            result = _run(slack_notify.send_alert({
-                "code": "TEST", "host": "h", "service": "s",
-                "severity": "warning", "message": "m", "status": "FIRING",
-            }))
+            result = _run(
+                slack_notify.send_alert(
+                    {
+                        "code": "TEST",
+                        "host": "h",
+                        "service": "s",
+                        "severity": "warning",
+                        "message": "m",
+                        "status": "FIRING",
+                    }
+                )
+            )
         self.assertFalse(result)
 
     def test_payload_shape_when_webhook_set(self):
@@ -119,33 +133,45 @@ class SendAlertTest(unittest.TestCase):
             text = "ok"
 
         class FakeClient:
-            def __init__(self, *a, **kw): pass
-            async def __aenter__(self): return self
-            async def __aexit__(self, *a): return False
+            def __init__(self, *a, **kw):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
             async def post(self, url, json):
                 captured["url"] = url
                 captured["json"] = json
                 return FakeResp()
 
-        with mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", "https://hooks.slack.com/test"), \
-             mock.patch.object(slack_notify.httpx, "AsyncClient", FakeClient):
-            result = _run(slack_notify.send_alert({
-                "id": 999,
-                "code": "AWSAPPUNREACHABLEFROMESP32",
-                "host": "cloudless-watchdog",
-                "service": "cloudless.gr",
-                "severity": "critical",
-                "message": "Real outage detected.",
-                "status": "FIRING",
-                "count": 1,
-            }))
+        with (
+            mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", "https://hooks.slack.com/test"),
+            mock.patch.object(slack_notify.httpx, "AsyncClient", FakeClient),
+        ):
+            result = _run(
+                slack_notify.send_alert(
+                    {
+                        "id": 999,
+                        "code": "AWSAPPUNREACHABLEFROMESP32",
+                        "host": "cloudless-watchdog",
+                        "service": "cloudless.gr",
+                        "severity": "critical",
+                        "message": "Real outage detected.",
+                        "status": "FIRING",
+                        "count": 1,
+                    }
+                )
+            )
 
         self.assertTrue(result)
         self.assertEqual(captured["url"], "https://hooks.slack.com/test")
         payload = captured["json"]
 
         # Block Kit invariants
-        self.assertIn("text", payload)               # fallback text for notifications
+        self.assertIn("text", payload)  # fallback text for notifications
         self.assertIn("blocks", payload)
         types = [b["type"] for b in payload["blocks"]]
         self.assertEqual(types, ["header", "section", "context", "divider"])
@@ -174,21 +200,35 @@ class SendAlertTest(unittest.TestCase):
             text = "ok"
 
         class FakeClient:
-            def __init__(self, *a, **kw): pass
-            async def __aenter__(self): return self
-            async def __aexit__(self, *a): return False
+            def __init__(self, *a, **kw):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
             async def post(self, url, json):
                 captured["json"] = json
                 return FakeResp()
 
-        with mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", "https://hooks.slack.com/test"), \
-             mock.patch.object(slack_notify.httpx, "AsyncClient", FakeClient):
-            _run(slack_notify.send_alert({
-                "code": "AWSAPPUNREACHABLEFROMESP32",
-                "host": "h", "service": "s",
-                "severity": "critical", "message": "ok now",
-                "status": "RESOLVED",
-            }))
+        with (
+            mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", "https://hooks.slack.com/test"),
+            mock.patch.object(slack_notify.httpx, "AsyncClient", FakeClient),
+        ):
+            _run(
+                slack_notify.send_alert(
+                    {
+                        "code": "AWSAPPUNREACHABLEFROMESP32",
+                        "host": "h",
+                        "service": "s",
+                        "severity": "critical",
+                        "message": "ok now",
+                        "status": "RESOLVED",
+                    }
+                )
+            )
         section_text = captured["json"]["blocks"][1]["text"]["text"]
         self.assertNotIn(":bulb: *Proposed solution:*", section_text)
 

@@ -77,4 +77,5 @@ ending in the target domain, and hard-guards that id (see `PROTECTED_HEALTH_CHEC
 mcp__github__issue_read(method="get_comments", owner="Themis128",
   repo="cloudless.gr", issue_number=382)
 ```
+
 The newest "Domain decommission —" comment is the latest run.

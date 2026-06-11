@@ -62,6 +62,7 @@ cp esphome/secrets.yaml.template esphome/secrets.yaml
 ```
 
 Generate the API key:
+
 ```bash
 python3 -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())"
 ```
@@ -87,6 +88,7 @@ opens the log console. After the first flash, OTA updates work over Wi-Fi — no
 USB needed.
 
 **OTA update (after first flash):**
+
 ```bash
 cd ~/code/cloudless.gr/infrastructure/esp32-watchdog/esphome
 esphome run cloudless-watchdog.yaml
@@ -94,6 +96,7 @@ esphome run cloudless-watchdog.yaml
 ```
 
 **Compile only (no flash):**
+
 ```bash
 esphome compile cloudless-watchdog.yaml
 ```
@@ -110,6 +113,7 @@ kubectl apply -f infrastructure/esp32-watchdog/k8s/prometheusrule.yaml
 ```
 
 Verify the scrape target appears in Prometheus:
+
 ```
 http://192.168.1.128:10000  (Grafana, port 10000)
 # or

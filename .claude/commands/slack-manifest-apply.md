@@ -76,6 +76,7 @@ A bot token (`xoxb-…`) **cannot** update the manifest.
 ## Manifest fields reference
 
 The manifest controls:
+
 - `display_information` — app name, description, background color shown in channel sidebar
 - `features.bot_user` — bot display name ("Cloudless")
 - `features.slash_commands` — all `/cloudless-*` commands and their request URLs

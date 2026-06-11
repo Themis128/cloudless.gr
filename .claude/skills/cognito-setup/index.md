@@ -43,6 +43,7 @@ bash scripts/cognito-setup.sh --skip-verify
 ## What gets updated
 
 The script updates `.env.local` with:
+
 - `NEXT_PUBLIC_COGNITO_CLIENT_ID` — for browser/Next.js public config
 - `COGNITO_CLIENT_ID` — for server-side auth
 - `COGNITO_CLIENT_SECRET` — if it exists in SSM
@@ -55,15 +56,18 @@ The script updates `.env.local` with:
 AWS keys have been rotated. You need new credentials:
 
 **Option A: AWS SSO (recommended)**
+
 ```bash
 # On your local machine (with browser)
 aws sso login --sso-session cloudless
 ```
 
 **Option B: Programmatic keys**
+
 1. Go to AWS Console → IAM → Users
 2. Create access keys (or ask your admin for them)
 3. Update `~/.aws/credentials`:
+
    ```ini
    [default]
    aws_access_key_id = YOUR_KEY
@@ -77,6 +81,7 @@ Your AWS credentials don't have SSM read permission. Ask your admin to grant `ss
 ### "ParameterNotFound" for CLIENT_ID
 
 The SSM parameter doesn't exist or is in a different SSM path. Verify the path:
+
 ```bash
 aws ssm get-parameter --name "/cloudless/production/COGNITO_CLIENT_ID" --region us-east-1
 ```
@@ -84,11 +89,13 @@ aws ssm get-parameter --name "/cloudless/production/COGNITO_CLIENT_ID" --region 
 ### Dev server won't start after setup
 
 Check `.env.local` is correctly updated:
+
 ```bash
 grep "COGNITO_CLIENT_ID" .env.local
 ```
 
 Then start manually to see errors:
+
 ```bash
 pnpm dev
 ```

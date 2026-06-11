@@ -21,6 +21,7 @@ All three share the same underlying logic and produce identical results.
 **Location:** `/home/tbaltzakis/code/cloudless.gr/scripts/cognito-setup.sh`
 
 **Usage:**
+
 ```bash
 # Full setup with verification
 bash scripts/cognito-setup.sh
@@ -33,6 +34,7 @@ bash scripts/cognito-setup.sh --skip-verify
 ```
 
 **What it does:**
+
 1. Checks AWS CLI availability
 2. Validates AWS credentials (SSO or programmatic)
 3. Fetches `COGNITO_CLIENT_ID` and `COGNITO_CLIENT_SECRET` from SSM
@@ -42,6 +44,7 @@ bash scripts/cognito-setup.sh --skip-verify
 7. Reports success/failure with clear messaging
 
 **Environment Variables:**
+
 ```bash
 AWS_REGION=us-east-1              # AWS region (default: us-east-1)
 SKIP_VERIFY=1                      # Skip dev server test
@@ -57,6 +60,7 @@ DRY_RUN=1                         # Preview without changes
 **Location:** `/home/tbaltzakis/code/cloudless.gr/.claude/skills/cognito-setup/`
 
 **Usage:**
+
 ```bash
 # In Claude Code terminal
 /cognito-setup
@@ -66,6 +70,7 @@ pnpm cognito:setup
 ```
 
 **Features:**
+
 - Colored output (✓ success, ✗ errors, ⚠ warnings)
 - Step-by-step progress
 - Automatic backup of `.env.local`
@@ -80,6 +85,7 @@ pnpm cognito:setup
 **Location:** `/home/tbaltzakis/code/cloudless.gr/.github/workflows/cognito-setup.yml`
 
 **Usage:**
+
 ```bash
 # Manual trigger via GitHub CLI
 gh workflow run cognito-setup.yml
@@ -88,12 +94,14 @@ gh workflow run cognito-setup.yml
 ```
 
 **Features:**
+
 - Uses AWS OIDC (no static credentials stored)
 - Posts results to issue #382
 - Automatic error reporting
 - Runs on `workflow_dispatch` (manual trigger only)
 
 **Inputs:**
+
 - `environment` — development | staging | production (default: development)
 
 ---
@@ -103,6 +111,7 @@ gh workflow run cognito-setup.yml
 **Location:** `package.json` scripts
 
 **Available Commands:**
+
 ```bash
 pnpm cognito:setup              # Full setup with verification
 pnpm cognito:setup:dry          # Dry run (preview)
@@ -118,6 +127,7 @@ pnpm cognito:setup:quick        # Skip dev server test
 **Location:** `/home/tbaltzakis/code/cloudless.gr/tools/cognito-setup-mcp/`
 
 **Exposed Tools:**
+
 - `cognito_check_aws_creds` — Validate AWS authentication
 - `cognito_fetch_credentials` — Fetch from SSM Parameter Store
 - `cognito_update_env` — Update `.env.local` file
@@ -125,6 +135,7 @@ pnpm cognito:setup:quick        # Skip dev server test
 - `cognito_full_setup` — Orchestrate all steps
 
 **Usage (in TypeScript/Node):**
+
 ```typescript
 const client = new MCPClient({
   command: "npx",
@@ -167,6 +178,7 @@ const result = await client.call("cognito_full_setup", {
 ```
 
 All levels:
+
 - Share the same core `cognito-setup.sh` script
 - Provide different interfaces (CLI, pnpm, API, GH Actions)
 - Produce identical results
@@ -221,11 +233,13 @@ AWS Credentials
 **User:** New team member setting up cloudless.gr locally
 
 **Command:**
+
 ```bash
 pnpm cognito:setup
 ```
 
-**Result:** 
+**Result:**
+
 - AWS credentials validated
 - Cognito Client ID fetched
 - `.env.local` updated
@@ -239,6 +253,7 @@ pnpm cognito:setup
 **User:** AWS credentials expired, need to refresh
 
 **Command:**
+
 ```bash
 # First, re-authenticate
 aws sso login --sso-session cloudless
@@ -248,6 +263,7 @@ pnpm cognito:setup
 ```
 
 **Result:**
+
 - Old credentials replaced
 - New ones fetched from SSM
 - Dev server verified
@@ -262,11 +278,13 @@ pnpm cognito:setup
 **Trigger:** Manual via `gh workflow run` or GitHub UI
 
 **Command:**
+
 ```bash
 gh workflow run cognito-setup.yml --ref main
 ```
 
 **Result:**
+
 - OIDC authentication to AWS
 - Cognito setup in test environment
 - Results posted to issue #382
@@ -279,6 +297,7 @@ gh workflow run cognito-setup.yml --ref main
 **User:** Setup failed, need to diagnose
 
 **Command:**
+
 ```bash
 # See what would happen
 pnpm cognito:setup:dry
@@ -310,6 +329,7 @@ All tools implement graceful error handling:
 ### Idempotency
 
 All scripts are fully idempotent:
+
 - Running multiple times is safe
 - Existing credentials are replaced (not duplicated)
 - Backups are timestamped (don't overwrite each other)

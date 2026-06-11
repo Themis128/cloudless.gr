@@ -32,6 +32,7 @@ tables, and ESPHome YAML configuration examples.
 ### Step 2 — Verify (optional)
 
 After restoring, check that the page shows:
+
 - ESPHome device configurations
 - Wiring diagrams / GPIO pin tables
 - Integration instructions with the Pi cluster monitor

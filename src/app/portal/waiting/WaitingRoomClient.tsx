@@ -37,6 +37,44 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
     { num: "03", label: "Project access", color: "neon-green" },
   ];
 
+  function stepColorClasses(s: (typeof steps)[number], isComplete: boolean, isActive: boolean) {
+    if (isComplete) {
+      return {
+        border: "border-neon-green",
+        ring: "ring-neon-green/30",
+        text: "text-neon-green",
+        bg: "bg-neon-green",
+      };
+    }
+    if (!isActive)
+      return {
+        border: "border-slate-700",
+        ring: "ring-transparent",
+        text: "text-slate-500",
+        bg: "bg-slate-700",
+      };
+    if (s.color === "neon-cyan")
+      return {
+        border: "border-neon-cyan",
+        ring: "ring-neon-cyan/30",
+        text: "text-neon-cyan",
+        bg: "bg-neon-cyan",
+      };
+    if (s.color === "neon-magenta")
+      return {
+        border: "border-neon-magenta",
+        ring: "ring-neon-magenta/30",
+        text: "text-neon-magenta",
+        bg: "bg-neon-magenta",
+      };
+    return {
+      border: "border-neon-green",
+      ring: "ring-neon-green/30",
+      text: "text-neon-green",
+      bg: "bg-neon-green",
+    };
+  }
+
   return (
     <div className="relative mx-auto max-w-xl">
       <div className="from-neon-cyan/40 via-neon-magenta/40 to-neon-green/40 absolute top-5 right-[calc(16.67%+1.5rem)] left-[calc(16.67%+1.5rem)] hidden h-px bg-gradient-to-r sm:block" />
@@ -45,12 +83,7 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
           const stepIndex = i + 1;
           const isComplete = stepIndex < activeStep;
           const isActive = stepIndex === activeStep;
-          let colorRing = "border-slate-700 ring-transparent";
-          if (isComplete) colorRing = "border-neon-green ring-neon-green/30";
-          else if (isActive) colorRing = `border-${s.color} ring-${s.color}/30`;
-          let colorText = "text-slate-500";
-          if (isComplete) colorText = "text-neon-green";
-          else if (isActive) colorText = `text-${s.color}`;
+          const cc = stepColorClasses(s, isComplete, isActive);
 
           return (
             <div
@@ -58,7 +91,7 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
               className="relative z-10 flex flex-1 flex-col items-center text-center"
             >
               <div
-                className={`bg-void mb-3 flex h-10 w-10 items-center justify-center rounded-full border-2 font-mono text-sm font-bold ring-2 transition-all duration-500 ${colorRing} ${colorText}`}
+                className={`bg-void mb-3 flex h-10 w-10 items-center justify-center rounded-full border-2 font-mono text-sm font-bold ring-2 transition-all duration-500 ${cc.border} ${cc.ring} ${cc.text}`}
               >
                 {isComplete ? (
                   <svg
@@ -74,10 +107,10 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
                   s.num
                 )}
               </div>
-              <span className={`font-mono text-xs font-semibold ${colorText}`}>{s.label}</span>
+              <span className={`font-mono text-xs font-semibold ${cc.text}`}>{s.label}</span>
               {isActive && (
                 <span className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] text-slate-500">
-                  <span className={`h-1 w-1 animate-pulse rounded-full bg-${s.color}`} />
+                  <span className={`h-1 w-1 animate-pulse rounded-full ${cc.bg}`} />
                   In progress
                 </span>
               )}
@@ -296,19 +329,22 @@ function WaitingRoomContent() {
                   icon: "📬",
                   title: "Email confirmation",
                   desc: "We'll send a notification to your inbox the moment your portal is ready.",
-                  color: "neon-cyan",
+                  iconBg: "bg-neon-cyan/10",
+                  iconBorder: "border-neon-cyan/20",
                 },
                 {
                   icon: "🗺",
                   title: "Project timeline",
                   desc: "Your portal will show every step of your project with status updates.",
-                  color: "neon-magenta",
+                  iconBg: "bg-neon-magenta/10",
+                  iconBorder: "border-neon-magenta/20",
                 },
                 {
                   icon: "💬",
                   title: "Live updates",
                   desc: "Comments from our team appear under each step in real time.",
-                  color: "neon-green",
+                  iconBg: "bg-neon-green/10",
+                  iconBorder: "border-neon-green/20",
                 },
               ].map((item) => (
                 <div
@@ -316,7 +352,7 @@ function WaitingRoomContent() {
                   className="bg-void-light/20 rounded-xl border border-slate-800 p-5 backdrop-blur-sm transition-all hover:border-slate-700"
                 >
                   <div
-                    className={`bg-${item.color}/10 border-${item.color}/20 mb-3 flex h-9 w-9 items-center justify-center rounded-lg border text-base`}
+                    className={`${item.iconBg} ${item.iconBorder} mb-3 flex h-9 w-9 items-center justify-center rounded-lg border text-base`}
                   >
                     {item.icon}
                   </div>

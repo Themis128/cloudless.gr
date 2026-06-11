@@ -21,6 +21,7 @@ two SSH-based cluster recovery workflows:
 The Pi's SSH user is `omv` at Tailscale IP `100.113.41.119`.
 
 **If a key already exists:**
+
 ```bash
 # On the Pi — check for existing keys
 ls ~/.ssh/id_ed25519  # or id_rsa
@@ -28,6 +29,7 @@ cat ~/.ssh/id_ed25519  # ← this is what you'll paste into GitHub
 ```
 
 **If no key exists, generate one:**
+
 ```bash
 # On the Pi
 ssh-keygen -t ed25519 -C "omv-pi-ssh-key" -f ~/.ssh/id_ed25519 -N ""
@@ -40,11 +42,13 @@ chmod 600 ~/.ssh/authorized_keys
 ## Add OMV_SSH_KEY to GitHub
 
 1. On the Pi: `cat ~/.ssh/id_ed25519` — copy the full output, including the header and footer:
+
    ```
    -----BEGIN OPENSSH PRIVATE KEY-----
    b3BlbnNzaC1rZXktdjEAAAAA...
    -----END OPENSSH PRIVATE KEY-----
    ```
+
 2. GitHub → repo `Themis128/cloudless.gr` → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 3. Name: `OMV_SSH_KEY`
 4. Value: paste the private key content
@@ -55,10 +59,13 @@ chmod 600 ~/.ssh/authorized_keys
 ## Verify connectivity (optional but recommended)
 
 From a machine with Tailscale active:
+
 ```bash
 ssh -i ~/.ssh/id_ed25519 tbaltzakis@100.113.41.119 "echo connected"
 ```
+
 Should print `connected`. If it fails:
+
 - Check `sshd` is running: `systemctl status ssh`
 - Check `~/.ssh/authorized_keys` contains the public key
 - Check firewall: `ufw status` — port 22 must be open
@@ -71,11 +78,13 @@ The watchdog installs a systemd drop-in that restarts k3s automatically
 whenever it crashes — eliminating future manual `k3s-ssh-restart` runs.
 
 **Trigger:**
+
 1. Edit `.github/workflows/k3s-watchdog-deploy.yml` (touch a comment)
 2. Create PR → squash-merge
 3. Watch issue #382 for the result
 
 **What it installs** (`/etc/systemd/system/k3s.service.d/restart-always.conf`):
+
 ```ini
 [Service]
 Restart=always
@@ -93,11 +102,13 @@ After install, k3s will restart within 30 seconds of any crash — no manual int
 Symptom: cluster doctor shows `connection refused on port 6443`.
 
 **Trigger:**
+
 1. Edit `.github/workflows/k3s-ssh-restart.yml` (touch a comment or whitespace)
 2. Create PR → squash-merge
 3. Watch issue #382 for result (~90s)
 
 **What it does:**
+
 1. Connects to tailnet via `TS_AUTHKEY`
 2. SSH to `tbaltzakis@100.113.41.119` using `OMV_SSH_KEY`
 3. Runs `sudo systemctl restart k3s`

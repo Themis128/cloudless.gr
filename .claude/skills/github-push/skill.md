@@ -35,10 +35,12 @@ git config --global credential.helper "/tmp/gh-cred-helper.sh"
 ```
 
 If `GITHUB_PAT` is not in the environment, tell the user:
+
 1. Go to **Claude Code → Session settings → Secrets**
 2. Add secret name `GITHUB_PAT`, value = their token
 
 As a last resort, embed temporarily:
+
 ```bash
 git remote set-url origin https://<TOKEN>@github.com/Themis128/cloudless.gr.git
 # push, then clean up:

@@ -57,9 +57,11 @@ Also verify protocol access is allowed:
 1. **File → Add Account**, type `tbaltzakis@cloudless.gr`, click **Connect**.
 2. If it can't auto-discover, choose **Exchange** / **advanced setup** and when
    prompted for the server use the EWS endpoint:
+
    ```
    https://ews.mail.us-east-1.awsapps.com/EWS/Exchange.asmx
    ```
+
 3. Credentials when prompted:
    - **User name:** `tbaltzakis@cloudless.gr` (the full address)
    - **Password:** the one set in Step 0

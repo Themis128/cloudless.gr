@@ -36,6 +36,7 @@ Analyses the last 30 runs of a workflow to determine if failures are intermitten
    - Check if this started after a specific commit — correlate timeline with `gh log`.
 
 3. **Print a clear summary**:
+
    ```
    Workflow:     deploy-pi.yml
    Verdict:      FLAKY

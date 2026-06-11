@@ -6,10 +6,12 @@ The Instagram Graph API allows management of Instagram Professional (Business/Cr
 
 **Graph API Version:** v25.0  
 **Base URLs:**
+
 - Facebook Login flow: `https://graph.facebook.com/v25.0`
 - Instagram Login flow: `https://graph.instagram.com/v25.0`
 
 **Cloudless Account IDs:**
+
 - Facebook Page: `116436681562585`
 - Instagram Business Account ID: **TBD** (see `meta-instagram/SKILL.md` for fix)
 - Ad Account: `act_657781691826702`
@@ -24,6 +26,7 @@ The Instagram Graph API allows management of Instagram Professional (Business/Cr
 Represents an Instagram Business or Creator Account.
 
 **Read Fields:**
+
 ```
 GET /{IG_USER_ID}?fields=
   id,
@@ -39,6 +42,7 @@ GET /{IG_USER_ID}?fields=
 ```
 
 **Edges:**
+
 | Edge | Method | Description |
 |------|--------|-------------|
 | `/media` | GET | List published media objects |
@@ -58,6 +62,7 @@ GET /{IG_USER_ID}?fields=
 Represents a photo, video, story, reel, or carousel album.
 
 **Read Fields:**
+
 ```
 GET /{MEDIA_ID}?fields=
   id,
@@ -76,6 +81,7 @@ GET /{MEDIA_ID}?fields=
 ```
 
 **Edges:**
+
 | Edge | Method | Description |
 |------|--------|-------------|
 | `/insights` | GET | Media-level metrics |
@@ -84,9 +90,11 @@ GET /{MEDIA_ID}?fields=
 | `/children` | GET | Carousel album children |
 
 **Update (POST):**
+
 - `comment_enabled` — Enable/disable comments
 
 **Delete:**
+
 - `DELETE /{MEDIA_ID}` — Delete a media object
 
 ---
@@ -94,6 +102,7 @@ GET /{MEDIA_ID}?fields=
 ### 3. IG Comment (`/{ig-comment-id}`)
 
 **Read Fields:**
+
 ```
 GET /{COMMENT_ID}?fields=
   id,
@@ -108,15 +117,18 @@ GET /{COMMENT_ID}?fields=
 ```
 
 **Edges:**
+
 | Edge | Method | Description |
 |------|--------|-------------|
 | `/replies` | GET | Replies to this comment |
 | `/replies` | POST | Reply to this comment |
 
 **Update (POST):**
+
 - `hide` — Hide/unhide a comment
 
 **Delete:**
+
 - `DELETE /{COMMENT_ID}` — Delete a comment
 
 ---
@@ -126,6 +138,7 @@ GET /{COMMENT_ID}?fields=
 Used in the content publishing flow. Created via `POST /{IG_USER_ID}/media`.
 
 **Read Fields:**
+
 ```
 GET /{CONTAINER_ID}?fields=
   id,
@@ -140,22 +153,26 @@ GET /{CONTAINER_ID}?fields=
 **Available only with Facebook Login flow.**
 
 **Read Fields:**
+
 ```
 GET /{HASHTAG_ID}?fields=id,name
 ```
 
 **Edges:**
+
 | Edge | Method | Description |
 |------|--------|-------------|
 | `/top_media` | GET | Top 9 media for hashtag |
 | `/recent_media` | GET | Most recent media for hashtag |
 
 **Search:**
+
 ```
 GET /ig_hashtag_search
   ?user_id={IG_USER_ID}
   &q={HASHTAG_TEXT}
 ```
+
 Limit: 30 unique hashtag searches per 7 days per user.
 
 ---
@@ -163,6 +180,7 @@ Limit: 30 unique hashtag searches per 7 days per user.
 ### 6. Page (`/{page-id}`) — Instagram Context
 
 **Read Fields (IG-relevant):**
+
 ```
 GET /{PAGE_ID}?fields=
   instagram_business_account,
@@ -207,6 +225,7 @@ curl -X POST "https://graph.facebook.com/v25.0/{IG_USER_ID}/media" \
 ```
 
 Additional Reel parameters:
+
 - `cover_url` — Custom thumbnail URL
 - `thumb_offset` — Thumbnail offset in milliseconds
 - `share_to_feed` — Also appear in feed (default true)
@@ -287,6 +306,7 @@ curl -X POST "https://rupload.facebook.com/ig-api-upload/v25.0/{CONTAINER_ID}" \
 | `audience_locale` | Top locales | lifetime |
 
 **Notes:**
+
 - Demographic metrics require 100+ followers
 - Empty data returns `[]` not `0`
 - Ads-driven data excluded from aggregated fields
@@ -330,11 +350,13 @@ Subscribe to `mentions` webhook to get real-time notifications when your account
 ## Comment Moderation
 
 ### List Comments
+
 ```
 GET /{MEDIA_ID}/comments?fields=id,text,username,timestamp,like_count,replies
 ```
 
 ### Reply to Comment
+
 ```
 POST /{COMMENT_ID}/replies
   ?message=Thanks for the comment!
@@ -342,6 +364,7 @@ POST /{COMMENT_ID}/replies
 ```
 
 ### Hide Comment
+
 ```
 POST /{COMMENT_ID}
   ?hide=true
@@ -349,6 +372,7 @@ POST /{COMMENT_ID}
 ```
 
 ### Delete Comment
+
 ```
 DELETE /{COMMENT_ID}?access_token={TOKEN}
 ```
@@ -377,6 +401,7 @@ DELETE /{COMMENT_ID}?access_token={TOKEN}
 ## Unsupported Features (via API)
 
 These features are NOT available through the API:
+
 - Shopping tags
 - Branded content tags
 - Filters and effects

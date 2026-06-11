@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate a markdown secrets-check report from check.log output."""
+
 import sys
 
 log_file = sys.argv[1]
@@ -44,8 +45,12 @@ if missing:
         print("### OMV_SSH_KEY")
         print("1. On the Pi: `cat ~/.ssh/id_ed25519` (or generate: `ssh-keygen -t ed25519`)")
         print("2. Ensure `~/.ssh/authorized_keys` contains the public key on the Pi")
-        print("3. Paste the **private key** (-----BEGIN OPENSSH PRIVATE KEY----- block) as `OMV_SSH_KEY`")
-        print("4. Once set, trigger `k3s-watchdog-deploy.yml` to install the Restart=always drop-in")
+        print(
+            "3. Paste the **private key** (-----BEGIN OPENSSH PRIVATE KEY----- block) as `OMV_SSH_KEY`"
+        )
+        print(
+            "4. Once set, trigger `k3s-watchdog-deploy.yml` to install the Restart=always drop-in"
+        )
     if "SES_SMTP_USER" in missing or "SES_SMTP_PASSWORD" in missing:
         print()
         print("### SES_SMTP_USER + SES_SMTP_PASSWORD")

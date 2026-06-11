@@ -87,6 +87,7 @@ freshness tracking.
 ### Configuring Verification Period
 
 Workspace owners can set the re-verification interval:
+
 - Navigate to Settings & Members → General → Wiki settings
 - Options: 30, 60, 90, 120, 180, or 365 days
 - Applies workspace-wide
@@ -157,6 +158,7 @@ Use a database as the wiki root for structured knowledge:
 | Audience | Select | Who this is for (All, Engineering, New Hires) |
 
 **Views to create:**
+
 - **All Articles** (Table): Full list with filters and sorts
 - **By Category** (Board): Grouped by category for browsing
 - **Needs Review** (Table): Filtered to "Needs re-verification"
@@ -218,6 +220,7 @@ Templates standardize page creation within wikis and databases.
 ### Page Archiving
 
 Archiving removes a page from active views without deleting it:
+
 - Right-click page → **Move to Trash** (moves to Trash, recoverable).
 - For soft archiving: create an "Archive" section and move pages there.
 
@@ -291,6 +294,7 @@ Archiving removes a page from active views without deleting it:
 ### Synced Databases
 
 Pull external data into Notion for a unified knowledge view:
+
 - **GitHub**: Issues and PRs synced to a Notion database.
 - **Jira**: Tickets synced for cross-team visibility.
 - **Google Drive**: Embed or link documents.

@@ -149,6 +149,7 @@ Both endpoints require a valid admin session or Bearer JWT with the `admin` grou
 Returns the 20 most recently seen unresolved issues.
 
 **Response:**
+
 ```json
 {
   "issues": [{ "id": "...", "title": "...", "level": "error", "count": "42", ... }],

@@ -2,7 +2,6 @@
 
 > **NOTE — auth is Cognito.** Migrated from Keycloak to Cognito on 2026-06-08 (PR #677); Keycloak is fully removed. App admin = membership in the Cognito group `admin`.
 
-
 Cloud computing, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs.
 
 Built with **Next.js 16**, **React 19**, **Tailwind CSS 4**, and **TypeScript**.
@@ -188,6 +187,7 @@ graph LR
 The app has a full two-way Slack integration. Last verified 2026-04-09 (56 unit tests, 12 integration tests — all pass).
 
 **Outbound notifications** (cloudless.gr → Slack):
+
 - `slackContactNotify` — fires on every contact form submission (fire-and-forget, parallel with HubSpot CRM upsert)
 - `slackSubscriberNotify` — fires on every newsletter sign-up, in parallel with the SES email
 - `slackOrderNotify` — fires on Stripe checkout completion with amount and session ID
@@ -195,6 +195,7 @@ The app has a full two-way Slack integration. Last verified 2026-04-09 (56 unit 
 - `slackDeployNotify` — post deploy status from CI/CD
 
 **Inbound endpoints** (Slack → cloudless.gr):
+
 - `POST /api/slack/events` — Events API (app mentions, DMs)
 - `POST /api/slack/commands` — Slash commands: `/cloudless-status`, `/cloudless-orders`
 - `POST /api/slack/interactions` — Block Kit button clicks and modal submissions

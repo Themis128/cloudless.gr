@@ -21,6 +21,7 @@ Workflow:
 5. Report a punch list grouped by rule: `<rule> <file:line> <one-line description> <fix applied>`. Cap at 25 findings.
 
 Hard rules:
+
 - Never bypass type safety (`as any`, `as unknown as X`) when fixing complexity. Extract a helper instead.
 - Never collapse a clear catch block into `// eslint-disable` — fix the cause.
 - If a finding requires architectural changes (extracting a module, redesigning state), STOP and report it instead of guessing.

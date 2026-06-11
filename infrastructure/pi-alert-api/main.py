@@ -22,23 +22,23 @@ New in v3.3:
     one-line summary-only payload that left messages like
     "cloudless.gr probe failure rate elevated" with no diagnostic context.
 """
+
 import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone, timedelta
-from typing import Any, Optional, Set
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
+import database
+import flap_guard
+import healthchecks_ping
+import mqtt_publish
+import slack_notify
+import tls_check
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
-import database
-import slack_notify
-import flap_guard
-import tls_check
-import healthchecks_ping
-import mqtt_publish
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,7 +47,7 @@ logging.basicConfig(
 log = logging.getLogger("main")
 
 # ── WebSocket connection pool ──────────────────────────────────────────────────
-_log_clients: Set[WebSocket] = set()
+_log_clients: set[WebSocket] = set()
 _log_queue: asyncio.Queue = asyncio.Queue(maxsize=500)
 
 
@@ -74,7 +74,7 @@ async def _push_log(level: str, message: str) -> dict:
     return entry
 
 
-_background_tasks = set()  # holds refs so asyncio doesn't GC the tasks
+_background_tasks: set[asyncio.Task] = set()  # holds refs so asyncio doesn't GC the tasks
 
 
 @asynccontextmanager
@@ -109,36 +109,38 @@ app.add_middleware(
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
+
 class AlertIn(BaseModel):
-    code:        str
-    host:        str
-    service:     str
-    severity:    str   # critical | high | medium | low | info
-    message:     str
-    status:      str   # FIRING | ONGOING | RESOLVED | INFO
-    count:       int   = 1
-    resolved_by: Optional[str] = None
+    code: str
+    host: str
+    service: str
+    severity: str  # critical | high | medium | low | info
+    message: str
+    status: str  # FIRING | ONGOING | RESOLVED | INFO
+    count: int = 1
+    resolved_by: str | None = None
 
 
 class HeartbeatIn(BaseModel):
-    ip:             Optional[str]  = None
-    rssi:           Optional[int]  = None
-    firmware_ver:   Optional[str]  = None
-    uptime_s:       Optional[int]  = None
-    free_ram_bytes: Optional[int]  = None
-    device_id:      Optional[str]  = None
+    ip: str | None = None
+    rssi: int | None = None
+    firmware_ver: str | None = None
+    uptime_s: int | None = None
+    free_ram_bytes: int | None = None
+    device_id: str | None = None
 
 
 class LogIn(BaseModel):
-    level:   str = "INFO"   # DEBUG | INFO | WARN | ERROR
+    level: str = "INFO"  # DEBUG | INFO | WARN | ERROR
     message: str
 
 
 class ScriptIn(BaseModel):
-    script: str   # name of the troubleshooting script to run
+    script: str  # name of the troubleshooting script to run
 
 
 # ── Alert endpoints ───────────────────────────────────────────────────────────
+
 
 @app.post("/api/alerts", status_code=201)
 async def receive_alert(alert: AlertIn):
@@ -161,7 +163,7 @@ async def receive_alert(alert: AlertIn):
 
 
 @app.get("/api/alerts")
-async def list_alerts(status: Optional[str] = None):
+async def list_alerts(status: str | None = None):
     """Return all alerts. Use ?status=active to filter."""
     if status == "active":
         return await database.get_active_alerts()
@@ -234,7 +236,9 @@ def _render_alertmanager_message(labels: dict, annotations: dict, am_alert: dict
     description = (annotations.get("description") or "").strip()
     runbook = (annotations.get("runbook_url") or "").strip()
     generator_url = (am_alert.get("generatorURL") or "").strip()
-    value = am_alert.get("value") or annotations.get("value")  # AM doesn't expose `value` by default; some templates do
+    value = am_alert.get("value") or annotations.get(
+        "value"
+    )  # AM doesn't expose `value` by default; some templates do
 
     parts: list[str] = []
     if summary:
@@ -260,8 +264,7 @@ def _render_alertmanager_message(labels: dict, annotations: dict, am_alert: dict
         parts.append("\n".join(facts))
 
     extra_labels = {
-        k: v for k, v in labels.items()
-        if k not in _PRIMARY_LABELS and v not in (None, "")
+        k: v for k, v in labels.items() if k not in _PRIMARY_LABELS and v not in (None, "")
     }
     if extra_labels:
         rendered = ", ".join(f"`{k}={v}`" for k, v in sorted(extra_labels.items()))
@@ -338,14 +341,14 @@ async def alertmanager_webhook(payload: dict[str, Any]):
 
 # ── ESP32 endpoints ───────────────────────────────────────────────────────────
 
+
 @app.post("/api/esp32/heartbeat", status_code=200)
 async def esp32_heartbeat(hb: HeartbeatIn):
     """Called by ESP32 every ~60 s to report hardware state."""
     status = await database.upsert_esp32_status(hb.model_dump())
     await _push_log(
         "DEBUG",
-        f"[HB] ip={hb.ip} rssi={hb.rssi}dBm uptime={hb.uptime_s}s "
-        f"free_ram={hb.free_ram_bytes}B",
+        f"[HB] ip={hb.ip} rssi={hb.rssi}dBm uptime={hb.uptime_s}s free_ram={hb.free_ram_bytes}B",
     )
     return {"ok": True, "status": status}
 
@@ -364,7 +367,7 @@ async def esp32_status():
     if s.get("last_heartbeat"):
         try:
             last = datetime.fromisoformat(s["last_heartbeat"])
-            stale = (datetime.now(timezone.utc) - last) > timedelta(minutes=5)
+            stale = (datetime.now(UTC) - last) > timedelta(minutes=5)
         except Exception:
             stale = True
     else:
@@ -375,7 +378,7 @@ async def esp32_status():
 
 @app.get("/api/esp32/logs")
 async def esp32_logs(
-    limit:  int = Query(default=200, ge=1, le=2000),
+    limit: int = Query(default=200, ge=1, le=2000),
     offset: int = Query(default=0, ge=0),
 ):
     """Return recent ESP32 log lines (oldest first)."""
@@ -383,6 +386,7 @@ async def esp32_logs(
 
 
 # ── Combined system status ────────────────────────────────────────────────────
+
 
 @app.get("/api/status")
 async def system_status():
@@ -393,8 +397,8 @@ async def system_status():
       - Alert summary
     """
     active = await database.get_active_alerts()
-    esp32  = await esp32_status()
-    stats  = await database.get_alert_stats()
+    esp32 = await esp32_status()
+    stats = await database.get_alert_stats()
 
     active_codes = {a["code"] for a in active}
 
@@ -407,17 +411,17 @@ async def system_status():
         return {"status": status, "alerts": [a["code"] for a in down_alerts]}
 
     return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "pis": {
             "omv-main": {"ip": "192.168.1.128", **_pi_status("OMV_MAIN_")},
-            "omv-ha":   {"ip": "192.168.1.130", **_pi_status("OMV_HA_")},
+            "omv-ha": {"ip": "192.168.1.130", **_pi_status("OMV_HA_")},
         },
         "esp32": esp32,
         "alerts": {
-            "active_count":   stats["active"],
+            "active_count": stats["active"],
             "resolved_count": stats["resolved"],
-            "total_count":    stats["total"],
-            "by_severity":    stats["by_severity"],
+            "total_count": stats["total"],
+            "by_severity": stats["by_severity"],
         },
     }
 
@@ -426,29 +430,29 @@ async def system_status():
 
 SCRIPTS: dict[str, dict] = {
     "restart_k3s_main": {
-        "label":       "Restart K3s (omv-main)",
+        "label": "Restart K3s (omv-main)",
         "description": "systemctl restart k3s on omv-main",
-        "danger":      False,
+        "danger": False,
     },
     "restart_k3s_agent": {
-        "label":       "Restart K3s Agent (omv-ha)",
+        "label": "Restart K3s Agent (omv-ha)",
         "description": "systemctl restart k3s-agent on omv-ha",
-        "danger":      False,
+        "danger": False,
     },
     "restart_cloudless_app": {
-        "label":       "Restart cloudless app pod",
+        "label": "Restart cloudless app pod",
         "description": "kubectl rollout restart deployment/cloudless-app -n cloudless",
-        "danger":      False,
+        "danger": False,
     },
     "restart_alert_api": {
-        "label":       "Restart Alert API pod",
+        "label": "Restart Alert API pod",
         "description": "kubectl rollout restart deployment/alert-api -n alert-manager",
-        "danger":      False,
+        "danger": False,
     },
     "resolve_all_alerts": {
-        "label":       "Resolve ALL active alerts",
+        "label": "Resolve ALL active alerts",
         "description": "Marks every active alert as resolved (manual bulk-clear)",
-        "danger":      True,
+        "danger": True,
     },
 }
 
@@ -483,10 +487,10 @@ async def run_script(script_id: str):
         return {"ok": True, "script": script_id, "resolved": len(active)}
 
     trigger_map = {
-        "restart_k3s_main":      "OMV_MAIN_K3S_API_DOWN",
-        "restart_k3s_agent":     "OMV_HA_K3S_AGENT_DOWN",
+        "restart_k3s_main": "OMV_MAIN_K3S_API_DOWN",
+        "restart_k3s_agent": "OMV_HA_K3S_AGENT_DOWN",
         "restart_cloudless_app": "CLOUDLESS_ONLINE_DOWN",
-        "restart_alert_api":     None,
+        "restart_alert_api": None,
     }
     trigger_code = trigger_map.get(script_id)
     msg = "Script triggered; remediation agent will act on next poll."
@@ -497,6 +501,7 @@ async def run_script(script_id: str):
 
 
 # ── WebSocket log stream ───────────────────────────────────────────────────────
+
 
 @app.websocket("/ws/esp32-logs")
 async def ws_logs(ws: WebSocket):
@@ -524,11 +529,14 @@ async def ws_logs(ws: WebSocket):
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
+
 @app.get("/api/health")
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "pi-alert-api", "version": "3.3.0"}
 
+
 # ── ESP32 command + config + OTA routes (added by deploy.sh) ─────────────────
 from esp32_command_routes import router as esp32_cmd_router  # noqa: E402
+
 app.include_router(esp32_cmd_router)

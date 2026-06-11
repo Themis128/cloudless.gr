@@ -71,6 +71,7 @@ first. None of them touch the code that serves either app, and none touch the
 mailbox.
 
 ### WorkMail — KEEP (required), $4.00/mo fixed
+
 `tbaltzakis@cloudless.gr` is a mailbox the owner must keep. WorkMail is a flat
 $4/user/mo with no usage-based component, so there is **nothing to trim here**
 without dropping the mailbox — which we are not doing. Treat the $4.00 as a
@@ -78,6 +79,7 @@ fixed floor. (It is unrelated to the apps: the sites send mail via **SES**, not
 WorkMail.)
 
 ### 1. CloudTrail → keep one free trail, drop the rest — saves up to **~$2.30/mo**
+
 The **first** trail logging **management events is free**. A $2.31 charge means
 one of: a second trail, **data-event** logging (S3/Lambda object-level), or
 **CloudTrail Insights**. Keep a single management-events trail (free) and
@@ -87,6 +89,7 @@ granularity, so confirm it's not required for a compliance posture you care
 about.
 
 ### 2. Secrets Manager → migrate to SSM Parameter Store — saves **$1.20/mo ($14/yr)**
+
 Secrets Manager is $0.40/secret/mo; **SSM SecureString parameters are free**
 (and KMS-encrypted with the free AWS-managed key). The app **already** reads its
 config from SSM `/cloudless/production/*` (`src/lib/ssm-config.ts`, `sst.config.ts`).
@@ -95,6 +98,7 @@ Move the ~3 Secrets Manager entries to SSM SecureString and update any
 load (helps item 4).
 
 ### 3. AWS Config → scope down or disable the recorder — saves up to **$0.84/mo**
+
 Config bills $0.003 per configuration item recorded. For an account this small
 it's pure overhead unless you specifically need a compliance timeline. Either
 disable the recorder, or scope it to a handful of resource types / daily
@@ -102,6 +106,7 @@ snapshot instead of continuous recording. **Caveat:** same as CloudTrail — it'
 a governance control, not functionality.
 
 ### 4. KMS → audit for orphaned customer-managed keys — saves **~$1–2/mo**
+
 Each customer-managed key (CMK) is $1/mo whether used or not. $2.13 ≈ 2 CMKs +
 request volume. Audit `aws kms list-keys` for keys with no recent usage, and
 prefer **AWS-managed keys (free)** wherever a CMK isn't strictly required (S3,
@@ -110,10 +115,12 @@ orphaned CMK saves $12/yr. **Do not** delete a key still referenced by SES, S3
 bucket encryption, or Secrets Manager without re-keying first.
 
 ### 5. Route 53 → trim health-check features — saves **~$1–2/mo**
+
 The hosted zone itself is $0.50/mo (unavoidable — it's your DNS). The rest is the
 **two HA failover health checks** (PRIMARY=CloudFront, SECONDARY=Pi/APIGW, see
 `sst.config.ts`) plus optional features (HTTPS, string-matching, fast 10s
 interval each add ~$1/mo). Options:
+
 - Drop **fast interval** (30s instead of 10s) and **string matching** on the
   health checks → keeps failover working, shaves the per-feature surcharges.
 - If the Pi SECONDARY failover path isn't worth maintaining, removing the
@@ -121,11 +128,13 @@ interval each add ~$1/mo). Options:
   HA failover** (`/ha-failover`, `/ha-status`). Trade-off, not free.
 
 ### 6. Systems Manager → downgrade advanced parameters — saves **~$0.30/mo**
+
 Standard SSM parameters are free; **advanced** parameters are $0.05/mo each.
 $0.33 suggests a few advanced params (or Session Manager logging). Downgrade any
 advanced parameter that doesn't need >4KB or parameter policies.
 
 ### 7. S3 → lifecycle-expire old versions — saves a few cents
+
 $0.64 is mostly SST deploy artifacts and old object versions. Add a lifecycle
 rule to expire noncurrent versions after 30 days. Minor, but free to set up.
 
@@ -183,5 +192,6 @@ Two paths overall:
 
 **Decisions only you can make** (each trades a few $/mo against
 functionality/security/effort):
+
 - Do you need the **CloudTrail** / **Config** audit trail for compliance? (items 1, 3)
 - Is the **Pi HA failover** worth its Route 53 health-check cost? (item 5)
