@@ -49,6 +49,7 @@ export const ADMIN_PAGES = [
   "/en/admin",
   "/en/admin/ab-tests",
   "/en/admin/ai-assistant",
+  "/en/admin/ai-generator",
   "/en/admin/analytics",
   "/en/admin/analytics/seo",
   "/en/admin/analytics/unified",
@@ -158,6 +159,7 @@ export const ADMIN_APIS = [
   "/api/admin/ai/analytics-orchestration",
   "/api/admin/ai/analytics-orchestration/pdf",
   "/api/admin/ai/audience",
+  "/api/admin/ai/generate",
   "/api/admin/ai/campaign",
   "/api/admin/ai/copy",
   "/api/admin/ai/report-insights",
@@ -234,8 +236,14 @@ export const ADMIN_API_DYNAMIC = [
   { template: "/api/admin/calendar/[id]", sample: "/api/admin/calendar/sample-id" },
   { template: "/api/admin/email/campaigns/[id]", sample: "/api/admin/email/campaigns/sample-id" },
   { template: "/api/admin/ops/errors/[id]", sample: "/api/admin/ops/errors/sample-id" },
-  { template: "/api/admin/pipeline/deals/[id]/move", sample: "/api/admin/pipeline/deals/sample-id/move" },
-  { template: "/api/admin/pipeline/deals/[id]/notes", sample: "/api/admin/pipeline/deals/sample-id/notes" },
+  {
+    template: "/api/admin/pipeline/deals/[id]/move",
+    sample: "/api/admin/pipeline/deals/sample-id/move",
+  },
+  {
+    template: "/api/admin/pipeline/deals/[id]/notes",
+    sample: "/api/admin/pipeline/deals/sample-id/notes",
+  },
   { template: "/api/admin/reports/[id]", sample: "/api/admin/reports/sample-id" },
   { template: "/api/admin/reports/[id]/pdf", sample: "/api/admin/reports/sample-id/pdf" },
 ] as const;

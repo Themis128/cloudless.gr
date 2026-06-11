@@ -41,6 +41,14 @@ function buildSiteEnvironment(
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
     USER_PROFILE_TABLE: userProfileTableName,
+    // Cloudflare Workers AI — consumed by /api/admin/ai/generate. Passed from
+    // the deploy workflow env; the route returns 503 when absent.
+    ...(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
+      ? {
+          CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+          CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+        }
+      : {}),
     // Auth provider — Cognito (AWS). NEXT_PUBLIC_AUTH_PROVIDER drives the login button label.
     ...(cognito
       ? {
