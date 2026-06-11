@@ -2,7 +2,7 @@
 /**
  * /api/admin/users — Cognito provider path.
  *
- * The Keycloak path is covered in admin-api.test.ts. This sets COGNITO_ISSUER
+ * This sets COGNITO_ISSUER
  * so the route dispatches to the AWS-SDK Cognito branch, and asserts:
  *   - GET lists Cognito users mapped to the shared shape, admin role from the
  *     admin group, and provider:"cognito"; pool id + region derive from issuer
@@ -63,8 +63,6 @@ describe("/api/admin/users — Cognito path", () => {
     vi.resetModules();
     sendMock.mockReset();
     process.env.COGNITO_ISSUER = ISSUER;
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
   });
 
   afterEach(() => {

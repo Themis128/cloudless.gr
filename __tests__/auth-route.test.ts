@@ -11,7 +11,7 @@ describe("auth route GET guard (ServerlessErrors hardening)", () => {
 
   it("redirects a bare GET /api/auth/signin/<provider> to the login page", async () => {
     const { GET } = await import("@/app/api/auth/[...nextauth]/route");
-    const res = await GET(new NextRequest("https://cloudless.gr/api/auth/signin/keycloak"));
+    const res = await GET(new NextRequest("https://cloudless.gr/api/auth/signin/cognito"));
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toContain("/auth/login");
     // The real next-auth handler (which logs error=Configuration) is NOT invoked.
@@ -20,7 +20,7 @@ describe("auth route GET guard (ServerlessErrors hardening)", () => {
 
   it("passes provider callbacks (GET /api/auth/callback/*) to the real handler", async () => {
     const { GET } = await import("@/app/api/auth/[...nextauth]/route");
-    await GET(new NextRequest("https://cloudless.gr/api/auth/callback/keycloak?code=abc"));
+    await GET(new NextRequest("https://cloudless.gr/api/auth/callback/cognito?code=abc"));
     expect(realGet).toHaveBeenCalledTimes(1);
   });
 

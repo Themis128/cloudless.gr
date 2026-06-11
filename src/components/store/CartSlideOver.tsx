@@ -20,7 +20,7 @@ export default function CartSlideOver() {
     setIsCheckingOut(true);
     setCheckoutError(null);
     try {
-      // fetchWithAuth attaches the Keycloak id_token when signed in, so the
+      // fetchWithAuth attaches the id_token when signed in, so the
       // checkout route can pre-fill customer_email and tag the session with
       // userId — linking the order to the account. Anonymous carts still work
       // (no token → anonymous checkout).

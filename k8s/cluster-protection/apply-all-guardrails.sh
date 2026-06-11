@@ -26,7 +26,7 @@ echo "==> Applying Analytics guardrails"
 ssh "$REMOTE" 'kubectl --request-timeout=60s apply -f -' \
   < "$MANIFEST_DIR/analytics-guardrails.yaml"
 
-echo "==> Applying Generic guardrails (oncall, n8n, keycloak, home-assistant)"
+echo "==> Applying Generic guardrails (oncall, n8n, home-assistant)"
 ssh "$REMOTE" 'kubectl --request-timeout=60s apply -f -' \
   < "$MANIFEST_DIR/generic-guardrails.yaml"
 

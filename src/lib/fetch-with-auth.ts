@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Fetch wrapper that adds the Keycloak access token from the next-auth session.
+ * Fetch wrapper that adds the access token from the next-auth session.
  *
  * For same-origin browser requests, the next-auth session cookie is sent
  * automatically and api-auth.ts reads it server-side via auth(). The Bearer

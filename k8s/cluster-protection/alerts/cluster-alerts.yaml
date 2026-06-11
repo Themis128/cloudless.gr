@@ -2,7 +2,7 @@
 #
 # Why: the 2026-05-29 cluster overload incident was only caught when the user
 # noticed pi-origin slowness. With this CronJob, the same incident would have
-# fired into #errors within ~5 min: "keycloak/keycloak-* CrashLoopBackOff x97"
+# fired into #errors within ~5 min: "n8n/n8n-* CrashLoopBackOff x97"
 # and "analytics/duckdb-api-* CrashLoopBackOff x108".
 #
 # Scope: read-only over Events + Pods cluster-wide. Posts to #errors via the

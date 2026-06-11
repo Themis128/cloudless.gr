@@ -1,7 +1,7 @@
 ---
 name: cluster-incident-response
-description: Diagnose and recover omv k3s cluster outages from a cloud session that has NO kubectl/ssh/aws. Use when auth.cloudless.gr returns 503, a pod is OOMKilled/CrashLoopBackOff, login is down, PrometheusRuleFailures fires, PrometheusKubernetesListWatchFailures fires, k3s API server is down, Metabase/DuckDB/ntfy/Grafana/Loki is down, or the user says "fix what's broken on the cluster", "is the cluster healthy", "recover Keycloak", "analytics down", "Grafana unreachable", "ntfy not working". Drives cluster ops through path-triggered GitHub workflows (hosted runner + Tailscale + KUBECONFIG_B64) that post diagnostics to issue #382.
-argument-hint: "what's broken, e.g. 'keycloak 503', 'Metabase OOM', 'ntfy crash', 'PrometheusRuleFailures', 'k3s API server down'"
+description: Diagnose and recover omv k3s cluster outages from a cloud session that has NO kubectl/ssh/aws. Use when a pod is OOMKilled/CrashLoopBackOff, PrometheusRuleFailures fires, PrometheusKubernetesListWatchFailures fires, k3s API server is down, Metabase/DuckDB/ntfy/Grafana/Loki is down, or the user says "fix what's broken on the cluster", "is the cluster healthy", "analytics down", "Grafana unreachable", "ntfy not working". Drives cluster ops through path-triggered GitHub workflows (hosted runner + Tailscale + KUBECONFIG_B64) that post diagnostics to issue #382.
+argument-hint: "what's broken, e.g. 'Metabase OOM', 'ntfy crash', 'PrometheusRuleFailures', 'k3s API server down'"
 ---
 
 # Cluster Incident Response — cloudless.gr (omv k3s)
@@ -37,8 +37,6 @@ offline during cluster incidents and the job queues forever).
 
 | Tier | Namespace | Service | Memory limit | OOM risk |
 |---|---|---|---|---|
-| Auth | keycloak | keycloak | 768Mi | **CRITICAL** — JVM `-Xmx512m` |
-| Auth | keycloak | postgres | — | Low |
 | App | cloudless | cloudless | — | Low |
 | App | ntfy | ntfy | 96Mi | Medium (tight) |
 | App | n8n | n8n | 256Mi | Low |
@@ -55,13 +53,8 @@ offline during cluster incidents and the job queues forever).
 
 | Command / Workflow | What it does |
 | --- | --- |
-| `pnpm cluster:doctor` (`scripts/cluster-doctor.sh`) | **Full 6-tier diagnostics** — Auth (Keycloak+Postgres), App (cloudless+ntfy+n8n), Monitoring (Prometheus+Grafana+Alertmanager+Loki+rules), Analytics (Metabase+DuckDB), Infra (nodes+etcd+CronJobs), External (HTTP surfaces+runners). Posts to #382. |
+| `pnpm cluster:doctor` (`scripts/cluster-doctor.sh`) | **Full diagnostics** — App (cloudless+ntfy+n8n), Monitoring (Prometheus+Grafana+Alertmanager+Loki+rules), Analytics (Metabase+DuckDB), Infra (nodes+etcd+CronJobs), External (HTTP surfaces+runners). Posts to #382. |
 | `.github/workflows/cluster-doctor.yml` | Runs the doctor on a hosted runner over Tailscale, posts the snapshot to **#382**. Trigger by editing `scripts/cluster-doctor.sh` or the workflow. |
-| `pnpm keycloak:smoke` (`scripts/keycloak-smoke.sh`) | Credential-free verification of the live login+registration surface (discovery, JWKS, hosted login, registration, token endpoint, next-auth provider). |
-| `pnpm keycloak:restore` (`scripts/restore-keycloak.sh`) | Direct strategic-merge **patch** of the keycloak deploy (768Mi + `-Xmx512m`), restart, verify. |
-| `.github/workflows/restore-keycloak.yml` | Runs `keycloak:restore` on a hosted runner, posts the log to #382. Trigger by editing the workflow file. |
-| `pnpm keycloak:ensure` (`scripts/keycloak-ensure.sh`) | **Self-heal** cron: restores Keycloak 768Mi+heap, realm flags, groups mapper, admin group/membership, Pi cloudless app auth wiring. Posts to #382 only when it corrects drift. |
-| `.github/workflows/keycloak-ensure.yml` | Runs `keycloak:ensure` on **cron `*/15`** + push. |
 | `pnpm prometheus:tune` (`scripts/prometheus-tune.sh`) | Removes heavy kube-apiserver burnrate/SLO PrometheusRules that time out and trip `PrometheusRuleFailures`. |
 | `.github/workflows/prometheus-tune.yml` | Runs `prometheus:tune` on a hosted runner, posts the log to #382. |
 | `scripts/analytics-restore.sh` | Recovers OOMKilled Metabase (patches to 600Mi + restarts) and DuckDB API (restarts if high restarts). |
@@ -79,20 +72,18 @@ offline during cluster incidents and the job queues forever).
 2. **Classify the failure mode** — see decision table below.
 3. **Apply the fix** by editing the relevant workflow file → PR → squash-merge.
    Read the posted log to confirm it stuck.
-4. **Verify** (`keycloak:smoke`, HTTP check, re-doctor).
+4. **Verify** (HTTP check, re-doctor).
 
 ## Failure mode decision table
 
 | Symptom | Likely cause | Tool |
 |---|---|---|
-| `auth.cloudless.gr` HTTP 503 | Keycloak OOMKilled / CrashLoop | `restore-keycloak.yml` → `keycloak:smoke` |
-| `auth.cloudless.gr` HTTP 000000 (no TCP) | k3s API server down AND Cloudflare tunnel broken | `k3s-ssh-restart.yml` → re-doctor |
+| Cluster HTTP surfaces 000000 (no TCP) | k3s API server down AND Cloudflare tunnel broken | `k3s-ssh-restart.yml` → re-doctor |
 | Doctor: `connection refused` on port 6443 | k3s process stopped (Pi host UP via Tailscale) | `k3s-ssh-restart.yml` (needs `OMV_SSH_KEY`) |
 | Doctor: `ServiceUnavailable` on port 6443 | k3s starting / overloaded — wait 2–5 min | Re-doctor; if persistent → `k3s-ssh-restart.yml` |
 | Doctor: all kubectl = `connection refused` + runner queued forever | Pi host completely down (power/kernel panic) | Physical access or out-of-band reboot |
 | `PrometheusRuleFailures` alert | `kube-apiserver-burnrate.rules` timing out | `prometheus-tune.yml` |
 | `PrometheusKubernetesListWatchFailures` alert | Prometheus can't reach k3s API | Run doctor first; if API down → `k3s-ssh-restart.yml` |
-| Keycloak OOMKilled / 79+ restarts / limit=384Mi | Memory cap too low | `restore-keycloak.yml` (patches to 768Mi) |
 | Metabase OOMKilled / CrashLoop | JVM heap exceeds 400Mi container limit | `analytics-restore.yml` (patches to 600Mi) |
 | DuckDB API high restarts / OOMKilled | Memory spike from heavy query | `analytics-restore.yml` (restarts DuckDB) |
 | Grafana unreachable (HTTP 503) | Pod crash or OOM (256Mi limit) | `kubectl -n monitoring rollout restart deploy/kube-prom-grafana` (via remediate workflow) |
@@ -125,8 +116,7 @@ offline during cluster incidents and the job queues forever).
 
 ## Hard-won lessons
 
-- **Never cap a JVM container below `-Xmx` + non-heap working set.** Keycloak 26.2 needs 512Mi heap + ~200Mi non-heap → 768Mi limit. Metabase needs 320Mi heap + 128Mi → 450Mi minimum (use 600Mi).
-- **Keycloak's operative heap variable is `JAVA_OPTS_APPEND`, not `JAVA_OPTS_KC_HEAP`.** Patching the wrong one is a silent no-op.
+- **Never cap a JVM container below `-Xmx` + non-heap working set.** Metabase needs 320Mi heap + 128Mi → 450Mi minimum (use 600Mi).
 - **`kubectl apply -f <manifest>` from CI did not stick** while a direct `kubectl patch` did. Prefer strategic-merge patch for recovery.
 - **`PrometheusRuleFailures` ≠ `PrometheusKubernetesListWatchFailures`.** See decision table. `prometheus:tune` does nothing for list-watch failures.
 - **`[self-hosted, omv, build]` runners survive k3s crashes** (systemd service, not k8s pod) but go offline when the Pi itself crashes. If job queues >2 min, the Pi is down.
@@ -145,9 +135,8 @@ Comments are chronological; newest snapshot/log is the last page.
 
 ## Reference
 
-- Keycloak: ns `keycloak`, deploy `keycloak`, image `quay.io/keycloak/keycloak:26.2`, fronted by Cloudflare tunnel.
 - Pi control-plane: `omv` / `192.168.1.128` / Tailscale `100.113.41.119`. kubeconfig: `/etc/rancher/k3s/k3s.yaml`.
 - Analytics: ns `analytics` — `metabase` (400Mi→600Mi), `duckdb-api` (1500Mi).
 - Monitoring: ns `monitoring` — prometheus (700Mi), grafana (256Mi), loki (400Mi), alertmanager (128Mi).
 - App services: ntfy (96Mi→128Mi), n8n (256Mi), cloudless (standby).
-- Incident 2026-06-01: Keycloak OOM (384Mi → 768Mi fix). Incident 2026-06-02: k3s API crash → `PrometheusKubernetesListWatchFailures`.
+- Incident 2026-06-02: k3s API crash → `PrometheusKubernetesListWatchFailures`.

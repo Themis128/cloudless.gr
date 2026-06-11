@@ -5,7 +5,7 @@
 #
 # This file:
 #   1. Adds LimitRange defaults to namespaces that had none
-#      (keycloak, analytics, n8n, ntfy, home-assistant, oncall, alert-manager)
+#      (analytics, n8n, ntfy, home-assistant, oncall, alert-manager)
 #   2. Sets memory limits on the limit-less pods on omv
 #   3. Caps the heaviest single offenders (metabase, oncall stack, n8n)
 #
@@ -15,7 +15,6 @@
 # Expected memory reclaim on omv after restart of affected workloads:
 #   metabase     (cap 400Mi, was 927 Mi)  → -527 Mi
 #   prometheus   (already capped 700 Mi, slim scrape config drops it further)
-#   keycloak     (cap 384Mi, was 494 Mi)  → -110 Mi
 #   home-assistant scaled to 0           → -314 Mi
 #   oncall stack scaled to 0             → -900 Mi
 #   ------------------------------------------------
@@ -23,22 +22,6 @@
 
 ---
 # ── Namespace-level defaults (was missing for these namespaces) ──
-apiVersion: v1
-kind: LimitRange
-metadata:
-  name: default-container-limits
-  namespace: keycloak
-spec:
-  limits:
-    - type: Container
-      default:        { memory: 512Mi, cpu: 1 }
-      defaultRequest: { memory: 128Mi, cpu: 100m }
-      # max raised 768Mi → 1Gi: Keycloak 26.2 runs a -Xmx512m heap, which needs
-      # a ~768Mi container ceiling (heap + JVM non-heap). 768Mi as the max left
-      # no room above the pod's own limit, so allow 1Gi headroom.
-      max:            { memory: 1Gi, cpu: 2 }
-
----
 apiVersion: v1
 kind: LimitRange
 metadata:

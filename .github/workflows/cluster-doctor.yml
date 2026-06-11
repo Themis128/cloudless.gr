@@ -1,5 +1,5 @@
 name: Cluster doctor (read-only diagnostics)
-# triggered 2026-06-02T22:5X — auth.cloudless.gr 503 live; confirm Keycloak OOM/limit state
+# triggered 2026-06-02T22:5X — repo maintenance
 # re-triggered 2026-06-03 — post-deploy full-stack verification
 # re-triggered 2026-06-03T00:30Z — post-k3s-restart verification (cluster recovered)
 # re-triggered 2026-06-03T01:2xZ — pi unresponsive (SSH timeout × 3); checking if recovered

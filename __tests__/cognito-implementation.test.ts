@@ -2,9 +2,9 @@
 /**
  * Cognito implementation tests — the REAL src/lib/auth.ts in Cognito mode.
  *
- * auth-lib-callbacks.test.ts exercises the same callbacks in *Keycloak* mode.
+ * Covers the Cognito jwt/session callback behaviour.
  * This file flips the env so COGNITO_ISSUER is set and asserts the
- * Cognito-specific behaviour that the Keycloak path never touches:
+ * Cognito-specific behaviour:
  *
  *   1. Provider selection — authProvider === "cognito" when COGNITO_ISSUER set
  *   2. cognito:groups claim extraction (id_token preferred over access_token)
@@ -43,10 +43,6 @@ vi.mock("next-auth/providers/cognito", () => ({
   default: (opts: Record<string, unknown>) => ({ ...opts, id: "cognito", name: "cognito" }),
 }));
 
-vi.mock("next-auth/providers/keycloak", () => ({
-  default: (opts: Record<string, unknown>) => ({ ...opts, id: "keycloak", name: "keycloak" }),
-}));
-
 // ── JWT helper: base64url payload (unsigned — decodeJwtPayload only reads it) ──
 
 function buildToken(payload: Record<string, unknown>): string {
@@ -82,16 +78,13 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   beforeEach(() => {
     vi.resetModules();
     capturedConfig = {};
-    // Cognito wins: COGNITO_ISSUER set, Keycloak vars absent.
+    // COGNITO_ISSUER set.
     process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
     process.env.COGNITO_ISSUER = COGNITO_ISSUER;
     process.env.COGNITO_CLIENT_ID = CLIENT_ID;
     process.env.COGNITO_CLIENT_SECRET = CLIENT_SECRET;
     process.env.COGNITO_DOMAIN = COGNITO_DOMAIN;
     process.env.AUTH_URL = AUTH_URL;
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.KEYCLOAK_CLIENT_ID;
-    delete process.env.KEYCLOAK_CLIENT_SECRET;
   });
 
   afterEach(() => {
@@ -134,13 +127,13 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     expect(result.groups).toEqual(["admin", "users"]);
   });
 
-  it("ignores the Keycloak `groups` claim name when in Cognito mode", async () => {
+  it("ignores the legacy `groups` claim name in Cognito mode", async () => {
     await loadAuth();
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
     >;
-    // A token carrying only the Keycloak-style `groups` (not cognito:groups)
+    // A token carrying only a bare `groups` claim (not cognito:groups)
     // must NOT populate groups when Cognito is the active provider.
     const idToken = buildToken({ groups: ["admin"] });
     const result = await jwt.jwt({
