@@ -15,6 +15,7 @@ Shows the latest run for every active workflow. Flags failures, skips always-pas
 
 4. Print the table in this order: FAIL first, then RUNNING, then OK.
    Format each row as:
+
    ```
    [STATUS] Workflow Name — <link to run>
    ```
@@ -22,9 +23,11 @@ Shows the latest run for every active workflow. Flags failures, skips always-pas
 5. For each FAIL entry, run `gh run view <id> --repo Themis128/cloudless.gr --log-failed 2>&1 | Select-Object -First 40` and print the relevant error lines.
 
 6. Print a final summary line:
+
    ```
    ✓ N passing  ● N failing  ⟳ N running
    ```
+
    If N failing > 0, suggest running `/k3s-e2e-rerun` if the failures are in k3s standby E2E, or inspect the logs above for other failures.
 
 ## Notes

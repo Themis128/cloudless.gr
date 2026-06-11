@@ -21,6 +21,7 @@ gh workflow run cognito-setup.yml
 ```
 
 All options automatically:
+
 1. ✅ Validate AWS credentials
 2. ✅ Fetch CLIENT_ID from SSM
 3. ✅ Update `.env.local`
@@ -30,6 +31,7 @@ All options automatically:
 ## 📁 Files Created
 
 ### Core Script
+
 - **`scripts/cognito-setup.sh`** (338 lines)
   - Main automation logic
   - Handles AWS auth, SSM fetch, .env update, dev test
@@ -37,6 +39,7 @@ All options automatically:
   - Color-coded output with clear messaging
 
 ### Documentation
+
 - **`docs/COGNITO_SETUP.md`** (detailed user guide)
   - Step-by-step instructions
   - Prerequisites and troubleshooting
@@ -50,6 +53,7 @@ All options automatically:
   - Security considerations
 
 ### Tools & Integrations
+
 - **`tools/cognito-setup-mcp/src/index.ts`** (MCP server)
   - Programmatic tools for external callers
   - 5 tools: check-creds, fetch, update-env, test-server, full-setup
@@ -59,11 +63,13 @@ All options automatically:
 - **`tools/cognito-setup-mcp/README.md`** (MCP documentation)
 
 ### Skills & Workflows
+
 - **`.claude/skills/cognito-setup/index.md`** (skill documentation)
 - **`.claude/skills/cognito-setup/index.sh`** (skill wrapper)
 - **`.github/workflows/cognito-setup.yml`** (GitHub Actions workflow)
 
 ### Package.json Updates
+
 - **`package.json`** — Added 3 pnpm aliases:
   - `pnpm cognito:setup`
   - `pnpm cognito:setup:dry`
@@ -135,27 +141,32 @@ pnpm cognito:setup:quick
 ## ✨ Key Features
 
 ✅ **Fully Automated**
+
 - No manual `.env.local` editing
 - No copy-paste of credentials
 - End-to-end verification
 
 ✅ **Error Handling**
+
 - Clear error messages
 - Automatic SSO fallback
 - Helpful recovery suggestions
 
 ✅ **Safe**
+
 - Backs up existing `.env.local`
 - Read-only `.env.local.backup` files
 - Idempotent (safe to run multiple times)
 
 ✅ **Flexible**
+
 - CLI for local dev
 - Skill for Claude Code
 - MCP for programmatic access
 - GH Actions for CI/CD
 
 ✅ **Well-Documented**
+
 - Inline comments in scripts
 - Comprehensive markdown docs
 - Architecture diagrams
@@ -168,12 +179,14 @@ pnpm cognito:setup:quick
 Your current credentials are invalid. You need to either:
 
 **Option 1: AWS SSO (Recommended)**
+
 ```bash
 # On your local machine with a browser
 aws sso login --sso-session cloudless
 ```
 
 **Option 2: Programmatic Keys**
+
 1. Go to AWS Console → IAM → Users
 2. Create access keys
 3. Update `~/.aws/credentials`
@@ -181,6 +194,7 @@ aws sso login --sso-session cloudless
 ### Wire Up MCP Server (Optional)
 
 To use in Claude Code, add to `mcp.json`:
+
 ```json
 {
   "mcpServers": {
@@ -195,29 +209,37 @@ To use in Claude Code, add to `mcp.json`:
 ## 📊 Usage by Scenario
 
 ### Scenario 1: First-Time Local Setup
+
 ```bash
 pnpm cognito:setup
 ```
+
 → All-in-one solution, fully automated
 
 ### Scenario 2: Credential Rotation
+
 ```bash
 aws sso login --sso-session cloudless
 pnpm cognito:setup
 ```
+
 → Refresh expired credentials
 
 ### Scenario 3: CI/CD Pipeline
+
 ```bash
 gh workflow run cognito-setup.yml
 ```
+
 → Automated setup in GitHub Actions (uses OIDC, no static credentials)
 
 ### Scenario 4: Debugging
+
 ```bash
 pnpm cognito:setup:dry
 bash -x scripts/cognito-setup.sh
 ```
+
 → Diagnose issues step-by-step
 
 ## 📚 Documentation Reference
@@ -234,14 +256,18 @@ bash -x scripts/cognito-setup.sh
 
 1. **Get valid AWS credentials** (see "What Needs Your Action" above)
 2. **Run the setup:**
+
    ```bash
    pnpm cognito:setup
    ```
+
 3. **Verify it works:**
+
    ```bash
    pnpm dev
    # Then visit http://localhost:4000/en and test login
    ```
+
 4. **Optional: Wire up MCP** for Claude Code skill usage
 
 ## 💡 Tips
@@ -255,20 +281,24 @@ bash -x scripts/cognito-setup.sh
 ## 🐛 Troubleshooting
 
 **"AWS CLI not found"**
+
 ```bash
 pip install awscli
 ```
 
 **"The security token included in the request is invalid"**
+
 ```bash
 aws sso login --sso-session cloudless
 ```
 
 **"ParameterNotFound"**
+
 - Verify AWS credentials have SSM read access
 - Verify parameter exists: `aws ssm get-parameter --name "/cloudless/production/COGNITO_CLIENT_ID"`
 
 **Setup succeeded but auth still fails**
+
 ```bash
 pnpm install                # Update dependencies
 pnpm dev                    # Restart dev server

@@ -81,6 +81,7 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 ```
 
 **Features:**
+
 - Fixed bottom-right floating button, expands to a 380px chat panel
 - Streaming responses via SSE — text appears token by token
 - Retains last 10 turns for context window management

@@ -51,7 +51,7 @@ Usage
 
 import asyncio
 import os
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, HTTPException
@@ -59,9 +59,7 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-ESPHOME_BASE = os.getenv(
-    "ESPHOME_URL", "http://192.168.1.201:9101"
-)
+ESPHOME_BASE = os.getenv("ESPHOME_URL", "http://192.168.1.201:9101")
 LED_ENTITY = "status_led"
 CMD_TIMEOUT = 5.0  # seconds
 
@@ -79,25 +77,27 @@ _DEFAULT_CONFIG = {
 
 # ── Pydantic models ────────────────────────────────────────────────────────────
 
+
 class CommandIn(BaseModel):
     action: str
-    value: Optional[Any] = None
+    value: Any | None = None
 
 
 class ConfigIn(BaseModel):
-    device_id: Optional[str] = None
-    brightness: Optional[int] = None
-    heartbeat_interval_s: Optional[int] = None
-    mqtt_qos: Optional[int] = None
+    device_id: str | None = None
+    brightness: int | None = None
+    heartbeat_interval_s: int | None = None
+    mqtt_qos: int | None = None
 
 
 class OtaIn(BaseModel):
-    device_id: Optional[str] = None
+    device_id: str | None = None
     firmware_url: str
-    version: Optional[str] = None
+    version: str | None = None
 
 
 # ── ESPHome helpers ────────────────────────────────────────────────────────────
+
 
 async def _esphome_post(path: str, params: dict | None = None) -> bool:
     """POST to ESPHome REST API. Returns True on success."""
@@ -128,6 +128,7 @@ async def _esphome_get(path: str) -> dict | None:
 
 
 # ── Command dispatch ───────────────────────────────────────────────────────────
+
 
 async def _dispatch_command(action: str, value: Any) -> dict:
     """Translate admin-panel command → ESPHome REST call."""
@@ -172,12 +173,12 @@ async def _dispatch_command(action: str, value: Any) -> dict:
         mode = str(value or "").strip()
         # Map human-readable modes to ESPHome effect names (must match YAML effects).
         EFFECT_MAP = {
-            "SOLID_GREEN":     None,            # no effect = solid
-            "blink_orange":    "blink_orange",
-            "blink_yellow":    "blink_yellow",
-            "blink_red_fast":  "blink_red_fast",
+            "SOLID_GREEN": None,  # no effect = solid
+            "blink_orange": "blink_orange",
+            "blink_yellow": "blink_yellow",
+            "blink_red_fast": "blink_red_fast",
             "blink_deep_orange_fast": "blink_deep_orange_fast",
-            "blink_magenta":   "blink_magenta",
+            "blink_magenta": "blink_magenta",
         }
         COLOR_MAP = {
             "SOLID_GREEN": {"r": "0", "g": "1", "b": "0", "brightness": "0.4"},
@@ -192,9 +193,7 @@ async def _dispatch_command(action: str, value: Any) -> dict:
             ok = await _esphome_post(f"/light/{LED_ENTITY}/turn_on", params or None)
         else:
             # Unknown mode — try passing it as an effect name directly.
-            ok = await _esphome_post(
-                f"/light/{LED_ENTITY}/turn_on", {"effect": mode}
-            )
+            ok = await _esphome_post(f"/light/{LED_ENTITY}/turn_on", {"effect": mode})
         return {"ok": ok, "action": action, "mode": mode}
 
     if action == "clear_override":
@@ -216,6 +215,7 @@ async def _dispatch_command(action: str, value: Any) -> dict:
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
+
 
 @router.post("/api/esp32/{device_id}/command")
 async def esp32_command(device_id: str, body: CommandIn):

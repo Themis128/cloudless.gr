@@ -1,4 +1,5 @@
 # Stripe Payments Integration
+
 cloudless.gr uses Stripe for one-time payments and recurring subscriptions. The integration covers checkout session creation, webhook event processing, order confirmation emails, and Slack notifications.
 
 > **Status:** Required for store functionality. The app throws if `STRIPE_SECRET_KEY` or `STRIPE_WEBHOOK_SECRET` are missing from SSM.
@@ -65,6 +66,7 @@ sequenceDiagram
     API-->>Browser: { url: checkout_url }
     Browser->>Stripe: Redirect to hosted checkout
 ```
+
 **Security:** Prices are **never** sent from the client. The checkout route looks up each product by ID in the server-side catalog (`store-products.ts`) and uses the server-side `price` field. This prevents price manipulation attacks.
 
 **Subscription detection:** If any item has `recurring: true`, the session mode is set to `subscription`. Otherwise it's `payment`.
@@ -127,6 +129,7 @@ Unhandled event types are logged with a warning and return 200.
 ---
 
 ## Environment Variables
+
 ### Local development (`.env.local`)
 
 ```bash
@@ -158,9 +161,11 @@ Products are defined server-side in `src/lib/store-products.ts`. The catalog inc
 | Physical | Dev Kit, T-Shirt | EUR 25 - 35 |
 
 **Key functions:**
+
 - `getProductById(id)` — used by checkout to validate items
 - `getProductsByCategory(category)` — used by store UI
 - `categoryLabels` / `categoryColors` — UI presentation helpers
+
 ---
 
 ## Stripe Client Initialization
@@ -208,6 +213,7 @@ curl -X POST http://localhost:4000/api/checkout \
 ```
 
 ---
+
 ## Security Notes
 
 - **Server-side pricing:** Client sends product IDs only; prices come from `store-products.ts`
@@ -228,7 +234,6 @@ curl -X POST http://localhost:4000/api/checkout \
 | `src/app/api/webhooks/stripe/route.ts` | Webhook handler for 6 event types |
 | `src/lib/email.ts` | `sendOrderConfirmation()`, `sendPaymentFailureNotice()`, `notifyTeam()` |
 | `src/lib/slack-notify.ts` | `slackOrderNotify()` — fire-and-forget Slack notification |
-
 
 ## Compliance And Legal Alignment (EU + US)
 

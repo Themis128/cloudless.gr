@@ -92,6 +92,7 @@ GOOGLE_CALENDAR_ID=your-calendar-id@group.calendar.google.com
 Returns available 30-minute consultation slots.
 
 **Query params:**
+
 - `days` (optional, default: 7, range: 1–30) — how many days ahead to check
 
 **Response:** `{ slots: [{ start: ISO8601, end: ISO8601 }, ...] }`
@@ -99,6 +100,7 @@ Returns available 30-minute consultation slots.
 **Caching:** `Cache-Control: public, s-maxage=300, stale-while-revalidate=60` (5-minute CDN cache)
 
 **Slot generation logic:**
+
 - Business hours: 09:00–17:00 Europe/Athens (DST-aware — UTC+2 in winter EET, UTC+3 in summer EEST)
 - Weekdays only (skip Saturday/Sunday)
 - 30-minute intervals
@@ -112,17 +114,20 @@ Books a consultation slot.
 **Rate limiting:** 5 requests per IP per 10 minutes.
 
 **Request body:**
+
 ```json
 { "name": "string", "email": "string", "start": "ISO8601", "end": "ISO8601", "notes": "optional string" }
 ```
 
 **Validation:**
+
 - Name, email, start, end are required
 - Email must pass `isValidEmail()` check
 - Start must be in the future
 - End must be after start
 
 **On success:**
+
 - Creates a Google Calendar event with:
   - Summary: `Cloudless Consultation — {name}`
   - Attendee: user's email (gets calendar invite)

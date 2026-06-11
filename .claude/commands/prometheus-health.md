@@ -5,9 +5,11 @@ Checks Prometheus targets, firing alerts, and scrape health for the cloudless.gr
 ## Steps
 
 1. **Pod health** — call `mcp__cloudless-infra__cluster_run_command` on `omv-main`:
+
    ```
    kubectl get pods -n monitoring --no-headers
    ```
+
    Confirm all pods are `Running`. Flag any pod in `CrashLoopBackOff`, `Pending`, or `Error`.
 
 2. **Active targets** — call `mcp__cloudless-infra__prometheus_check_targets`.
@@ -28,6 +30,7 @@ Checks Prometheus targets, firing alerts, and scrape health for the cloudless.gr
 5. **Alerting rules** — call `mcp__cloudless-infra__prometheus_check_rules`. Report any rule in error state.
 
 6. Print summary:
+
    ```
    Prometheus targets:  N active, N down
    Firing alerts:       N critical, N warning, N info

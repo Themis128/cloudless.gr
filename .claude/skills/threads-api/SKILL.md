@@ -9,6 +9,7 @@ The Threads API enables publishing content, reading profiles, retrieving media, 
 **Required Scopes:** `threads_basic`, `threads_content_publish`, `threads_manage_insights`, `threads_manage_replies`
 
 **Cloudless Account:**
+
 - Threads username: `t_baltzakis`
 - Threads User ID: `26733238892980904` (from Windsor.ai)
 - App ID: `1936126137016578` (shared Meta app)
@@ -20,6 +21,7 @@ The Threads API enables publishing content, reading profiles, retrieving media, 
 ### OAuth 2.0 Flow (via Instagram)
 
 **Step 1 — Authorization URL:**
+
 ```
 https://threads.net/oauth/authorize
   ?client_id={APP_ID}
@@ -30,6 +32,7 @@ https://threads.net/oauth/authorize
 ```
 
 **Step 2 — Exchange code for short-lived token:**
+
 ```bash
 curl -X POST "https://graph.threads.net/oauth/access_token" \
   -d "client_id={APP_ID}" \
@@ -38,18 +41,22 @@ curl -X POST "https://graph.threads.net/oauth/access_token" \
   -d "redirect_uri={REDIRECT_URI}" \
   -d "code={AUTH_CODE}"
 ```
+
 Returns: `{"access_token": "...", "user_id": 12345}`
 
 **Step 3 — Exchange for long-lived token (60 days):**
+
 ```bash
 curl "https://graph.threads.net/access_token
   ?grant_type=th_exchange_token
   &client_secret={APP_SECRET}
   &access_token={SHORT_LIVED_TOKEN}"
 ```
+
 Returns: `{"access_token": "...", "token_type": "bearer", "expires_in": 5184000}`
 
 **Step 4 — Refresh long-lived token:**
+
 ```bash
 curl "https://graph.threads.net/refresh_access_token
   ?grant_type=th_refresh_token
@@ -81,6 +88,7 @@ GET /v1.0/{USER_ID}
 ```
 
 **Available fields:**
+
 - `id` — Threads user ID
 - `username` — Handle (without @)
 - `threads_profile_picture_url` — Avatar URL
@@ -93,6 +101,7 @@ GET /v1.0/{USER_ID}
 #### Step 1 — Create Media Container
 
 **Text post:**
+
 ```bash
 curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
   -d "media_type=TEXT" \
@@ -102,6 +111,7 @@ curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
 ```
 
 **Image post:**
+
 ```bash
 curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
   -d "media_type=IMAGE" \
@@ -111,6 +121,7 @@ curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
 ```
 
 **Video post:**
+
 ```bash
 curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
   -d "media_type=VIDEO" \
@@ -120,6 +131,7 @@ curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
 ```
 
 **Carousel post:**
+
 ```bash
 # Step A: Create child containers
 curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
@@ -169,6 +181,7 @@ GET /v1.0/{CONTAINER_ID}
 ### 3. Reply / Quote Post
 
 **Reply to a thread:**
+
 ```bash
 curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
   -d "media_type=TEXT" \
@@ -178,6 +191,7 @@ curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
 ```
 
 **Quote post:**
+
 ```bash
 curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
   -d "media_type=TEXT" \
@@ -191,6 +205,7 @@ curl -X POST "https://graph.threads.net/v1.0/{USER_ID}/threads" \
 ### 4. Read Media
 
 **List user's threads:**
+
 ```bash
 GET /v1.0/{USER_ID}/threads
   ?fields=id,media_product_type,media_type,media_url,permalink,
@@ -201,6 +216,7 @@ GET /v1.0/{USER_ID}/threads
 ```
 
 **Get single thread:**
+
 ```bash
 GET /v1.0/{MEDIA_ID}
   ?fields=id,media_type,media_url,permalink,text,timestamp,
@@ -213,6 +229,7 @@ GET /v1.0/{MEDIA_ID}
 ### 5. Reply Management
 
 **Get replies to a thread:**
+
 ```bash
 GET /v1.0/{MEDIA_ID}/replies
   ?fields=id,text,username,timestamp,media_type,media_url,
@@ -221,6 +238,7 @@ GET /v1.0/{MEDIA_ID}/replies
 ```
 
 **Get conversation (all nested replies):**
+
 ```bash
 GET /v1.0/{MEDIA_ID}/conversation
   ?fields=id,text,username,timestamp,media_type,has_replies
@@ -228,6 +246,7 @@ GET /v1.0/{MEDIA_ID}/conversation
 ```
 
 **Hide/unhide a reply:**
+
 ```bash
 POST /v1.0/{REPLY_ID}/manage_reply
   ?hide=true
@@ -275,6 +294,7 @@ GET /v1.0/{USER_ID}/threads_insights
 | `follower_demographics` | Breakdown by country, city, age, gender | point-in-time |
 
 **Demographic breakdowns (pass as `breakdown` param):**
+
 - `country`
 - `city`
 - `age`

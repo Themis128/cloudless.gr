@@ -9,6 +9,7 @@ Slack has three distinct branding layers — each with different controls:
 ### 1. Per-message branding (code-controlled ✅)
 
 Every message sent by `slack-notify.ts` carries:
+
 - `username: "Cloudless"` — display name shown on each message
 - `icon_url: "https://cloudless.gr/icons/icon-512.png"` — 512×512 PNG avatar
 
@@ -22,6 +23,7 @@ The Slack App's icon and name shown in the workspace sidebar / app directory.
 👉 **<https://api.slack.com/apps> → select your app → Basic Information → Display Information**
 
 Steps:
+
 1. App Name: `Cloudless`
 2. Short Description: `Notifications from cloudless.gr — bookings, orders, errors & deploys`
 3. App Icon: upload `/public/icons/icon-512.png` (512×512 PNG, already in the repo at `https://cloudless.gr/icons/icon-512.png`)

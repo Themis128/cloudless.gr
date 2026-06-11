@@ -54,6 +54,7 @@ graph TB
 | `src/app/api/slack/events/route.ts` | Events API handler |
 | `src/app/api/slack/commands/route.ts` | Slash command handler |
 | `src/app/api/slack/interactions/route.ts` | Block Kit interaction handler |
+
 ---
 
 ## Environment Variables
@@ -124,6 +125,7 @@ Workspace: your workspace
 **Event Subscriptions → Enable Events → On**
 
 Request URL:
+
 ```
 https://cloudless.gr/api/slack/events
 ```
@@ -131,8 +133,10 @@ https://cloudless.gr/api/slack/events
 Slack will POST a `url_verification` challenge. The route responds automatically.
 
 **Subscribe to bot events:**
+
 - `app_mention` — bot was @mentioned in a channel
 - `message.im` — message sent directly to the bot
+
 ### 4. Slash Commands
 
 **Slash Commands → Create New Command** (repeat for each):
@@ -147,6 +151,7 @@ Slack will POST a `url_verification` challenge. The route responds automatically
 **Interactivity & Shortcuts → Interactivity → On**
 
 Request URL:
+
 ```
 https://cloudless.gr/api/slack/interactions
 ```
@@ -192,6 +197,7 @@ sequenceDiagram
 Returns app health in the channel (visible to everyone — `response_type: in_channel`).
 
 **Response (3 Block Kit blocks):**
+
 - Header: "✅ cloudless.gr Status"
 - Section with fields: Version, Uptime, API status, Store status
 - Context: Slack-formatted timestamp
@@ -201,6 +207,7 @@ Returns app health in the channel (visible to everyone — `response_type: in_ch
 Returns an ephemeral message (visible only to the user — `response_type: ephemeral`) with links to the Stripe Dashboard and the store.
 
 **Response (4 Block Kit blocks):**
+
 - Header: "🧾 Recent Orders"
 - Section with explanation text
 - Actions: "Open Stripe Dashboard" (primary) + "View Store" buttons
@@ -291,15 +298,18 @@ All outbound notifications use the `SlackClient` class, which automatically sele
 Called from `/api/contact` as **fire-and-forget** via `Promise.allSettled` (runs in parallel with HubSpot CRM upsert). Does not block the API response.
 
 Block Kit message includes:
+
 - Header: "📨 New Contact Form Submission"
 - Fields: Name, Email, Company, Service
 - Full message text (truncated to 2000 chars)
 - Slack-formatted timestamp + source label
+
 ### `slackSubscriberNotify(email)`
 
 Called automatically from `/api/subscribe` in parallel with the SES email notification.
 
 Block Kit message includes:
+
 - Header: "New Newsletter Subscriber"
 - Email address
 - Slack timestamp with date/time
@@ -309,6 +319,7 @@ Block Kit message includes:
 Called from `/api/webhooks/stripe` when a checkout is completed.
 
 Block Kit message includes:
+
 - Header: "💰 New Order"
 - Customer email, amount, and truncated Stripe session ID
 - Slack-formatted timestamp + source label
@@ -318,6 +329,7 @@ Block Kit message includes:
 Called from `chat-tools.ts:runBookSlot()` as **fire-and-forget** after a consultation booking is confirmed via the AI chat assistant.
 
 Block Kit message includes:
+
 - Header: "📅 New Consultation Booked"
 - Visitor name, email, slot time (Athens local), Google Meet link
 - Optional notes the visitor shared
@@ -417,6 +429,7 @@ inputs like `<@here>` or `<!channel>` cannot be rendered as Slack mentions
 or links.
 
 Apply to any new user-controlled value before composing a Block Kit message.
+
 ---
 
 ## Local Testing with ngrok
@@ -464,6 +477,7 @@ pnpm test -- __tests__/slack/slack-events.test.ts
 pnpm test -- __tests__/slack/slack-commands.test.ts
 pnpm test -- __tests__/slack/slack-interactions.test.ts
 ```
+
 Test coverage:
 
 | File | What is tested |

@@ -15,6 +15,7 @@ Step-by-step recovery for the three IAM issues found during the 2026-05-29 audit
 In your **admin AWS console** (root or a user with `iam:*` on this user):
 
 ### 1a. Detach the quarantine policy
+
 ```bash
 aws iam detach-user-policy \
   --user-name omv-main-cli \
@@ -49,17 +50,21 @@ ssh tbaltzakis@100.113.41.119 "
 
 There are TWO other secrets that may also need the rotation depending on
 their owner-user (verify before patching):
+
 - `monitoring/aws-creds`
 - `cloudless/pi-standby-aws-creds`
 
 Confirm with:
+
 ```bash
 ssh tbaltzakis@100.113.41.119 \
   "kubectl -n monitoring get secret aws-creds -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d"
 ```
+
 If it returns the OLD `AKIAUBXIAELU5SADA3XL`, repeat 1c for that namespace too.
 
 ### 1d. Un-suspend `s3-to-duckdb-sync`
+
 ```bash
 ssh tbaltzakis@100.113.41.119 "
   kubectl -n analytics patch cronjob s3-to-duckdb-sync \
@@ -154,6 +159,7 @@ SMTP password from the new key:
 ```
 
 Then update `/etc/msmtprc` with the new SMTP username/password and test:
+
 ```bash
 ssh tbaltzakis@100.113.41.119 \
   "sudo /usr/local/bin/omv-main-alert 'test after rotation' 'body'"
@@ -172,12 +178,14 @@ After all three steps:
 ## Rollback
 
 If anything goes wrong in step 2:
+
 ```bash
 ssh tbaltzakis@100.113.41.119 "
   sudo cp /etc/rancher/k3s/config.yaml.bak /etc/rancher/k3s/config.yaml
   sudo systemctl restart k3s
 "
 ```
+
 This restores the pre-rotation config. Local etcd snapshots continue to
 write to `/srv/dev-disk-by-uuid-a9a5a108-*/k3s/server/db/snapshots/`
 regardless of S3 status, so cluster recovery is not blocked.

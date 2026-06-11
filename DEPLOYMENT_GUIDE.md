@@ -39,18 +39,22 @@ This guide walks you through deploying the infrastructure optimization for Light
 **Risk:** Low (pure caching layer, easy rollback)
 
 **Trigger:**
+
 ```bash
 gh workflow run deploy-infrastructure.yml -f phase=cloudfront -R Themis128/cloudless.gr
 # OR via UI: Select "cloudfront" phase
 ```
 
 **Post-deployment:**
+
 1. Get CloudFront domain from workflow output (Action Summary)
 2. Update DNS CNAME to CloudFront domain:
+
    ```bash
    # Current: cloudless.gr CNAME → [Lambda function URL]
    # New: cloudless.gr CNAME → [CloudFront domain from output]
    ```
+
 3. Wait 5-10 minutes for DNS propagation
 4. Test: `curl -I https://cloudless.gr/en` (should show CloudFront headers)
 5. Re-run Lighthouse: Expect +5-6 point improvement immediately
@@ -66,12 +70,14 @@ gh workflow run deploy-infrastructure.yml -f phase=cloudfront -R Themis128/cloud
 **Risk:** Low (just provisioning, no code changes)
 
 **Trigger:**
+
 ```bash
 gh workflow run deploy-infrastructure.yml -f phase=lambda-concurrency -R Themis128/cloudless.gr
 # OR via UI: Select "lambda-concurrency" phase
 ```
 
 **Post-deployment:**
+
 - No manual action needed
 - Instances automatically warm up
 - Monitor in AWS console: Lambda → Provisioned Concurrency
@@ -88,11 +94,13 @@ gh workflow run deploy-infrastructure.yml -f phase=lambda-concurrency -R Themis1
 **Risk:** Medium (requires pod restart, but rolling update)
 
 **Deploy manually:**
+
 ```bash
 kubectl apply -f k8s/cloudless-app-optimized.yaml
 ```
 
 **Monitor:**
+
 ```bash
 # Watch pods restart
 kubectl rollout status deployment/cloudless-app -n cloudless
@@ -105,6 +113,7 @@ kubectl get hpa -n cloudless -w
 ```
 
 **Verify:**
+
 ```bash
 # Pods should have 512Mi memory (was 256Mi)
 kubectl describe pod -n cloudless | grep -A 2 "Requests:"
@@ -125,25 +134,32 @@ kubectl get hpa -n cloudless
 **Risk:** Medium (requires app config change)
 
 **Trigger:**
+
 ```bash
 gh workflow run deploy-infrastructure.yml -f phase=rds-proxy -R Themis128/cloudless.gr
 # OR via UI: Select "rds-proxy" phase
 ```
 
 **Post-deployment:**
+
 1. Get RDS Proxy endpoint from workflow output
 2. Update app DATABASE_URL in k8s secrets:
+
    ```bash
    kubectl set env deployment/cloudless-app \
      -n cloudless \
      DATABASE_URL=[PROXY_ENDPOINT]
    ```
+
 3. Restart pods:
+
    ```bash
    kubectl rollout restart deployment/cloudless-app -n cloudless
    kubectl rollout status deployment/cloudless-app -n cloudless
    ```
+
 4. Verify DB connections dropped:
+
    ```bash
    # Connect to database and check
    SELECT count(*) FROM pg_stat_activity;
@@ -163,6 +179,7 @@ gh workflow run deploy-infrastructure.yml -f phase=all -R Themis128/cloudless.gr
 
 **Total time:** 10-15 minutes
 **Expected outcome:**
+
 - /services: 64 → 71 (+7 points) ✅
 - /store: 63 → 70 (+7 points) ✅
 - LCP: 6.4s → 4.8s (-1.6s, -25%)
@@ -175,16 +192,19 @@ gh workflow run deploy-infrastructure.yml -f phase=all -R Themis128/cloudless.gr
 ### Real-time Monitoring
 
 **GitHub Actions:**
+
 - Go to Actions tab → Deploy Infrastructure workflow → latest run
 - Watch logs in real-time
 - See deployment summary in "Summary" section
 
 **AWS Console:**
+
 - CloudFront: https://console.aws.amazon.com/cloudfront/
 - Lambda: https://console.aws.amazon.com/lambda/ → Provisioned Concurrency
 - RDS: https://console.aws.amazon.com/rds/ → Proxies
 
 **k8s:**
+
 ```bash
 # Monitor pod rollout
 kubectl rollout status deployment/cloudless-app -n cloudless
@@ -225,6 +245,7 @@ pnpm exec lighthouse https://cloudless.gr/en/store --throttle-method=devtools
 If any phase causes issues:
 
 ### Rollback CloudFront
+
 ```bash
 # Point DNS back to Lambda origin
 # Update CNAME: cloudless.gr → [Lambda function URL]
@@ -232,18 +253,21 @@ If any phase causes issues:
 ```
 
 ### Rollback Lambda Concurrency
+
 ```bash
 terraform destroy -target=aws_lambda_provisioned_concurrency_config.main_app
 # Cold-starts return immediately
 ```
 
 ### Rollback k8s Tuning
+
 ```bash
 kubectl rollout undo deployment/cloudless-app -n cloudless
 # Rolls back to previous pod spec
 ```
 
 ### Rollback RDS Proxy
+
 ```bash
 # Update app DATABASE_URL to point to RDS directly (not proxy)
 kubectl set env deployment/cloudless-app DATABASE_URL=[DIRECT_RDS_URL]
@@ -276,6 +300,7 @@ Recommendation: Deploy all 4 phases. ROI is excellent (cost per ms: $2.22/ms).
 ### Workflow doesn't appear in GitHub Actions
 
 GitHub takes a few minutes to index new workflow files. Try:
+
 1. Refresh the page
 2. Wait 5 minutes
 3. Check if file exists: https://github.com/Themis128/cloudless.gr/blob/main/.github/workflows/deploy-infrastructure.yml
@@ -283,6 +308,7 @@ GitHub takes a few minutes to index new workflow files. Try:
 ### "role-to-assume error" in workflow
 
 The AWS_DEPLOY_ROLE_ARN secret is missing or invalid.
+
 - Check: https://github.com/Themis128/cloudless.gr/settings/secrets/actions
 - Should have: `AWS_DEPLOY_ROLE_ARN` secret
 - Value: `arn:aws:iam::278585680617:role/cloudless-github-actions`
@@ -297,6 +323,7 @@ The AWS_DEPLOY_ROLE_ARN secret is missing or invalid.
 ### Lambda concurrency not visible
 
 Takes a few minutes to show in console. Check with AWS CLI:
+
 ```bash
 aws lambda get-provisioned-concurrency-config \
   --function-name cloudless-app-production \
@@ -306,6 +333,7 @@ aws lambda get-provisioned-concurrency-config \
 ### Pods not restarting with new config
 
 Try manual restart:
+
 ```bash
 kubectl delete pod -l app=cloudless-app -n cloudless
 # New pods will be created with new spec

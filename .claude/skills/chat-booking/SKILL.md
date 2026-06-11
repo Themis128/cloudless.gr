@@ -9,6 +9,7 @@ allowed-tools: mcp__cloudless-infra__cluster_run_command, mcp__cloudless-infra__
 ## Overview
 
 The Cloudless chat widget exposes three tools to Bedrock:
+
 1. `lookup_product` — Stripe / static catalog search
 2. `check_calendar_availability` — free/busy query, returns open 30-min slots
 3. `book_slot` — confirms a booking, creates Google Calendar event + Meet link
@@ -38,6 +39,7 @@ The Cloudless chat widget exposes three tools to Bedrock:
 ## Calendar Configuration
 
 All three Google SSM params are set under `/cloudless/production/`:
+
 - `GOOGLE_CLIENT_EMAIL` — service account email
 - `GOOGLE_PRIVATE_KEY` — RSA private key (PEM, `\n` escaped)
 - `GOOGLE_CALENDAR_ID` — `baltzakis.themis@gmail.com`
@@ -59,6 +61,7 @@ All three Google SSM params are set under `/cloudless/production/`:
 ```
 
 Returns on success:
+
 ```
 Booking confirmed!
 Slot: Mon, 12 May, 10:00–10:30 Athens
@@ -73,6 +76,7 @@ Returns on failure: human-readable error + suggestion to try another slot or use
 ## Slot Format from check_calendar_availability
 
 Each slot line includes both the human label and the raw ISO times for book_slot:
+
 ```
 - Mon, 12 May, 10:00–10:30 Athens [start=2026-05-12T07:00:00.000Z end=2026-05-12T07:30:00.000Z]
 ```
@@ -89,6 +93,7 @@ The system prompt instructs the model to use start/end values **exactly** as ret
 ## Debugging
 
 ### Calendar returns "not yet wired up"
+
 ```
 # Check isConfiguredAsync is used (not isConfigured) in chat-tools.ts:
 grep "isConfigured" src/lib/chat-tools.ts
@@ -96,6 +101,7 @@ grep "isConfigured" src/lib/chat-tools.ts
 ```
 
 ### Calendar API auth failing
+
 ```bash
 # Check SSM params exist:
 aws_get_ssm_parameters  # look for GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID
@@ -105,6 +111,7 @@ kubectl logs -n cloudless deployment/cloudless --tail=50 | grep '\[chat'
 ```
 
 ### book_slot returns "slot no longer available"
+
 - `bookConsultation()` returned null — usually means another booking claimed the slot between check and confirm
 - Ask visitor to call `check_calendar_availability` again
 

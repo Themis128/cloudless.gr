@@ -29,31 +29,41 @@ which pins them to `omv-build` (the only runner with all three labels).
 ## Common Tasks
 
 ### Check runner fleet status
+
 ```
 gh_runner_health(repo: "cloudless.gr")
 ```
+
 Shows: online/offline state, busy flag, queue depth, and actionable issues.
 
 ### Fetch runner logs (diagnose drops or failures)
+
 ```
 gh_runner_logs(repo: "cloudless.gr", runner: "omv", lines: 100)
 ```
+
 For a specific time window:
+
 ```
 gh_runner_logs(repo: "cloudless.gr", runner: "omv", lines: 100, since: "30 minutes ago")
 ```
+
 Look for: `HostNotFound`, `DNS`, `timeout`, `lease renewal` errors.
 
 ### Restart a stuck or offline runner
+
 ```
 gh_runner_restart(repo: "cloudless.gr", runner: "omv")
 ```
 
 ### Apply systemd hardening (after fresh registration or if runner keeps dropping)
+
 ```
 gh_runner_fix_service(repo: "cloudless.gr", runner: "omv")
 ```
+
 This writes:
+
 - `/etc/systemd/system/actions.runner.Themis128-cloudless.gr.omv.service.d/override.conf`
   - `Restart=on-failure`, `RestartSec=10s`, `StartLimitIntervalSec=0`
   - `After=network-online.target`
@@ -65,25 +75,33 @@ This writes:
 Then runs `daemon-reload` and restarts the service. **Idempotent — safe to re-run.**
 
 ### Cancel stuck queued/in-progress runs
+
 ```
 gh_runner_cancel_stuck(repo: "cloudless.gr")
 ```
+
 Preview first without cancelling:
+
 ```
 gh_runner_cancel_stuck(repo: "cloudless.gr", dry_run: true)
 ```
+
 Filter by workflow name:
+
 ```
 gh_runner_cancel_stuck(repo: "cloudless.gr", workflow: "build pi image")
 ```
 
 ### Add missing `pi` label to a runner
+
 ```
 gh_runner_set_labels(repo: "cloudless.gr", runner: "omv", labels: ["pi"], mode: "add")
 ```
+
 Required so jobs with `runs-on: [self-hosted, omv, pi]` can be picked up.
 
 ### Re-trigger a workflow after fixing a runner
+
 ```
 gh_workflow_trigger(repo: "cloudless.gr", workflow: "build pi image")
 ```
@@ -104,6 +122,7 @@ When workflows are stuck or runners appear offline:
 ## Runner Service Status (raw SSH fallback)
 
 If the MCP tools are unavailable, use:
+
 ```
 cluster_run_command(node: "omv-main",
   command: "systemctl is-active actions.runner.Themis128-cloudless.gr.omv.service")

@@ -13,11 +13,13 @@ attribution by sending each event from BOTH the browser pixel and the server
 CAPI, deduped by a shared `event_id`.
 
 **Implementation:**
+
 - `src/lib/meta-capi.ts` — server-side CAPI sender (`sendCapiEvent`, `sendLeadEvent`, etc.)
 - `src/lib/meta-pixel.ts` — browser-side `trackPixelEvent`
 - `meta-account-runbook.md` — phase-by-phase activation steps
 
 **Status:** code is **staged but not wired**. Activated when:
+
 1. Pixel exists in Events Manager → ID in `NEXT_PUBLIC_META_PIXEL_ID`.
 2. CAPI access token generated → `META_CAPI_ACCESS_TOKEN`.
 3. `<Script>` base init added to `src/app/layout.tsx` (Phase C.5 of runbook).
@@ -30,6 +32,7 @@ Pixel + CAPI do not depend on Instagram and can ship independently.
 ## Core principle — dedup by event_id
 
 Meta dedupes a browser pixel event and a server CAPI event when:
+
 - `event_name` matches (e.g. both send `Lead`)
 - `event_id` matches **exactly**
 - They arrive within ~24h of each other
@@ -144,6 +147,7 @@ rather than calling `sendCapiEvent` from a route.
 
 `sendCapiEvent` is **fire-and-forget by intent** but currently `await`-ed —
 result type:
+
 ```ts
 | { ok: true, eventsReceived }
 | { ok: false, skipped: true, reason }   // not configured / no eventId

@@ -33,6 +33,7 @@ graph TB
         SSM -->|AWS_SES_REGION| GetSES
     end
 ```
+
 ## Email Sending Flow
 
 ```mermaid
@@ -94,6 +95,7 @@ Low-level email sending wrapper.
 **Source format:** `{fromLabel} <{SES_FROM_EMAIL}>` (e.g., `"Cloudless Contact Form <noreply@cloudless.gr>"`)
 
 ### `sendOrderConfirmation(email, sessionId, amount, currency): Promise<void>`
+
 Sends cyberpunk-styled order receipt to the customer.
 
 - Formats amount using `Intl.NumberFormat` with the order currency
@@ -165,6 +167,7 @@ All emails use inline CSS for maximum email client compatibility.
 | Subscriber Welcome | `/api/subscribe` | New subscriber | Branded, includes unsubscribe link |
 | Unsubscribe Confirmation | `/api/unsubscribe` (GET + POST) | Unsubscribed user | Minimal, confirms removal |
 | Booking Confirmation | `book_slot` chat tool | Visitor who booked | Branded, includes slot time + Meet link |
+
 ---
 
 ## SES Client Initialization

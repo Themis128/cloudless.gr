@@ -31,9 +31,9 @@ Usage (wire into FastAPI lifespan in main.py):
 
 import asyncio
 import logging
-import ssl
 import socket
-from datetime import datetime, timezone
+import ssl
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ MONITORED_DOMAINS = [
     "metrics.cloudless.gr",
 ]
 
-CHECK_INTERVAL_S = 6 * 3600   # 6 hours
+CHECK_INTERVAL_S = 6 * 3600  # 6 hours
 WARN_DAYS = 14
 CRIT_DAYS = 3
 
@@ -65,9 +65,7 @@ def _get_cert_expiry(hostname: str, port: int = 443, timeout: float = 10.0) -> d
                 not_after = cert.get("notAfter")
                 if not isinstance(not_after, str):
                     return None
-                return datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(
-                    tzinfo=timezone.utc
-                )
+                return datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=UTC)
     except Exception as exc:
         logger.warning("tls_check %s: %s", hostname, exc)
         return None
@@ -83,7 +81,7 @@ async def _check_domain(hostname: str) -> None:
         logger.error("tls_check %s: could not retrieve certificate", hostname)
         return
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     days_left = (expiry - now).days
 
     if days_left > WARN_DAYS:
@@ -91,7 +89,9 @@ async def _check_domain(hostname: str) -> None:
     elif days_left > CRIT_DAYS:
         logger.warning("tls_check %s: %d days remaining — CERT_EXPIRING_SOON", hostname, days_left)
     elif days_left > 0:
-        logger.error("tls_check %s: %d days remaining — CERT_EXPIRING_CRITICAL", hostname, days_left)
+        logger.error(
+            "tls_check %s: %d days remaining — CERT_EXPIRING_CRITICAL", hostname, days_left
+        )
     else:
         logger.error("tls_check %s: certificate EXPIRED (%d days ago)", hostname, -days_left)
 

@@ -11,6 +11,7 @@ bash scripts/cognito-setup.sh
 ```
 
 This fully automates:
+
 1. AWS credential validation
 2. Cognito Client ID/Secret retrieval from SSM
 3. `.env.local` configuration
@@ -23,6 +24,7 @@ This fully automates:
 ```
 
 Or in this repo:
+
 ```bash
 pnpm cognito:setup
 ```
@@ -39,6 +41,7 @@ gh workflow run cognito-setup.yml --repo Themis128-cloudless.gr
 ### AWS Credentials
 
 You need valid AWS credentials with access to:
+
 - SSM Parameter Store (read access to `/cloudless/production/*`)
 - Cognito User Pool management (for testing)
 
@@ -53,6 +56,7 @@ aws sso login --sso-session cloudless
 ```
 
 This will:
+
 1. Open a browser to authenticate
 2. Cache credentials locally
 3. Enable the setup script to work
@@ -63,6 +67,7 @@ This will:
 2. Click your user → Security credentials
 3. Create new access key
 4. Update `~/.aws/credentials`:
+
    ```ini
    [default]
    aws_access_key_id = AKIA...
@@ -94,6 +99,7 @@ bash scripts/cognito-setup.sh
 ```
 
 **Output:**
+
 ```
 [cognito] Checking AWS CLI...
 ✓ AWS CLI found
@@ -136,11 +142,13 @@ bash scripts/cognito-setup.sh --skip-verify
 ### "AWS CLI not found"
 
 Install with:
+
 ```bash
 pip install awscli
 ```
 
 Or use your system package manager:
+
 ```bash
 # macOS
 brew install awscli
@@ -171,12 +179,14 @@ aws ssm get-parameter --name "/cloudless/production/COGNITO_CLIENT_ID" --region 
 ```
 
 If it doesn't exist:
+
 1. Contact your admin to ensure SSM parameters are set up
 2. Or check if you're using the wrong AWS account
 
 ### "Permission denied" or "UnauthorizedOperation"
 
 Your AWS credentials don't have SSM read permission. Ask your admin to grant:
+
 - `ssm:GetParameter` on `/cloudless/production/*`
 - `ssm:DescribeParameters` (optional, for listing)
 
@@ -195,6 +205,7 @@ pnpm dev
 ```
 
 Check:
+
 1. `COGNITO_CLIENT_ID` is not `<PASTE_CLIENT_ID_HERE>`
 2. `AUTH_SECRET` is set (not empty)
 3. `.env.local` has no syntax errors
@@ -268,6 +279,7 @@ gh workflow run cognito-setup.yml
 ```
 
 The workflow:
+
 1. Uses AWS OIDC to assume credentials (no static keys)
 2. Runs the setup script
 3. Posts results to issue #382

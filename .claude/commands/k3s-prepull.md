@@ -13,9 +13,11 @@ of waiting 4+ minutes for the in-rollout ECR pull.
 ## Steps
 
 1. **Resolve the target image URI** — if no image is given, read the latest deployed SHA from SSM:
+
    ```powershell
    aws ssm get-parameter --name "/cloudless/production/pi-sha" --query "Parameter.Value" --output text
    ```
+
    Construct the full image: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`
 
 2. **Pre-pull via MCP tool** — call `mcp__cloudless-infra__k3s_prepull_image` with:
@@ -28,6 +30,7 @@ of waiting 4+ minutes for the in-rollout ECR pull.
 3. **Report result** — confirm the image tag appears in `sudo ctr -n k8s.io images ls` output.
 
 4. **Optional rollout** — if the user wants to trigger the rollout immediately after:
+
    ```powershell
    gh workflow run "Deploy to Pi (ECR + k3s rollout)" --repo Themis128/cloudless.gr --ref main
    ```

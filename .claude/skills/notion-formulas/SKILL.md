@@ -26,15 +26,19 @@ Formulas work with these types. The output type is inferred automatically.
 ## Operators
 
 ### Arithmetic
+
 `+` (add), `-` (subtract), `*` (multiply), `/` (divide), `%` (modulo), `^` (power)
 
 ### Comparison
+
 `==` (equal), `!=` (not equal), `>`, `>=`, `<`, `<=`
 
 ### Logical
+
 `and` / `&&`, `or` / `||`, `not` / `!`
 
 ### Ternary
+
 `condition ? value_if_true : value_if_false`
 
 ---
@@ -42,15 +46,19 @@ Formulas work with these types. The output type is inferred automatically.
 ## Variable Assignment
 
 ### let — single variable
+
 ```
 let(variableName, value, expression)
 ```
+
 Example: `let(tax, 0.08, prop("Price") * (1 + tax))`
 
 ### lets — multiple variables
+
 ```
 lets(var1, val1, var2, val2, ..., expression)
 ```
+
 Example: `lets(base, prop("Price"), tax, 0.08, base * (1 + tax))`
 
 ---
@@ -185,16 +193,19 @@ Example: `lets(base, prop("Price"), tax, 0.08, base * (1 + tax))`
 ## Common Formula Patterns
 
 ### Days until deadline
+
 ```
 dateBetween(prop("Due Date"), now(), "days")
 ```
 
 ### Percent complete (from sub-tasks via rollup)
+
 ```
 round(prop("Done Count") / prop("Total Count") * 100)
 ```
 
 ### Status emoji badge
+
 ```
 ifs(
   prop("Status") == "Done", style("Done", "b", "green"),
@@ -204,11 +215,13 @@ ifs(
 ```
 
 ### Full name from relation
+
 ```
 prop("Assignee").map(current.name()).join(", ")
 ```
 
 ### Overdue check
+
 ```
 if(
   and(prop("Due Date") < now(), prop("Status") != "Done"),
@@ -218,11 +231,13 @@ if(
 ```
 
 ### Tag count
+
 ```
 length(prop("Tags"))
 ```
 
 ### Fiscal quarter
+
 ```
 "Q" + format(ceil(month(prop("Date")) / 3))
 ```

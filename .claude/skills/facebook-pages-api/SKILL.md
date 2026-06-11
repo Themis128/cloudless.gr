@@ -8,6 +8,7 @@ The Facebook Pages API enables management of the cloudless.gr Facebook Page — 
 **Base URL:** `https://graph.facebook.com/v25.0`
 
 **Cloudless Account IDs:**
+
 - Facebook Page: `116436681562585` (cloudless.gr)
 - Meta Business Portfolio: `1558125105019725`
 - Ad Account: `act_657781691826702`
@@ -125,6 +126,7 @@ curl -X POST "https://graph.facebook.com/v25.0/{PAGE_ID}/feed" \
 ```
 
 **Scheduling constraints:**
+
 - Minimum: 10 minutes from now
 - Maximum: 6 months from now
 - Format: UNIX timestamp (seconds) or ISO 8601 string
@@ -278,6 +280,7 @@ GET /{POST_ID}/insights?metric=
 **By June 15, 2026:** Many legacy Page Insights metrics will be deprecated for all API versions. Check the [deprecation guide](https://developers.facebook.com/docs/graph-api/reference/insights/) for the full list and replacements.
 
 ### Data Retention
+
 - Public Pages: 2 years
 - Unpublished Pages: 5 days only
 
@@ -341,6 +344,7 @@ curl -X POST "https://graph.facebook.com/v25.0/{PAGE_ID}/subscribed_apps" \
 ### Webhook Verification
 
 Your endpoint must handle a GET request with:
+
 - `hub.mode=subscribe`
 - `hub.challenge={CHALLENGE_TOKEN}`
 - `hub.verify_token={YOUR_VERIFY_TOKEN}`
@@ -406,6 +410,7 @@ Requires: `pages_messaging` permission and 24-hour messaging window.
 ## New Pages Experience (2026)
 
 Meta is migrating Pages to the "New Pages Experience" with updated endpoints:
+
 - Profile-style layout for Pages
 - Unified inbox across FB + IG + Messenger
 - Separate professional and personal profiles

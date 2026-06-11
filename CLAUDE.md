@@ -219,6 +219,7 @@ The repo now has a Playwright E2E suite that runs **alongside** Vitest.
 Both are required-pass on every PR.
 
 ### Layout
+
 - `e2e/migrated/` — refined-pattern API contract specs (admin-api,
   public-api, webhooks, integrations, validation-branches, jwt-branches,
   i18n-branches).
@@ -231,6 +232,7 @@ Both are required-pass on every PR.
   checkout, blog, theme+locale, admin tour).
 
 ### E2E auth bypass (production-safe, dead code in prod)
+
 - `src/lib/api-auth.ts` `requireAuth`: synthetic admin user returned
   ONLY when ALL THREE hold: `NEXT_PUBLIC_E2E=1` env, `E2E_ADMIN_TOKEN`
   env non-empty, AND the request's Bearer token equals that env value.
@@ -242,18 +244,21 @@ Both are required-pass on every PR.
   `playwright.config.mts` webServer env + `e2e/_internal/admin-fixture.ts`.
 
 ### CI workflow
+
 `.github/workflows/e2e-full-coverage.yml` boots `pnpm dev` on
 ubuntu-latest, installs chromium, runs ~241 tests in 2-3 min. Triggers
 on `pull_request` (paths `src/**`, `e2e/**`, `playwright.config.mts`,
 `package.json`, the workflow file) AND `workflow_dispatch`.
 
 ### Pi5 cannot host the full suite
+
 The Pi5 (4 cores, 8GB) OOM-rebooted under `pnpm dev` + 100+ concurrent
 Playwright tests + k3s simultaneously during migration. Always run the
 full sweep in CI, not on the Pi. The Pi handles individual smoke runs
 fine.
 
 ### Coverage at merge
+
 - **Vitest**: 1649 tests, ~45% line coverage of `src/` (74% in
   `src/lib/`, 66% in `src/app/api/`). Kept intact.
 - **Playwright**: 241 tests in new suite — 100% of mounted API routes
@@ -261,6 +266,7 @@ fine.
   238 passed, 3 skipped, 0 failed in 1m30s.
 
 ### Failure handling pattern
+
 When a Playwright spec fails in CI without backing creds (Google,
 Notion, etc.), the right fix is either (a) widen the assertion to
 "route is wired" (accept any 2xx-5xx), or (b) `test.skip()` gracefully
@@ -274,6 +280,7 @@ Daily disk cleanup runs at **03:00 EEST** on `omv-main` via systemd timer
 `cloudless-cleanup.timer` (installed 2026-06-10).
 
 **What it prunes:**
+
 - `journalctl --vacuum-time=14d`
 - `apt-get clean`
 - `pnpm store prune` (as user `tbaltzakis`)
@@ -283,18 +290,21 @@ Daily disk cleanup runs at **03:00 EEST** on `omv-main` via systemd timer
 - `k3s crictl rmi --prune`
 
 **Files:**
+
 - `/usr/local/sbin/cloudless-cleanup.sh` — the script
 - `/etc/systemd/system/cloudless-cleanup.service`
 - `/etc/systemd/system/cloudless-cleanup.timer` (daily 03:00 + 10min random delay)
 - `/var/log/cloudless-cleanup.log` — output log
 
 **Manual run:**
+
 ```bash
 sudo systemctl start cloudless-cleanup.service
 sudo tail -f /var/log/cloudless-cleanup.log
 ```
 
 **Disable:**
+
 ```bash
 sudo systemctl disable --now cloudless-cleanup.timer
 ```
@@ -306,6 +316,7 @@ When a Terraform CI workflow fails, **invoke the `terraform-doctor` skill first*
 which automates Stages 0-3 from the Pi.
 
 **Lessons from PRs #778-#781 (2026-06-10):**
+
 - `openpgp: key expired` from `terraform init` is almost always the **CLI's**
   embedded root key, not the provider's. Bump `TF_VERSION` (1.6.0 → 1.15.6).
   Bumping just the AWS provider does NOT fix it.
@@ -321,6 +332,7 @@ which automates Stages 0-3 from the Pi.
   variable so the rest of the stack still plans.
 
 **Known-good versions (mid-2026):**
+
 - Terraform CLI: `1.15.6`
 - `hashicorp/aws`: `~> 5.80.0`
 - `aws-actions/configure-aws-credentials`: `v4.x`

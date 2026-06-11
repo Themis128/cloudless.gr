@@ -7,14 +7,17 @@
 ## Win #1: Extract Service Data (Bundle De-duplication)
 
 ### Symptom
+
 `src/app/[locale]/services/page.tsx` is 1,184 lines. The `getServices()` and `getServicesFaqs()` functions (340 lines) contain static data that never changes and have zero dependencies on React components. They're loaded into the services JS bundle regardless of SSR caching.
 
 ### Root Cause
+
 The functions are defined inline in the page component, so they're tree-shaken into the services JS chunk even if unused elsewhere.
 
 ### Fix: Extract to `src/lib/services-data.ts`
 
 **Step 1:** Create new file `src/lib/services-data.ts`
+
 ```typescript
 // src/lib/services-data.ts
 export type ServiceColor = "cyan" | "magenta" | "green" | "blue";
@@ -111,20 +114,25 @@ export const bundleTerminal = [
 ```
 
 **Step 2:** Update `src/app/[locale]/services/page.tsx`
+
 - Delete lines 40–387 (all `getServices`, `getServicesFaqs`, `colorMap` definitions)
 - Add at the top:
+
 ```typescript
 import { getServices, getServicesFaqs, colorMap, bundleTerminal } from "@/lib/services-data";
 ```
+
 - Page now starts at line ~40 (the `Arrow` function)
 
 **Step 3:** Verify no broken references
+
 ```bash
 pnpm build 2>&1 | grep -i "services" | grep -E "error|undefined"
 # Should be empty — if not, you missed a reference
 ```
 
 **Step 4:** Test rendering
+
 ```bash
 pnpm dev
 # Open http://localhost:3000/en/services
@@ -132,6 +140,7 @@ pnpm dev
 ```
 
 **Step 5:** Measure bundle reduction
+
 ```bash
 # Build and check JS chunk size
 pnpm build
@@ -145,9 +154,11 @@ ls -lh .next/static/chunks/app*services*.js | tail -1
 ## Win #2: Fix Locale Redirect Chain (Next.js Rewrites)
 
 ### Symptom
+
 User hits `/services` on first visit. Browser sees 301 redirect to `/en/services`, adding 300–500ms round-trip latency. This is visible in Lighthouse trace as a gap between "Send Request" and first network activity.
 
 ### Root Cause
+
 `src/app/services/page.tsx` uses `permanentRedirect("/en/services")` to enforce locale prefix. This is the **only way** to do SSR redirects in Next.js App Router, but it adds a network round-trip.
 
 ### Fix: Use Next.js Rewrites at the Edge
@@ -155,6 +166,7 @@ User hits `/services` on first visit. Browser sees 301 redirect to `/en/services
 **Step 1:** Update `next.config.ts` (lines 107–111)
 
 **Before:**
+
 ```typescript
 nextConfig.rewrites = async () => ({
   beforeFiles: [{ source: "/manifest.webmanifest", destination: "/api/pwa-manifest" }],
@@ -164,6 +176,7 @@ nextConfig.rewrites = async () => ({
 ```
 
 **After:**
+
 ```typescript
 nextConfig.rewrites = async () => ({
   beforeFiles: [
@@ -177,6 +190,7 @@ nextConfig.rewrites = async () => ({
 ```
 
 **Why this works:**
+
 - `beforeFiles` rewrites happen at the Edge (Vercel's network), **before the browser sees a response**.
 - User's browser receives a `200 OK` for `/services`, not a `301 redirect`.
 - To the user, it's a single HTTP request. To Next.js, the actual route is `/en/services`.
@@ -185,12 +199,14 @@ nextConfig.rewrites = async () => ({
 **Step 2:** Keep the fallback route for non-GET requests
 
 File `src/app/services/page.tsx` can stay as-is. It's a fallback for:
+
 - POST requests (if any future API endpoint uses this path)
 - Navigations from outside Next.js (e.g., old bookmarks)
 
 It will be hit **rarely** now.
 
 **Step 3:** Test the rewrite
+
 ```bash
 # Start dev server
 pnpm dev
@@ -207,6 +223,7 @@ curl -i http://localhost:3000/en/services
 ```
 
 **Step 4:** Verify metadata canonical
+
 ```bash
 # The page should still advertise itself as /services for SEO
 curl -s http://localhost:3000/services | grep -o '<link rel="canonical"[^>]*>'
@@ -214,6 +231,7 @@ curl -s http://localhost:3000/services | grep -o '<link rel="canonical"[^>]*>'
 ```
 
 **Step 5:** Measure latency improvement
+
 ```bash
 # Use DevTools Network tab or curl with time breakdown
 curl -w "@curl-format.txt" -o /dev/null -s http://localhost:3000/services
@@ -226,14 +244,17 @@ curl -w "@curl-format.txt" -o /dev/null -s http://localhost:3000/services
 ## Win #3: Compress ProductIcon SVGs (Static Asset Extraction)
 
 ### Symptom
+
 `src/components/store/ProductIcon.tsx` defines 6 inline SVG icons as React components. Each is 2–3 KB of uncompressed JSX/SVG markup. The `/store` page renders 3+ cards, loading 6–15 KB of SVG code just to render 6 icons.
 
 ### Root Cause
+
 SVG icons are defined as JavaScript functions, not static assets. They're bundled, not cached by the CDN, and they're parsed as JS before rendering.
 
 ### Fix: Extract SVGs to Static Files
 
 **Step 1:** Create `public/icons/store/` directory
+
 ```bash
 mkdir -p public/icons/store
 ```
@@ -241,6 +262,7 @@ mkdir -p public/icons/store
 **Step 2:** Extract each icon as an SVG file
 
 **Example: `public/icons/store/cloud-audit.svg`** (from `CloudAuditIcon` in `ProductIcon.tsx` lines 11–76)
+
 ```xml
 <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <!-- Dashed orbit ring -->
@@ -276,6 +298,7 @@ mkdir -p public/icons/store
 **Repeat for:** `lambda.svg`, `analytics.svg`, `dlc.svg`, `web-design.svg`, `hosting.svg`
 
 **Step 3:** Minify all SVGs
+
 ```bash
 pnpm add -D svgo
 
@@ -288,6 +311,7 @@ svgo --multipass public/icons/store/*.svg
 
 **Before:** ~200 lines of React component definitions  
 **After:**
+
 ```typescript
 "use client";
 
@@ -434,6 +458,7 @@ style={{
 ```
 
 **Step 5:** Test visual rendering
+
 ```bash
 pnpm dev
 # Load http://localhost:3000/en/store
@@ -442,6 +467,7 @@ pnpm dev
 ```
 
 **Step 6:** Verify bundle reduction
+
 ```bash
 pnpm build
 ls -lh public/icons/store/
@@ -457,7 +483,9 @@ du -sh .next/static/chunks/app*store*.js | tail -1
 ## Win #4: Defer Non-Critical JS with `requestIdleCallback()`
 
 ### Symptom
+
 The `/services` page renders:
+
 - 6 `TerminalBlock` components (2 KB JS each = 12 KB)
 - 24 `StatCounter` components (0.5 KB JS × 24 = 12 KB)
 - FAQ accordion (3 KB JS)
@@ -465,11 +493,13 @@ The `/services` page renders:
 These are all **below the fold** on mobile and don't contribute to LCP. They're parsed and executed synchronously, blocking FID.
 
 ### Root Cause
+
 All components are imported and rendered in the same component tree. Next.js can't tree-shake them because they're in the JSX.
 
 ### Fix: Lazy-Load with `requestIdleCallback()`
 
 **Step 1:** Create `src/components/DeferredRender.tsx`
+
 ```typescript
 "use client";
 
@@ -512,11 +542,13 @@ export function DeferredRender({ children, fallback }: DeferredRenderProps) {
 **Step 2:** Update `src/app/[locale]/services/page.tsx`
 
 Add import at the top (after other imports):
+
 ```typescript
 import { DeferredRender } from "@/components/DeferredRender";
 ```
 
 **Wrap TerminalBlock** (around line 743):
+
 ```typescript
 // Before:
 <TerminalBlock
@@ -534,6 +566,7 @@ import { DeferredRender } from "@/components/DeferredRender";
 ```
 
 **Wrap stat grid** (around line 749):
+
 ```typescript
 // Before:
 <div className="grid grid-cols-2 gap-3">
@@ -565,6 +598,7 @@ import { DeferredRender } from "@/components/DeferredRender";
 ```
 
 **Wrap FAQ section** (around line 1119):
+
 ```typescript
 // Before:
 <div className="space-y-4">
@@ -592,6 +626,7 @@ import { DeferredRender } from "@/components/DeferredRender";
 ```
 
 **Step 3:** Test with Lighthouse throttling
+
 ```bash
 pnpm dev
 
@@ -612,6 +647,7 @@ pnpm lighthouse https://localhost:3000/en/services \
 ```
 
 **Step 4:** Verify no visual jarring
+
 - Manual test on slow network (DevTools throttling)
 - FAQ section should show gray placeholder while loading
 - Placeholder should be roughly same height as final content (so layout doesn't shift)
@@ -621,14 +657,17 @@ pnpm lighthouse https://localhost:3000/en/services \
 ## Win #5: Optimize Icon Assets to WebP
 
 ### Symptom
+
 `public/icons/icon-192.png`, `icon-512.png`, `icon-512-maskable.png` are 28 KB each (84 KB total). These are only used in the PWA manifest, but they're still downloaded by PWA installers.
 
 ### Root Cause
+
 PNG format is older and less efficient than modern WebP. A 512×512 PNG with simple colors can be 50–60% smaller in WebP format.
 
 ### Fix: Convert to WebP with PNG Fallback
 
 **Step 1:** Install WebP encoder
+
 ```bash
 # macOS
 brew install webp
@@ -641,6 +680,7 @@ pnpm add -D imagemin imagemin-webp
 ```
 
 **Step 2:** Convert PNG icons
+
 ```bash
 cwebp -q 90 public/icons/icon-192.png -o public/icons/icon-192.webp
 cwebp -q 90 public/icons/icon-512.png -o public/icons/icon-512.webp
@@ -656,6 +696,7 @@ ls -lh public/icons/icon-*.webp
 File: `src/app/api/pwa-manifest/route.ts`
 
 Update to include WebP with PNG fallback:
+
 ```typescript
 export async function GET() {
   const icons = [
@@ -697,6 +738,7 @@ export async function GET() {
 File: `src/app/layout.tsx` (lines 67–69)
 
 **Before:**
+
 ```typescript
 icons: {
   apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
@@ -704,6 +746,7 @@ icons: {
 ```
 
 **After:**
+
 ```typescript
 icons: {
   apple: [
@@ -714,6 +757,7 @@ icons: {
 ```
 
 **Step 5:** Verify manifest endpoint
+
 ```bash
 curl http://localhost:3000/manifest.webmanifest | jq .icons
 # Should output:
@@ -725,6 +769,7 @@ curl http://localhost:3000/manifest.webmanifest | jq .icons
 ```
 
 **Step 6:** Test PWA install
+
 ```bash
 # Open DevTools > Application > Manifest
 # Should show all icons listed (WebP + PNG)
@@ -736,6 +781,7 @@ curl http://localhost:3000/manifest.webmanifest | jq .icons
 ## Testing Checklist
 
 ### Local Testing
+
 ```bash
 # After each win, verify nothing breaks:
 pnpm dev
@@ -764,6 +810,7 @@ ls -lh public/icons/icon-*.webp
 ```
 
 ### Lighthouse Testing
+
 ```bash
 # Install Lighthouse CLI if needed
 npm install -g @lhci/cli@latest
@@ -777,6 +824,7 @@ lighthouse https://localhost:3000/en/store --output=json --chrome-flags="--headl
 ```
 
 ### CI Validation
+
 ```bash
 # Run E2E tests to catch regressions
 pnpm test:e2e
@@ -793,30 +841,35 @@ pnpm test:performance
 If any win introduces regressions:
 
 ### Win #1: Undo service data extraction
+
 ```bash
 git revert <commit-hash>
 # Or: manually restore services/page.tsx from Git history
 ```
 
 ### Win #2: Undo rewrites
+
 ```bash
 # Revert next.config.ts to original rewrites
 # Users on old cached 301s will still redirect (safe), new users see correct URLs
 ```
 
 ### Win #3: Undo ProductIcon changes
+
 ```bash
 # If SVG color filters don't work, revert to inline React components
 # Temporarily accept higher bundle size
 ```
 
 ### Win #4: Undo DeferredRender
+
 ```bash
 # Remove <DeferredRender> wrappers, restore inline TerminalBlock/FAQ
 # No API changes, fully backward compatible
 ```
 
 ### Win #5: Undo WebP conversion
+
 ```bash
 # Delete .webp files, keep .png as primary in manifest
 # WebP support is 95%+ anyway, no breakage

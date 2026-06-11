@@ -49,6 +49,7 @@ IFTTT MCP server UUID: `418288e6-2c4e-48f8-8412-0b00c81b7f9d`
 ### Applet Structure: "If This Then That"
 
 Every IFTTT applet has:
+
 1. **Trigger** ("If This") — the event that starts the applet (exactly one required)
 2. **Queries** (optional) — fetch additional data before actions run
 3. **Actions** ("Then That") — what happens when the trigger fires (at least one required)
@@ -75,12 +76,14 @@ object. Copy this template, fill in `account_id` and `fields`, then pass it to
 ## Workflow: Creating a Custom Applet
 
 1. **Discover steps**: Call `get_steps` with the services and step types you need:
+
    ```
    get_steps(services=[
      {service_slug: "wordpress", step_types: ["triggers"]},
      {service_slug: "facebook_pages", step_types: ["actions"]}
    ])
    ```
+
 2. **Review fields**: Each step has fields with `prompt_guidance` — follow these to
    determine what values to set. Fields with defaults can be accepted as-is.
 3. **Build the applet**: Call `create_applet` with:
@@ -114,6 +117,7 @@ run_action(
 ## Field Types
 
 When filling step template fields:
+
 - **TEXT**: string value
 - **COLLECTION_SELECT**: choose from `options` list
 - **LOCATION**: use `{latitude, longitude}` or `{latitude, longitude, radius_in_meters}` — use `geocode` tool to convert addresses
@@ -123,10 +127,12 @@ When filling step template fields:
 Check current connections with `get_services()`. Key services for cloudless.gr:
 
 ### Likely Connected
+
 - Facebook Pages (for cloudless.gr page posts)
 - WordPress / webhooks (for blog post triggers)
 
 ### Useful Services to Connect
+
 - Instagram, LinkedIn, Twitter/X, Threads (social media cross-posting)
 - Google Sheets (logging/analytics)
 - Slack (notifications)
@@ -136,18 +142,22 @@ Check current connections with `get_services()`. Key services for cloudless.gr:
 ## Common Applet Patterns for cloudless.gr
 
 ### Auto-share blog posts to social media
+
 - **Trigger**: WordPress "Any new post" or RSS "New feed item"
 - **Action**: Facebook Pages "Create a link post", LinkedIn "Share an update", etc.
 
 ### Log form submissions
+
 - **Trigger**: Webhooks "Receive a web request" (from Next.js contact form API route)
 - **Action**: Google Sheets "Add row to spreadsheet"
 
 ### Notify on new lead
+
 - **Trigger**: Webhooks "Receive a web request" (from HubSpot webhook or contact form)
 - **Action**: Slack "Post to channel" or Email "Send me an email"
 
 ### Cross-post across platforms
+
 - **Trigger**: Instagram "Any new photo by you"
 - **Action**: Facebook Pages "Create a photo post", Twitter "Post a tweet with image"
 

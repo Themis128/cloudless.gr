@@ -16,7 +16,6 @@ Lives on the omv-main Pi at `~/alert-api/`. Source-of-truth is this repo.
 └─────────────┘    └─────────────────┘    └───────────────┘    └──────────────┘
 ```
 
-
 ## File map
 
 | File | Purpose |
@@ -32,7 +31,6 @@ Lives on the omv-main Pi at `~/alert-api/`. Source-of-truth is this repo.
 | `deploy.sh` | scp's the Python files to the Pi and rebuilds the container. |
 | `tests/` | Unit tests + live smoke test. |
 
-
 ## How the pipeline works
 
 ### 1. Rules fire in Prometheus
@@ -43,6 +41,7 @@ Two `PrometheusRule` resources we own:
 - **`monitoring/cluster-node-alerts`** ([yaml](../../k8s/cluster-protection/prometheus-rule-tuning.yaml)) — node-exporter signals (disk, memory, swap, etcd).
 
 Every rule:
+
 - Has a multi-line `description` annotation with **impact**, **ranked causes**, and a **triage checklist**.
 - Uses `{{ $value | printf "%.0f" }}` in `summary` so the triggering number shows up at-a-glance in Slack.
 - Carries explicit `target:` and `probe:` labels (e.g. `target: cloudless.gr`, `probe: esp32-https`) — the alert-api uses `target` as the Slack "Service" field.
@@ -81,11 +80,11 @@ _Other labels:_ `component=etcd`, `cluster=homelab`
 ```
 
 Then `slack_notify.send_alert()` wraps that body in a 4-block Slack message:
+
 - **Header block** — `:severity-emoji: SEVERITY - CODE`
 - **Section block** — the rendered body above + a Host / Severity / Code / Count / Time prefix + a per-code proposed-solution hint
 - **Context block** — small grey text: `Alert #N · dedupe count: N · severity: ... · status: ...`
 - **Divider**
-
 
 ## Testing
 
@@ -97,6 +96,7 @@ python3 -m unittest discover tests
 ```
 
 Covers:
+
 - `_render_alertmanager_message()` — every field shape, ordering, edge cases (18 tests)
 - `slack_notify.send_alert()` — Block Kit payload structure, severity emoji, proposed-solution mapping for all ESP32 codes (12 tests)
 
@@ -113,11 +113,11 @@ Sends a synthetic `SMOKETEST_<unixtime>` alert to the live alert-api webhook, po
 You should also see the test message land in `#alerts` — visually verify the formatting, then it auto-resolves.
 
 Override URL when running off-cluster:
+
 ```bash
 ALERT_API_URL=http://192.168.1.128:30800 \
   bash infrastructure/pi-alert-api/tests/smoke_test_live.sh
 ```
-
 
 ## Operator runbook
 
@@ -133,6 +133,7 @@ ALERT_API_URL=http://192.168.1.128:30800 \
    - `severity: warning` → must be added to the AlertManager allowlist. Edit `apply-prometheus-rule-tuning.sh`, append the alertname to the `alertname =~ "..."` regex in the route block. Bump the marker version (`v2` → `v3`) so the script re-applies the AM secret.
 
 3. **Apply** (idempotent):
+
    ```bash
    bash k8s/cluster-protection/apply-prometheus-rule-tuning.sh
    ```
@@ -182,10 +183,10 @@ bash infrastructure/pi-alert-api/deploy.sh
 scp's `main.py` + `slack_notify.py` + `mqtt_publish.py` + `tls_check.py` + `esp32_command_routes.py` to the Pi (with `.bak.<ts>` safety copies), then `docker build` + `k3s ctr images import` + `kubectl rollout`. Takes ~30-60s.
 
 After redeploy, always run the smoke test:
+
 ```bash
 bash infrastructure/pi-alert-api/tests/smoke_test_live.sh
 ```
-
 
 ## See also
 

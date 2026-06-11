@@ -5,6 +5,7 @@
 This skill is the **central hub** for all Meta platform operations for cloudless.gr. It covers Facebook Pages, Instagram (Graph API), Meta Ads, and the unified Business Suite workflows. Use this skill whenever the user asks about Meta, Facebook, Instagram, publishing, scheduling, insights, ads, or audience management.
 
 **Related skills (deep-dive):**
+
 - `meta-instagram/SKILL.md` — MCP server config, token generation, existing tool reference
 - `instagram-graph-api/SKILL.md` — Full Instagram API endpoint reference
 - `facebook-pages-api/SKILL.md` — Full Facebook Pages API endpoint reference
@@ -73,6 +74,7 @@ GET https://graph.facebook.com/v25.0/oauth/access_token
 All IG publishing uses a 3-step container flow:
 
 **Step 1 — Create Container**
+
 ```
 POST /{IG_USER_ID}/media
   ?image_url={URL}           # or video_url for video/reels
@@ -82,12 +84,15 @@ POST /{IG_USER_ID}/media
 ```
 
 **Step 2 — Check Status** (poll every 60s, max 5 min)
+
 ```
 GET /{CONTAINER_ID}?fields=status_code
 ```
+
 Status values: `IN_PROGRESS` → `FINISHED` → ready to publish
 
 **Step 3 — Publish**
+
 ```
 POST /{IG_USER_ID}/media_publish
   ?creation_id={CONTAINER_ID}
@@ -106,6 +111,7 @@ POST /{IG_USER_ID}/media_publish
 | Trial Reel | `REELS` | `trial_params` with `graduation_strategy` | MANUAL or SS_PERFORMANCE |
 
 #### IG Rate Limits
+
 - 100 API-published posts per 24h (carousels count as 1)
 - 50 carousel posts per 24h
 - 200 API calls per user per hour (Graph API global)
@@ -114,6 +120,7 @@ POST /{IG_USER_ID}/media_publish
 ### Facebook Page Publishing
 
 **Text Post**
+
 ```
 POST /{PAGE_ID}/feed
   ?message={text}
@@ -121,6 +128,7 @@ POST /{PAGE_ID}/feed
 ```
 
 **Photo Post**
+
 ```
 POST /{PAGE_ID}/photos
   ?url={IMAGE_URL}
@@ -129,6 +137,7 @@ POST /{PAGE_ID}/photos
 ```
 
 **Video Post** (resumable upload)
+
 ```
 # Step 1: Initiate upload session
 POST /{APP_ID}/uploads
@@ -151,6 +160,7 @@ POST /{PAGE_ID}/videos
 ```
 
 **Scheduled Post**
+
 ```
 POST /{PAGE_ID}/feed
   ?message={text}
@@ -158,9 +168,11 @@ POST /{PAGE_ID}/feed
   &scheduled_publish_time={UNIX_TIMESTAMP}
   &access_token={PAGE_TOKEN}
 ```
+
 Schedule window: 10 minutes to 6 months from now.
 
 **Link Post**
+
 ```
 POST /{PAGE_ID}/feed
   ?message={text}
@@ -265,6 +277,7 @@ Available at 4 levels: `act_{ID}/insights`, `{CAMPAIGN_ID}/insights`, `{ADSET_ID
 ## Webhooks
 
 Meta supports real-time webhooks for:
+
 - **Page**: feed updates, mentions, messages, ratings
 - **Instagram**: comments, mentions, story insights
 - **WhatsApp**: messages, status updates

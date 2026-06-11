@@ -89,6 +89,7 @@ globalThis.fetch(...)
 3. **Apply the fix pattern** from the table above. Then push.
 
 4. **Verify locally before pushing:**
+
    ```bash
    pnpm lint   # catches most sonarjs/ rule violations via ESLint plugin
    pnpm typecheck
@@ -101,6 +102,7 @@ globalThis.fetch(...)
 - Check if it's a **hotspot that looks like an issue** — the gate text says "X Security Hotspots" not "X New Issues". Hotspots never block the gate.
 - Check if the code fix introduced a **new violation** in a different location.
 - Check if the PR branch is behind `main` — SonarCloud compares against the base branch. If `main` advanced, rebase first.
+
   ```bash
   git fetch origin main && git rebase origin/main
   git push --force-with-lease

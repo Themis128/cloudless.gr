@@ -5,6 +5,7 @@
 ### Actions Taken
 
 **1. Verified the Attack Chain** ✓
+
 - ✅ `AGENTS.md` reads from `node_modules/next/dist/docs/` (third-party controlled)
 - ✅ `dependabot-automerge.yml` auto-merges patch/minor `next` updates without review
 - ✅ `pr-review.yml` explicitly skips Dependabot PRs (Claude code reviewer bypassed)
@@ -19,6 +20,7 @@
 Branch: **`security/fix-dependabot-bypass`** → [View Commit](https://github.com/Themis128/cloudless.gr/commit/4488537847f03c950970839c89317085414b6438)
 
 ✅ **1. Excluded `next` from auto-merge**
+
 ```yaml
 # .github/workflows/dependabot-automerge.yml
 if: |
@@ -26,9 +28,11 @@ if: |
    steps.meta.outputs.update-type == 'version-update:semver-minor') &&
   !contains(steps.meta.outputs.dependency-names, 'next')
 ```
+
 Framework updates now require **human review**.
 
 ✅ **2. Removed risky `node_modules` path from AGENTS.md**
+
 ```markdown
 # BEFORE
 "Read the relevant guide in `node_modules/next/dist/docs/` before writing any code"
@@ -38,13 +42,16 @@ Framework updates now require **human review**.
 ```
 
 ✅ **3. Made MCP security scan blocking**
+
 ```yaml
 # .github/workflows/mcp-security-scan.yml
 continue-on-error: false
 ```
+
 Security findings now **prevent merges**.
 
 ✅ **4. Enabling branch protection** (via settings)
+
 - Require ≥1 approving review before merge
 - Dismiss stale reviews on new commits
 
@@ -53,6 +60,7 @@ Security findings now **prevent merges**.
 ### Result
 
 The supply-chain attack vector is now **closed**. A malicious `next` patch would:
+
 1. ❌ NOT auto-merge (human review required)
 2. ❌ NOT bypass security scan (now blocking)
 3. ❌ NOT inject code into agent instructions (safe source)
@@ -68,5 +76,6 @@ Thank you for the thorough security research and for helping us harden the repos
 ---
 
 **References:**
+
 - 🔗 [OWASP LLM Top 10 — LLM01: Prompt Injection](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
 - 🔗 [Dependabot Security Best Practices](https://docs.github.com/en/code-security/dependabot/working-with-dependabot)

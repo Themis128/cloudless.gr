@@ -14,16 +14,16 @@
 2. [Architecture Overview](#2-architecture-overview)
 3. [Platform APIs & Credentials Needed](#3-platform-apis--credentials-needed)
 4. [Phase Roadmap](#4-phase-roadmap)
-5. [Phase 1 — Meta (Facebook + Instagram)](#5-phase-1--meta-facebook--instagram)
-6. [Phase 2 — Email Marketing (ActiveCampaign)](#6-phase-2--email-marketing-activecampaign)
-7. [Phase 3 — Google Ads](#7-phase-3--google-ads)
-8. [Phase 4 — Lead Pipeline Automation (HubSpot)](#8-phase-4--lead-pipeline-automation-hubspot)
-9. [Phase 5 — LinkedIn Campaigns](#9-phase-5--linkedin-campaigns)
-10. [Phase 6 — TikTok Campaigns](#10-phase-6--tiktok-campaigns)
-11. [Phase 7 — X (Twitter) Campaigns](#11-phase-7--x-twitter-campaigns)
-12. [Phase 8 — Content Calendar](#12-phase-8--content-calendar)
-13. [Phase 9 — Client Reporting](#13-phase-9--client-reporting)
-14. [Phase 10 — AI Campaign Assistant](#14-phase-10--ai-campaign-assistant)
+5. [Phase 1 — Meta (Facebook + Instagram)](#5-phase-1--meta-facebook--instagram--deferred)
+6. [Phase 2 — Email Marketing (ActiveCampaign)](#6-phase-2--email-marketing-activecampaign--done)
+7. [Phase 3 — Google Ads](#7-phase-3--google-ads--done)
+8. [Phase 4 — Lead Pipeline Automation (HubSpot)](#8-phase-4--lead-pipeline-automation-hubspot--done)
+9. [Phase 5 — LinkedIn Campaigns](#9-phase-5--linkedin-campaigns--done)
+10. [Phase 6 — TikTok Campaigns](#10-phase-6--tiktok-campaigns--done)
+11. [Phase 7 — X (Twitter) Campaigns](#11-phase-7--x-twitter-campaigns--done)
+12. [Phase 8 — Content Calendar](#12-phase-8--content-calendar--done)
+13. [Phase 9 — Client Reporting](#13-phase-9--client-reporting--done)
+14. [Phase 10 — AI Campaign Assistant](#14-phase-10--ai-campaign-assistant--done)
 15. [Admin Panel Navigation Changes](#15-admin-panel-navigation-changes)
 16. [SSM Parameters to Add](#16-ssm-parameters-to-add)
 
@@ -93,6 +93,7 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 ## 3. Platform APIs & Credentials Needed
 
 ### Meta (Facebook + Instagram)
+
 | Credential | How to get | SSM key |
 |---|---|---|
 | App ID | business.facebook.com → Apps | `META_APP_ID` |
@@ -105,6 +106,7 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 **Status:** Partially done. Complete `meta-account-runbook.md` first (Phases A+B+C).
 
 ### Google Ads
+
 | Credential | How to get | SSM key |
 |---|---|---|
 | Developer Token | ads.google.com → Tools → API Center | `GOOGLE_ADS_DEVELOPER_TOKEN` |
@@ -112,6 +114,7 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 | OAuth2 credentials | Same Google service account already in SSM | reuse `GOOGLE_CLIENT_EMAIL` + `GOOGLE_PRIVATE_KEY` |
 
 ### LinkedIn
+
 | Credential | How to get | SSM key |
 |---|---|---|
 | Client ID | linkedin.com/developers → Create App | `LINKEDIN_CLIENT_ID` |
@@ -121,6 +124,7 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 | Organization URN | Company page → ID | `LINKEDIN_ORGANIZATION_URN` |
 
 ### TikTok
+
 | Credential | How to get | SSM key |
 |---|---|---|
 | App ID | ads.tiktok.com → Developer → Apps | `TIKTOK_APP_ID` |
@@ -129,6 +133,7 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 | Advertiser ID | TikTok Ads Manager | `TIKTOK_ADVERTISER_ID` |
 
 ### X (Twitter)
+
 | Credential | How to get | SSM key |
 |---|---|---|
 | API Key | developer.twitter.com → Create Project | `X_API_KEY` |
@@ -138,12 +143,14 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 | Ad Account ID | ads.twitter.com | `X_AD_ACCOUNT_ID` |
 
 ### ActiveCampaign (already built as MCP server)
+
 | Credential | How to get | SSM key |
 |---|---|---|
 | API URL | AC Settings → Developer | `ACTIVECAMPAIGN_API_URL` |
 | API Token | AC Settings → Developer | `ACTIVECAMPAIGN_API_TOKEN` |
 
 ### AI API (for campaign generation)
+
 | Credential | How to get | SSM key |
 |---|---|---|
 | Anthropic API Key | console.anthropic.com | `ANTHROPIC_API_KEY` |
@@ -185,6 +192,7 @@ ANTHROPIC_API_KEY  (for AI assistant + report insights)
 ### What to build
 
 **New files:**
+
 ```
 src/lib/campaigns/meta.ts              ← Meta Marketing API client
 src/app/api/admin/campaigns/meta/
@@ -200,6 +208,7 @@ src/app/[locale]/admin/campaigns/
 ```
 
 **`src/lib/campaigns/meta.ts` — key functions:**
+
 ```typescript
 // Campaign management
 listCampaigns(adAccountId: string): Promise<MetaCampaign[]>
@@ -226,13 +235,16 @@ getCustomAudiences(adAccountId: string): Promise<MetaAudience[]>
 ```
 
 **Admin page tabs:**
+
 - **Overview** — spend today / this week / this month, active campaigns count, top performing ad
 - **Campaigns** — table: name, status, objective, budget, spend, ROAS, actions (pause/edit/duplicate)
 - **Create Campaign** — form: objective → audience → budget → creative → launch
 - **Insights** — charts: impressions, clicks, CTR, CPC, conversions over time
 
 ### First step (before any code)
+
 Complete `meta-account-runbook.md`:
+
 1. Phase A — Full-mode IG link *(do first)*
 2. Phase B — Create ad account + add payment method
 3. Phase C — Create Pixel, wire CAPI in `/api/contact`
@@ -242,6 +254,7 @@ Complete `meta-account-runbook.md`:
 ## 6. Phase 2 — Email Marketing (ActiveCampaign) — DONE
 
 **Implemented files:**
+
 - `src/lib/activecampaign.ts` — AC API v3 client (campaigns, contacts, lists, automations, stats)
 - `src/app/api/admin/email/campaigns/route.ts` — GET list / POST create
 - `src/app/api/admin/email/campaigns/[id]/route.ts` — GET single
@@ -275,6 +288,7 @@ src/app/[locale]/admin/email/
 ```
 
 **Admin page tabs:**
+
 - **Dashboard** — total contacts, active campaigns, avg open rate, avg click rate
 - **Campaigns** — list with status (draft / scheduled / sent), stats, actions
 - **New Campaign** — name → list → subject → HTML body (with AI generation option) → schedule
@@ -282,6 +296,7 @@ src/app/[locale]/admin/email/
 - **Automations** — list all flows, active contact counts, toggle on/off
 
 **SSM keys to add:**
+
 ```
 /cloudless/production/ACTIVECAMPAIGN_API_URL
 /cloudless/production/ACTIVECAMPAIGN_API_TOKEN
@@ -292,6 +307,7 @@ src/app/[locale]/admin/email/
 ## 7. Phase 3 — Google Ads — DONE
 
 **Implemented files:**
+
 - `src/lib/campaigns/google-ads.ts` — Google Ads API v17 with GAQL queries
 - `src/app/api/admin/campaigns/google/route.ts` — GET campaigns
 - `src/app/api/admin/campaigns/google/insights/route.ts` — GET metrics
@@ -314,6 +330,7 @@ src/app/[locale]/admin/campaigns/google/
 ```
 
 **Key functions in `google-ads.ts`:**
+
 ```typescript
 listCampaigns(): Promise<GoogleCampaign[]>
 createSearchCampaign(data: SearchCampaignInput): Promise<GoogleCampaign>
@@ -330,6 +347,7 @@ pauseCampaign(id: string): Promise<void>
 ## 8. Phase 4 — Lead Pipeline Automation (HubSpot) — DONE
 
 **Implemented files:**
+
 - `src/lib/hubspot.ts` — extended with `updateDeal`, `moveDealStage`, `getDealsByStage`, `createNote`, `listNotes`, `getPipelineStats`
 - `src/app/api/admin/pipeline/board/route.ts` — GET deals grouped by stage + pipelines
 - `src/app/api/admin/pipeline/deals/[id]/move/route.ts` — POST move to stage
@@ -342,6 +360,7 @@ pauseCampaign(id: string): Promise<void>
 ### What to build
 
 **Extend `src/lib/hubspot.ts`:**
+
 ```typescript
 // Already exists — extend these:
 updateDeal(id: string, data: Partial<Deal>): Promise<Deal>
@@ -353,6 +372,7 @@ createTask(dealId: string, task: TaskInput): Promise<Task>
 ```
 
 **New automation routes:**
+
 ```
 src/app/api/admin/pipeline/
     board/route.ts                     ← GET all deals grouped by stage (kanban)
@@ -362,12 +382,14 @@ src/app/api/admin/pipeline/
 ```
 
 **New admin page:**
+
 ```
 src/app/[locale]/admin/pipeline/
     page.tsx                           ← Kanban board view of HubSpot pipeline
 ```
 
 **Automations to wire up (in API routes):**
+
 - `POST /api/calendar/book` → auto-create HubSpot deal (stage: "Consultation Booked")
 - `POST /api/webhooks/stripe` (checkout.completed) → auto-create HubSpot deal (stage: "Closed Won")
 - `POST /api/contact` → auto-create HubSpot deal (stage: "New Lead") — already upserts contact, add deal creation
@@ -387,6 +409,7 @@ src/app/[locale]/admin/campaigns/linkedin/page.tsx
 ```
 
 **Key LinkedIn API endpoints used:**
+
 - `GET /adAccounts/{id}/campaigns` — list campaigns
 - `POST /adAccounts/{id}/campaigns` — create campaign
 - `GET /adAnalytics` — performance data
@@ -410,6 +433,7 @@ src/app/[locale]/admin/campaigns/tiktok/page.tsx
 ```
 
 **Key TikTok API endpoints:**
+
 - `GET /campaign/get/` — list campaigns
 - `POST /campaign/create/` — create campaign
 - `GET /report/integrated/get/` — performance metrics
@@ -430,6 +454,7 @@ src/app/[locale]/admin/campaigns/x/page.tsx
 ```
 
 **Key X Ads API endpoints:**
+
 - `GET /accounts/{id}/campaigns` — list campaigns
 - `POST /accounts/{id}/campaigns` — create campaign
 - `GET /stats/accounts/{id}` — performance stats
@@ -458,6 +483,7 @@ src/app/[locale]/admin/calendar/
 ```
 
 **What appears on the calendar:**
+
 | Type | Source | Colour |
 |---|---|---|
 | Social posts | Meta / LinkedIn / TikTok / X schedule | Platform colour |
@@ -467,6 +493,7 @@ src/app/[locale]/admin/calendar/
 | Ad campaigns | Start/end dates from all ad platforms | Orange |
 
 **Calendar item creation:**
+
 - Pick date → pick type → pick platform → fill details (or use AI) → schedule
 
 ---
@@ -494,6 +521,7 @@ src/app/[locale]/admin/reports/
 ```
 
 **Report sections (configurable per report):**
+
 1. **Executive Summary** — total spend, total leads, total revenue, top channel
 2. **SEO Performance** — GSC clicks/impressions/keywords (already built)
 3. **Paid Social** — Meta / LinkedIn / TikTok / X: impressions, clicks, conversions, ROAS
@@ -502,6 +530,7 @@ src/app/[locale]/admin/reports/
 6. **Website Analytics** — Notion Analytics: page views, form submits, store visits
 
 **Report generation flow:**
+
 1. Choose date range + client name
 2. Select which sections to include
 3. Claude API generates written insights/commentary for each section
@@ -530,9 +559,11 @@ src/app/[locale]/admin/ai-assistant/
 **AI assistant capabilities:**
 
 ### Campaign Strategy Generator
+
 Input: "I want to promote my AI marketing service to Greek SMBs with a €500/month budget"
 
 Output:
+
 ```json
 {
   "recommended_platforms": ["Meta", "LinkedIn"],
@@ -548,16 +579,19 @@ Output:
 ```
 
 ### Ad Copy Generator
+
 Input: service description + platform + objective
 
 Output: 3-5 variants of headline + body + CTA, optimised for the platform's character limits
 
 ### Audience Builder
+
 Input: target customer description
 
 Output: recommended targeting parameters per platform (interests, behaviors, lookalike sources)
 
 ### Reporting Insights
+
 Input: raw metrics data
 
 Output: plain-English commentary — "Your CTR of 2.4% on Meta is 40% above the industry average for SaaS services in Greece…"

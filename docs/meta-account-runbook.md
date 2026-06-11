@@ -52,12 +52,15 @@ Goal: @cloudless_gr shows "Full control" in Portfolio `1558125105019725` Instagr
 ## Step A.1 — Verify 2FA on both accounts
 
 Personal Facebook:
+
 ```
 https://accounts.meta.com/security/two-factor-authentication
 ```
+
 Confirm at least one method (Authenticator app preferred; SMS acceptable).
 
 @cloudless_gr Instagram (in the IG mobile app, logged in as @cloudless_gr):
+
 ```
 Settings and privacy → Accounts Center → Password and security → Two-factor authentication
 ```
@@ -68,14 +71,17 @@ Settings and privacy → Accounts Center → Password and security → Two-facto
 ## Step A.2 — Remove @cloudless_gr from Portfolio 1526956002406847
 
 Direct URL:
+
 ```
 https://business.facebook.com/latest/settings/instagram_accounts?business_id=1526956002406847
 ```
 
 If @cloudless_gr is not listed there, check:
+
 ```
 https://business.facebook.com/latest/settings/people?business_id=1526956002406847
 ```
+
 Look under "Business users" or "Instagram accounts" — remove it anywhere it appears.
 
 **Expected result:** @cloudless_gr no longer shows under Portfolio 1526956002406847.
@@ -84,6 +90,7 @@ Look under "Business users" or "Instagram accounts" — remove it anywhere it ap
 ## Step A.3 — Break the lite-mode link in the IG app
 
 In the @cloudless_gr IG mobile app (NOT web):
+
 ```
 Profile → hamburger menu → Settings and privacy
   → Accounts Center
@@ -108,6 +115,7 @@ https://www.facebook.com/cloudless.gr
 ```
 
 Then:
+
 ```
 Page Settings → Linked Accounts → Instagram → Connect account
 ```
@@ -120,6 +128,7 @@ Answer **Yes to both**.
 
 **Expected result:** FB Page shows @cloudless_gr under Linked Accounts with a green "Full access" indicator.
 **If it fails:**
+
 - "This account is already associated with another Page" → A.3 didn't propagate. Wait another hour, retry.
 - "We couldn't connect" with no detail → 2FA likely missing on one side (re-check A.1).
 - Page Settings menu has no "Linked Accounts" → your Page was force-migrated to Pages Experience. Instead, go to: `https://business.facebook.com/latest/settings/instagram_accounts?business_id=1558125105019725` and click Add → Connect Instagram.
@@ -136,6 +145,7 @@ https://business.facebook.com/latest/settings/instagram_accounts?business_id=155
 ## Step A.6 — Re-onboard Windsor.ai Instagram connector
 
 In Windsor.ai dashboard:
+
 ```
 Data sources → Instagram → Reconnect (or add new)
 ```
@@ -147,6 +157,7 @@ OAuth prompt appears. Log in as the personal FB account that is Admin on Portfol
 ## Step A.7 — Smoke test
 
 Run from this Claude session:
+
 ```
 get_data(connector="instagram", fields=["date", "impressions", "reach"], date_preset="last_7d")
 ```
@@ -207,6 +218,7 @@ Add card. Complete 3DS challenge. Meta pre-authorizes €1.00 (refunded in 3–5
 
 **Expected result:** Card shows as "Active".
 **If it fails:**
+
 - Greek-issued card 3DS failure → retry from Business Suite mobile app.
 - Card rejected → prepaid/virtual cards are blocked. Use a standard Visa/Mastercard debit or credit.
 - Stuck in verification → add PayPal as a secondary backup method in parallel.
@@ -255,11 +267,13 @@ https://business.facebook.com/latest/settings/data_sources?business_id=155812510
 ## Step C.2 — Add environment variables
 
 In `.env.local` (development):
+
 ```
 NEXT_PUBLIC_META_PIXEL_ID=<pixel_id_from_c1>
 ```
 
 For production, add to SSM per `aws-ssm-config/SKILL.md`:
+
 ```
 aws ssm put-parameter \
   --name /cloudless/production/NEXT_PUBLIC_META_PIXEL_ID \
@@ -273,11 +287,13 @@ aws ssm put-parameter \
 ## Step C.3 — Install Pixel in `app/layout.tsx`
 
 Add at the top of the file:
+
 ```tsx
 import Script from 'next/script';
 ```
 
 Inside the `<body>` (before `{children}`):
+
 ```tsx
 <Script id="meta-pixel" strategy="afterInteractive">
   {`
@@ -312,6 +328,7 @@ Commit and deploy to staging.
 3. Expected: "1 pixel found" with a `PageView` event, ID matching C.1
 
 **If it fails:**
+
 - Extension shows 0 pixels → `NEXT_PUBLIC_` env var not bundled. Restart `pnpm dev` / redeploy.
 - Pixel found but "No events fired" → Script strategy is wrong; confirm `afterInteractive`.
 - CSP error in console → add `https://connect.facebook.net` to `script-src` in middleware.
@@ -335,11 +352,13 @@ Verify with Pixel Helper after submitting a test form — should show `PageView`
 ## Step C.6 — Generate CAPI access token
 
 In Events Manager:
+
 ```
 Data sources → cloudless.gr pixel → Settings → Conversions API → Generate access token
 ```
 
 Copy the token. Store in SSM (us-east-1):
+
 ```
 aws ssm put-parameter \
   --name /cloudless/production/META_CAPI_ACCESS_TOKEN \
@@ -420,16 +439,19 @@ fbq('track', 'Lead', { ... }, { eventID: serverProvidedEventId });
 Submit a test form in production.
 
 Events Manager:
+
 ```
 Data sources → cloudless.gr pixel → Overview
 ```
 
 **Expected result:**
+
 - Event appears within ~1 minute
 - "Event Match Quality" > 5/10
 - "Deduplication" tab shows the browser + server events matched by `event_id`
 
 **If it fails:**
+
 - Event appears from server only → client-side `fbq` isn't firing; check C.5.
 - Event appears from browser only → CAPI returning 4xx; check token + SSM fetch.
 - Duplicate events not deduped → `event_id` mismatch client↔server.

@@ -49,6 +49,7 @@ The `memory-relief-2026-05-31.yaml` manifest caps Metabase at 400Mi. If you're s
 Run the cluster doctor (touch `scripts/cluster-doctor.sh` → PR → merge) — the doctor now covers Tier 4 Analytics sections: Metabase pods, DuckDB API pods, and their resource limits.
 
 Quick manual checks (run from a Tailscale-connected host with kubectl):
+
 ```bash
 # Pod health
 kubectl -n analytics get pods -o wide
@@ -68,6 +69,7 @@ kubectl -n analytics logs deploy/duckdb-api --tail=20
 Grafana lives in the `monitoring` namespace. The HTTP endpoint `https://grafana.cloudless.gr/api/health` returns `{"database":"ok"}` when healthy (HTTP 200).
 
 If Grafana is unreachable:
+
 1. Check if the pod is running: `kubectl -n monitoring get pods -l app.kubernetes.io/name=grafana`
 2. Check restarts / OOM: `kubectl -n monitoring describe pod -l app.kubernetes.io/name=grafana`
 3. Restart: `kubectl -n monitoring rollout restart deploy/kube-prom-grafana`
@@ -104,6 +106,7 @@ ntfy (push notification server) is in the `ntfy` namespace with a 96Mi limit. It
 ### Grafana shows no data / datasource error
 
 Usually means Prometheus is not reachable from Grafana. Check:
+
 1. Prometheus pod is Running: `kubectl -n monitoring get pods -l app.kubernetes.io/name=prometheus`
 2. Prometheus rules health: cluster doctor Tier 3 section
 3. If `PrometheusRuleFailures` is firing: trigger `prometheus-tune.yml`
