@@ -56,6 +56,22 @@ interface DeviceRow {
   avgPosition: number;
 }
 
+/** One persisted weekly snapshot from the Notion GSC archive. */
+interface ArchiveRow {
+  id: string;
+  week: string;
+  date: string;
+  clicks: number;
+  impressions: number;
+  /** whole percent */
+  ctrPct: number;
+  avgPosition: number;
+  keywords: number;
+  topCountry: string;
+  mobilePct: number;
+  ctrOpportunities: number;
+}
+
 export default function SeoAnalyticsPage() {
   const [snapshot, setSnapshot] = useState<SeoSnapshot | null>(null);
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
@@ -63,6 +79,7 @@ export default function SeoAnalyticsPage() {
   const [intent, setIntent] = useState<IntentBreakdown | null>(null);
   const [countries, setCountries] = useState<CountryRow[]>([]);
   const [devices, setDevices] = useState<DeviceRow[]>([]);
+  const [archive, setArchive] = useState<ArchiveRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,12 +88,15 @@ export default function SeoAnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [seoRes, qpRes, intentRes, countryRes, deviceRes] = await Promise.all([
+      const [seoRes, qpRes, intentRes, countryRes, deviceRes, archiveRes] = await Promise.all([
         fetchWithAuth("/api/admin/analytics/seo"),
         fetchWithAuth("/api/admin/analytics/query-pages?limit=50"),
         fetchWithAuth("/api/admin/analytics/search-intent"),
         fetchWithAuth("/api/admin/analytics/countries?limit=20"),
         fetchWithAuth("/api/admin/analytics/devices"),
+        // Notion-backed weekly archive — optional; absent when the DB isn't
+        // configured (503). Never block the live GSC view on it.
+        fetchWithAuth("/api/admin/analytics/gsc-archive?limit=26"),
       ]);
       if (seoRes.status === 503) {
         setNotConfigured(true);
@@ -90,6 +110,7 @@ export default function SeoAnalyticsPage() {
       if (intentRes.ok) setIntent((await intentRes.json()).intent ?? null);
       if (countryRes.ok) setCountries((await countryRes.json()).countries ?? []);
       if (deviceRes.ok) setDevices((await deviceRes.json()).devices ?? []);
+      if (archiveRes.ok) setArchive((await archiveRes.json()).reports ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -232,6 +253,40 @@ export default function SeoAnalyticsPage() {
               />
             </section>
           </div>
+
+          {archive.length > 0 && (
+            <section>
+              <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
+                WEEKLY ARCHIVE{" "}
+                <span className="text-slate-600">— persisted snapshots (Notion)</span>
+              </h2>
+              <SeoTable
+                head={[
+                  "Week",
+                  "Clicks",
+                  "Impressions",
+                  "CTR",
+                  "Avg Pos",
+                  "Keywords",
+                  "Mobile",
+                  "Top Country",
+                  "CTR Opps",
+                ]}
+                empty="No archived snapshots yet."
+                rows={archive.map((a) => [
+                  a.week,
+                  a.clicks.toLocaleString(),
+                  a.impressions.toLocaleString(),
+                  `${a.ctrPct}%`,
+                  a.avgPosition.toFixed(1),
+                  a.keywords.toLocaleString(),
+                  `${a.mobilePct}%`,
+                  a.topCountry || "—",
+                  a.ctrOpportunities.toLocaleString(),
+                ])}
+              />
+            </section>
+          )}
         </div>
       )}
     </div>
