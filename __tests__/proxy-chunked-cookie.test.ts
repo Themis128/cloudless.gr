@@ -1,7 +1,7 @@
 /**
  * Regression test for the chunked-session-cookie bug in src/proxy.ts.
  *
- * The next-auth session JWT stores the Keycloak access/id/refresh tokens, so
+ * The next-auth session JWT stores the IdP access/id/refresh tokens, so
  * it exceeds the 4096-byte cookie limit and next-auth splits it into chunked
  * cookies: `<name>.0`, `<name>.1`, … — the unchunked `<name>` cookie then does
  * not exist. readAuthToken's precheck used to look only for the base cookie

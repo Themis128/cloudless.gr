@@ -2,7 +2,7 @@
  * /api/user/profile — provider-agnostic profile store on DynamoDB.
  *
  * The route reads/writes name/company/phone/preferences keyed by the OIDC
- * `sub`, decoupled from the IdP (works for Cognito and Keycloak). These tests
+ * `sub`, decoupled from the IdP (works for any OIDC provider). These tests
  * mock @/lib/user-profile so no AWS call is made, and verify the auth gate,
  * the session fallback for name/email, and the upsert payload.
  *

@@ -2,7 +2,7 @@
  * AuthContext tests — covers the real AuthProvider component rendered via
  * @testing-library/react in jsdom.
  *
- * AuthContext now uses only Keycloak via next-auth. On mount it calls
+ * AuthContext uses Cognito via next-auth. On mount it calls
  * GET /api/auth/session and sets user/isAdmin from the response.
  */
 
@@ -110,7 +110,7 @@ describe("AuthProvider — no active session", () => {
     expect(screen.getByTestId("no-user").textContent).toBe("signed-out");
   });
 
-  it("configError is always null (Keycloak-only, no config needed)", async () => {
+  it("configError is always null (single provider, no config needed)", async () => {
     await act(async () => {
       renderAuth();
     });

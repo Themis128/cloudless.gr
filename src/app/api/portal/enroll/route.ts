@@ -13,7 +13,7 @@ const ADMIN_NOTIFY_EMAIL = "tbaltzakis@cloudless.gr";
 
 /**
  * POST /api/portal/enroll
- * Auth required (next-auth session or Keycloak Bearer token).
+ * Auth required (next-auth session or Bearer token).
  * Body: { plan: "cloud"|"serverless"|"analytics"|"marketing"|"bundle", notes?: string }
  *
  * Adds the authenticated user to the pending-clients waiting list and

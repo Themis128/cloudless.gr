@@ -13,7 +13,7 @@
  * - History       - 16-week click/impression trend chart (SVG sparkline)
  * - CTR Opps      - pages with high impressions but below-average CTR
  *
- * All requests carry the Keycloak access token via fetchWithAuth.
+ * All requests carry the access token via fetchWithAuth.
  *
  * @module admin/analytics
  */

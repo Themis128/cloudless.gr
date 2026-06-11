@@ -21,7 +21,7 @@
 #   - prometheus-self    (Prometheus's own metrics — needed for retention alerts)
 #
 # What we drop:
-#   - Application metrics (Loki self-metrics, Traefik, Grafana, n8n, Keycloak,
+#   - Application metrics (Loki self-metrics, Traefik, Grafana, n8n,
 #     duckdb-api, etc.)
 #   - Ad-hoc PodMonitors for cloudless-app, etc.
 #

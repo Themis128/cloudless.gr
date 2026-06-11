@@ -5,10 +5,9 @@
  * NEXT_PUBLIC_AUTH_PROVIDER. These tests verify the sign-in / sign-up /
  * forgot-password handlers hand off to the right provider:
  *   - Cognito → nextAuthSignIn("cognito", ...) for all three flows
- *   - default (Keycloak) → nextAuthSignIn("keycloak", ...) for sign-in
  *
- * (The Keycloak sign-up / reset paths navigate via window.location and are
- * covered by the existing Keycloak-mode tests; jsdom can't follow navigation.)
+ * (Hosted-UI sign-up / reset paths navigate via window.location; jsdom can't
+ * follow navigation, so only the provider hand-off is asserted here.)
  */
 
 import { render, act, cleanup } from "@testing-library/react";

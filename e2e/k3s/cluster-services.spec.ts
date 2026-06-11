@@ -52,7 +52,7 @@ test.describe("Cloudless Manager", () => {
     const res = await request.get(`https://manage.${K3S_HOST}/`, {
       maxRedirects: 5,
     });
-    // oauth2-proxy may redirect to Keycloak — never a 5xx
+    // oauth2-proxy may redirect to the IdP — never a 5xx
     expect(res.status()).toBeLessThan(500);
   });
 });

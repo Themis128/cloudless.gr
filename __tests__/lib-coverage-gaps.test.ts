@@ -315,7 +315,6 @@ vi.mock("next-auth", () => ({
     auth: vi.fn(),
   })),
 }));
-vi.mock("next-auth/providers/keycloak", () => ({ default: vi.fn(() => ({})) }));
 
 describe("auth.ts", () => {
   beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });

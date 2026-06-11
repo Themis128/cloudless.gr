@@ -76,7 +76,6 @@ echo ""
 echo "── Step 5/6: Restart capped workloads to pick up new limits ─"
 for ns_deploy in \
   "analytics deployment/metabase" \
-  "keycloak deployment/keycloak" \
   "n8n deployment/n8n" \
   "ntfy deployment/ntfy" \
   ; do

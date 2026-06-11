@@ -25,7 +25,7 @@ The analytics namespace on the omv k3s cluster runs two services: **Metabase** (
 | Metabase OOMKilled / CrashLoopBackOff | `analytics-restore.yml` |
 | DuckDB API high restarts / OOMKilled | `analytics-restore.yml` |
 | ntfy Error / CrashLoopBackOff | `ntfy-restore.yml` |
-| Grafana unreachable (HTTP 503) | `restore-keycloak.yml` → cluster doctor to check; Grafana pod restart via `kubectl -n monitoring rollout restart deploy/kube-prom-grafana` wrapped in a remediate workflow |
+| Grafana unreachable (HTTP 503) | Cluster doctor to check; Grafana pod restart via `kubectl -n monitoring rollout restart deploy/kube-prom-grafana` wrapped in a remediate workflow |
 | Prometheus rule failures | `prometheus-tune.yml` |
 
 **Trigger analytics-restore**: edit `.github/workflows/analytics-restore.yml` → PR → squash-merge. The workflow runs on `ubuntu-latest` via Tailscale + `KUBECONFIG_B64`, posts result to **issue #382**.
@@ -71,7 +71,7 @@ If Grafana is unreachable:
 1. Check if the pod is running: `kubectl -n monitoring get pods -l app.kubernetes.io/name=grafana`
 2. Check restarts / OOM: `kubectl -n monitoring describe pod -l app.kubernetes.io/name=grafana`
 3. Restart: `kubectl -n monitoring rollout restart deploy/kube-prom-grafana`
-4. Grafana limit is 256Mi — if OOMKilling, patch to 384Mi (same pattern as Keycloak restore)
+4. Grafana limit is 256Mi — if OOMKilling, patch to 384Mi (patch the deployment memory limit)
 
 ## Loki
 

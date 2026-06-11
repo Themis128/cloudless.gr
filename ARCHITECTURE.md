@@ -1,6 +1,6 @@
 # Cloudless.gr — System Architecture
 
-> **NOTE — auth is Cognito.** This repo migrated from Cognito (formerly Keycloak) to Cognito on 2026-06-08 (PR #677). Any references to Keycloak below are historical context. App admin = membership in the Cognito group `admin`.
+> **NOTE — auth is Cognito.** Migrated from Keycloak to Cognito on 2026-06-08 (PR #677); Keycloak is fully removed. App admin = membership in the Cognito group `admin`.
 
 
 > **Purpose:** Digital solutions business providing cloud computing, AI marketing, serverless development, and e-commerce services to startups and SMBs.
@@ -99,7 +99,7 @@ src/
 │   │   │   ├── [id]/page.tsx     ← Product detail + JSON-LD
 │   │   │   └── success/          ← Order confirmation page
 │   │   ├── contact/              ← Contact form (SES + Slack + HubSpot + Notion)
-│   │   ├── auth/                 ← Login · Signup · Forgot Password (Keycloak + next-auth)
+│   │   ├── auth/                 ← Login · Signup · Forgot Password (Cognito + next-auth)
 │   │   ├── dashboard/            ← Customer portal (auth-protected)
 │   │   │   ├── page.tsx          ← Personalized overview
 │   │   │   ├── profile/          ← Edit name, company, phone
@@ -115,7 +115,7 @@ src/
 │   │       ├── notion/           ← Notion DB explorer (blog, docs, tasks, projects)
 │   │       ├── notifications/    ← Slack test panel
 │   │       ├── settings/         ← App config viewer
-│   │       └── users/            ← Keycloak user management
+│   │       └── users/            ← Cognito user management
 │   └── api/                      ← API Routes (server-only)
 │       ├── contact/              ← POST: SES + Slack + HubSpot + Notion
 │       ├── checkout/             ← POST: Stripe checkout session
@@ -146,7 +146,7 @@ src/
 │           ├── notion/           ← Notion DB queries: blog, docs, tasks, projects, submissions
 │           ├── ops/errors/       ← Sentry issues
 │           ├── orders/           ← Stripe orders summary
-│           └── users/            ← Keycloak user list
+│           └── users/            ← Cognito user list
 │
 ├── components/                   ← Shared UI components
 │   ├── Navbar.tsx
@@ -224,9 +224,6 @@ src/
 | `SES_FROM_EMAIL` | String | All outbound emails |
 | `SES_TO_EMAIL` | String | Contact form recipient |
 | `AWS_SES_REGION` | String | SES client config |
-| `KEYCLOAK_ISSUER` | String | Keycloak realm URL (JWKS source) |
-| `KEYCLOAK_CLIENT_ID` | String | Keycloak app client (JWT aud) |
-| `KEYCLOAK_CLIENT_SECRET` | SecureString | Keycloak app client secret |
 | `SLACK_BOT_TOKEN` | SecureString | Slack API calls |
 | `SLACK_SIGNING_SECRET` | SecureString | Inbound Slack verification |
 | `SLACK_WEBHOOK_URL` | SecureString | Outbound Slack notifications |
@@ -246,7 +243,6 @@ src/
 |---|---|
 | `NEXT_PUBLIC_SITE_URL` | `https://cloudless.gr` |
 | `NEXT_PUBLIC_STAGE` | `production` |
-| `NEXT_PUBLIC_KEYCLOAK_ISSUER` | `https://auth.cloudless.gr/realms/master` |
 | `NOTION_BLOG_DB_ID` | (Notion DB ID — non-secret) |
 | `NOTION_SUBMISSIONS_DB_ID` | (Notion DB ID — non-secret) |
 | `NOTION_DOCS_DB_ID` | (Notion DB ID — non-secret) |
@@ -261,11 +257,11 @@ src/
 ```
 Browser
       │
-      │  click "Sign in" → redirect to Keycloak hosted UI
+      │  click "Sign in" → redirect to Cognito Hosted UI
       ▼
-Keycloak (auth.cloudless.gr)  —  Authorization Code + PKCE
+Cognito (Hosted UI)  —  Authorization Code + PKCE
       │
-      │  code → /api/auth/callback/keycloak
+      │  code → /api/auth/callback/cognito
       ▼
 next-auth v5 (src/lib/auth.ts)
       │  exchanges code → access_token + id_token + refresh_token
@@ -289,12 +285,12 @@ Page Route Protection (src/proxy.ts middleware):
 API Route Protection (src/lib/api-auth.ts):
   requireAuth(req)   → 401 if missing/invalid JWT
   requireAdmin(req)  → 401/403 if not admin group
-  Provider: Keycloak by default; Cognito when COGNITO_ISSUER is set.
+  Provider: Cognito.
 
 JWT Verification (JWKS · RS256):
-  - Issuer:   KEYCLOAK_ISSUER or COGNITO_ISSUER
-  - Audience: KEYCLOAK_CLIENT_ID or COGNITO_CLIENT_ID
-  - Group membership: groups claim (Keycloak) or cognito:groups (Cognito)
+  - Issuer:   COGNITO_ISSUER
+  - Audience: COGNITO_CLIENT_ID
+  - Group membership: cognito:groups claim
   - Key rotation handled automatically (jose in-process JWKS cache)
 ```
 
@@ -323,7 +319,7 @@ graph TB
         UI["Next.js App<br/>React 19 + Tailwind 4"]
         SW["Service Worker<br/>PWA / Offline"]
         Cart["CartContext<br/>(in-memory)"]
-        Auth["AuthContext<br/>(next-auth v5 / Keycloak)"]
+        Auth["AuthContext<br/>(next-auth v5 / Cognito)"]
     end
 
     subgraph Routes["📡 API Routes (Lambda)"]
@@ -341,7 +337,7 @@ graph TB
     end
 
     subgraph AWS["☁️ AWS (us-east-1)"]
-        Keycloak["Keycloak<br/>(auth.cloudless.gr)"]
+        Cognito["Cognito<br/>(Hosted UI)"]
         SES["SES<br/>Transactional Email"]
         SSM["SSM Parameter Store<br/>/cloudless/production/*"]
         CF["CloudFront CDN"]
@@ -382,7 +378,7 @@ graph TB
 
     CF --> Lambda
     UI --> Routes
-    Auth --> Keycloak
+    Auth --> Cognito
     Routes --> SSM
 
     RC --> SES
@@ -501,7 +497,7 @@ graph TB
 | `GET /api/admin/notion/tasks` | Notion | Tasks DB |
 | `GET /api/admin/ops/errors` | Sentry | Unresolved issues |
 | `GET /api/admin/orders` | Stripe | Orders summary |
-| `GET /api/admin/users` | Keycloak | User list |
+| `GET /api/admin/users` | Cognito | User list |
 
 ---
 
@@ -510,7 +506,7 @@ graph TB
 ```
 Integration            Status         Auth Method                    Used In
 ────────────────────────────────────────────────────────────────────────────────────
-Keycloak               ✅ Live         OIDC / next-auth v5            Auth, all protected routes
+Cognito                ✅ Live         OIDC / next-auth v5            Auth, all protected routes
 AWS Cognito            🔶 Optional     OIDC (when COGNITO_ISSUER set) Auth fallback (serverless path)
 AWS SES                ✅ Live         IAM (Lambda role)              Contact, subscribe, webhooks
 AWS SSM                ✅ Live         IAM (Lambda role)              All API routes (secrets)
@@ -554,9 +550,8 @@ All modules live in `src/lib/`. They are **server-side only** unless noted.
 |---|---|
 | `ssm-config.ts` | Loads all secrets from SSM (5-min TTL cache, singleton `SSMClient`, stale-cache fallback on error). Validates `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as required. `SSM_PREFIX` uses `||` so an empty string falls back to `/cloudless/production`. |
 | `integrations.ts` | Reads integration keys from env. Provides `isConfigured(...keys)` guard. |
-| `auth.ts` | next-auth v5 configuration — provider-agnostic (Keycloak default; Cognito when `COGNITO_ISSUER` is set). Handles token refresh and RP-Initiated Logout. |
+| `auth.ts` | next-auth v5 configuration — Cognito. Handles token refresh and RP-Initiated Logout. |
 | `api-auth.ts` | `requireAuth()` / `requireAdmin()` — RS256 JWT verification against the active provider's JWKS; enforces issuer, audience (client ID), and group membership claims. |
-| `keycloak-auth.ts` | Keycloak auth adapter — implements the `AuthContext` interface using next-auth `signIn`/`signOut`/`getSession`. |
 
 ### Email
 
@@ -882,7 +877,7 @@ The analysis runs **in addition to** the following static-analysis workflows def
 ### ✅ Fully Live
 
 - Next.js app deployed on AWS Lambda via SST v4
-- Keycloak + next-auth v5 (login, signup, forgot password, admin group)
+- Cognito + next-auth v5 (login, signup, forgot password, admin group)
 - Stripe store, checkout, subscriptions, webhooks
 - AWS SES email (contact form, order confirmation, newsletter)
 - SES suppression list (unsubscribe)

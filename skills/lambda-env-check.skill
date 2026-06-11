@@ -1,6 +1,6 @@
 ---
 name: lambda-env-check
-description: Audit the production Lambda's environment variables against expected/required values. Detect missing AUTH_SECRET, KEYCLOAK_*, stale Cognito refs, env drift after deploy. Identify common 500 causes from missing env.
+description: Audit the production Lambda's environment variables against expected/required values. Detect missing AUTH_SECRET, COGNITO_*, env drift after deploy. Identify common 500 causes from missing env.
 triggers: when the user mentions "Lambda env", "AUTH_SECRET", "next-auth 500", "auth error 500", "/api/auth/session 500", "There was a problem with the server configuration", "AUTH_TRUST_HOST", "env var missing in production"
 ---
 
@@ -23,16 +23,17 @@ aws lambda get-function-configuration --function-name "$LAMBDA_FN" --region us-e
   --query "Environment.Variables" 2>&1 | python3 -m json.tool
 ```
 
-## Required env vars (post-Keycloak migration)
+## Required env vars (Cognito auth)
 
 | Variable | Purpose | Failure mode if missing |
 |---|---|---|
 | `AUTH_SECRET` | next-auth JWT encryption | 500 on `/api/auth/session`, "server configuration" error |
 | `AUTH_TRUST_HOST` | Lambda behind CloudFront — trust X-Forwarded-Host | 500 on `/api/auth/*` |
 | `AUTH_URL` | Canonical site URL for callback construction | Wrong callback URLs, redirect failures |
-| `NEXT_PUBLIC_KEYCLOAK_ISSUER` | OIDC discovery URL | Client can't init OIDC provider |
-| `NEXT_PUBLIC_KEYCLOAK_CLIENT_ID` | OIDC client ID | Same as above |
-| `KEYCLOAK_ISSUER` | Server-side JWT verification (proxy.ts) | Falls back to Cognito (now deleted) → all auth fails |
+| `COGNITO_ISSUER` | OIDC issuer + server-side JWKS verification (api-auth.ts) | Login impossible; admin Bearer auth falls back to decode-only |
+| `COGNITO_CLIENT_ID` | OIDC client ID (JWT `aud`) | Login impossible |
+| `COGNITO_CLIENT_SECRET` | OIDC client secret | Token exchange fails at callback |
+| `COGNITO_DOMAIN` | Hosted-UI domain for RP-initiated logout | Sign-out leaves the SSO session alive |
 | `SSM_PREFIX` | SSM path prefix for runtime secrets | App can't load Stripe/Notion/etc. |
 
 ## Common 500 causes
@@ -43,12 +44,12 @@ aws lambda get-function-configuration --function-name "$LAMBDA_FN" --region us-e
 - Both must be set at deploy time via `sst.config.ts` — they can't be lazy-loaded from SSM because next-auth reads them synchronously at module load
 
 ### "Invalid token signature"
-- `KEYCLOAK_ISSUER` URL mismatches the issuer in the JWT
-- Verify: `curl https://auth.cloudless.gr/realms/master/.well-known/openid-configuration | python3 -c "import sys,json; print(json.load(sys.stdin)['issuer'])"` should exactly match `KEYCLOAK_ISSUER`
+- `COGNITO_ISSUER` URL mismatches the issuer in the JWT
+- Verify: `curl "$COGNITO_ISSUER/.well-known/openid-configuration" | python3 -c "import sys,json; print(json.load(sys.stdin)['issuer'])"` should exactly match `COGNITO_ISSUER`
 
-### "Cognito JWKS unreachable" (legacy fallback)
-- proxy.ts still tries Cognito if `NEXT_PUBLIC_KEYCLOAK_ISSUER` is empty
-- Cognito pools were deleted 2026-05-30 — make sure Keycloak issuer is set
+### "Cognito JWKS unreachable"
+- api-auth.ts verifies Bearer tokens against `${COGNITO_ISSUER}/.well-known/jwks.json`
+- If `COGNITO_ISSUER` is unset on the Lambda, all admin Bearer auth fails
 
 ## Verify a deploy actually picked up new env
 
@@ -59,7 +60,7 @@ curl -s https://cloudless.gr/api/health | python3 -m json.tool
 
 # Check the actual env on the Lambda
 aws lambda get-function-configuration --function-name "$LAMBDA_FN" --region us-east-1 \
-  --query "Environment.Variables.{AUTH_SECRET:AUTH_SECRET,AUTH_TRUST_HOST:AUTH_TRUST_HOST,KEYCLOAK_ISSUER:KEYCLOAK_ISSUER,APP_VERSION:APP_VERSION}" \
+  --query "Environment.Variables.{AUTH_SECRET:AUTH_SECRET,AUTH_TRUST_HOST:AUTH_TRUST_HOST,COGNITO_ISSUER:COGNITO_ISSUER,APP_VERSION:APP_VERSION}" \
   --output json
 ```
 
@@ -69,7 +70,7 @@ aws lambda get-function-configuration --function-name "$LAMBDA_FN" --region us-e
 echo "=== /api/health ===" && curl -s -o /dev/null -w "%{http_code}\n" https://cloudless.gr/api/health
 echo "=== /api/auth/session ===" && curl -s -o /dev/null -w "%{http_code}\n" https://cloudless.gr/api/auth/session
 echo "=== /api/auth/providers ===" && curl -s -o /dev/null -w "%{http_code}\n" https://cloudless.gr/api/auth/providers
-echo "=== Keycloak JWKS ===" && curl -s -o /dev/null -w "%{http_code}\n" https://auth.cloudless.gr/realms/master/protocol/openid-connect/certs
+echo "=== Cognito JWKS ===" && curl -s -o /dev/null -w "%{http_code}\n" "$COGNITO_ISSUER/.well-known/jwks.json"
 # All four should return 200. /api/auth/session returns `null` when no user logged in.
 ```
 

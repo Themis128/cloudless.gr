@@ -10,11 +10,11 @@ import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
  * Provider-agnostic user-profile store on DynamoDB.
  *
  * The dashboard Profile/Settings form needs to persist name / company / phone /
- * preferences. These used to live in the Keycloak Account API, which ties the
+ * preferences. These used to live in the IdP account store, which ties the
  * profile to a specific IdP and is unavailable under Cognito (its custom
  * attributes can't be added to an existing pool without replacing it). Storing
  * the profile in DynamoDB keyed by the user's `sub` decouples it from the IdP,
- * so it works identically for Cognito and Keycloak.
+ * so it works identically for any OIDC provider.
  *
  * Table (sst.config.ts → "UserProfile"): hashKey `userId` = the OIDC `sub`.
  * Access is granted to the site Lambda via SST resource linking.

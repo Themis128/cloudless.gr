@@ -11,9 +11,8 @@ These require access outside GitHub and cannot be automated from a cloud session
 | Item | Status | Action |
 |------|--------|--------|
 | `OMV_SSH_KEY` | **SET** ✅ | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active. |
-| SES SMTP | **IAM BLOCKED** | `GitHubActionsOIDC` role lacks `iam:CreateUser`. AWS Console → IAM → role `GitHubActionsOIDC` → add inline policy (exact JSON in issue #382 comment 2026-06-02T18:55Z). Then touch `provision-ses-smtp.yml` to trigger. |
 | ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore. |
-| Admin password | **SET** ✅ | `keycloak-finalize-admin.yml` ran 2026-06-02T19:09Z — `PERM_LOGIN=ok`. Login at https://auth.cloudless.gr with `tbaltzakis@cloudless.gr`. New permanent password stored in SSM `/cloudless/production/KEYCLOAK_ADMIN_PERMANENT_PASSWORD`. ⚠️ Earlier run logged password in plain text to issue #382 comment — fixed in scripts/keycloak-finalize-admin.sh (now masked + SSM-only). |
+| Admin password | **N/A** | Auth is Cognito (PR #677, 2026-06-08). Manage admin users in the Cognito User Pool console; there is no separate IdP admin to bootstrap. |
 | Cloudflare HA LB | **TOKEN NEEDED** | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — add as repo secret or SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` with scopes: Zone:Read, Load Balancing Monitors/Pools+Load Balancers:Edit, DNS:Edit (zone cloudless.gr). Then `workflow_dispatch` or touch the workflow to apply. |
 | Cloudflare Email Obfuscation fix | **TOKEN NEEDED** | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors by disabling Scrape Shield Email Obfuscation zone-wide. Needs `CLOUDFLARE_API_TOKEN` repo secret or SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` (can reuse HA LB token if it has Zone Settings:Edit, or create a new token with scopes: **Zone:Read, Zone Settings:Edit** for cloudless.gr). Then `workflow_dispatch` to run; it verifies the fix by curling /en and checking for email-obfuscation markers. |
 
@@ -114,90 +113,33 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
   Read it back with `mcp__github__issue_read(get_comments, issue_number=382)`.
   Do NOT pin recovery to `[self-hosted, omv, pi]` — those runners go offline
   during cluster incidents and the job queues forever.
-- **Tools (all in repo):** `pnpm cluster:doctor` (read-only diagnostics →
-  `cluster-doctor.yml`), `pnpm keycloak:smoke` (login/registration surface),
-  `pnpm keycloak:restore` (direct-patch recovery → `restore-keycloak.yml`),
-  `pnpm prometheus:tune` (kill heavy apiserver SLO rules → `prometheus-tune.yml`),
-  `pnpm keycloak:create-user` / `pnpm keycloak:enable-signup` (user provisioning →
-  `keycloak-create-user.yml` / `keycloak-full-verify.yml`; see the
-  **`keycloak-user-provisioning`** skill).
-- **2026-06-01 incident:** the 2026-05-31 memory-relief PR OOM-capped Keycloak
-  (384Mi container vs its real `-Xmx512m` heap) → CrashLoop → `auth.cloudless.gr`
-  503, login/registration down ~8h. Fix: size the container to the heap
-  (768Mi limit). Lessons baked into the skill:
+- **Tools (in repo):** `pnpm cluster:doctor` (read-only diagnostics →
+  `cluster-doctor.yml`), `pnpm prometheus:tune` (kill heavy apiserver SLO rules
+  → `prometheus-tune.yml`).
+- **JVM workload sizing lessons (2026-06-01 incident):**
   - **Never cap a JVM container below `-Xmx` + ~200Mi non-heap.** A higher
-    *limit* doesn't raise real RSS (~500Mi) — it only stops the kernel OOMKill.
-  - Keycloak's operative heap var is **`JAVA_OPTS_APPEND`**, not
-    `JAVA_OPTS_KC_HEAP`. Verify via the doctor's deploy `env` dump.
+    *limit* doesn't raise real RSS — it only stops the kernel OOMKill.
   - From CI, a direct `kubectl patch` of the single object beat
     `kubectl apply -f <manifest>` (the apply silently never reached the deploy).
-  - Test login with the real **POST + CSRF** flow → `302` to Keycloak with
-    `code_challenge_method=S256`. `error=Configuration` on a bare **GET** to
-    `/api/auth/signin/keycloak` is a test artifact, not a bug.
   - `PrometheusRuleFailures` here = `kube-apiserver-burnrate.rules` timing out
     (`context deadline exceeded`), not OOM. `pnpm prometheus:tune` removes those
     unused heavy SLO rule groups. Durable fix: kube-prometheus-stack Helm values
     `defaultRules.rules.kubeApiserver{Burnrate,Availability,Slos}: false`.
 
-### Keycloak users & the `ServerlessErrors` alarm
+## Authentication
 
-- **Self-service registration** was OFF on the `master` realm (users are
-  admin-provisioned). 2026-06-01 it was turned **ON**
-  (`registrationAllowed=true` + `resetPasswordAllowed` + `loginWithEmailAllowed`)
-  so the website "Create Account" / forgot-password flows work. Toggle with
-  `pnpm keycloak:enable-signup` (`ENABLE=false` reverts).
-- **Provision users** with `pnpm keycloak:create-user` (`EMAIL=…`, `ADMIN=1` for
-  the admin group). It runs `kcadm` **inside the keycloak pod** so the admin
-  password never leaves the cluster. The keycloak image has **no `curl`** and **no
-  `awk`/`jq`**, so verify a login with `kcadm config credentials` (direct grant as
-  the user via `admin-cli`) and parse kcadm output with `--format csv --noquotes` +
-  grep/cut. App admin = **`admin` group membership**, surfaced via the `groups`
-  claim — which requires a **group-membership protocol mapper on the `cloudless-app`
-  client** with **`full.path=false`** (a `full.path=true` emits `"/admin"` and
-  silently breaks `isAdmin()`).
-- **Admin login chain** (must all hold): `admin` group → user membership →
-  `groups` mapper on `cloudless-app` (full.path=false, id+access claims) →
-  `auth.ts` jwt+session callbacks → `proxy.ts` (server) + `AdminLayoutClient`
-  (client, via `/api/auth/session`) + `api-auth.ts requireAdmin`. Configure it:
-  - `pnpm keycloak:configure-admin` — ensure group + verify/fix the mapper +
-    membership; sets the password from the `ADMIN_BOOTSTRAP_PASSWORD` repo secret
-    or a `workflow_dispatch` `password` input, and enforces single-admin once a
-    password exists.
-  - `pnpm keycloak:bootstrap-admin` — when you **can't** deliver a password to CI
-    (no `Secrets:write` token in-session; the mobile Actions UI hides inputs):
-    generates a one-time **temporary** password in-cluster, configures the sole
-    admin, and posts the temp login to #382; the human logs in once and Keycloak
-    forces `UPDATE_PASSWORD`. (A temporary password fails a direct-grant check —
-    that's expected; no `LOGIN_VERIFIED`.) **Never commit a password to git.**
-- **Self-heal (GitHub layer):** `pnpm keycloak:ensure` (`keycloak-ensure.yml`,
-  **cron `*/15`**) reconciles auth to the last-working state — OOM-recovers
-  Keycloak (768Mi / `-Xmx512m`), fixes realm flags + the `cloudless-app` groups
-  mapper + admin group/membership, **and restores the Pi `cloudless` app's auth
-  wiring** (the `cloudless-app-auth` secret + `envFrom`) if it stops serving the
-  keycloak provider; posts to #382 only when it corrects drift or auth is broken.
-- **Self-heal (in-cluster layer):** `k8s/cluster-protection/keycloak-autoheal.yaml`
-  — a CronJob (`*/5`) + least-privilege RBAC in ns `keycloak` that runs the OOM
-  reconcile on the **cluster's own scheduler**, so it heals even when GitHub's
-  cron/CI or the tailnet is down (the gap that let the `*/15` cron stall). It
-  re-sizes the deploy to 768Mi + `-Xmx512m`, lifts the LimitRange ceiling, and
-  deletes OOM-stuck pods (only when the spec is already correct, so it never
-  masks a non-memory crash). Deploy/remediate with `keycloak-autoheal-deploy.yml`.
-- **Pi/k3s app auth (HA standby):** the `cloudless` deployment needs runtime env
-  `AUTH_SECRET` + `KEYCLOAK_ISSUER`(**realm `master`**, not the stale SSM value
-  `cloudless`) + `KEYCLOAK_CLIENT_ID`/`KEYCLOAK_CLIENT_SECRET` + **`AUTH_TRUST_HOST=true`**
-  + `AUTH_URL=https://cloudless.gr` — else next-auth returns `{}` (no AUTH_SECRET)
-  or a "server configuration"/`UntrustedHost` error. Wire it with
-  `pnpm keycloak:wire-pi` style (`scripts/wire-pi-keycloak.sh` → `wire-pi-keycloak.yml`):
-  pulls values from SSM `/cloudless/production/*`, pins realm to `master`, stores
-  them in `cloudless-app-auth`, adds `envFrom` (keeping `pi-standby-aws-creds`),
-  restarts. `NEXT_PUBLIC_KEYCLOAK_ISSUER` is build-time → the Pi login *page*
-  button still needs the `--build-arg` in `deploy-pi.yml`.
+Auth is **Cognito**, full-stop (PR #677, 2026-06-08). There is no Keycloak, no
+JVM heap, no realm config to maintain. App admin = membership in the Cognito
+group `admin`, surfaced via the `cognito:groups` claim and checked by
+`api-auth.ts` `requireAdmin`. Manage users in the Cognito User Pool console.
+The `[...nextauth]` route uses the Cognito provider; `NEXT_PUBLIC_COGNITO_*`
+client IDs are baked at build time.
+
 - **CloudWatch `SERVERLESS-APP_MAIN-Errors`** (custom metric
   `CloudlessApp/ServerlessErrors`) is a **CloudWatch Logs metric filter** on the
-  Lambda log group — NOT Sentry (Sentry had 0). It counts next-auth
+  Lambda log group — NOT Sentry. It counts next-auth
   `[auth][error] Configuration` lines, which fire on a bare **GET** to
-  `/api/auth/signin/keycloak` (real login POSTs and is fine). The 2026-06-01
-  burst was the Keycloak outage (now fixed) + diagnostic GET probes. Threshold
+  `/api/auth/signin/<provider>` (real login POSTs and is fine). Threshold
   is 1 error / 5 min (very noisy). The alarm/filter are not in this repo.
 
 ## Deployment to Pi

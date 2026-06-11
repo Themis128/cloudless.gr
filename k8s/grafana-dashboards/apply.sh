@@ -10,7 +10,6 @@
 # Requires:
 #   GRAFANA_URL (default http://grafana.cloudless.gr)
 #   GRAFANA_API_TOKEN (from SSM: /cloudless/production/GRAFANA_API_TOKEN)
-#                     or fall back to admin login from KEYCLOAK_ADMIN_PASSWORD
 #
 # Idempotent — re-running this updates dashboards in place via uid.
 
@@ -56,7 +55,7 @@ echo ""
 echo "── Step 2/3: Delete dashboards that reference dropped metrics ──"
 # Metrics that survive Prometheus slim: node_*, kube_*, kubelet_*, apiserver_*,
 # coredns_*, prometheus_*, up, scrape_*. Everything else is orphaned.
-ORPHAN_PATTERNS='loki_|grafana_|n8n_|keycloak_|traefik_|duckdb_|metabase_|cloudless_app_|oncall_|home_assistant_|mosquitto_|alert_api_'
+ORPHAN_PATTERNS='loki_|grafana_|n8n_|traefik_|duckdb_|metabase_|cloudless_app_|oncall_|home_assistant_|mosquitto_|alert_api_'
 
 while IFS=$'\t' read -r uid title; do
   # Skip our own new dashboards (we'll create them in step 3)
