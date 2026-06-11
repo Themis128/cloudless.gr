@@ -107,6 +107,7 @@ jobs:
           SENTRY_ORG: baltzakisthemiscom
           SENTRY_PROJECT: cloudless-gr
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          # Cloudflare Workers AI — consumed by /api/admin/ai/generate at runtime
           CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=3072
