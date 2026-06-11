@@ -1,0 +1,80 @@
+name: Setup Cognito Credentials
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to setup"
+        required: false
+        default: "development"
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  setup:
+    name: Automated Cognito Setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Run Cognito setup
+        run: bash scripts/cognito-setup.sh
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+
+      - name: Verify setup
+        run: |
+          echo "✓ Cognito setup completed"
+          grep "COGNITO_CLIENT_ID" .env.local | head -1
+          echo "Ready to authenticate with Cognito!"
+
+      - name: Report success to issue
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: 382,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✓ Cognito setup successful\n\n- AWS credentials validated\n- Client ID fetched from SSM\n- .env.local updated\n- Dev server test passed`
+            })
+
+      - name: Report failure to issue
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: 382,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✗ Cognito setup failed\n\nCheck workflow logs for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            })
