@@ -12,6 +12,7 @@ use the official Node SDK — it talks REST + GAQL directly so it stays Lambda-f
 and avoids the protobuf footprint.
 
 **Implementation:**
+
 - `src/lib/campaigns/google-ads.ts` — REST + GAQL client
 - `scripts/google-ads-setup.ts` — first-run OAuth/customer-id wiring
 - `src/app/api/admin/campaigns/google/route.ts` — admin route
@@ -66,6 +67,7 @@ POST /v17/customers/{customerId}/googleAds:search
 ### Common queries
 
 **List active campaigns + budget:**
+
 ```sql
 SELECT campaign.id, campaign.name, campaign.status,
        campaign.advertising_channel_type,
@@ -78,6 +80,7 @@ LIMIT 20
 ```
 
 **Account-level metrics over a date range:**
+
 ```sql
 SELECT metrics.impressions, metrics.clicks,
        metrics.cost_micros, metrics.conversions, metrics.ctr
@@ -86,6 +89,7 @@ WHERE segments.date BETWEEN '2026-04-01' AND '2026-04-30'
 ```
 
 **Keyword performance:**
+
 ```sql
 SELECT ad_group_criterion.keyword.text,
        ad_group_criterion.keyword.match_type,
@@ -95,6 +99,7 @@ WHERE segments.date DURING LAST_30_DAYS
 ```
 
 **Search terms (intent mining):**
+
 ```sql
 SELECT search_term_view.search_term,
        metrics.impressions, metrics.clicks, metrics.cost_micros
@@ -130,6 +135,7 @@ POST /v17/customers/{customerId}/adGroupAds:mutate
 Each takes `{ operations: [{ create | update | remove: { ... } }] }`.
 
 **Create flow for a search campaign** (3 calls, in order):
+
 1. `campaignBudgets:mutate` — create. Get the resource_name.
 2. `campaigns:mutate` — create with that budget resource_name.
 3. `adGroups:mutate` → `adGroupAds:mutate` for ads.

@@ -99,6 +99,7 @@ function weeksRange(weeks: number) {
 ## Common Query Bodies
 
 ### Site-wide totals (no breakdown)
+
 ```json
 {
   "startDate": "2026-03-16",
@@ -109,6 +110,7 @@ function weeksRange(weeks: number) {
 ```
 
 ### Top keywords by clicks
+
 ```json
 {
   "startDate": "2026-03-16",
@@ -120,6 +122,7 @@ function weeksRange(weeks: number) {
 ```
 
 ### Top pages by clicks
+
 ```json
 {
   "startDate": "2026-03-16",
@@ -131,6 +134,7 @@ function weeksRange(weeks: number) {
 ```
 
 ### Daily history (date dimension)
+
 ```json
 {
   "startDate": "2026-01-13",
@@ -141,6 +145,7 @@ function weeksRange(weeks: number) {
 ```
 
 ### By country
+
 ```json
 {
   "startDate": "2026-03-16",
@@ -152,6 +157,7 @@ function weeksRange(weeks: number) {
 ```
 
 ### By device
+
 ```json
 {
   "startDate": "2026-03-16",
@@ -162,6 +168,7 @@ function weeksRange(weeks: number) {
 ```
 
 ### Keyword + page combo (which keywords drive which pages)
+
 ```json
 {
   "startDate": "2026-03-16",
@@ -177,6 +184,7 @@ function weeksRange(weeks: number) {
 ## Response Row Shape
 
 GSC always returns rows in this shape:
+
 ```typescript
 interface GscRow {
   keys: string[];        // dimension values in the same order as requested dimensions
@@ -188,6 +196,7 @@ interface GscRow {
 ```
 
 Example for `dimensions: ["query", "page"]`:
+
 ```json
 {
   "keys": ["cloud computing", "https://cloudless.gr/blog/cloud-101"],

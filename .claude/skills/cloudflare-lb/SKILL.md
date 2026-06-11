@@ -89,6 +89,7 @@ Alternatively, run the `/cloudflare-lb` slash command which handles steps 1 and 
 ### 3. Verify result
 
 Read latest comment on issue #382. Healthy output:
+
 ```
 pool cl-aws-cloudless.gr: HEALTHY
 pool cl-pi-cloudless.gr:  HEALTHY
@@ -106,6 +107,7 @@ dispatch `store-cloudflare-token.yml` with the token.
 ### Pool is UNHEALTHY
 
 Check that both health endpoints return HTTP 200:
+
 - `curl -o /dev/null -w '%{http_code}' https://cloudless.gr/api/health`
 - `curl -o /dev/null -w '%{http_code}' https://pi-origin.cloudless.gr/api/health`
 
@@ -137,6 +139,7 @@ updated in place.
 ## Manual failover test
 
 To force traffic to the Pi standby for testing:
+
 1. Cloudflare dashboard → cloudless.gr → Traffic → Load Balancing → edit the LB
 2. Temporarily move `cl-aws-cloudless.gr` pool to "disabled" — all traffic routes to Pi
 3. Re-enable to restore

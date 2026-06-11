@@ -36,6 +36,7 @@ Output format (raw markdown, ready to paste):
 ```
 
 Hard rules:
+
 - Don't fabricate a feature from a commit message you don't understand. If a commit's intent is unclear, drop it or ask the user.
 - Don't credit Co-Authored-By trailers as separate entries.
 - Don't include reverted commits.

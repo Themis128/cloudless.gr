@@ -166,5 +166,6 @@ This project enforces cryptography at two layers:
   - Lambda environment and temporary storage are encrypted at rest by AWS-managed controls.
 
 Operational recommendation:
+
 - Keep all new secrets under the existing SSM prefix and store them as SecureString.
 - Do not add plaintext secrets to repository files or non-encrypted environment variables.

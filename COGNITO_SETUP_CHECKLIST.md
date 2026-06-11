@@ -3,6 +3,7 @@
 ## ✅ Completed
 
 ### Core Automation
+
 - [x] `scripts/cognito-setup.sh` — Main bash script (338 lines)
   - [x] AWS CLI validation
   - [x] AWS credential checking
@@ -14,6 +15,7 @@
   - [x] Error handling
 
 ### Documentation
+
 - [x] `docs/COGNITO_SETUP.md` — User guide (comprehensive)
 - [x] `docs/COGNITO_AUTOMATION.md` — Architecture & overview
 - [x] `COGNITO_SETUP_SUMMARY.md` — Executive summary
@@ -21,6 +23,7 @@
 - [x] `.claude/skills/cognito-setup/index.md` — Skill docs
 
 ### Tools & Integrations
+
 - [x] `tools/cognito-setup-mcp/src/index.ts` — MCP server (5 tools)
 - [x] `tools/cognito-setup-mcp/package.json` — Dependencies
 - [x] `.claude/skills/cognito-setup/index.sh` — Skill wrapper
@@ -28,12 +31,14 @@
 - [x] `package.json` — pnpm aliases (3 new commands)
 
 ### Flags & Options
+
 - [x] `--dry-run` — Preview without changes
 - [x] `--skip-verify` — Skip dev server test
 - [x] `--help` — Usage information
 - [x] Environment variable overrides
 
 ### Error Handling
+
 - [x] AWS CLI validation
 - [x] Credential validation
 - [x] SSO fallback
@@ -44,6 +49,7 @@
 - [x] Recovery suggestions
 
 ### Safety Features
+
 - [x] Idempotent design
 - [x] Automatic backups
 - [x] Read-only backup files (chmod 600)
@@ -57,16 +63,19 @@ All components are production-ready and tested.
 ### To Start Using
 
 1. Get valid AWS credentials:
+
    ```bash
    aws sso login --sso-session cloudless
    ```
 
 2. Run the setup:
+
    ```bash
    pnpm cognito:setup
    ```
 
 3. Verify it works:
+
    ```bash
    pnpm dev
    # Visit http://localhost:4000/en
@@ -116,6 +125,7 @@ Then use `/cognito-setup` in Claude Code (or call MCP tools directly).
 ## 🎯 Success Criteria
 
 All met:
+
 - [x] Fully automated (no manual edits needed)
 - [x] Multiple interfaces (CLI, skill, MCP, GH Actions)
 - [x] Comprehensive documentation

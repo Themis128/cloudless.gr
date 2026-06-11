@@ -24,6 +24,7 @@ Base URL: `https://api.notion.com/v1`
 ## Core Endpoints
 
 ### Create a Database
+
 **POST** `/v1/databases`
 
 Creates a new database as a child of an existing page. You define the schema via `properties`.
@@ -53,16 +54,19 @@ Creates a new database as a child of an existing page. You define the schema via
 ```
 
 ### Retrieve a Database
+
 **GET** `/v1/databases/{database_id}`
 
 Returns the database object with its schema (property definitions), title, and metadata.
 
 ### Update a Database
+
 **PATCH** `/v1/databases/{database_id}`
 
 Modify title, description, or add/rename properties. You cannot delete properties via the API — only add new ones or update existing ones.
 
 ### Query a Database
+
 **POST** `/v1/databases/{database_id}/query`
 
 The most-used endpoint. Returns pages matching your filters, sorted as specified, with cursor-based pagination.
@@ -170,21 +174,25 @@ async function queryAll(databaseId: string, filter?: object) {
 ## Common Patterns
 
 **Extract plain text from a rich_text property:**
+
 ```typescript
 const text = page.properties.Description.rich_text.map(t => t.plain_text).join("");
 ```
 
 **Extract select value:**
+
 ```typescript
 const status = page.properties.Status.select?.name ?? "";
 ```
 
 **Extract multi-select values:**
+
 ```typescript
 const tags = page.properties.Tags.multi_select.map(t => t.name);
 ```
 
 **Extract date:**
+
 ```typescript
 const date = page.properties["Due Date"].date?.start ?? "";
 ```

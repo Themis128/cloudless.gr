@@ -47,32 +47,38 @@ The current visual language (deep void background, hard neon glow, scanlines, gl
 ## New v2 tokens
 
 ### Surfaces
+
 - `--surface-canvas` — page background (`#fcfcfd` / `#0b0f15`)
 - `--surface-subtle` — section alt background (`#f4f6f9` / `#121823`)
 - `--surface-raised` — card / panel (`#ffffff` / `#1a2230`)
 - `--surface-glass` — sticky nav / hero cards (`rgb(255 255 255 / 0.7)` blur 20 / `rgb(11 15 21 / 0.7)` blur 20)
 
 ### Borders
+
 - `--border-subtle` — dividers, hairlines (`#dde3ec` / `#27313f`)
 - `--border-strong` — input borders, card edges in hover (`#b6c2d1` / `#3d4a5c`)
 
 ### Text
+
 - `--ink-primary` — H1/H2/key text (`#0f1822` / `#e6edf3`)
 - `--ink-body` — paragraph (`#475467` / `#9aa7b8`)
 - `--ink-muted` — captions (`#7a8aa0` / `#697587`)
 
 ### Accent
+
 - `--accent` — single brand accent (`#0e9aab` / `#22d3e6`)
 - `--accent-hover` — interactive hover state (`#0c8696` / `#5be4f0`)
 - `--accent-soft` — ghost CTA fill, badges (`#e0f2f5` / `#0e3a40`)
 
 ### Semantic
+
 - `--success` (`#0a8a52` / `#1fa56e`)
 - `--warning` (`#b56e00` / `#e09530`)
 - `--danger` (`#c0392b` / `#e85f4d`)
 - `--info` — same as accent
 
 ### Radii
+
 - `--radius-sm` 6px (badges, small inputs)
 - `--radius-md` 10px (buttons, inputs)
 - `--radius-lg` 14px (cards)
@@ -80,18 +86,21 @@ The current visual language (deep void background, hard neon glow, scanlines, gl
 - `--radius-pill` 999px
 
 ### Shadows
+
 - `--shadow-sm` — 1px hairline lift, used on inputs `0 1px 2px rgb(15 24 34 / 0.04)`
 - `--shadow-md` — card resting state `0 4px 12px rgb(15 24 34 / 0.06)`
 - `--shadow-lg` — card hover / hero panel `0 12px 32px rgb(15 24 34 / 0.08)`
 - Dark mode shadows are nearly invisible by design — depth comes from `--surface-raised` contrast, not shadow.
 
 ### Motion
+
 - `--motion-fast` 120ms (hover, focus)
 - `--motion-base` 200ms (default ease-out)
 - `--motion-slow` 360ms (reveal-on-scroll)
 - All transitions cubic-bezier `cubic-bezier(0.4, 0, 0.2, 1)` unless explicitly varied.
 
 ### Type scale
+
 - `--type-display` 56px / 64px line-height (hero h1 only)
 - `--type-h1` 44px / 52px
 - `--type-h2` 32px / 40px
@@ -139,7 +148,7 @@ themeForRoute(pathname)   (route default)
 | Surface | Component | Variant | Notes |
 |---|---|---|---|
 | Desktop nav (>= `lg` breakpoint) | `<ThemeSwitcher />` | Popover trigger between `<CartButton />` and `<LocaleSwitcher />` | Sun / moon / system icon shows current selection. |
-| Mobile menu (<` lg` breakpoint) | `<ThemeSwitcherInline />` | Three radio buttons in their own bordered row, above the Language section | Inline because the mobile menu is inside an `overflow-y-auto` container that would clip an absolute-positioned popover. |
+| Mobile menu (<`lg` breakpoint) | `<ThemeSwitcherInline />` | Three radio buttons in their own bordered row, above the Language section | Inline because the mobile menu is inside an `overflow-y-auto` container that would clip an absolute-positioned popover. |
 | Dashboard settings | `/dashboard/settings` form | Buttons that call `writeStoredPref(value)` immediately (live preview) and update local form state | Save still flushes everything (theme + language + email prefs) to the server via `updatePreferences`. The button click no longer waits for Save to apply the theme — it flows through the same localStorage + custom-event channel as the navbar. |
 
 Both navbar variants render `null` on `/admin/*` paths.
@@ -164,7 +173,7 @@ When a click happens, the switcher:
 | `src/components/ThemeProvider.tsx` | `themeForRoute()` mapping (route default). |
 | `src/components/Navbar.tsx` | Mounts both switcher variants. |
 | `src/app/[locale]/dashboard/settings/page.tsx` | Calls `writeStoredPref` on each theme button click for live preview; `updatePreferences` still runs on Save for the rest of the form. |
-| `src/locales/{en,el,fr,de}.json` | `common.theme`, `common.themeSystem|Light|Dark`. |
+| `src/locales/{en,el,fr,de}.json` | `common.theme`, `common.themeSystem\|Light\|Dark`. |
 | `__tests__/theme-switcher.test.tsx` | 8 tests — admin hide on both variants, popover persistence, custom event dispatch, authenticated `updatePreferences`, user-pref seeding, localStorage-wins-over-user-pref ordering. |
 | `__tests__/theme-preference-sync.test.tsx` | 5 tests — original 3 (route default, user pref, admin lock) plus 2 new (anonymous localStorage override, auth-pref-wins-over-localStorage). |
 | `__tests__/dashboard-settings-live-preview.test.tsx` | 3 tests — click writes localStorage, click dispatches the custom event, Save is still required for `updatePreferences`. |

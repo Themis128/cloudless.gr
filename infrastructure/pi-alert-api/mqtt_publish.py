@@ -37,14 +37,14 @@ MQTT_TOPIC_EVENTS = "homelab/alerts/events"
 # Severity ordering worst-first — matches Notion spec
 _SEVERITY_RANK: dict[str, int] = {
     "critical": 8,
-    "high":     7,
-    "error":    6,
-    "warning":  5,
-    "medium":   4,
-    "low":      3,
-    "info":     2,
-    "debug":    1,
-    "ok":       0,
+    "high": 7,
+    "error": 6,
+    "warning": 5,
+    "medium": 4,
+    "low": 3,
+    "info": 2,
+    "debug": 1,
+    "ok": 0,
 }
 
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="mqtt")
@@ -92,11 +92,13 @@ async def publish_alert_event(alert: dict, active_alerts: list[dict]) -> None:
     severity = _worst_severity(active_alerts)
     count = len(active_alerts)
 
-    status_payload = json.dumps({
-        "severity": severity,
-        "count": count,
-        "timestamp": int(time.time()),
-    })
+    status_payload = json.dumps(
+        {
+            "severity": severity,
+            "count": count,
+            "timestamp": int(time.time()),
+        }
+    )
     event_payload = json.dumps(alert, default=str)
 
     msgs = [
@@ -126,11 +128,13 @@ async def publish_resolved(active_alerts: list[dict]) -> None:
     severity = _worst_severity(active_alerts)
     count = len(active_alerts)
 
-    payload = json.dumps({
-        "severity": severity,
-        "count": count,
-        "timestamp": int(time.time()),
-    })
+    payload = json.dumps(
+        {
+            "severity": severity,
+            "count": count,
+            "timestamp": int(time.time()),
+        }
+    )
     msgs = [
         {
             "topic": MQTT_TOPIC_STATUS,

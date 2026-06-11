@@ -17,6 +17,7 @@ One Campaign can contain many Ad Sets, each with its own audience/placements/bud
 ### Flat structure for cloudless.gr (small accounts)
 
 For a solo/small business under €1000/mo spend:
+
 - 1 Campaign per objective (e.g., one for "Leads", one for "Traffic")
 - 1-2 Ad Sets per Campaign (e.g., one broad, one retargeting)
 - 2-3 Ads per Ad Set (different creative variants)
@@ -76,6 +77,7 @@ Build these audiences BEFORE launching the first campaign — you'll use them as
 ### Detailed targeting (interests/behaviors/demographics)
 
 In the Ad Set → Audience → Detailed targeting field, you can add/exclude:
+
 - Interests (e.g., "Web development", "Entrepreneurship", "Small business")
 - Behaviors (e.g., "Small business owners", "Frequent travelers")
 - Demographics (e.g., job titles — limited post-2022 due to EU DMA changes)
@@ -131,12 +133,14 @@ Start with **Highest volume** (no cap). Only switch to Cost per result goal afte
 ### Copy structure (primary text)
 
 Best-performing pattern for cloudless.gr:
+
 1. **Hook** (first line, ≤125 chars so it's above "See More")
 2. **Value prop** (what problem you solve)
 3. **Social proof or specificity**
 4. **CTA** (explicit action)
 
 Example:
+
 ```
 Your Next.js deploy shouldn't break at 2 AM.
 
@@ -183,6 +187,7 @@ Before clicking **Publish** on your first campaign:
 ## 7. Ad review
 
 After publish, ads enter **In Review** status. Typical timing:
+
 - Most ads approve in 15 min – 24h
 - Flagged ads can take 48–72h for secondary review
 - Rejected ads: read the disapproval reason, edit, resubmit (counts as a new review cycle)
@@ -265,6 +270,7 @@ For cloudless.gr, the MCP path is already wired — Windsor + Claude gives ad-ho
 Full policies: `https://www.facebook.com/policies/ads/`
 
 Most-hit gotchas for cloudless.gr's likely verticals:
+
 - Can't use Meta's trademarks in ad text ("Facebook", "Instagram", "Meta") except factually
 - Can't promise specific results ("Guaranteed 10x ROI")
 - Can't use before/after imagery for anything body/health related

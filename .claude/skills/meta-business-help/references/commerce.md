@@ -5,12 +5,14 @@ Meta's Commerce surface for selling on Facebook and Instagram. This doc is **for
 ## 1. When Commerce makes sense
 
 Commerce is a fit when you have:
+
 - A **physical product catalog** (inventory with SKUs, prices, variants)
 - A **digital product catalog** with stable SKUs (courses, templates, downloads)
 - Intent to run **shopping-objective ads** (Advantage+ Shopping, Sales objective with Catalog)
 - A checkout flow — either on your own site OR Meta's native checkout (US only at time of writing)
 
 Commerce is NOT a fit when:
+
 - You sell services only (consulting hours, retainers) — use Lead Gen campaigns instead
 - Catalog changes daily or SKUs are unstable
 - You want to experiment with "just posting product photos" — plain posts work fine without Commerce infrastructure
@@ -28,6 +30,7 @@ Commerce is NOT a fit when:
 ## 3. Creating a Catalog
 
 Direct URL:
+
 ```
 https://business.facebook.com/commerce/catalogs/create?business_id=1558125105019725
 ```
@@ -45,6 +48,7 @@ https://business.facebook.com/commerce/catalogs/create?business_id=1558125105019
 ### Required product fields
 
 For a basic e-commerce catalog:
+
 - `id` — stable unique SKU
 - `title`
 - `description`
@@ -68,6 +72,7 @@ Feed URL must be public (or behind Basic Auth credentials you share with Meta). 
 ## 4. Setting up a Shop
 
 Requires:
+
 - Catalog attached
 - FB Page (for FB Shop) or IG Business account (for IG Shop)
 - Business verified on Meta
@@ -96,6 +101,7 @@ Once approved, the Shop appears as a "Shop" tab on the FB Page and as a shop bag
 ### In organic posts (FB Page + IG)
 
 During compose in Business Suite:
+
 1. Upload the image/video as normal
 2. Look for **Tag products** option
 3. Tap the image → select point → type product name → pick from Catalog
@@ -136,6 +142,7 @@ Creative: Meta auto-generates carousel + single-image variants from the Catalog.
 Full: `https://www.facebook.com/policies/commerce/`
 
 Common rejections:
+
 - **Prohibited products** — animals, tobacco, alcohol, weapons, drugs/supplements (most), adult products, medical devices, recalled items, event tickets (restricted)
 - **Digital products** with unclear fulfillment
 - **Service listings** — Commerce is for products; services should be in-person bookings or site lead gen
@@ -145,6 +152,7 @@ Common rejections:
 ## 8. Instagram Shopping specifics
 
 Beyond a standard Shop, IG offers:
+
 - **Shopping tags in Reels** — mentioned above
 - **Shopping from Creators** — if you have creator partners, they can tag YOUR products in their own content
 - **Live Shopping** — products shown during IG Live broadcasts
@@ -158,6 +166,7 @@ EU availability of full IG Shopping features is uneven as of 2026. Check eligibi
 ## 9. Meta Pay
 
 If using Meta's native checkout (US only today):
+
 - Users pay with Meta Pay (stored payment profile) inside FB/IG
 - Meta handles payment processing (takes a selling fee, currently ~5% per transaction + $0.40)
 - Funds payout to your bank on a rolling schedule

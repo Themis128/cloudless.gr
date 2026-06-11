@@ -1,10 +1,10 @@
+import base64
+import http.client
+import logging
 import os
 import ssl
 import time
-import http.client
-import base64
-import logging
-import socket
+
 import boto3
 
 log = logging.getLogger()
@@ -50,8 +50,11 @@ def lambda_handler(event, _ctx):
 
     method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
 
-    headers = {k: v for k, v in (event.get("headers") or {}).items()
-               if k.lower() not in ("host", "content-length", "connection")}
+    headers = {
+        k: v
+        for k, v in (event.get("headers") or {}).items()
+        if k.lower() not in ("host", "content-length", "connection")
+    }
     headers["Host"] = HOST_HEADER
     headers["X-Forwarded-Host"] = (event.get("headers") or {}).get("host", HOST_HEADER)
 
@@ -94,15 +97,23 @@ def lambda_handler(event, _ctx):
 
         if is_text:
             try:
-                return {"statusCode": resp.status, "headers": out_headers,
-                        "body": raw.decode("utf-8"), "isBase64Encoded": False}
+                return {
+                    "statusCode": resp.status,
+                    "headers": out_headers,
+                    "body": raw.decode("utf-8"),
+                    "isBase64Encoded": False,
+                }
             except UnicodeDecodeError:
                 pass
 
-        return {"statusCode": resp.status, "headers": out_headers,
-                "body": base64.b64encode(raw).decode("ascii"), "isBase64Encoded": True}
+        return {
+            "statusCode": resp.status,
+            "headers": out_headers,
+            "body": base64.b64encode(raw).decode("ascii"),
+            "isBase64Encoded": True,
+        }
 
-    except (socket.timeout, TimeoutError):
+    except TimeoutError:
         log.exception("upstream timeout via Funnel %s", funnel_host)
         return {"statusCode": 504, "body": "upstream timeout"}
     except Exception as e:

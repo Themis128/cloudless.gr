@@ -25,12 +25,14 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | 8 | `/auth/login` → "Continue with Keycloak" → Keycloak login → `/api/auth/callback/keycloak` → `/auth/post-login` → `/dashboard` | `login/page.tsx:64`, `post-login/page.tsx` |
 
 ### ✅ Wins
+
 - Real Keycloak user creation via Admin API, rate limiting, email validation, duplicate handling (`409` → friendly message).
 - Correct locale-aware navigation (`@/i18n/navigation`) on signup/login/forgot pages.
 - Post-login admin-vs-dashboard routing resolved **server-side** (no flash) in `post-login/page.tsx`.
 - Refresh-token rotation + RP-initiated federated logout in `src/lib/auth.ts`.
 
 ### ❌ Failures / risks
+
 - **Email verification is a hard SMTP dependency with no escape hatch.** `send-verify-email` is best-effort and swallows errors (`register/route.ts:116-126`), **but** the `VERIFY_EMAIL` required action still blocks login. If SES/SMTP isn't configured in Keycloak, the new user is created, never gets the email, and **can never log in** — with no UI to recover. (Known fragile area — see the `ses-email-setup` skill.)
 - **No "resend verification email"** anywhere in the UI. The check-email screen only links to `/auth/login`.
 - **Forgot-password link is unreachable in production.** The "Forgot Password?" link is rendered **only** in the non-Keycloak branch of the login form (`login/page.tsx:207-214`). When `NEXT_PUBLIC_KEYCLOAK_ISSUER` is set (production), the login page shows just the "Continue with Keycloak" button — so `/auth/forgot-password` exists and works but has **no link pointing to it**.
@@ -53,12 +55,14 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | 7 | `checkout.session.completed` webhook: email, team notify, Slack, HubSpot deal, persist | `api/webhooks/stripe/route.ts` |
 
 ### ✅ Wins
+
 - Catalog renders with **zero** Stripe dependency; client (`store-products-client.ts`) and server (`store-products.ts`) `defaultProducts` IDs verified **in sync** → no "unknown product" on checkout.
 - Checkout route is hardened: origin allowlist (anti open-redirect), quantity clamp 1–99, idempotency-key support, subscription-vs-payment mode, EU+ shipping for physical goods, `503` when Stripe unconfigured.
 - Webhook: signature verification, duplicate suppression, failure marking, Sentry, graceful HubSpot/Slack degradation.
 - Purchases read **live from Stripe by email** — no separate order DB to drift.
 
 ### ❌ Failures / risks
+
 - **Cart checkout never sends the auth token.** `CartSlideOver.handleCheckout` (`CartSlideOver.tsx:20`) uses plain `fetch` with no `Authorization` header, so `authUser` in the checkout route is `null` → `customer_email` is **not** prefilled and `userId` is **not** put in metadata. The purchase links to the account **only if** the user happens to type their exact account email at Stripe. Different email → the order is invisible in their dashboard. Fragile coupling.
 - **Silent checkout failure.** `handleCheckout` does `if (data.url) …`. On any non-`url` response (e.g. `503` Stripe-not-configured, `400`) it does nothing — the spinner resets and **no error is shown**; the `catch` only fires on a network error. A user hitting an unconfigured/erroring Stripe sees the button do nothing.
 - **Store-grid "Add to Cart" gives no feedback.** `ProductCard` calls only `addItem` (`StoreGrid.tsx:101`) and `ADD_ITEM` does not open the drawer — only the badge count changes. The product **detail** page button does open the cart (`AddToCartButton.tsx`). Inconsistent; grid users may think nothing happened.
@@ -76,7 +80,7 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | Action | Status | Notes |
 |--------|--------|-------|
 | View dashboard overview + stats | ✅ Works | aggregates purchases + consultations (`dashboard/page.tsx`) |
-| View purchases & subscriptions | ✅ Works | live from Stripe by email (`api/user/purchases`) — *email-linkage caveat from Flow 2 applies* |
+| View purchases & subscriptions | ✅ Works | live from Stripe by email (`api/user/purchases`) — _email-linkage caveat from Flow 2 applies_ |
 | View consultations | ✅ Works | Google Calendar by email; unconfigured → graceful empty state (`api/user/consultations`) |
 | Update profile (name/company/phone) | ⚠️ Write-only | `POST /api/user/profile` → Keycloak Account API succeeds, but **nothing reads it back** |
 | Change settings (theme/language/notifications) | ⚠️ Partial | theme persists (localStorage); language + notification prefs **don't survive reload** |
@@ -86,10 +90,12 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | Waiting room `/portal/waiting` | ✅ Works | post-service-purchase status, polls every 30s |
 
 ### ✅ Wins
+
 - All dashboard data loads through authenticated same-origin routes; `requireAuth` supports both the next-auth session cookie **and** a Bearer token with full JWKS signature verification (`api-auth.ts`).
 - Consistent graceful empty states — no hard crashes when Stripe/Calendar/Notion are unconfigured.
 
 ### ❌ Failures
+
 - **Profile & preferences are write-only.** `AuthContext.checkAuth` only hydrates `name`/`email` from the session (`AuthContext.tsx:117-124`); there is **no GET** that reads `company`, `phone`, or `preferences` back from Keycloak. So after saving, the Profile fields show blank again on reload and Settings toggles reset to defaults — the data persisted, but the UI makes it look like the save failed. **This is the biggest functional papercut.**
 - **"Preferred Language" in Settings does nothing to the site locale** (locale is driven by the URL/Navbar, not this preference).
 - **Dashboard auth gate is client-side only** — the page shell can render briefly before redirect. No data leak (APIs are guarded server-side), but a visible flash.
@@ -105,6 +111,7 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | Registered-user actions | Reads work well; **writes (profile/preferences) don't read back**, so saves appear to not stick. |
 
 ### Highest-impact fixes (suggested order)
+
 1. Guarantee Keycloak SMTP **or** add a "resend verification" + clear messaging (unblocks all new signups).
 2. Add a `GET /api/user/profile` and hydrate `company`/`phone`/`preferences` in `AuthContext` (makes saves visibly stick).
 3. Send the Bearer token from `CartSlideOver.handleCheckout`, and surface checkout errors instead of failing silently.

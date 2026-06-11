@@ -15,6 +15,7 @@ Each Edit returned a success message. Each file looked correct via `Read`. `git 
 ## What works and what doesn't (summary table)
 
 See SKILL.md table. Short version:
+
 - `Write` new files: always safe.
 - `Edit` existing files: 0% success rate, ~100% corruption.
 - `git checkout HEAD -- <file>` from sandbox: blocked by `.git/index.lock` perm-denied.

@@ -22,6 +22,7 @@ Provision all required Slack channels for cloudless.gr and ensure the bot is a m
    - The token must have scopes: `channels:manage`, `channels:read`, `channels:write.invites`, `groups:write`, `groups:read`.
 
 3. Run `ensureAllChannels()` by executing a small Node script:
+
    ```bash
    node --input-type=module << 'EOF'
    import { ensureAllChannels } from "./src/lib/slack-admin.js";
@@ -32,7 +33,9 @@ Provision all required Slack channels for cloudless.gr and ensure the bot is a m
    }
    EOF
    ```
+
    Or, if the project uses ts-node / tsx:
+
    ```bash
    npx tsx -e "
    import { ensureAllChannels } from './src/lib/slack-admin.js';

@@ -31,17 +31,21 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
 ## Components
 
 ### Subscriber capture and lifecycle
+
 - [src/app/api/subscribe/route.ts](../src/app/api/subscribe/route.ts) records the email in HubSpot via `setNewsletterStatus(email, "newsletter_signup")`, clears any stale SES suppression so a returning subscriber can be emailed again, then sends the branded welcome email and a real-time Slack ping to `#subscribers`.
 - [src/app/api/unsubscribe/route.ts](../src/app/api/unsubscribe/route.ts) (POST for the in-app form, GET for the one-click `List-Unsubscribe` link) atomically adds the address to the SES suppression list and flips the HubSpot contact to `lead_source = "newsletter_unsubscribed"`, removing it from the send audience.
 - [src/lib/hubspot.ts](../src/lib/hubspot.ts) — `setNewsletterStatus()` creates or updates a contact and sets the subscription state; `listNewsletterSubscribers()` returns every contact with `lead_source = "newsletter_signup"` (cursor-paginated search).
 
 ### Welcome email
+
 - [src/lib/email.ts](../src/lib/email.ts) — `sendSubscriberWelcome()` sends a branded dark-theme email from `Themis at Cloudless` with subject "Welcome to Cloudless — your first issue lands Monday". The email previews the three content categories (Cloud and Serverless, Analytics and AI Marketing, Company Updates and Offers), links to the blog archive, and includes a one-click `List-Unsubscribe` header (RFC 8058).
 
 ### Send endpoint
+
 - [src/app/api/newsletter/send/route.ts](../src/app/api/newsletter/send/route.ts) — `POST` authenticated with the `x-newsletter-secret` header against `NEWSLETTER_SEND_SECRET`. Accepts `{ subject, html, text }`, resolves the subscriber list from HubSpot, and delivers one email per recipient via `sendEmail()` (SES). Returns `{ sent, failed, total }`. The `%UNSUBSCRIBELINK%` token in the body is replaced per recipient with `/api/unsubscribe?email=...`, and a matching `List-Unsubscribe` header is added.
 
 ### CMS
+
 - Notion database **Blog** — fetched at runtime via [src/lib/notion-blog.ts](../src/lib/notion-blog.ts). 5-min ISR on `/blog` and `/blog/[slug]`.
 - Schema (workflow-relevant fields):
   - `Status` — select: Draft / Approved / Published. Editorial state machine.
@@ -52,11 +56,13 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
   - `Slug`, `Excerpt`, `Title`, `ReadTime`, `Author` — content fields.
 
 ### Cron scripts (self-contained: read env directly, no `src/lib/*` imports)
+
 - [scripts/generate-weekly-article.ts](../scripts/generate-weekly-article.ts) picks the least-recently-used category, calls Claude with a brand-voice system prompt plus the last 8 titles to avoid, parses the JSON response, inserts as a Notion Draft, Slack-pings the editor.
 - [scripts/publish-and-send-newsletter.ts](../scripts/publish-and-send-newsletter.ts) finds Approved rows, renders Notion blocks to HTML and plaintext (including a category-matched "This Week at Cloudless" service offer section), marks Published with `Date` and `PublishedAt`, hits the existing Notion webhook to revalidate ISR, then POSTs the rendered email to `/api/newsletter/send`, and Slack-confirms with the delivered/failed counts.
 - [scripts/weekly-subscriber-report.ts](../scripts/weekly-subscriber-report.ts) queries HubSpot for total active subscribers, new signups this week, and total unsubscribed contacts; posts a formatted Block Kit summary to Slack `#subscribers`; and inserts a timestamped row into a Notion "Newsletter Reports" database (auto-created on first run).
 
 ### Workflows
+
 - [.github/workflows/weekly-article-draft.yml](../.github/workflows/weekly-article-draft.yml) — `cron: "0 6 * * 1"` (Mondays 06:00 UTC, 08:00 Athens).
 - [.github/workflows/weekly-newsletter.yml](../.github/workflows/weekly-newsletter.yml) — `cron: "0 9 * * 1"` (Mondays 09:00 UTC, 11:00 Athens).
 - [.github/workflows/weekly-subscriber-report.yml](../.github/workflows/weekly-subscriber-report.yml) — `cron: "0 10 * * 1"` (Mondays 10:00 UTC, 12:00 Athens).
@@ -75,6 +81,7 @@ All commands need the env vars listed below.
 ## Required configuration
 
 ### SSM (production runtime, for the Next.js app)
+
 ```
 /cloudless/production/HUBSPOT_API_KEY        (already set)
 /cloudless/production/NEWSLETTER_SEND_SECRET (already set)
@@ -84,6 +91,7 @@ All commands need the env vars listed below.
 The `/api/newsletter/send` route reads all three from SSM at runtime. SES is reached with the Lambda execution role, so no extra credentials are required.
 
 ### GitHub Actions secrets (for the cron jobs)
+
 | Secret | Purpose |
 |---|---|
 | `ANTHROPIC_API_KEY` | Claude API for article generation |

@@ -77,6 +77,7 @@ Common AWS provider 5.x migrations:
 | `aws_db_proxy` `max_connections` | top-level | moved to `aws_db_proxy_default_target_group.connection_pool_config` |
 
 Validate locally:
+
 ```bash
 /tmp/terraform init -input=false
 /tmp/terraform validate -no-color

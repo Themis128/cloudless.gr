@@ -129,17 +129,22 @@ On each Pi host (`omv` = omv-main Pi 5, `omv-ha` = secondary):
    <https://github.com/Themis128/cloudless.gr/settings/actions/runners> →
    **New self-hosted runner** (or via CLI: `gh api -X POST repos/Themis128/cloudless.gr/actions/runners/registration-token --jq '.token'`).
 2. Run the bootstrap script (token expires in 1 hour, so do it inline):
+
    ```bash
    ./.github/scripts/register-build-runner.sh <REG_TOKEN> omv-build
    #                                                       omv-2-build
    ```
+
    The script handles download, config, systemd install, and start in one shot.
    For hosts without `gh` installed, rsync the binaries from omv-main first:
+
    ```bash
    # On omv-main:
    rsync -a --exclude '_work' --exclude '_diag' ~/actions-runner-build/ tbaltzakis@192.168.1.130:~/actions-runner-build/
    ```
+
 3. Verify all runners online:
+
    ```bash
    gh api repos/Themis128/cloudless.gr/actions/runners \
      --jq '.runners[] | {name, status, labels: [.labels[].name]}'

@@ -20,6 +20,7 @@ Workflow:
 Output: short verdict (variance / regression), per-route score table, and a 2–3 line "what to do next" — re-run, fix specific PR, raise budget, or escalate.
 
 Hard rules:
+
 - Don't change `lighthouse-budget.json` or workflow YAML on your own. Report and let the user decide.
 - Don't kick off a new Lighthouse run unprompted (it costs runner minutes).
 - Cap output at the score table + verdict + 3 next-step lines. The user reads this on a phone.

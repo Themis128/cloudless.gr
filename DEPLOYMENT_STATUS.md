@@ -1,7 +1,9 @@
 # Infrastructure Deployment Status — June 10, 2026
 
 ## ✅ READY TO DEPLOY
+
 All infrastructure code is complete, tested, and committed:
+
 - **Terraform IaC:** `infrastructure/terraform/lambda-optimization.tf` (400+ lines)
   - CloudFront distribution with Lambda@Edge
   - Lambda provisioned concurrency (10 instances)
@@ -27,19 +29,23 @@ All infrastructure code is complete, tested, and committed:
   - Monitoring and verification steps
 
 ## 🔴 CURRENT BLOCKER
+
 **Hashicorp's GPG key for AWS provider signature verification has expired.**
 
 This is preventing `terraform init` from downloading AWS providers in GitHub Actions CI environment.
 
 Error message:
+
 ```
 Error while installing hashicorp/aws v4.67.0: error checking signature: openpgp: key expired
 ```
 
 ### Root Cause
+
 Hashicorp rotated their provider signing key. During the transition period, old keys are no longer valid. This affects all users trying to download AWS providers through the Terraform registry.
 
 ### Status
+
 - This is a known issue affecting the Terraform community
 - Hashicorp typically resolves these within 24-48 hours
 - Check: https://github.com/hashicorp/terraform/issues
@@ -47,7 +53,9 @@ Hashicorp rotated their provider signing key. During the transition period, old 
 ## 🚀 HOW TO DEPLOY NOW
 
 ### Option A: Deploy Manually (FASTEST)
+
 If you have AWS credentials configured locally:
+
 ```bash
 cd infrastructure/terraform
 
@@ -68,6 +76,7 @@ terraform output cloudfront_domain_name
 ```
 
 Then proceed with other phases:
+
 ```bash
 # Phase 2: Lambda Concurrency
 terraform apply -target=aws_lambda_provisioned_concurrency_config.main_app
@@ -80,11 +89,13 @@ terraform apply -target=aws_db_proxy.main
 ```
 
 ### Option B: Wait for Hashicorp Fix
+
 - Once Hashicorp updates the signing key, the GitHub Actions workflow will work automatically
 - Estimated time: 24-48 hours
 - You can then trigger: `gh workflow run deploy-infrastructure.yml -f phase=cloudfront`
 
 ### Option C: Use Terraform Cloud
+
 - Upload the Terraform code to Terraform Cloud
 - Connect AWS credentials via OIDC
 - Run plans and applies through their UI (doesn't have signature verification issues)
@@ -102,6 +113,7 @@ terraform apply -target=aws_db_proxy.main
 | DB connections | 50+ | <10 | -80% |
 
 ## 💾 Files Committed
+
 - `infrastructure/terraform/lambda-optimization.tf` - Terraform IaC
 - `k8s/cloudless-app-optimized.yaml` - Kubernetes manifests
 - `.github/workflows/deploy-infrastructure.yml` - GitHub Actions workflow

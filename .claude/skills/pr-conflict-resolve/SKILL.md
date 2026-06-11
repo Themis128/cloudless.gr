@@ -109,6 +109,7 @@ If there are multiple commits in the PR and several stop with conflicts, resolve
 ## After pushing — check the PR
 
 After `git push --force-with-lease`, verify:
+
 1. GitHub shows the branch is now mergeable (no conflict warning).
 2. CI re-runs automatically on the new push.
 3. The PR diff still shows only the intended changes (no accidental regression from wrong conflict resolution).

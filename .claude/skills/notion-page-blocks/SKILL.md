@@ -10,6 +10,7 @@ This skill covers reading, creating, updating, and deleting page content (blocks
 ## Page Endpoints
 
 ### Create a Page
+
 **POST** `/v1/pages`
 
 A page can live under a database (as a record) or under another page (as a child page).
@@ -38,19 +39,23 @@ A page can live under a database (as a record) or under another page (as a child
 You can include up to 100 blocks in `children` on creation. For more, append after creation.
 
 ### Retrieve a Page
+
 **GET** `/v1/pages/{page_id}`
 
 Returns the page object with properties but NOT content blocks. To get content, query blocks.
 
 ### Update Page Properties
+
 **PATCH** `/v1/pages/{page_id}`
 
 ### Get Page as Markdown (API v2025+)
+
 **GET** `/v1/pages/{page_id}/markdown`
 
 Returns the full page content as markdown. A newer, simpler alternative to walking blocks.
 
 ### Update Page via Markdown (API v2025+)
+
 **PATCH** `/v1/pages/{page_id}/markdown` with `{ "markdown": "# New content\n\nParagraph here." }`
 
 ---
@@ -58,6 +63,7 @@ Returns the full page content as markdown. A newer, simpler alternative to walki
 ## Block Endpoints
 
 ### List Block Children (Read Page Content)
+
 **GET** `/v1/blocks/{block_id}/children?page_size=100`
 
 Returns a paginated list of child blocks. A page IS a block, so use the page ID as `block_id`.
@@ -67,6 +73,7 @@ Pagination: follow `next_cursor` while `has_more` is true.
 For nested blocks (toggles, lists with children), you must recursively fetch children of each block that has `has_children: true`.
 
 ### Append Block Children (Add Content)
+
 **PATCH** `/v1/blocks/{block_id}/children`
 
 ```json
@@ -86,9 +93,11 @@ For nested blocks (toggles, lists with children), you must recursively fetch chi
 Use `after` parameter to insert after a specific block: `?after=<block-id>`.
 
 ### Update a Block
+
 **PATCH** `/v1/blocks/{block_id}`
 
 Send the block type with updated content:
+
 ```json
 {
   "paragraph": {
@@ -98,6 +107,7 @@ Send the block type with updated content:
 ```
 
 ### Delete a Block
+
 **DELETE** `/v1/blocks/{block_id}`
 
 ---
@@ -154,6 +164,7 @@ Every text-containing block uses an array of rich text objects:
 **Color values**: `default`, `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red` — plus `*_background` variants (e.g., `blue_background`)
 
 ### Extracting Plain Text
+
 ```typescript
 const plainText = richTextArray.map(rt => rt.plain_text).join("");
 ```
@@ -250,6 +261,7 @@ function blocksToHtml(blocks: Block[]): string {
 ```
 
 ### Rich Text to HTML
+
 ```typescript
 function richTextToHtml(richText: RichTextItem[]): string {
   return richText.map(rt => {

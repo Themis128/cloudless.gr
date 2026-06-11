@@ -72,14 +72,17 @@ aws ssm put-parameter --name "/cloudless/production/ANTHROPIC_API_KEY" \
 ## Where to get the credentials
 
 ### ActiveCampaign
+
 Settings → Developer → API Access. The URL is your account subdomain (`https://ACCOUNT.api-us1.com`).
 
 ### Google Ads
+
 1. Sign in at ads.google.com
 2. Tools → API Center → Developer token (apply for Standard Access if not yet approved — takes 1-5 days)
 3. Customer ID is shown in the top-right of the Google Ads dashboard (format: `123-456-7890`)
 
 ### LinkedIn
+
 1. Create an app at linkedin.com/developers
 2. Request `r_ads`, `rw_ads` scopes
 3. Run the OAuth 2.0 authorization flow to get an access token
@@ -87,18 +90,21 @@ Settings → Developer → API Access. The URL is your account subdomain (`https
 5. Organization URN: your LinkedIn Company Page URL contains the numeric ID
 
 ### TikTok
+
 1. Register at business.tiktok.com → Developer
 2. Create an app and request Business API access
 3. Generate an access token via the OAuth flow
 4. Advertiser ID from TikTok Ads Manager → account settings
 
 ### X (Twitter)
+
 1. Apply at developer.twitter.com → Projects & Apps
 2. Enable "Read and Write" app permissions + Ads API access
 3. Generate Access Token and Secret from the app dashboard
 4. Ad Account ID from ads.twitter.com (format: `abc123def456`)
 
 ### Anthropic
+
 console.anthropic.com → API Keys → Create key. The AI assistant uses `claude-sonnet-4-6`.
 
 ---

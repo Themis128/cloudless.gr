@@ -94,6 +94,7 @@ All responses include `fetchedAt: ISO8601` and `source: "google-search-console"`
 Combined snapshot + top keywords in a single call. Use this as the main dashboard entry point.
 
 **Response:**
+
 ```json
 {
   "snapshot": { "clicks": 842, "impressions": 18500, "ctr": 4.55, "avgPosition": 12.7, "organicKeywords": 320 },
@@ -138,6 +139,7 @@ Query → page mapping: which search terms land on which pages. Useful for detec
 ### `GET /api/admin/analytics/search-intent`
 
 Keywords bucketed by inferred intent:
+
 - **brand** — contains "cloudless"
 - **product** — purchase-intent words (buy, price, order, store, shop…)
 - **informational** — knowledge-seeking (how, what, guide, tutorial…)
@@ -160,21 +162,25 @@ Cross-integration dashboard combining SEO (GSC), pipeline (HubSpot), email (Acti
 All GSC functions use a **28-day rolling window** (`dateRange()` helper). The window always ends today and starts 28 days ago.
 
 ### `SeoSnapshot`
+
 ```typescript
 { clicks: number; impressions: number; ctr: number; avgPosition: number; organicKeywords: number }
 ```
 
 ### `KeywordData` / `PageData`
+
 ```typescript
 { keyword/page: string; clicks: number; impressions: number; ctr: number; position: number }
 ```
 
 ### `PerformancePoint`
+
 ```typescript
 { date: string; clicks: number; impressions: number; ctr: number; avgPosition: number }
 ```
 
 ### `CtrOpportunity`
+
 ```typescript
 { keyword: string; clicks: number; impressions: number; ctr: number; position: number }
 // Only includes position 4–20, impressions > 10, CTR < 5%

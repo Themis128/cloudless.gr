@@ -64,6 +64,7 @@ ssh 192.168.1.128 'systemd-cgtop -m -n 1 --depth=3 | head -25'
 ```
 
 Look for:
+
 - Non-k8s processes ≥ 200 MiB RSS (especially in `user.slice`).
 - `kubepods.slice` ≥ 4.5 GiB total.
 - Anything in `tbaltzakis` shell sessions that isn't VSCode Server.
@@ -154,7 +155,7 @@ Permanent fixes live in this PR / branch:
   system-reserved tuning so the kernel doesn't get to swap-storm before pods
   start being evicted.
 - **`k8s/cluster-protection/limit-ranges.yaml`** — namespace-level LimitRange
-  + ResourceQuota so a single namespace can't take the box hostage.
+  - ResourceQuota so a single namespace can't take the box hostage.
 - **`k8s/cluster-protection/monitoring-resources.yaml`** — explicit
   `resources.limits` on every monitoring-stack pod, with Prometheus
   retention reduced from 7d/4 GB to 3d/2 GB.

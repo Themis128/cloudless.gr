@@ -70,6 +70,7 @@ Once you have the token, call `mcp__github__actions_run_trigger` with:
 ```
 
 The workflow:
+
 - Masks the token immediately (will NOT appear in logs)
 - Writes it to SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` (SecureString)
 - Runs `scripts/setup-cloudflare-lb.sh` in apply mode
@@ -79,6 +80,7 @@ The workflow:
 ### Step 4 — Verify
 
 Check issue #382 for the latest comment. Look for:
+
 - `pool cl-aws-cloudless.gr: HEALTHY` and `pool cl-pi-cloudless.gr: HEALTHY`
 - `LB cloudless.gr: UP` and `LB www.cloudless.gr: UP`
 - `DNS cloudless.gr → <lb-cname>: done`

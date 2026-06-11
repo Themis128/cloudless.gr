@@ -21,6 +21,7 @@ Comprehensive CI health check across all three repos. Runs in parallel and gives
    - Print the first meaningful error line(s)
 
 5. **Print a consolidated summary table**:
+
    ```
    Repo                  Verdict     Fail  Running  OK
    ─────────────────────────────────────────────────

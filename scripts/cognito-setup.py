@@ -18,13 +18,10 @@ Requirements:
     AWS credentials via SSO or environment variables
 """
 
-import os
-import sys
-import json
 import argparse
 import subprocess
+import sys
 from pathlib import Path
-from typing import Optional, Dict, Tuple
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -45,10 +42,10 @@ class CognitoSetup:
     def log(self, message: str, level="info"):
         """Log with colored output"""
         colors = {
-            "info": "\033[0;36m",     # cyan
+            "info": "\033[0;36m",  # cyan
             "success": "\033[0;32m",  # green
             "warning": "\033[1;33m",  # yellow
-            "error": "\033[0;31m",    # red
+            "error": "\033[0;31m",  # red
         }
         reset = "\033[0m"
         prefix = f"{colors.get(level, '')}[cognito]{reset}"
@@ -67,6 +64,7 @@ class CognitoSetup:
         self.log("Checking requirements...")
         try:
             import boto3  # noqa
+
             self.log("boto3 installed", "success")
             return True
         except ImportError:
@@ -82,13 +80,15 @@ class CognitoSetup:
             self.log(f"Authenticated as: {identity['Arn']}", "success")
             return True
         except NoCredentialsError:
-            self.log("No AWS credentials found. Run: aws sso login --sso-session cloudless", "error")
+            self.log(
+                "No AWS credentials found. Run: aws sso login --sso-session cloudless", "error"
+            )
             return False
         except ClientError as e:
             self.log(f"Authentication failed: {e}", "error")
             return False
 
-    def fetch_credentials(self) -> Optional[Dict[str, str]]:
+    def fetch_credentials(self) -> dict[str, str] | None:
         """Fetch Cognito credentials from SSM"""
         self.log("Fetching Cognito credentials from SSM...")
 
@@ -96,9 +96,7 @@ class CognitoSetup:
 
         try:
             # Fetch Client ID
-            response = self.ssm_client.get_parameter(
-                Name="/cloudless/production/COGNITO_CLIENT_ID"
-            )
+            response = self.ssm_client.get_parameter(Name="/cloudless/production/COGNITO_CLIENT_ID")
             client_id = response["Parameter"]["Value"]
             self.log(f"Client ID: {client_id[:10]}...", "success")
         except ClientError as e:
@@ -112,8 +110,7 @@ class CognitoSetup:
         client_secret = ""
         try:
             response = self.ssm_client.get_parameter(
-                Name="/cloudless/production/COGNITO_CLIENT_SECRET",
-                WithDecryption=True
+                Name="/cloudless/production/COGNITO_CLIENT_SECRET", WithDecryption=True
             )
             client_secret = response["Parameter"]["Value"]
             self.log(f"Client Secret: {client_secret[:10]}...", "success")
@@ -128,7 +125,7 @@ class CognitoSetup:
             "client_secret": client_secret,
         }
 
-    def backup_env(self) -> Optional[Path]:
+    def backup_env(self) -> Path | None:
         """Backup existing .env.local"""
         if not self.env_local.exists():
             self.log(".env.local not found, will create new one", "warning")
@@ -139,7 +136,7 @@ class CognitoSetup:
         self.log(f"Backed up to: {backup_path.name}", "success")
         return backup_path
 
-    def update_env(self, credentials: Dict[str, str]) -> bool:
+    def update_env(self, credentials: dict[str, str]) -> bool:
         """Update .env.local with credentials"""
         self.log("Updating .env.local...")
 
@@ -148,7 +145,9 @@ class CognitoSetup:
             self.log(f"  NEXT_PUBLIC_COGNITO_CLIENT_ID={credentials['client_id']}", "warning")
             self.log(f"  COGNITO_CLIENT_ID={credentials['client_id']}", "warning")
             if credentials["client_secret"]:
-                self.log(f"  COGNITO_CLIENT_SECRET={credentials['client_secret'][:10]}...", "warning")
+                self.log(
+                    f"  COGNITO_CLIENT_SECRET={credentials['client_secret'][:10]}...", "warning"
+                )
             return True
 
         # Backup first
@@ -203,11 +202,7 @@ class CognitoSetup:
 
         try:
             # Kill existing servers
-            subprocess.run(
-                ["pkill", "-f", "next dev"],
-                capture_output=True,
-                timeout=5
-            )
+            subprocess.run(["pkill", "-f", "next dev"], capture_output=True, timeout=5)
         except subprocess.TimeoutExpired:
             pass
 
@@ -217,7 +212,7 @@ class CognitoSetup:
                 ["pnpm", "dev"],
                 cwd=self.repo_root,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
             )
         except Exception as e:
             self.log(f"Failed to start dev server: {e}", "error")
@@ -225,17 +220,16 @@ class CognitoSetup:
 
         # Wait for server
         import time
-        for i in range(30):
+
+        for _ in range(30):
             try:
                 result = subprocess.run(
-                    ["curl", "-s", "http://localhost:4000/en"],
-                    capture_output=True,
-                    timeout=2
+                    ["curl", "-s", "http://localhost:4000/en"], capture_output=True, timeout=2
                 )
                 if result.returncode == 0:
                     self.log("Dev server started successfully", "success")
                     return True
-            except:
+            except Exception:
                 pass
             time.sleep(1)
 
@@ -282,25 +276,12 @@ class CognitoSetup:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Automated Cognito credential setup using boto3"
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Preview changes without applying"
-    )
-    parser.add_argument(
-        "--skip-verify",
-        action="store_true",
-        help="Skip dev server test"
-    )
+    parser = argparse.ArgumentParser(description="Automated Cognito credential setup using boto3")
+    parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying")
+    parser.add_argument("--skip-verify", action="store_true", help="Skip dev server test")
     args = parser.parse_args()
 
-    setup = CognitoSetup(
-        dry_run=args.dry_run,
-        skip_verify=args.skip_verify
-    )
+    setup = CognitoSetup(dry_run=args.dry_run, skip_verify=args.skip_verify)
 
     success = setup.run()
     sys.exit(0 if success else 1)

@@ -193,4 +193,5 @@ Primary and secondary paths should maintain equivalent cryptographic posture:
   - Both runtime paths read the same encrypted values from SSM.
 
 Operational rule:
+
 - Any new secret, webhook token, or API credential required for failover must be stored as SecureString in SSM before rollout.

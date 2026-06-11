@@ -20,6 +20,7 @@ Send a test ping to every dedicated Slack channel to verify the bot is a member 
    | `slackDeployNotify`      | `#deployments` | version, stage = "production", status = "succeeded"  |
 
 4. Use a small tsx/Node script to import and call each function:
+
    ```bash
    npx tsx -e "
    import {

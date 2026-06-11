@@ -160,6 +160,7 @@ sequenceDiagram
 | `lead_source` | string | No | `lead_source` (default: `website_contact_form`) |
 
 **Auto-set properties on create:**
+
 - `hs_lead_status`: `NEW`
 - `lifecyclestage`: `lead`
 
@@ -238,6 +239,7 @@ sequenceDiagram
 ```
 
 **Key design decisions:**
+
 - Email sending is **awaited** (critical path) — if SES fails, the user gets a 500 error
 - Slack and HubSpot are **fire-and-forget** via `Promise.allSettled().catch(() => {})` — failures are logged but don't block the response
 - Name splitting: `"Themis Baltzakis"` → `firstname: "Themis"`, `lastname: "Baltzakis"`
@@ -256,6 +258,7 @@ These custom properties must exist in your HubSpot account for full functionalit
 | `lead_source` | Single-line text | Contact information | `upsertContact()` (default: `website_contact_form`) |
 
 To create these in HubSpot:
+
 1. Go to **Settings → Properties → Contact properties**
 2. Click **Create property**
 3. Set the internal name exactly as shown above
@@ -279,12 +282,14 @@ To create these in HubSpot:
 ### 2. Configure the Token
 
 **Local development:**
+
 ```bash
 # .env.local
 HUBSPOT_API_KEY=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 **Production (AWS):**
+
 ```bash
 aws ssm put-parameter \
   --name "/cloudless/production/HUBSPOT_API_KEY" \

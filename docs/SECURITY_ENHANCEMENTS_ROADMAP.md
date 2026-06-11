@@ -7,6 +7,7 @@
 ## Priority 3: Optional Infrastructure Enhancements
 
 ### Phase 1: DDoS Protection (AWS WAF)
+
 **Timeline:** Q2 2026  
 **Benefit:** Protect against Layer 7 attacks  
 **Implementation:**
@@ -22,6 +23,7 @@ aws wafv2 create-web-acl \
 ```
 
 **Rules to implement:**
+
 - Rate limiting: 2000 req/5min per IP
 - Geo-blocking: Allow only allowed countries
 - Common attack patterns (SQLi, XSS, LFI)
@@ -30,6 +32,7 @@ aws wafv2 create-web-acl \
 ---
 
 ### Phase 2: AWS X-Ray Tracing (Lambda Diagnostics)
+
 **Timeline:** Q2 2026  
 **Benefit:** Enhanced visibility into Lambda cold starts, latency, errors  
 **Implementation:**
@@ -50,6 +53,7 @@ export default $config({
 ```
 
 **Metrics to track:**
+
 - Cold start frequency & duration
 - Error rates by function
 - End-to-end latency (API → DB)
@@ -58,6 +62,7 @@ export default $config({
 ---
 
 ### Phase 3: CloudFront Edge Caching
+
 **Timeline:** Q3 2026  
 **Benefit:** 40-60% reduction in origin requests, improved response times  
 **Implementation:**
@@ -108,6 +113,7 @@ resource "aws_cloudfront_distribution" "main" {
 ```
 
 **Caching strategy:**
+
 - Static assets: 31536000s (1 year)
 - HTML pages: 3600s (1 hour)
 - API responses: Based on Cache-Control headers
@@ -116,6 +122,7 @@ resource "aws_cloudfront_distribution" "main" {
 ---
 
 ### Phase 4: Enhanced Logging & Compliance
+
 **Timeline:** Q3 2026  
 **Benefit:** 12-month audit trail, compliance visibility  
 **Implementation:**
@@ -148,6 +155,7 @@ export const complianceLog = async (event: {
 ```
 
 **Compliance events to log:**
+
 - User authentication (success/failure)
 - Data access (user ID, resource, timestamp)
 - Admin actions (settings changes, user management)
@@ -159,6 +167,7 @@ export const complianceLog = async (event: {
 ## Implementation Checklist
 
 ### Q2 2026
+
 - [ ] AWS WAF WebACL creation
 - [ ] Rate limiting rule configuration (2000 req/5min)
 - [ ] X-Ray tracing enablement in Lambda
@@ -166,6 +175,7 @@ export const complianceLog = async (event: {
 - [ ] CloudWatch alarm creation (error threshold)
 
 ### Q3 2026
+
 - [ ] CloudFront distribution creation
 - [ ] Edge location cache strategy documentation
 - [ ] Compliance logging infrastructure
@@ -173,6 +183,7 @@ export const complianceLog = async (event: {
 - [ ] Compliance notification alerts
 
 ### Q4 2026
+
 - [ ] Performance optimization review
 - [ ] Security audit re-assessment
 - [ ] Annual penetration testing

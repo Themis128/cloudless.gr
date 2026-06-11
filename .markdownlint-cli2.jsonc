@@ -1,0 +1,63 @@
+// markdownlint-cli2 config for the repo's ~485 Markdown docs (README, docs/,
+// agent skills under .claude/, CLAUDE.md, AGENTS.md).
+//
+//   pnpm lint:md       # check
+//   pnpm lint:md:fix   # auto-fix the fixable subset
+//
+// Philosophy: catch structural mistakes (broken reference links, duplicate
+// headings, malformed lists/fences) — NOT cosmetic line-wrapping. These are
+// hand-written engineering docs, not prose with an 80-col house style.
+{
+  "config": {
+    "default": true,
+
+    // Long lines are fine: tables, URLs, command snippets, and SSM paths
+    // routinely exceed any wrap width and wrapping them hurts readability.
+    "MD013": false,
+
+    // Inline HTML is used deliberately (<details>, <kbd>, <br>, badges).
+    "MD033": false,
+
+    // First line need not be a top-level heading (many docs lead with a
+    // badge row or an auto-generated banner).
+    "MD041": false,
+
+    // Allow duplicate sibling headings (e.g. repeated "Usage" / "Example"
+    // under different parents across these long reference docs).
+    "MD024": { "siblings_only": true },
+
+    // Bare URLs appear in logs/output blocks pasted into docs.
+    "MD034": false,
+
+    // Ordered lists may use 1. 1. 1. OR 1. 2. 3.; don't enforce one style.
+    "MD029": false,
+
+    // Emphasis-as-heading is intentional in some callouts.
+    "MD036": false,
+
+    // Trailing punctuation in headings (e.g. "Note:") is fine.
+    "MD026": false,
+
+    // Table pipe spacing is cosmetic; Prettier/editors vary.
+    "MD060": false,
+
+    // Many fenced blocks are pasted terminal/log output with no meaningful
+    // language tag; requiring one on all 270+ of them is pure noise.
+    "MD040": false,
+
+    // Some docs intentionally use multiple H1s as major section dividers
+    // (runbook "PHASE A/B/C" banners) or carry a vendored rules block with
+    // its own H1 (AGENTS.md). Don't force a single title.
+    "MD025": false
+  },
+  "ignores": [
+    "node_modules",
+    ".next",
+    ".venv",
+    ".git",
+    "coverage",
+    "**/node_modules/**",
+    ".claude/**/node_modules/**",
+    "CHANGELOG.md"
+  ]
+}

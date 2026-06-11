@@ -13,9 +13,11 @@ Runs a comprehensive health check across the entire HA stack: CloudFront origin 
 4. **Cloudflare tunnel** — call `mcp__cloudless-infra__cloudflare_tunnel_status` to confirm the `cloudless.gr` tunnel (`a82f24a8-f767-4a59-bc77-1d59ad132be2`) is healthy with active connections.
 
 5. **Monitoring stack** — call `mcp__cloudless-infra__cluster_run_command` on `omv-main`:
+
    ```
    kubectl get pods -n monitoring --no-headers | awk '{print $1, $3}'
    ```
+
    Confirm all pods are `Running`.
 
 6. **Subdomain reachability** — for each of the following, run a curl HEAD check via `cluster_run_command` and confirm HTTP 200/301/302:
@@ -25,6 +27,7 @@ Runs a comprehensive health check across the entire HA stack: CloudFront origin 
    - `manage.cloudless.gr`
 
 7. Print a summary table:
+
    ```
    Layer              Status
    ─────────────────────────────

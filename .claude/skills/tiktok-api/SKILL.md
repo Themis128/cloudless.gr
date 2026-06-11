@@ -23,6 +23,7 @@ Content-Type: application/json
 **Purpose:** Get creator's posting capabilities and constraints before publishing.
 
 **Response includes:**
+
 - `max_video_post_duration_sec` (usually 300s)
 - `privacy_level_options` — available privacy levels for this user
 - `stitch_disabled`, `duet_disabled`, `comment_disabled` — feature availability
@@ -37,6 +38,7 @@ Content-Type: application/json
 ```
 
 **Request body:**
+
 ```json
 {
   "post_info": {
@@ -57,12 +59,14 @@ Content-Type: application/json
 ```
 
 **`source` options:**
+
 | Source | Description | Additional Fields |
 |--------|-------------|-------------------|
 | `FILE_UPLOAD` | Upload from local file | `video_size`, `chunk_size`, `total_chunk_count` |
 | `PULL_FROM_URL` | Pull from hosted URL | `video_url` (must be on verified domain) |
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -86,6 +90,7 @@ Content-Type: video/mp4
 ```
 
 **Chunk constraints:**
+
 - Minimum chunk: 5 MB
 - Maximum chunk: 64 MB
 - Final chunk: up to 128 MB (for trailing bytes)
@@ -99,6 +104,7 @@ Content-Type: application/json
 ```
 
 **Request body:**
+
 ```json
 {
   "post_info": {
@@ -122,6 +128,7 @@ Content-Type: application/json
 ```
 
 **Photo requirements:**
+
 - URLs must be on verified domains
 - Multiple images create a photo carousel
 - `photo_cover_index` selects the cover image
@@ -139,6 +146,7 @@ Content-Type: application/json
 ```
 
 **Status values:**
+
 | Status | Description |
 |--------|-------------|
 | `PROCESSING_UPLOAD` | Video being uploaded |
@@ -208,6 +216,7 @@ Content-Type: application/json
 5. Use Bearer token in API calls
 
 **Token endpoint:**
+
 ```
 POST https://open.tiktokapis.com/v2/oauth/token/
 Content-Type: application/x-www-form-urlencoded
@@ -220,6 +229,7 @@ client_key={APP_KEY}
 ```
 
 **Token refresh:**
+
 ```
 POST https://open.tiktokapis.com/v2/oauth/token/
 Content-Type: application/x-www-form-urlencoded

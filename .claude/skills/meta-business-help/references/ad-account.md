@@ -37,6 +37,7 @@ Recommendation: (A) — migrating a used ad account sometimes triggers review fl
 ## 2. Add a payment method
 
 ### Direct URL
+
 ```
 https://www.facebook.com/ads/manager/account_settings/account_billing/?act=<NEW_AD_ACCOUNT_ID>
 ```
@@ -85,6 +86,7 @@ Meta uses **billing thresholds** (not monthly invoices) for most new accounts.
 ### Moving to monthly invoicing
 
 Requires:
+
 - €/$ 2500+ monthly spend for 3+ months
 - Good payment history (no declined charges)
 - EU businesses: VAT ID registered
@@ -100,6 +102,7 @@ Separate from threshold — this is a MAXIMUM you'll spend.
 **Account-level spend limit:** Ads Manager → Billing → Payment settings → Account spending limit
 
 Useful for:
+
 - Preventing runaway spend from misconfigured campaigns (especially auto-placements)
 - Client work where you pre-bill and have a fixed budget
 
@@ -187,6 +190,7 @@ import Script from 'next/script';
 Browser Pixel is increasingly blocked by ad-blockers and ITP. Meta's Conversions API sends the same events server-side for better accuracy.
 
 For cloudless.gr Next.js:
+
 - Install `@meta/conversions-api` or use raw Graph API calls in a Lambda/API route
 - Send events from the server at the same time as the browser Pixel
 - Meta dedupes using `event_id` — same ID on both browser + server = one event
@@ -209,6 +213,7 @@ Meta's learning phase requires ~50 optimization events per ad set per week to ex
 ## 8. Closing the loop: Reporting
 
 After campaigns run, data flows through:
+
 - **Ads Manager** — native Meta UI, real-time but can only see Meta data
 - **Windsor.ai** `facebook` connector → MCP → Claude for cross-platform blended analysis
 - **Supermetrics** → Google Sheets / Looker Studio for polished reports
