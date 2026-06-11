@@ -2,6 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
+import { Link } from "@/i18n/navigation";
 
 type Tab = "subscribers" | "contacts";
 
@@ -216,7 +217,15 @@ function PageHeader() {
         <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
         <span className="text-neon-cyan font-mono text-xs">EMAIL MARKETING</span>
       </div>
-      <h1 className="font-heading text-2xl font-bold text-white">Email</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-2xl font-bold text-white">Email</h1>
+        <Link
+          href="/admin/email/campaigns"
+          className="text-neon-cyan font-mono text-xs hover:underline"
+        >
+          Campaigns &amp; Audience →
+        </Link>
+      </div>
       <p className="font-body mt-1 text-slate-400">
         HubSpot newsletter subscribers and CRM contacts.
       </p>

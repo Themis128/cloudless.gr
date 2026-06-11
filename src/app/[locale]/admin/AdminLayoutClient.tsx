@@ -59,6 +59,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin", label: "Dashboard", Icon: LayoutDashboard },
       { href: "/admin/analytics", label: "Analytics", Icon: BarChart2 },
       { href: "/admin/analytics/unified", label: "Unified View", Icon: Layers },
+      { href: "/admin/analytics/seo", label: "SEO", Icon: BarChart2 },
     ],
   },
   {
@@ -100,6 +101,7 @@ const adminGroups: AdminGroup[] = [
     links: [
       { href: "/admin/campaigns", label: "Campaigns", Icon: Megaphone },
       { href: "/admin/email", label: "Email", Icon: Mail },
+      { href: "/admin/email/campaigns", label: "Email Campaigns", Icon: Mail },
       { href: "/admin/pipeline", label: "Pipeline", Icon: GitMerge },
       { href: "/admin/calendar", label: "Calendar", Icon: CalendarDays },
       { href: "/admin/reports", label: "Reports", Icon: ClipboardList },
