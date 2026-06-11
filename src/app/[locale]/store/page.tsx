@@ -4,7 +4,6 @@ import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";
 
-
 // Lighthouse Win — let Next.js statically generate the shell + ISR-refresh
 // every hour. The product grid is client-side (StoreGrid uses defaultProducts),
 // so SSG works; this removes a Lambda cold-start from every visit.
