@@ -85,13 +85,15 @@ export default function StorePage() {
           <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ STORE ]
           </p>
-          <h1 className="animate-fade-in-up font-heading text-3xl leading-tight font-bold delay-100 md:text-5xl">
+          {/* LCP element renders at full opacity on first paint — no entrance
+              animation, which would delay LCP past Lighthouse's measurement. */}
+          <h1 className="font-heading text-3xl leading-tight font-bold md:text-5xl">
             Tools, templates &amp;{" "}
             <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
               expert services.
             </span>
           </h1>
-          <p className="animate-fade-in-up mt-4 max-w-xl text-lg text-slate-400 delay-200">
+          <p className="mt-4 max-w-xl text-lg text-slate-400">
             Everything you need to build, scale, and market your cloud-powered business. From
             self-serve digital products to done-for-you services.
           </p>
