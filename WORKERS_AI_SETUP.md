@@ -4,12 +4,12 @@ Text generation via Cloudflare Workers AI, surfaced as an admin tool.
 
 ## Implementation
 
-| File | Role |
-|---|---|
-| `src/app/api/admin/ai/generate/route.ts` | `POST` route — admin-auth-gated (`requireAdmin`), validates `{ prompt, model? }`, calls the Cloudflare Workers AI REST API, returns `{ success, result, model, usage }`. 503 when credentials are absent. |
-| `src/app/[locale]/admin/ai-generator/page.tsx` | Admin UI (`/admin/ai-generator`, in the Marketing Hub sidebar) — prompt box, model picker (Llama 3 8B/70B), result with copy + token usage. |
-| `sst.config.ts` | Forwards `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` from the deploy environment into the Lambda runtime env. |
-| `.github/workflows/deploy.yml` | Supplies both variables to the SST deploy step (token from the `CLOUDFLARE_API_TOKEN` repo secret). |
+| File                                           | Role                                                                                                                                                                                                      |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/api/admin/ai/generate/route.ts`       | `POST` route — admin-auth-gated (`requireAdmin`), validates `{ prompt, model? }`, calls the Cloudflare Workers AI REST API, returns `{ success, result, model, usage }`. 503 when credentials are absent. |
+| `src/app/[locale]/admin/ai-generator/page.tsx` | Admin UI (`/admin/ai-generator`, in the Marketing Hub sidebar) — prompt box, model picker (Llama 3 8B/70B), result with copy + token usage.                                                               |
+| `sst.config.ts`                                | Forwards `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` from the deploy environment into the Lambda runtime env.                                                                                        |
+| `.github/workflows/deploy.yml`                 | Supplies both variables to the SST deploy step (token from the `CLOUDFLARE_API_TOKEN` repo secret).                                                                                                       |
 
 The endpoint lives under `/api/admin/*` on purpose: every call costs Workers AI
 inference, so it requires an admin session/Bearer token and inherits the shared

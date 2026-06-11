@@ -16,10 +16,7 @@ import { requireAdmin } from "@/lib/api-auth";
 export const runtime = "nodejs";
 
 const DEFAULT_MODEL = "@cf/meta/llama-3-8b-instruct";
-const ALLOWED_MODELS = new Set([
-  "@cf/meta/llama-3-8b-instruct",
-  "@cf/meta/llama-3-70b-instruct",
-]);
+const ALLOWED_MODELS = new Set(["@cf/meta/llama-3-8b-instruct", "@cf/meta/llama-3-70b-instruct"]);
 
 interface GenerateRequest {
   prompt?: string;
@@ -46,10 +43,7 @@ export async function POST(request: NextRequest) {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !apiToken) {
-    return NextResponse.json(
-      { error: "Cloudflare Workers AI not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Cloudflare Workers AI not configured." }, { status: 503 });
   }
 
   try {
@@ -62,7 +56,7 @@ export async function POST(request: NextRequest) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
-      },
+      }
     );
 
     const data = (await response.json()) as {
@@ -73,7 +67,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       return NextResponse.json(
         { error: `Cloudflare API error: ${data.errors?.[0]?.message ?? "Unknown error"}` },
-        { status: response.status >= 500 ? 502 : response.status },
+        { status: response.status >= 500 ? 502 : response.status }
       );
     }
 
