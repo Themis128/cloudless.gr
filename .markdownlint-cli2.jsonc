@@ -58,6 +58,16 @@
     "coverage",
     "**/node_modules/**",
     ".claude/**/node_modules/**",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    // Generated, gitignored artifacts — not authored docs. markdownlint-cli2
+    // does not read .gitignore, so these must be listed explicitly.
+    "test-results",
+    "test-results/**",
+    "playwright-report",
+    "playwright-report/**",
+    "monocart-report",
+    "monocart-report/**",
+    ".coverage-run/**",
+    ".coverage-v8-server/**"
   ]
 }

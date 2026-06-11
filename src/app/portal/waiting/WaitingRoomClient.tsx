@@ -46,10 +46,33 @@ function SystemIndicator({ activeStep }: Readonly<{ activeStep: 1 | 2 | 3 }>) {
         bg: "bg-neon-green",
       };
     }
-    if (!isActive) return { border: "border-slate-700", ring: "ring-transparent", text: "text-slate-500", bg: "bg-slate-700" };
-    if (s.color === "neon-cyan") return { border: "border-neon-cyan", ring: "ring-neon-cyan/30", text: "text-neon-cyan", bg: "bg-neon-cyan" };
-    if (s.color === "neon-magenta") return { border: "border-neon-magenta", ring: "ring-neon-magenta/30", text: "text-neon-magenta", bg: "bg-neon-magenta" };
-    return { border: "border-neon-green", ring: "ring-neon-green/30", text: "text-neon-green", bg: "bg-neon-green" };
+    if (!isActive)
+      return {
+        border: "border-slate-700",
+        ring: "ring-transparent",
+        text: "text-slate-500",
+        bg: "bg-slate-700",
+      };
+    if (s.color === "neon-cyan")
+      return {
+        border: "border-neon-cyan",
+        ring: "ring-neon-cyan/30",
+        text: "text-neon-cyan",
+        bg: "bg-neon-cyan",
+      };
+    if (s.color === "neon-magenta")
+      return {
+        border: "border-neon-magenta",
+        ring: "ring-neon-magenta/30",
+        text: "text-neon-magenta",
+        bg: "bg-neon-magenta",
+      };
+    return {
+      border: "border-neon-green",
+      ring: "ring-neon-green/30",
+      text: "text-neon-green",
+      bg: "bg-neon-green",
+    };
   }
 
   return (
