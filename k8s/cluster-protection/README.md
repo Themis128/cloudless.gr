@@ -11,7 +11,7 @@ for the full RCA.
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | `limit-ranges.yaml`         | Namespace `LimitRange` + `ResourceQuota` for `monitoring` and `cloudless`                                                                      | `kubectl apply -f limit-ranges.yaml`         |
 | `analytics-guardrails.yaml` | `LimitRange` + `ResourceQuota` for the `analytics` namespace (DuckDB, ML training)                                                             | `kubectl apply -f analytics-guardrails.yaml` |
-| `generic-guardrails.yaml`   | Quotas for utility namespaces (`oncall`, `n8n`, `keycloak`, `home-assistant`)                                                                  | `kubectl apply -f generic-guardrails.yaml`   |
+| `generic-guardrails.yaml`   | Quotas for utility namespaces (`oncall`, `n8n`, `home-assistant`)                                                                  | `kubectl apply -f generic-guardrails.yaml`   |
 | `monitoring-resources.yaml` | Explicit `resources.{requests,limits}` for Prometheus / Loki / Grafana / Alertmanager / operator + Prometheus retention trim (7d/4GB → 3d/2GB) | `bash apply-all-guardrails.sh`               |
 | `duckdb-api-resources.yaml` | Patch for DuckDB API resource limits                                                                                                           | `bash apply-all-guardrails.sh`               |
 | `apply-all-guardrails.sh`   | Wrapper that applies all manifests and rolls out the workloads                                                                                 | `bash apply-all-guardrails.sh`               |
@@ -44,6 +44,4 @@ for the full RCA.
   which stays healthy even when k3s is dead. Fixing this needs a
   Route 53 health check path update and is tracked as a follow-up in
   `docs/cluster-overload-runbook.md`.
-- Migrating the standalone Keycloak from the `tbaltzakis` user shell into
-  the cluster. Also a follow-up.
 - Boot SD card cleanup (was 90% during the incident).

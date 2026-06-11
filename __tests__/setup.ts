@@ -82,14 +82,8 @@ process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
 process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
 process.env.COGNITO_CLIENT_ID = "test-client-id";
 
-// ── Keycloak / next-auth ──────────────────────────────────────────────────────
-process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID = "cloudless-app";
-process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-process.env.KEYCLOAK_CLIENT_ID = "cloudless-app";
+// ── next-auth ─────────────────────────────────────────────────────────────────
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
-process.env.KEYCLOAK_ADMIN_USER = "tbaltzakis";
-process.env.KEYCLOAK_ADMIN_PASSWORD = "test-admin-pass";
 
 // ── Cache resets ──────────────────────────────────────────────────────────────
 // Reset all in-memory caches before each test and restore env vars that tests
@@ -108,12 +102,11 @@ beforeEach(() => {
   process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
   process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
-  // Clear Keycloak ISSUER so api-auth.ts uses the decode-only fallback
-  // for fake-sig test tokens. Without this, CI (where KEYCLOAK_ISSUER is
+  // Clear COGNITO_ISSUER so api-auth.ts uses the decode-only fallback
+  // for fake-sig test tokens. Without this, CI (where COGNITO_ISSUER may be
   // set as a GH secret) tries real JWKS verification and rejects them.
   // Tests that need JWKS verification set the issuer explicitly.
-  delete process.env.KEYCLOAK_ISSUER;
-  delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
+  delete process.env.COGNITO_ISSUER;
   resetIntegrationCache();
   resetIntegrationCacheAsync();
   resetSlackConfigCache();

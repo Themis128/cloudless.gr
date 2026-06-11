@@ -1,7 +1,7 @@
 ---
 name: cluster-health
-description: Quick health snapshot of the k3s Pi cluster + critical AWS resources. Covers SSH/runner status, k3s pods/deployments, Grafana/Keycloak/Lambda reachability, cert expiry. Identifies whether an issue is k3s-side or cloud-side without needing to drill in.
-triggers: when the user mentions "is the cluster ok", "k3s health", "Pi runner offline", "cluster status", "deploy stuck", "is grafana up", "is keycloak up", "everything green?", "what's broken"
+description: Quick health snapshot of the k3s Pi cluster + critical AWS resources. Covers SSH/runner status, k3s pods/deployments, Grafana/Lambda reachability, cert expiry. Identifies whether an issue is k3s-side or cloud-side without needing to drill in.
+triggers: when the user mentions "is the cluster ok", "k3s health", "Pi runner offline", "cluster status", "deploy stuck", "is grafana up", "everything green?", "what's broken"
 ---
 
 # Cluster Health Snapshot
@@ -14,10 +14,6 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 5 https://cloudless.gr/
 
 echo "=== k3s ingress (Pi) ==="
 curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 5 -k -H "Host: cloudless.gr" https://192.168.1.128/api/health
-
-echo "=== Keycloak ==="
-curl -s -o /dev/null -w "HTTP %{http_code}\n" --max-time 5 https://auth.cloudless.gr/api/health || echo "Use OIDC discovery:"
-curl -s -o /dev/null -w "OIDC discovery: %{http_code}\n" --max-time 5 https://auth.cloudless.gr/realms/master/.well-known/openid-configuration
 
 echo "=== Grafana ==="
 curl -s --max-time 5 https://grafana.cloudless.gr/api/health | python3 -m json.tool
@@ -38,7 +34,7 @@ gh api repos/Themis128/cloudless.gr/actions/runners --jq '.runners[] | "\(.name)
 # Via SSH (if working):
 ssh omv@192.168.1.128 'kubectl get pods -A --field-selector status.phase!=Running'
 
-# Via Portainer (if SSH dead) — see `keycloak-ops` skill for the pattern
+# Via Portainer (if SSH dead) — launch a privileged container with /host mount
 # Portainer URL: http://192.168.1.128:9000
 # Auth: admin / [Portainer password — same as Cognito]
 ```
@@ -53,7 +49,7 @@ The `omv` GH Actions runner is a systemd service `actions.runner.Themis128-cloud
 
 ```bash
 # Pattern: launch alpine container with /host mount, run nsenter into host PID
-# Full recipe in tools/keycloak-cli/keycloak.sh (search for "runner-fix")
+# then start the runner: chroot /host systemctl restart 'actions.runner.*'
 ```
 
 ### Grafana password
@@ -75,13 +71,12 @@ echo | openssl s_client -servername cloudless.gr -connect cloudless.gr:443 2>/de
 
 ## Common state combinations
 
-| Lambda | k3s | Keycloak | Diagnosis |
-|---|---|---|---|
-| 200 | 200 | 200 | All healthy |
-| 500 | 500 | 200 | Likely Keycloak token verification failing → check Lambda env (AUTH_SECRET, KEYCLOAK_ISSUER) |
-| 200 | TIMEOUT | 200 | Pi failover triggered or DNS routing odd |
-| 200 | 200 | DOWN | Keycloak pod or postgres down — affects /admin login but public site OK |
-| 502 | n/a | n/a | CloudFront couldn't reach origin — check Lambda logs |
+| Lambda | k3s | Diagnosis |
+|---|---|---|
+| 200 | 200 | All healthy |
+| 500 | 500 | Likely auth token verification failing → check Lambda env (AUTH_SECRET, COGNITO_ISSUER) |
+| 200 | TIMEOUT | Pi failover triggered or DNS routing odd |
+| 502 | n/a | CloudFront couldn't reach origin — check Lambda logs |
 
 ## Workflow status (CI/deploys)
 

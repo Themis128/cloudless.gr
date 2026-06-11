@@ -44,7 +44,7 @@ rm -rf /home/tbaltzakis/code/cloudless.gr/.next /home/tbaltzakis/code/cloudless.
 
 # Verify .env.local exists with the auth vars
 test -f /home/tbaltzakis/code/cloudless.gr/.env.local && \
-  grep -E "^AUTH_SECRET|^AUTH_TRUST_HOST|^KEYCLOAK_ISSUER" /home/tbaltzakis/code/cloudless.gr/.env.local || \
+  grep -E "^AUTH_SECRET|^AUTH_TRUST_HOST|^COGNITO_ISSUER" /home/tbaltzakis/code/cloudless.gr/.env.local || \
   echo "WARNING: .env.local missing or incomplete"
 
 # Restart in background (user can attach via the terminal)
@@ -68,11 +68,19 @@ If `.env.local` is missing, recreate it:
 AUTH_SECRET=$(aws ssm get-parameter --name "/cloudless/production/AUTH_SECRET" \
   --with-decryption --output text --query Parameter.Value --region us-east-1)
 
+# Cognito OIDC settings — read from the deployed Lambda (single source of truth)
+LAMBDA_FN="cloudless-production-CloudlessSiteServerUseast1Function-ddkafukh"
+read -r COGNITO_ISSUER COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET COGNITO_DOMAIN < <(
+  aws lambda get-function-configuration --function-name "$LAMBDA_FN" --region us-east-1 \
+    --query "Environment.Variables.[COGNITO_ISSUER,COGNITO_CLIENT_ID,COGNITO_CLIENT_SECRET,COGNITO_DOMAIN]" \
+    --output text)
+
 cat > /home/tbaltzakis/code/cloudless.gr/.env.local <<EOF
-NEXT_PUBLIC_KEYCLOAK_ISSUER=https://auth.cloudless.gr/realms/master
-NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=cloudless-app
-KEYCLOAK_ISSUER=https://auth.cloudless.gr/realms/master
-KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
+COGNITO_ISSUER=${COGNITO_ISSUER}
+COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+COGNITO_CLIENT_SECRET=${COGNITO_CLIENT_SECRET}
+COGNITO_DOMAIN=${COGNITO_DOMAIN}
+NEXT_PUBLIC_AUTH_PROVIDER=cognito
 AUTH_SECRET=${AUTH_SECRET}
 AUTH_TRUST_HOST=true
 AUTH_URL=http://localhost:4000

@@ -26,7 +26,7 @@ function makeRequest(token?: string): NextRequest {
   return new NextRequest("http://localhost/api/test", { headers });
 }
 
-describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
+describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
   beforeEach(() => {
     // Reset the entire mock (clears queued Once values + call history) then set
     // the default: no session. Tests that need a session configure mockOnce() explicitly.
@@ -34,8 +34,6 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
     authMock.mockResolvedValue(null);
     // Clear the issuer so verifyToken takes the decode-only fallback path.
     // (Global setup.ts already does this + resetJwksCache(); belt-and-suspenders.)
-    delete process.env.KEYCLOAK_ISSUER;
-    delete process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER;
   });
 
   describe("getTokenFromHeader()", () => {
@@ -126,7 +124,7 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
       expect(isAdmin(decoded)).toBe(false);
     });
 
-    it("returns true when user is in the Keycloak admin group", async () => {
+    it("returns true when user is in the admin group", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
       const decoded = {
         sub: "u",
@@ -278,7 +276,7 @@ describe("api-auth.ts (fallback path — no Keycloak issuer)", () => {
       if (!result.ok) expect(result.response.status).toBe(403);
     });
 
-    it("returns ok:true for a valid admin Bearer token (Keycloak groups claim)", async () => {
+    it("returns ok:true for a valid admin Bearer token (groups claim)", async () => {
       const { requireAdmin } = await import("@/lib/api-auth");
       const token = makeValidJwt({ groups: ["admin"] });
       const result = await requireAdmin(makeRequest(token));

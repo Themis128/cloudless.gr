@@ -17,7 +17,7 @@ interface ProfileBody {
  * Reads the signed-in user's stored profile (name + company/phone/preferences)
  * from DynamoDB so the dashboard Profile/Settings forms render previously-saved
  * values. Provider-agnostic: keyed by the OIDC `sub`, so it works identically
- * for Cognito and Keycloak. `name`/`email` fall back to the session when no
+ * across OIDC providers. `name`/`email` fall back to the session when no
  * stored record exists yet.
  */
 export async function GET() {

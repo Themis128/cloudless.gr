@@ -7,9 +7,8 @@ const STAGE_PRODUCTION = "production";
 /**
  * Lambda runtime environment for the Next.js site.
  *
- * Provider selection: Cognito (always-up AWS) wins when configured; Keycloak
- * is the fallback. Swap the active provider by passing/omitting the `cognito`
- * argument — no code change required at cutover time.
+ * Auth provider: Cognito (always-up AWS), activated by passing the `cognito`
+ * argument so the Lambda env carries the COGNITO_* variables.
  */
 function buildSiteEnvironment(
   stage: string,
@@ -140,18 +139,17 @@ export default {
 
     // Provider-agnostic user-profile store (name/company/phone/preferences),
     // keyed by the OIDC `sub`. Decouples the dashboard profile from the IdP so
-    // it works identically for Cognito and Keycloak (see src/lib/user-profile.ts).
+    // it works identically for any OIDC provider (see src/lib/user-profile.ts).
     const userProfileTable = new sst.aws.Dynamo("UserProfile", {
       fields: { userId: "string" },
       primaryIndex: { hashKey: "userId" },
     });
 
     // -------------------------------------------------------------------------
-    // Cognito User Pool — always-up AWS auth (migration target from Keycloak)
+    // Cognito User Pool — always-up AWS auth
     //
-    // Active when COGNITO_ISSUER is set in the Lambda env.
-    // Keycloak is the fallback (KEYCLOAK_ISSUER set instead).
-    // Cutover = passing `cognito` to buildSiteEnvironment (done below).
+    // Active when COGNITO_ISSUER is set in the Lambda env
+    // (passed via `cognito` to buildSiteEnvironment below).
     // -------------------------------------------------------------------------
     const userPool = new aws.cognito.UserPool("CloudlessAuth", {
       name: isProd ? "cloudless-auth" : `cloudless-auth-${stage}`,

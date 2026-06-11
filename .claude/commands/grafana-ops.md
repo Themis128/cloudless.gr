@@ -57,6 +57,6 @@ If Grafana admin password is lost or needs rotation:
 ## Notes
 
 - Grafana is exposed externally via `grafana.cloudless.gr` → cloudflared tunnel → k3s Traefik → `kube-prom-grafana` service.
-- Authentication is handled by Grafana's built-in auth (not Keycloak OIDC) — admin only.
+- Authentication is handled by Grafana's built-in auth — admin only.
 - Dashboard changes made in the UI are ephemeral unless exported and committed to the Helm values or a ConfigMap.
 - Do not exec into the Grafana pod to edit configs directly — use Helm values or the API.

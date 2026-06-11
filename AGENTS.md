@@ -15,7 +15,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **3D:** @react-three/fiber + @react-three/drei + three.js
 - **Animation:** GSAP (ScrollTrigger) + Lenis smooth scroll
 - **Command palette:** cmdk
-- **Auth:** AWS Cognito + next-auth v5 (production default, when `COGNITO_ISSUER` is set); Keycloak fallback
+- **Auth:** AWS Cognito + next-auth v5
 - **Payments:** Stripe (webhooks, checkout)
 - **Email:** AWS SES
 - **Secrets:** AWS SSM Parameter Store (no .env files in prod)
@@ -63,7 +63,7 @@ src/
 │   │   │   ├── [id]/page.tsx    # Product detail + JSON-LD
 │   │   │   └── success/         # Order confirmation
 │   │   ├── contact/             # Contact form (SES + Slack + HubSpot + Notion)
-│   │   ├── auth/                # Login · Signup · Forgot Password (Keycloak + next-auth)
+│   │   ├── auth/                # Login · Signup · Forgot Password (Cognito + next-auth)
 │   │   ├── dashboard/           # Customer portal (auth-protected, cyan accent)
 │   │   │   ├── profile/         # Edit name, company, phone
 │   │   │   ├── purchases/       # Stripe order history
@@ -77,7 +77,7 @@ src/
 │   │       ├── notion/          # Notion DB explorer
 │   │       ├── notifications/   # Slack test panel
 │   │       ├── settings/        # App config viewer
-│   │       └── users/           # Keycloak user management
+│   │       └── users/           # Cognito user management
 │   └── api/
 │       ├── contact/             # POST → SES + Slack + HubSpot + Notion
 │       ├── checkout/            # POST → Stripe Checkout Session
@@ -108,7 +108,7 @@ src/
 │           ├── notion/          # Blog/docs/tasks/projects/submissions/search
 │           ├── ops/errors/      # Sentry issues
 │           ├── orders/          # Stripe orders summary
-│           └── users/           # Keycloak user list
+│           └── users/           # Cognito user list
 │
 ├── components/
 │   ├── Navbar.tsx · Footer.tsx
@@ -132,8 +132,8 @@ src/
 ├── lib/                         # Server + shared utilities (see ARCHITECTURE.md §9)
 │   ├── ssm-config.ts            # SSM secrets loader (5-min TTL, fails fast on required keys)
 │   ├── integrations.ts          # isConfigured() guards for all optional integrations
-│   ├── api-auth.ts              # requireAuth() / requireAdmin() — OIDC JWKS verification (Keycloak or Cognito)
-│   ├── auth.ts                  # next-auth v5 config — Cognito when COGNITO_ISSUER set, Keycloak fallback
+│   ├── api-auth.ts              # requireAuth() / requireAdmin() — OIDC JWKS verification (Cognito)
+│   ├── auth.ts                  # next-auth v5 config — Cognito
 │   ├── email.ts                 # SES: sendEmail, sendOrderConfirmation, notifyTeam
 │   ├── ses-suppression.ts       # SES suppression list management
 │   ├── stripe.ts                # Stripe client, product/session helpers
@@ -195,19 +195,19 @@ __tests__/
 └── service-worker.test.tsx  # SW registration + push notification tests
 ```
 
-## Authentication (Keycloak + next-auth v5)
+## Authentication (Cognito + next-auth v5)
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant App as Next.js Client
-    participant KC as Keycloak (auth.cloudless.gr)
+    participant KC as Cognito (Hosted UI)
 
     U->>App: Click "Sign in"
     App->>KC: Authorization Code + PKCE redirect
     KC-->>U: Hosted login / registration UI
     U->>KC: Enter credentials
-    KC-->>App: /api/auth/callback/keycloak
+    KC-->>App: /api/auth/callback/cognito
     App->>KC: Exchange code for tokens
     KC-->>App: access_token + id_token + refresh_token
     App->>App: Decode id_token, check groups claim
@@ -218,15 +218,15 @@ sequenceDiagram
     end
 ```
 
-- **Provider:** AWS Cognito (Hosted UI) when `COGNITO_ISSUER` is set — the production default since the 2026-06 migration; Keycloak (`auth.cloudless.gr`, realm `master`) is the fallback when Cognito is not configured
-- **Env vars required:** `COGNITO_ISSUER` + `COGNITO_CLIENT_ID` + `COGNITO_CLIENT_SECRET` + `COGNITO_DOMAIN` + `AUTH_SECRET` (Cognito); or `KEYCLOAK_ISSUER` + `KEYCLOAK_CLIENT_ID` + `KEYCLOAK_CLIENT_SECRET` + `AUTH_SECRET` (Keycloak fallback). See `.env.example`
-- **Admin group:** `admin` — checked via JWT `cognito:groups` claim (Cognito) or `groups` (Keycloak)
+- **Provider:** AWS Cognito (Hosted UI) — the sole provider since the 2026-06 migration
+- **Env vars required:** `COGNITO_ISSUER` + `COGNITO_CLIENT_ID` + `COGNITO_CLIENT_SECRET` + `COGNITO_DOMAIN` + `AUTH_SECRET`. See `.env.example`
+- **Admin group:** `admin` — checked via the JWT `cognito:groups` claim
 - **AuthProvider:** Wraps entire app in `layout.tsx`; exposes `signIn`/`signOut`/`useAuth()` via `src/context/AuthContext.tsx` (delegates to next-auth `signIn`/`signOut`)
 - **Route protection:** Server-side via `src/proxy.ts` middleware (before the page renders) + client-side layout guards
   - `/dashboard/*` → redirects to `/auth/login` if not authenticated
   - `/admin/*` → redirects to `/dashboard` if not in admin group, `/auth/login` if not authenticated
 - **Token refresh:** next-auth transparently refreshes expired access tokens at the provider's token endpoint
-- **Logout:** RP-Initiated Logout — terminates the Keycloak SSO session, not just the local cookie
+- **Logout:** RP-Initiated Logout — terminates the Cognito SSO session, not just the local cookie
 - **Form UX:** All auth forms include `autoComplete` attributes (`email`, `current-password`, `new-password`) for password manager integration
 - **Navbar integration:** Shows "Sign In" button when logged out, user avatar dropdown when logged in (Dashboard, Admin Panel if admin, Sign Out)
 - **Color coding:** Cyan for user-facing auth, magenta for admin
