@@ -27,7 +27,9 @@ for (const ep of PUBLIC_API_GET) {
 for (const { template, sample } of PUBLIC_API_DYNAMIC) {
   test(`GET ${template} — handles unknown slug (404 or empty 200)`, async ({ request }) => {
     const r = await request.get(sample);
-    expect([200, 301, 302, 303, 307, 308, 400, 401, 404]).toContain(r.status());
+    // 503 is the documented "integration not configured" response (e.g. the
+    // docs API returns 503 when NOTION_API_KEY/NOTION_DOCS_DB_ID are unset).
+    expect([200, 301, 302, 303, 307, 308, 400, 401, 404, 503]).toContain(r.status());
   });
 }
 
@@ -102,8 +104,10 @@ test("POST /api/chat — non-empty message", async ({ request }) => {
     data: { messages: [{ role: "user", content: "test" }] },
     failOnStatusCode: false,
   });
-  // /api/chat may be auth-gated (returns 401) or rate-limited (429)
-  expect(r.status()).toBeLessThan(500);
+  // /api/chat may be auth-gated (401), rate-limited (429), or unconfigured —
+  // the route surfaces missing/invalid Anthropic credentials as 503.
+  const s = r.status();
+  expect(s < 500 || s === 503, `/api/chat returned ${s}`).toBeTruthy();
 });
 
 test("GET /api/notion-image — without url param returns 4xx", async ({ request }) => {
@@ -201,7 +205,9 @@ test("GET /api/case-studies/sample — handles slug lookup", async ({ request })
 
 test("GET /api/docs/getting-started — handles slug lookup", async ({ request }) => {
   const r = await request.get("/api/docs/getting-started");
-  expect(r.status()).toBeLessThan(500);
+  // 503 = docs integration not configured (NOTION_API_KEY/NOTION_DOCS_DB_ID unset)
+  const s = r.status();
+  expect(s < 500 || s === 503, `/api/docs/getting-started returned ${s}`).toBeTruthy();
 });
 
 test("POST /api/portal/me with missing auth header", async ({ request }) => {
