@@ -56,13 +56,18 @@ jobs:
       - name: Post result to issue 382
         env:
           GH_TOKEN: ${{ github.token }}
+          DOCTOR_RESULT: ${{ steps.doctor.outputs.result }}
+          DOCTOR_CODE: ${{ steps.doctor.outputs.code }}
         run: |
-          STATUS=$([ "${{ steps.doctor.outputs.code }}" = "0" ] && echo "✅ PASS" || echo "❌ FAIL")
-          gh issue comment 382 --repo "${{ github.repository }}" --body "## Workers AI verify — ${STATUS}
-          \`\`\`
-          ${{ steps.doctor.outputs.result }}
-          \`\`\`
-          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          STATUS=$([ "$DOCTOR_CODE" = "0" ] && echo "PASS ✅" || echo "FAIL ❌")
+          {
+            echo "## Workers AI verify — ${STATUS}"
+            echo '```'
+            echo "$DOCTOR_RESULT"
+            echo '```'
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/comment.md
 
       - name: Fail job if doctor failed
         if: steps.doctor.outputs.code != '0'
