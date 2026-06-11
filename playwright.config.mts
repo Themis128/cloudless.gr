@@ -14,6 +14,9 @@ const isCi = !!process.env.CI;
  */
 export default defineConfig({
   testDir: path.join(rootDir, "e2e"),
+  // k3s specs target the live Pi cluster and have their own config
+  // (playwright.k3s.config.mts) — never run them against localhost.
+  testIgnore: ["**/k3s/**"],
   fullyParallel: true,
   forbidOnly: isCi,
   retries: isCi ? 2 : 1,
@@ -28,13 +31,23 @@ export default defineConfig({
   },
 
   projects: [
+    // Writes e2e/.auth/{user,admin}.json before any spec runs. Without
+    // E2E_USER_* / E2E_ADMIN_* credentials it writes empty storage states so
+    // the authenticated suites in the deep specs skip via their hasRealAuth()
+    // guards instead of failing with ENOENT on a fresh checkout.
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
     },
     {
       name: "mobile-chrome",
       use: { ...devices["Pixel 7"] },
+      dependencies: ["setup"],
     },
   ],
 
