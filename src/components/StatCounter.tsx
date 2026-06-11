@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CountUp } from "countup.js";
 
 interface StatCounterProps {
   value: string;
@@ -28,29 +27,39 @@ export default function StatCounter({
   label,
   valueClassName = "text-neon-cyan font-mono text-3xl font-bold",
   showLabel = true,
-}: StatCounterProps) {
+}: Readonly<StatCounterProps>) {
   const elRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
 
   useEffect(() => {
     const el = elRef.current;
-    if (!el) return;
-
-    const { end, suffix, decimalPlaces } = parseStatValue(value);
+    if (!el || typeof IntersectionObserver === "undefined") return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const cu = new CountUp(el, end, {
-            duration: 2,
-            suffix,
-            decimalPlaces,
-            useEasing: true,
+        if (!entry.isIntersecting || started.current) return;
+        started.current = true;
+        observer.unobserve(el);
+
+        const { end, suffix, decimalPlaces } = parseStatValue(value);
+        // Load countup.js (~50KB) lazily, only when a counter actually scrolls
+        // into view. The final value is already rendered as text, so the
+        // visible number is correct even if this never loads — keeping it out
+        // of the initial bundle cuts parse/compile time (TBT) on stat-heavy
+        // pages like /services (24 counters).
+        import("countup.js")
+          .then(({ CountUp }) => {
+            const cu = new CountUp(el, end, {
+              duration: 2,
+              suffix,
+              decimalPlaces,
+              useEasing: true,
+            });
+            if (!cu.error) cu.start();
+          })
+          .catch(() => {
+            /* keep the statically rendered value on load failure */
           });
-          if (!cu.error) cu.start();
-          observer.unobserve(el);
-        }
       },
       { threshold: 0.2 }
     );
