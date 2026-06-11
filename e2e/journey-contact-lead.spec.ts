@@ -12,7 +12,13 @@ test.describe("Contact lead flow", () => {
     await page.goto("/en");
     await expect(page.locator("h1, h2").first()).toBeVisible();
 
-    // Find a contact link in the nav or footer
+    // Find a contact link in the nav or footer. On mobile viewports the nav
+    // links live inside the hamburger drawer and the sticky navbar intercepts
+    // pointer events — open the menu first so the link is actually clickable.
+    const menuToggle = page.locator('button[aria-label*="menu" i]').first();
+    if (await menuToggle.isVisible().catch(() => false)) {
+      await menuToggle.click();
+    }
     const contactLink = page.getByRole("link", { name: /contact/i }).first();
     await expect(contactLink).toBeVisible();
     await contactLink.click();
