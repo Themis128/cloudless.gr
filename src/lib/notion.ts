@@ -16,14 +16,16 @@ import { getIntegrationsAsync } from "@/lib/integrations";
  * tainted format-string issues (js/tainted-format-string).
  */
 function safeId(id: string): string {
-  return String(id).replace(/[\r\n\t]/g, "").slice(0, 64);
+  return String(id)
+    .replace(/[\r\n\t]/g, "")
+    .slice(0, 64);
 }
 
 function safeMsg(msg: string): string {
-  return String(msg).replace(/[\r\n\t]/g, " ").slice(0, 200);
+  return String(msg)
+    .replace(/[\r\n\t]/g, " ")
+    .slice(0, 200);
 }
-
-
 
 export const NOTION_API = "https://api.notion.com/v1";
 export const NOTION_VERSION = "2022-06-28";
