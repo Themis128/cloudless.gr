@@ -20,6 +20,8 @@ These require access outside GitHub and cannot be automated from a cloud session
 
 **Never fix test failures by adding mock code.** When a test fails, fix the actual production code so the test passes naturally. Do not add `vi.mocked(...)`, `mockReturnValue`, `mockResolvedValue`, or any other mock overrides to patch a failing test. If the test expectation is wrong (e.g. it expects old behavior that changed), update the expectation — but never shim production behavior with mocks.
 
+**Address every issue found with actual code.** When a test run, audit, or review surfaces problems, fix all of them with real working code — never placeholders, stubs, skipped assertions, or "known failure" allowlists.
+
 ### Coverage (read before any "combined coverage" work)
 
 There are **two separate, non-mergeable** coverage numbers — this is a tooling
@@ -46,6 +48,17 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
   (`proxy.ts`) and prod bundle URLs are *less* resolvable than dev's. The harness targets
   `next dev --webpack`. COVERAGE-mode e2e failures (theme-switcher 45s timeouts, etc.) are
   dev-server-under-instrumentation **artifacts**, not bugs — verify against a normal run.
+
+## E2E (Playwright) Conventions — learned 2026-06-11
+
+- **`playwright.config.mts` must keep** the `setup` project (runs `auth.setup.ts`, which writes `e2e/.auth/{user,admin}.json` — empty without `E2E_USER_*`/`E2E_ADMIN_*` creds) with `chromium`/`mobile-chrome` declaring `dependencies: ["setup"]`, plus `testIgnore: ["**/k3s/**"]`. Without setup, every storageState-based deep spec fails ENOENT on a fresh checkout (206 tests, PR #790); k3s specs target the live cluster via `playwright.k3s.config.mts` and must never run against localhost. PR #754 once clobbered both — watch for stale-branch merges overwriting this config.
+- **503 means "integration not configured"** — API routes deliberately return 503 when their backing service (Notion docs, Anthropic chat, Google Calendar, …) has no credentials. E2E status expectations must accept 503 alongside 2xx/4xx for those routes; do not "fix" the route to hide it.
+- **Run full suites with `--workers=2`** (repo convention, see `scripts/e2e-smart-run.sh`) — higher worker counts overload the dev server and produce flaky 500s / Suspense-fallback stalls. Content checks should wait on `page.locator("h1, main").first().waitFor({ state: "visible", timeout: 30_000 })`, not short `isVisible()` samples (PRs #788/#790).
+- **Port 4000 must be free of foreign dev servers before a run.** `reuseExistingServer: true` silently reuses whatever listens on 4000 — including a `pnpm dev` inside WSL — which lacks the webServer env (`NEXT_PUBLIC_E2E=1`, `E2E_ADMIN_TOKEN`) and causes mass false 401s in `admin-api-sweep`. Check with `Get-NetTCPConnection -LocalPort 4000` / `lsof -ti:4000` first.
+- **Mobile-viewport specs**: navbar controls (contact link, theme/locale switcher) live inside the hamburger drawer (`button[aria-label*="menu" i]`) and the desktop instances stay hidden in the DOM — open the drawer first and select with `.filter({ visible: true })`, never bare `.first()`.
+- A broken `node_modules` (missing `@auth/core`, stale nested `@aws-sdk/*` requiring removed `@smithy/property-provider`) makes API routes 500 en masse while the lockfile is fine — fix with a clean `pnpm install --frozen-lockfile` after deleting `node_modules`, never by touching code.
+- **Verify load artifacts solo before changing code.** Under full-suite load the dev server can transiently 404 a real API route (seen once on `POST /api/admin/ai/analytics-orchestration/pdf`, both projects + retries). Re-run the failing spec alone first — if it passes (route verified: unauth → 401), it's a dev-server race, not a regression. Never widen a security assertion (e.g. adding 404 to "unauth must be 401/403") to absorb such flakes.
+- Notion DBs for case studies / testimonials / services / FAQs currently 404 (`object_not_found`) — deleted or unshared with the "Cloudless.gr App" integration. Code falls back to static content, so tests pass; restoring them is a human/Notion-UI action (see Pending One-Time Setup).
 
 ## Git Workflow
 

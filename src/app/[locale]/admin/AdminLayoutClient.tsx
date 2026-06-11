@@ -106,6 +106,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/calendar", label: "Calendar", Icon: CalendarDays },
       { href: "/admin/reports", label: "Reports", Icon: ClipboardList },
       { href: "/admin/ai-assistant", label: "AI Assistant", Icon: Bot },
+      { href: "/admin/ai-generator", label: "AI Generator", Icon: Bot },
       { href: "/admin/voice-brief", label: "Voice Brief", Icon: Mic },
     ],
   },
