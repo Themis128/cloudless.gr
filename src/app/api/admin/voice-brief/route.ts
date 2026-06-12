@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getConfig } from "@/lib/ssm-config";
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { runVoiceBriefAgent } from "@/lib/agent-voice-brief";
+import { persistVoiceBrief, VOICE_BRIEF_SSM_NAME } from "@/lib/voice-brief-store";
 
 interface VoiceBrief {
   text: string;
@@ -13,12 +14,14 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const region = process.env.AWS_REGION ?? "eu-central-1";
+  // Region defaults to us-east-1 (where all production SSM lives). Lambda's
+  // runtime auto-sets AWS_REGION; we read it but fall back to the prod region.
+  const region = process.env.AWS_REGION || "us-east-1";
 
   try {
     const client = new SSMClient({ region });
     const res = await client.send(
-      new GetParameterCommand({ Name: "/cloudless/VOICE_BRIEF_LATEST" }),
+      new GetParameterCommand({ Name: VOICE_BRIEF_SSM_NAME }),
     );
     const raw = res.Parameter?.Value;
     if (!raw) {
@@ -35,39 +38,29 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // Trigger on-demand generation by calling the cron route internally.
-  // Pin the base URL to a known allowlist so a misconfigured or tampered env
-  // var cannot redirect this server-side fetch to an attacker host (SSRF guard).
-  const ALLOWED_BASE_URLS = [
-    "https://cloudless.gr",
-    "http://localhost:3000",
-  ];
-  const envBase =
-    process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const baseUrl = ALLOWED_BASE_URLS.includes(envBase)
-    ? envBase
-    : "https://cloudless.gr";
-  // Read CRON_SECRET from SSM-backed config — process.env is not populated
-  // in Lambda runtime where secrets live only in SSM.
-  const cfg = await getConfig();
-  const cronSecret = cfg.CRON_SECRET ?? process.env.CRON_SECRET ?? "";
   try {
-    const res = await fetch(`${baseUrl}/api/cron/voice-brief`, {
-      headers: { authorization: `Bearer ${cronSecret}` },
-      signal: AbortSignal.timeout(60_000),
+    const agentResult = await runVoiceBriefAgent({
+      dateLabel: new Date().toLocaleDateString("en-IE", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
     });
-    if (!res.ok) throw new Error(`Cron returned ${res.status}`);
-    const data = await res.json();
-    return NextResponse.json({
-      brief: {
-        text: data.text,
-        generatedAt: data.generatedAt,
-        week: "on-demand",
-      },
-    });
+    const brief: VoiceBrief = {
+      text: agentResult.text,
+      generatedAt: new Date().toISOString(),
+      week: "on-demand",
+    };
+    // Best-effort persist — failure should not fail the user-facing response.
+    await persistVoiceBrief(brief).catch((err) =>
+      console.warn(
+        "[admin/voice-brief] persist failed:",
+        err instanceof Error ? err.message : String(err),
+      ),
+    );
+    return NextResponse.json({ brief });
   } catch (e) {
-    // Log only the message — the raw error may carry the internal fetch's
-    // Authorization header (CRON_SECRET) in its request context.
     console.error(
       "[admin/voice-brief] generation failed:",
       e instanceof Error ? e.message : String(e),
