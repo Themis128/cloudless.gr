@@ -99,3 +99,33 @@ calendar is planned in the roadmap (Phase 2, item 5) but not yet implemented.
 - **502 on publish** — Postiz rejected the post; check the Postiz container logs:
   `kubectl -n postiz logs deploy/postiz --tail=100`.
 - **Pod OOMKilled on the Pi** — raise the memory limit; do not lower `requests`.
+- **Channel stuck with a red "!" badge after page selection** (`inBetweenSteps`
+  stays `true` in the `Integration` table) — upstream v2.11.2 bug: saving a
+  provider page downloads the page's avatar via `uploadSimple`, and when the
+  provider CDN returns 403 (LinkedIn does), the exception aborts the save.
+  Hot-fix in the running pod (reverts on pod restart; harmless — only needed
+  while connecting a new page):
+
+  ```bash
+  kubectl -n postiz exec deploy/postiz -- sh -c "sed -i \\
+    \"14s|.*|        const loadImage = await axios_1.default.get(path, { responseType: 'arraybuffer' }).catch(() => null); if (!loadImage) return path;|\" \\
+    /app/apps/backend/dist/libraries/nestjs-libraries/src/upload/local.storage.js \\
+    && pm2 restart backend"
+  ```
+
+  Then redo the page selection in the UI (click the red badge → pick the page →
+  Save). Verified fixed for the `linkedin-page` channel 2026-06-12.
+
+## Connected channels (as of 2026-06-12)
+
+| Channel | Identifier | Notes |
+|---|---|---|
+| Cloudless.gr (Facebook Page) | `facebook` | Page created 2026-06-12 (id 61590723842098); Meta app needs **Live mode** before posts are publicly visible |
+| Themistoklis Baltzakis | `linkedin` | Personal profile |
+| cloudless.gr | `linkedin-page` | Company page |
+
+Pending: `instagram` (link IG business `cloudless_gr` to the FB Page — blocked
+2026-06-12 by a temporary FB account restriction), `x` (needs OAuth 1.0a
+callback `https://postiz.cloudless.gr/integrations/social/x` in the X app),
+`tiktok` (needs TikTok login + possibly redirect whitelisting, app key
+`awtn8vvhotyxe9oc`).
