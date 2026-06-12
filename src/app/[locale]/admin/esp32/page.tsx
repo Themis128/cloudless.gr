@@ -13,6 +13,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useVisiblePoll } from "@/lib/use-visible-poll";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -178,12 +179,9 @@ export default function AdminEsp32Page() {
     }
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData();
-    const timer = setInterval(fetchData, POLL_INTERVAL);
-    return () => clearInterval(timer);
-  }, [fetchData]);
+  // Visibility-gated polling — pauses while the tab is hidden to avoid
+  // amplifying Cloudflare Worker / API request volume.
+  useVisiblePoll(fetchData, POLL_INTERVAL);
 
   // ── WebSocket log stream ───────────────────────────────────────────────────
 

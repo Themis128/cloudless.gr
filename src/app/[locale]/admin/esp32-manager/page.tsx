@@ -2,6 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useCallback, useEffect, useState } from "react";
+import { useVisiblePoll } from "@/lib/use-visible-poll";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -270,14 +271,9 @@ export default function Esp32ManagerPage() {
     if (Array.isArray(data)) setDevices(data);
   }, [call]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadDevices().catch(() => {});
-    const t = setInterval(() => {
-      loadDevices().catch(() => {});
-    }, POLL_MS);
-    return () => clearInterval(t);
-  }, [loadDevices]);
+  // Visibility-gated polling — pauses while the tab is hidden to avoid
+  // amplifying Cloudflare Worker / API request volume.
+  useVisiblePoll(loadDevices, POLL_MS);
 
   // ── Config tab ───────────────────────────────────────────────────────────────
 
