@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SSMClient, PutParameterCommand } from "@aws-sdk/client-ssm";
-import { getConfig } from "@/lib/ssm-config";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 import { mapIntegrationError } from "@/lib/api-errors";
 import { runVoiceBriefAgent } from "@/lib/agent-voice-brief";
 import { SlackClient } from "@/lib/slack-notify";
-
-const SSM_PARAM_NAME = "/cloudless/VOICE_BRIEF_LATEST";
+import { persistVoiceBrief } from "@/lib/voice-brief-store";
 
 function now() {
   return new Date();
@@ -35,25 +32,12 @@ async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
 // Persistence + notification
 // ---------------------------------------------------------------------------
 
-async function persistBrief(
-  text: string,
-  cfg: Record<string, string | undefined>,
-): Promise<void> {
-  const region = cfg.AWS_REGION ?? "eu-central-1";
-  const client = new SSMClient({ region });
-  const brief = {
+async function persistBrief(text: string): Promise<void> {
+  await persistVoiceBrief({
     text,
     generatedAt: new Date().toISOString(),
     week: weekLabel(now()),
-  };
-  await client.send(
-    new PutParameterCommand({
-      Name: SSM_PARAM_NAME,
-      Value: JSON.stringify(brief),
-      Type: "String",
-      Overwrite: true,
-    }),
-  );
+  });
 }
 
 interface SlackSourceSummary {
@@ -109,11 +93,6 @@ export async function GET(request: NextRequest) {
     return cronUnauthorized();
   }
 
-  const cfg = (await getConfig()) as unknown as Record<
-    string,
-    string | undefined
-  >;
-
   let text: string;
   let sources: SlackSourceSummary[] = [];
 
@@ -134,7 +113,7 @@ export async function GET(request: NextRequest) {
     throw err;
   }
 
-  await safeCall(() => persistBrief(text, cfg));
+  await safeCall(() => persistBrief(text));
   await safeCall(() => notifySlack(text, sources));
 
   return NextResponse.json({
