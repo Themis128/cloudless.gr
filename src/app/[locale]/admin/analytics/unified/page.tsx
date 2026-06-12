@@ -88,8 +88,121 @@ function EmptyState({ label }: Readonly<{ label: string }>) {
   );
 }
 
+interface RoiChannelData {
+  channel: string;
+  configured: boolean;
+  spendCents: number;
+  impressions: number;
+  clicks: number;
+  platformLeads: number;
+}
+
+interface RoiData {
+  windowDays: number;
+  channels: RoiChannelData[];
+  totals: {
+    spendCents: number;
+    impressions: number;
+    clicks: number;
+    platformLeads: number;
+    newLeads: number | null;
+    revenueCents: number | null;
+    costPerLeadCents: number | null;
+    roas: number | null;
+  };
+}
+
+const CHANNEL_LABELS: Record<string, string> = {
+  google: "Google Ads",
+  linkedin: "LinkedIn",
+  tiktok: "TikTok",
+  x: "X",
+  meta: "Meta",
+};
+
+function euros(cents: number | null): string {
+  if (cents === null) return "—";
+  return `€${(cents / 100).toLocaleString("en-IE", { maximumFractionDigits: 2 })}`;
+}
+
+function RoiSection({ roi }: Readonly<{ roi: RoiData | null }>) {
+  if (!roi) return <EmptyState label="ROI" />;
+  const configured = roi.channels.filter((c) => c.configured);
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          label="Ad spend"
+          value={euros(roi.totals.spendCents)}
+          sub={`last ${roi.windowDays} days`}
+          color="text-neon-magenta"
+        />
+        <KpiCard
+          label="New leads"
+          value={roi.totals.newLeads === null ? "—" : String(roi.totals.newLeads)}
+          sub={roi.totals.newLeads === null ? "HubSpot not configured" : "HubSpot contacts"}
+          color="text-neon-cyan"
+        />
+        <KpiCard
+          label="Cost / lead"
+          value={euros(roi.totals.costPerLeadCents)}
+          sub={roi.totals.costPerLeadCents === null ? "needs spend + leads" : "blended"}
+          color="text-yellow-400"
+        />
+        <KpiCard
+          label="ROAS"
+          value={roi.totals.roas === null ? "—" : `${roi.totals.roas}×`}
+          sub={euros(roi.totals.revenueCents) + " revenue"}
+          color="text-neon-green"
+        />
+      </div>
+      {configured.length > 0 && (
+        <div className="mt-3 overflow-x-auto rounded-xl border border-slate-800">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-900/50">
+                <th className="px-4 py-2 text-left font-mono text-xs text-slate-500">Channel</th>
+                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Spend</th>
+                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">
+                  Impressions
+                </th>
+                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">Clicks</th>
+                <th className="px-4 py-2 text-right font-mono text-xs text-slate-500">
+                  Platform leads
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {configured.map((c) => (
+                <tr key={c.channel}>
+                  <td className="px-4 py-2 font-mono text-xs text-white">
+                    {CHANNEL_LABELS[c.channel] ?? c.channel}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-300">
+                    {euros(c.spendCents)}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
+                    {c.impressions.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
+                    {c.clicks.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono text-xs text-slate-400">
+                    {c.platformLeads.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UnifiedAnalyticsPage() {
   const [data, setData] = useState<UnifiedData | null>(null);
+  const [roi, setRoi] = useState<RoiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -100,10 +213,17 @@ export default function UnifiedAnalyticsPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetchWithAuth("/api/admin/analytics/unified");
+        const [res, roiRes] = await Promise.all([
+          fetchWithAuth("/api/admin/analytics/unified"),
+          fetchWithAuth("/api/admin/analytics/roi"),
+        ]);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: UnifiedData = await res.json();
         if (!cancelled) setData(json);
+        if (roiRes.ok) {
+          const roiJson: RoiData = await roiRes.json();
+          if (!cancelled) setRoi(roiJson);
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -159,6 +279,12 @@ export default function UnifiedAnalyticsPage() {
 
       {data && (
         <div className="space-y-10">
+          {/* ROI — spend → leads → revenue */}
+          <div>
+            <SectionHeader title="Campaign ROI" icon="🎯" href="/admin/campaigns" />
+            <RoiSection roi={roi} />
+          </div>
+
           {/* Revenue */}
           <div>
             <SectionHeader title="Revenue" icon="💳" href="/admin/orders" />
