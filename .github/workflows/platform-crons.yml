@@ -1,0 +1,109 @@
+name: Platform crons
+
+# Triggers the app's authenticated cron endpoints on a schedule:
+#
+#   /api/cron/owner-digest    — weekly Slack digest (Mon 06:00 UTC)
+#   /api/cron/client-reports  — monthly client status emails (1st 08:00 UTC;
+#                               endpoint is idempotent within a 25-day window,
+#                               so re-runs are safe)
+#
+# Auth: CRON_SECRET is read from SSM /cloudless/production/CRON_SECRET via the
+# existing AWS OIDC deploy role — no extra repo secrets needed.
+#
+# Manual run: workflow_dispatch with a target picker (defaults to both).
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # owner-digest — Mondays 06:00 UTC
+    - cron: "0 8 1 * *" # client-reports — 1st of the month 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which cron endpoint(s) to trigger"
+        type: choice
+        default: both
+        options:
+          - both
+          - owner-digest
+          - client-reports
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  BASE_URL: https://cloudless.gr
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Read CRON_SECRET from SSM
+        id: secret
+        run: |
+          SECRET=$(aws ssm get-parameter \
+            --name "/cloudless/production/CRON_SECRET" \
+            --with-decryption \
+            --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          if [ -z "$SECRET" ] || [ "$SECRET" = "None" ]; then
+            echo "::error::/cloudless/production/CRON_SECRET is not set in SSM — cron endpoints cannot authenticate."
+            exit 1
+          fi
+          echo "::add-mask::$SECRET"
+          echo "value=$SECRET" >> "$GITHUB_OUTPUT"
+
+      - name: Decide targets
+        id: targets
+        run: |
+          EVENT="${{ github.event_name }}"
+          SCHEDULE="${{ github.event.schedule }}"
+          INPUT="${{ github.event.inputs.target }}"
+          RUN_DIGEST="false"
+          RUN_REPORTS="false"
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            case "$INPUT" in
+              both)            RUN_DIGEST="true"; RUN_REPORTS="true" ;;
+              owner-digest)    RUN_DIGEST="true" ;;
+              client-reports)  RUN_REPORTS="true" ;;
+            esac
+          elif [ "$SCHEDULE" = "0 6 * * 1" ]; then
+            RUN_DIGEST="true"
+          elif [ "$SCHEDULE" = "0 8 1 * *" ]; then
+            RUN_REPORTS="true"
+          fi
+          echo "digest=$RUN_DIGEST" >> "$GITHUB_OUTPUT"
+          echo "reports=$RUN_REPORTS" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger owner-digest
+        if: steps.targets.outputs.digest == 'true'
+        run: |
+          echo "Calling $BASE_URL/api/cron/owner-digest"
+          RESPONSE=$(curl -fsS --retry 3 --retry-delay 10 --max-time 60 \
+            -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
+            "$BASE_URL/api/cron/owner-digest")
+          echo "Response: $RESPONSE"
+          echo "## Owner digest" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Trigger client-reports
+        if: steps.targets.outputs.reports == 'true'
+        run: |
+          echo "Calling $BASE_URL/api/cron/client-reports"
+          RESPONSE=$(curl -fsS --retry 3 --retry-delay 10 --max-time 120 \
+            -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
+            "$BASE_URL/api/cron/client-reports")
+          echo "Response: $RESPONSE"
+          echo "## Client reports" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
