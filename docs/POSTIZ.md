@@ -54,6 +54,14 @@ calendar item status → scheduled / published
      cover the per-provider setup; the repo skills
      `.claude/skills/meta-business-help` and `instagram-graph-api` cover the
      Meta side.
+   - Provider OAuth credentials live in the k8s secret `postiz-providers`
+     (loaded via `envFrom` in `postiz.yaml`, created 2026-06-12 from the SSM
+     values): `FACEBOOK_APP_ID/SECRET`, `LINKEDIN_CLIENT_ID/SECRET`,
+     `X_API_KEY/SECRET`, `TIKTOK_CLIENT_ID/SECRET`. Each provider app console
+     must whitelist the redirect URI
+     `https://postiz.cloudless.gr/integrations/social/{provider}`
+     (provider = `facebook`, `instagram`, `linkedin`, `x`, `tiktok`) or the
+     channel OAuth flow fails with `redirect_uri_mismatch`.
    - Create an API key: Settings → Public API.
 
 5. **Wire the app** — set SSM params (then the 5-min config cache picks them up):
