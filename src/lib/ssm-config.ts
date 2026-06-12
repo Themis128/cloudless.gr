@@ -87,6 +87,9 @@ interface AppConfig {
   META_PAGE_ID: string;
   // GitHub Actions
   GITHUB_TOKEN: string;
+  // Postiz (self-hosted social publishing)
+  POSTIZ_API_URL: string;
+  POSTIZ_API_KEY: string;
   // Cron auth
   CRON_SECRET: string;
   // AI
@@ -211,6 +214,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
     META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
     GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
+    POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
+    POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
@@ -283,6 +288,8 @@ function buildConfigFromEnv(): AppConfig {
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
     META_PAGE_ID: process.env.META_PAGE_ID || "",
     GITHUB_TOKEN: process.env.GITHUB_TOKEN || "",
+    POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
+    POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
     CRON_SECRET: process.env.CRON_SECRET || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",

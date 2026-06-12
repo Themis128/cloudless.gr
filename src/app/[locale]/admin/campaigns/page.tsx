@@ -78,11 +78,10 @@ const platforms: PlatformDef[] = [
     integrationId: "meta",
     href: "/admin/campaigns/meta",
     name: "Meta",
-    description: "Facebook + Instagram — pending policy appeal",
-    color: "border-slate-800/50 bg-slate-900/20 cursor-not-allowed opacity-50",
-    badge: "text-slate-600",
+    description: "Facebook + Instagram ads & insights",
+    color: "border-blue-600/30 bg-blue-600/5 hover:border-blue-600/50",
+    badge: "text-blue-400",
     icon: "f",
-    disabled: true,
   },
 ];
 
