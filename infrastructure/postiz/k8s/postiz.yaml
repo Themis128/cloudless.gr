@@ -199,8 +199,12 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: postiz
-          # arm64-compatible multi-arch image; pin a release tag after first deploy
-          image: ghcr.io/gitroomhq/postiz-app:latest
+          # Pinned to v2.11.2 — the last release before Postiz made the Temporal
+          # workflow server mandatory (v2.12.0+ needs temporal + its own DB +
+          # optional Elasticsearch, too heavy for the Pi cluster). Upgrading past
+          # this tag requires deploying Temporal alongside; see
+          # https://docs.postiz.com/installation/migration
+          image: ghcr.io/gitroomhq/postiz-app:v2.11.2
           ports:
             - containerPort: 5000
           env:
