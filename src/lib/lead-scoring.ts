@@ -57,7 +57,10 @@ const UNDECIDED_SERVICE = "Not sure yet — let's discuss";
 
 const PROJECT_SIGNAL_PATTERNS: ReadonlyArray<[RegExp, string]> = [
   [/\b(budget|invest|spend)\b/i, "mentions budget"],
-  [/\b(timeline|deadline|by (january|february|march|april|may|june|july|august|september|october|november|december)|asap|urgent)\b/i, "mentions timeline"],
+  [
+    /\b(timeline|deadline|by (january|february|march|april|may|june|july|august|september|october|november|december)|asap|urgent)\b/i,
+    "mentions timeline",
+  ],
   [/\b(migrate|migration|launch|rebuild|redesign|scale|grow)\b/i, "concrete project verb"],
   [/\b(quote|proposal|estimate|pricing|price)\b/i, "asks for proposal/pricing"],
 ];

@@ -74,9 +74,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     const contacts =
-      contactsResult.status === "fulfilled"
-        ? (contactsResult.value as HubSpotContactRecord[])
-        : [];
+      contactsResult.status === "fulfilled" ? (contactsResult.value as HubSpotContactRecord[]) : [];
     const pending = pendingResult.status === "fulfilled" ? pendingResult.value : [];
 
     if (!hubspotConfigured && pending.length === 0) {

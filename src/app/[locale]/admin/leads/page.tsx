@@ -26,9 +26,7 @@ const SOURCE_BADGE: Record<string, string> = {
 function formatDate(iso?: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? "—"
-    : d.toLocaleDateString("en-IE", { dateStyle: "medium" });
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("en-IE", { dateStyle: "medium" });
 }
 
 export default function AdminLeadsPage() {
@@ -127,7 +125,10 @@ export default function AdminLeadsPage() {
       />
 
       {error && (
-        <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 font-mono text-sm text-red-300">
+        <p
+          role="alert"
+          className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 font-mono text-sm text-red-300"
+        >
           {error}
         </p>
       )}
@@ -150,7 +151,10 @@ export default function AdminLeadsPage() {
             <tbody className="divide-y divide-slate-800/60">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center font-mono text-sm text-slate-500">
+                  <td
+                    colSpan={6}
+                    className="px-6 py-10 text-center font-mono text-sm text-slate-500"
+                  >
                     {q ? "No leads match your search." : "No leads yet."}
                   </td>
                 </tr>
