@@ -207,6 +207,17 @@ spec:
           image: ghcr.io/gitroomhq/postiz-app:v2.11.2
           ports:
             - containerPort: 5000
+          # Social-provider OAuth app credentials (FACEBOOK_APP_ID/SECRET,
+          # LINKEDIN_CLIENT_ID/SECRET, X_API_KEY/SECRET, TIKTOK_CLIENT_ID/SECRET).
+          # Created out-of-band from SSM /cloudless/production values:
+          #   kubectl -n postiz create secret generic postiz-providers \
+          #     --from-literal=FACEBOOK_APP_ID=... (etc.)
+          # Marked optional so the manifest still applies on a fresh cluster
+          # before the secret exists — channel buttons just stay disabled.
+          envFrom:
+            - secretRef:
+                name: postiz-providers
+                optional: true
           env:
             - name: MAIN_URL
               value: "https://postiz.cloudless.gr"
