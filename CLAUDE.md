@@ -141,8 +141,7 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
 
 ## Authentication
 
-Auth is **Cognito**, full-stop (PR #677, 2026-06-08). There is no Keycloak, no
-JVM heap, no realm config to maintain. App admin = membership in the Cognito
+Auth is **Cognito**. App admin = membership in the Cognito
 group `admin`, surfaced via the `cognito:groups` claim and checked by
 `api-auth.ts` `requireAdmin`. Manage users in the Cognito User Pool console.
 The `[...nextauth]` route uses the Cognito provider; `NEXT_PUBLIC_COGNITO_*`

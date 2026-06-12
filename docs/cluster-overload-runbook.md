@@ -1,4 +1,4 @@
-> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was Keycloak. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
+> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was provided by an external OIDC provider. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
 
 # Cluster Overload Runbook
 
@@ -22,7 +22,7 @@ recovery path is repeatable.
 
 A compound memory/IO failure. The trigger is usually one of:
 
-1. A non-k8s process on the host runs away (e.g. a Keycloak started in a
+1. A non-k8s process on the host runs away (e.g. an orphaned process in a
    user shell, an `aws s3 sync` cron without limits).
 2. A monitoring-namespace pod (Prometheus, Loki, Grafana, Alertmanager) hits
    its working set and starts swapping.
@@ -74,7 +74,7 @@ Look for:
 For user-session bloat, kill the process directly:
 
 ```bash
-ssh 192.168.1.128 'pkill -f keycloak; pkill -f "aws s3 sync"'
+ssh 192.168.1.128 'pkill -f "aws s3 sync"'
 ```
 
 For monitoring-namespace bloat, scale to 0 via kubectl (use long timeouts
@@ -167,9 +167,8 @@ Permanent fixes live in this PR / branch:
   it. It should be re-pointed at a path that exercises the upstream (e.g.
   `/api/health` proxied through the Lambda), so Route 53 stops sending
   failover traffic to a degraded SECONDARY.
-- The `tbaltzakis` user shell is currently the home for a standalone
-  Keycloak (~760 MiB) and ad-hoc `aws s3 sync` jobs. Both should move into
-  the cluster as Deployments / CronJobs with `resources.limits`, or be
+- The `tbaltzakis` user shell may have ad-hoc `aws s3 sync` jobs. These
+  should move into the cluster as CronJobs with `resources.limits`, or be
   removed entirely.
 - The omv boot SD card (`/`) was at 90% during this incident. Cleanup is a
   separate task.
