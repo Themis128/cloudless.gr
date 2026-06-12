@@ -165,6 +165,16 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+/** One-click shortcuts to the most common owner workflows. */
+const QUICK_ACTIONS: { label: string; icon: string; href: string }[] = [
+  { label: "New client portal", icon: "➕", href: "/admin/client-portals" },
+  { label: "Plan a post", icon: "🗓", href: "/admin/calendar" },
+  { label: "Generate content", icon: "🤖", href: "/admin/ai-generator" },
+  { label: "Write blog post", icon: "✍️", href: "/admin/blog" },
+  { label: "Check leads", icon: "📥", href: "/admin/leads" },
+  { label: "View live site", icon: "🌐", href: "/" },
+];
+
 function buildActionQueue(s: DashStats): { label: string; count: number; href: string }[] {
   const queue = [
     {
@@ -269,6 +279,20 @@ export default function AdminDashboard() {
         <p className="font-body mt-1 text-slate-400">
           Manage your Cloudless platform — leads, campaigns, clients, website, and systems.
         </p>
+      </div>
+
+      {/* Quick actions — most common workflows, one click away */}
+      <div className="mb-8 flex flex-wrap gap-2">
+        {QUICK_ACTIONS.map((action) => (
+          <Link
+            key={action.label}
+            href={action.href}
+            className="bg-void-light/50 hover:border-neon-magenta/40 flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2.5 font-mono text-xs font-semibold text-slate-200 transition-colors hover:text-white"
+          >
+            <span aria-hidden>{action.icon}</span>
+            {action.label}
+          </Link>
+        ))}
       </div>
 
       {/* Action queue — what needs the owner right now */}
