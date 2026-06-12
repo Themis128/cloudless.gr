@@ -15,6 +15,7 @@ function buildSiteEnvironment(
   isProd: boolean,
   stripeTransactionsTableName: $util.Output<string>,
   userProfileTableName: $util.Output<string>,
+  adminNotificationsTableName: $util.Output<string>,
   authSecret?: $util.Output<string>,
   cognito?: {
     issuer: $util.Output<string>;
@@ -41,6 +42,7 @@ function buildSiteEnvironment(
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
     USER_PROFILE_TABLE: userProfileTableName,
+    ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
     // Cloudflare Workers AI — consumed by /api/admin/ai/generate. Passed from
     // the deploy workflow env; the route returns 503 when absent.
     ...(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
@@ -153,6 +155,26 @@ export default {
       primaryIndex: { hashKey: "userId" },
     });
 
+    // Durable admin notifications store — audit + analytics for every
+    // client-facing interaction (contact, subscribe, booking, order, error,
+    // auth, portal). 90-day hot retention, then archived to S3 via the
+    // notifications-archive cron (see src/lib/admin-notifications.ts).
+    //
+    // pk = "NOTIF", sk = "<createdAt-ISO8601>#<id>"
+    // GSI categoryIndex: catPk = "CAT#<category>", catSk = "<createdAt-ISO8601>#<id>"
+    const adminNotificationsTable = new sst.aws.Dynamo("AdminNotifications", {
+      fields: {
+        pk: "string",
+        sk: "string",
+        catPk: "string",
+        catSk: "string",
+      },
+      primaryIndex: { hashKey: "pk", rangeKey: "sk" },
+      globalIndexes: {
+        categoryIndex: { hashKey: "catPk", rangeKey: "catSk" },
+      },
+    });
+
     // -------------------------------------------------------------------------
     // Cognito User Pool — always-up AWS auth
     //
@@ -258,6 +280,7 @@ export default {
         isProd,
         stripeTransactionsTable.name,
         userProfileTable.name,
+        adminNotificationsTable.name,
         authSecret,
         {
           issuer: cognitoIssuer,
@@ -266,7 +289,7 @@ export default {
           domain: cognitoHostedDomain,
         }
       ),
-      link: [stripeTransactionsTable, userProfileTable],
+      link: [stripeTransactionsTable, userProfileTable, adminNotificationsTable],
       permissions: [
         {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
@@ -380,25 +403,4 @@ export default {
     //   - PRIMARY:   this SST stack (CloudFront -> Lambda).
     //   - SECONDARY: the Pi/k3s cluster, reachable on the public Tailscale
     //                Funnel (omv.tail8eb71.ts.net:443), serving the SAME
-    //                Next.js image.
-    //
-    // Failover is owned by Cloudflare (where the domain DNS lives), NOT by
-    // Route 53. A Cloudflare Load Balancer health-checks /api/health and steers
-    // traffic AWS -> Pi automatically. Provision/update it with
-    // scripts/setup-cloudflare-lb.sh (CI: .github/workflows/cloudflare-lb.yml).
-    //
-    // HISTORY: a Route 53 PRIMARY/SECONDARY record set used to live here, but
-    // the domain has never actually been delegated to Route 53 (it resolves via
-    // Cloudflare), so those records served no real traffic. The hosted zone
-    // Z079608614L53CC4EAZM3 was then deleted out-of-band on 2026-06-02, which
-    // broke every sst deploy (pulumi could no longer refresh the imported
-    // records). The dead block was removed in favour of the Cloudflare LB.
-
-    return {
-      url: site.url,
-      cognitoUserPoolId: userPool.id,
-      cognitoClientId: userPoolClient.id,
-      cognitoHostedDomain,
-    };
-  },
-} satisfies sst.Config;
+    //                Ne
