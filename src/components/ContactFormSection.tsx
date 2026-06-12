@@ -8,6 +8,7 @@ import SocialLinks from "@/components/SocialLinks";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { trackPixelEvent } from "@/lib/meta-pixel";
+import { getStoredAttribution } from "@/lib/lead-attribution";
 
 const serviceOptions = [
   "Cloud Architecture & Migration",
@@ -34,6 +35,8 @@ export default function ContactFormSection() {
       company: (form.elements.namedItem("company") as HTMLInputElement).value,
       service: (form.elements.namedItem("service") as HTMLSelectElement).value,
       message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
+      // First-touch UTM/referrer attribution captured by <AttributionCapture />.
+      attribution: getStoredAttribution() ?? undefined,
     };
 
     try {
