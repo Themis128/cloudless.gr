@@ -74,180 +74,93 @@ interface NavGroup {
   cards: NavCard[];
 }
 
+/** Compact card constructor — keeps the nav config dense (and CPD-quiet). */
+function card(
+  title: string,
+  description: string,
+  icon: string,
+  href: string,
+  stat?: NavCard["stat"]
+): NavCard {
+  return { title, description, icon, href, stat };
+}
+
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "Growth — leads to revenue",
     accent: "text-neon-cyan",
     cards: [
-      {
-        title: "Lead Inbox",
-        description: "Unified leads from HubSpot + portal enrollments",
-        icon: "📥",
-        href: "/admin/leads",
-        stat: (s) => (s.leads === null ? null : `${s.leads} leads`),
-      },
-      {
-        title: "Campaign ROI",
-        description: "Spend → leads → revenue across all channels",
-        icon: "🎯",
-        href: "/admin/analytics/unified",
-        stat: (s) => (s.roas === null ? null : `ROAS ${s.roas}×`),
-      },
-      {
-        title: "Campaigns",
-        description: "Meta, Google, LinkedIn, TikTok, X ads",
-        icon: "📣",
-        href: "/admin/campaigns",
-        stat: (s) => (s.spendCents === null ? null : `€${(s.spendCents / 100).toFixed(0)} spend`),
-      },
-      {
-        title: "Content Calendar",
-        description: "Plan and publish social posts via Postiz",
-        icon: "🗓",
-        href: "/admin/calendar",
-      },
-      {
-        title: "Email Campaigns",
-        description: "ActiveCampaign sends and automations",
-        icon: "📧",
-        href: "/admin/email/campaigns",
-      },
-      {
-        title: "Pipeline",
-        description: "HubSpot deals by stage",
-        icon: "🔀",
-        href: "/admin/pipeline",
-      },
+      card(
+        "Lead Inbox",
+        "Unified leads from HubSpot + portal enrollments",
+        "📥",
+        "/admin/leads",
+        (s) => (s.leads === null ? null : `${s.leads} leads`)
+      ),
+      card(
+        "Campaign ROI",
+        "Spend → leads → revenue across all channels",
+        "🎯",
+        "/admin/analytics/unified",
+        (s) => (s.roas === null ? null : `ROAS ${s.roas}×`)
+      ),
+      card("Campaigns", "Meta, Google, LinkedIn, TikTok, X ads", "📣", "/admin/campaigns", (s) =>
+        s.spendCents === null ? null : `€${(s.spendCents / 100).toFixed(0)} spend`
+      ),
+      card("Content Calendar", "Plan and publish social posts via Postiz", "🗓", "/admin/calendar"),
+      card(
+        "Email Campaigns",
+        "ActiveCampaign sends and automations",
+        "📧",
+        "/admin/email/campaigns"
+      ),
+      card("Pipeline", "HubSpot deals by stage", "🔀", "/admin/pipeline"),
     ],
   },
   {
     label: "Clients — the front-end promise",
     accent: "text-neon-green",
     cards: [
-      {
-        title: "Client Portals",
-        description: "Timelines, deliverables, approvals, payments",
-        icon: "🤝",
-        href: "/admin/client-portals",
-        stat: (s) => (s.atRiskClients === null ? null : `${s.atRiskClients} need attention`),
-      },
-      {
-        title: "Orders & Revenue",
-        description: "Stripe checkouts and order history",
-        icon: "💳",
-        href: "/admin/orders",
-        stat: (s) =>
-          s.orders === null ? null : `${s.orders} orders · €${(s.revenue ?? 0).toFixed(0)}`,
-      },
-      {
-        title: "Subscriptions",
-        description: "Recurring plans and MRR",
-        icon: "🔁",
-        href: "/admin/subscriptions",
-      },
-      {
-        title: "CRM",
-        description: "HubSpot contacts, companies, tickets",
-        icon: "◉",
-        href: "/admin/crm",
-      },
+      card(
+        "Client Portals",
+        "Timelines, deliverables, approvals, payments",
+        "🤝",
+        "/admin/client-portals",
+        (s) => (s.atRiskClients === null ? null : `${s.atRiskClients} need attention`)
+      ),
+      card("Orders & Revenue", "Stripe checkouts and order history", "💳", "/admin/orders", (s) =>
+        s.orders === null ? null : `${s.orders} orders · €${(s.revenue ?? 0).toFixed(0)}`
+      ),
+      card("Subscriptions", "Recurring plans and MRR", "🔁", "/admin/subscriptions"),
+      card("CRM", "HubSpot contacts, companies, tickets", "◉", "/admin/crm"),
     ],
   },
   {
     label: "Website — what visitors see",
     accent: "text-neon-magenta",
     cards: [
-      {
-        title: "Blog",
-        description: "Notion-backed posts on /blog",
-        icon: "✍️",
-        href: "/admin/blog",
-      },
-      {
-        title: "Case Studies",
-        description: "CMS for /case-studies and /work",
-        icon: "💼",
-        href: "/admin/cms/case-studies",
-      },
-      {
-        title: "Services",
-        description: "CMS for the /services page",
-        icon: "📦",
-        href: "/admin/cms/services",
-      },
-      {
-        title: "Testimonials",
-        description: "Social proof shown across the site",
-        icon: "⭐",
-        href: "/admin/cms/testimonials",
-      },
-      {
-        title: "FAQs",
-        description: "CMS for FAQ sections",
-        icon: "❓",
-        href: "/admin/cms/faqs",
-      },
-      {
-        title: "Docs",
-        description: "Notion-backed docs on /docs",
-        icon: "📚",
-        href: "/admin/docs",
-      },
-      {
-        title: "Form Submissions",
-        description: "Contact entries stored in Notion",
-        icon: "📝",
-        href: "/admin/notion",
-      },
-      {
-        title: "SEO",
-        description: "Search Console performance and keywords",
-        icon: "🔍",
-        href: "/admin/analytics/seo",
-      },
+      card("Blog", "Notion-backed posts on /blog", "✍️", "/admin/blog"),
+      card("Case Studies", "CMS for /case-studies and /work", "💼", "/admin/cms/case-studies"),
+      card("Services", "CMS for the /services page", "📦", "/admin/cms/services"),
+      card("Testimonials", "Social proof shown across the site", "⭐", "/admin/cms/testimonials"),
+      card("FAQs", "CMS for FAQ sections", "❓", "/admin/cms/faqs"),
+      card("Docs", "Notion-backed docs on /docs", "📚", "/admin/docs"),
+      card("Form Submissions", "Contact entries stored in Notion", "📝", "/admin/notion"),
+      card("SEO", "Search Console performance and keywords", "🔍", "/admin/analytics/seo"),
     ],
   },
   {
     label: "System — keep it running",
     accent: "text-yellow-400",
     cards: [
-      {
-        title: "Integrations",
-        description: "Live status of every connected service",
-        icon: "🔌",
-        href: "/admin/integrations",
-      },
-      {
-        title: "Errors",
-        description: "Unresolved Sentry issues",
-        icon: "⚠️",
-        href: "/admin/errors",
-        stat: (s) => (s.errors === null ? null : `${s.errors} unresolved`),
-      },
-      {
-        title: "KPI Dashboard",
-        description: "GSC, analytics, projects, tasks in one view",
-        icon: "📊",
-        href: "/admin/kpi",
-      },
-      {
-        title: "Users",
-        description: "Cognito accounts and admin access",
-        icon: "👤",
-        href: "/admin/users",
-      },
-      {
-        title: "Notifications",
-        description: "Slack routing and test sends",
-        icon: "🔔",
-        href: "/admin/notifications",
-      },
-      {
-        title: "Settings",
-        description: "Site configuration and preferences",
-        icon: "⚙️",
-        href: "/admin/settings",
-      },
+      card("Integrations", "Live status of every connected service", "🔌", "/admin/integrations"),
+      card("Errors", "Unresolved Sentry issues", "⚠️", "/admin/errors", (s) =>
+        s.errors === null ? null : `${s.errors} unresolved`
+      ),
+      card("KPI Dashboard", "GSC, analytics, projects, tasks in one view", "📊", "/admin/kpi"),
+      card("Users", "Cognito accounts and admin access", "👤", "/admin/users"),
+      card("Notifications", "Slack routing and test sends", "🔔", "/admin/notifications"),
+      card("Settings", "Site configuration and preferences", "⚙️", "/admin/settings"),
     ],
   },
 ];
