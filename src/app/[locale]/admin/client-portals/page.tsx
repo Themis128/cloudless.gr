@@ -333,6 +333,294 @@ function StepManager({
   );
 }
 
+async function patchPortal(body: Record<string, unknown>): Promise<boolean> {
+  const res = await fetchWithAuth("/api/admin/client-portals", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.ok;
+}
+
+const DELIVERABLE_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "draft", label: "Draft (internal)" },
+  { value: "in_review", label: "In review (client sees it)" },
+  { value: "approved", label: "Approved" },
+  { value: "changes_requested", label: "Changes requested" },
+];
+
+function DeliverableManager({
+  portal,
+  onUpdate,
+}: Readonly<{ portal: ClientPortal; onUpdate: () => void }>) {
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const deliverables = portal.deliverables ?? [];
+
+  async function add() {
+    if (!title.trim()) return;
+    setBusy(true);
+    try {
+      await patchPortal({
+        token: portal.token,
+        action: "add-deliverable",
+        title: title.trim(),
+        url: url.trim() || undefined,
+      });
+      setTitle("");
+      setUrl("");
+      onUpdate();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setStatus(deliverableId: string, status: string) {
+    await patchPortal({ token: portal.token, action: "update-deliverable", deliverableId, status });
+    onUpdate();
+  }
+
+  async function remove(deliverableId: string) {
+    if (!confirm("Delete this deliverable?")) return;
+    await patchPortal({ token: portal.token, action: "delete-deliverable", deliverableId });
+    onUpdate();
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      {deliverables.length === 0 && (
+        <p className="font-mono text-xs text-slate-600">No deliverables yet.</p>
+      )}
+      {deliverables.map((d) => (
+        <div
+          key={d.id}
+          className="bg-void flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 px-3 py-2"
+        >
+          <div className="min-w-0 flex-1">
+            <span className="block truncate font-mono text-xs text-white">{d.title}</span>
+            {d.url && (
+              <a
+                href={d.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neon-cyan block truncate font-mono text-[10px] hover:underline"
+              >
+                {d.url}
+              </a>
+            )}
+            {d.clientComment && (
+              <p className="mt-1 font-mono text-[10px] text-yellow-400">
+                Client: {d.clientComment}
+              </p>
+            )}
+          </div>
+          <select
+            value={d.status}
+            onChange={(e) => setStatus(d.id, e.target.value)}
+            aria-label={`Status of ${d.title}`}
+            className="bg-void rounded-lg border border-slate-700 px-2 py-1.5 font-mono text-[10px] text-slate-300 focus:outline-none"
+          >
+            {DELIVERABLE_STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => remove(d.id)}
+            aria-label={`Delete ${d.title}`}
+            className="font-mono text-xs text-slate-600 hover:text-red-400"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Deliverable title…"
+          className="bg-void focus:border-neon-blue/50 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
+        />
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Link (Figma, staging, doc)…"
+          className="bg-void focus:border-neon-blue/50 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
+        />
+        <button
+          type="button"
+          disabled={busy || !title.trim()}
+          onClick={add}
+          className="rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition hover:border-slate-600 hover:text-white disabled:opacity-40"
+        >
+          + Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PaymentLinkManager({
+  portal,
+  onUpdate,
+}: Readonly<{ portal: ClientPortal; onUpdate: () => void }>) {
+  const [label, setLabel] = useState("");
+  const [url, setUrl] = useState("");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const links = portal.paymentLinks ?? [];
+
+  async function add() {
+    if (!label.trim() || !url.trim()) return;
+    setBusy(true);
+    try {
+      const amountCents = amount.trim() ? Math.round(Number.parseFloat(amount) * 100) : undefined;
+      await patchPortal({
+        token: portal.token,
+        action: "add-payment-link",
+        label: label.trim(),
+        url: url.trim(),
+        amountCents: Number.isFinite(amountCents) ? amountCents : undefined,
+        currency: "EUR",
+      });
+      setLabel("");
+      setUrl("");
+      setAmount("");
+      onUpdate();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setStatus(paymentLinkId: string, status: string) {
+    await patchPortal({
+      token: portal.token,
+      action: "update-payment-link",
+      paymentLinkId,
+      status,
+    });
+    onUpdate();
+  }
+
+  async function remove(paymentLinkId: string) {
+    if (!confirm("Delete this payment link?")) return;
+    await patchPortal({ token: portal.token, action: "delete-payment-link", paymentLinkId });
+    onUpdate();
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      {links.length === 0 && (
+        <p className="font-mono text-xs text-slate-600">No payment links yet.</p>
+      )}
+      {links.map((l) => (
+        <div
+          key={l.id}
+          className="bg-void flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 px-3 py-2"
+        >
+          <div className="min-w-0 flex-1">
+            <span className="block truncate font-mono text-xs text-white">
+              {l.label}
+              {typeof l.amountCents === "number" &&
+                ` — ${(l.amountCents / 100).toFixed(2)} ${l.currency ?? "EUR"}`}
+            </span>
+            <a
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-neon-cyan block truncate font-mono text-[10px] hover:underline"
+            >
+              {l.url}
+            </a>
+          </div>
+          <select
+            value={l.status}
+            onChange={(e) => setStatus(l.id, e.target.value)}
+            aria-label={`Status of ${l.label}`}
+            className="bg-void rounded-lg border border-slate-700 px-2 py-1.5 font-mono text-[10px] text-slate-300 focus:outline-none"
+          >
+            <option value="open">Open</option>
+            <option value="paid">Paid</option>
+            <option value="void">Void</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => remove(l.id)}
+            aria-label={`Delete ${l.label}`}
+            className="font-mono text-xs text-slate-600 hover:text-red-400"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Label (e.g. Deposit 50%)…"
+          className="bg-void focus:border-neon-blue/50 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
+        />
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Stripe payment link URL…"
+          className="bg-void focus:border-neon-blue/50 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
+        />
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="€"
+          className="bg-void focus:border-neon-blue/50 w-24 rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-white placeholder-slate-600 focus:outline-none"
+        />
+        <button
+          type="button"
+          disabled={busy || !label.trim() || !url.trim()}
+          onClick={add}
+          className="rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-400 transition hover:border-slate-600 hover:text-white disabled:opacity-40"
+        >
+          + Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReportsToggle({
+  portal,
+  onUpdate,
+}: Readonly<{ portal: ClientPortal; onUpdate: () => void }>) {
+  const enabled = Boolean(portal.reportsEnabled);
+
+  async function toggle() {
+    await patchPortal({ token: portal.token, action: "set-reports-enabled", enabled: !enabled });
+    onUpdate();
+  }
+
+  return (
+    <label className="mt-6 flex cursor-pointer items-center gap-3">
+      <input
+        type="checkbox"
+        checked={enabled}
+        onChange={toggle}
+        className="border-neon-cyan/30 bg-void h-4 w-4 rounded border accent-cyan-400"
+      />
+      <span className="font-mono text-xs text-slate-400">
+        Monthly status email to the client (cron <code>client-reports</code>)
+      </span>
+    </label>
+  );
+}
+
 function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   const [clients, setClients] = useState<PendingClient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -779,6 +1067,15 @@ export default function ClientPortalsPage() {
                       Project Steps
                     </p>
                     <StepManager portal={portal} onUpdate={load} />
+                    <p className="mt-6 mb-1 font-mono text-[10px] tracking-widest text-slate-500 uppercase">
+                      Deliverables
+                    </p>
+                    <DeliverableManager portal={portal} onUpdate={load} />
+                    <p className="mt-6 mb-1 font-mono text-[10px] tracking-widest text-slate-500 uppercase">
+                      Payment Links
+                    </p>
+                    <PaymentLinkManager portal={portal} onUpdate={load} />
+                    <ReportsToggle portal={portal} onUpdate={load} />
                   </div>
                 )}
               </div>

@@ -1,33 +1,7 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-import type { ClientPortal } from "@/app/api/admin/client-portals/route";
-
-const SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
-
-async function resolvePortal(token: string): Promise<ClientPortal | null> {
-  try {
-    const client = new SSMClient({ region: REGION });
-    const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
-    const portals: ClientPortal[] = JSON.parse(res.Parameter?.Value ?? "[]");
-    return (
-      portals.find((p) => {
-        try {
-          const a = Buffer.from(p.token);
-          const b = Buffer.from(token);
-          return a.length === b.length && timingSafeEqual(a, b);
-        } catch {
-          return false;
-        }
-      }) ?? null
-    );
-  } catch {
-    return null;
-  }
-}
+import { findPortalByToken, clientVisibleDeliverables } from "@/lib/client-portals";
 
 async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
   try {
@@ -54,7 +28,7 @@ export async function GET(
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
-  const portal = await resolvePortal(token);
+  const portal = await findPortalByToken(token);
   if (!portal) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
   }
@@ -135,6 +109,8 @@ export async function GET(
       label: portal.label,
     },
     steps: portal.steps ?? [],
+    deliverables: clientVisibleDeliverables(portal),
+    paymentLinks: portal.paymentLinks ?? [],
     projects: projects ?? [],
     invoices: stripeData?.invoices ?? [],
     subscriptions: stripeData?.subscriptions ?? [],
