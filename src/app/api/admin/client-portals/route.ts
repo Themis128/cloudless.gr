@@ -1,34 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID } from "node:crypto";
+import {
+  readPortals,
+  writePortals,
+  newDeliverable,
+  newPaymentLink,
+  type ClientPortal,
+  type PortalStep,
+  type DeliverableStatus,
+  type PaymentLinkStatus,
+} from "@/lib/client-portals";
 
-const SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
-
-export interface PortalComment {
-  id: string;
-  author: string;
-  text: string;
-  createdAt: string;
-}
-
-export interface PortalStep {
-  id: string;
-  name: string;
-  status: "pending" | "in-progress" | "completed" | "blocked";
-  completedAt?: string;
-  comments: PortalComment[];
-}
-
-export interface ClientPortal {
-  token: string;
-  label: string;
-  clientEmail: string;
-  clientName: string;
-  createdAt: string;
-  steps: PortalStep[];
-}
+// Re-exported for existing imports (portal token route, admin pages).
+export type { ClientPortal, PortalStep, PortalComment } from "@/lib/client-portals";
 
 const DEFAULT_STEP_NAMES = [
   "Free Audit",
@@ -46,28 +31,6 @@ function makeDefaultSteps(): PortalStep[] {
     status: "pending",
     comments: [],
   }));
-}
-
-async function readPortals(): Promise<ClientPortal[]> {
-  try {
-    const client = new SSMClient({ region: REGION });
-    const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
-    return JSON.parse(res.Parameter?.Value ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-async function writePortals(portals: ClientPortal[]): Promise<void> {
-  const client = new SSMClient({ region: REGION });
-  await client.send(
-    new PutParameterCommand({
-      Name: SSM_KEY,
-      Value: JSON.stringify(portals),
-      Type: "String",
-      Overwrite: true,
-    })
-  );
 }
 
 export async function GET(request: NextRequest) {
@@ -108,6 +71,8 @@ export async function POST(request: NextRequest) {
           comments: [],
         }))
       : makeDefaultSteps(),
+    deliverables: [],
+    paymentLinks: [],
   };
 
   portals.push(portal);
@@ -138,7 +103,40 @@ type PatchAction =
     }
   | { token: string; action: "add-step"; name: string }
   | { token: string; action: "delete-step"; stepId: string }
-  | { token: string; action: "rename-step"; stepId: string; name: string };
+  | { token: string; action: "rename-step"; stepId: string; name: string }
+  | {
+      token: string;
+      action: "add-deliverable";
+      title: string;
+      url?: string;
+      description?: string;
+    }
+  | {
+      token: string;
+      action: "update-deliverable";
+      deliverableId: string;
+      status?: DeliverableStatus;
+      title?: string;
+      url?: string;
+      description?: string;
+    }
+  | { token: string; action: "delete-deliverable"; deliverableId: string }
+  | {
+      token: string;
+      action: "add-payment-link";
+      label: string;
+      url: string;
+      amountCents?: number;
+      currency?: string;
+    }
+  | {
+      token: string;
+      action: "update-payment-link";
+      paymentLinkId: string;
+      status: PaymentLinkStatus;
+    }
+  | { token: string; action: "delete-payment-link"; paymentLinkId: string }
+  | { token: string; action: "set-reports-enabled"; enabled: boolean };
 
 function stepNotFound() {
   return NextResponse.json({ error: "Step not found" }, { status: 404 });
@@ -213,6 +211,72 @@ function applyRenameStep(
   return null;
 }
 
+function applyAddDeliverable(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "add-deliverable" }>
+): NextResponse | null {
+  if (!body.title?.trim()) {
+    return NextResponse.json({ error: "Deliverable title required" }, { status: 400 });
+  }
+  portal.deliverables ??= [];
+  portal.deliverables.push(
+    newDeliverable({ title: body.title, url: body.url, description: body.description })
+  );
+  return null;
+}
+
+function applyUpdateDeliverable(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "update-deliverable" }>
+): NextResponse | null {
+  const deliverable = portal.deliverables?.find((d) => d.id === body.deliverableId);
+  if (!deliverable) {
+    return NextResponse.json({ error: "Deliverable not found" }, { status: 404 });
+  }
+  if (body.status) deliverable.status = body.status;
+  if (body.title?.trim()) deliverable.title = body.title.slice(0, 120);
+  if (body.url !== undefined) deliverable.url = body.url.slice(0, 500) || undefined;
+  if (body.description !== undefined) {
+    deliverable.description = body.description.slice(0, 1000) || undefined;
+  }
+  deliverable.updatedAt = new Date().toISOString();
+  return null;
+}
+
+function applyAddPaymentLink(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "add-payment-link" }>
+): NextResponse | null {
+  if (!body.label?.trim() || !body.url?.trim()) {
+    return NextResponse.json({ error: "label and url are required" }, { status: 400 });
+  }
+  portal.paymentLinks ??= [];
+  portal.paymentLinks.push(
+    newPaymentLink({
+      label: body.label,
+      url: body.url,
+      amountCents: body.amountCents,
+      currency: body.currency,
+    })
+  );
+  return null;
+}
+
+function applyUpdatePaymentLink(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "update-payment-link" }>
+): NextResponse | null {
+  const link = portal.paymentLinks?.find((l) => l.id === body.paymentLinkId);
+  if (!link) return NextResponse.json({ error: "Payment link not found" }, { status: 404 });
+  link.status = body.status;
+  if (body.status === "paid" && !link.paidAt) {
+    link.paidAt = new Date().toISOString();
+  } else if (body.status !== "paid") {
+    delete link.paidAt;
+  }
+  return null;
+}
+
 function dispatchPatch(portal: ClientPortal, body: PatchAction): NextResponse | null {
   switch (body.action) {
     case "update-step":
@@ -228,6 +292,23 @@ function dispatchPatch(portal: ClientPortal, body: PatchAction): NextResponse | 
       return null;
     case "rename-step":
       return applyRenameStep(portal, body);
+    case "add-deliverable":
+      return applyAddDeliverable(portal, body);
+    case "update-deliverable":
+      return applyUpdateDeliverable(portal, body);
+    case "delete-deliverable":
+      portal.deliverables = (portal.deliverables ?? []).filter((d) => d.id !== body.deliverableId);
+      return null;
+    case "add-payment-link":
+      return applyAddPaymentLink(portal, body);
+    case "update-payment-link":
+      return applyUpdatePaymentLink(portal, body);
+    case "delete-payment-link":
+      portal.paymentLinks = (portal.paymentLinks ?? []).filter((l) => l.id !== body.paymentLinkId);
+      return null;
+    case "set-reports-enabled":
+      portal.reportsEnabled = Boolean(body.enabled);
+      return null;
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
