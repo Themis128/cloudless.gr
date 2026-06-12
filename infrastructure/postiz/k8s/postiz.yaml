@@ -214,6 +214,11 @@ spec:
               value: "https://postiz.cloudless.gr"
             - name: NEXT_PUBLIC_BACKEND_URL
               value: "https://postiz.cloudless.gr/api"
+            # Server-side (SSR) calls from the frontend to the backend stay
+            # inside the container — without this the frontend fetches
+            # "undefined/auth/..." and renders errors.
+            - name: BACKEND_INTERNAL_URL
+              value: "http://localhost:3000"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -231,7 +236,9 @@ spec:
             - name: IS_GENERAL
               value: "true"
             - name: DISABLE_REGISTRATION
-              value: "false" # flip to "true" after creating the admin account
+              # Admin account exists (creds in SSM POSTIZ_ADMIN_EMAIL/PASSWORD,
+              # created 2026-06-12) — registration stays locked.
+              value: "true"
             - name: STORAGE_PROVIDER
               value: "local"
             - name: UPLOAD_DIRECTORY
