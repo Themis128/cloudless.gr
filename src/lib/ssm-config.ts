@@ -27,6 +27,8 @@ interface AppConfig {
   SLACK_WEBHOOK_URL: string;
   SLACK_BOT_TOKEN: string;
   SLACK_SIGNING_SECRET: string;
+  /** Default channel (ID or #name) for bot posts without an explicit channel. */
+  SLACK_DEFAULT_CHANNEL: string;
   HUBSPOT_API_KEY: string;
   HUBSPOT_CLIENT_SECRET: string;
   NOTION_API_KEY: string;
@@ -165,6 +167,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
     SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
     SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
+    SLACK_DEFAULT_CHANNEL: params.get("SLACK_DEFAULT_CHANNEL") ?? "",
     HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
     HUBSPOT_CLIENT_SECRET: params.get("HUBSPOT_CLIENT_SECRET") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
@@ -239,6 +242,7 @@ function buildConfigFromEnv(): AppConfig {
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
+    SLACK_DEFAULT_CHANNEL: process.env.SLACK_DEFAULT_CHANNEL || "",
     HUBSPOT_API_KEY: process.env.HUBSPOT_API_KEY || process.env.HUBSPOT_PRIVATE_APP_TOKEN || "",
     HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",

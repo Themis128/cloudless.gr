@@ -68,10 +68,12 @@ const COMMIT_SHA_SHORT_LENGTH = 7;
 const ORDER_SESSION_DISPLAY_LENGTH = 20;
 
 export class SlackClient {
-  private defaultChannel: string;
+  /** Explicit per-instance channel override; otherwise resolved from config at post time. */
+  private channelOverride?: string;
+  private defaultChannel = "#general";
 
   constructor(opts?: { channel?: string }) {
-    this.defaultChannel = opts?.channel ?? process.env.SLACK_DEFAULT_CHANNEL ?? "#general";
+    this.channelOverride = opts?.channel;
   }
 
   /** Send a Block Kit message with retry/backoff. Returns true on success. */
@@ -81,6 +83,8 @@ export class SlackClient {
     const cfg = await getSlackConfigAsync();
     const token = cfg.SLACK_BOT_TOKEN;
     const webhookUrl = cfg.SLACK_WEBHOOK_URL;
+    // Channel priority: explicit instance override → env/SSM default → #general.
+    this.defaultChannel = this.channelOverride || cfg.SLACK_DEFAULT_CHANNEL || "#general";
 
     if (!token && !webhookUrl) {
       // Slack not configured — skip silently (warning logged at config init)
