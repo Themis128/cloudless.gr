@@ -33,9 +33,31 @@ interface PortalSubscription {
   cancelAtPeriodEnd: boolean;
 }
 
+interface PortalDeliverable {
+  id: string;
+  title: string;
+  url?: string;
+  description?: string;
+  status: "in_review" | "approved" | "changes_requested";
+  clientComment?: string;
+  respondedAt?: string;
+}
+
+interface PortalPaymentLink {
+  id: string;
+  label: string;
+  url: string;
+  amountCents?: number;
+  currency?: string;
+  status: "open" | "paid" | "void";
+  paidAt?: string;
+}
+
 interface PortalData {
   client: { name: string; email: string; label: string };
   steps: PortalStep[];
+  deliverables: PortalDeliverable[];
+  paymentLinks: PortalPaymentLink[];
   projects: PortalProject[];
   invoices: PortalInvoice[];
   subscriptions: PortalSubscription[];
@@ -359,6 +381,162 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
   );
 }
 
+const DELIVERABLE_BADGE: Record<PortalDeliverable["status"], { label: string; cls: string }> = {
+  in_review: {
+    label: "Awaiting your review",
+    cls: "border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan",
+  },
+  approved: { label: "Approved", cls: "border-green-900/40 bg-green-950/20 text-green-400" },
+  changes_requested: {
+    label: "Changes requested",
+    cls: "border-yellow-500/40 bg-yellow-500/10 text-yellow-400",
+  },
+};
+
+function DeliverableCard({
+  deliverable,
+  token,
+  onUpdated,
+}: Readonly<{
+  deliverable: PortalDeliverable;
+  token: string;
+  onUpdated: (d: PortalDeliverable) => void;
+}>) {
+  const [busy, setBusy] = useState(false);
+  const [askingChanges, setAskingChanges] = useState(false);
+  const [comment, setComment] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function respond(action: "approve" | "request_changes") {
+    setBusy(true);
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/portal/${token}/deliverables`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deliverableId: deliverable.id,
+          action,
+          comment: comment.trim() || undefined,
+        }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setActionError(body?.error ?? "Something went wrong — please try again.");
+        return;
+      }
+      onUpdated(body.deliverable as PortalDeliverable);
+      setAskingChanges(false);
+    } catch {
+      setActionError("Could not reach the server — please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const badge = DELIVERABLE_BADGE[deliverable.status];
+
+  return (
+    <div className="bg-void-light/30 rounded-xl border border-slate-800 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {deliverable.url ? (
+            <a
+              href={deliverable.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-heading text-neon-cyan font-semibold hover:underline"
+            >
+              {deliverable.title} ↗
+            </a>
+          ) : (
+            <span className="font-heading font-semibold text-white">{deliverable.title}</span>
+          )}
+          {deliverable.description && (
+            <p className="mt-1 text-sm text-slate-400">{deliverable.description}</p>
+          )}
+          {deliverable.clientComment && deliverable.status !== "in_review" && (
+            <p className="mt-2 border-l-2 border-slate-700 pl-3 font-mono text-xs text-slate-500">
+              Your feedback: {deliverable.clientComment}
+            </p>
+          )}
+        </div>
+        <span
+          className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] ${badge.cls}`}
+        >
+          {badge.label}
+        </span>
+      </div>
+
+      {deliverable.status === "in_review" && (
+        <div className="mt-4 space-y-3">
+          {askingChanges && (
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+              placeholder="What would you like us to change?"
+              className="focus:border-neon-cyan/60 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-sm text-white outline-none placeholder:text-slate-600"
+            />
+          )}
+          {actionError && (
+            <p role="alert" className="font-mono text-xs text-red-400">
+              {actionError}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {askingChanges ? (
+              <>
+                <button
+                  type="button"
+                  disabled={busy || !comment.trim()}
+                  onClick={() => respond("request_changes")}
+                  className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-2 font-mono text-xs font-semibold text-yellow-400 transition-colors hover:bg-yellow-500/20 disabled:opacity-40"
+                >
+                  {busy ? "Sending…" : "Send change request"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setAskingChanges(false)}
+                  className="rounded-lg border border-slate-700 px-4 py-2 font-mono text-xs text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => respond("approve")}
+                  className="border-neon-green/40 bg-neon-green/10 text-neon-green hover:bg-neon-green/20 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-colors disabled:opacity-40"
+                >
+                  {busy ? "Sending…" : "Approve ✓"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setAskingChanges(true)}
+                  className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-2 font-mono text-xs font-semibold text-yellow-400 transition-colors hover:bg-yellow-500/20 disabled:opacity-40"
+                >
+                  Request changes
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const PAYMENT_BADGE: Record<PortalPaymentLink["status"], { label: string; cls: string }> = {
+  open: { label: "Open", cls: "border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan" },
+  paid: { label: "Paid", cls: "border-green-900/40 bg-green-950/20 text-green-400" },
+  void: { label: "Void", cls: "border-slate-700 text-slate-500" },
+};
+
 export default function PortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const [data, setData] = useState<PortalData | null>(null);
@@ -433,6 +611,81 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
               <div className="bg-void-light/20 rounded-2xl border border-slate-800 p-6">
                 <ProjectTimeline steps={data.steps} />
               </div>
+            )}
+
+            {/* Deliverables — review & approve */}
+            {data.deliverables.length > 0 && (
+              <section>
+                <h2 className="mb-3 font-mono text-xs tracking-widest text-slate-500 uppercase">
+                  Deliverables
+                </h2>
+                <div className="space-y-3">
+                  {data.deliverables.map((deliverable) => (
+                    <DeliverableCard
+                      key={deliverable.id}
+                      deliverable={deliverable}
+                      token={token}
+                      onUpdated={(updated) =>
+                        setData((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                deliverables: prev.deliverables.map((d) =>
+                                  d.id === updated.id ? updated : d
+                                ),
+                              }
+                            : prev
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Payment links */}
+            {data.paymentLinks.filter((l) => l.status !== "void").length > 0 && (
+              <section>
+                <h2 className="mb-3 font-mono text-xs tracking-widest text-slate-500 uppercase">
+                  Payments
+                </h2>
+                <div className="space-y-2">
+                  {data.paymentLinks
+                    .filter((l) => l.status !== "void")
+                    .map((link) => (
+                      <div
+                        key={link.id}
+                        className="bg-void-light/20 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="font-mono text-sm text-white">{link.label}</span>
+                          {typeof link.amountCents === "number" && (
+                            <span className="font-mono text-sm font-semibold text-white">
+                              {formatAmount(link.amountCents, link.currency ?? "EUR")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${PAYMENT_BADGE[link.status].cls}`}
+                          >
+                            {PAYMENT_BADGE[link.status].label}
+                          </span>
+                          {link.status === "open" && (
+                            <a
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 rounded-lg border px-4 py-1.5 font-mono text-xs font-semibold transition-colors"
+                            >
+                              Pay now →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </section>
             )}
 
             {/* Active subscriptions */}
