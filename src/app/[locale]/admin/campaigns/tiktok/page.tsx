@@ -3,6 +3,7 @@
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
+import { MetricCard, Spinner, ErrorMsg } from "@/components/admin/CampaignPageKit";
 
 interface TikTokCampaign {
   campaign_id: string;
@@ -160,32 +161,6 @@ function StatusBadge({ status }: { readonly status: string }) {
     >
       {isActive ? "Active" : "Paused"}
     </span>
-  );
-}
-
-function MetricCard({ label, value }: { readonly label: string; readonly value: string }) {
-  return (
-    <div className="bg-void-light/50 rounded-xl border border-slate-800 p-3">
-      <p className="font-mono text-[10px] text-slate-500">{label}</p>
-      <p className="mt-1 font-mono text-sm font-bold text-white">{value}</p>
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <div className="flex items-center gap-3 text-slate-400">
-      <div className="h-4 w-4 animate-spin rounded-full border-2 border-pink-400 border-t-transparent" />
-      <span className="font-mono text-sm">Loading...</span>
-    </div>
-  );
-}
-
-function ErrorMsg({ msg }: { readonly msg: string }) {
-  return (
-    <div className="rounded-lg border border-red-900/30 bg-red-950/10 px-4 py-3 font-mono text-sm text-red-400">
-      {msg}
-    </div>
   );
 }
 

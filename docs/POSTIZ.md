@@ -46,7 +46,7 @@ calendar item status → scheduled / published
    `/etc/cloudflared/config.yml` on omv-main, add the
    `postiz.cloudless.gr` CNAME, then `sudo systemctl reload cloudflared`.
 
-4. **First-run setup in the Postiz UI** (https://postiz.cloudless.gr):
+4. **First-run setup in the Postiz UI** (`https://postiz.cloudless.gr`):
    - Register the admin account, then set `DISABLE_REGISTRATION="true"` in the
      deployment and re-apply.
    - Connect channels (Settings → Channels): Facebook Page, Instagram,
