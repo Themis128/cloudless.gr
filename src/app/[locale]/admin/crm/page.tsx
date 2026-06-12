@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { useVisiblePoll } from "@/lib/use-visible-poll";
 
 interface Contact {
   id: string;
@@ -32,8 +33,7 @@ export default function AdminCRMPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    async function fetchContacts() {
+  const fetchContacts = useCallback(async () => {
       try {
         const res = await fetchWithAuth("/api/admin/crm/contacts?limit=50");
         if (!res.ok) {
@@ -47,20 +47,11 @@ export default function AdminCRMPage() {
       } finally {
         setLoading(false);
       }
-    }
-    fetchContacts();
-    const interval = setInterval(fetchContacts, 10_000);
-    const onVisible = () => {
-      if (document.visibilityState === "visible") fetchContacts();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, []);
+    }, []);
+
+  // Visibility-gated polling — pauses while the tab is hidden to avoid
+  // amplifying Cloudflare Worker / API request volume.
+  useVisiblePoll(fetchContacts, 10_000);
 
   const filtered = contacts.filter((c) => {
     const q = search.toLowerCase();
