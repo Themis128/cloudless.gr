@@ -19,6 +19,7 @@ import { isAgentBookConfigured, proposeBookingSlot } from "@/lib/agent-book";
 import { MAX_DAYS_AHEAD, formatAthensSlot } from "@/lib/booking-slots";
 import { bookConsultation, getAvailableSlots } from "@/lib/google-calendar";
 import { slackBookingNotify } from "@/lib/slack-notify";
+import { recordNotification } from "@/lib/admin-notifications";
 import { sendBookingConfirmation } from "@/lib/email";
 import { mapIntegrationError } from "@/lib/api-errors";
 
@@ -147,6 +148,21 @@ async function handleConfirm(
       notes,
       meetLink: result.htmlLink,
     }).catch((err) => console.warn("[agent-book] slackBookingNotify failed:", err));
+
+    recordNotification({
+      category: "booking",
+      type: "success",
+      title: `Agent-booked consultation: ${userName}`,
+      message: `${userName} (${userEmail}) booked ${slotLabel} via the booking agent`,
+      actor: userEmail,
+      route: "/api/agent/book",
+      metadata: {
+        start: body.start,
+        end: body.end,
+        meetLink: result.htmlLink,
+        notes: notes ? String(notes).slice(0, 500) : null,
+      },
+    });
     sendBookingConfirmation({
       name: userName,
       email: userEmail,

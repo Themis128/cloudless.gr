@@ -4,6 +4,7 @@ import { setNewsletterStatus } from "@/lib/hubspot";
 import { removeFromSuppressionList } from "@/lib/ses-suppression";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
+import { recordNotification } from "@/lib/admin-notifications";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -53,6 +54,15 @@ export async function POST(request: Request) {
 
     slackSubscriberNotify(email).catch((err) => {
       console.error("[subscribe] Slack notification failed:", err);
+    });
+
+    recordNotification({
+      category: "subscribe",
+      type: "success",
+      title: "New newsletter subscriber",
+      message: email,
+      actor: email,
+      route: "/api/subscribe",
     });
 
     return Response.json({ success: true });
