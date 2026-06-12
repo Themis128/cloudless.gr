@@ -23,7 +23,7 @@ function safeId(id: string): string {
 
 function safeMsg(msg: string): string {
   return String(msg)
-    .replace(/[\r\n\t]/g, " ")
+    .replace(/[\x00-\x1f\x7f]/g, " ")
     .slice(0, 200);
 }
 
