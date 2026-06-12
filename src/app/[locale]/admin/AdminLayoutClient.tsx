@@ -66,6 +66,7 @@ const adminGroups: AdminGroup[] = [
     label: "HubSpot",
     links: [
       { href: "/admin/hubspot", label: "Overview", Icon: LayoutGrid },
+      { href: "/admin/leads", label: "Lead Inbox", Icon: Inbox },
       { href: "/admin/crm", label: "Contacts", Icon: Users },
       { href: "/admin/crm/companies", label: "Companies", Icon: Building2 },
       { href: "/admin/crm/tickets", label: "Tickets", Icon: Ticket },

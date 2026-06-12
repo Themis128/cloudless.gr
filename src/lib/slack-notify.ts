@@ -383,24 +383,36 @@ export async function slackContactNotify(data: {
   company?: string;
   service?: string;
   message: string;
+  /** Lead score 0\u2013100 (lead engine). */
+  leadScore?: number;
+  /** Score band label, e.g. "hot" / "warm" / "cold". */
+  leadBand?: string;
+  /** One-line attribution summary (UTM/referrer/landing page). */
+  attributionSummary?: string;
 }): Promise<boolean> {
   const safeName = slackEscape(data.name);
   const safeEmail = slackEscape(data.email);
   const safeCompany = data.company ? slackEscape(data.company) : "\u2014";
   const safeService = data.service ? slackEscape(data.service) : "\u2014";
   const safeMessage = slackEscape(data.message).slice(0, 2000);
+  const detailLines = [
+    `*Name:* ${safeName}`,
+    `*Email:* ${safeEmail}`,
+    `*Company:* ${safeCompany}`,
+    `*Service:* ${safeService}`,
+  ];
+  if (typeof data.leadScore === "number") {
+    const band = data.leadBand ? ` (${slackEscape(data.leadBand)})` : "";
+    detailLines.push(`*Lead score:* ${data.leadScore}/100${band}`);
+  }
+  if (data.attributionSummary) {
+    detailLines.push(`*Attribution:* ${slackEscape(data.attributionSummary).slice(0, 500)}`);
+  }
   return contactsClient.post({
     text: `New contact from ${safeName} (${safeEmail})`,
     blocks: [
       headerBlock("\ud83d\udce8 New Contact Form Submission"),
-      sectionBlock(
-        [
-          `*Name:* ${safeName}`,
-          `*Email:* ${safeEmail}`,
-          `*Company:* ${safeCompany}`,
-          `*Service:* ${safeService}`,
-        ].join("\n")
-      ),
+      sectionBlock(detailLines.join("\n")),
       divider,
       sectionBlock(`*Message:*\n${safeMessage}`),
       contextBlock(slackTimestamp(), "cloudless.gr contact form"),

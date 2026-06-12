@@ -204,6 +204,60 @@ export async function listAutomations(): Promise<ACAutomation[]> {
   }
 }
 
+/**
+ * Create-or-update an AC contact and enroll it in the configured lead
+ * follow-up automation (`ACTIVECAMPAIGN_LEAD_AUTOMATION_ID`).
+ *
+ * Silent no-op (returns false) when ActiveCampaign or the automation ID is
+ * not configured — the contact flow must never fail because follow-up
+ * sequences aren't set up yet.
+ */
+export async function enrollLeadInAutomation(lead: {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+}): Promise<boolean> {
+  const cfg = await getConfig();
+  const automationId = cfg.ACTIVECAMPAIGN_LEAD_AUTOMATION_ID;
+  if (!automationId || !(await isActiveCampaignConfigured())) return false;
+
+  try {
+    // 1. Sync (create-or-update by email).
+    const syncRes = await acFetch("/contact/sync", {
+      method: "POST",
+      body: JSON.stringify({
+        contact: {
+          email: lead.email,
+          firstName: lead.firstName ?? "",
+          lastName: lead.lastName ?? "",
+        },
+      }),
+    });
+    if (!syncRes.ok) {
+      console.error("[ActiveCampaign] contact sync failed:", syncRes.status);
+      return false;
+    }
+    const syncData = (await syncRes.json()) as { contact?: { id?: string } };
+    const contactId = syncData.contact?.id;
+    if (!contactId) return false;
+
+    // 2. Enroll in the automation. AC returns 422 when already enrolled —
+    //    treat that as success (idempotent behaviour).
+    const enrollRes = await acFetch("/contactAutomations", {
+      method: "POST",
+      body: JSON.stringify({
+        contactAutomation: { contact: contactId, automation: automationId },
+      }),
+    });
+    if (enrollRes.ok || enrollRes.status === 422) return true;
+    console.error("[ActiveCampaign] automation enroll failed:", enrollRes.status);
+    return false;
+  } catch (err) {
+    console.error("[ActiveCampaign] enrollLeadInAutomation error:", err);
+    return false;
+  }
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
 export async function getEmailStats(): Promise<{
