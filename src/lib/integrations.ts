@@ -321,6 +321,8 @@ export interface SlackConfig {
   SLACK_BOT_TOKEN: string;
   SLACK_SIGNING_SECRET: string;
   SLACK_WEBHOOK_URL: string;
+  /** Default channel for bot posts (ID or #name). Empty when unset. */
+  SLACK_DEFAULT_CHANNEL: string;
 }
 
 let cachedSlack: SlackConfig | null = null;
@@ -348,6 +350,7 @@ export function getSlackConfig(): SlackConfig {
     SLACK_BOT_TOKEN: token,
     SLACK_SIGNING_SECRET: signingSecret,
     SLACK_WEBHOOK_URL: webhookUrl,
+    SLACK_DEFAULT_CHANNEL: process.env.SLACK_DEFAULT_CHANNEL ?? "",
   };
   return cachedSlack;
 }
@@ -365,16 +368,18 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
   let token = cfg.SLACK_BOT_TOKEN ?? "";
   let signingSecret = cfg.SLACK_SIGNING_SECRET ?? "";
   let webhookUrl = cfg.SLACK_WEBHOOK_URL ?? "";
+  let defaultChannel = process.env.SLACK_DEFAULT_CHANNEL ?? "";
 
-  // SSM fallback when signing secret is missing from env
-  if (!signingSecret) {
+  // SSM fallback when signing secret or default channel is missing from env
+  if (!signingSecret || !defaultChannel) {
     try {
       const { getConfig } = await import("@/lib/ssm-config");
       const ssmCfg = await getConfig();
-      signingSecret = (ssmCfg as unknown as Record<string, string>).SLACK_SIGNING_SECRET ?? "";
-      if (!token) token = (ssmCfg as unknown as Record<string, string>).SLACK_BOT_TOKEN ?? "";
-      if (!webhookUrl)
-        webhookUrl = (ssmCfg as unknown as Record<string, string>).SLACK_WEBHOOK_URL ?? "";
+      const ssmRecord = ssmCfg as unknown as Record<string, string>;
+      if (!signingSecret) signingSecret = ssmRecord.SLACK_SIGNING_SECRET ?? "";
+      if (!token) token = ssmRecord.SLACK_BOT_TOKEN ?? "";
+      if (!webhookUrl) webhookUrl = ssmRecord.SLACK_WEBHOOK_URL ?? "";
+      if (!defaultChannel) defaultChannel = ssmRecord.SLACK_DEFAULT_CHANNEL ?? "";
     } catch (err) {
       console.warn("[Slack] SSM fallback failed:", err);
     }
@@ -391,6 +396,7 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
     SLACK_BOT_TOKEN: token,
     SLACK_SIGNING_SECRET: signingSecret,
     SLACK_WEBHOOK_URL: webhookUrl,
+    SLACK_DEFAULT_CHANNEL: defaultChannel,
   };
   return cachedSlackAsync;
 }
