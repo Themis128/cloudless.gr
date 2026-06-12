@@ -35,6 +35,7 @@ export const AUTH_PAGES = [
   "/en/auth/login",
   "/en/auth/signup",
   "/en/auth/forgot-password",
+  "/en/auth/post-login",
 ] as const;
 
 export const DASHBOARD_PAGES = [
@@ -58,9 +59,14 @@ export const ADMIN_PAGES = [
   "/en/admin/campaigns",
   "/en/admin/campaigns/google",
   "/en/admin/campaigns/linkedin",
+  "/en/admin/campaigns/meta",
   "/en/admin/campaigns/tiktok",
   "/en/admin/campaigns/x",
   "/en/admin/client-portals",
+  "/en/admin/cms/case-studies",
+  "/en/admin/cms/faqs",
+  "/en/admin/cms/services",
+  "/en/admin/cms/testimonials",
   "/en/admin/crm",
   "/en/admin/crm/companies",
   "/en/admin/crm/tickets",
@@ -73,6 +79,7 @@ export const ADMIN_PAGES = [
   "/en/admin/hubspot",
   "/en/admin/integrations",
   "/en/admin/kpi",
+  "/en/admin/leads",
   "/en/admin/monitor",
   "/en/admin/notifications",
   "/en/admin/notion",
@@ -244,8 +251,4 @@ export const ADMIN_API_DYNAMIC = [
     template: "/api/admin/pipeline/deals/[id]/notes",
     sample: "/api/admin/pipeline/deals/sample-id/notes",
   },
-  { template: "/api/admin/reports/[id]", sample: "/api/admin/reports/sample-id" },
-  { template: "/api/admin/reports/[id]/pdf", sample: "/api/admin/reports/sample-id/pdf" },
-] as const;
-
-export const AUTH_API = "/api/auth/session"; // NextAuth handler
+  { template: "/api/admin/reports/[id]", sample: "/api/admin
