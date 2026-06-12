@@ -5,10 +5,12 @@ const VOICE_BRIEF_URL = "http://localhost/api/admin/voice-brief";
 // ---------------------------------------------------------------------------
 // Hoist mocks
 // ---------------------------------------------------------------------------
-const { mockGetConfig, mockSSMSend, mockFetch } = vi.hoisted(() => ({
+const { mockGetConfig, mockSSMSend, mockFetch, mockRunAgent, mockPersist } = vi.hoisted(() => ({
   mockGetConfig: vi.fn(),
   mockSSMSend: vi.fn(),
   mockFetch: vi.fn(),
+  mockRunAgent: vi.fn(),
+  mockPersist: vi.fn(),
 }));
 
 vi.mock("jose", async () => {
@@ -27,6 +29,13 @@ vi.mock("jose", async () => {
 });
 
 vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
+vi.mock("@/lib/agent-voice-brief", () => ({
+  runVoiceBriefAgent: (...a: unknown[]) => mockRunAgent(...a),
+}));
+vi.mock("@/lib/voice-brief-store", () => ({
+  VOICE_BRIEF_SSM_NAME: "/cloudless/production/VOICE_BRIEF_LATEST",
+  persistVoiceBrief: (...a: unknown[]) => mockPersist(...a),
+}));
 vi.stubGlobal("fetch", mockFetch);
 
 vi.mock("@aws-sdk/client-ssm", async () => {
@@ -156,12 +165,12 @@ describe("GET /api/admin/voice-brief", () => {
 describe("POST /api/admin/voice-brief", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue({
-      ...BASE_CFG,
-      NEXTAUTH_URL: "http://localhost",
+    mockGetConfig.mockResolvedValue(BASE_CFG);
+    mockRunAgent.mockResolvedValue({
+      text: "AI-enhanced brief.",
+      sources: [],
     });
-    process.env.CRON_SECRET = "test-cron-secret";
-    process.env.NEXTAUTH_URL = "http://localhost";
+    mockPersist.mockResolvedValue(undefined);
   });
 
   it("returns 401 without token", async () => {
@@ -170,27 +179,43 @@ describe("POST /api/admin/voice-brief", () => {
       new NextRequest(VOICE_BRIEF_URL, { method: "POST" }),
     );
     expect(res.status).toBe(401);
+    expect(mockRunAgent).not.toHaveBeenCalled();
   });
 
-  it("returns brief when cron route succeeds", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        text: "AI-enhanced brief.",
-        generatedAt: new Date().toISOString(),
+  it("returns 403 for non-admin", async () => {
+    const { POST } = await import("@/app/api/admin/voice-brief/route");
+    const res = await POST(
+      new NextRequest(VOICE_BRIEF_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${makeUserToken()}` },
       }),
-    });
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("calls the agent directly and returns the generated brief", async () => {
     const { POST } = await import("@/app/api/admin/voice-brief/route");
     const res = await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.brief).toBeDefined();
     expect(data.brief.text).toBe("AI-enhanced brief.");
     expect(data.brief.week).toBe("on-demand");
+    expect(typeof data.brief.generatedAt).toBe("string");
+    expect(mockRunAgent).toHaveBeenCalledTimes(1);
+    expect(mockPersist).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 500 when cron route fails", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+  it("returns the brief even when persist fails (best-effort)", async () => {
+    mockPersist.mockRejectedValueOnce(new Error("ssm down"));
+    const { POST } = await import("@/app/api/admin/voice-brief/route");
+    const res = await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.brief.text).toBe("AI-enhanced brief.");
+  });
+
+  it("returns 500 when the agent throws", async () => {
+    mockRunAgent.mockRejectedValueOnce(new Error("agent down"));
     const { POST } = await import("@/app/api/admin/voice-brief/route");
     const res = await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
     expect(res.status).toBe(500);
@@ -198,37 +223,10 @@ describe("POST /api/admin/voice-brief", () => {
     expect(data.error).toBeDefined();
   });
 
-  it("ignores an off-allowlist NEXTAUTH_URL and targets cloudless.gr (SSRF guard)", async () => {
-    process.env.NEXTAUTH_URL = "https://evil.example.com";
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        text: "brief",
-        generatedAt: new Date().toISOString(),
-      }),
-    });
+  it("does NOT make any outbound HTTP call (no SSRF surface)", async () => {
+    mockFetch.mockClear();
     const { POST } = await import("@/app/api/admin/voice-brief/route");
     await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
-
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const calledUrl = String(mockFetch.mock.calls[0][0]);
-    expect(calledUrl).toBe("https://cloudless.gr/api/cron/voice-brief");
-    expect(calledUrl).not.toContain("evil.example.com");
-  });
-
-  it("uses an allowlisted NEXTAUTH_URL when configured", async () => {
-    process.env.NEXTAUTH_URL = "https://cloudless.gr";
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        text: "brief",
-        generatedAt: new Date().toISOString(),
-      }),
-    });
-    const { POST } = await import("@/app/api/admin/voice-brief/route");
-    await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
-
-    const calledUrl = String(mockFetch.mock.calls[0][0]);
-    expect(calledUrl).toBe("https://cloudless.gr/api/cron/voice-brief");
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
