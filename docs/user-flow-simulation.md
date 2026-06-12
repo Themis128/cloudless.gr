@@ -1,8 +1,8 @@
-> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was Keycloak. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
+> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was provided by an external OIDC provider. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
 
 # User Flow Simulation — Wins & Failures
 
-_Code-level trace of the three core user journeys on cloudless.gr (Next.js App Router + Keycloak + Stripe). Date: 2026-06-02._
+_Code-level trace of the three core user journeys on cloudless.gr (Next.js App Router + Cognito + Stripe). Date: 2026-06-02._
 
 This is a static trace of the actual code paths (not a live browser run). Each
 step lists the file that implements it and flags wins ✅ and failures ❌.
@@ -19,24 +19,24 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | 2 | Type full name (optional), email, password (min 8), confirm password | form state |
 | 3 | Submit | client checks `password === confirmPassword` (`signup/page.tsx:43`) |
 | 4 | → `POST /api/auth/register` | `src/app/api/auth/register/route.ts` |
-| 5 | Server: rate-limit 5/10 min, validate email + length, get Keycloak admin token (client_credentials), create user with `requiredActions:["VERIFY_EMAIL"]`, send verify email | `register/route.ts:28-129` |
+| 5 | Server: rate-limit 5/10 min, validate email + length, create user via Cognito admin API | `register/route.ts:28-129` |
 | 6 | UI switches to "Check Your Email" | `signup/page.tsx:59` |
-| 7 | User clicks link in email → Keycloak marks `emailVerified` | Keycloak hosted |
-| 8 | `/auth/login` → "Continue with Keycloak" → Keycloak login → `/api/auth/callback/keycloak` → `/auth/post-login` → `/dashboard` | `login/page.tsx:64`, `post-login/page.tsx` |
+| 7 | User clicks link in email → Cognito marks `emailVerified` | Cognito hosted |
+| 8 | `/auth/login` → "Continue with Cognito" → Cognito login → `/api/auth/callback/cognito` → `/auth/post-login` → `/dashboard` | `login/page.tsx:64`, `post-login/page.tsx` |
 
 ### ✅ Wins
 
-- Real Keycloak user creation via Admin API, rate limiting, email validation, duplicate handling (`409` → friendly message).
+- Real Cognito user creation via Admin API, rate limiting, email validation, duplicate handling (`409` → friendly message).
 - Correct locale-aware navigation (`@/i18n/navigation`) on signup/login/forgot pages.
 - Post-login admin-vs-dashboard routing resolved **server-side** (no flash) in `post-login/page.tsx`.
 - Refresh-token rotation + RP-initiated federated logout in `src/lib/auth.ts`.
 
 ### ❌ Failures / risks
 
-- **Email verification is a hard SMTP dependency with no escape hatch.** `send-verify-email` is best-effort and swallows errors (`register/route.ts:116-126`), **but** the `VERIFY_EMAIL` required action still blocks login. If SES/SMTP isn't configured in Keycloak, the new user is created, never gets the email, and **can never log in** — with no UI to recover. (Known fragile area — see the `ses-email-setup` skill.)
+- **Email verification is a hard SMTP dependency with no escape hatch.** If SES/SMTP isn't configured in Cognito, the new user is created, never gets the email, and **can never log in** — with no UI to recover.
 - **No "resend verification email"** anywhere in the UI. The check-email screen only links to `/auth/login`.
-- **Forgot-password link is unreachable in production.** The "Forgot Password?" link is rendered **only** in the non-Keycloak branch of the login form (`login/page.tsx:207-214`). When `NEXT_PUBLIC_KEYCLOAK_ISSUER` is set (production), the login page shows just the "Continue with Keycloak" button — so `/auth/forgot-password` exists and works but has **no link pointing to it**.
-- **Two divergent signup implementations.** The page posts to `/api/auth/register` (admin-create), while `AuthContext.handleSignUp` (unused) redirects to Keycloak's hosted `/registrations`. Dead/confusing, not user-facing.
+- **Forgot-password link is unreachable in production.** The "Forgot Password?" link is rendered **only** in the non-Cognito branch of the login form (`login/page.tsx:207-214`). When Cognito is configured (production), the login page shows just the "Continue with Cognito" button — so `/auth/forgot-password` exists and works but has **no link pointing to it**.
+- **Two divergent signup implementations.** The page posts to `/api/auth/register` (admin-create), while `AuthContext.handleSignUp` (unused) redirects to Cognito's hosted `/registrations`. Dead/confusing, not user-facing.
 
 ---
 
@@ -82,10 +82,10 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | View dashboard overview + stats | ✅ Works | aggregates purchases + consultations (`dashboard/page.tsx`) |
 | View purchases & subscriptions | ✅ Works | live from Stripe by email (`api/user/purchases`) — _email-linkage caveat from Flow 2 applies_ |
 | View consultations | ✅ Works | Google Calendar by email; unconfigured → graceful empty state (`api/user/consultations`) |
-| Update profile (name/company/phone) | ⚠️ Write-only | `POST /api/user/profile` → Keycloak Account API succeeds, but **nothing reads it back** |
+| Update profile (name/company/phone) | ⚠️ Write-only | `POST /api/user/profile` → Cognito Account API succeeds, but **nothing reads it back** |
 | Change settings (theme/language/notifications) | ⚠️ Partial | theme persists (localStorage); language + notification prefs **don't survive reload** |
 | Sign out | ✅ Works | federated logout (`AuthContext.handleSignOut`) |
-| Reset password | ⚠️ Works but unreachable | page redirects to Keycloak reset-credentials; no link from login (Flow 1) |
+| Reset password | ⚠️ Works but unreachable | page redirects to Cognito reset-credentials; no link from login (Flow 1) |
 | Client portal `/portal/[token]` | ✅ Works (admin-issued link) | timeline, invoices, subscriptions; invalid token → friendly message |
 | Waiting room `/portal/waiting` | ✅ Works | post-service-purchase status, polls every 30s |
 
@@ -96,7 +96,7 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 
 ### ❌ Failures
 
-- **Profile & preferences are write-only.** `AuthContext.checkAuth` only hydrates `name`/`email` from the session (`AuthContext.tsx:117-124`); there is **no GET** that reads `company`, `phone`, or `preferences` back from Keycloak. So after saving, the Profile fields show blank again on reload and Settings toggles reset to defaults — the data persisted, but the UI makes it look like the save failed. **This is the biggest functional papercut.**
+- **Profile & preferences are write-only.** `AuthContext.checkAuth` only hydrates `name`/`email` from the session (`AuthContext.tsx:117-124`); there is **no GET** that reads `company`, `phone`, or `preferences` back from Cognito. So after saving, the Profile fields show blank again on reload and Settings toggles reset to defaults — the data persisted, but the UI makes it look like the save failed. **This is the biggest functional papercut.**
 - **"Preferred Language" in Settings does nothing to the site locale** (locale is driven by the URL/Navbar, not this preference).
 - **Dashboard auth gate is client-side only** — the page shell can render briefly before redirect. No data leak (APIs are guarded server-side), but a visible flash.
 
@@ -106,15 +106,15 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 
 | Journey | Verdict |
 |---------|---------|
-| Create account | Works **iff** Keycloak SMTP is configured; otherwise users get permanently stuck with no recovery UI. Forgot-password link missing from production login. |
+| Create account | Works **iff** Cognito SMTP is configured; otherwise users get permanently stuck with no recovery UI. Forgot-password link missing from production login. |
 | Buy a product | Core path works; account↔order linkage is fragile (no token on checkout), checkout errors fail silently, and non-English product pages have 404 links. |
 | Registered-user actions | Reads work well; **writes (profile/preferences) don't read back**, so saves appear to not stick. |
 
 ### Highest-impact fixes (suggested order)
 
-1. Guarantee Keycloak SMTP **or** add a "resend verification" + clear messaging (unblocks all new signups).
+1. Guarantee Cognito SMTP **or** add a "resend verification" + clear messaging (unblocks all new signups).
 2. Add a `GET /api/user/profile` and hydrate `company`/`phone`/`preferences` in `AuthContext` (makes saves visibly stick).
 3. Send the Bearer token from `CartSlideOver.handleCheckout`, and surface checkout errors instead of failing silently.
 4. Fix the `store/[id]` locale double-prefix (drop `localePath`, pass bare paths to the i18n `<Link>`).
-5. Add the forgot-password link to the Keycloak-mode login screen.
+5. Add the forgot-password link to the Cognito-mode login screen.
 6. Open the cart drawer (or toast) from the store-grid "Add to Cart".

@@ -1,4 +1,4 @@
-> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was Keycloak. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
+> **HISTORICAL — 2026-06-02.** This document describes the app architecture when auth was provided by an external OIDC provider. Auth migrated to Cognito on 2026-06-08 (PR #677). Code paths described here for `/api/auth/[...nextauth]` are still valid; only the OIDC provider changed.
 
 # Pi K3s ↔ Serverless Cloud — Sync Reference
 
