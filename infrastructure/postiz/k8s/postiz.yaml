@@ -1,0 +1,271 @@
+# Postiz — self-hosted social publishing engine (Phase 2, one-stop-shop roadmap)
+# Namespace: postiz | App: ghcr.io/gitroomhq/postiz-app
+#
+# Components:
+#   - postgres (PVC 2Gi)  — Postiz database
+#   - redis    (PVC 512Mi) — queue/cache
+#   - postiz   (port 5000, NodePort 30500) — app + API
+#
+# Exposure: Cloudflare tunnel hostname postiz.cloudless.gr → http://192.168.1.128:30500
+# (see infrastructure/postiz/cloudflare-tunnel.yaml).
+#
+# REQUIRED before apply — create the secret (values are examples of the *shape*,
+# generate real random strings):
+#   kubectl create namespace postiz
+#   kubectl -n postiz create secret generic postiz-secrets \
+#     --from-literal=POSTGRES_PASSWORD="$(openssl rand -hex 24)" \
+#     --from-literal=JWT_SECRET="$(openssl rand -hex 32)"
+#
+# Apply: kubectl apply -f infrastructure/postiz/k8s/postiz.yaml
+# Verify: kubectl -n postiz get pods && curl -I https://postiz.cloudless.gr
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postiz-postgres-data
+  namespace: postiz
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postiz-redis-data
+  namespace: postiz
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 512Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postiz-uploads
+  namespace: postiz
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postiz-postgres
+  namespace: postiz
+  labels:
+    app: postiz-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postiz-postgres
+  template:
+    metadata:
+      labels:
+        app: postiz-postgres
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postiz
+            - name: POSTGRES_DB
+              value: postiz
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postiz-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postiz"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postiz-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postiz-postgres
+  namespace: postiz
+spec:
+  selector:
+    app: postiz-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postiz-redis
+  namespace: postiz
+  labels:
+    app: postiz-redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postiz-redis
+  template:
+    metadata:
+      labels:
+        app: postiz-redis
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postiz-redis-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postiz-redis
+  namespace: postiz
+spec:
+  selector:
+    app: postiz-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postiz
+  namespace: postiz
+  labels:
+    app: postiz
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postiz
+  template:
+    metadata:
+      labels:
+        app: postiz
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: postiz
+          # arm64-compatible multi-arch image; pin a release tag after first deploy
+          image: ghcr.io/gitroomhq/postiz-app:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: MAIN_URL
+              value: "https://postiz.cloudless.gr"
+            - name: FRONTEND_URL
+              value: "https://postiz.cloudless.gr"
+            - name: NEXT_PUBLIC_BACKEND_URL
+              value: "https://postiz.cloudless.gr/api"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postiz-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql://postiz:$(POSTGRES_PASSWORD)@postiz-postgres:5432/postiz"
+            - name: REDIS_URL
+              value: "redis://postiz-redis:6379"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: postiz-secrets
+                  key: JWT_SECRET
+            - name: IS_GENERAL
+              value: "true"
+            - name: DISABLE_REGISTRATION
+              value: "false" # flip to "true" after creating the admin account
+            - name: STORAGE_PROVIDER
+              value: "local"
+            - name: UPLOAD_DIRECTORY
+              value: "/uploads"
+            - name: NEXT_PUBLIC_UPLOAD_DIRECTORY
+              value: "/uploads"
+          volumeMounts:
+            - name: uploads
+              mountPath: /uploads
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 6
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: postiz-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postiz
+  namespace: postiz
+spec:
+  type: NodePort
+  selector:
+    app: postiz
+  ports:
+    - port: 5000
+      targetPort: 5000
+      nodePort: 30500

@@ -92,6 +92,26 @@ export default function CalendarPage() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
+  async function handlePublish(item: CalendarItem) {
+    try {
+      const res = await fetchWithAuth(`/api/admin/calendar/${item.id}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        window.alert(data?.error ?? `Publish failed (HTTP ${res.status}).`);
+        return;
+      }
+      const channels = (data?.channels ?? []).map((c: { name: string }) => c.name).join(", ");
+      window.alert(`"${item.title}" sent to Postiz${channels ? ` → ${channels}` : ""}.`);
+      await loadItems();
+    } catch {
+      window.alert("Publish failed — could not reach the server.");
+    }
+  }
+
   const prevMonth = () => {
     if (month === 0) {
       setYear((y) => y - 1);
@@ -190,25 +210,54 @@ export default function CalendarPage() {
                     >
                       {day}
                     </p>
-                    {dayItems.slice(0, 3).map((item) => (
-                      <div
-                        key={item.id}
-                        className="mb-0.5 flex items-center gap-1 rounded px-1 py-0.5 text-[9px]"
-                        style={{
-                          backgroundColor: `${CALENDAR_ITEM_COLORS[item.type]}20`,
-                          color: CALENDAR_ITEM_COLORS[item.type],
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`Delete "${item.title}"?`)) {
-                            handleDelete(item.id);
+                    {dayItems.slice(0, 3).map((item) => {
+                      const publishable = item.type === "social_post" && item.status === "draft";
+                      return (
+                        <div
+                          key={item.id}
+                          className="mb-0.5 flex items-center gap-1 rounded px-1 py-0.5 text-[9px]"
+                          style={{
+                            backgroundColor: `${CALENDAR_ITEM_COLORS[item.type]}20`,
+                            color: CALENDAR_ITEM_COLORS[item.type],
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (publishable) {
+                              if (
+                                window.confirm(
+                                  `Publish "${item.title}" via Postiz?\n\nFuture date → scheduled, past/today → posted now.`
+                                )
+                              ) {
+                                handlePublish(item);
+                              }
+                            } else if (window.confirm(`Delete "${item.title}"?`)) {
+                              handleDelete(item.id);
+                            }
+                          }}
+                          title={
+                            publishable
+                              ? `${item.title} — click to publish via Postiz`
+                              : `${item.title} — click to delete`
                           }
-                        }}
-                        title={`${item.title} — click to delete`}
-                      >
-                        <span className="truncate font-mono">{item.title}</span>
-                      </div>
-                    ))}
+                        >
+                          <span className="truncate font-mono">{item.title}</span>
+                          {publishable && <span aria-hidden>↗</span>}
+                          <button
+                            type="button"
+                            aria-label={`Delete ${item.title}`}
+                            className="ml-auto opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete "${item.title}"?`)) {
+                                handleDelete(item.id);
+                              }
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
                     {dayItems.length > 3 && (
                       <p className="font-mono text-[9px] text-slate-600">
                         +{dayItems.length - 3} more
