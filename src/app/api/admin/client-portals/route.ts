@@ -12,6 +12,8 @@ import {
   type PaymentLinkStatus,
 } from "@/lib/client-portals";
 
+import { scoreClientHealth } from "@/lib/client-health";
+
 // Re-exported for existing imports (portal token route, admin pages).
 export type { ClientPortal, PortalStep, PortalComment } from "@/lib/client-portals";
 
@@ -38,7 +40,9 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const portals = await readPortals();
-  return NextResponse.json({ portals });
+  // Computed, non-persisted health score per portal (Phase 4).
+  const withHealth = portals.map((p) => ({ ...p, health: scoreClientHealth(p) }));
+  return NextResponse.json({ portals: withHealth });
 }
 
 export async function POST(request: NextRequest) {
