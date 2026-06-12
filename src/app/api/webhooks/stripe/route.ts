@@ -4,6 +4,7 @@ import { getConfig } from "@/lib/ssm-config";
 import { sendOrderConfirmation, sendPaymentFailureNotice, notifyTeam } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
+import { recordNotification } from "@/lib/admin-notifications";
 import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
@@ -67,6 +68,22 @@ async function handleCheckoutCompleted(
     email: session.customer_email ?? "N/A",
     amount: String((session.amount_total ?? 0) / 100),
   }).catch(() => {});
+
+  recordNotification({
+    category: "order",
+    type: "success",
+    title: `New order: €${((session.amount_total ?? 0) / 100).toFixed(2)}`,
+    message: `${session.customer_email ?? "anonymous"} completed checkout (${session.id})`,
+    actor: session.customer_email ?? undefined,
+    route: "/api/webhooks/stripe",
+    metadata: {
+      sessionId: session.id,
+      amountTotal: session.amount_total,
+      currency: (session.currency ?? "eur").toUpperCase(),
+      paymentStatus: session.payment_status,
+      mode: session.mode,
+    },
+  });
 
   if (session.customer_email) {
     syncHubSpotDeal(session).catch(() => {});

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { readPortals, writePortals, tokenMatches, applyClientResponse } from "@/lib/client-portals";
+import { recordNotification } from "@/lib/admin-notifications";
 import { SlackClient } from "@/lib/slack-notify";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
@@ -63,6 +64,21 @@ export async function POST(
   const verb = approved ? "approved ✅" : "requested changes on 🔁";
   const clientLabel = portal.clientName || portal.clientEmail;
   const commentText = result.clientComment ?? "";
+
+  recordNotification({
+    category: "portal",
+    type: approved ? "success" : "warning",
+    title: `${clientLabel} ${approved ? "approved" : "requested changes on"} "${result.title}"`,
+    message: `Project: ${portal.label}${commentText ? ` — ${commentText.slice(0, 500)}` : ""}`,
+    actor: portal.clientEmail,
+    route: "/api/portal/[token]/deliverables",
+    metadata: {
+      portalLabel: portal.label,
+      deliverableTitle: result.title,
+      deliverableId: result.id,
+      action: body.action,
+    },
+  });
 
   new SlackClient()
     .post({

@@ -4,6 +4,7 @@ import {
   SignUpCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac } from "crypto";
+import { recordNotification } from "@/lib/admin-notifications";
 
 function makeClient(): CognitoIdentityProviderClient {
   const issuer = process.env.COGNITO_ISSUER ?? "";
@@ -52,6 +53,15 @@ export async function POST(req: NextRequest) {
         ],
       })
     );
+    recordNotification({
+      category: "auth",
+      type: "info",
+      title: "New user sign-up",
+      message: `${email} signed up${fullName ? ` (${fullName})` : ""}`,
+      actor: email,
+      route: "/api/auth/register",
+      metadata: { fullName: fullName ?? null },
+    });
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     const name = (err as { name?: string }).name;

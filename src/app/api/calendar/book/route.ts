@@ -3,6 +3,7 @@ import { bookConsultation } from "@/lib/google-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { isValidEmail } from "@/lib/validation";
 import { slackBookingNotify } from "@/lib/slack-notify";
+import { recordNotification } from "@/lib/admin-notifications";
 import {
   upsertContact,
   createDeal,
@@ -57,6 +58,16 @@ export async function POST(request: Request) {
     }
 
     slackBookingNotify({ name, email, start, notes }).catch(() => {});
+
+    recordNotification({
+      category: "booking",
+      type: "success",
+      title: `New consultation booked: ${String(name)}`,
+      message: `${String(name)} (${String(email)}) booked ${String(start)}`,
+      actor: String(email),
+      route: "/api/calendar/book",
+      metadata: { start, notes: notes ? String(notes).slice(0, 500) : null },
+    });
 
     // HubSpot: upsert contact + create consultation deal (fire-and-forget)
     (async () => {

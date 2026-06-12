@@ -3,6 +3,7 @@ import { isValidEmail } from "@/lib/validation";
 import { sendEmail, sendContactAcknowledgment } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { slackContactNotify } from "@/lib/slack-notify";
+import { recordNotification } from "@/lib/admin-notifications";
 import {
   upsertContact,
   createDeal,
@@ -110,6 +111,20 @@ export async function POST(request: Request) {
         leadScore: lead.score,
         leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
         attributionSummary,
+      }),
+      recordNotification({
+        category: "contact",
+        type: "info",
+        title: `New contact: ${String(name)}`,
+        message: String(message).slice(0, 500),
+        actor: String(email),
+        route: "/api/contact",
+        metadata: {
+          company: company || null,
+          service: service || null,
+          leadScore: lead.score,
+          leadBand: lead.band,
+        },
       }),
       (async () => {
         const contactId = await upsertContact({
