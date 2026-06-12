@@ -15,6 +15,9 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
 import { mapIntegrationError } from "@/lib/api-errors";
+import { sanitizeAttribution, formatAttribution } from "@/lib/lead-attribution";
+import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
+import { enrollLeadInAutomation } from "@/lib/activecampaign";
 
 export async function POST(request: Request) {
   // Rate limit: 5 contact submissions per IP per 10 minutes
@@ -34,6 +37,7 @@ export async function POST(request: Request) {
 
   try {
     const { name, email, company, service, message } = parsed;
+    const attribution = sanitizeAttribution(parsed.attribution);
 
     if (!name || !email || !message) {
       return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
@@ -91,8 +95,22 @@ export async function POST(request: Request) {
     );
 
     const nameParts = String(name).trim().split(" ");
+
+    // Lead engine: deterministic score + first-touch attribution summary.
+    const lead = scoreLead({ email, service, company, message: String(message), attribution });
+    const attributionSummary = attribution ? formatAttribution(attribution) : undefined;
+
     Promise.allSettled([
-      slackContactNotify({ name, email, company, service, message }),
+      slackContactNotify({
+        name,
+        email,
+        company,
+        service,
+        message,
+        leadScore: lead.score,
+        leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
+        attributionSummary,
+      }),
       (async () => {
         const contactId = await upsertContact({
           email,
@@ -107,6 +125,8 @@ export async function POST(request: Request) {
             `Service interest: ${service || "General inquiry"}`,
             `Message: ${String(message).slice(0, 500)}`,
             ...(company ? [`Company: ${company}`] : []),
+            `Lead score: ${lead.score}/100 (${lead.band}) — ${lead.reasons.join("; ")}`,
+            ...(attributionSummary ? [`Attribution: ${attributionSummary}`] : []),
           ];
           await createContactNote(contactId, noteLines.join("\n"));
         }
@@ -129,9 +149,15 @@ export async function POST(request: Request) {
         message,
         source: "contact",
       }),
+      // Follow-up sequence — silent no-op when AC/automation ID unconfigured.
+      enrollLeadInAutomation({
+        email,
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(" ") || undefined,
+      }),
     ])
       .then((results) => {
-        const labels = ["slack", "hubspot", "notion"];
+        const labels = ["slack", "hubspot", "notion", "activecampaign"];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
@@ -166,7 +192,7 @@ export async function POST(request: Request) {
       fbp,
       fbc,
       eventSourceUrl: "https://cloudless.gr/contact",
-      source: service ?? undefined,
+      source: service ?? attribution?.utmSource ?? undefined,
     }).catch(() => {});
 
     return Response.json({ success: true, eventId });

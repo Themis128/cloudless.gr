@@ -17,6 +17,7 @@ import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
 import ClientCartSlideOver from "@/components/ClientCartSlideOver";
 import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
+import AttributionCapture from "@/components/AttributionCapture";
 
 type Props = {
   children: React.ReactNode;
@@ -72,6 +73,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           <CartProvider>
             <CookieConsentProvider>
               <GoogleAnalyticsConsent />
+              <AttributionCapture />
               <JsonLd data={getOrganizationSchema()} />
               <TrainingBanner locale={locale} />
               <Navbar />
