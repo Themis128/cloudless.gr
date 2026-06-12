@@ -403,4 +403,25 @@ export default {
     //   - PRIMARY:   this SST stack (CloudFront -> Lambda).
     //   - SECONDARY: the Pi/k3s cluster, reachable on the public Tailscale
     //                Funnel (omv.tail8eb71.ts.net:443), serving the SAME
-    //                Ne
+    //                Next.js image.
+    //
+    // Failover is owned by Cloudflare (where the domain DNS lives), NOT by
+    // Route 53. A Cloudflare Load Balancer health-checks /api/health and steers
+    // traffic AWS -> Pi automatically. Provision/update it with
+    // scripts/setup-cloudflare-lb.sh (CI: .github/workflows/cloudflare-lb.yml).
+    //
+    // HISTORY: a Route 53 PRIMARY/SECONDARY record set used to live here, but
+    // the domain has never actually been delegated to Route 53 (it resolves via
+    // Cloudflare), so those records served no real traffic. The hosted zone
+    // Z079608614L53CC4EAZM3 was then deleted out-of-band on 2026-06-02, which
+    // broke every sst deploy (pulumi could no longer refresh the imported
+    // records). The dead block was removed in favour of the Cloudflare LB.
+
+    return {
+      url: site.url,
+      cognitoUserPoolId: userPool.id,
+      cognitoClientId: userPoolClient.id,
+      cognitoHostedDomain,
+    };
+  },
+} satisfies sst.Config;
