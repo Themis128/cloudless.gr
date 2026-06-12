@@ -133,7 +133,10 @@ export async function schedulePost(input: SchedulePostInput): Promise<SchedulePo
         tags: [],
         posts: input.integrationIds.map((id) => ({
           integration: { id },
-          value: [{ content: input.content }],
+          // `image` must always be present as an array — the live Postiz
+          // v2.11.2 validator rejects value items without it
+          // ("posts.0.value.0.image must be an array", verified 2026-06-12).
+          value: [{ content: input.content, image: [] }],
         })),
       }),
     });
