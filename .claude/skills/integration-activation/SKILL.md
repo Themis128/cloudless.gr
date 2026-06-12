@@ -44,9 +44,9 @@ curl -fsSL https://raw.githubusercontent.com/Themis128/cloudless.gr/main/scripts
 |-------------|------|---------------------------|---------|
 | ActiveCampaign | `ACTIVECAMPAIGN_API_URL`, `ACTIVECAMPAIGN_API_TOKEN`, `ACTIVECAMPAIGN_LEAD_AUTOMATION_ID` | AC → Settings → Developer (URL + key); automation ID is in the automation's URL | Email campaigns pages + automated lead follow-up |
 | TikTok Ads | `TIKTOK_ACCESS_TOKEN`, `TIKTOK_ADVERTISER_ID` | TikTok for Business → developer portal (app already exists: ID/secret are in SSM) | TikTok campaign insights + ROI channel |
-| X Ads | `X_AD_ACCOUNT_ID` | ads.x.com URL after login (`/accounts/<id>/...`) | X campaign insights + ROI channel |
+| X Ads | `X_AD_ACCOUNT_ID` — **blocked upstream**: verified 2026-06-12 that the X app returns `UNAUTHORIZED_CLIENT_APPLICATION` (no Ads API access). Apply for Ads API access at developer.x.com first; the account ID alone won't help | ads.x.com URL after login (`/accounts/<id>/...`) | X campaign insights + ROI channel |
 | Postiz | `POSTIZ_API_URL`, `POSTIZ_API_KEY` | Postiz UI → Settings → Public API (instance: https://postiz.cloudless.gr) | One-click social publishing from the calendar |
-| Slack delivery | bot member of `SLACK_DEFAULT_CHANNEL` (`#general`, ID `C09AF5W3X16`) | In Slack: `/invite @Cloudless` in the channel. Bot token lacks `channels:join`, so it cannot join itself | Weekly digest + all default-channel notifications |
+| Slack delivery | ✅ DONE 2026-06-12 — bot invited to `#general` (`C09AF5W3X16`) via browser automation; digest verified `sent:true` | — | Weekly digest + all default-channel notifications |
 | Cloudflare | `CLOUDFLARE_API_TOKEN` | CF dashboard → API Tokens (scopes: Zone:Read, LB Monitors/Pools+LBs:Edit, DNS:Edit, Zone Settings:Edit for cloudless.gr) | HA load balancing + email-obfuscation workflows |
 
 ## Handling secrets in a session
