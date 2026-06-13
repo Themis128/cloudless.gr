@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getTopPages } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 
 export async function GET(request: NextRequest) {
@@ -20,11 +21,18 @@ export async function GET(request: NextRequest) {
   );
 
   try {
-    const pages = await getTopPages(undefined, limit);
+    const __read = await readThrough(
+      "pages",
+      { limit: limit },
+      () => getTopPages(undefined, limit),
+      { ttlSeconds: 3600 },
+    );
+    const pages = __read.value;
     return NextResponse.json({
       pages,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC pages] Error:", err);
