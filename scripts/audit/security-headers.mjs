@@ -23,6 +23,24 @@
  */
 
 import { writeFile } from "node:fs/promises";
+import { resolve as resolvePath } from "node:path";
+
+/**
+ * Validate that a user-supplied output path stays inside the current working
+ * directory. CodeQL "network data written to file" alerts flag any writeFile
+ * whose path could be influenced by external input; constraining writes to
+ * the CWD eliminates the path-traversal class of risks even though our flow
+ * doesn't take untrusted filenames.
+ */
+function safeOutPath(p) {
+  if (typeof p !== "string" || p.length === 0) return null;
+  const abs = resolvePath(p);
+  const cwd = resolvePath(process.cwd());
+  if (!abs.startsWith(cwd + "/") && abs !== cwd) {
+    throw new Error(`Refusing to write outside cwd: ${p}`);
+  }
+  return abs;
+}
 
 const args = process.argv.slice(2);
 const urls = [];
@@ -261,7 +279,8 @@ const summary = {
 };
 
 if (jsonOut) {
-  await writeFile(jsonOut, JSON.stringify(summary, null, 2));
+  const target = safeOutPath(jsonOut);
+  await writeFile(target, JSON.stringify(summary, null, 2));
   console.log(`\nJSON → ${jsonOut}`);
 }
 
@@ -279,7 +298,13 @@ if (mdOut) {
           .slice(0, 3)
           .map((f) => `${f.header}: ${f.note}`)
           .join("; ") || "OK";
-    lines.push(`| ${r.url} | ${emoji(r.grade)} ${r.grade} | ${r.score} | ${note.replace(/\|/g, "\\|")} |`);
+    // Escape pipe AND backslash in EVERY column to avoid breaking the table
+    // when any of the interpolated fields contains `|`. CodeQL #1772 flagged
+    // the prior code as incomplete escaping because only `note` was escaped.
+    const escCell = (v) => String(v).replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
+    lines.push(
+      `| ${escCell(r.url)} | ${escCell(emoji(r.grade))} ${escCell(r.grade)} | ${escCell(r.score)} | ${escCell(note)} |`,
+    );
   }
   lines.push("");
   lines.push("<details><summary>Full findings</summary>");
@@ -294,7 +319,8 @@ if (mdOut) {
     lines.push("");
   }
   lines.push("</details>");
-  await writeFile(mdOut, lines.join("\n") + "\n");
+  const target = safeOutPath(mdOut);
+  await writeFile(target, lines.join("\n") + "\n");
   console.log(`Markdown → ${mdOut}`);
 }
 

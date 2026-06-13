@@ -130,9 +130,24 @@ if (cmd === "list") {
     }
     const buf = Buffer.from(await zip.arrayBuffer());
     const { writeFile, mkdir } = await import("node:fs/promises");
+    const { resolve: resolvePath, basename } = await import("node:path");
     await mkdir("audit-report", { recursive: true });
-    await writeFile(`audit-report/${a.name}.zip`, buf);
-    console.log(`audit-report/${a.name}.zip (${buf.length} bytes)`);
+    // CodeQL #1774: GitHub REST controls `a.name`. Strip any path
+    // separators via basename + character filter so we cannot write
+    // outside audit-report/ even with a crafted artifact name.
+    const safeName = basename(String(a.name)).replace(/[\\/]/g, "");
+    if (!safeName || safeName === "." || safeName === "..") {
+      console.warn(`skip ${a.name}: unsafe artifact name`);
+      continue;
+    }
+    const root = resolvePath("audit-report");
+    const dest = resolvePath("audit-report", `${safeName}.zip`);
+    if (!dest.startsWith(root + "/")) {
+      console.warn(`skip ${a.name}: would write outside audit-report/`);
+      continue;
+    }
+    await writeFile(dest, buf);
+    console.log(`audit-report/${safeName}.zip (${buf.length} bytes)`);
   }
 } else if (cmd === "summary") {
   const res = await gh(
