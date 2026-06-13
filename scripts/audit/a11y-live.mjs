@@ -60,6 +60,13 @@ for (const route of ROUTES) {
         help: v.help,
         helpUrl: v.helpUrl,
         nodes: v.nodes.length,
+        // Capture the first 5 offending node selectors + a short snippet
+        // so a follow-up fix session can find the elements without re-running
+        // a full crawl. Limited to 5 to keep the report small.
+        targets: v.nodes.slice(0, 5).map((n) => ({
+          target: Array.isArray(n.target) ? n.target.join(" ") : String(n.target),
+          html: (n.html ?? "").slice(0, 200),
+        })),
       }));
     }
   } catch (err) {
