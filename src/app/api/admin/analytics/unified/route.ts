@@ -19,11 +19,22 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const config = await getConfig();
+  const days = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("days") ?? "28"), 365 * 2),
+  );
 
   const [seo, pipeline, email, stripe] = await Promise.all([
     config.GOOGLE_CLIENT_EMAIL && config.GOOGLE_PRIVATE_KEY
       ? safeCall(async () =>
-          (await readThrough("seo", {}, () => getSeoSnapshot(), { ttlSeconds: 3600 })).value,
+          (
+            await readThrough(
+              "seo-unified",
+              { days },
+              () => getSeoSnapshot(undefined, days),
+              { ttlSeconds: 3600 },
+            )
+          ).value,
         )
       : Promise.resolve(null),
 
@@ -72,5 +83,6 @@ export async function GET(request: NextRequest) {
     email,
     stripe,
     fetchedAt: new Date().toISOString(),
+    _filters: { days },
   });
 }

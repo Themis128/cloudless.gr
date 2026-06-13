@@ -21,14 +21,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Google Search Console not configured." }, { status: 503 });
   }
 
+  const days = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("days") ?? "28"), 365 * 2),
+  );
+
   try {
     const __read = await readThrough(
       "seo",
-      {},
+      { days },
       async () => {
         const [snapshot, keywords] = await Promise.all([
-          getSeoSnapshot(),
-          getTopKeywords(),
+          getSeoSnapshot(undefined, days),
+          getTopKeywords(undefined, 20, days),
         ]);
         return { snapshot, keywords };
       },
@@ -41,9 +46,10 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
       _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
+      _filters: { days },
     });
   } catch (err) {
-    console.error("[SEO] Error:", err);
+    console.error("[SEO] Error:", JSON.stringify(String((err as Error)?.message ?? err)));
     return NextResponse.json({ error: "Failed to fetch SEO data." }, { status: 500 });
   }
 }

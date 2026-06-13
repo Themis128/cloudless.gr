@@ -20,7 +20,46 @@
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+// ─── Date-range filter ────────────────────────────────────────────────────────
+
+interface RangePreset {
+  readonly id: string;
+  readonly label: string;
+  readonly days: number;
+}
+
+const RANGE_PRESETS: readonly RangePreset[] = [
+  { id: "7d", label: "Last 7 days", days: 7 },
+  { id: "28d", label: "Last 28 days", days: 28 },
+  { id: "90d", label: "Last 90 days", days: 90 },
+  { id: "180d", label: "Last 6 months", days: 180 },
+] as const;
+
+const DEFAULT_RANGE = RANGE_PRESETS[1]; // 28d
+const RANGE_LS_KEY = "admin:analytics:days";
+
+function loadStoredDays(): number {
+  if (typeof window === "undefined") return DEFAULT_RANGE.days;
+  const raw = window.localStorage.getItem(RANGE_LS_KEY);
+  const n = raw ? Number(raw) : NaN;
+  if (!Number.isFinite(n) || n < 1 || n > 365 * 2) return DEFAULT_RANGE.days;
+  return n;
+}
+
+function persistDays(days: number) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RANGE_LS_KEY, String(days));
+  } catch {
+    /* localStorage may be unavailable */
+  }
+}
+
+function presetForDays(days: number): RangePreset {
+  return RANGE_PRESETS.find((p) => p.days === days) ?? DEFAULT_RANGE;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -285,14 +324,15 @@ async function handleTabFetch<T>(
 
 // ─── Overview data loader ─────────────────────────────────────────────────────
 
-async function loadOverviewData(): Promise<{
+async function loadOverviewData(days: number): Promise<{
   snapshot: SeoSnapshot | null;
   analytics: WebAnalytics | null;
   overviewError: string | null;
 }> {
+  const qs = `?days=${days}`;
   const [seoRes, webRes] = await Promise.allSettled([
-    fetchWithAuth("/api/admin/analytics/seo"),
-    fetchWithAuth("/api/admin/analytics/web"),
+    fetchWithAuth(`/api/admin/analytics/seo${qs}`),
+    fetchWithAuth(`/api/admin/analytics/web${qs}`),
   ]);
 
   let snapshot: SeoSnapshot | null = null;
@@ -318,6 +358,19 @@ async function loadOverviewData(): Promise<{
 
 export default function AdminAnalyticsPage() {
   const [tab, setTab] = useState<Tab>("overview");
+
+  // ── Date-range filter ──
+  // Initialize to default 28d on first render (SSR-safe). On mount, restore
+  // any persisted value from localStorage (which would refetch via the
+  // effect that watches `days`).
+  const [days, setDays] = useState<number>(DEFAULT_RANGE.days);
+
+  useEffect(() => {
+    const stored = loadStoredDays();
+    if (stored !== days) setDays(stored);
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Data state ──
   const [snapshot, setSnapshot] = useState<SeoSnapshot | null>(null);
@@ -352,7 +405,7 @@ export default function AdminAnalyticsPage() {
     setLoading("overview", true);
     setError("overview", null);
     try {
-      const { snapshot, analytics, overviewError } = await loadOverviewData();
+      const { snapshot, analytics, overviewError } = await loadOverviewData(days);
       if (overviewError) {
         setError("overview", overviewError);
       } else {
@@ -363,63 +416,74 @@ export default function AdminAnalyticsPage() {
       setLoading("overview", false);
       markFetched("overview");
     }
-  }, []);
+  }, [days]);
 
   const fetchKeywords = useCallback(
     () =>
       handleTabFetch(
         "keywords",
-        "/api/admin/analytics/keywords?limit=50",
+        `/api/admin/analytics/keywords?limit=50&days=${days}`,
         setKeywords as (d: unknown) => void,
         (v) => setLoading("keywords", v),
         (v) => setError("keywords", v),
         () => markFetched("keywords"),
         (j) => (j.keywords ?? []) as Keyword[]
       ),
-    []
+    [days]
   );
 
   const fetchPages = useCallback(
     () =>
       handleTabFetch(
         "pages",
-        "/api/admin/analytics/pages?limit=25",
+        `/api/admin/analytics/pages?limit=25&days=${days}`,
         setPages as (d: unknown) => void,
         (v) => setLoading("pages", v),
         (v) => setError("pages", v),
         () => markFetched("pages"),
         (j) => (j.pages ?? []) as Page[]
       ),
-    []
+    [days]
   );
 
+  // History tab uses `weeks` (different from the rolling day window), but we
+  // still derive a reasonable default from `days` so the trend window roughly
+  // matches the headline KPIs (16 weeks for 90d+, otherwise enough to cover
+  // the chosen window with some padding for trend context).
+  const historyWeeks = Math.max(4, Math.min(Math.ceil(days / 7) + 4, 26));
   const fetchHistory = useCallback(
     () =>
       handleTabFetch(
         "history",
-        "/api/admin/analytics/history?weeks=16",
+        `/api/admin/analytics/history?weeks=${historyWeeks}`,
         setHistory as (d: unknown) => void,
         (v) => setLoading("history", v),
         (v) => setError("history", v),
         () => markFetched("history"),
         (j) => (j.history ?? []) as HistoryPoint[]
       ),
-    []
+    [historyWeeks]
   );
 
   const fetchCtr = useCallback(
     () =>
       handleTabFetch(
         "ctr",
-        "/api/admin/analytics/ctr-opportunities?limit=40",
+        `/api/admin/analytics/ctr-opportunities?limit=40&days=${days}`,
         setOpportunities as (d: unknown) => void,
         (v) => setLoading("ctr", v),
         (v) => setError("ctr", v),
         () => markFetched("ctr"),
         (j) => (j.opportunities ?? []) as CtrOpportunity[]
       ),
-    []
+    [days]
   );
+
+  // When the date range changes, clear the "already fetched" set so each tab
+  // refetches against the new window the next time it's visited.
+  useEffect(() => {
+    setFetchedTabs(new Set());
+  }, [days]);
 
   // Lazy-load: only fetch when tab is first opened
   useEffect(() => {
@@ -434,6 +498,19 @@ export default function AdminAnalyticsPage() {
       fetchers[tab]();
     }
   }, [tab, fetchedTabs, fetchOverview, fetchKeywords, fetchPages, fetchHistory, fetchCtr]);
+
+  const currentPreset = useMemo(() => presetForDays(days), [days]);
+  const isFiltered = days !== DEFAULT_RANGE.days;
+
+  const applyDays = useCallback((d: number) => {
+    setDays(d);
+    persistDays(d);
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setDays(DEFAULT_RANGE.days);
+    persistDays(DEFAULT_RANGE.days);
+  }, []);
 
   const currentLoading = loadingTab[tab];
   const currentError = errors[tab];
@@ -467,6 +544,63 @@ export default function AdminAnalyticsPage() {
           Performance data from Google Search Console — clicks, impressions, rankings.
         </p>
       </div>
+
+      <div
+        className="mb-4 flex flex-wrap items-center gap-2"
+        role="group"
+        aria-label="Date range filter"
+      >
+        <span className="font-mono text-[10px] uppercase tracking-wide text-slate-500">
+          Range
+        </span>
+        {RANGE_PRESETS.map((p) => {
+          const active = p.days === days;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => applyDays(p.days)}
+              aria-pressed={active}
+              className={`rounded-lg px-3 py-1.5 font-mono text-xs transition-all ${
+                active
+                  ? "bg-neon-cyan/10 text-neon-cyan border-neon-cyan/30 border"
+                  : "border border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white"
+              }`}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {isFiltered && (
+        <div
+          className="mb-4 flex flex-wrap items-center gap-2"
+          aria-label="Active filters"
+        >
+          <span className="font-mono text-[10px] uppercase tracking-wide text-slate-500">
+            Active
+          </span>
+          <span className="bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs">
+            {currentPreset.label}
+            <button
+              type="button"
+              onClick={resetFilters}
+              aria-label={`Clear ${currentPreset.label} filter`}
+              className="hover:text-white"
+            >
+              ✕
+            </button>
+          </span>
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="font-mono text-[10px] uppercase tracking-wide text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+          >
+            Reset to default
+          </button>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-wrap gap-2">
         {TABS.map((t) => (

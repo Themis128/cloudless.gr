@@ -86,7 +86,12 @@ export default function NewsletterForm() {
           "newsletter.consent",
           "By subscribing, you agree to receive our newsletter and accept our"
         )}{" "}
-        <Link href="/privacy" className="text-neon-cyan/60 hover:text-neon-cyan underline">
+        {/*
+          A11y: previous text-neon-cyan/60 measured ~2.8:1 against the
+          dark background and failed WCAG AA. Solid neon-cyan (#22d3e6)
+          measures > 7:1 on the dark surface.
+        */}
+        <Link href="/privacy" className="text-neon-cyan hover:text-white underline">
           {translate(locale, "legal.privacyTitle", "Privacy Policy")}
         </Link>
         {". "}

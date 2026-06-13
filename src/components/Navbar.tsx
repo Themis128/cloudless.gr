@@ -158,7 +158,7 @@ export default function Navbar() {
                   <>
                     <Link
                       href="/contact"
-                      className="bg-accent hover:bg-accent/90 rounded-lg px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-white transition-all duration-300"
+                      className="bg-accent hover:bg-accent/90 rounded-lg px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-[var(--accent-on)] transition-all duration-300"
                     >
                       {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
                     </Link>
@@ -291,7 +291,7 @@ export default function Navbar() {
                   <>
                     <Link
                       href="/contact"
-                      className="bg-accent hover:bg-accent/90 mt-2 block min-h-11 rounded-lg px-5 py-3 text-center font-mono text-sm font-semibold text-white transition-all"
+                      className="bg-accent hover:bg-accent/90 mt-2 block min-h-11 rounded-lg px-5 py-3 text-center font-mono text-sm font-semibold text-[var(--accent-on)] transition-all"
                       onClick={() => setMobileOpen(false)}
                     >
                       {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
