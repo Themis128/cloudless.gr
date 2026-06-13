@@ -63,4 +63,14 @@ export async function GET(request: NextRequest) {
               ) / 100,
           };
         })
-      : Promise.resolve
+      : Promise.resolve(null),
+  ]);
+
+  return NextResponse.json({
+    seo,
+    pipeline,
+    email,
+    stripe,
+    fetchedAt: new Date().toISOString(),
+  });
+}
