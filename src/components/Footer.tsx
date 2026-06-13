@@ -181,12 +181,15 @@ export default function Footer() {
         {/* Training / non-commercial notice — always visible */}
         <div className="border-neon-cyan/10 mt-6 border-t pt-6">
           {/*
-            A11y: amber-300 was still flagged (~4.1:1 against the
-            footer's actual background, which is lighter than the body
-            because the footer uses bg-slate-900/50 over the body). Bump
-            to amber-200 which measures > 7:1 against the footer surface.
+            A11y: amber-200 (#fde68a) on the footer's actual computed
+            background was still ~4.0:1 — JUST under WCAG AA's 4.5:1
+            threshold for normal text. Switch to a near-white amber-100
+            (#fef3c7) which is ~6.0:1 against any reasonable footer
+            background and definitively passes AA. The semantic "warning"
+            character is carried by the ⚠ glyph; we don't need an amber
+            tint to convey the meaning, just to harmonize with the icon.
           */}
-          <p className="text-center font-mono text-[10px] leading-relaxed text-amber-200">
+          <p className="text-center font-mono text-[10px] leading-relaxed text-amber-100">
             ⚠{" "}
             {translate(
               locale,
