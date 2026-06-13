@@ -251,4 +251,8 @@ export const ADMIN_API_DYNAMIC = [
     template: "/api/admin/pipeline/deals/[id]/notes",
     sample: "/api/admin/pipeline/deals/sample-id/notes",
   },
-  { template: "/api/admin/reports/[id]", sample: "/api/admin
+  { template: "/api/admin/reports/[id]", sample: "/api/admin/reports/sample-id" },
+  { template: "/api/admin/reports/[id]/pdf", sample: "/api/admin/reports/sample-id/pdf" },
+] as const;
+
+export const AUTH_API = "/api/auth/session"; // NextAuth handler
