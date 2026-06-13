@@ -14,7 +14,34 @@
 
 import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { join, resolve as resolvePath, basename } from "node:path";
+
+/**
+ * CodeQL "network data written to file" — every writeFile in this script
+ * is constrained to stay inside `--out-dir` (default: audit-report/) and
+ * uses only the sanitized basename of any artifact name. Path traversal
+ * via crafted artifact names is impossible because we strip directory
+ * separators before composing the destination.
+ */
+function safeFileName(name) {
+  // basename() drops any preceding path; the regex strips remaining
+  // separators (no-op after basename, defense-in-depth) and bans names
+  // that resolve to ".." or "".
+  const safe = basename(String(name)).replace(/[\\/]/g, "");
+  if (!safe || safe === "." || safe === "..") {
+    throw new Error(`Refusing to write artifact with unsafe name: ${name}`);
+  }
+  return safe;
+}
+
+function safeWriteTarget(outDir, ...segments) {
+  const root = resolvePath(outDir);
+  const target = resolvePath(outDir, ...segments.map((s) => String(s)));
+  if (!target.startsWith(root + "/") && target !== root) {
+    throw new Error(`Refusing to write outside out-dir: ${segments.join("/")}`);
+  }
+  return target;
+}
 
 const args = process.argv.slice(2);
 const flags = {};
@@ -220,15 +247,20 @@ async function fetchArtifact(runId, prefix, fileName) {
   });
   if (!zipRes.ok) throw new Error(`Artifact download ${zipRes.status}`);
   const buf = Buffer.from(await zipRes.arrayBuffer());
-  const tmp = `${outDir}/${art.name}.zip`;
+  // CodeQL #1775: artifact name comes from GitHub REST and could in
+  // principle contain path separators; basename + reject of /./.. is
+  // defense-in-depth.
+  const safeName = safeFileName(art.name);
+  const tmp = safeWriteTarget(outDir, `${safeName}.zip`);
   await writeFile(tmp, buf);
   // Use system unzip
+  const extractDir = safeWriteTarget(outDir, safeName);
   await new Promise((resolve, reject) => {
-    const p = spawn("unzip", ["-o", tmp, "-d", `${outDir}/${art.name}`], { stdio: "ignore" });
+    const p = spawn("unzip", ["-o", tmp, "-d", extractDir], { stdio: "ignore" });
     p.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`unzip exit ${code}`))));
   });
   // Walk recursively for the keyFile
-  const found = await findFile(`${outDir}/${art.name}`, fileName);
+  const found = await findFile(extractDir, fileName);
   if (!found) return null;
   return readFile(found, "utf8");
 }
@@ -302,6 +334,8 @@ md.push("");
 md.push("> Reports retained 30-60 days per audit. Click an audit name above to open the run.");
 md.push("> Live page: `/admin/audits` reads the latest `audits-dashboard-*` artifact via REST.");
 
-await writeFile(`${outDir}/dashboard.json`, JSON.stringify(dashboard, null, 2));
-await writeFile(`${outDir}/dashboard.md`, md.join("\n") + "\n");
+// CodeQL #1773: dashboard.{json,md} are static names but go through
+// safeWriteTarget for symmetry with the artifact-write path above.
+await writeFile(safeWriteTarget(outDir, "dashboard.json"), JSON.stringify(dashboard, null, 2));
+await writeFile(safeWriteTarget(outDir, "dashboard.md"), md.join("\n") + "\n");
 console.log(`\nDashboard → ${outDir}/dashboard.{json,md}`);
