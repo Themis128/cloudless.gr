@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getConfig } from "@/lib/ssm-config";
 import { getSeoSnapshot } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";
 import { getStripe } from "@/lib/stripe";
 
@@ -21,7 +22,9 @@ export async function GET(request: NextRequest) {
 
   const [seo, pipeline, email, stripe] = await Promise.all([
     config.GOOGLE_CLIENT_EMAIL && config.GOOGLE_PRIVATE_KEY
-      ? safeCall(() => getSeoSnapshot())
+      ? safeCall(async () =>
+          (await readThrough("seo", {}, () => getSeoSnapshot(), { ttlSeconds: 3600 })).value,
+        )
       : Promise.resolve(null),
 
     (await isHubSpotConfigured())

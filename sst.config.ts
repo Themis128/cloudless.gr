@@ -15,6 +15,8 @@ function buildSiteEnvironment(
   isProd: boolean,
   stripeTransactionsTableName: $util.Output<string>,
   userProfileTableName: $util.Output<string>,
+  adminNotificationsTableName: $util.Output<string>,
+  analyticsCacheTableName: $util.Output<string>,
   authSecret?: $util.Output<string>,
   cognito?: {
     issuer: $util.Output<string>;
@@ -41,6 +43,8 @@ function buildSiteEnvironment(
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
     USER_PROFILE_TABLE: userProfileTableName,
+    ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
+    ANALYTICS_CACHE_TABLE: analyticsCacheTableName,
     // Cloudflare Workers AI — consumed by /api/admin/ai/generate. Passed from
     // the deploy workflow env; the route returns 503 when absent.
     ...(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
@@ -153,6 +157,45 @@ export default {
       primaryIndex: { hashKey: "userId" },
     });
 
+    // Durable admin notifications store — audit + analytics for every
+    // client-facing interaction (contact, subscribe, booking, order, error,
+    // auth, portal). 90-day hot retention, then archived to S3 via the
+    // notifications-archive cron (see src/lib/admin-notifications.ts).
+    //
+    // pk = "NOTIF", sk = "<createdAt-ISO8601>#<id>"
+    // GSI categoryIndex: catPk = "CAT#<category>", catSk = "<createdAt-ISO8601>#<id>"
+    const adminNotificationsTable = new sst.aws.Dynamo("AdminNotifications", {
+      fields: {
+        pk: "string",
+        sk: "string",
+        catPk: "string",
+        catSk: "string",
+      },
+      primaryIndex: { hashKey: "pk", rangeKey: "sk" },
+      globalIndexes: {
+        categoryIndex: { hashKey: "catPk", rangeKey: "catSk" },
+      },
+    });
+
+    // Read-through cache for Google Search Console responses.
+    //
+    // GSC has per-minute / per-day / 50k-rows-per-day quotas, and every
+    // admin tab open today calls 1-2 endpoints directly. This table caches
+    // each (route, params) combination keyed by a deterministic hash, with
+    // TTL enforced application-side. See src/lib/gsc-cache.ts.
+    //
+    // pk = "<route>"  e.g. "seo", "keywords", "ctr-opportunities"
+    // sk = "<params-hash>"  deterministic for a given query-string
+    //
+    // Refreshed hourly by /api/cron/gsc-cache-refresh (PR C3).
+    const analyticsCacheTable = new sst.aws.Dynamo("AnalyticsCache", {
+      fields: {
+        pk: "string",
+        sk: "string",
+      },
+      primaryIndex: { hashKey: "pk", rangeKey: "sk" },
+    });
+
     // -------------------------------------------------------------------------
     // Cognito User Pool — always-up AWS auth
     //
@@ -258,6 +301,8 @@ export default {
         isProd,
         stripeTransactionsTable.name,
         userProfileTable.name,
+        adminNotificationsTable.name,
+        analyticsCacheTable.name,
         authSecret,
         {
           issuer: cognitoIssuer,
@@ -266,7 +311,7 @@ export default {
           domain: cognitoHostedDomain,
         }
       ),
-      link: [stripeTransactionsTable, userProfileTable],
+      link: [stripeTransactionsTable, userProfileTable, adminNotificationsTable, analyticsCacheTable],
       permissions: [
         {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.

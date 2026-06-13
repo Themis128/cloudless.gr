@@ -1,6 +1,6 @@
 # Cloudless — cloudless.gr
 
-> **NOTE — auth is Cognito.** Migrated from Keycloak to Cognito on 2026-06-08 (PR #677); Keycloak is fully removed. App admin = membership in the Cognito group `admin`.
+> **Auth is Cognito.** App admin = membership in the Cognito group `admin`.
 
 Cloud computing, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs.
 

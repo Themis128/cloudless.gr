@@ -330,6 +330,23 @@ export async function slackErrorNotify(opts: {
     icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
+
+  // Mirror to the admin notifications audit log. Lazy import so the
+  // Slack lib has no static dependency on Dynamo — keeps the bundle
+  // lighter for the many call sites that don't transitively need Dynamo.
+  try {
+    const { recordNotification } = await import("@/lib/admin-notifications");
+    await recordNotification({
+      category: "error",
+      type: "error",
+      title: opts.title,
+      message: opts.message,
+      route: opts.route,
+      metadata: errText ? { error: errText.slice(0, MAX_ERROR_TEXT_LENGTH) } : undefined,
+    });
+  } catch (e) {
+    console.warn("[slackErrorNotify] admin-notifications mirror failed:", e);
+  }
 }
 
 /**

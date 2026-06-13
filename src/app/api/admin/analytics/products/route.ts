@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProductPageMetrics } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 import { requireAdmin } from "@/lib/api-auth";
 
@@ -26,12 +27,19 @@ export async function GET(request: NextRequest) {
   const pattern = request.nextUrl.searchParams.get("pattern") || "/store/";
 
   try {
-    const products = await getProductPageMetrics(undefined, pattern, limit);
+    const __read = await readThrough(
+      "products",
+      { pattern: pattern, limit: limit },
+      () => getProductPageMetrics(undefined, pattern, limit),
+      { ttlSeconds: 3600 },
+    );
+    const products = __read.value;
     return NextResponse.json({
       products,
       pattern,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC products] Error:", err);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDeviceBreakdown } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 import { requireAdmin } from "@/lib/api-auth";
 
@@ -22,11 +23,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const devices = await getDeviceBreakdown();
+    const __read = await readThrough(
+      "devices",
+      {},
+      () => getDeviceBreakdown(),
+      { ttlSeconds: 3600 },
+    );
+    const devices = __read.value;
     return NextResponse.json({
       devices,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC devices] Error:", err);
