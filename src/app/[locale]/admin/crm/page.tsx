@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useVisiblePoll } from "@/lib/use-visible-poll";
 

@@ -376,12 +376,14 @@ export async function createPage(
     });
     return page.id;
   } catch (err) {
-    const line =
+    // CodeQL js/log-injection — use JSON.stringify as the
+    // canonical sanitizer for tainted values flowing into console.error.
+    console.error(
       "[Notion] Failed to create page in " +
-      safeId(databaseId) +
-      ": " +
-      safeMsg((err as Error)?.message ?? "unknown error");
-    console.error(line);
+        JSON.stringify(safeId(databaseId)) +
+        ": " +
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+    );
     return null;
   }
 }
@@ -397,12 +399,14 @@ export async function updatePage(
     });
     return true;
   } catch (err) {
-    const line =
+    // CodeQL js/log-injection — use JSON.stringify as the
+    // canonical sanitizer for tainted values flowing into console.error.
+    console.error(
       "[Notion] Failed to update page " +
-      safeId(pageId) +
-      ": " +
-      safeMsg((err as Error)?.message ?? "unknown error");
-    console.error(line);
+        JSON.stringify(safeId(pageId)) +
+        ": " +
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+    );
     return false;
   }
 }
@@ -418,12 +422,14 @@ export async function archivePage(pageId: string): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    const line =
+    // CodeQL js/log-injection — use JSON.stringify as the
+    // canonical sanitizer for tainted values flowing into console.error.
+    console.error(
       "[Notion] Failed to archive page " +
-      safeId(pageId) +
-      ": " +
-      safeMsg((err as Error)?.message ?? "unknown error");
-    console.error(line);
+        JSON.stringify(safeId(pageId)) +
+        ": " +
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+    );
     return false;
   }
 }
@@ -439,12 +445,14 @@ export async function restorePage(pageId: string): Promise<boolean> {
     });
     return true;
   } catch (err) {
-    const line =
+    // CodeQL js/log-injection — use JSON.stringify as the
+    // canonical sanitizer for tainted values flowing into console.error.
+    console.error(
       "[Notion] Failed to restore page " +
-      safeId(pageId) +
-      ": " +
-      safeMsg((err as Error)?.message ?? "unknown error");
-    console.error(line);
+        JSON.stringify(safeId(pageId)) +
+        ": " +
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+    );
     return false;
   }
 }
@@ -467,12 +475,14 @@ export async function appendBlocks(parentId: string, children: any[]): Promise<b
     });
     return true;
   } catch (err) {
-    const line =
+    // CodeQL js/log-injection — use JSON.stringify as the
+    // canonical sanitizer for tainted values flowing into console.error.
+    console.error(
       "[Notion] Failed to append blocks to " +
-      safeId(parentId) +
-      ": " +
-      safeMsg((err as Error)?.message ?? "unknown error");
-    console.error(line);
+        JSON.stringify(safeId(parentId)) +
+        ": " +
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+    );
     return false;
   }
 }
@@ -485,12 +495,14 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
     await notionFetch(`/blocks/${blockId}`, { method: "DELETE" });
     return true;
   } catch (err) {
-    const line =
+    // CodeQL js/log-injection — use JSON.stringify as the
+    // canonical sanitizer for tainted values flowing into console.error.
+    console.error(
       "[Notion] Failed to delete block " +
-      safeId(blockId) +
-      ": " +
-      safeMsg((err as Error)?.message ?? "unknown error");
-    console.error(line);
+        JSON.stringify(safeId(blockId)) +
+        ": " +
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+    );
     return false;
   }
 }
