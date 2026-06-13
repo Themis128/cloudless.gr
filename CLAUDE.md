@@ -13,8 +13,9 @@ These require access outside GitHub and cannot be automated from a cloud session
 | `OMV_SSH_KEY` | **SET** ✅ | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active. |
 | ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore. |
 | Admin password | **N/A** | Auth is Cognito (PR #677, 2026-06-08). Manage admin users in the Cognito User Pool console; there is no separate IdP admin to bootstrap. |
-| Cloudflare HA LB | **TOKEN NEEDED** | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — add as repo secret or SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` with scopes: Zone:Read, Load Balancing Monitors/Pools+Load Balancers:Edit, DNS:Edit (zone cloudless.gr). Then `workflow_dispatch` or touch the workflow to apply. |
-| Cloudflare Email Obfuscation fix | **TOKEN NEEDED** | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors by disabling Scrape Shield Email Obfuscation zone-wide. Needs `CLOUDFLARE_API_TOKEN` repo secret or SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` (can reuse HA LB token if it has Zone Settings:Edit, or create a new token with scopes: **Zone:Read, Zone Settings:Edit** for cloudless.gr). Then `workflow_dispatch` to run; it verifies the fix by curling /en and checking for email-obfuscation markers. |
+| Cloudflare HA LB | **TOKEN NEEDED** | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — use the `cloudflare-token-doctor` skill, mint a token with the full scope set (skill Stage 1), then `gh workflow run store-cloudflare-token.yml -f cloudflare_token=… -f apply=true`. |
+| Cloudflare Email Obfuscation fix | **TOKEN NEEDED** | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors. Same token as HA LB above. |
+| Cloudflare infra MCP token | **NEEDS ROTATION** | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. |
 
 ## Testing Policy
 
@@ -141,7 +142,8 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
 
 ## Authentication
 
-Auth is **Cognito**. App admin = membership in the Cognito
+Auth is **Cognito**, full-stop (PR #677, 2026-06-08). There is no Keycloak, no
+JVM heap, no realm config to maintain. App admin = membership in the Cognito
 group `admin`, surfaced via the `cognito:groups` claim and checked by
 `api-auth.ts` `requireAdmin`. Manage users in the Cognito User Pool console.
 The `[...nextauth]` route uses the Cognito provider; `NEXT_PUBLIC_COGNITO_*`
@@ -336,4 +338,4 @@ which automates Stages 0-3 from the Pi.
 - Terraform CLI: `1.15.6`
 - `hashicorp/aws`: `~> 5.80.0`
 - `aws-actions/configure-aws-credentials`: `v4.x`
-- `hashicorp/setup-terraform`: prefer `v3.x` (v2 nears Node 20 EOL)
+- `hashicorp/setup-ter
