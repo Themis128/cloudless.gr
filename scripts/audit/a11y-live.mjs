@@ -13,15 +13,16 @@ import { writeFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import AxeBuilder from "@axe-core/playwright";
 
+// Live routes audited daily. /el and /en/about are currently 404 and
+// excluded — re-add them when those pages ship. 404s aren't a11y problems
+// and would pollute the report.
 const ROUTES = [
   "/",
   "/en",
-  "/el",
   "/en/services",
   "/en/contact",
   "/en/store",
   "/en/blog",
-  "/en/about",
   "/en/case-studies",
 ];
 
