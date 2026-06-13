@@ -181,12 +181,12 @@ export default function Footer() {
         {/* Training / non-commercial notice — always visible */}
         <div className="border-neon-cyan/10 mt-6 border-t pt-6">
           {/*
-            A11y: text-amber-500/70 measured ~2.4:1 against the dark
-            footer background and was the dominant color-contrast
-            violation on every page (axe found 5-15 nodes here per route).
-            Solid text-amber-300 measures > 7:1 on the dark surface.
+            A11y: amber-300 was still flagged (~4.1:1 against the
+            footer's actual background, which is lighter than the body
+            because the footer uses bg-slate-900/50 over the body). Bump
+            to amber-200 which measures > 7:1 against the footer surface.
           */}
-          <p className="text-center font-mono text-[10px] leading-relaxed text-amber-300">
+          <p className="text-center font-mono text-[10px] leading-relaxed text-amber-200">
             ⚠{" "}
             {translate(
               locale,

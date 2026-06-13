@@ -11,7 +11,11 @@ const T = {
   gridAxis: "rgba(180,200,230,0.25)",
   text: "#dde4f0",
   textDim: "#8895ac",
-  textMuted: "#5e6a82",
+  // A11y: previous #5e6a82 measured ~3.2:1 on the dark slate background
+  // and produced 11 serious color-contrast violations on the home page
+  // (header labels like "Dashboard" and "p95 Latency"). Lifted to the
+  // same value as textDim which passes WCAG AA at 5.6:1.
+  textMuted: "#8895ac",
   accent: "#22d3e6",
   secondary: "#8b5cf6",
   ok: "#34d399",
