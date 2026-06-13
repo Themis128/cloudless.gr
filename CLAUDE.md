@@ -15,7 +15,7 @@ These require access outside GitHub and cannot be automated from a cloud session
 | Admin password | **N/A** | Auth is Cognito (PR #677, 2026-06-08). Manage admin users in the Cognito User Pool console; there is no separate IdP admin to bootstrap. |
 | Cloudflare HA LB | **TOKEN NEEDED** | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — use the `cloudflare-token-doctor` skill, mint a token with the full scope set (skill Stage 1), then `gh workflow run store-cloudflare-token.yml -f cloudflare_token=… -f apply=true`. |
 | Cloudflare Email Obfuscation fix | **TOKEN NEEDED** | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors. Same token as HA LB above. |
-| Cloudflare infra MCP token | **NEEDS ROTATION** | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. |
+| Cloudflare infra MCP token | **NEEDS ROTATION** | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. SSM half **is set ✅** as of 2026-06-13; only the Cowork session-secret store half is pending — see `cowork-session-secrets` skill. |
 
 ## Testing Policy
 
@@ -338,4 +338,4 @@ which automates Stages 0-3 from the Pi.
 - Terraform CLI: `1.15.6`
 - `hashicorp/aws`: `~> 5.80.0`
 - `aws-actions/configure-aws-credentials`: `v4.x`
-- `hashicorp/setup-ter
+- `hashicorp/setup-terraform`: prefer `v3.x` (v2 nears Node 20 EOL)
