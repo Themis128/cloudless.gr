@@ -116,10 +116,15 @@ if [ -n "$ZONE_ID" ]; then
 fi
 
 # ── 4. Analytics:Read (GraphQL) ──────────────────────────────────────────────
+# Cloudflare's httpRequests1hGroups dataset caps queries to a 3-day window.
+# Use the most recent hour so the test stays well under the limit and works
+# on a freshly minted token (no rolling cutover at midnight UTC).
 if [ -n "$ZONE_ID" ]; then
-  GQ_BODY="$(jq -nc --arg z "$ZONE_ID" '{
-    query: "query($z: String!) { viewer { zones(filter: {zoneTag: $z}) { httpRequests1hGroups(limit: 1, filter: {datetime_gt: \"2026-01-01T00:00:00Z\"}) { sum { requests } } } } }",
-    variables: { z: $z }
+  SINCE="$(date -u -d '1 hour ago' '+%Y-%m-%dT%H:00:00Z' 2>/dev/null || \
+           date -u -v-1H '+%Y-%m-%dT%H:00:00Z')"
+  GQ_BODY="$(jq -nc --arg z "$ZONE_ID" --arg s "$SINCE" '{
+    query: "query($z: String!, $s: Time!) { viewer { zones(filter: {zoneTag: $z}) { httpRequests1hGroups(limit: 1, filter: {datetime_geq: $s}) { sum { requests } } } } }",
+    variables: { z: $z, s: $s }
   }')"
   GQ="$(curl -sS -X POST -H "Authorization: Bearer $CF" \
     -H "Content-Type: application/json" \
