@@ -19,9 +19,9 @@ on:
         description: 'Base URL (default https://cloudless.gr)'
         default: 'https://cloudless.gr'
       strict:
-        description: 'Fail on any serious violation (default warn-only)'
+        description: 'Fail on any serious violation'
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -66,11 +66,12 @@ jobs:
         id: audit
         env:
           BASE_URL: ${{ github.event.inputs.base_url || 'https://cloudless.gr' }}
-          # Default warn-only. The audit's primary job is producing a report;
-          # serious violations get tracked in a separate issue, not gated as
-          # a hard failure that pages the team. Flip to true on manual runs
-          # when triaging a specific regression.
-          STRICT: ${{ github.event.inputs.strict || 'false' }}
+          # Strict by default. 2026-06-13: live site has 0 serious/critical
+          # color-contrast violations across all 7 audited routes — locking
+          # that in so any new regression fails the daily run instead of
+          # being silently logged. Flip to false in a manual dispatch only
+          # when triaging a known issue.
+          STRICT: ${{ github.event.inputs.strict || 'true' }}
         run: |
           set -e
           mkdir -p audit-report
