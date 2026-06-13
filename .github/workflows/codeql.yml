@@ -8,11 +8,20 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      # CodeQL also covers our Node tooling: audit scripts, Lambda handlers,
+      # e2e helpers. Without these, alerts on those files only surface on
+      # the weekly Monday scan instead of the commit that introduces them.
+      - 'scripts/**'
+      - 'lambda/**'
+      - 'e2e/**'
       - '.github/workflows/codeql.yml'
   pull_request:
     branches: [main]
     paths:
       - 'src/**'
+      - 'scripts/**'
+      - 'lambda/**'
+      - 'e2e/**'
       - '.github/workflows/codeql.yml'
   workflow_dispatch:
   schedule:
