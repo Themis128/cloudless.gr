@@ -249,6 +249,17 @@ function addSecurityHeaders(response: NextResponse, nonce: string): void {
     "Strict-Transport-Security",
     "max-age=63072000; includeSubDomains; preload",
   );
+  // Cross-Origin isolation headers. The marketing/storefront app does not
+  // window.opener any third-party origins, and does not need
+  // SharedArrayBuffer, so the strictest settings are safe.
+  //   COOP: same-origin    → popups from any cross-origin opener are isolated
+  //   CORP: same-origin    → resources can only be loaded by same-origin pages
+  //   COEP: credentialless → loads any subresource without forcing CORP on it,
+  //                          which would otherwise break Stripe + Sentry + HubSpot
+  //                          scripts that don't set CORP on their CDN responses
+  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  response.headers.set("Cross-Origin-Embedder-Policy", "credentialless");
   response.headers.set("Report-To", REPORT_TO);
   response.headers.set("Content-Security-Policy", buildCSP(nonce));
   // Forward nonce to server components (layout.tsx reads x-nonce via headers()).

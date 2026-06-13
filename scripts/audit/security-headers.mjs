@@ -149,7 +149,17 @@ async function auditUrl(url) {
     score += cspName === "content-security-policy" ? 25 : 15;
     const csp = h(cspName);
     const cspIssues = [];
-    if (/'unsafe-inline'/.test(csp) && /script-src/.test(csp)) {
+    // 'unsafe-inline' alone is bad, but 'strict-dynamic' + 'nonce-…' supersedes
+    // it in modern browsers (the inline directive becomes a no-op). Only flag
+    // 'unsafe-inline' if it is NOT neutralized by 'strict-dynamic' or a nonce.
+    const hasStrictDynamic = /'strict-dynamic'/.test(csp);
+    const hasNonce = /'nonce-[^']+'/.test(csp);
+    if (
+      /'unsafe-inline'/.test(csp) &&
+      /script-src/.test(csp) &&
+      !hasStrictDynamic &&
+      !hasNonce
+    ) {
       cspIssues.push("script-src allows 'unsafe-inline'");
       score -= 5;
     }
