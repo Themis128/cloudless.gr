@@ -27,6 +27,7 @@ const AUDITS = {
   depsDrift: "deps-drift-audit.yml",
   bundleBudget: "bundle-budget.yml",
   coreWebVitals: "core-web-vitals-audit.yml",
+  clusterStatus: "cluster-status-audit.yml",
   aggregator: "audits-aggregator.yml",
 };
 
