@@ -20,7 +20,13 @@ import { useEffect, useRef } from "react";
  */
 export function useVisiblePoll(fn: () => void | Promise<void>, intervalMs: number): void {
   const fnRef = useRef(fn);
-  fnRef.current = fn;
+
+  // react-hooks/refs: never write to a ref during render. Update the latest
+  // `fn` reference in an effect so the polling timer always sees the freshest
+  // closure without violating React's invariant.
+  useEffect(() => {
+    fnRef.current = fn;
+  }, [fn]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;

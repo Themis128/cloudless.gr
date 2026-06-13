@@ -102,7 +102,16 @@ export default function NotificationsPage() {
   }, [category, since]);
 
   useEffect(() => {
-    void load();
+    // react-hooks/set-state-in-effect: do not call setState synchronously in
+    // the effect body. Defer to the next microtask so we leave the
+    // commit-phase before `load()` calls setLoading/setData.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const markAllRead = async () => {

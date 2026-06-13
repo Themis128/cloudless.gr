@@ -146,12 +146,11 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ url: session.url });
   } catch (error) {
-    // Sanitize once, then build a single fully-sanitized log line so static
-    // analysis can see the sanitization survives into the sink. See CodeQL
-    // js/log-injection (#1753).
+    // CodeQL js/log-injection — JSON.stringify is the canonical sanitizer
+    // for tainted values flowing into console.error (#1753 / #1769).
     const rawMsg = (error as Error)?.message ?? "unknown error";
     const msg = String(rawMsg).replace(/[\x00-\x1f\x7f]/g, " ").slice(0, 200);
-    console.error("Checkout error: " + msg);
+    console.error("Checkout error: " + JSON.stringify(msg));
 
     // Client errors: malformed body or unknown product → 400. Return a fixed,
     // non-reflective message — never echo the raw exception text (which may

@@ -46,3 +46,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: node scripts/audit/check-bundle-budget.mjs
+      - name: Emit bundle-size report for aggregator
+        if: always()
+        run: |
+          mkdir -p audit-report
+          node scripts/audit/bundle-report.mjs --out audit-report/bundle.json --md audit-report/bundle.md
+          cat audit-report/bundle.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Upload bundle report
+        if: always()
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
+        with:
+          name: bundle-report-${{ github.run_id }}
+          path: audit-report/
+          retention-days: 30
+          if-no-files-found: warn
