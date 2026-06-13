@@ -278,13 +278,26 @@ const summary = {
   results,
 };
 
+// eslint-disable-next-line no-control-regex
+const CTRL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
+const MAX_CELL = 300;
+const sanitizeCell = (v) => String(v).replace(CTRL_RE, "").slice(0, MAX_CELL);
+const escCell = (v) => sanitizeCell(v).replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
+
 if (jsonOut) {
   const target = safeOutPath(jsonOut);
-  await writeFile(target, JSON.stringify(summary, null, 2));
+  // CodeQL #1780 defense: even the JSON form runs through control-char
+  // strip so the same flow guarantee applies regardless of consumer.
+  const body = JSON.stringify(summary, null, 2).replace(CTRL_RE, "");
+  await writeFile(target, body);
   console.log(`\nJSON → ${jsonOut}`);
 }
 
 if (mdOut) {
+  // CodeQL #1780 (js/http-to-file-access): the report content is derived
+  // from response headers fetched via HTTP. Strip control characters and
+  // cap the per-cell length so a hostile header value cannot break out of
+  // the markdown context.
   const lines = [];
   lines.push("## 🛡️ Security Headers Audit");
   lines.push("");
@@ -298,10 +311,6 @@ if (mdOut) {
           .slice(0, 3)
           .map((f) => `${f.header}: ${f.note}`)
           .join("; ") || "OK";
-    // Escape pipe AND backslash in EVERY column to avoid breaking the table
-    // when any of the interpolated fields contains `|`. CodeQL #1772 flagged
-    // the prior code as incomplete escaping because only `note` was escaped.
-    const escCell = (v) => String(v).replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
     lines.push(
       `| ${escCell(r.url)} | ${escCell(emoji(r.grade))} ${escCell(r.grade)} | ${escCell(r.score)} | ${escCell(note)} |`,
     );
@@ -310,17 +319,18 @@ if (mdOut) {
   lines.push("<details><summary>Full findings</summary>");
   lines.push("");
   for (const r of results) {
-    lines.push(`### ${r.url}`);
+    lines.push(`### ${sanitizeCell(r.url)}`);
     lines.push("");
     for (const f of r.findings) {
       const icon = f.severity === "ok" ? "✅" : f.severity === "warn" ? "⚠️" : f.severity === "error" ? "❌" : "ℹ️";
-      lines.push(`- ${icon} **${f.header}** — ${f.note}`);
+      lines.push(`- ${icon} **${sanitizeCell(f.header)}** — ${sanitizeCell(f.note)}`);
     }
     lines.push("");
   }
   lines.push("</details>");
   const target = safeOutPath(mdOut);
-  await writeFile(target, lines.join("\n") + "\n");
+  const body = lines.join("\n").replace(CTRL_RE, "") + "\n";
+  await writeFile(target, body);
   console.log(`Markdown → ${mdOut}`);
 }
 

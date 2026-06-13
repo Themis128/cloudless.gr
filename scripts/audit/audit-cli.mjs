@@ -119,7 +119,50 @@ if (cmd === "list") {
   const id = rest[0];
   const res = await gh(`/repos/${REPO}/actions/runs/${id}/artifacts`);
   const data = await res.json();
+  // CodeQL #1778 (js/http-to-file-access): bound the HTTP→disk flow with
+  //   1) HTTPS-only + host allowlist  2) size cap  3) ZIP magic check.
+  const MAX_BYTES = 10 * 1024 * 1024;
+  const ALLOWED_HOSTS = new Set([
+    "api.github.com",
+    "objects.githubusercontent.com",
+    "pipelines.actions.githubusercontent.com",
+  ]);
+  const assertSafeUrl = (u) => {
+    const p = new URL(u);
+    if (p.protocol !== "https:") throw new Error(`non-HTTPS: ${p.protocol}`);
+    const host = p.host.toLowerCase();
+    const ok = ALLOWED_HOSTS.has(host) ||
+      host.endsWith(".githubusercontent.com") ||
+      host.endsWith(".blob.core.windows.net");
+    if (!ok) throw new Error(`unallowed host: ${host}`);
+  };
+  const readBounded = async (response, maxBytes) => {
+    const reader = response.body?.getReader?.();
+    if (!reader) {
+      const b = Buffer.from(await response.arrayBuffer());
+      if (b.length > maxBytes) throw new Error(`response > ${maxBytes} bytes`);
+      return b;
+    }
+    const chunks = []; let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch { /* ignore */ }
+        throw new Error(`response > ${maxBytes} bytes`);
+      }
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks);
+  };
   for (const a of data.artifacts ?? []) {
+    try {
+      assertSafeUrl(a.archive_download_url);
+    } catch (e) {
+      console.warn(`skip ${a.name}: ${e.message}`);
+      continue;
+    }
     const zip = await fetch(a.archive_download_url, {
       headers: { Authorization: `Bearer ${token()}`, "User-Agent": "audit-cli/1.0" },
       redirect: "follow",
@@ -128,13 +171,25 @@ if (cmd === "list") {
       console.warn(`skip ${a.name}: HTTP ${zip.status}`);
       continue;
     }
-    const buf = Buffer.from(await zip.arrayBuffer());
+    const ct = (zip.headers.get("content-type") ?? "").toLowerCase();
+    if (!ct.includes("zip") && !ct.includes("octet-stream")) {
+      console.warn(`skip ${a.name}: unexpected content-type ${ct}`);
+      continue;
+    }
+    let buf;
+    try {
+      buf = await readBounded(zip, MAX_BYTES);
+    } catch (e) {
+      console.warn(`skip ${a.name}: ${e.message}`);
+      continue;
+    }
+    if (buf.length < 4 || buf[0] !== 0x50 || buf[1] !== 0x4b) {
+      console.warn(`skip ${a.name}: not a ZIP (bad magic)`);
+      continue;
+    }
     const { writeFile, mkdir } = await import("node:fs/promises");
     const { resolve: resolvePath, basename } = await import("node:path");
     await mkdir("audit-report", { recursive: true });
-    // CodeQL #1774: GitHub REST controls `a.name`. Strip any path
-    // separators via basename + character filter so we cannot write
-    // outside audit-report/ even with a crafted artifact name.
     const safeName = basename(String(a.name)).replace(/[\\/]/g, "");
     if (!safeName || safeName === "." || safeName === "..") {
       console.warn(`skip ${a.name}: unsafe artifact name`);
