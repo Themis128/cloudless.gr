@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getQueryPageMapping } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 import { requireAdmin } from "@/lib/api-auth";
 
@@ -28,11 +29,18 @@ export async function GET(request: NextRequest) {
   );
 
   try {
-    const mappings = await getQueryPageMapping(undefined, limit);
+    const __read = await readThrough(
+      "query-pages",
+      { limit: limit },
+      () => getQueryPageMapping(undefined, limit),
+      { ttlSeconds: 3600 },
+    );
+    const mappings = __read.value;
     return NextResponse.json({
       mappings,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC query-pages] Error:", err);

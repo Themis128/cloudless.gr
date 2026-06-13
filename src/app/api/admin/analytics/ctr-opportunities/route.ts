@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCtrOpportunities } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 import { requireAdmin } from "@/lib/api-auth";
 
@@ -26,11 +27,18 @@ export async function GET(request: NextRequest) {
   const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 50, 200));
 
   try {
-    const opportunities = await getCtrOpportunities(undefined, limit);
+    const __read = await readThrough(
+      "ctr-opportunities",
+      { limit: limit },
+      () => getCtrOpportunities(undefined, limit),
+      { ttlSeconds: 3600 },
+    );
+    const opportunities = __read.value;
     return NextResponse.json({
       opportunities,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC CTR opportunities] Error:", err);

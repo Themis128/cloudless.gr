@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getPerformanceHistory } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 
 export async function GET(request: NextRequest) {
@@ -20,12 +21,19 @@ export async function GET(request: NextRequest) {
   );
 
   try {
-    const history = await getPerformanceHistory(undefined, weeks);
+    const __read = await readThrough(
+      "history",
+      { weeks: weeks },
+      () => getPerformanceHistory(undefined, weeks),
+      { ttlSeconds: 1800 },
+    );
+    const history = __read.value;
     return NextResponse.json({
       history,
       weeks,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC history] Error:", err);

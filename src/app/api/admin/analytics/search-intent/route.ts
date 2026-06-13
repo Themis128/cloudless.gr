@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSearchIntentBreakdown } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 import { requireAdmin } from "@/lib/api-auth";
 
@@ -22,7 +23,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const intent = await getSearchIntentBreakdown();
+    const __read = await readThrough(
+      "search-intent",
+      {},
+      () => getSearchIntentBreakdown(),
+      { ttlSeconds: 3600 },
+    );
+    const intent = __read.value;
     return NextResponse.json({
       intent,
       summary: {
@@ -30,7 +37,8 @@ export async function GET(request: NextRequest) {
         product: intent.product.length,
         informational: intent.informational.length,
         navigational: intent.navigational.length,
-      },
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
+    },
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
     });

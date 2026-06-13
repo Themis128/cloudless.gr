@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getSeoSnapshot, getTopKeywords } from "@/lib/gsc";
 import { getConfig } from "@/lib/ssm-config";
+import { readThrough } from "@/lib/gsc-cache";
 
+/**
+ * Combined SEO snapshot + top keywords.
+ *
+ * Caches the (snapshot, keywords) pair as a single payload because they
+ * always render together on the Overview tab. The `keywords` route caches
+ * its own list independently so the Keywords tab still benefits when
+ * opened without going through Overview first.
+ */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -13,13 +22,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [snapshot, keywords] = await Promise.all([getSeoSnapshot(), getTopKeywords()]);
+    const __read = await readThrough(
+      "seo",
+      {},
+      async () => {
+        const [snapshot, keywords] = await Promise.all([
+          getSeoSnapshot(),
+          getTopKeywords(),
+        ]);
+        return { snapshot, keywords };
+      },
+      { ttlSeconds: 3600 },
+    );
 
     return NextResponse.json({
-      snapshot,
-      keywords,
+      snapshot: __read.value.snapshot,
+      keywords: __read.value.keywords,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[SEO] Error:", err);
