@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTrafficByCountry } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 import { requireAdmin } from "@/lib/api-auth";
 
@@ -24,11 +25,18 @@ export async function GET(request: NextRequest) {
   const limit = Math.max(1, Math.min(Number(request.nextUrl.searchParams.get("limit")) || 30, 50));
 
   try {
-    const countries = await getTrafficByCountry(undefined, limit);
+    const __read = await readThrough(
+      "countries",
+      { limit: limit },
+      () => getTrafficByCountry(undefined, limit),
+      { ttlSeconds: 3600 },
+    );
+    const countries = __read.value;
     return NextResponse.json({
       countries,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC countries] Error:", err);

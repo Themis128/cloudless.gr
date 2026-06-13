@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getTopKeywords } from "@/lib/gsc";
+import { readThrough } from "@/lib/gsc-cache";
 import { getConfig } from "@/lib/ssm-config";
 
 export async function GET(request: NextRequest) {
@@ -20,11 +21,18 @@ export async function GET(request: NextRequest) {
   );
 
   try {
-    const keywords = await getTopKeywords(undefined, limit);
+    const __read = await readThrough(
+      "keywords",
+      { limit: limit },
+      () => getTopKeywords(undefined, limit),
+      { ttlSeconds: 3600 },
+    );
+    const keywords = __read.value;
     return NextResponse.json({
       keywords,
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
+      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
     });
   } catch (err) {
     console.error("[GSC keywords] Error:", err);
