@@ -20,9 +20,12 @@ on:
     - cron: "45 */6 * * *"
   workflow_dispatch:
   workflow_run:
-    # Also after a deploy completes — gives the most useful signal
-    # (right when convergence should be happening).
-    workflows: ["HA sync orchestrator"]
+    # Run after Deploy to Production completes so we check drift right
+    # when convergence should be happening — NOT immediately on the
+    # triggering push, which races the deploy's own SSM update step and
+    # produces false-positive failures (the "cloud-sha is still old"
+    # window between push and the deploy's put-parameter call).
+    workflows: ["Deploy to Production"]
     types: [completed]
 
 permissions:

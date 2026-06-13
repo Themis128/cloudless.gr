@@ -152,6 +152,39 @@ const AUDITS = [
       }
     },
   },
+  {
+    key: "clusterStatus",
+    name: "Cluster Status",
+    workflow: "cluster-status-audit.yml",
+    artifactPrefix: "cluster-status-report-",
+    keyFile: "cluster.json",
+    parse: (raw) => {
+      const data = JSON.parse(raw);
+      const nodes = data.nodes ?? [];
+      const notReady = nodes.filter((n) => n.status !== "Ready").length;
+      const runners = data.runners ?? [];
+      const offlineRunners = runners.filter((r) => r.status !== "online").length;
+      const crashPods = (data.pods ?? []).reduce(
+        (acc, ns) =>
+          acc +
+          (ns.CrashLoopBackOff ?? 0) +
+          (ns.ImagePullBackOff ?? 0) +
+          (ns.ErrImagePull ?? 0),
+        0,
+      );
+      return {
+        ok: data.cluster?.reachable && notReady === 0 && offlineRunners === 0 && crashPods === 0,
+        summary: {
+          clusterReachable: data.cluster?.reachable ?? false,
+          nodes: nodes.length,
+          nodesReady: nodes.length - notReady,
+          runners: runners.length,
+          runnersOnline: runners.length - offlineRunners,
+          crashPods,
+        },
+      };
+    },
+  },
 ];
 
 /** Helper: call gh REST API with auth. */

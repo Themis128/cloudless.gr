@@ -18,6 +18,7 @@ This skill turns the **audit-report family of GitHub Actions workflows** into a 
 | `depsDrift`        | `deps-drift-audit.yml`            | Mondays 06:00, manual             | no             | `deps-drift-report-*`        |
 | `bundleBudget`     | `bundle-budget.yml`               | PR + manual                       | yes            | `bundle-report-*`            |
 | `coreWebVitals`    | `core-web-vitals-audit.yml`       | scheduled, manual                 | optional       | `cwv-report-*`               |
+| `clusterStatus`    | `cluster-status-audit.yml`        | every 30 min, manual              | optional       | `cluster-status-report-*`    |
 | `aggregator`       | `audits-aggregator.yml`           | daily 06:00, manual               | n/a            | `audits-dashboard-*`         |
 
 ## Quickstart
