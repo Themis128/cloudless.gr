@@ -416,6 +416,15 @@ export default {
         schedule: "cron(0 5 ? * MON *)",
         job: cronJobConfig("/api/cron/voice-brief"),
       });
+
+      // Hourly — pre-warm the GSC AnalyticsCache for the two most common
+      // ranges (7d, 28d) so the first user to open /admin/analytics on a
+      // given hour gets a cache hit instead of a 2-4 s fresh GSC query.
+      // See src/app/api/cron/gsc-cache-refresh/route.ts.
+      new sst.aws.Cron("CronGscCacheRefresh", {
+        schedule: "cron(0 * * * ? *)",
+        job: cronJobConfig("/api/cron/gsc-cache-refresh"),
+      });
     }
 
     // ---------------------------------------------------------------------

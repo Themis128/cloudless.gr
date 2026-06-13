@@ -19,12 +19,16 @@ export async function GET(request: NextRequest) {
     1,
     Math.min(Number(request.nextUrl.searchParams.get("limit") ?? String(DEFAULT_LIMIT)), MAX_LIMIT)
   );
+  const days = Math.max(
+    1,
+    Math.min(Number(request.nextUrl.searchParams.get("days") ?? "28"), 365 * 2)
+  );
 
   try {
     const __read = await readThrough(
       "pages",
-      { limit: limit },
-      () => getTopPages(undefined, limit),
+      { limit, days },
+      () => getTopPages(undefined, limit, days),
       { ttlSeconds: 3600 },
     );
     const pages = __read.value;
@@ -33,9 +37,10 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
       _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
+      _filters: { days, limit },
     });
   } catch (err) {
-    console.error("[GSC pages] Error:", err);
+    console.error("[GSC pages] Error:", JSON.stringify(String((err as Error)?.message ?? err)));
     return NextResponse.json({ error: "Failed to fetch pages." }, { status: 500 });
   }
 }

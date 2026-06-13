@@ -19,11 +19,16 @@ const SORT_DESCENDING = "DESCENDING";
 /** Default GSC property — domain property covers all subdomains & protocols. */
 const DEFAULT_SITE = process.env.GSC_SITE_URL ?? "https://cloudless.gr/";
 
-/** 28-day rolling window (GSC standard reporting period). */
-function dateRange() {
+/**
+ * Rolling window ending today. `days` defaults to 28 (GSC's standard
+ * reporting period); callers pass a custom value (e.g. 7, 90, 180) for
+ * the date-range filter on /admin/analytics.
+ */
+function dateRange(days = 28) {
+  const safeDays = Math.max(1, Math.min(Math.round(days), 365 * 2));
   const end = new Date();
   const start = new Date();
-  start.setDate(start.getDate() - 28);
+  start.setDate(start.getDate() - safeDays);
   return {
     startDate: start.toISOString().slice(0, 10),
     endDate: end.toISOString().slice(0, 10),
@@ -107,11 +112,15 @@ export interface WebAnalyticsData {
 /* ------------------------------------------------------------------ */
 
 /**
- * Overall SEO performance snapshot (28-day rolling window).
+ * Overall SEO performance snapshot for a rolling `days`-day window
+ * (defaults to 28, GSC's standard reporting period).
  */
-export async function getSeoSnapshot(siteUrl = DEFAULT_SITE): Promise<SeoSnapshot | null> {
+export async function getSeoSnapshot(
+  siteUrl = DEFAULT_SITE,
+  days = 28,
+): Promise<SeoSnapshot | null> {
   try {
-    const range = dateRange();
+    const range = dateRange(days);
 
     // Aggregate totals (no dimensions = single summary row)
     const totalsRes = await gscQuery(siteUrl, {
@@ -150,12 +159,17 @@ export async function getSeoSnapshot(siteUrl = DEFAULT_SITE): Promise<SeoSnapsho
 }
 
 /**
- * Top organic keywords sorted by clicks (28-day rolling window).
+ * Top organic keywords sorted by clicks for a rolling `days`-day window
+ * (defaults to 28, GSC's standard reporting period).
  */
-export async function getTopKeywords(siteUrl = DEFAULT_SITE, limit = 20): Promise<KeywordData[]> {
+export async function getTopKeywords(
+  siteUrl = DEFAULT_SITE,
+  limit = 20,
+  days = 28,
+): Promise<KeywordData[]> {
   try {
     const res = await gscQuery(siteUrl, {
-      ...dateRange(),
+      ...dateRange(days),
       dimensions: ["query"],
       rowLimit: limit,
       orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
@@ -230,12 +244,17 @@ export async function getPerformanceHistory(
 }
 
 /**
- * Top pages by organic clicks.
+ * Top pages by organic clicks for a rolling `days`-day window
+ * (defaults to 28, GSC's standard reporting period).
  */
-export async function getTopPages(siteUrl = DEFAULT_SITE, limit = 25): Promise<PageData[]> {
+export async function getTopPages(
+  siteUrl = DEFAULT_SITE,
+  limit = 25,
+  days = 28,
+): Promise<PageData[]> {
   try {
     const res = await gscQuery(siteUrl, {
-      ...dateRange(),
+      ...dateRange(days),
       dimensions: ["page"],
       rowLimit: limit,
       orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
@@ -259,10 +278,14 @@ export async function getTopPages(siteUrl = DEFAULT_SITE, limit = 25): Promise<P
 
 /**
  * Top pages by organic clicks — used as a web analytics proxy.
+ * Window: rolling `days`-day (defaults to 28, GSC's standard period).
  */
-export async function getWebAnalytics(siteUrl = DEFAULT_SITE): Promise<WebAnalyticsData | null> {
+export async function getWebAnalytics(
+  siteUrl = DEFAULT_SITE,
+  days = 28,
+): Promise<WebAnalyticsData | null> {
   try {
-    const range = dateRange();
+    const range = dateRange(days);
 
     // Site-wide totals
     const totalsRes = await gscQuery(siteUrl, {

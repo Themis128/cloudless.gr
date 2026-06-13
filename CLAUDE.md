@@ -17,6 +17,50 @@ These require access outside GitHub and cannot be automated from a cloud session
 | Cloudflare Email Obfuscation fix | **TOKEN NEEDED** | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors. Same token as HA LB above. |
 | Cloudflare infra MCP token | **NEEDS ROTATION** | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. SSM half **is set ✅** as of 2026-06-13; only the Cowork session-secret store half is pending — see `cowork-session-secrets` skill. |
 
+## omv-main Storage Layout (post-2026-06-13 migration)
+
+The omv-main Pi 5 cluster node has **two SATA-over-USB SSDs** plus the SD
+card. After the 2026-06-13 disk-pressure incident (sdb1 hit 89% from a 624GB
+Windows backup, k3s started evicting/restarting pods), the storage roles
+are now strictly separated:
+
+| Device | Hardware | Size | Mount | Role |
+|--------|----------|------|-------|------|
+| `mmcblk0p2` | SD card (SR64G) | 59GB | `/` | OS root only |
+| `/dev/sda1` | SanDisk SDSSDP128G via ICY_BOX IB-AC603b-U3 (USB3) | 120GB | bind to `/var/lib/rancher/k3s` + `/var/lib/kubelet` | **Dedicated k3s data**: containerd images, etcd, kubelet state, local-path-provisioner PVs |
+| `/dev/sdb1` | Samsung SSD 860 EVO 1TB via ASMedia ASM1153 (USB3) | 916GB | `/srv/dev-disk-by-uuid-fa6231ab-…` | **User data only**: Windows backups, photos, media. K3s does NOT live here anymore. |
+
+**Why this matters for any future debugging:**
+
+- If `sdb1` fills again (Windows backup growth), k3s stays healthy.
+- If `sda1` starts filling, that IS a k3s problem — usually runaway image
+  layers, log retention, or a PV growing unbounded. First step:
+  `crictl rmi --prune` and check `du -sh /var/lib/rancher/k3s/*`.
+- `local-path-provisioner` is configured to allocate PVs under
+  `/var/lib/rancher/k3s/storage` so every PV lives on the dedicated SSD.
+  Do NOT change its `nodePath` back to `/srv/...` without first checking
+  sda1 has the headroom.
+- The legacy `/dev/sdb1 on /var/lib/rancher/k3s` bind-mount in OMV's
+  fstab/`/etc/openmediavault/config.xml` has been removed. Do not re-enable
+  it. OMV's web UI may want to add it back when it sees the share — check
+  the bind-mount section after any OMV update.
+- The `pi-disk-cleanup` systemd timer (daily 03:00) still runs the same
+  set of prunes (journal, apt cache, pnpm store, buildx volumes, crictl
+  rmi). It now has +810GB of true headroom on sdb1 because nothing
+  cluster-relevant lives there.
+
+**Quick disk audit one-liner** (run on omv-main):
+```
+df -h /var/lib/rancher/k3s /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7 /
+```
+
+**Restoring a Windows backup safely:** the OMV share for the
+`/srv/.../Backups/WindowsImageBackup/` directory remains exposed via the
+existing OMV SMB share — Windows backup tooling on `Office` continues
+to write there. If that backup tree breaches 80% of sdb1's capacity,
+prune the oldest dated `Backup YYYY-MM-DD HHMMSS` directory or move the
+share to an external drive; k3s is unaffected either way.
+
 ## Testing Policy
 
 **Never fix test failures by adding mock code.** When a test fails, fix the actual production code so the test passes naturally. Do not add `vi.mocked(...)`, `mockReturnValue`, `mockResolvedValue`, or any other mock overrides to patch a failing test. If the test expectation is wrong (e.g. it expects old behavior that changed), update the expectation — but never shim production behavior with mocks.
