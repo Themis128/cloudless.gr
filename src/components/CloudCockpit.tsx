@@ -1,6 +1,45 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+
+/**
+ * Returns true when the given ref's element is visible in the viewport
+ * AND the user hasn't requested reduced motion. Used to pause all the
+ * timeseries setInterval ticks on this page when the cockpit is off
+ * screen, which trims TBT measurably on the home-page Lighthouse run
+ * (previously, the 380 ms cursor interval kept the main thread busy
+ * even when the cockpit was scrolled away).
+ *
+ * Falls back to "visible + motion-allowed" if either browser API is
+ * missing so older runtimes degrade to the previous behaviour.
+ */
+function useAnimationActive(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [visible, setVisible] = useState(true);
+  const [allowed, setAllowed] = useState(true);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
+      // Start animating slightly before scroll lands on the widget so
+      // the first frame the user sees is already up-to-date.
+      rootMargin: "100px",
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setAllowed(!mq.matches);
+    apply();
+    mq.addEventListener?.("change", apply);
+    return () => mq.removeEventListener?.("change", apply);
+  }, []);
+
+  return visible && allowed;
+}
 
 const T = {
   bg: "#0b1220",
@@ -67,15 +106,22 @@ function TimeSeries() {
   const areaPath = toPath(series.p95) + ` L${xFor(n - 1)},${H - padB} L${xFor(0)},${H - padB} Z`;
 
   const [cursor, setCursor] = useState(n - 1);
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const active = useAnimationActive(hostRef);
   useEffect(() => {
-    const id = setInterval(() => setCursor((c) => (c + 1) % n), 380);
+    if (!active) return;
+    // Bumped from 380ms to 1000ms — the cursor still feels live but the
+    // main thread gets ~2.6× more idle time. Combined with the off-screen
+    // pause above, the home-page Lighthouse TBT improves meaningfully.
+    const id = setInterval(() => setCursor((c) => (c + 1) % n), 1000);
     return () => clearInterval(id);
-  }, [n]);
+  }, [n, active]);
   const cx = xFor(cursor);
   const yTicks = [0, 10, 20, 28];
 
   return (
     <div
+      ref={hostRef}
       style={{
         background: T.bg,
         borderTop: `1px solid ${T.border}`,
