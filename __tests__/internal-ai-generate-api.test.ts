@@ -13,16 +13,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("@/lib/ssm-config", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/ssm-config")>(
-    "@/lib/ssm-config",
-  );
+  const actual = await vi.importActual<typeof import("@/lib/ssm-config")>("@/lib/ssm-config");
   return { ...actual, getConfig: vi.fn() };
 });
 vi.mock("@/lib/bedrock-shared", () => ({
   getBedrockClient: vi.fn(),
   runBedrockTurn: vi.fn(),
-  joinAssistantText: (blocks: { text?: string }[]) =>
-    blocks.map((b) => b.text ?? "").join(""),
+  joinAssistantText: (blocks: { text?: string }[]) => blocks.map((b) => b.text ?? "").join(""),
   BEDROCK_MODEL_ID: "us.anthropic.claude-3-5-haiku-20241022-v1:0",
 }));
 
@@ -56,22 +53,15 @@ describe("POST /api/internal/ai/generate", () => {
     vi.mocked(getConfig).mockResolvedValue({
       AI_GENERATE_SECRET: "",
     } as Awaited<ReturnType<typeof getConfig>>);
-    const res = await POST(
-      reqWith({ messages: [{ role: "user", content: "hi" }] }) as never,
-    );
+    const res = await POST(reqWith({ messages: [{ role: "user", content: "hi" }] }) as never);
     expect(res.status).toBe(503);
   });
 
   it("returns 401 when the secret header is missing or wrong", async () => {
-    const a = await POST(
-      reqWith({ messages: [{ role: "user", content: "hi" }] }, null) as never,
-    );
+    const a = await POST(reqWith({ messages: [{ role: "user", content: "hi" }] }, null) as never);
     expect(a.status).toBe(401);
     const b = await POST(
-      reqWith(
-        { messages: [{ role: "user", content: "hi" }] },
-        "wrong-secret",
-      ) as never,
+      reqWith({ messages: [{ role: "user", content: "hi" }] }, "wrong-secret") as never
     );
     expect(b.status).toBe(401);
   });
@@ -82,17 +72,16 @@ describe("POST /api/internal/ai/generate", () => {
   });
 
   it("returns Cloudflare result on success", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ result: { response: "Hello world" } }),
-        { status: 200 },
-      ),
-    ) as typeof fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ result: { response: "Hello world" } }), { status: 200 })
+      ) as typeof fetch;
     const res = await POST(
       reqWith({
         messages: [{ role: "user", content: "say hi" }],
         system: "you are helpful",
-      }) as never,
+      }) as never
     );
     const body = (await res.json()) as {
       result: string;
@@ -111,19 +100,19 @@ describe("POST /api/internal/ai/generate", () => {
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ errors: [{ message: "boom" }] }), {
           status: 500,
-        }),
+        })
       )
       // Fallback CF model → also 500
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ errors: [{ message: "boom" }] }), {
           status: 500,
-        }),
+        })
       ) as typeof fetch;
     vi.mocked(runBedrockTurn).mockResolvedValueOnce([{ text: "From Bedrock" }]);
     const res = await POST(
       reqWith({
         messages: [{ role: "user", content: "fallback please" }],
-      }) as never,
+      }) as never
     );
     const body = (await res.json()) as { result: string; source: string };
     expect(res.status).toBe(200);
@@ -132,18 +121,16 @@ describe("POST /api/internal/ai/generate", () => {
   });
 
   it("returns 502 when every provider fails", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ errors: [{ message: "down" }] }), {
-          status: 500,
-        }),
-      ) as typeof fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ errors: [{ message: "down" }] }), {
+        status: 500,
+      })
+    ) as typeof fetch;
     vi.mocked(runBedrockTurn).mockRejectedValueOnce(new Error("bedrock down"));
     const res = await POST(
       reqWith({
         messages: [{ role: "user", content: "try" }],
-      }) as never,
+      }) as never
     );
     expect(res.status).toBe(502);
   });
@@ -163,19 +150,60 @@ describe("POST /api/internal/ai/generate — non-string Cloudflare response", ()
     process.env.CLOUDFLARE_API_TOKEN = "token-test";
   });
 
+  // SSRF defense — CodeQL alert #1784. The `model` body field is
+  // interpolated into the Cloudflare URL, so any value outside the
+  // strict `@<provider>/<vendor>/<name>` allowlist must be rejected
+  // BEFORE `fetch` runs. We assert (a) the fetch never gets called,
+  // and (b) the response is a clean 400.
+  it.each([
+    ["../../@evil.example.com/x", "path traversal + URL rehosting"],
+    ["@cf/meta/../../../etc/passwd", "path traversal"],
+    ["http://attacker.com/", "absolute URL"],
+    ["@cf/meta/llama?host=evil.com", "query string injection"],
+    ["@cf/meta/llama#evil", "fragment injection"],
+    ["@cf/meta /llama", "whitespace"],
+    ["", "empty string"],
+  ])("rejects untrusted model %j (%s) with 400 and no outbound fetch", async (badModel) => {
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as typeof fetch;
+    const res = await POST(
+      reqWith({
+        model: badModel,
+        messages: [{ role: "user", content: "hi" }],
+      }) as never
+    );
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts the canonical allowlisted model id", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ result: { response: "ok" } }), { status: 200 })
+      ) as typeof fetch;
+    const res = await POST(
+      reqWith({
+        model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        messages: [{ role: "user", content: "hi" }],
+      }) as never
+    );
+    expect(res.status).toBe(200);
+  });
+
   it("stringifies a non-string Cloudflare response instead of throwing", async () => {
     globalThis.fetch = vi.fn().mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           result: { response: { json: "shape", with: ["nested", "arr"] } },
         }),
-        { status: 200 },
-      ),
+        { status: 200 }
+      )
     ) as typeof fetch;
     const res = await POST(
       reqWith({
         messages: [{ role: "user", content: "hi" }],
-      }) as never,
+      }) as never
     );
     const body = (await res.json()) as { result: string; source: string };
     expect(res.status).toBe(200);
