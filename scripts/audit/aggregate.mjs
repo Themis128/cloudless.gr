@@ -241,6 +241,6 @@ md.push("> Live page: `/admin/audits` reads the latest `audits-dashboard-*` arti
 const CTRL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const stripCtrl = (s) => String(s).replace(CTRL_RE, "");
 const safeMd = md.map(stripCtrl).join("\n") + "\n";
-await writeFile(safeWriteTarget(outDir, "dashboard.json"), safeJson);
+const safeJson = stripCtrl(JSON.stringify(dashboard, null, 2));
 await writeFile(safeWriteTarget(outDir, "dashboard.md"), safeMd);
 console.log(`\nDashboard → ${outDir}/dashboard.{json,md}`);
