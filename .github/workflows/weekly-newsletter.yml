@@ -6,7 +6,7 @@ env:
 on:
   schedule:
     # Every Monday at 09:00 UTC (11:00 Athens). Three hours after the draft
-    # generator — that window is the human review SLA. If nothing is approved
+    # generator — that window is the human review SLA. If nothing is in review
     # by now, the publisher exits 0 and no newsletter is sent.
     - cron: "0 9 * * 1"
   workflow_dispatch:
@@ -67,7 +67,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "The Monday publisher failed. Approved posts may not have been promoted, and the newsletter may not have sent.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+                    "text": "The Monday publisher failed. Posts in review may not have been promoted, and the newsletter may not have sent.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
                   }
                 }
               ]

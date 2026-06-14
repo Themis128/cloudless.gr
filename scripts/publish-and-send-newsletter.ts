@@ -1,7 +1,7 @@
 /**
  * Publisher + Newsletter Sender
  *
- * Finds Notion Blog rows with Status=Approved, promotes them to Published,
+ * Finds Notion Blog rows with Status="In Review", promotes them to Published,
  * triggers ISR revalidation on the public blog, then asks the site's
  * newsletter send endpoint to email each post to every HubSpot subscriber.
  *
@@ -78,13 +78,13 @@ async function fetchApprovedPosts(): Promise<ApprovedPost[]> {
   const res = await notionFetch(`/databases/${dbId}/query`, {
     method: "POST",
     body: JSON.stringify({
-      filter: { property: "Status", select: { equals: "Approved" } },
+      filter: { property: "Status", select: { equals: "In Review" } },
       sorts: [{ timestamp: "created_time", direction: "ascending" }],
     }),
   });
   if (!res.ok) {
     throw new Error(
-      `Notion query (Approved) failed: ${res.status} ${await res
+      `Notion query (In Review) failed: ${res.status} ${await res
         .text()
         .catch(() => "")}`,
     );
