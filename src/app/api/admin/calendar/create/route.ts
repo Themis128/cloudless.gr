@@ -19,6 +19,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const item = await createCalendarItem(input);
+  let item;
+  try {
+    item = await createCalendarItem(input);
+  } catch (e) {
+    console.error("[calendar/create] failed to persist calendar item:", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed to save calendar item" },
+      { status: 502 }
+    );
+  }
   return NextResponse.json({ item }, { status: 201 });
 }

@@ -146,18 +146,19 @@ export async function notionCreateCalendarItem(item: CalendarItem): Promise<stri
   if (item.url) properties.URL = { url: item.url };
   if (item.notes) properties.Notes = { rich_text: rt(item.notes) };
 
-  try {
-    const page = await notionFetch<{ id: string }>("/pages", {
-      method: "POST",
-      body: JSON.stringify({
-        parent: { database_id: db.dbId },
-        properties,
-      }),
-    });
-    return page.id;
-  } catch {
-    return null;
-  }
+  // No try/catch: a Notion failure (e.g. the calendar DB was deleted or
+  // unshared from the integration → object_not_found) must propagate so the
+  // API route returns 5xx. Swallowing it here made `createCalendarItem` return
+  // a fabricated item and the route answer 201 while nothing persisted — a
+  // silent data-loss path (the new item vanished on the next page load).
+  const page = await notionFetch<{ id: string }>("/pages", {
+    method: "POST",
+    body: JSON.stringify({
+      parent: { database_id: db.dbId },
+      properties,
+    }),
+  });
+  return page.id;
 }
 
 export async function notionUpdateCalendarItem(item: CalendarItem): Promise<boolean> {
