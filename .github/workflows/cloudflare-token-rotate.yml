@@ -162,10 +162,23 @@ jobs:
       - name: Update GH Actions secret
         if: ${{ inputs.apply == true }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN is read-only on the secrets API ("403 Resource not
+          # accessible by integration"). Use the GH_PAT secret which has
+          # `repo` scope. If GH_PAT isn't set, this step warns but doesn't
+          # fail — SSM is the source of truth and can be synced manually
+          # via:  echo -n "$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+          #         --with-decryption --region us-east-1 --query Parameter.Value --output text)" \
+          #         | gh secret set CLOUDFLARE_API_TOKEN --repo Themis128/cloudless.gr --body -
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
           NEW_TOKEN: ${{ steps.rotate.outputs.new_token }}
+          GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
+        continue-on-error: true
         run: |
           set -e
+          if [ "$GH_PAT_SET" != "true" ]; then
+            echo "::warning::GH_PAT secret not set — using GITHUB_TOKEN (likely will 403)."
+            echo "::warning::If this step fails, sync the GH secret from SSM manually (see comment in step env)."
+          fi
           # gh secret set reads from stdin to avoid arg-list disclosure.
           echo -n "$NEW_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN \
             --repo ${{ github.repository }} \
