@@ -17,7 +17,7 @@
  *
  * Flow per approved post:
  *   1. Fetch full block tree, render to HTML + plaintext.
- *   2. Atomically set Status=Published, Published=true, Date + PublishedAt.
+ *   2. Atomically set Status=Published, Published=true, Date.
  *   3. POST /api/webhooks/notion (page.updated, blog) to revalidate.
  *   4. POST /api/newsletter/send with the rendered email.
  *   5. Slack-ping with subject, slug, and delivered/failed counts.
@@ -100,7 +100,7 @@ async function fetchApprovedPosts(): Promise<ApprovedPost[]> {
       slug: get(p.Slug?.rich_text),
       excerpt: get(p.Excerpt?.rich_text),
       category: p.Category?.select?.name ?? "Cloud",
-      readTime: get(p.ReadTime?.rich_text) || "5 min read",
+      readTime: get(p["Read Time"]?.rich_text) || "5 min read",
     };
   });
 }
@@ -140,7 +140,6 @@ async function markPublished(pageId: string, today: string): Promise<void> {
         Status: { select: { name: "Published" } },
         Published: { checkbox: true },
         Date: { date: { start: today } },
-        PublishedAt: { date: { start: today } },
       },
     }),
   });
