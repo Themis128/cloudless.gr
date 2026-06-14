@@ -8,14 +8,14 @@
 
 These require access outside GitHub and cannot be automated from a cloud session.
 
-| Item | Status | Action |
-|------|--------|--------|
-| `OMV_SSH_KEY` | **SET** ✅ | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active. |
-| ESP32 page content | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore. |
-| Admin password | **N/A** | Auth is Cognito (PR #677, 2026-06-08). Manage admin users in the Cognito User Pool console; there is no separate IdP admin to bootstrap. |
-| Cloudflare HA LB | **TOKEN NEEDED** | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — use the `cloudflare-token-doctor` skill, mint a token with the full scope set (skill Stage 1), then `gh workflow run store-cloudflare-token.yml -f cloudflare_token=… -f apply=true`. |
-| Cloudflare Email Obfuscation fix | **TOKEN NEEDED** | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors. Same token as HA LB above. |
-| Cloudflare infra MCP token | **NEEDS ROTATION** | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. SSM half **is set ✅** as of 2026-06-13; only the Cowork session-secret store half is pending — see `cowork-session-secrets` skill. |
+| Item                             | Status              | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `OMV_SSH_KEY`                    | **SET** ✅          | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active.                                                                                                                                                                                                                                                                                                                                                                          |
+| ESP32 page content               | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore.                                                                                                                                                                                                                                                                                                               |
+| Admin password                   | **N/A**             | Auth is Cognito (PR #677, 2026-06-08). Manage admin users in the Cognito User Pool console; there is no separate IdP admin to bootstrap.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Cloudflare HA LB                 | **TOKEN NEEDED**    | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — use the `cloudflare-token-doctor` skill, mint a token with the full scope set (skill Stage 1), then `gh workflow run store-cloudflare-token.yml -f cloudflare_token=… -f apply=true`.                                                                                                                                                                                                                                                                                                    |
+| Cloudflare Email Obfuscation fix | **TOKEN NEEDED**    | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors. Same token as HA LB above.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Cloudflare infra MCP token       | **NEEDS ROTATION**  | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. SSM half **is set ✅** as of 2026-06-13; only the Cowork session-secret store half is pending — see `cowork-session-secrets` skill. |
 
 ## omv-main Storage Layout (post-2026-06-13 migration)
 
@@ -24,11 +24,11 @@ card. After the 2026-06-13 disk-pressure incident (sdb1 hit 89% from a 624GB
 Windows backup, k3s started evicting/restarting pods), the storage roles
 are now strictly separated:
 
-| Device | Hardware | Size | Mount | Role |
-|--------|----------|------|-------|------|
-| `mmcblk0p2` | SD card (SR64G) | 59GB | `/` | OS root only |
+| Device      | Hardware                                           | Size  | Mount                                               | Role                                                                                       |
+| ----------- | -------------------------------------------------- | ----- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `mmcblk0p2` | SD card (SR64G)                                    | 59GB  | `/`                                                 | OS root only                                                                               |
 | `/dev/sda1` | SanDisk SDSSDP128G via ICY_BOX IB-AC603b-U3 (USB3) | 120GB | bind to `/var/lib/rancher/k3s` + `/var/lib/kubelet` | **Dedicated k3s data**: containerd images, etcd, kubelet state, local-path-provisioner PVs |
-| `/dev/sdb1` | Samsung SSD 860 EVO 1TB via ASMedia ASM1153 (USB3) | 916GB | `/srv/dev-disk-by-uuid-fa6231ab-…` | **User data only**: Windows backups, photos, media. K3s does NOT live here anymore. |
+| `/dev/sdb1` | Samsung SSD 860 EVO 1TB via ASMedia ASM1153 (USB3) | 916GB | `/srv/dev-disk-by-uuid-fa6231ab-…`                  | **User data only**: Windows backups, photos, media. K3s does NOT live here anymore.        |
 
 **Why this matters for any future debugging:**
 
@@ -50,7 +50,8 @@ are now strictly separated:
   cluster-relevant lives there.
 
 **Quick disk audit one-liner** (run on omv-main):
-```
+
+```bash
 df -h /var/lib/rancher/k3s /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7 /
 ```
 
@@ -79,10 +80,10 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
 - **E2E client-side (Playwright CDP):** `pnpm test:coverage:full` then
   `pnpm coverage:merge` (`scripts/coverage-merge.mjs`). Source-resolvable because
   `/_next/static` chunks carry browser source maps (`productionBrowserSourceMaps` in
-  coverage mode). This is the *only* e2e coverage that maps to `src/`.
+  coverage mode). This is the _only_ e2e coverage that maps to `src/`.
 - **E2E server-side V8 is NOT source-resolvable post-hoc** — do not chase it. Next
   records app code against ephemeral `webpack-internal:///(rsc|ssr)/./src/...` bundle
-  URLs with no on-disk source/map, so monocart drops them → a report that *looks* 0%.
+  URLs with no on-disk source/map, so monocart drops them → a report that _looks_ 0%.
   The trailing comment in `scripts/coverage-merge.mjs` documents this; the guard there
   warns when it happens.
 - **Build-time instrumentation is a dead end here (both paths checked):** Babel/Istanbul
@@ -90,7 +91,7 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
   note in `next.config.ts`); `swc-plugin-coverage-instrument` is ABI-pinned to an old
   `swc_core` and won't load under Next 16's swc. So server coverage stays V8-only.
 - **Don't run coverage against a production build.** `next start` 308-redirects http→https
-  (`proxy.ts`) and prod bundle URLs are *less* resolvable than dev's. The harness targets
+  (`proxy.ts`) and prod bundle URLs are _less_ resolvable than dev's. The harness targets
   `next dev --webpack`. COVERAGE-mode e2e failures (theme-switcher 45s timeouts, etc.) are
   dev-server-under-instrumentation **artifacts**, not bugs — verify against a normal run.
 
@@ -142,11 +143,11 @@ When spawning sub-agents, follow these rules for optimal orchestration:
 
 Set these in **Claude Code web UI → Session → Environment → Secrets**. The `session-start` hook picks them up automatically on every new session.
 
-| Secret name           | Value                                    | Effect                                              |
-|-----------------------|------------------------------------------|-----------------------------------------------------|
-| `GITHUB_PAT`          | GitHub PAT with `repo` scope             | `git push` works without any manual auth step; stop hook auto-pushes on session close |
-| `TAILSCALE_AUTH_KEY`  | Tailscale ephemeral auth key             | Pi SSH access via `mcp__cloudless-infra__*` tools   |
-| `OMV_SSH_KEY_CONTENTS`| `base64 -w0 ~/.ssh/id_ed25519`           | SSH private key forwarded to the infra MCP server   |
+| Secret name            | Value                          | Effect                                                                                |
+| ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------- |
+| `GITHUB_PAT`           | GitHub PAT with `repo` scope   | `git push` works without any manual auth step; stop hook auto-pushes on session close |
+| `TAILSCALE_AUTH_KEY`   | Tailscale ephemeral auth key   | Pi SSH access via `mcp__cloudless-infra__*` tools                                     |
+| `OMV_SSH_KEY_CONTENTS` | `base64 -w0 ~/.ssh/id_ed25519` | SSH private key forwarded to the infra MCP server                                     |
 
 **Generate a GitHub PAT:** github.com/settings/tokens/new — `repo` scope, no expiry or 1 year. Use `/github-push` skill for manual push/PR/merge within a session.
 
@@ -176,7 +177,7 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
   → `prometheus-tune.yml`).
 - **JVM workload sizing lessons (2026-06-01 incident):**
   - **Never cap a JVM container below `-Xmx` + ~200Mi non-heap.** A higher
-    *limit* doesn't raise real RSS — it only stops the kernel OOMKill.
+    _limit_ doesn't raise real RSS — it only stops the kernel OOMKill.
   - From CI, a direct `kubectl patch` of the single object beat
     `kubectl apply -f <manifest>` (the apply silently never reached the deploy).
   - `PrometheusRuleFailures` here = `kube-apiserver-burnrate.rules` timing out
@@ -221,7 +222,7 @@ client IDs are baked at build time.
 **Workflow:** `.github/workflows/deploy-pi.yml` — triggers on every push to `main`.
 
 - **Job 1 `build-and-push`** (`[self-hosted, omv, pi, build]`): builds `linux/arm64` Docker image **natively on a Pi runner** (no real QEMU work — the host is already arm64; the `setup-qemu-action` step is left in for portability but is a no-op here). Pushes SHA-only tag to ECR (`278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:<sha>`). ECR repo has **immutable tags** — never push `:latest` from CI.
-  - **Immutable-tag race (FIXED, PR #799, 2026-06-11):** `deploy-pi.yml` and `build-pi-image.yml` both build+push the *same* SHA tag on every push to `main`. They race; whichever pushes second hits `tag invalid: ... already exists ... immutable`. The `Push to ECR` step now treats that specific error as success (the image IS in ECR) and sets `image_exists=true` so the rollout still runs — mirroring the pattern `build-pi-image.yml` already used. Any *other* push error still fails. So a "tag already exists" line in this job's log is expected, not a failure.
+  - **Immutable-tag race (FIXED, PR #799, 2026-06-11):** `deploy-pi.yml` and `build-pi-image.yml` both build+push the _same_ SHA tag on every push to `main`. They race; whichever pushes second hits `tag invalid: ... already exists ... immutable`. The `Push to ECR` step now treats that specific error as success (the image IS in ECR) and sets `image_exists=true` so the rollout still runs — mirroring the pattern `build-pi-image.yml` already used. Any _other_ push error still fails. So a "tag already exists" line in this job's log is expected, not a failure.
 - **Job 2 `rollout`** (`${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}` — GH-hosted by default, joins tailnet via `KUBECONFIG_B64`; failover to `[self-hosted, omv, build]` via `toggle-runner.sh pi`): runs `kubectl set image` + `kubectl rollout status` against the k3s API over Tailscale (`100.113.41.119:6443`). Gated by `if: ... build-and-push.result == 'success' || build-and-push.outputs.image_exists == 'true'`.
 - **Runner labels:** Both jobs require `[self-hosted, omv, pi]` (PR #167, merged 2026-05-17). The `pi` label gates them to the 3 Pi runners (`omv`, `omv-2`, `omv-3`) so an added non-Pi `omv` runner (e.g. `legion` in WSL2) can't accidentally take a cluster-bound job it can't perform. Cross-compile via QEMU on `ubuntu-latest` was tried and abandoned — `pnpm install` alone exceeded 60 min under emulation.
 - **Auth:** OIDC via `AWS_DEPLOY_ROLE_ARN` secret — no static AWS keys.
@@ -386,7 +387,7 @@ which automates Stages 0-3 from the Pi.
   failures after a CLI bump. Fix them in order — never try to fix multiple
   stages at once.
 - AWS provider 5.x has notable schema breaks (CloudFront `header_behavior =
-  "all"` is no longer valid for cache policies; `aws_db_proxy` requires `auth`
+"all"` is no longer valid for cache policies; `aws_db_proxy` requires `auth`
   block + `vpc_subnet_ids`; pool config moved to `aws_db_proxy_default_target_group`).
   See `scripts/tf-validate-fix.py` for the idempotent migration script.
 - `terraform plan` failures on a data source (e.g. `Function not found`) are
