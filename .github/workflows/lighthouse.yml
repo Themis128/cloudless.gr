@@ -157,10 +157,13 @@ jobs:
           # below 60 still fails, but normal CI flake stops blocking PRs.
           # Currently:
           #   - https://cloudless.gr/         (hero animation + carousel + GSC)
+          #   - https://cloudless.gr/<locale> (same home content, just localised
+          #                                    — /en, /el, etc.)
           #   - https://cloudless.gr/services (service cards + animations)
           # Other routes stay on the stricter 65 bar.
-          # TODO(perf): once /services lands a CLS/LCP optimisation pass and
-          # consistently medians ≥ 0.70, drop it back to PAGE_PERF_MIN.
+          # TODO(perf): once /services and the home route land a CLS/LCP
+          # optimisation pass and consistently median ≥ 0.70, drop them back
+          # to PAGE_PERF_MIN.
           ROOT_PERF_MIN=0.60
           PAGE_PERF_MIN=0.65
           A11Y_MIN=0.90
@@ -171,6 +174,7 @@ jobs:
             --argjson a11y "$A11Y_MIN" --argjson bp "$BP_MIN" --argjson seo "$SEO_MIN" '
             [.[] | . as $row |
               (($row.url | test("^https?://[^/]+/?$"))
+                or ($row.url | test("^https?://[^/]+/[a-z]{2}/?$"))
                 or ($row.url | test("^https?://[^/]+/services/?$"))) as $is_rich |
               ($row.perf < (if $is_rich then $root else $page end))
                 or ($row.a11y < $a11y)
@@ -191,7 +195,7 @@ jobs:
               echo "$FAILED"
               echo '```'
               echo ""
-              echo "Thresholds: rich pages (/, /services) Perf ≥ 60, other Perf ≥ 65, A11y/BP/SEO ≥ 90 (median of 5 runs)."
+              echo "Thresholds: rich pages (/, /<locale>, /services) Perf ≥ 60, other Perf ≥ 65, A11y/BP/SEO ≥ 90 (median of 5 runs)."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "$FAILED"
             if [ "$STRICT" = "true" ] || [ "$GITHUB_EVENT_NAME" != "schedule" ]; then
