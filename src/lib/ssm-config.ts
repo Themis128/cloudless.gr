@@ -91,6 +91,13 @@ interface AppConfig {
   META_PAGE_ID: string;
   // GitHub Actions
   GITHUB_TOKEN: string;
+  /**
+   * Fine-grained PAT used by /api/slack/interactions and /api/slack/commands
+   * to trigger workflow_dispatch on weekly-article-draft.yml (and similar).
+   * Permissions: Actions = Read and write, scoped to the cloudless.gr repo.
+   * Falls back to GITHUB_TOKEN if unset, so a single broader PAT also works.
+   */
+  GITHUB_DISPATCH_TOKEN: string;
   // Postiz (self-hosted social publishing)
   POSTIZ_API_URL: string;
   POSTIZ_API_KEY: string;
@@ -220,6 +227,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
     META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
     GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
+    GITHUB_DISPATCH_TOKEN: params.get("GITHUB_DISPATCH_TOKEN") ?? "",
     POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
     POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
@@ -296,6 +304,7 @@ function buildConfigFromEnv(): AppConfig {
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
     META_PAGE_ID: process.env.META_PAGE_ID || "",
     GITHUB_TOKEN: process.env.GITHUB_TOKEN || "",
+    GITHUB_DISPATCH_TOKEN: process.env.GITHUB_DISPATCH_TOKEN || "",
     POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
     POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
     CRON_SECRET: process.env.CRON_SECRET || "",

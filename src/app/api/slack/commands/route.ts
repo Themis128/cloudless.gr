@@ -8,6 +8,7 @@
  *   /cloudless-ticket    — open a support ticket modal
  *   /cloudless-analytics — Stripe revenue summary
  *   /cloudless-deploy    — trigger production deploy (confirmation modal)
+ *   /cloudless-draft     — re-run the weekly article draft workflow
  *   /cloudless-help      — show all available commands
  *
  * Slack delivers slash command payloads as application/x-www-form-urlencoded.
@@ -22,6 +23,18 @@ import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { listChannels } from "@/lib/slack-admin";
 import { getBotInfo } from "@/lib/slack-workspace";
 import { getSlackConfigAsync } from "@/lib/integrations";
+import { dispatchWorkflow } from "@/lib/github-dispatch";
+
+/**
+ * Slack user-ID allowlist for slash-command-driven workflow dispatch.
+ * Mirrors SLACK_OPS_USERS in interactions/route.ts. Empty/unset = anyone
+ * in the workspace can use /cloudless-draft. Set to a single user ID to
+ * lock it down to one operator.
+ */
+const SLACK_OPS_USERS: string[] = (process.env.SLACK_OPS_USERS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -79,6 +92,9 @@ export async function POST(request: Request): Promise<Response> {
 
     case "/cloudless-deploy":
       return handleDeploy(payload);
+
+    case "/cloudless-draft":
+      return handleDraftRerun(payload);
 
     case "/cloudless-help":
       return handleHelp();
@@ -573,6 +589,7 @@ function handleHelp(): Response {
             "• `/cloudless-ticket` — submit a support ticket",
             "• `/cloudless-analytics` — Stripe revenue summary",
             "• `/cloudless-deploy` — deploy latest code to production",
+            "• `/cloudless-draft rerun` — re-run the weekly article draft generator",
             "• `/cloudless-help` — show this message",
           ].join("\n"),
         },
@@ -603,5 +620,57 @@ interface SlackCommandResponse {
 function slackResponse(body: SlackCommandResponse): Response {
   return Response.json(body, {
     headers: { "Content-Type": "application/json" },
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// /cloudless-draft — re-run the weekly article draft workflow
+//
+// Usage:
+//   /cloudless-draft rerun   → triggers .github/workflows/weekly-article-draft.yml
+//   /cloudless-draft         → prints usage
+//
+// Optional allowlist via SLACK_OPS_USERS (comma-separated Slack user IDs).
+// ---------------------------------------------------------------------------
+
+async function handleDraftRerun(payload: SlashCommandPayload): Promise<Response> {
+  const arg = payload.text.trim().toLowerCase();
+
+  if (arg !== "rerun") {
+    return slackResponse({
+      response_type: "ephemeral",
+      text:
+        "Usage: `/cloudless-draft rerun` — triggers the *Weekly Article Draft* workflow.\n" +
+        "The job appears in the GitHub Actions tab within ~5 seconds. " +
+        "A new Notion Draft row will be created if the run succeeds.",
+    });
+  }
+
+  if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(payload.user_id)) {
+    return slackResponse({
+      response_type: "ephemeral",
+      text:
+        ":no_entry: You're not on the ops allowlist for workflow dispatch. " +
+        "Ask the admin to add your Slack user ID to `SLACK_OPS_USERS`.",
+    });
+  }
+
+  const result = await dispatchWorkflow("weekly-article-draft.yml", "main");
+
+  if (result.ok) {
+    return slackResponse({
+      response_type: "in_channel",
+      text:
+        `:rocket: <@${payload.user_id}> re-triggered the *Weekly Article Draft* workflow. ` +
+        "Check the Actions tab in ~5 seconds.",
+    });
+  }
+
+  return slackResponse({
+    response_type: "ephemeral",
+    text:
+      `:warning: Re-run failed (HTTP ${result.status}): \`${result.error.slice(0, 200)}\`. ` +
+      "Check that `GITHUB_DISPATCH_TOKEN` (or `GITHUB_TOKEN`) is set in SSM with Actions write permission.",
   });
 }
