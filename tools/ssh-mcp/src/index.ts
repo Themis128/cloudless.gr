@@ -35,6 +35,7 @@ import { readFileSync, existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 import { z } from "zod";
+import { isValidSecretName, isPlainBase64, isClaudeBranch, resolveSsmName } from "./validators.js";
 
 // ── Node definitions ───────────────────────────────────────────────────────
 
@@ -607,6 +608,95 @@ server.tool(
 );
 
 server.tool(
+  "gh_secret_set",
+  "Set a GitHub Actions secret for the repo. Value is base64-encoded over SSH so it never appears in `ps`.\nOverwrites if it already exists. Use repo-level Actions secrets only (no environment scoping).",
+  {
+    name: z.string().describe('Secret name (e.g. "AI_GENERATE_SECRET"). Must match GitHub naming rules.'),
+    value: z.string().describe("Plain-text value. Base64-encoded for transport, decoded on the Pi."),
+    repo: z.string().optional().describe("Repo name (default: cloudless.gr)"),
+  },
+  async ({ name, value, repo }) => {
+    if (!isValidSecretName(name)) {
+      return err(new Error(`Invalid secret name "${name}" — must match /^[A-Z][A-Z0-9_]*$/`));
+    }
+    const r = `Themis128/${repo ?? "cloudless.gr"}`;
+    const valueB64 = Buffer.from(value, "utf8").toString("base64");
+    const cmd = `printf %s '${valueB64}' | base64 -d | gh secret set ${name} --repo ${r} 2>&1`;
+    try { return ok(await sshMain(cmd, 15_000)); } catch (e) { return err(e); }
+  }
+);
+
+server.tool(
+  "gh_secret_delete",
+  "Delete a repo-level GitHub Actions secret.",
+  {
+    name: z.string().describe("Secret name to delete."),
+    repo: z.string().optional().describe("Repo name (default: cloudless.gr)"),
+  },
+  async ({ name, repo }) => {
+    if (!isValidSecretName(name)) {
+      return err(new Error(`Invalid secret name "${name}" — must match /^[A-Z][A-Z0-9_]*$/`));
+    }
+    const r = `Themis128/${repo ?? "cloudless.gr"}`;
+    const cmd = `gh secret delete ${name} --repo ${r} 2>&1 || echo "(secret already absent)"`;
+    try { return ok(await sshMain(cmd, 15_000)); } catch (e) { return err(e); }
+  }
+);
+
+server.tool(
+  "gh_secret_list",
+  "List repo-level GitHub Actions secrets (names + last-updated; values stay hidden).",
+  {
+    repo: z.string().optional().describe("Repo name (default: cloudless.gr)"),
+  },
+  async ({ repo }) => {
+    const r = `Themis128/${repo ?? "cloudless.gr"}`;
+    try { return ok(await sshMain(`gh secret list --repo ${r} 2>&1`, 15_000)); } catch (e) { return err(e); }
+  }
+);
+
+server.tool(
+  "gh_apply_patch_and_open_pr",
+  "Apply a git format-patch on the omv-main shared clone, push to a feature branch, and open an auto-merge PR.\nUseful for service-to-service code changes (e.g. agent-driven hotfixes). Returns the PR URL.\nThe patch must be a unified diff with author/subject headers — generate it with `git format-patch -1 HEAD --stdout`.",
+  {
+    branch: z.string().describe('Feature branch name (e.g. "claude/fix-x"). Must start with "claude/".'),
+    patch_base64: z.string().describe("Base64-encoded patch content (`base64 -w0 patch.patch`)."),
+    base_ref: z.string().optional().describe('Base ref to branch from (default: "main").'),
+    merge: z.enum(["auto", "admin", "skip"]).default("auto").describe('"auto" = wait for required checks; "admin" = override; "skip" = leave PR open.'),
+    repo: z.string().optional().describe("Repo name (default: cloudless.gr)"),
+  },
+  async ({ branch, patch_base64, base_ref, merge, repo }) => {
+    if (!isClaudeBranch(branch)) {
+      return err(new Error(`Refusing to push to "${branch}" — only claude/<topic> branches are accepted from this tool.`));
+    }
+    if (!isPlainBase64(patch_base64)) {
+      return err(new Error("patch_base64 must be plain base64 (single line, no whitespace)."));
+    }
+    const r = `Themis128/${repo ?? "cloudless.gr"}`;
+    const base = base_ref ?? "main";
+    // Use a per-invocation scratch dir; clone fresh to avoid stepping on whatever else the Pi is doing.
+    const cmd = [
+      `set -euo pipefail`,
+      `WORKDIR=$(mktemp -d)`,
+      `cd $WORKDIR`,
+      `git clone --quiet --depth 5 --branch ${base} https://x-access-token:$(gh auth token)@github.com/${r}.git repo`,
+      `cd repo`,
+      `git checkout -b ${branch}`,
+      `printf %s '${patch_base64}' | base64 -d > /tmp/in.patch`,
+      `git am /tmp/in.patch`,
+      `git push -u origin ${branch} 2>&1`,
+      `PR_URL=$(gh pr create --fill --repo ${r} 2>&1 | tail -1)`,
+      `echo "PR_URL=$PR_URL"`,
+      merge === "skip" ? `echo "(merge skipped per request)"` :
+        merge === "admin" ? `gh pr merge $PR_URL --squash --delete-branch --admin --repo ${r} 2>&1` :
+        `gh pr merge $PR_URL --squash --delete-branch --auto --repo ${r} 2>&1`,
+      `cd / && rm -rf $WORKDIR`,
+    ].join(" && ");
+    try { return ok(await sshMain(cmd, 90_000)); } catch (e) { return err(e); }
+  }
+);
+
+server.tool(
   "gh_pr_checks",
   "Show CI check statuses for a PR.",
   {
@@ -675,6 +765,41 @@ server.tool(
       cmd = `aws ssm get-parameters-by-path --path "${pfx}" --recursive --region us-east-1 --query 'Parameters[].{Name:Name,Type:Type,LastModifiedDate:LastModifiedDate}' --output table 2>&1`;
     }
     try { return ok(await sshMain(cmd, 20_000)); } catch (e) { return err(e); }
+  }
+);
+
+server.tool(
+  "aws_put_ssm_parameter",
+  "Write (create or overwrite) an SSM parameter under /cloudless/production.\nSecure by default — values are sent over SSH and stored as SecureString unless overridden.\nThe value is base64-encoded on the wire to avoid quoting issues and to keep it out of `ps`.",
+  {
+    parameter_name: z.string().describe('Short name (e.g. "AI_GENERATE_SECRET") or absolute path. Short names are placed under /cloudless/production/.'),
+    value: z.string().describe("Plain-text value. Will be base64-encoded for transport and decoded on the Pi before the AWS CLI sees it."),
+    type: z.enum(["SecureString", "String", "StringList"]).default("SecureString").describe('Parameter type (default: SecureString).'),
+    description: z.string().optional().describe("Human-readable description stored alongside the parameter."),
+  },
+  async ({ parameter_name, value, type, description }) => {
+    const name = resolveSsmName(parameter_name);
+    const valueB64 = Buffer.from(value, "utf8").toString("base64");
+    const descFlag = description
+      ? `--description ${JSON.stringify(description)}`
+      : "";
+    // shellcheck-safe: the only externally-supplied strings are name (validated path), valueB64
+    // (alphanumeric+/=), and the optional description (passed through JSON.stringify quoting).
+    const cmd = `VAL=$(printf %s '${valueB64}' | base64 -d) && aws ssm put-parameter --name '${name}' --type ${type} --value "$VAL" --overwrite ${descFlag} --region us-east-1 --output json 2>&1 && unset VAL`;
+    try { return ok(await sshMain(cmd, 20_000)); } catch (e) { return err(e); }
+  }
+);
+
+server.tool(
+  "aws_delete_ssm_parameter",
+  "Delete an SSM parameter under /cloudless/production. No-op if it doesn't exist.",
+  {
+    parameter_name: z.string().describe('Short name (e.g. "OLD_KEY") or absolute path.'),
+  },
+  async ({ parameter_name }) => {
+    const name = resolveSsmName(parameter_name);
+    const cmd = `aws ssm delete-parameter --name '${name}' --region us-east-1 2>&1 || echo "(parameter already absent)"`;
+    try { return ok(await sshMain(cmd, 15_000)); } catch (e) { return err(e); }
   }
 );
 

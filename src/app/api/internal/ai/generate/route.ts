@@ -71,7 +71,7 @@ async function callCloudflare(
   model: string,
   system: string | undefined,
   messages: ChatMessage[],
-  maxTokens: number,
+  maxTokens: number
 ): Promise<string> {
   const cfMessages = [
     ...(system ? [{ role: "system" as const, content: system }] : []),
@@ -86,7 +86,7 @@ async function callCloudflare(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ messages: cfMessages, max_tokens: maxTokens }),
-    },
+    }
   );
   const data = (await res.json()) as {
     result?: { response?: string };
@@ -104,7 +104,7 @@ async function callCloudflare(
 async function callBedrock(
   system: string | undefined,
   messages: ChatMessage[],
-  maxTokens: number,
+  maxTokens: number
 ): Promise<string> {
   const bedrockMessages = messages
     .filter((m) => m.role === "user" || m.role === "assistant")
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!secret) {
     return NextResponse.json(
       { error: "Internal AI generation is not configured." },
-      { status: 503 },
+      { status: 503 }
     );
   }
   if (!secretsMatch(request.headers.get("x-internal-secret"), secret)) {
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (!messages.length || !messages.some((m) => m.role === "user" && m.content?.trim())) {
     return NextResponse.json(
       { error: "messages[] with at least one non-empty user turn is required." },
-      { status: 400 },
+      { status: 400 }
     );
   }
   const maxTokens = Math.min(Math.max(body.maxTokens ?? 4096, 64), 8192);
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         cfModel,
         body.system,
         messages,
-        maxTokens,
+        maxTokens
       );
       return NextResponse.json({ result, source: "cloudflare", model: cfModel });
     } catch (err) {
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             FALLBACK_CF_MODEL,
             body.system,
             messages,
-            maxTokens,
+            maxTokens
           );
           return NextResponse.json({
             result,
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         error: "All AI providers failed.",
         detail: (err as Error)?.message ?? String(err),
       },
-      { status: 502 },
+      { status: 502 }
     );
   }
 }
