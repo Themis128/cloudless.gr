@@ -1,0 +1,36 @@
+# Synced from live cluster after PR #880 architecture-alignment work.
+# Apply: sudo k3s kubectl apply -f k8s/cluster-protection/alerts/disk-pressure.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: kube-prometheus-stack
+  name: disk-pressure
+  namespace: monitoring
+spec:
+  groups:
+  - name: disk
+    rules:
+    - alert: DiskPressureHigh
+      annotations:
+        description: "{{ $value | humanize }}% used \u2014 free space before k3s crashes."
+        summary: Disk usage > 85% on {{ $labels.instance }} ({{ $labels.mountpoint
+          }})
+      expr: "(1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",mountpoint!~\"\
+        /boot.*|/srv/dev-disk-.*\"}\n   / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"\
+        ,mountpoint!~\"/boot.*|/srv/dev-disk-.*\"}) * 100 > 85\n"
+      for: 5m
+      labels:
+        severity: warning
+    - alert: DiskPressureCritical
+      annotations:
+        description: "{{ $value | humanize }}% used \u2014 k3s is likely to crash.\
+          \ Free space immediately."
+        summary: Disk usage > 95% on {{ $labels.instance }} ({{ $labels.mountpoint
+          }})
+      expr: "(1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\",mountpoint!~\"\
+        /boot.*|/srv/dev-disk-.*\"}\n   / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"\
+        ,mountpoint!~\"/boot.*|/srv/dev-disk-.*\"}) * 100 > 95\n"
+      for: 2m
+      labels:
+        severity: critical
