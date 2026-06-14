@@ -17,6 +17,27 @@ import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { getSlackConfigAsync } from "@/lib/integrations";
+import { dispatchWorkflow } from "@/lib/github-dispatch";
+
+/**
+ * Comma-separated list of Slack user IDs allowed to trigger workflow
+ * dispatch from interaction buttons. Empty/unset = anyone in the workspace
+ * who can see the button. Set to a single user ID (e.g. "U01ABCDEF") to
+ * lock workflow re-runs down to one operator.
+ */
+const SLACK_OPS_USERS: string[] = (process.env.SLACK_OPS_USERS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+/**
+ * Action IDs registered in this route that map to a workflow_dispatch
+ * filename. Keep this object tight — every entry here is one click away
+ * from running a real GitHub Actions job.
+ */
+const RERUN_ACTIONS: Record<string, string> = {
+  rerun_weekly_draft: "weekly-article-draft.yml",
+};
 
 // ---------------------------------------------------------------------------
 // Types (subset of Slack interaction payloads)
@@ -116,7 +137,24 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
       }
 
       default:
-        console.warn(`[Slack Interactions] Unhandled action_id: ${action.action_id}`);
+        if (action.action_id in RERUN_ACTIONS) {
+          const workflowFile = RERUN_ACTIONS[action.action_id];
+          if (payload.response_url) {
+            rerunWorkflowAsync(
+              workflowFile,
+              payload.response_url,
+              payload.user.id,
+              action.action_id
+            ).catch((err) =>
+              console.error(
+                `[Slack Interactions] ${action.action_id} failed:`,
+                err
+              )
+            );
+          }
+        } else {
+          console.warn(`[Slack Interactions] Unhandled action_id: ${action.action_id}`);
+        }
     }
   }
 
@@ -385,4 +423,64 @@ async function refreshOrdersAsync(responseUrl: string): Promise<void> {
   } catch (err) {
     console.error("[Slack Interactions] refreshOrdersAsync error:", err);
   }
+}
+
+
+// ---------------------------------------------------------------------------
+// Workflow re-run responder
+//
+// Triggered by buttons whose action_id is registered in RERUN_ACTIONS above
+// (currently just "rerun_weekly_draft"). Posts a follow-up to the original
+// channel via response_url; never edits the original failure card so the
+// audit trail stays intact.
+// ---------------------------------------------------------------------------
+
+async function rerunWorkflowAsync(
+  workflowFile: string,
+  responseUrl: string,
+  userId: string,
+  actionId: string
+): Promise<void> {
+  // Optional allowlist — when set, only listed Slack user IDs can dispatch.
+  if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(userId)) {
+    await fetch(responseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        response_type: "ephemeral",
+        replace_original: false,
+        text:
+          ":no_entry: You're not on the ops allowlist for workflow dispatch. " +
+          "Ask <@" +
+          (SLACK_OPS_USERS[0] ?? "the admin") +
+          "> to add your Slack user ID to `SLACK_OPS_USERS`.",
+      }),
+      signal: AbortSignal.timeout(5_000),
+    }).catch((err) =>
+      console.error("[Slack Interactions] denial post failed:", err)
+    );
+    return;
+  }
+
+  const result = await dispatchWorkflow(workflowFile, "main");
+
+  const message = result.ok
+    ? `:rocket: <@${userId}> re-triggered *${workflowFile}*. Check the Actions tab in ~5 seconds — it'll show up under "Weekly Article Draft".`
+    : `:warning: Re-run of *${workflowFile}* failed (HTTP ${result.status}): \`${result.error}\``;
+
+  await fetch(responseUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      response_type: "in_channel",
+      replace_original: false,
+      text: message,
+    }),
+    signal: AbortSignal.timeout(5_000),
+  }).catch((err) =>
+    console.error(
+      `[Slack Interactions] follow-up post failed for ${actionId}:`,
+      err
+    )
+  );
 }

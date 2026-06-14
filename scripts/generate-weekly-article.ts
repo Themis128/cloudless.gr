@@ -308,6 +308,36 @@ async function generateViaRoute(
   };
 }
 
+/**
+ * Robust JSON parser for model output.
+ *
+ * Tries strict JSON.parse first. On failure, attempts to extract the largest
+ * balanced `{ ... }` block from the text and parse that — this rescues cases
+ * where the model wraps the JSON in prose or appends a trailing explanation
+ * despite the json_schema response_format. Throws with a truncated raw
+ * payload on total failure so the GH Actions log stays readable.
+ */
+export function parseArticleJson(raw: string): GeneratedArticle {
+  try {
+    return JSON.parse(raw) as GeneratedArticle;
+  } catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      const candidate = raw.slice(start, end + 1);
+      try {
+        return JSON.parse(candidate) as GeneratedArticle;
+      } catch (err2) {
+        throw new Error(
+          `Could not parse article JSON (after extraction). Raw: ${candidate.slice(0, 500)}`,
+          { cause: err2 },
+        );
+      }
+    }
+    throw new Error(`Could not parse article JSON. Raw: ${raw.slice(0, 500)}`);
+  }
+}
+
 async function generateArticle(
   category: Category,
   avoidTitles: string[],
@@ -336,21 +366,21 @@ async function generateArticle(
     .replace(/\n?```\s*$/i, "")
     .trim();
 
-  let parsed: GeneratedArticle;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch (err) {
-    throw new Error(
-      `Could not parse article JSON. Raw: ${cleaned.slice(0, 500)}`,
-      { cause: err },
-    );
-  }
+  const parsed = parseArticleJson(cleaned);
 
   const record = parsed as unknown as Record<string, unknown>;
-  // Some endpoints return `content` as an array of paragraphs. Join, don't crash.
+  // Some endpoints return `content` as an array of paragraphs or block
+  // objects (`{type, text}`). Join, don't crash.
   if (Array.isArray(record.content)) {
     record.content = (record.content as unknown[])
-      .map((p) => (typeof p === "string" ? p : JSON.stringify(p)))
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          const obj = item as Record<string, unknown>;
+          return typeof obj.text === "string" ? obj.text : JSON.stringify(obj);
+        }
+        return String(item ?? "");
+      })
       .join("\n\n");
   }
 
