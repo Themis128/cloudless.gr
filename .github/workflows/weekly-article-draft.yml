@@ -1,11 +1,11 @@
 name: Weekly Article Draft
 
 on:
-  schedule:
-    # Every Monday at 06:00 UTC (08:00 Athens). Three hours before the
-    # publisher runs — that window is the human review SLA.
-    - cron: "0 6 * * 1"
-  workflow_dispatch: # Manual trigger from the Actions tab
+  # Dispatch-only. The Anthropic API call fails with 400 "credit balance
+  # too low" while the account is unfunded. Until credits are added at
+  # platform.claude.com/settings/billing, scheduled/auto runs would generate
+  # GH email noise on every fire. Stays available for manual dispatch.
+  workflow_dispatch:
 
 concurrency:
   group: weekly-article-draft

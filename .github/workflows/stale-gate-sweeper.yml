@@ -6,9 +6,11 @@ name: Stale Gate Sweeper
 # are ready to delete, and posts a triage report to tracking issue #382.
 
 on:
-  schedule:
-    - cron: "0 9 * * 1" # Monday 09:00 UTC
-  workflow_dispatch: # manual trigger
+  # Dispatch-only. The Anthropic API call fails with 400 "credit balance
+  # too low" while the account is unfunded. Until credits are added at
+  # platform.claude.com/settings/billing, scheduled/auto runs would generate
+  # GH email noise on every fire. Stays available for manual dispatch.
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
