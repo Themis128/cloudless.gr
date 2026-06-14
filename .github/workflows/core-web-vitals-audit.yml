@@ -69,12 +69,21 @@ jobs:
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
           configPath: .github/lighthouserc.js
+          # Audit the locale-resolved URLs directly. The bare `/services`,
+          # `/contact`, `/store` paths all 307-redirect through next-intl
+          # middleware to `/en/<path>` (this is by design — `localePrefix:
+          # always`). Auditing the bare paths makes Lighthouse pay for the
+          # redirect round-trip on every probe, which (a) doesn't measure
+          # the actual page perf and (b) varies more between runs.
+          # The user-perceived perf for someone landing on `cloudless.gr/`
+          # is captured by auditing `https://cloudless.gr` (apex → locale
+          # redirect) and `https://cloudless.gr/en` (the resolved root).
           urls: |
             https://cloudless.gr
             https://cloudless.gr/en
-            https://cloudless.gr/services
-            https://cloudless.gr/contact
-            https://cloudless.gr/store
+            https://cloudless.gr/en/services
+            https://cloudless.gr/en/contact
+            https://cloudless.gr/en/store
           # 3 runs per URL → median absorbs single-run CI variance.
           runs: 3
           budgetPath: .github/lighthouse-budget.json
