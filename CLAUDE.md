@@ -50,7 +50,6 @@ are now strictly separated:
   cluster-relevant lives there.
 
 **Quick disk audit one-liner** (run on omv-main):
-
 ```
 df -h /var/lib/rancher/k3s /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7 /
 ```
@@ -184,6 +183,22 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
     (`context deadline exceeded`), not OOM. `pnpm prometheus:tune` removes those
     unused heavy SLO rule groups. Durable fix: kube-prometheus-stack Helm values
     `defaultRules.rules.kubeApiserver{Burnrate,Availability,Slos}: false`.
+
+## Cluster bash (cluster-bash skill)
+
+Two-node SSH operations go through one of four MCP tools per the
+`cluster-bash` skill (`skills/cluster-bash/SKILL.md`):
+
+- `mcp__cloudless-infra__cluster_list_nodes` — topology + reachability probe
+- `mcp__cloudless-infra__cluster_run_fanout` — parallel exec on both Pis
+- `mcp__cloudless-infra__cluster_read_file` — SFTP read, 1 MiB cap, returns true size
+- `mcp__cloudless-infra__cluster_write_file` — SFTP write, refuses /etc /boot /sys /proc /dev, 8 MiB cap
+
+These complement (not replace) the existing `cluster_run_command`,
+`k3s_*` tools, and the GitHub Actions fallback documented above. Source
+lives in `tools/ssh-mcp/src/sftp.ts`; topology is the single source of
+truth in `TOPOLOGY`. Unit tests in `tools/ssh-mcp/src/__tests__/sftp.test.ts`
+cover the path-safety policy. Read the skill before reaching for SSH.
 
 ## Authentication
 
@@ -355,37 +370,6 @@ sudo tail -f /var/log/cloudless-cleanup.log
 ```bash
 sudo systemctl disable --now cloudless-cleanup.timer
 ```
-
-## Scheduled Tasks (cron architecture)
-
-**All scheduled tasks run on GitHub Actions, not on the Pi.** A legacy
-`/etc/cron.d/cloudless-tasks` orchestrator existed on `omv-main` and was
-decommissioned on 2026-06-14 — it had been silently failing every week with
-`Unable to locate credentials` because root cron has no AWS context. None
-of its 7 routines (cloudless-agency-hub-status, daily-leads-digest,
-notion-stale-submissions, weekly-sentry-digest, weekly-seo-snapshot,
-weekly-gsc-notion-sync, windsor-configuration-check) ran successfully for
-the prior ~5 weeks.
-
-Current scheduled-task setup:
-
-- **`platform-crons.yml`** — calls `/api/cron/owner-digest` weekly (Mon 06:00
-  UTC) and `/api/cron/client-reports` monthly (1st 08:00 UTC). owner-digest
-  consolidates k3s pod health, Lambda deploy state, Sentry unresolved-issue
-  summary, Stripe activity, and GSC stats into a single Slack post —
-  replacing 5 of the 7 legacy Pi routines.
-- **`weekly-gsc-sync.yml`** — weekly GSC → Notion sync (Mon 07:00 UTC),
-  direct replacement for the legacy weekly-gsc-notion-sync.
-- **`notion-integration-health.yml`** — hourly Notion DB reachability probe.
-- **`ha-failover-watchdog.yml`** — 1-min HA failover for cloudless.gr.
-- **`sha-drift-detector.yml`** + **`sha-drift-watchdog.yml`** — deployed-SHA
-  vs main-HEAD drift detection.
-- App-side stale-submissions surfacing happens via the admin notifications
-  Dynamo table (PR A1/A2/A3, 2026-06-08) — no need for a cron probe.
-
-Do **not** add new tasks to Pi cron. New scheduled work goes in
-`.github/workflows/<name>.yml` with `schedule:` and reads SSM via the AWS
-OIDC deploy role.
 
 ## Terraform Doctor
 
