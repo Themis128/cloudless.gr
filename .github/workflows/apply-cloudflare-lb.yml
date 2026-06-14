@@ -74,7 +74,7 @@ jobs:
           AWS_REGION: us-east-1
           MODE: apply
           CONFIRM: "1"
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # GH secret is stale; script reads SSM. See cloudflare-token-rotate.yml.
         run: |
           set -o pipefail
           bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
