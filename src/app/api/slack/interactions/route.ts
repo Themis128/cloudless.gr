@@ -146,10 +146,7 @@ async function handleBlockActions(payload: SlackInteractionPayload): Promise<Res
               payload.user.id,
               action.action_id
             ).catch((err) =>
-              console.error(
-                `[Slack Interactions] ${action.action_id} failed:`,
-                err
-              )
+              console.error(`[Slack Interactions] ${action.action_id} failed:`, err)
             );
           }
         } else {
@@ -425,7 +422,6 @@ async function refreshOrdersAsync(responseUrl: string): Promise<void> {
   }
 }
 
-
 // ---------------------------------------------------------------------------
 // Workflow re-run responder
 //
@@ -456,9 +452,7 @@ async function rerunWorkflowAsync(
           "> to add your Slack user ID to `SLACK_OPS_USERS`.",
       }),
       signal: AbortSignal.timeout(5_000),
-    }).catch((err) =>
-      console.error("[Slack Interactions] denial post failed:", err)
-    );
+    }).catch((err) => console.error("[Slack Interactions] denial post failed:", err));
     return;
   }
 
@@ -478,9 +472,6 @@ async function rerunWorkflowAsync(
     }),
     signal: AbortSignal.timeout(5_000),
   }).catch((err) =>
-    console.error(
-      `[Slack Interactions] follow-up post failed for ${actionId}:`,
-      err
-    )
+    console.error(`[Slack Interactions] follow-up post failed for ${actionId}:`, err)
   );
 }
