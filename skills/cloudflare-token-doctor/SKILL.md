@@ -112,6 +112,7 @@ Use Path B for read-only consumers (Grafana, dashboards) so the wide
 Two stores keep them in sync:
 
 ### 2a — SSM (consumed by the infra MCP, deploy workflows, the Next.js
+
 runtime, and the Pi cluster)
 
 ```bash
@@ -208,11 +209,13 @@ mcp__cloudless-infra__cloudflare_delete_token(token_id: "<id>")
 ```
 
 Keep:
+
 - The currently active infra token
 - Anything used by a CI workflow (look for `gh secret list | grep -i cloudflare`)
 - Any tokens with a documented purpose in `docs/`
 
 Revoke:
+
 - "Edit Cloudflare Workers" default-named tokens you don't remember creating
 - Tokens with expiry > 1 year in the past
 - Duplicates from prior rotations
