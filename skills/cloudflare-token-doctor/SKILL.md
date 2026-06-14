@@ -80,8 +80,7 @@ output. This is the path you'll take if every prior token is gone.
 
 4. Account Resources: **Include — All accounts**
 5. Zone Resources: **Include — Specific zone — cloudless.gr**
-   (Add another row for `cloudless.online` if failover analytics is
-   wanted.)
+   (cloudless.online has been decommissioned — do not add it.)
 6. TTL: **1 year** (or no expiry — your call; expiry forces rotation,
    no expiry forces vigilance).
 7. **Continue → Create → copy the secret once.** Cloudflare will not

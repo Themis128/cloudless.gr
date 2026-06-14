@@ -356,6 +356,37 @@ sudo tail -f /var/log/cloudless-cleanup.log
 sudo systemctl disable --now cloudless-cleanup.timer
 ```
 
+## Scheduled Tasks (cron architecture)
+
+**All scheduled tasks run on GitHub Actions, not on the Pi.** A legacy
+`/etc/cron.d/cloudless-tasks` orchestrator existed on `omv-main` and was
+decommissioned on 2026-06-14 — it had been silently failing every week with
+`Unable to locate credentials` because root cron has no AWS context. None
+of its 7 routines (cloudless-agency-hub-status, daily-leads-digest,
+notion-stale-submissions, weekly-sentry-digest, weekly-seo-snapshot,
+weekly-gsc-notion-sync, windsor-configuration-check) ran successfully for
+the prior ~5 weeks.
+
+Current scheduled-task setup:
+
+- **`platform-crons.yml`** — calls `/api/cron/owner-digest` weekly (Mon 06:00
+  UTC) and `/api/cron/client-reports` monthly (1st 08:00 UTC). owner-digest
+  consolidates k3s pod health, Lambda deploy state, Sentry unresolved-issue
+  summary, Stripe activity, and GSC stats into a single Slack post —
+  replacing 5 of the 7 legacy Pi routines.
+- **`weekly-gsc-sync.yml`** — weekly GSC → Notion sync (Mon 07:00 UTC),
+  direct replacement for the legacy weekly-gsc-notion-sync.
+- **`notion-integration-health.yml`** — hourly Notion DB reachability probe.
+- **`ha-failover-watchdog.yml`** — 1-min HA failover for cloudless.gr.
+- **`sha-drift-detector.yml`** + **`sha-drift-watchdog.yml`** — deployed-SHA
+  vs main-HEAD drift detection.
+- App-side stale-submissions surfacing happens via the admin notifications
+  Dynamo table (PR A1/A2/A3, 2026-06-08) — no need for a cron probe.
+
+Do **not** add new tasks to Pi cron. New scheduled work goes in
+`.github/workflows/<name>.yml` with `schedule:` and reads SSM via the AWS
+OIDC deploy role.
+
 ## Terraform Doctor
 
 When a Terraform CI workflow fails, **invoke the `terraform-doctor` skill first**
