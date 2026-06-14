@@ -140,7 +140,6 @@ describe("bedrock-shared", () => {
         client: getBedrockClient(),
         system: "be helpful",
         messages: [{ role: "user", content: [{ text: "hi" }] }],
-        toolConfig: { tools: [] },
         maxTokens: 100,
       });
 
@@ -154,7 +153,6 @@ describe("bedrock-shared", () => {
         client: getBedrockClient(),
         system: "s",
         messages: [{ role: "user", content: [{ text: "hi" }] }],
-        toolConfig: { tools: [] },
       });
       const cmd = mockSend.mock.calls[0][0] as {
         input?: { inferenceConfig?: { maxTokens?: number } };
@@ -168,9 +166,62 @@ describe("bedrock-shared", () => {
         client: getBedrockClient(),
         system: "s",
         messages: [],
-        toolConfig: { tools: [] },
       });
       expect(out).toEqual([]);
+    });
+
+    // Regression: Bedrock 400s with ValidationException when toolConfig.tools
+    // is an empty array. The shared helper must OMIT toolConfig in that case.
+    it("omits toolConfig from ConverseCommand when none is provided", async () => {
+      mockSend.mockResolvedValueOnce({ output: { message: { content: [] } } });
+      await runBedrockTurn({
+        client: getBedrockClient(),
+        system: "s",
+        messages: [{ role: "user", content: [{ text: "hi" }] }],
+      });
+      const cmd = mockSend.mock.calls[0][0] as {
+        input?: Record<string, unknown>;
+      };
+      expect(cmd.input).toBeDefined();
+      expect("toolConfig" in (cmd.input ?? {})).toBe(false);
+    });
+
+    it("omits toolConfig when tools array is empty", async () => {
+      mockSend.mockResolvedValueOnce({ output: { message: { content: [] } } });
+      await runBedrockTurn({
+        client: getBedrockClient(),
+        system: "s",
+        messages: [{ role: "user", content: [{ text: "hi" }] }],
+        toolConfig: { tools: [] },
+      });
+      const cmd = mockSend.mock.calls[0][0] as {
+        input?: Record<string, unknown>;
+      };
+      expect("toolConfig" in (cmd.input ?? {})).toBe(false);
+    });
+
+    it("forwards toolConfig when tools is non-empty", async () => {
+      mockSend.mockResolvedValueOnce({ output: { message: { content: [] } } });
+      await runBedrockTurn({
+        client: getBedrockClient(),
+        system: "s",
+        messages: [{ role: "user", content: [{ text: "hi" }] }],
+        toolConfig: {
+          tools: [
+            {
+              toolSpec: {
+                name: "x",
+                description: "y",
+                inputSchema: { json: {} },
+              },
+            },
+          ],
+        },
+      });
+      const cmd = mockSend.mock.calls[0][0] as {
+        input?: { toolConfig?: { tools?: unknown[] } };
+      };
+      expect(cmd.input?.toolConfig?.tools).toHaveLength(1);
     });
   });
 });

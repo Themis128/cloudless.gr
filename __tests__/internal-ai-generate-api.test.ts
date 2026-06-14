@@ -148,3 +148,39 @@ describe("POST /api/internal/ai/generate", () => {
     expect(res.status).toBe(502);
   });
 });
+
+// Regression: in production we saw Workers AI sometimes return a non-string
+// `result.response`, which crashed the handler with `text.trim is not a function`.
+// The route must coerce defensively and either return a stringified value or
+// fall through to Bedrock cleanly.
+describe("POST /api/internal/ai/generate — non-string Cloudflare response", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(getConfig).mockResolvedValue({
+      AI_GENERATE_SECRET: SECRET,
+    } as Awaited<ReturnType<typeof getConfig>>);
+    process.env.CLOUDFLARE_ACCOUNT_ID = "acct-test";
+    process.env.CLOUDFLARE_API_TOKEN = "token-test";
+  });
+
+  it("stringifies a non-string Cloudflare response instead of throwing", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          result: { response: { json: "shape", with: ["nested", "arr"] } },
+        }),
+        { status: 200 },
+      ),
+    ) as typeof fetch;
+    const res = await POST(
+      reqWith({
+        messages: [{ role: "user", content: "hi" }],
+      }) as never,
+    );
+    const body = (await res.json()) as { result: string; source: string };
+    expect(res.status).toBe(200);
+    expect(body.source).toBe("cloudflare");
+    expect(typeof body.result).toBe("string");
+    expect(body.result).toContain('"json":"shape"');
+  });
+});

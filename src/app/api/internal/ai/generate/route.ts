@@ -39,7 +39,7 @@ import {
 export const runtime = "nodejs";
 
 const DEFAULT_CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-const FALLBACK_CF_MODEL = "@cf/meta/llama-3-70b-instruct";
+const FALLBACK_CF_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -89,14 +89,19 @@ async function callCloudflare(
     }
   );
   const data = (await res.json()) as {
-    result?: { response?: string };
+    result?: { response?: unknown };
     errors?: { message?: string }[];
   };
   if (!res.ok) {
     const reason = data.errors?.[0]?.message ?? `status ${res.status}`;
     throw new Error(`Cloudflare Workers AI: ${reason}`);
   }
-  const text = data.result?.response ?? "";
+  // Workers AI usually returns `result.response` as a string, but some models
+  // (and some failure modes) put a non-string there. Coerce defensively so a
+  // bad shape doesn't crash the handler — it just becomes "fall back to Bedrock".
+  const raw = data.result?.response;
+  const text =
+    typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
   if (!text.trim()) throw new Error("Cloudflare Workers AI returned empty response");
   return text;
 }
@@ -116,7 +121,6 @@ async function callBedrock(
     client: getBedrockClient(),
     system: system ?? "",
     messages: bedrockMessages,
-    toolConfig: { tools: [] },
     maxTokens,
   });
   const text = joinAssistantText(content);
