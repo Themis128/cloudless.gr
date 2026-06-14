@@ -22,9 +22,7 @@ import { getConfig } from "@/lib/ssm-config";
  */
 const REPO = process.env.GITHUB_DISPATCH_REPO || "Themis128/cloudless.gr";
 
-export type DispatchResult =
-  | { ok: true }
-  | { ok: false; status: number; error: string };
+export type DispatchResult = { ok: true } | { ok: false; status: number; error: string };
 
 /**
  * Trigger a workflow_dispatch event on the given workflow file.
