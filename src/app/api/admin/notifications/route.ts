@@ -54,10 +54,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    return NextResponse.json(
-      { error: "Notifications store not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 
   const url = new URL(request.url);
@@ -74,10 +71,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ notifications });
   } catch (err) {
     console.error("[admin-notifications] GET failed:", err);
-    return NextResponse.json(
-      { error: "Failed to load notifications" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to load notifications" }, { status: 500 });
   }
 }
 
@@ -90,10 +84,7 @@ export async function PATCH(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    return NextResponse.json(
-      { error: "Notifications store not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 
   let body: { id?: string; ids?: string[]; markAllRead?: boolean };
@@ -120,20 +111,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (!ids.length) {
-      return NextResponse.json(
-        { error: "Provide id, ids, or markAllRead" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Provide id, ids, or markAllRead" }, { status: 400 });
     }
 
     await markNotificationsRead(ids);
     return NextResponse.json({ success: true, updated: ids.length });
   } catch (err) {
     console.error("[admin-notifications] PATCH failed:", err);
-    return NextResponse.json(
-      { error: "Failed to update notifications" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to update notifications" }, { status: 500 });
   }
 }
 

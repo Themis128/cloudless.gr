@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       "keywords",
       { limit, days },
       () => getTopKeywords(undefined, limit, days),
-      { ttlSeconds: 3600 },
+      { ttlSeconds: 3600 }
     );
     const keywords = __read.value;
     return NextResponse.json({

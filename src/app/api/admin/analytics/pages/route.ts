@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       "pages",
       { limit, days },
       () => getTopPages(undefined, limit, days),
-      { ttlSeconds: 3600 },
+      { ttlSeconds: 3600 }
     );
     const pages = __read.value;
     return NextResponse.json({

@@ -382,7 +382,7 @@ export async function createPage(
       "[Notion] Failed to create page in " +
         JSON.stringify(safeId(databaseId)) +
         ": " +
-        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error"))
     );
     return null;
   }
@@ -405,7 +405,7 @@ export async function updatePage(
       "[Notion] Failed to update page " +
         JSON.stringify(safeId(pageId)) +
         ": " +
-        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error"))
     );
     return false;
   }
@@ -428,7 +428,7 @@ export async function archivePage(pageId: string): Promise<boolean> {
       "[Notion] Failed to archive page " +
         JSON.stringify(safeId(pageId)) +
         ": " +
-        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error"))
     );
     return false;
   }
@@ -451,7 +451,7 @@ export async function restorePage(pageId: string): Promise<boolean> {
       "[Notion] Failed to restore page " +
         JSON.stringify(safeId(pageId)) +
         ": " +
-        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error"))
     );
     return false;
   }
@@ -481,7 +481,7 @@ export async function appendBlocks(parentId: string, children: any[]): Promise<b
       "[Notion] Failed to append blocks to " +
         JSON.stringify(safeId(parentId)) +
         ": " +
-        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error"))
     );
     return false;
   }
@@ -501,7 +501,7 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
       "[Notion] Failed to delete block " +
         JSON.stringify(safeId(blockId)) +
         ": " +
-        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error")),
+        JSON.stringify(safeMsg((err as Error)?.message ?? "unknown error"))
     );
     return false;
   }

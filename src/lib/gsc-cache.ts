@@ -68,7 +68,7 @@ function toItem<T>(
   route: string,
   hash: string,
   payload: T,
-  ttlSeconds: number,
+  ttlSeconds: number
 ): Record<string, AttributeValue> {
   return {
     pk: { S: route },
@@ -81,7 +81,7 @@ function toItem<T>(
 
 function fromItem<T>(
   item: Record<string, AttributeValue>,
-  ttlSeconds: number,
+  ttlSeconds: number
 ): CacheEntry<T> | null {
   const storedAt = item.storedAt?.S;
   const raw = item.payload?.S;
@@ -113,7 +113,7 @@ function fromItem<T>(
 export async function getCached<T = unknown>(
   route: string,
   params: Record<string, unknown> = {},
-  ttlSeconds = 3600,
+  ttlSeconds = 3600
 ): Promise<CacheEntry<T> | null> {
   const table = getTableName();
   if (!table) return null;
@@ -123,15 +123,12 @@ export async function getCached<T = unknown>(
       new GetItemCommand({
         TableName: table,
         Key: { pk: { S: route }, sk: { S: hash } },
-      }),
+      })
     );
     if (!out.Item) return null;
     return fromItem<T>(out.Item, ttlSeconds);
   } catch (err) {
-    console.warn(
-      "[gsc-cache] getCached failed:",
-      err instanceof Error ? err.message : err,
-    );
+    console.warn("[gsc-cache] getCached failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -144,7 +141,7 @@ export async function setCached<T = unknown>(
   route: string,
   params: Record<string, unknown> = {},
   payload: T,
-  ttlSeconds = 3600,
+  ttlSeconds = 3600
 ): Promise<void> {
   const table = getTableName();
   if (!table) return;
@@ -154,13 +151,10 @@ export async function setCached<T = unknown>(
       new PutItemCommand({
         TableName: table,
         Item: toItem(route, hash, payload, ttlSeconds),
-      }),
+      })
     );
   } catch (err) {
-    console.warn(
-      "[gsc-cache] setCached failed:",
-      err instanceof Error ? err.message : err,
-    );
+    console.warn("[gsc-cache] setCached failed:", err instanceof Error ? err.message : err);
   }
 }
 
@@ -175,7 +169,7 @@ export async function readThrough<T>(
   route: string,
   params: Record<string, unknown>,
   fetcher: () => Promise<T>,
-  opts: { ttlSeconds?: number; acceptStaleSeconds?: number } = {},
+  opts: { ttlSeconds?: number; acceptStaleSeconds?: number } = {}
 ): Promise<{ value: T; source: "cache" | "live" | "stale"; ageSeconds: number }> {
   const ttlSeconds = opts.ttlSeconds ?? 3600;
   const acceptStaleSeconds = opts.acceptStaleSeconds ?? 24 * 3600;
@@ -193,7 +187,7 @@ export async function readThrough<T>(
     if (cached && cached.ageSeconds <= acceptStaleSeconds) {
       console.warn(
         `[gsc-cache] live fetch failed for ${route}, serving stale (age=${cached.ageSeconds}s):`,
-        err instanceof Error ? err.message : err,
+        err instanceof Error ? err.message : err
       );
       return { value: cached.payload, source: "stale", ageSeconds: cached.ageSeconds };
     }

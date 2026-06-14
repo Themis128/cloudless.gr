@@ -117,7 +117,7 @@ export interface WebAnalyticsData {
  */
 export async function getSeoSnapshot(
   siteUrl = DEFAULT_SITE,
-  days = 28,
+  days = 28
 ): Promise<SeoSnapshot | null> {
   try {
     const range = dateRange(days);
@@ -165,7 +165,7 @@ export async function getSeoSnapshot(
 export async function getTopKeywords(
   siteUrl = DEFAULT_SITE,
   limit = 20,
-  days = 28,
+  days = 28
 ): Promise<KeywordData[]> {
   try {
     const res = await gscQuery(siteUrl, {
@@ -250,7 +250,7 @@ export async function getPerformanceHistory(
 export async function getTopPages(
   siteUrl = DEFAULT_SITE,
   limit = 25,
-  days = 28,
+  days = 28
 ): Promise<PageData[]> {
   try {
     const res = await gscQuery(siteUrl, {
@@ -282,7 +282,7 @@ export async function getTopPages(
  */
 export async function getWebAnalytics(
   siteUrl = DEFAULT_SITE,
-  days = 28,
+  days = 28
 ): Promise<WebAnalyticsData | null> {
   try {
     const range = dateRange(days);

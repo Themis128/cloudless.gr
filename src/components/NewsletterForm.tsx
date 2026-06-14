@@ -91,7 +91,7 @@ export default function NewsletterForm() {
           dark background and failed WCAG AA. Solid neon-cyan (#22d3e6)
           measures > 7:1 on the dark surface.
         */}
-        <Link href="/privacy" className="text-neon-cyan hover:text-white underline">
+        <Link href="/privacy" className="text-neon-cyan underline hover:text-white">
           {translate(locale, "legal.privacyTitle", "Privacy Policy")}
         </Link>
         {". "}

@@ -103,8 +103,7 @@ function toItem(notif: AdminNotification): Record<string, AttributeValue> {
   };
   if (notif.actor) item.actor = { S: notif.actor };
   if (notif.route) item.route = { S: notif.route };
-  if (notif.metadata)
-    item.metadata = { S: JSON.stringify(notif.metadata) };
+  if (notif.metadata) item.metadata = { S: JSON.stringify(notif.metadata) };
   if (notif.archivedAt) item.archivedAt = { S: notif.archivedAt };
   return item;
 }
@@ -168,13 +167,13 @@ export async function recordNotification(input: {
       new PutItemCommand({
         TableName: getTableName(),
         Item: toItem(notif),
-      }),
+      })
     );
     return notif;
   } catch (err) {
     console.warn(
       "[admin-notifications] recordNotification failed:",
-      err instanceof Error ? err.message : err,
+      err instanceof Error ? err.message : err
     );
     return null;
   }
@@ -193,9 +192,7 @@ export interface ListFilters {
  * Read recent notifications, newest first. Defaults to 50 most recent
  * un-archived entries.
  */
-export async function listNotifications(
-  filters: ListFilters = {},
-): Promise<AdminNotification[]> {
+export async function listNotifications(filters: ListFilters = {}): Promise<AdminNotification[]> {
   const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
   const useCategoryIndex = Boolean(filters.category);
 
@@ -241,14 +238,12 @@ export async function listNotifications(
       TableName: getTableName(),
       IndexName: useCategoryIndex ? CAT_INDEX : undefined,
       KeyConditionExpression: keyConditionParts.join(" AND "),
-      ...(filterExpressions.length
-        ? { FilterExpression: filterExpressions.join(" AND ") }
-        : {}),
+      ...(filterExpressions.length ? { FilterExpression: filterExpressions.join(" AND ") } : {}),
       ExpressionAttributeNames: exprNames,
       ExpressionAttributeValues: exprValues,
       Limit: limit,
       ScanIndexForward: false, // newest first
-    }),
+    })
   );
 
   return (out.Items ?? []).map(fromItem);
@@ -273,7 +268,7 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
           ":id": { S: id },
         },
         Limit: 1,
-      }),
+      })
     );
     const item = matches.Items?.[0];
     if (!item) continue;
@@ -284,7 +279,7 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
         UpdateExpression: "SET #read = :true",
         ExpressionAttributeNames: { "#read": "read" },
         ExpressionAttributeValues: { ":true": { BOOL: true } },
-      }),
+      })
     );
   }
 }
@@ -293,10 +288,12 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
  * Per-category counts over a window. Used by the admin analytics endpoint.
  * Returns { total, byCategory: { contact: N, ... }, byDay: { '2026-06-12': N, ... } }.
  */
-export async function notificationAnalytics(opts: {
-  since: string;
-  until?: string;
-} = { since: "" }): Promise<{
+export async function notificationAnalytics(
+  opts: {
+    since: string;
+    until?: string;
+  } = { since: "" }
+): Promise<{
   total: number;
   byCategory: Record<NotificationCategory, number>;
   byDay: Record<string, number>;
@@ -363,7 +360,7 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
               DeleteRequest: { Key: { pk: it.pk, sk: it.sk } },
             })),
           },
-        }),
+        })
       );
       purged += items.length;
     }
