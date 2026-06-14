@@ -18,6 +18,8 @@ interface AppConfig {
   AWS_SES_REGION: string;
   /** Shared secret authenticating the weekly newsletter send endpoint. */
   NEWSLETTER_SEND_SECRET: string;
+  /** Shared secret authenticating the internal AI text-generation endpoint. */
+  AI_GENERATE_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
@@ -160,6 +162,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     SES_TO_EMAIL: sesTo,
     AWS_SES_REGION: sesRegion,
     NEWSLETTER_SEND_SECRET: params.get("NEWSLETTER_SEND_SECRET") ?? "",
+    AI_GENERATE_SECRET: params.get("AI_GENERATE_SECRET") ?? "",
     STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY") ?? "",
     STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
     STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET") ?? "",
@@ -235,6 +238,7 @@ function buildConfigFromEnv(): AppConfig {
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
     AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
     NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
+    AI_GENERATE_SECRET: process.env.AI_GENERATE_SECRET || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",

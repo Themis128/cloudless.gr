@@ -2,16 +2,21 @@
  * Weekly Article Generator
  *
  * Picks the least-recently-used Category from the Notion Blog database,
- * asks Claude to author a fresh article in that category (avoiding topic
- * repetition with recent posts), and inserts the result as a Draft for
- * human review. Slack-pings the editor with a link.
+ * asks our /api/internal/ai/generate endpoint to author a fresh article in
+ * that category (avoiding topic repetition with recent posts), and inserts
+ * the result as a Draft for human review. Slack-pings the editor with a link.
+ *
+ * The generation endpoint tries Cloudflare Workers AI first (free tier) and
+ * falls back to AWS Bedrock Claude — so this cron does NOT depend on an
+ * Anthropic.com account or its credit balance.
  *
  * Designed to run from .github/workflows/weekly-article-draft.yml on
  * Monday 06:00 UTC. Self-contained — reads env directly, talks to Notion
- * and Anthropic via raw fetch (no src/lib/* imports, no SSM, no @/ alias).
+ * via raw fetch and to its own /api/internal/ai/generate route over HTTPS.
  *
  * Required env:
- *   ANTHROPIC_API_KEY            Claude API key
+ *   AI_GENERATE_SECRET           Shared secret for /api/internal/ai/generate
+ *   SITE_URL                     Base URL of the Lambda hosting the route
  *   NOTION_API_KEY               Notion integration token
  *   NOTION_BLOG_DB_ID            Blog database id
  *   SLACK_WEBHOOK_URL            (optional) pings the team on success
@@ -23,9 +28,10 @@
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
-const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
-const ANTHROPIC_VERSION = "2023-06-01";
-const MODEL = "claude-sonnet-4-6";
+const SITE_URL_DEFAULT = "https://cloudless.gr";
+/** Cloudflare Workers AI model. Route will fall back to llama-3-70b and then
+ *  Bedrock Claude 3.5 Haiku if this model errors or is rate-limited. */
+const CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 export const CATEGORIES = [
   "Cloud",
@@ -164,7 +170,8 @@ async function generateArticle(
   category: Category,
   avoidTitles: string[],
 ): Promise<GeneratedArticle> {
-  const apiKey = requireEnv("ANTHROPIC_API_KEY");
+  const secret = requireEnv("AI_GENERATE_SECRET");
+  const siteUrl = (process.env.SITE_URL || SITE_URL_DEFAULT).replace(/\/$/, "");
 
   const userMessage = [
     `Write this week's blog post for the **${category}** category.`,
@@ -177,39 +184,34 @@ async function generateArticle(
     "Pick a fresh angle that hasn't been covered. Output the JSON object only.",
   ].join("\n");
 
-  const res = await fetch(ANTHROPIC_API, {
+  const res = await fetch(`${siteUrl}/api/internal/ai/generate`, {
     method: "POST",
     headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": ANTHROPIC_VERSION,
       "content-type": "application/json",
+      "x-internal-secret": secret,
     },
     body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 4096,
-      system: [
-        {
-          type: "text",
-          text: SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
+      model: CF_MODEL,
+      maxTokens: 4096,
+      system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
     }),
   });
 
   if (!res.ok) {
     throw new Error(
-      `Anthropic API failed: ${res.status} ${await res.text().catch(() => "")}`,
+      `Internal AI generation failed: ${res.status} ${await res.text().catch(() => "")}`,
     );
   }
   const data = (await res.json()) as {
-    content: Array<{ type: string; text?: string }>;
+    result?: string;
+    source?: "cloudflare" | "bedrock";
+    model?: string;
   };
-  const text = data.content
-    .filter((b) => b.type === "text" && b.text)
-    .map((b) => b.text!)
-    .join("");
+  const text = data.result ?? "";
+  console.log(
+    `[generate-weekly-article] generated via ${data.source ?? "unknown"} (${data.model ?? "?"})`,
+  );
 
   // Strip ```json fences if the model adds them despite instructions.
   const cleaned = text
