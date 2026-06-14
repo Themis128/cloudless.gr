@@ -100,8 +100,7 @@ async function callCloudflare(
   // (and some failure modes) put a non-string there. Coerce defensively so a
   // bad shape doesn't crash the handler — it just becomes "fall back to Bedrock".
   const raw = data.result?.response;
-  const text =
-    typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
+  const text = typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
   if (!text.trim()) throw new Error("Cloudflare Workers AI returned empty response");
   return text;
 }
