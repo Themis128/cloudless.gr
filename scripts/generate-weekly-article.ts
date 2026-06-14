@@ -174,13 +174,18 @@ Article structure:
 - Open with the problem, not a generic intro.
 - Close with a concrete next step the reader can take this week.
 
-Output format — strict JSON, no prose, no markdown fences:
+Output format — strict JSON, no prose, no markdown fences. EVERY field
+is a STRING (not an array, not an object). The "content" field is ONE
+long string holding the full markdown body, with embedded \\n newlines
+between paragraphs and headings. Never a list of sections.
+
+Worked example (use this exact shape, your own topic):
 {
-  "title": "...",                  // 50–70 chars, specific, no clickbait
-  "slug": "...",                   // kebab-case, lowercase, 3–6 words
-  "excerpt": "...",                // ONE sentence, 120–180 chars, used in newsletter preview
-  "readTime": "X min read",        // estimate at ~200 words/min
-  "content": "..."                 // markdown body, NO front-matter, NO title heading
+  "title": "Cutting AWS Lambda Cold Starts: A Production Playbook",
+  "slug": "aws-lambda-cold-starts-playbook",
+  "excerpt": "How we trimmed p99 invocation latency by 78% across three Lambda services using provisioned concurrency, ARM, and SnapStart — with the numbers.",
+  "readTime": "9 min read",
+  "content": "## The pattern that bit us in production\\nWe ran a serverless image resizer on Lambda for an EU media customer ...\\n\\n## SnapStart on Java 21 ...\\n\\n## The next step you can take this week\\n..."
 }`;
 
 function buildUserMessage(category: Category, avoidTitles: string[]): string {
@@ -204,6 +209,23 @@ async function generateViaCloudflare(
   category: Category,
   avoidTitles: string[],
 ): Promise<{ text: string; model: string }> {
+  // Force schema-valid JSON. Without this, llama-3.3-70b will sometimes
+  // emit `"content": [## Heading\nbody...]` — an array with unquoted
+  // markdown — which JSON.parse rejects. The strict schema makes the
+  // model server-side-validate before returning.
+  const articleSchema = {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      slug: { type: "string" },
+      excerpt: { type: "string" },
+      readTime: { type: "string" },
+      content: { type: "string" },
+    },
+    required: ["title", "slug", "excerpt", "readTime", "content"],
+    additionalProperties: false,
+  } as const;
+
   const res = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${CF_MODEL}`,
     {
@@ -218,6 +240,10 @@ async function generateViaCloudflare(
           { role: "user", content: buildUserMessage(category, avoidTitles) },
         ],
         max_tokens: 4096,
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: "article", schema: articleSchema, strict: true },
+        },
       }),
     },
   );
@@ -321,6 +347,13 @@ async function generateArticle(
   }
 
   const record = parsed as unknown as Record<string, unknown>;
+  // Some endpoints return `content` as an array of paragraphs. Join, don't crash.
+  if (Array.isArray(record.content)) {
+    record.content = (record.content as unknown[])
+      .map((p) => (typeof p === "string" ? p : JSON.stringify(p)))
+      .join("\n\n");
+  }
+
   for (const key of ["title", "slug", "excerpt", "readTime", "content"]) {
     const v = record[key];
     if (typeof v !== "string" || !v.trim()) {
