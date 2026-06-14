@@ -33,10 +33,15 @@ name: Apply Cloudflare HA load balancer (DNS cutover)
 #   Steady state is identical to today — all traffic goes to AWS; Pi is on standby.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/apply-cloudflare-lb.yml"
+  # Dispatch-only. The push-on-self-edit trigger was removed because the
+  # current Cloudflare token (in SSM) is scoped for the HA failover watchdog
+  # only (Zone:Read + DNS:Edit). It lacks Load Balancing: Monitors and Pools
+  # :Edit and Load Balancing: Load Balancers:Edit, so attempting to apply the
+  # LB fails with "10000 Authentication error". The account also doesn't
+  # currently subscribe to Cloudflare's Load Balancing add-on. The poor-man's
+  # HA failover (ha-failover-watchdog.yml) replaces this workflow's function
+  # for cloudless.gr — use that instead. Keep this workflow available for
+  # manual dispatch in case the LB add-on is purchased in the future.
   workflow_dispatch:
 
 permissions:
