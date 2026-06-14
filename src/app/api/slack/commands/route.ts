@@ -623,7 +623,6 @@ function slackResponse(body: SlackCommandResponse): Response {
   });
 }
 
-
 // ---------------------------------------------------------------------------
 // /cloudless-draft — re-run the weekly article draft workflow
 //
