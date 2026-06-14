@@ -103,7 +103,7 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
 // ───────────────────────────────────────────────────────────────────────
 
 const HEALTH_URLS = {
-  cloud: "https://cloudless.gr/api/health",
+  cloud: "https://www.cloudless.gr/api/health",
   pi: "https://pi-origin.cloudless.gr/api/health",
 } as const;
 const SSM_CLOUD = "/cloudless/production/cloud-sha";

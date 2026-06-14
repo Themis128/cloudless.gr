@@ -16,7 +16,7 @@ export interface DriftSnapshot {
   cloudExpected: string;
   /** deploy-pi.yml SHA — source of truth for the Pi surface. */
   piExpected: string;
-  /** cloudless.gr/api/health.version, or null if unreachable. */
+  /** www.cloudless.gr/api/health.version, or null if unreachable. */
   cloud: string | null;
   /** pi-origin.cloudless.gr/api/health.version, or null if unreachable. */
   pi: string | null;
