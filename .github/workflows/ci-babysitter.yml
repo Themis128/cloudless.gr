@@ -6,12 +6,16 @@ name: CI Failure Babysitter
 # the relevant PR (or tracking issue #382 for main-branch failures).
 
 on:
-  workflow_run:
-    workflows:
-      - CI
-      - Deploy to Production
-      - Deploy to Pi (ECR + k3s rollout)
-    types: [completed]
+  # Dispatch-only. The Anthropic API call fails with 400 "credit balance
+  # too low" while the account is unfunded. Until credits are added at
+  # platform.claude.com/settings/billing, scheduled/auto runs would generate
+  # GH email noise on every fire. Stays available for manual dispatch.
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Failed run ID to narrate"
+        required: true
+        type: string
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
