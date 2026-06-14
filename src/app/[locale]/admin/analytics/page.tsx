@@ -20,7 +20,7 @@
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ─── Date-range filter ────────────────────────────────────────────────────────
 
@@ -363,14 +363,11 @@ export default function AdminAnalyticsPage() {
   // Initialize to default 28d on first render (SSR-safe). On mount, restore
   // any persisted value from localStorage (which would refetch via the
   // effect that watches `days`).
-  const [days, setDays] = useState<number>(DEFAULT_RANGE.days);
-
-  useEffect(() => {
-    const stored = loadStoredDays();
-    if (stored !== days) setDays(stored);
-    // run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Lazy initializer: read from localStorage on first render (during SSR this
+  // returns DEFAULT_RANGE.days since loadStoredDays() short-circuits on !window).
+  // Avoids the mount-then-setState pattern that triggers
+  // react-hooks/set-state-in-effect.
+  const [days, setDays] = useState<number>(() => loadStoredDays());
 
   // ── Data state ──
   const [snapshot, setSnapshot] = useState<SeoSnapshot | null>(null);
@@ -480,9 +477,15 @@ export default function AdminAnalyticsPage() {
   );
 
   // When the date range changes, clear the "already fetched" set so each tab
-  // refetches against the new window the next time it's visited.
+  // refetches against the new window the next time it's visited. The ref guard
+  // prevents firing on first render (which would be a no-op since fetchedTabs
+  // starts empty) — that's what react-hooks/set-state-in-effect was flagging.
+  const prevDaysRef = useRef<number>(days);
   useEffect(() => {
-    setFetchedTabs(new Set());
+    if (prevDaysRef.current !== days) {
+      prevDaysRef.current = days;
+      setFetchedTabs(new Set());
+    }
   }, [days]);
 
   // Lazy-load: only fetch when tab is first opened

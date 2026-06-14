@@ -593,7 +593,8 @@ describe("GET /api/admin/analytics/keywords", () => {
     const { getTopKeywords } = await import("@/lib/gsc");
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
     await GET(adminRequest("http://localhost/api/admin/analytics/keywords?limit=5"));
-    expect(getTopKeywords).toHaveBeenCalledWith(undefined, 5);
+    // Route now passes (undefined, limit, days) — days defaults to 28 when ?days is omitted.
+    expect(getTopKeywords).toHaveBeenCalledWith(undefined, 5, 28);
   });
 });
 
@@ -627,7 +628,8 @@ describe("GET /api/admin/analytics/pages", () => {
     const { getTopPages } = await import("@/lib/gsc");
     const { GET } = await import("@/app/api/admin/analytics/pages/route");
     await GET(adminRequest("http://localhost/api/admin/analytics/pages?limit=10"));
-    expect(getTopPages).toHaveBeenCalledWith(undefined, 10);
+    // Route now passes (undefined, limit, days) — days defaults to 28 when ?days is omitted.
+    expect(getTopPages).toHaveBeenCalledWith(undefined, 10, 28);
   });
 });
 

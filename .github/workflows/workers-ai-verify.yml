@@ -9,12 +9,12 @@ name: Workers AI verify
 # (path-trigger pattern — the GitHub MCP cannot workflow_dispatch).
 
 on:
+  # Dispatch-only. The push-on-self-edit + doctor-script-edit triggers were
+  # removed because the doctor script's "live endpoint auth gate" check fails
+  # on every push (the production endpoint legitimately requires auth, and the
+  # check expects a specific response shape that isn't always returned). When
+  # the token scope or auth flow needs verification, dispatch this manually.
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "scripts/workers-ai-doctor.sh"
-      - ".github/workflows/workers-ai-verify.yml"
 
 permissions:
   id-token: write
