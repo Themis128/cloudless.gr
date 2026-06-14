@@ -101,7 +101,9 @@ export interface RunBedrockTurnOptions {
   client: BedrockRuntimeClient;
   system: string;
   messages: BedrockMessage[];
-  toolConfig: ToolConfiguration;
+  /** Omit (or pass an empty tools array) for plain text generation —
+   *  Bedrock 400s on `toolConfig: { tools: [] }`. */
+  toolConfig?: ToolConfiguration;
   maxTokens?: number;
 }
 
@@ -110,11 +112,14 @@ export interface RunBedrockTurnOptions {
  * Callers handle the loop, tool dispatch, and termination conditions.
  */
 export async function runBedrockTurn(opts: RunBedrockTurnOptions): Promise<AnyBlock[]> {
+  // Only attach toolConfig when there is at least one tool — Bedrock 400s on
+  // an empty tools array.
+  const hasTools = !!opts.toolConfig?.tools?.length;
   const cmd = new ConverseCommand({
     modelId: BEDROCK_MODEL_ID,
     system: [{ text: opts.system }],
     messages: opts.messages,
-    toolConfig: opts.toolConfig,
+    ...(hasTools ? { toolConfig: opts.toolConfig } : {}),
     inferenceConfig: { maxTokens: opts.maxTokens ?? 400 },
   });
   const response = await opts.client.send(cmd);
