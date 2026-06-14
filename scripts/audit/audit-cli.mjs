@@ -121,7 +121,8 @@ if (cmd === "list") {
   const data = await res.json();
   // CodeQL #1778 (js/http-to-file-access): bound the HTTP→disk flow with
   //   1) HTTPS-only + host allowlist  2) size cap  3) ZIP magic check.
-  const MAX_BYTES = 10 * 1024 * 1024;
+  // 64 MiB cap matches aggregate.mjs — Lighthouse traces are ~22 MiB.
+  const MAX_BYTES = 64 * 1024 * 1024;
   const ALLOWED_HOSTS = new Set([
     "api.github.com",
     "objects.githubusercontent.com",
