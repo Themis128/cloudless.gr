@@ -50,22 +50,42 @@ jobs:
 
       - name: Notify Slack on failure
         if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
-            -d '{
-              "text": "❌ Weekly article draft generation failed",
-              "blocks": [
+            -d "$(jq -n --arg run_url "$RUN_URL" '{
+              text: "❌ Weekly article draft generation failed",
+              blocks: [
                 {
-                  "type": "header",
-                  "text": { "type": "plain_text", "text": "❌ Weekly Draft Failed", "emoji": true }
+                  type: "header",
+                  text: { type: "plain_text", text: "❌ Weekly Draft Failed", emoji: true }
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "The Monday-morning AI draft generator failed. No newsletter will be sent unless you draft something manually.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View logs>"
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: "The Monday-morning AI draft generator failed. No newsletter will be sent unless you re-run it (button below) or draft something manually in Notion."
                   }
+                },
+                {
+                  type: "actions",
+                  elements: [
+                    {
+                      type: "button",
+                      style: "primary",
+                      text: { type: "plain_text", text: "🔁 Re-run draft", emoji: true },
+                      action_id: "rerun_weekly_draft",
+                      value: "weekly-article-draft.yml"
+                    },
+                    {
+                      type: "button",
+                      text: { type: "plain_text", text: "View logs", emoji: true },
+                      url: $run_url,
+                      action_id: "view_failed_run_logs"
+                    }
+                  ]
                 }
               ]
-            }'
+            }')"
