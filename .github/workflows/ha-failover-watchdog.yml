@@ -202,6 +202,93 @@ jobs:
             echo "  ✓ $HOST updated"
           done
 
+      - name: Detect state transition
+        id: transition
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT: ${{ steps.decide.outputs.target }}
+        run: |
+          set -e
+          # Look at the previous completed run's conclusion to determine if
+          # this run is a transition. The watchdog forces a red run whenever
+          # target=standby, so previous conclusion is a direct proxy for
+          # previous target.
+          PREV=$(gh run list \
+            --repo "$REPO" \
+            --workflow=ha-failover-watchdog.yml \
+            --status=completed \
+            --limit 2 \
+            --json conclusion \
+            -q '.[1].conclusion // "none"')
+          echo "Previous run conclusion: $PREV"
+          echo "Current target: $CURRENT"
+          TRANSITION="none"
+          if [ "$CURRENT" = "standby" ] && [ "$PREV" != "failure" ]; then
+            TRANSITION="failover"
+          elif [ "$CURRENT" = "primary" ] && [ "$PREV" = "failure" ]; then
+            TRANSITION="recovered"
+          fi
+          echo "transition=$TRANSITION" >> "$GITHUB_OUTPUT"
+          echo "Detected transition: $TRANSITION"
+
+      - name: Notify Slack on failover
+        if: steps.transition.outputs.transition == 'failover'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        continue-on-error: true
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL not set — skipping notification"
+            exit 0
+          fi
+          curl -s --max-time 10 -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \":rotating_light: *cloudless.gr failed over to Pi standby*\",
+              \"blocks\": [
+                {\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\":rotating_light: HA failover triggered\"}},
+                {\"type\":\"section\",\"fields\":[
+                  {\"type\":\"mrkdwn\",\"text\":\"*Site*\ncloudless.gr\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*New origin*\nPi (cfargotunnel)\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*Reason*\nCloudFront /api/health unhealthy\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*RTO*\n~1-2 min\"}
+                ]},
+                {\"type\":\"actions\",\"elements\":[
+                  {\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View run\"},\"url\":\"$RUN_URL\"}
+                ]}
+              ]
+            }"
+
+      - name: Notify Slack on recovery
+        if: steps.transition.outputs.transition == 'recovered'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        continue-on-error: true
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL not set — skipping notification"
+            exit 0
+          fi
+          curl -s --max-time 10 -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \":white_check_mark: *cloudless.gr recovered — back on CloudFront*\",
+              \"blocks\": [
+                {\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\":white_check_mark: HA recovered\"}},
+                {\"type\":\"section\",\"fields\":[
+                  {\"type\":\"mrkdwn\",\"text\":\"*Site*\ncloudless.gr\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*Origin*\nCloudFront (primary)\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*Status*\nHealthy\"}
+                ]},
+                {\"type\":\"actions\",\"elements\":[
+                  {\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View run\"},\"url\":\"$RUN_URL\"}
+                ]}
+              ]
+            }"
+
       - name: Summary
         run: |
           {
@@ -210,6 +297,7 @@ jobs:
             echo "- Probe: **${{ steps.probe.outputs.result }}**"
             echo "- Target: **${{ steps.decide.outputs.target }}**"
             echo "- Reason: ${{ steps.decide.outputs.reason }}"
+            echo "- Transition: ${{ steps.transition.outputs.transition }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail run if standby
