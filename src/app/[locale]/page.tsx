@@ -1,9 +1,29 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
-import CloudCockpit from "@/components/CloudCockpit";
 import JsonLd from "@/components/JsonLd";
+
+// CloudCockpit is a ~10 KB-gzipped client widget rendered only inside
+// the hero's right column on lg screens. Splitting it into its own
+// chunk keeps it off the critical JS path for mobile users (where it
+// is hidden anyway) and trims the home page's main bundle. Server-
+// rendered placeholder keeps LCP intact; the live chart hydrates after
+// the initial bundle parses.
+const CloudCockpit = dynamic(() => import("@/components/CloudCockpit"), {
+  loading: () => (
+    <div
+      aria-hidden
+      style={{
+        minHeight: 360,
+        background: "#0b1220",
+        border: "1px solid #2a3550",
+        borderRadius: 12,
+      }}
+    />
+  ),
+});
 import { getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
 import { translate, translateArray } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
