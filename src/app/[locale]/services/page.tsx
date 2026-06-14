@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
@@ -10,7 +8,13 @@ import { translate } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import StatCounter from "@/components/StatCounter";
 
-export const revalidate = 86400;
+// All service content comes from the static `services-data` module — there is
+// no per-request data on this page. Removing `force-dynamic` and the explicit
+// `revalidate` lets Next render this page statically at build time and serve
+// it from the CloudFront edge cache, skipping the Lambda cold start that was
+// dragging the median Lighthouse perf score to 58 (below the 60 floor on the
+// core-web-vitals-audit). The locale segment still varies via the URL, so
+// each locale gets its own static HTML.
 
 const BASE_URL = "https://cloudless.gr";
 const canonical = `${BASE_URL}/services`;
