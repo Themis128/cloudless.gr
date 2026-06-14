@@ -4,12 +4,16 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - "src/**"
-      - "sentry.*.config.ts"
-      - "instrumentation.ts"
+  # Dispatch-only. The Anthropic API call fails with 400 "credit balance
+  # too low" while the account is unfunded. Until credits are added at
+  # platform.claude.com/settings/billing, scheduled/auto runs would generate
+  # GH email noise on every fire. Stays available for manual dispatch.
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: string
 
 # One review per PR branch at a time; cancel stale runs on new push
 concurrency:
