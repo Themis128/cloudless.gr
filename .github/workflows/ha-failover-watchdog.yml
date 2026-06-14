@@ -71,18 +71,21 @@ jobs:
 
       - name: Resolve Cloudflare token
         id: token
+        env:
+          # SSM is source of truth - cloudflare-token-rotate.yml cant write GH secrets.
+          SECRET_FALLBACK: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -e
-          TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
-          if [ -z "$TOKEN" ]; then
-            echo "Falling back to SSM…" >&2
-            TOKEN=$(aws ssm get-parameter \
-              --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-              --with-decryption --region us-east-1 \
-              --query 'Parameter.Value' --output text)
+          TOKEN=$(aws ssm get-parameter \
+            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+            --with-decryption --region us-east-1 \
+            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
+            echo "SSM unreachable, falling back to GH secret" >&2
+            TOKEN="$SECRET_FALLBACK"
           fi
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
-            echo "::error::No Cloudflare token resolved"
+            echo "::error::No Cloudflare token resolved (SSM empty, GH secret empty)"
             exit 1
           fi
           echo "::add-mask::$TOKEN"

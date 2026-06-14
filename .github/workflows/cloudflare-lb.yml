@@ -63,7 +63,7 @@ jobs:
           # push trigger => always report-only; dispatch => honour the apply input.
           MODE: ${{ github.event.inputs.apply == 'true' && 'apply' || 'report' }}
           CONFIRM: ${{ github.event.inputs.apply == 'true' && '1' || '0' }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # GH secret is stale; script reads SSM. See cloudflare-token-rotate.yml.
         run: |
           set -o pipefail
           bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log

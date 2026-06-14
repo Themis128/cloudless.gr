@@ -67,7 +67,7 @@ jobs:
           # Cloudflare token: prefer a repo secret (add it in the GitHub UI — no
           # AWS access needed); the script falls back to SSM
           # /cloudless/production/CLOUDFLARE_API_TOKEN if this is empty.
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # GH secret is stale; script reads SSM. See cloudflare-token-rotate.yml.
         run: |
           set -o pipefail
           bash scripts/domain-decommission.sh 2>&1 | tee decommission.log

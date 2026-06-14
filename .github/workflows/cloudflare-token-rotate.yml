@@ -174,16 +174,20 @@ jobs:
           GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
         continue-on-error: true
         run: |
-          set -e
+          # All consumer workflows now read CF token from SSM directly.
+          # GH secret is optional/legacy; failure here is not a real outage.
+          set +e
           if [ "$GH_PAT_SET" != "true" ]; then
-            echo "::warning::GH_PAT secret not set — using GITHUB_TOKEN (likely will 403)."
-            echo "::warning::If this step fails, sync the GH secret from SSM manually (see comment in step env)."
+            echo "::notice::GH_PAT not set - skipping GH secret update. SSM is source of truth."
+            exit 0
           fi
-          # gh secret set reads from stdin to avoid arg-list disclosure.
-          echo -n "$NEW_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN \
-            --repo ${{ github.repository }} \
-            --body -
-          echo "✅ GitHub Actions secret updated"
+          if echo -n "$NEW_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN \
+            --repo ${{ github.repository }} --body - 2>&1; then
+            echo "GitHub Actions secret updated"
+          else
+            echo "::warning::Failed to update GH Actions secret. Not blocking."
+            exit 0
+          fi
 
       - name: Apply summary
         if: ${{ inputs.apply == true }}
