@@ -50,6 +50,10 @@ on:
       - "*.md"
       - ".gitignore"
       - "infrastructure/**"
+      # Slack app manifest — slack-manifest-apply.yml deploys it, but the
+      # required "Build" check still has to fire for the PR to merge.
+      # Without this, a manifest-only edit stays BLOCKED forever.
+      - "slack-app.manifest.json"
 
 concurrency:
   group: ci-${{ github.head_ref }}
