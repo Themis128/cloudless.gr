@@ -59,6 +59,13 @@
         "should_escape": false
       },
       {
+        "command": "/cloudless-draft",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Re-run the weekly article draft generator workflow",
+        "usage_hint": "rerun",
+        "should_escape": false
+      },
+      {
         "command": "/cloudless-help",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "Show all available Cloudless slash commands",
