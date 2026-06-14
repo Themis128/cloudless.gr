@@ -60,14 +60,23 @@ jobs:
           set -e
           # The DBs production code reads. Each entry: name|ssm_path
           # If an SSM key doesn't exist yet, the probe is skipped (not failed).
+          # SSM key names verified against /cloudless/production/* on 2026-06-14.
           DBS=(
-            "calendar|/cloudless/production/notion/calendar-db-id"
-            "case-studies|/cloudless/production/notion/case-studies-db-id"
-            "testimonials|/cloudless/production/notion/testimonials-db-id"
-            "services|/cloudless/production/notion/services-db-id"
-            "faqs|/cloudless/production/notion/faqs-db-id"
-            "blog|/cloudless/production/notion/blog-db-id"
-            "docs|/cloudless/production/notion/docs-db-id"
+            "calendar|/cloudless/production/NOTION_CALENDAR_DB_ID"
+            "case-studies|/cloudless/production/NOTION_CASE_STUDIES_DB_ID"
+            "testimonials|/cloudless/production/NOTION_TESTIMONIALS_DB_ID"
+            "services|/cloudless/production/NOTION_SERVICES_DB_ID"
+            "faqs|/cloudless/production/NOTION_FAQS_DB_ID"
+            "blog|/cloudless/production/NOTION_BLOG_DB_ID"
+            "docs|/cloudless/production/NOTION_DOCS_DB_ID"
+            "projects|/cloudless/production/NOTION_PROJECTS_DB_ID"
+            "reports|/cloudless/production/NOTION_REPORTS_DB_ID"
+            "analytics|/cloudless/production/NOTION_ANALYTICS_DB_ID"
+            "gsc-reports|/cloudless/production/NOTION_GSC_REPORTS_DB_ID"
+            "tasks|/cloudless/production/NOTION_TASKS_DB_ID"
+            "submissions|/cloudless/production/NOTION_SUBMISSIONS_DB_ID"
+            "esp32-devices|/cloudless/production/NOTION_ESP32_DEVICES_DB_ID"
+            "esp32-telemetry|/cloudless/production/NOTION_ESP32_TELEMETRY_DB_ID"
           )
 
           FAILED=()
