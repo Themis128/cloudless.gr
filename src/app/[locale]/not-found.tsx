@@ -1,4 +1,3 @@
-export const dynamic = "force-dynamic";
 
 import { headers } from "next/headers";
 import { getLocale } from "next-intl/server";
