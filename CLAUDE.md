@@ -50,6 +50,7 @@ are now strictly separated:
   cluster-relevant lives there.
 
 **Quick disk audit one-liner** (run on omv-main):
+
 ```
 df -h /var/lib/rancher/k3s /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7 /
 ```

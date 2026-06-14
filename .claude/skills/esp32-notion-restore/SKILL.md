@@ -45,6 +45,7 @@ If you don't know the URL, search Notion workspace for "ESP32" and pick the pare
 Scroll the list until you see a revision dated **before 2026-06-02 15:19 UTC**. The first viable candidate is likely the last revision *that morning* or the last one from 2026-06-01. Notion timestamps are in local time; the right column shows "X days ago" — for the 2026-06-02 incident at ~12 days ago, look for revisions dated 13+ days ago.
 
 Each revision shows:
+
 - Author
 - Timestamp
 - A preview of what the page looked like at that point
@@ -52,6 +53,7 @@ Each revision shows:
 ### 4. Verify it's the right revision
 
 Click the revision to preview it in the main canvas. Confirm:
+
 - The expected sections are present (device list, telemetry views, runbook links)
 - It is NOT one of the stub-content revisions from after the incident
 
@@ -60,6 +62,7 @@ If the preview is empty, that revision was already post-incident; pick an older 
 ### 5. Restore
 
 Click the **Restore** button in the history sidebar header. Notion will:
+
 - Snapshot the current (post-restore) state as a new revision
 - Replace the live page content with the chosen revision
 - Keep ALL nested databases untouched

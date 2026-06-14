@@ -30,6 +30,7 @@ gh run watch --repo Themis128/cloudless.gr
 ```
 
 The step summary will print:
+
 - The current token id
 - Verify-call success
 - A plan of what `apply=true` will do
@@ -44,6 +45,7 @@ gh run watch --repo Themis128/cloudless.gr
 ```
 
 What happens:
+
 1. Workflow calls `PUT /user/tokens/{id}/value` — Cloudflare returns a new secret. **Old secret is invalidated immediately on this call.**
 2. New value is verified against `/user/tokens/verify`.
 3. AWS SSM is updated via `aws ssm put-parameter --overwrite`.
