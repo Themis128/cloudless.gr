@@ -17,6 +17,7 @@ This is **UI-only**. Notion's public API has no `add_connection`, `share`, or `g
 ## Affected databases (verify which are broken)
 
 From CLAUDE.md ("E2E (Playwright) Conventions" section):
+
 - Case studies
 - Testimonials
 - Services
