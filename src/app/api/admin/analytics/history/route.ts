@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       "history",
       { weeks: weeks },
       () => getPerformanceHistory(undefined, weeks),
-      { ttlSeconds: 1800 },
+      { ttlSeconds: 1800 }
     );
     const history = __read.value;
     return NextResponse.json({

@@ -27,6 +27,6 @@ export async function persistVoiceBrief(brief: VoiceBriefRecord): Promise<void> 
       Value: JSON.stringify(brief),
       Type: "String",
       Overwrite: true,
-    }),
+    })
   );
 }

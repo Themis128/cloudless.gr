@@ -23,12 +23,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const __read = await readThrough(
-      "search-intent",
-      {},
-      () => getSearchIntentBreakdown(),
-      { ttlSeconds: 3600 },
-    );
+    const __read = await readThrough("search-intent", {}, () => getSearchIntentBreakdown(), {
+      ttlSeconds: 3600,
+    });
     const intent = __read.value;
     return NextResponse.json({
       intent,
@@ -37,8 +34,8 @@ export async function GET(request: NextRequest) {
         product: intent.product.length,
         informational: intent.informational.length,
         navigational: intent.navigational.length,
-      _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
-    },
+        _cache: { source: __read.source, ageSeconds: __read.ageSeconds },
+      },
       fetchedAt: new Date().toISOString(),
       source: "google-search-console",
     });

@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";

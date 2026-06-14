@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const days = Math.max(
     1,
-    Math.min(Number(request.nextUrl.searchParams.get("days") ?? "28"), 365 * 2),
+    Math.min(Number(request.nextUrl.searchParams.get("days") ?? "28"), 365 * 2)
   );
 
   try {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         ]);
         return { snapshot, keywords };
       },
-      { ttlSeconds: 3600 },
+      { ttlSeconds: 3600 }
     );
 
     return NextResponse.json({

@@ -33,7 +33,13 @@ async function gh<T>(path: string, token: string): Promise<T> {
 }
 
 interface RunsResponse {
-  workflow_runs: Array<{ id: number; head_sha: string; html_url: string; updated_at: string; conclusion: string }>;
+  workflow_runs: Array<{
+    id: number;
+    head_sha: string;
+    html_url: string;
+    updated_at: string;
+    conclusion: string;
+  }>;
 }
 
 interface ArtifactsResponse {
@@ -49,14 +55,14 @@ export async function GET(request: NextRequest) {
   if (!token) {
     return NextResponse.json(
       { error: "Audits API not configured — set GH_AUDITS_TOKEN" },
-      { status: 503 },
+      { status: 503 }
     );
   }
 
   try {
     const runs = await gh<RunsResponse>(
       `/repos/${REPO}/actions/workflows/${encodeURIComponent(WORKFLOW)}/runs?per_page=5&status=success`,
-      token,
+      token
     );
     const run = runs.workflow_runs[0];
     if (!run) {
@@ -65,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     const arts = await gh<ArtifactsResponse>(
       `/repos/${REPO}/actions/runs/${run.id}/artifacts`,
-      token,
+      token
     );
     const dash = arts.artifacts.find((a) => a.name.startsWith("audits-dashboard-"));
     if (!dash) {
@@ -83,7 +89,7 @@ export async function GET(request: NextRequest) {
     if (!zipRes.ok) {
       return NextResponse.json(
         { error: `Artifact download failed: ${zipRes.status}` },
-        { status: 502 },
+        { status: 502 }
       );
     }
     const zipBuf = Buffer.from(await zipRes.arrayBuffer());

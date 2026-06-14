@@ -23,12 +23,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const __read = await readThrough(
-      "devices",
-      {},
-      () => getDeviceBreakdown(),
-      { ttlSeconds: 3600 },
-    );
+    const __read = await readThrough("devices", {}, () => getDeviceBreakdown(), {
+      ttlSeconds: 3600,
+    });
     const devices = __read.value;
     return NextResponse.json({
       devices,
