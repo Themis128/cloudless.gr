@@ -84,7 +84,7 @@ describe("GET /api/admin/analytics/keywords — cache wiring", () => {
     expect(mockReadThrough).toHaveBeenCalledTimes(1);
     const [routeKey, params, fetcher, opts] = mockReadThrough.mock.calls[0];
     expect(routeKey).toBe("keywords");
-    expect(params).toEqual({ limit: 42 });
+    expect(params).toEqual({ limit: 42, days: 28 });
     expect(opts).toEqual({ ttlSeconds: 3600 });
     expect(typeof fetcher).toBe("function");
   });
@@ -98,8 +98,8 @@ describe("GET /api/admin/analytics/keywords — cache wiring", () => {
     const { GET } = await import("@/app/api/admin/analytics/keywords/route");
     await GET(req("http://localhost/api/admin/analytics/keywords?limit=5"));
     await GET(req("http://localhost/api/admin/analytics/keywords?limit=100"));
-    expect(mockReadThrough.mock.calls[0][1]).toEqual({ limit: 5 });
-    expect(mockReadThrough.mock.calls[1][1]).toEqual({ limit: 100 });
+    expect(mockReadThrough.mock.calls[0][1]).toEqual({ limit: 5, days: 28 });
+    expect(mockReadThrough.mock.calls[1][1]).toEqual({ limit: 100, days: 28 });
   });
 
   it("includes _cache metadata in the response", async () => {
@@ -128,7 +128,7 @@ describe("GET /api/admin/analytics/keywords — cache wiring", () => {
     await GET(req("http://localhost/api/admin/analytics/keywords?limit=12"));
     expect(captured).not.toBeNull();
     await captured!();
-    expect(mockGsc.getTopKeywords).toHaveBeenCalledWith(undefined, 12);
+    expect(mockGsc.getTopKeywords).toHaveBeenCalledWith(undefined, 12, 28);
   });
 });
 
@@ -174,7 +174,7 @@ describe("GET /api/admin/analytics/seo — composite cache", () => {
     expect(data.keywords).toEqual([{ keyword: "x" }]);
     expect(data._cache).toEqual({ source: "cache", ageSeconds: 60 });
     // Empty params: the seo route caches one global blob.
-    expect(mockReadThrough.mock.calls[0][1]).toEqual({});
+    expect(mockReadThrough.mock.calls[0][1]).toEqual({ days: 28 });
   });
 
   it("composite fetcher resolves snapshot + keywords in parallel", async () => {

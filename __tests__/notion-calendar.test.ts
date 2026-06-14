@@ -246,20 +246,24 @@ describe("notion-calendar.ts", () => {
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
-    it("returns null on API error", async () => {
+    it("propagates API error (caller must handle, no silent data-loss)", async () => {
+      // notionCreateCalendarItem no longer swallows errors — see CLAUDE.md
+      // commit 8983eb3 ("calendar silent-data-loss fix"). Failures now bubble
+      // up and the /api/admin/calendar/create route returns 502 instead of a
+      // false 201 with item:null.
       mockNotionFetch.mockRejectedValueOnce(new Error("fail"));
 
       const { notionCreateCalendarItem } = await import("@/lib/notion-calendar");
-      const result = await notionCreateCalendarItem({
-        id: "cal_1",
-        title: "T",
-        type: "social_post",
-        platform: "x",
-        date: "2026-06-01",
-        status: "draft",
-      });
-
-      expect(result).toBeNull();
+      await expect(
+        notionCreateCalendarItem({
+          id: "cal_1",
+          title: "T",
+          type: "social_post",
+          platform: "x",
+          date: "2026-06-01",
+          status: "draft",
+        }),
+      ).rejects.toThrow("fail");
     });
   });
 
