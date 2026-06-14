@@ -118,8 +118,10 @@ async function latestRun(workflow) {
 }
 
 // CodeQL #1777/#1779 (js/http-to-file-access): bound URL + content-type + size + magic bytes
-// before any HTTP-sourced byte reaches writeFile.
-const MAX_ARTIFACT_BYTES = 10 * 1024 * 1024;
+// before any HTTP-sourced byte reaches writeFile. Lighthouse traces alone run
+// ~22 MiB (5 URLs × full trace bundle), so the cap is set to 64 MiB — still
+// well below GitHub's 500 MiB per-artifact ceiling.
+const MAX_ARTIFACT_BYTES = 64 * 1024 * 1024;
 const ALLOWED_FETCH_HOSTS = new Set([
   "api.github.com", "objects.githubusercontent.com",
   "pipelines.actions.githubusercontent.com",
@@ -239,7 +241,6 @@ md.push("> Live page: `/admin/audits` reads the latest `audits-dashboard-*` arti
 const CTRL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const stripCtrl = (s) => String(s).replace(CTRL_RE, "");
 const safeMd = md.map(stripCtrl).join("\n") + "\n";
-const safeJson = stripCtrl(JSON.stringify(dashboard, null, 2));
 await writeFile(safeWriteTarget(outDir, "dashboard.json"), safeJson);
 await writeFile(safeWriteTarget(outDir, "dashboard.md"), safeMd);
 console.log(`\nDashboard → ${outDir}/dashboard.{json,md}`);
