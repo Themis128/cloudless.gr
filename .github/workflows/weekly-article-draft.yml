@@ -23,6 +23,8 @@ jobs:
     env:
       AI_GENERATE_SECRET: ${{ secrets.AI_GENERATE_SECRET }}
       SITE_URL: ${{ secrets.SITE_URL }}
+      CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
       NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

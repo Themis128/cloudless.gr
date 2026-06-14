@@ -12,13 +12,30 @@
  *
  * Designed to run from .github/workflows/weekly-article-draft.yml on
  * Monday 06:00 UTC. Self-contained — reads env directly, talks to Notion
- * via raw fetch and to its own /api/internal/ai/generate route over HTTPS.
+ * via raw fetch and to Cloudflare Workers AI over HTTPS.
+ *
+ * AI generation strategy:
+ *   1. If CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN are set, call the
+ *      Workers AI REST API directly. This is the preferred path — it
+ *      bypasses the cloudless.gr Cloudflare Worker (which has a 10s CPU
+ *      limit on the Free plan) and lets the 70B model finish a 4096-token
+ *      generation that typically takes 20-30s.
+ *   2. Otherwise fall back to /api/internal/ai/generate, which itself
+ *      tries Workers AI then Bedrock. Used for local dev or when the
+ *      runner cannot hold CF creds.
  *
  * Required env:
- *   AI_GENERATE_SECRET           Shared secret for /api/internal/ai/generate
- *   SITE_URL                     Base URL of the Lambda hosting the route
  *   NOTION_API_KEY               Notion integration token
  *   NOTION_BLOG_DB_ID            Blog database id
+ *
+ * Path A (direct, preferred) — supply both:
+ *   CLOUDFLARE_ACCOUNT_ID        Account id (currently inlined in deploy.yml)
+ *   CLOUDFLARE_API_TOKEN         Token with Workers AI Read + Write
+ *
+ * Path B (route fallback) — supply both:
+ *   AI_GENERATE_SECRET           Shared secret for /api/internal/ai/generate
+ *   SITE_URL                     Base URL of the Lambda/pod hosting the route
+ *
  *   SLACK_WEBHOOK_URL            (optional) pings the team on success
  *
  * Exit codes:
@@ -166,14 +183,8 @@ Output format — strict JSON, no prose, no markdown fences:
   "content": "..."                 // markdown body, NO front-matter, NO title heading
 }`;
 
-async function generateArticle(
-  category: Category,
-  avoidTitles: string[],
-): Promise<GeneratedArticle> {
-  const secret = requireEnv("AI_GENERATE_SECRET");
-  const siteUrl = (process.env.SITE_URL || SITE_URL_DEFAULT).replace(/\/$/, "");
-
-  const userMessage = [
+function buildUserMessage(category: Category, avoidTitles: string[]): string {
+  return [
     `Write this week's blog post for the **${category}** category.`,
     "",
     "Recent posts (avoid repeating these topics):",
@@ -183,7 +194,62 @@ async function generateArticle(
     "",
     "Pick a fresh angle that hasn't been covered. Output the JSON object only.",
   ].join("\n");
+}
 
+/** Direct Cloudflare Workers AI REST call. Bypasses the cloudless.gr Worker
+ *  (10s CPU limit on Free plan) so a 4096-token 70B generation can finish. */
+async function generateViaCloudflare(
+  accountId: string,
+  apiToken: string,
+  category: Category,
+  avoidTitles: string[],
+): Promise<{ text: string; model: string }> {
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${CF_MODEL}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: buildUserMessage(category, avoidTitles) },
+        ],
+        max_tokens: 4096,
+      }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Cloudflare Workers AI failed: ${res.status} ${await res.text().catch(() => "")}`,
+    );
+  }
+  const data = (await res.json()) as {
+    result?: { response?: unknown };
+    errors?: { message?: string }[];
+    success?: boolean;
+  };
+  if (!data.success) {
+    throw new Error(
+      `Cloudflare Workers AI rejected the request: ${data.errors?.[0]?.message ?? "unknown"}`,
+    );
+  }
+  const raw = data.result?.response;
+  const text =
+    typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
+  return { text, model: CF_MODEL };
+}
+
+/** Fallback: call our own /api/internal/ai/generate route. Used for local dev
+ *  and any environment where CF creds can't be held by the cron runner. */
+async function generateViaRoute(
+  category: Category,
+  avoidTitles: string[],
+): Promise<{ text: string; model: string; source: string }> {
+  const secret = requireEnv("AI_GENERATE_SECRET");
+  const siteUrl = (process.env.SITE_URL || SITE_URL_DEFAULT).replace(/\/$/, "");
   const res = await fetch(`${siteUrl}/api/internal/ai/generate`, {
     method: "POST",
     headers: {
@@ -194,10 +260,11 @@ async function generateArticle(
       model: CF_MODEL,
       maxTokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userMessage }],
+      messages: [
+        { role: "user", content: buildUserMessage(category, avoidTitles) },
+      ],
     }),
   });
-
   if (!res.ok) {
     throw new Error(
       `Internal AI generation failed: ${res.status} ${await res.text().catch(() => "")}`,
@@ -208,10 +275,34 @@ async function generateArticle(
     source?: "cloudflare" | "bedrock";
     model?: string;
   };
-  const text = data.result ?? "";
-  console.log(
-    `[generate-weekly-article] generated via ${data.source ?? "unknown"} (${data.model ?? "?"})`,
-  );
+  return {
+    text: data.result ?? "",
+    model: data.model ?? "?",
+    source: data.source ?? "unknown",
+  };
+}
+
+async function generateArticle(
+  category: Category,
+  avoidTitles: string[],
+): Promise<GeneratedArticle> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+
+  let text: string;
+  if (accountId && apiToken) {
+    const r = await generateViaCloudflare(accountId, apiToken, category, avoidTitles);
+    text = r.text;
+    console.log(
+      `[generate-weekly-article] generated via cloudflare-direct (${r.model})`,
+    );
+  } else {
+    const r = await generateViaRoute(category, avoidTitles);
+    text = r.text;
+    console.log(
+      `[generate-weekly-article] generated via ${r.source} (${r.model})`,
+    );
+  }
 
   // Strip ```json fences if the model adds them despite instructions.
   const cleaned = text
