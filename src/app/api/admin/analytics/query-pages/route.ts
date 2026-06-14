@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       "query-pages",
       { limit: limit },
       () => getQueryPageMapping(undefined, limit),
-      { ttlSeconds: 3600 },
+      { ttlSeconds: 3600 }
     );
     const mappings = __read.value;
     return NextResponse.json({

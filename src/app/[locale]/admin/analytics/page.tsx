@@ -553,9 +553,7 @@ export default function AdminAnalyticsPage() {
         role="group"
         aria-label="Date range filter"
       >
-        <span className="font-mono text-[10px] uppercase tracking-wide text-slate-500">
-          Range
-        </span>
+        <span className="font-mono text-[10px] tracking-wide text-slate-500 uppercase">Range</span>
         {RANGE_PRESETS.map((p) => {
           const active = p.days === days;
           return (
@@ -577,11 +575,8 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {isFiltered && (
-        <div
-          className="mb-4 flex flex-wrap items-center gap-2"
-          aria-label="Active filters"
-        >
-          <span className="font-mono text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
+          <span className="font-mono text-[10px] tracking-wide text-slate-500 uppercase">
             Active
           </span>
           <span className="bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs">
@@ -598,7 +593,7 @@ export default function AdminAnalyticsPage() {
           <button
             type="button"
             onClick={resetFilters}
-            className="font-mono text-[10px] uppercase tracking-wide text-slate-500 underline-offset-2 hover:text-slate-300 hover:underline"
+            className="font-mono text-[10px] tracking-wide text-slate-500 uppercase underline-offset-2 hover:text-slate-300 hover:underline"
           >
             Reset to default
           </button>

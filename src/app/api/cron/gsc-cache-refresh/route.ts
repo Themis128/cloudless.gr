@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
 import { readThrough } from "@/lib/gsc-cache";
-import {
-  getSeoSnapshot,
-  getTopKeywords,
-  getTopPages,
-  getWebAnalytics,
-} from "@/lib/gsc";
+import { getSeoSnapshot, getTopKeywords, getTopPages, getWebAnalytics } from "@/lib/gsc";
 
 /**
  * GSC cache warmer.
@@ -41,30 +36,24 @@ async function warmRange(days: number): Promise<WarmResult> {
   // Run each warm in parallel; collect their failures but don't let one
   // route's flake fail the whole hourly job.
   const results = await Promise.allSettled([
-    readThrough(
-      "seo",
-      { days },
-      () => getSeoSnapshot(undefined, days),
-      { ttlSeconds: TTL_SECONDS },
-    ),
+    readThrough("seo", { days }, () => getSeoSnapshot(undefined, days), {
+      ttlSeconds: TTL_SECONDS,
+    }),
     readThrough(
       "keywords",
       { limit: KEYWORDS_LIMIT, days },
       () => getTopKeywords(undefined, KEYWORDS_LIMIT, days),
-      { ttlSeconds: TTL_SECONDS },
+      { ttlSeconds: TTL_SECONDS }
     ),
     readThrough(
       "pages",
       { limit: PAGES_LIMIT, days },
       () => getTopPages(undefined, PAGES_LIMIT, days),
-      { ttlSeconds: TTL_SECONDS },
+      { ttlSeconds: TTL_SECONDS }
     ),
-    readThrough(
-      "web",
-      { days },
-      () => getWebAnalytics(undefined, days),
-      { ttlSeconds: TTL_SECONDS },
-    ),
+    readThrough("web", { days }, () => getWebAnalytics(undefined, days), {
+      ttlSeconds: TTL_SECONDS,
+    }),
   ]);
 
   for (const r of results) {
@@ -94,10 +83,7 @@ export async function GET(request: NextRequest) {
   // GSC must actually be configured; otherwise return 503 (caller's cron
   // dashboard surfaces this distinctly from auth failures).
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
-    return NextResponse.json(
-      { error: "Google Search Console not configured." },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Google Search Console not configured." }, { status: 503 });
   }
 
   const t0 = performance.now();

@@ -22,10 +22,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    return NextResponse.json(
-      { error: "Notifications store not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 
   const url = new URL(request.url);
@@ -34,18 +31,14 @@ export async function GET(request: NextRequest) {
 
   const until = untilParam ?? new Date().toISOString();
   const since =
-    sinceParam ??
-    new Date(Date.now() - DEFAULT_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    sinceParam ?? new Date(Date.now() - DEFAULT_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   try {
     const stats = await notificationAnalytics({ since, until });
     return NextResponse.json({ window: { since, until }, ...stats });
   } catch (err) {
     console.error("[admin-notifications] analytics failed:", err);
-    return NextResponse.json(
-      { error: "Failed to compute analytics" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to compute analytics" }, { status: 500 });
   }
 }
 

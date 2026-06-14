@@ -197,7 +197,7 @@ export default function NotificationsPage() {
         <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/30 p-4">
           <div className="mb-3 flex items-baseline justify-between">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-wider text-slate-500">
+              <div className="font-mono text-[10px] tracking-wider text-slate-500 uppercase">
                 Last {windowDays}d
               </div>
               <div className="font-heading text-2xl font-bold text-white">
@@ -256,7 +256,7 @@ export default function NotificationsPage() {
               <div className="mb-1 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   {!n.read && <span className="bg-neon-magenta h-2 w-2 rounded-full" />}
-                  <span className="rounded border border-slate-700 px-1.5 py-0.5 font-mono text-[9px] uppercase text-slate-400">
+                  <span className="rounded border border-slate-700 px-1.5 py-0.5 font-mono text-[9px] text-slate-400 uppercase">
                     {n.category}
                   </span>
                   <span className="font-mono text-sm font-semibold text-white">{n.title}</span>

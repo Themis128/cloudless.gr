@@ -14,12 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const __read = await readThrough(
-      "web",
-      {},
-      () => getWebAnalytics(),
-      { ttlSeconds: 1800 },
-    );
+    const __read = await readThrough("web", {}, () => getWebAnalytics(), { ttlSeconds: 1800 });
     const analytics = __read.value;
     return NextResponse.json({
       analytics,

@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { headers } from "next/headers";
 import { translate, type Locale, isSupportedLocale, defaultLocale } from "@/lib/i18n";

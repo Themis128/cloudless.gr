@@ -34,20 +34,20 @@ export default function AdminCRMPage() {
   const [search, setSearch] = useState("");
 
   const fetchContacts = useCallback(async () => {
-      try {
-        const res = await fetchWithAuth("/api/admin/crm/contacts?limit=50");
-        if (!res.ok) {
-          if (res.status === 503) throw new Error("HubSpot not configured");
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        setContacts(data.contacts ?? []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load contacts");
-      } finally {
-        setLoading(false);
+    try {
+      const res = await fetchWithAuth("/api/admin/crm/contacts?limit=50");
+      if (!res.ok) {
+        if (res.status === 503) throw new Error("HubSpot not configured");
+        throw new Error(`HTTP ${res.status}`);
       }
-    }, []);
+      const data = await res.json();
+      setContacts(data.contacts ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load contacts");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Visibility-gated polling — pauses while the tab is hidden to avoid
   // amplifying Cloudflare Worker / API request volume.

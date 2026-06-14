@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       "ctr-opportunities",
       { limit: limit },
       () => getCtrOpportunities(undefined, limit),
-      { ttlSeconds: 3600 },
+      { ttlSeconds: 3600 }
     );
     const opportunities = __read.value;
     return NextResponse.json({

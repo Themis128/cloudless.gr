@@ -60,7 +60,7 @@ export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>
               Δεν αποτελεί εμπορική υπηρεσία, δεν παρέχει πραγματικές υπηρεσίες και δεν δέχεται
               πελάτες.
               <span className="mx-2 text-amber-200">·</span>
-              <span className="italic text-amber-200">υπό κατασκευή</span>
+              <span className="text-amber-200 italic">υπό κατασκευή</span>
             </>
           ) : (
             <>
@@ -69,11 +69,11 @@ export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>
               This website is built for educational and portfolio purposes only. It is not a
               commercial service, does not provide real services, and does not accept clients.
               <span className="mx-2 text-amber-200">·</span>
-              <span className="italic text-amber-200">under construction</span>
+              <span className="text-amber-200 italic">under construction</span>
             </>
           )}
           <span className="mx-2 text-amber-200">|</span>
-          <span className="italic text-amber-200">&ldquo;{isEl ? QUOTE_EL : QUOTE_EN}&rdquo;</span>
+          <span className="text-amber-200 italic">&ldquo;{isEl ? QUOTE_EL : QUOTE_EN}&rdquo;</span>
         </p>
         <button
           type="button"

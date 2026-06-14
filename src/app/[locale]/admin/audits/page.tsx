@@ -19,8 +19,10 @@ interface Dashboard {
 }
 
 function statusBadge(ok: boolean | null): { icon: string; color: string; label: string } {
-  if (ok === true) return { icon: "✅", color: "text-green-600 dark:text-green-400", label: "passing" };
-  if (ok === false) return { icon: "❌", color: "text-red-600 dark:text-red-400", label: "failing" };
+  if (ok === true)
+    return { icon: "✅", color: "text-green-600 dark:text-green-400", label: "passing" };
+  if (ok === false)
+    return { icon: "❌", color: "text-red-600 dark:text-red-400", label: "failing" };
   return { icon: "⚪", color: "text-gray-500 dark:text-gray-400", label: "unknown" };
 }
 
@@ -70,10 +72,10 @@ export default function AuditsPage() {
   }, [load]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <header className="flex items-center justify-between mb-6">
+    <div className="container mx-auto max-w-6xl px-4 py-8">
+      <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Audits</h1>
+          <h1 className="mb-1 text-3xl font-bold">Audits</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Rolling dashboard of every audit workflow. Updated nightly at 06:00 UTC.
           </p>
@@ -81,7 +83,7 @@ export default function AuditsPage() {
         <button
           type="button"
           onClick={() => void load()}
-          className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
+          className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
           disabled={loading}
         >
           {loading ? "Loading…" : "Refresh"}
@@ -89,14 +91,14 @@ export default function AuditsPage() {
       </header>
 
       {error && (
-        <div className="rounded border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800 p-4 mb-6">
+        <div className="mb-6 rounded border border-red-300 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/30">
           <p className="text-red-700 dark:text-red-300">Failed to load audit dashboard: {error}</p>
         </div>
       )}
 
       {data && (
         <>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
             Generated {new Date(data.generatedAt).toLocaleString()} · {data.repo}
           </p>
 
@@ -106,9 +108,9 @@ export default function AuditsPage() {
               return (
                 <article
                   key={key}
-                  className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm"
+                  className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
                 >
-                  <header className="flex items-start justify-between mb-3">
+                  <header className="mb-3 flex items-start justify-between">
                     <h2 className="font-semibold">
                       {entry.lastRun?.url ? (
                         <a
@@ -123,11 +125,15 @@ export default function AuditsPage() {
                         entry.name
                       )}
                     </h2>
-                    <span className={`text-2xl ${badge.color}`} title={badge.label} aria-label={badge.label}>
+                    <span
+                      className={`text-2xl ${badge.color}`}
+                      title={badge.label}
+                      aria-label={badge.label}
+                    >
                       {badge.icon}
                     </span>
                   </header>
-                  <dl className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <dl className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex justify-between">
                       <dt>Workflow</dt>
                       <dd className="font-mono text-xs">{entry.workflow}</dd>
@@ -143,7 +149,9 @@ export default function AuditsPage() {
                       </div>
                     )}
                     {entry.note && (
-                      <div className="pt-2 text-xs italic text-gray-500 dark:text-gray-500">{entry.note}</div>
+                      <div className="pt-2 text-xs text-gray-500 italic dark:text-gray-500">
+                        {entry.note}
+                      </div>
                     )}
                   </dl>
                 </article>

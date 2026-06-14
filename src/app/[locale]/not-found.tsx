@@ -1,4 +1,3 @@
-
 import { headers } from "next/headers";
 import { getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       "countries",
       { limit: limit },
       () => getTrafficByCountry(undefined, limit),
-      { ttlSeconds: 3600 },
+      { ttlSeconds: 3600 }
     );
     const countries = __read.value;
     return NextResponse.json({

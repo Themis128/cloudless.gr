@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       "products",
       { pattern: pattern, limit: limit },
       () => getProductPageMetrics(undefined, pattern, limit),
-      { ttlSeconds: 3600 },
+      { ttlSeconds: 3600 }
     );
     const products = __read.value;
     return NextResponse.json({
