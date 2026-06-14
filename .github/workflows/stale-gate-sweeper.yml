@@ -6,10 +6,13 @@ name: Stale Gate Sweeper
 # are ready to delete, and posts a triage report to tracking issue #382.
 
 on:
-  # Dispatch-only. The Anthropic API call fails with 400 "credit balance
-  # too low" while the account is unfunded. Until credits are added at
-  # platform.claude.com/settings/billing, scheduled/auto runs would generate
-  # GH email noise on every fire. Stays available for manual dispatch.
+  # Weekly Monday 09:00 UTC. The script (scripts/stale-gate-sweeper.mjs)
+  # works without Anthropic credits — it falls back to a deterministic
+  # heuristic when ANTHROPIC_API_KEY is missing or returns a billing error,
+  # so the report is still posted to issue #382. Add Anthropic credits at
+  # platform.claude.com/settings/billing for the richer LLM-enhanced analysis.
+  schedule:
+    - cron: "0 9 * * 1"
   workflow_dispatch:
 
 env:
