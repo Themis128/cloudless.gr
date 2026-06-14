@@ -8,7 +8,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   const { id } = await params;
   const updates = await request.json();
-  const item = await updateCalendarItem(id, updates);
+  let item;
+  try {
+    item = await updateCalendarItem(id, updates);
+  } catch (e) {
+    console.error("[calendar/[id]] PATCH failed:", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed to update calendar item" },
+      { status: 502 }
+    );
+  }
   if (!item) {
     return NextResponse.json({ error: "Item not found." }, { status: 404 });
   }
