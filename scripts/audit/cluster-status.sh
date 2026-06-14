@@ -121,23 +121,45 @@ print(json.dumps(peers))
 fi
 
 # ── Assemble JSON ─────────────────────────────────────────────────────
-payload=$(python3 -c "
-import json, sys
+# Write each subprocess output to a temp file and have Python read them.
+# The previous heredoc embedded the JSON values into a Python triple-quoted
+# string which broke any time the kubectl output contained quotes or newlines —
+# silently producing an empty cluster.json. Temp files sidestep all quoting.
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+printf '%s' "$nodes_json"      > "$tmpdir/nodes.json"
+printf '%s' "$namespaces_json" > "$tmpdir/namespaces.json"
+printf '%s' "$pods_json"       > "$tmpdir/pods.json"
+printf '%s' "$runners_json"    > "$tmpdir/runners.json"
+printf '%s' "$tailscale_json"  > "$tmpdir/tailscale.json"
+
+export GENERATED_AT="$generated_at" CLUSTER_REACHABLE="$cluster_reachable" \
+       API_SERVER="$api_server" K3S_VERSION="$k3s_version" TMPDIR_OUT="$tmpdir"
+
+payload=$(python3 - <<'PY'
+import json, os
+def load(name):
+    try:
+        with open(os.path.join(os.environ["TMPDIR_OUT"], name)) as f:
+            return json.loads(f.read() or "[]")
+    except Exception:
+        return []
 out = {
-  'generatedAt': '$generated_at',
-  'cluster': {
-    'reachable': $cluster_reachable,
-    'apiServer': '$api_server',
-    'k3sVersion': '$k3s_version',
+  "generatedAt": os.environ["GENERATED_AT"],
+  "cluster": {
+    "reachable": os.environ["CLUSTER_REACHABLE"] == "true",
+    "apiServer": os.environ["API_SERVER"],
+    "k3sVersion": os.environ["K3S_VERSION"],
   },
-  'nodes': json.loads('''$nodes_json'''),
-  'namespaces': json.loads('''$namespaces_json'''),
-  'pods': json.loads('''$pods_json'''),
-  'runners': json.loads('''$runners_json'''),
-  'tailscale': json.loads('''$tailscale_json'''),
+  "nodes":      load("nodes.json"),
+  "namespaces": load("namespaces.json"),
+  "pods":       load("pods.json"),
+  "runners":    load("runners.json"),
+  "tailscale":  load("tailscale.json"),
 }
 print(json.dumps(out, indent=2))
-")
+PY
+)
 
 if [[ -n "$JSON_OUT" ]]; then
   printf '%s\n' "$payload" > "$JSON_OUT"
@@ -194,7 +216,7 @@ for row in d.get('pods', []):
     icon = '🔴 ' if crash else ''
     print(f\"| {icon}{ns} | {running} | {pending} | {crash} | {other} |\")
 "
-    echo ""
+     echo ""
 
     # Runners
     echo "### Self-hosted GH runners"
