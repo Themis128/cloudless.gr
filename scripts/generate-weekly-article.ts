@@ -437,9 +437,12 @@ async function createDraftPage(
         Excerpt: { rich_text: [{ text: { content: article.excerpt } }] },
         Category: { select: { name: category } },
         Status: { select: { name: "Draft" } },
-        GeneratedBy: { select: { name: "AI" } },
-        ReadTime: { rich_text: [{ text: { content: article.readTime } }] },
-        Author: { rich_text: [{ text: { content: "Cloudless Team" } }] },
+        // Notion DB schema notes (verified 2026-06-14):
+        //   - "Read Time" has a space; the script previously wrote `ReadTime`.
+        //   - "Author" is a People property — cannot be set to a string from
+        //     an integration token, so leave it empty for the human reviewer.
+        //   - There is no `GeneratedBy` property in the DB.
+        "Read Time": { rich_text: [{ text: { content: article.readTime } }] },
         Published: { checkbox: false },
       },
       children: initialChildren,
