@@ -41,7 +41,19 @@
  * Exit codes:
  *   0  draft created (or Slack-pinged failure that we want to surface)
  *   1  hard failure (config error, Anthropic/Notion API down, bad JSON)
+ *
+ * Quality gates (Layer 1 + Layer 2 — see scripts/article-quality-gates.ts):
+ *   After generation we run deterministic gates (word count, structure,
+ *   slug uniqueness, banned phrases, title novelty, forbidden topics) and
+ *   an LLM critic (Cloudflare llama-3.1-8b). If ALL gates pass AND the
+ *   critic verdict is "pass" with overall ≥ 7.0, the draft is inserted as
+ *   Status="In Review" — this is the auto-promote path; the Monday 09:00
+ *   UTC publisher cron sends it without any human touch. Otherwise the
+ *   draft is inserted as Status="Draft" and the operator is DM'd with the
+ *   exact reasons + critic feedback.
  */
+
+import { runGates, type AutoPromoteVerdict } from "./article-quality-gates";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
@@ -67,6 +79,7 @@ export interface RecentPost {
   category: Category;
   /** ISO date the publisher set, falls back to created_time */
   date: string;
+  slug: string;
 }
 
 async function notionFetch(path: string, init: RequestInit = {}): Promise<Response> {
@@ -107,7 +120,8 @@ async function fetchRecentPosts(): Promise<RecentPost[]> {
     const title = (p.Title?.title ?? p.Name?.title ?? []).map((t) => t.plain_text ?? "").join("");
     const cat = (p.Category?.select?.name ?? "Cloud") as Category;
     const date = p.PublishedAt?.date?.start ?? p.Date?.date?.start ?? page.created_time ?? "";
-    return { title, category: cat, date };
+    const slug = (p.Slug?.rich_text ?? []).map((t) => t.plain_text ?? "").join("");
+    return { title, category: cat, date, slug };
   });
 }
 
@@ -456,7 +470,8 @@ function numberedBlock(text: string): NotionBlock {
 
 async function createDraftPage(
   article: GeneratedArticle,
-  category: Category
+  category: Category,
+  initialStatus: "Draft" | "In Review" = "Draft"
 ): Promise<{ id: string; url: string }> {
   const dbId = requireEnv("NOTION_BLOG_DB_ID");
   const blocks = markdownToNotionBlocks(article.content);
@@ -474,7 +489,7 @@ async function createDraftPage(
         Slug: { rich_text: [{ text: { content: article.slug } }] },
         Excerpt: { rich_text: [{ text: { content: article.excerpt } }] },
         Category: { select: { name: category } },
-        Status: { select: { name: "Draft" } },
+        Status: { select: { name: initialStatus } },
         // Notion DB schema notes (verified 2026-06-14):
         //   - "Read Time" has a space; the script previously wrote `ReadTime`.
         //   - "Author" is a People property — cannot be set to a string from
@@ -508,6 +523,65 @@ async function createDraftPage(
     }
   }
   return created;
+}
+
+/**
+ * Direct-message the operator (bot DM). Best path for "needs your eyes"
+ * notifications — bypasses #newsletter noise. Requires SLACK_BOT_TOKEN and
+ * SLACK_OPS_USER_ID; both must be set in the cron secrets. Falls back to a
+ * regular slackPing if either is missing.
+ */
+async function slackDM(text: string): Promise<void> {
+  const botToken = process.env.SLACK_BOT_TOKEN;
+  const userId = process.env.SLACK_OPS_USER_ID;
+  if (!botToken || !userId) {
+    await slackPing(text);
+    return;
+  }
+  try {
+    // conversations.open is idempotent — returns the existing DM channel id.
+    const open = await fetch("https://slack.com/api/conversations.open", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${botToken}`,
+        "Content-Type": "application/json; charset=utf-8",
+      },
+      body: JSON.stringify({ users: userId }),
+    });
+    const openData = (await open.json().catch(() => ({}))) as {
+      ok?: boolean;
+      channel?: { id?: string };
+      error?: string;
+    };
+    const dmCh = openData.channel?.id;
+    if (!openData.ok || !dmCh) {
+      console.warn(
+        `[generate-weekly-article] conversations.open failed (${openData.error}), falling back to channel ping`
+      );
+      await slackPing(text);
+      return;
+    }
+    const r = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${botToken}`,
+        "Content-Type": "application/json; charset=utf-8",
+      },
+      body: JSON.stringify({ channel: dmCh, text }),
+    });
+    const data = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (data.ok) {
+      console.log("[generate-weekly-article] DM sent to operator");
+      return;
+    }
+    console.warn(
+      `[generate-weekly-article] DM rejected (${data.error}), falling back to channel ping`
+    );
+    await slackPing(text);
+  } catch (err) {
+    console.warn("[generate-weekly-article] DM failed, falling back to channel ping:", err);
+    await slackPing(text);
+  }
 }
 
 async function slackPing(text: string): Promise<void> {
@@ -563,11 +637,44 @@ async function slackPing(text: string): Promise<void> {
   }
 }
 
+function formatVerdict(verdict: AutoPromoteVerdict): string {
+  const lines: string[] = [];
+  lines.push("*Layer 1 — deterministic gates*");
+  for (const g of verdict.gates) {
+    const tick = g.pass ? ":white_check_mark:" : ":x:";
+    lines.push(`  ${tick} \`${g.name}\` — ${g.detail ?? ""}`);
+  }
+  if ("critic" in verdict && verdict.critic) {
+    const c = verdict.critic;
+    lines.push("");
+    lines.push("*Layer 2 — LLM critic*");
+    lines.push(`  overall: *${c.overall.toFixed(1)}/10* · verdict: \`${c.verdict}\``);
+    lines.push(
+      `  scores: factual=${c.scores.factual_credibility}, voice=${c.scores.brand_voice}, structure=${c.scores.structure}, originality=${c.scores.originality}, tech=${c.scores.technical_accuracy}`
+    );
+    if (c.issues.length > 0) {
+      lines.push(
+        `  issues: ${c.issues
+          .slice(0, 5)
+          .map((i) => `_${i}_`)
+          .join("; ")}`
+      );
+    }
+  }
+  if (!verdict.promote && verdict.reason === "critic_unavailable") {
+    lines.push("");
+    lines.push("*Layer 2 — LLM critic*");
+    lines.push(`  :warning: skipped (${verdict.criticError ?? "credentials missing"})`);
+  }
+  return lines.join("\n");
+}
+
 async function main(): Promise<void> {
   console.log("[generate-weekly-article] starting");
   const recent = await fetchRecentPosts();
   const category = pickLruCategory(recent);
   const avoidTitles = recent.slice(0, 8).map((p) => p.title);
+  const existingSlugs = recent.map((p) => p.slug).filter(Boolean);
   console.log(
     `[generate-weekly-article] picked category=${category}; avoiding ${avoidTitles.length} recent titles`
   );
@@ -575,12 +682,58 @@ async function main(): Promise<void> {
   const article = await generateArticle(category, avoidTitles);
   console.log(`[generate-weekly-article] generated: "${article.title}" (${article.slug})`);
 
-  const page = await createDraftPage(article, category);
-  console.log(`[generate-weekly-article] draft created: ${page.url}`);
+  // Run quality gates BEFORE creating the Notion page so we know which
+  // Status to insert with. This avoids needing a second PATCH after-create.
+  console.log("[generate-weekly-article] running quality gates...");
+  const verdict = await runGates({
+    draft: {
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt,
+      readTime: article.readTime,
+      content: article.content,
+    },
+    recentTitles: avoidTitles,
+    existingSlugs,
+    cloudflareAccountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+    cloudflareApiToken: process.env.CLOUDFLARE_API_TOKEN,
+  });
 
-  await slackPing(
-    `:newspaper: Weekly draft ready for review (${category}): *${article.title}*\n${page.url}\n\nApprove in Notion before Mon 09:00 UTC to publish + send newsletter.`
+  const initialStatus = verdict.promote ? "In Review" : "Draft";
+  console.log(
+    `[generate-weekly-article] gates verdict: ${verdict.promote ? "AUTO-PROMOTE" : `HOLD (${verdict.reason})`} — Notion Status will be "${initialStatus}"`
   );
+
+  const page = await createDraftPage(article, category, initialStatus);
+  console.log(`[generate-weekly-article] page created: ${page.url}`);
+
+  // Channel ping (visible to everyone in #newsletter)
+  const headline = verdict.promote
+    ? `:rocket: *AUTO-PROMOTED* — Weekly draft passed all gates, will publish + send Mon 09:00 UTC.`
+    : `:eyes: *NEEDS REVIEW* — Weekly draft created but did NOT auto-pass quality gates.`;
+  const channelMsg = `${headline}\n\n*${article.title}* — ${category} · ${article.readTime}\n${page.url}`;
+  await slackPing(channelMsg);
+
+  // Direct DM the operator the full verdict so the channel stays tidy.
+  const dmBody = [
+    headline,
+    "",
+    `*${article.title}*`,
+    `_${article.excerpt}_`,
+    `${category} · ${article.readTime} · slug \`${article.slug}\``,
+    page.url,
+    "",
+    formatVerdict(verdict),
+    "",
+    verdict.promote
+      ? ":information_source: No action needed. To cancel, flip Notion Status to `Archived` before Mon 09:00 UTC, or run `/cloudless-newsletter unpublish " +
+        article.slug +
+        "` after send."
+      : ":pencil2: To approve manually: open the Notion page, edit if needed, flip Status to `In Review`. The publisher will pick it up on Mon 09:00 UTC OR you can run `/cloudless-newsletter send " +
+        article.slug +
+        "` to send immediately.",
+  ].join("\n");
+  await slackDM(dmBody);
 }
 
 // Only auto-run when invoked directly (skip during vitest imports).

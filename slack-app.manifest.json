@@ -68,8 +68,8 @@
       {
         "command": "/cloudless-newsletter",
         "url": "https://cloudless.gr/api/slack/commands",
-        "description": "List pending Notion drafts or approve+send the newsletter",
-        "usage_hint": "list | send <slug>",
+        "description": "List drafts, approve+send a newsletter, or emergency-unpublish",
+        "usage_hint": "list | send <slug> | unpublish <slug>",
         "should_escape": false
       },
       {

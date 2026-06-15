@@ -32,6 +32,10 @@ jobs:
       # instead of falling back to the generic SLACK_WEBHOOK_URL.
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       NEWSLETTER_SLACK_CHANNEL_ID: ${{ secrets.NEWSLETTER_SLACK_CHANNEL_ID }}
+      # Operator Slack user id — when set together with SLACK_BOT_TOKEN
+      # the generator DMs the full gate verdict + critic feedback to the
+      # operator, keeping #newsletter tidy.
+      SLACK_OPS_USER_ID: ${{ secrets.SLACK_OPS_USER_ID }}
 
     steps:
       - name: Checkout
