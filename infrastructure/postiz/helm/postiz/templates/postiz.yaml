@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postiz
+  labels:
+    {{- include "postiz.labels" . | nindent 4 }}
+    app: postiz
+    app.kubernetes.io/component: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postiz
+  template:
+    metadata:
+      labels:
+        app: postiz
+        {{- include "postiz.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: app
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postiz
+          image: "{{ .Values.image.postiz.repository }}:{{ .Values.image.postiz.tag }}"
+          imagePullPolicy: {{ .Values.image.postiz.pullPolicy }}
+          ports:
+            - containerPort: 5000
+          # Social-provider OAuth app credentials (FACEBOOK_APP_ID/SECRET,
+          # LINKEDIN_CLIENT_ID/SECRET, X_API_KEY/SECRET, TIKTOK_CLIENT_ID/SECRET).
+          # Optional so the manifest still applies on a fresh cluster before
+          # the providers secret is created — channels just stay disabled.
+          envFrom:
+            - secretRef:
+                name: {{ .Values.postiz.providersSecretName }}
+                optional: true
+          env:
+            - name: MAIN_URL
+              value: {{ .Values.postiz.mainUrl | quote }}
+            - name: FRONTEND_URL
+              value: {{ .Values.postiz.frontendUrl | quote }}
+            - name: NEXT_PUBLIC_BACKEND_URL
+              value: {{ .Values.postiz.backendUrl | quote }}
+            - name: BACKEND_INTERNAL_URL
+              value: {{ .Values.postiz.internalBackendUrl | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postiz.secretName }}
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgres.user }}:$(POSTGRES_PASSWORD)@postiz-postgres:5432/{{ .Values.postgres.database }}"
+            - name: REDIS_URL
+              value: "redis://postiz-redis:6379"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postiz.secretName }}
+                  key: JWT_SECRET
+            - name: IS_GENERAL
+              value: {{ .Values.postiz.isGeneral | quote }}
+            - name: DISABLE_REGISTRATION
+              value: {{ .Values.postiz.disableRegistration | quote }}
+            - name: STORAGE_PROVIDER
+              value: {{ .Values.postiz.storageProvider | quote }}
+            - name: UPLOAD_DIRECTORY
+              value: {{ .Values.postiz.uploadDirectory | quote }}
+            - name: NEXT_PUBLIC_UPLOAD_DIRECTORY
+              value: {{ .Values.postiz.uploadDirectory | quote }}
+          volumeMounts:
+            - name: uploads
+              mountPath: /uploads
+          resources:
+            {{- toYaml .Values.postiz.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 6
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: postiz-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postiz
+  labels:
+    {{- include "postiz.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: postiz
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 5000
+      {{- if eq .Values.service.type "NodePort" }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
