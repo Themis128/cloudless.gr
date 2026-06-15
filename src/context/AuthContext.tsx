@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
+import { clearSessionCache } from "@/lib/fetch-with-auth";
 
 interface UserPreferences {
   theme: "system" | "dark" | "light";
@@ -215,6 +216,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const handleSignOut = async () => {
     setUser(null);
     setIsAdmin(false);
+    clearSessionCache();
     await nextAuthSignOut({ callbackUrl: "/" });
   };
 
