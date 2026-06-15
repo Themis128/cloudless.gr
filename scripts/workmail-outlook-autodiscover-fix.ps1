@@ -8,7 +8,7 @@
     Classic Outlook walks several Autodiscover sources in order: SCP (AD),
     HTTPS root domain, SRV record, then the email-suffix subdomain. On
     networks that have ever been M365-joined, the SCP or SRV step routes
-    everything to outlook.office365.com — which has no idea about your
+    everything to outlook.office365.com -- which has no idea about your
     `@cloudless.gr` WorkMail mailbox and bounces back a sign-in prompt.
 
     This script writes the documented registry overrides under
@@ -16,7 +16,7 @@
     skips the hijack-prone sources and goes straight to the WorkMail
     Autodiscover XML. Per-user (HKCU), no admin elevation required.
 
-    Source: AWS re:Post — "Preventing Outlook (Classic) Autodiscover Hijack
+    Source: AWS re:Post -- "Preventing Outlook (Classic) Autodiscover Hijack
     to Microsoft 365 (AWS WorkMail)".
 
 .PARAMETER Region
@@ -178,4 +178,4 @@ if ($Revert) {
             Write-Action "DRYRUN would remove: $RedirectKey"
         }
         else {
-            Remove-Item -Path $RedirectKey -Rec
+            Remove-Item -Path $RedirectKey -Recur
