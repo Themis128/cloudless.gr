@@ -49,10 +49,7 @@ function requireEnv(name: string): string {
 
 // ── Notion ────────────────────────────────────────────────────────────────────
 
-async function notionFetch(
-  path: string,
-  init: RequestInit = {},
-): Promise<Response> {
+async function notionFetch(path: string, init: RequestInit = {}): Promise<Response> {
   return fetch(`${NOTION_API}${path}`, {
     ...init,
     headers: {
@@ -84,9 +81,7 @@ async function fetchApprovedPosts(): Promise<ApprovedPost[]> {
   });
   if (!res.ok) {
     throw new Error(
-      `Notion query (In Review) failed: ${res.status} ${await res
-        .text()
-        .catch(() => "")}`,
+      `Notion query (In Review) failed: ${res.status} ${await res.text().catch(() => "")}`
     );
   }
   const data = (await res.json()) as { results: NotionPage[] };
@@ -111,14 +106,11 @@ async function fetchAllBlocks(pageId: string): Promise<NotionBlock[]> {
   let cursor: string | undefined;
   do {
     const url =
-      `/blocks/${pageId}/children?page_size=100` +
-      (cursor ? `&start_cursor=${cursor}` : "");
+      `/blocks/${pageId}/children?page_size=100` + (cursor ? `&start_cursor=${cursor}` : "");
     const res = await notionFetch(url);
     if (!res.ok) {
       throw new Error(
-        `Notion blocks fetch failed: ${res.status} ${await res
-          .text()
-          .catch(() => "")}`,
+        `Notion blocks fetch failed: ${res.status} ${await res.text().catch(() => "")}`
       );
     }
     const data = (await res.json()) as {
@@ -145,9 +137,7 @@ async function markPublished(pageId: string, today: string): Promise<void> {
   });
   if (!res.ok) {
     throw new Error(
-      `Notion mark-published failed: ${res.status} ${await res
-        .text()
-        .catch(() => "")}`,
+      `Notion mark-published failed: ${res.status} ${await res.text().catch(() => "")}`
     );
   }
 }
@@ -241,7 +231,7 @@ export function blocksToHtml(blocks: NotionBlock[]): {
       case "code": {
         const lang = ((block[type] ?? {}) as { language?: string }).language;
         htmlParts.push(
-          `<pre><code${lang ? ` class="language-${escapeAttr(lang)}"` : ""}>${escapeHtml(text)}</code></pre>`,
+          `<pre><code${lang ? ` class="language-${escapeAttr(lang)}"` : ""}>${escapeHtml(text)}</code></pre>`
         );
         textParts.push(text);
         break;
@@ -392,11 +382,7 @@ interface SendResult {
  * resolves the HubSpot subscriber list and delivers via SES. Authenticated
  * with the shared NEWSLETTER_SEND_SECRET.
  */
-async function postNewsletter(
-  subject: string,
-  html: string,
-  text: string,
-): Promise<SendResult> {
+async function postNewsletter(subject: string, html: string, text: string): Promise<SendResult> {
   const siteUrl = (process.env.SITE_URL || SITE_URL_DEFAULT).replace(/\/$/, "");
   const res = await fetch(`${siteUrl}/api/newsletter/send`, {
     method: "POST",
@@ -408,9 +394,7 @@ async function postNewsletter(
   });
   if (!res.ok) {
     throw new Error(
-      `Newsletter send endpoint failed: ${res.status} ${await res
-        .text()
-        .catch(() => "")}`,
+      `Newsletter send endpoint failed: ${res.status} ${await res.text().catch(() => "")}`
     );
   }
   return (await res.json()) as SendResult;
@@ -418,12 +402,12 @@ async function postNewsletter(
 
 // ── ISR revalidation ──────────────────────────────────────────────────────────
 
-async function revalidate(slug: string): Promise<void> {
+async function revalidate(slug: string, pageId: string): Promise<void> {
   const siteUrl = process.env.SITE_URL || SITE_URL_DEFAULT;
   const secret = process.env.NOTION_WEBHOOK_SECRET;
   if (!secret) {
     console.warn(
-      "[publish-and-send-newsletter] NOTION_WEBHOOK_SECRET not set — skipping revalidate",
+      "[publish-and-send-newsletter] NOTION_WEBHOOK_SECRET not set — skipping revalidate"
     );
     return;
   }
@@ -437,14 +421,16 @@ async function revalidate(slug: string): Promise<void> {
       body: JSON.stringify({
         type: "page.updated",
         database: "blog",
-        page_id: "",
+        // The webhook handler in src/app/api/webhooks/notion/route.ts
+        // rejects requests with empty page_id (400). Passing the real id
+        // here makes the revalidate call succeed instead of silently 400'ing
+        // on every publish (which it has been since this script was written).
+        page_id: pageId,
         slug,
       }),
     });
     if (!res.ok) {
-      console.warn(
-        `[publish-and-send-newsletter] revalidate failed: ${res.status}`,
-      );
+      console.warn(`[publish-and-send-newsletter] revalidate failed: ${res.status}`);
     }
   } catch (err) {
     console.warn("[publish-and-send-newsletter] revalidate error:", err);
@@ -461,7 +447,7 @@ async function slackPing(text: string): Promise<void> {
   const channelId = process.env.NEWSLETTER_SLACK_CHANNEL_ID;
   if (botToken && channelId) {
     try {
-      await fetch("https://slack.com/api/chat.postMessage", {
+      const r = await fetch("https://slack.com/api/chat.postMessage", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${botToken}`,
@@ -469,21 +455,39 @@ async function slackPing(text: string): Promise<void> {
         },
         body: JSON.stringify({ channel: channelId, text }),
       });
-      return;
+      const data = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (data.ok) {
+        console.log(
+          `[publish-and-send-newsletter] Slack ping posted to ${channelId} via chat.postMessage`
+        );
+        return;
+      }
+      console.warn(
+        `[publish-and-send-newsletter] chat.postMessage rejected (${data.error}), falling back to webhook`
+      );
     } catch (err) {
       console.warn(
         "[publish-and-send-newsletter] chat.postMessage failed, falling back to webhook:",
-        err,
+        err
       );
     }
   }
-  if (!url) return;
+  if (!url) {
+    // No destination configured at all — surface this once per run so
+    // operators don't wonder why no confirmation landed in any channel.
+    console.warn(
+      "[publish-and-send-newsletter] no Slack destination configured " +
+        "(NEWSLETTER_SLACK_CHANNEL_ID + SLACK_BOT_TOKEN unset, SLACK_WEBHOOK_URL also unset) — ping skipped"
+    );
+    return;
+  }
   try {
     await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
     });
+    console.log("[publish-and-send-newsletter] Slack ping posted via SLACK_WEBHOOK_URL");
   } catch (err) {
     console.warn("[publish-and-send-newsletter] Slack ping failed:", err);
   }
@@ -496,35 +500,27 @@ async function main(): Promise<void> {
   const approved = await fetchApprovedPosts();
   if (approved.length === 0) {
     console.log(
-      "[publish-and-send-newsletter] nothing approved — skipping. No newsletter will be sent.",
+      "[publish-and-send-newsletter] nothing approved — skipping. No newsletter will be sent."
     );
     return;
   }
-  console.log(
-    `[publish-and-send-newsletter] ${approved.length} approved post(s) to process`,
-  );
+  console.log(`[publish-and-send-newsletter] ${approved.length} approved post(s) to process`);
 
   const today = new Date().toISOString().slice(0, 10);
   for (const post of approved) {
     if (!post.slug) {
-      console.error(
-        `[publish-and-send-newsletter] post ${post.id} has empty slug — skipping`,
-      );
-      await slackPing(
-        `:warning: Skipped publishing "${post.title}" — empty slug.`,
-      );
+      console.error(`[publish-and-send-newsletter] post ${post.id} has empty slug — skipping`);
+      await slackPing(`:warning: Skipped publishing "${post.title}" — empty slug.`);
       continue;
     }
 
-    console.log(
-      `[publish-and-send-newsletter] processing: "${post.title}" (${post.slug})`,
-    );
+    console.log(`[publish-and-send-newsletter] processing: "${post.title}" (${post.slug})`);
     try {
       const blocks = await fetchAllBlocks(post.id);
       const { html: bodyHtml, text: bodyText } = blocksToHtml(blocks);
 
       await markPublished(post.id, today);
-      await revalidate(post.slug);
+      await revalidate(post.slug, post.id);
 
       const fullHtml = renderNewsletter(post, bodyHtml);
       const fullText = renderPlaintext(post, bodyText);
@@ -532,22 +528,19 @@ async function main(): Promise<void> {
 
       console.log(
         `[publish-and-send-newsletter] "${post.title}" delivered to ` +
-          `${result.sent}/${result.total} subscriber(s), ${result.failed} failed`,
+          `${result.sent}/${result.total} subscriber(s), ${result.failed} failed`
       );
       await slackPing(
         `:rocket: Newsletter sent: *${post.title}*\n` +
           `Category: ${post.category} · Slug: ${post.slug}\n` +
-          `Delivered: ${result.sent} · Failed: ${result.failed}`,
+          `Delivered: ${result.sent} · Failed: ${result.failed}`
       );
     } catch (err) {
-      console.error(
-        `[publish-and-send-newsletter] FAILED for "${post.title}":`,
-        err,
-      );
+      console.error(`[publish-and-send-newsletter] FAILED for "${post.title}":`, err);
       await slackPing(
         `:warning: Newsletter FAILED for "${post.title}": \`${String(
-          (err as Error)?.message ?? err,
-        ).slice(0, 500)}\``,
+          (err as Error)?.message ?? err
+        ).slice(0, 500)}\``
       );
       throw err;
     }
