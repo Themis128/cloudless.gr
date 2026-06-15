@@ -85,10 +85,30 @@ export interface ClientPortal {
   lastReportAt?: string;
 }
 
+/**
+ * Coerce a stored record into a well-formed portal. Legacy/partial entries in
+ * SSM (written before deliverables/paymentLinks existed, or hand-edited) can be
+ * missing the array fields that scoreClientHealth and the admin route iterate
+ * over. A missing `steps` array threw an unhandled TypeError that surfaced as a
+ * 500 on GET /api/admin/client-portals. Normalizing on read is the single choke
+ * point that guarantees every consumer sees the arrays it assumes.
+ */
+function normalizePortal(raw: ClientPortal): ClientPortal {
+  const steps = Array.isArray(raw?.steps) ? raw.steps : [];
+  return {
+    ...raw,
+    steps: steps.map((s) => ({ ...s, comments: Array.isArray(s?.comments) ? s.comments : [] })),
+    deliverables: Array.isArray(raw?.deliverables) ? raw.deliverables : [],
+    paymentLinks: Array.isArray(raw?.paymentLinks) ? raw.paymentLinks : [],
+  };
+}
+
 export async function readPortals(): Promise<ClientPortal[]> {
   try {
     const res = await getClient().send(new GetParameterCommand({ Name: SSM_KEY }));
-    return JSON.parse(res.Parameter?.Value ?? "[]");
+    const parsed: unknown = JSON.parse(res.Parameter?.Value ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((p) => normalizePortal(p as ClientPortal));
   } catch {
     return [];
   }

@@ -44,7 +44,36 @@ describe("client-portals", () => {
         Parameter: { Value: JSON.stringify([SAMPLE_PORTAL]) },
       });
       const r = await readPortals();
-      expect(r).toEqual([SAMPLE_PORTAL]);
+      // readPortals normalizes records, so the array fields are always present.
+      expect(r).toEqual([{ ...SAMPLE_PORTAL, deliverables: [], paymentLinks: [] }]);
+    });
+
+    it("normalizes legacy records missing array fields (regression: 500 on GET)", async () => {
+      // A pre-deliverables record with no steps array (and a step missing its
+      // comments) must be coerced to valid arrays so scoreClientHealth and the
+      // admin route can iterate without throwing an unhandled TypeError.
+      const legacy = {
+        token: "tok-legacy",
+        label: "Legacy",
+        clientEmail: "y@acme.example",
+        clientName: "Acme",
+        createdAt: "2026-01-01T00:00:00Z",
+        steps: [{ id: "s1", name: "Audit", status: "pending" }],
+      };
+      mockSSMSend.mockResolvedValueOnce({
+        Parameter: { Value: JSON.stringify([legacy]) },
+      });
+      const [p] = await readPortals();
+      expect(p.steps[0].comments).toEqual([]);
+      expect(p.deliverables).toEqual([]);
+      expect(p.paymentLinks).toEqual([]);
+    });
+
+    it("returns empty array when the stored value is not an array", async () => {
+      mockSSMSend.mockResolvedValueOnce({
+        Parameter: { Value: JSON.stringify({ not: "an array" }) },
+      });
+      await expect(readPortals()).resolves.toEqual([]);
     });
 
     it("returns empty array on SSM error", async () => {
