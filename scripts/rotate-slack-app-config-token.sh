@@ -63,9 +63,14 @@ fi
 mask "$REFRESH"
 
 # --- Call Slack API ---
+#
+# Per https://docs.slack.dev/reference/methods/tooling.tokens.rotate the
+# refresh token is passed as a form argument (refresh_token=...), NOT as a
+# Bearer Authorization header. "No scopes required" — auth is the refresh
+# token itself, validated server-side.
 RESP=$(curl -sS -X POST "https://slack.com/api/tooling.tokens.rotate" \
-  -H "Authorization: Bearer $REFRESH" \
-  -H "Content-Type: application/x-www-form-urlencoded; charset=utf-8")
+  -H "Content-Type: application/x-www-form-urlencoded; charset=utf-8" \
+  --data-urlencode "refresh_token=$REFRESH")
 
 OK=$(echo "$RESP" | jq -r '.ok // false')
 if [ "$OK" != "true" ]; then
