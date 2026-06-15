@@ -25,14 +25,13 @@
 
 .PARAMETER OfficeVersion
     Outlook registry version (16.0 = Office 2016/2019/2021/365, 15.0 = 2013).
-    Default 16.0. Specify when you have multiple Outlook installs.
+    Default 16.0.
 
 .PARAMETER DryRun
     Print every action without writing to the registry.
 
 .PARAMETER Revert
-    Remove the keys this script added. Useful if you later move back to
-    M365 / Exchange Online.
+    Remove the keys this script added.
 
 .EXAMPLE
     .\workmail-outlook-autodiscover-fix.ps1 -Region us-east-1
@@ -61,23 +60,17 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # This script writes per-user (HKCU) registry values, so it can only run on
-# Windows. PowerShell 7+ runs on Linux/macOS too (`pwsh` from snap, brew,
-# etc.) where the `HKCU:` drive doesn't exist and every Set-ItemProperty call
-# would later fail with a confusing 'Cannot find drive' error. Bail early.
+# Windows. Bail early when running under pwsh on Linux/macOS.
 if (-not $IsWindows -and $null -ne $IsWindows) {
-    # PowerShell 6+ defines $IsWindows; on Windows PowerShell 5.x it's $null,
-    # which is also Windows. So we only abort when explicitly NOT Windows.
     Write-Host "ERROR: workmail-outlook-autodiscover-fix.ps1 must run on Windows." -ForegroundColor Red
     Write-Host "  This script writes registry values under HKCU\Software\Microsoft\Office\..." -ForegroundColor Red
     Write-Host "  Detected platform: $($PSVersionTable.OS)" -ForegroundColor Red
     Write-Host ""
     Write-Host "From WSL on the same machine, invoke the Windows-side PowerShell instead:" -ForegroundColor Yellow
-    Write-Host '  /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe \' -ForegroundColor Yellow
-    Write-Host '    -ExecutionPolicy Bypass \' -ForegroundColor Yellow
-    Write-Host '    -File "$(wslpath -w scripts/workmail-outlook-autodiscover-fix.ps1)" \' -ForegroundColor Yellow
+    Write-Host "  /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe \\" -ForegroundColor Yellow
+    Write-Host "    -ExecutionPolicy Bypass \\" -ForegroundColor Yellow
+    Write-Host '    -File "$(wslpath -w "$PWD/scripts/workmail-outlook-autodiscover-fix.ps1")" \\' -ForegroundColor Yellow
     Write-Host "    -Region $Region" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Or open a normal Windows PowerShell window and run it directly." -ForegroundColor Yellow
     exit 4
 }
 
@@ -85,17 +78,16 @@ $AutoDiscoverKey = "HKCU:\Software\Microsoft\Office\$OfficeVersion\Outlook\AutoD
 $RedirectKey     = "HKCU:\Software\Microsoft\Office\$OfficeVersion\Outlook\AutoDiscover\RedirectServers"
 $WorkMailHost    = "autodiscover-service.mail.$Region.awsapps.com"
 
-# DWORD values that disable the hijack-prone Autodiscover sources.
-# 1 = skip this lookup method. Leaving HttpsAutoDiscoverDomain at 0 means
-# Outlook IS allowed to hit autodiscover.<your-domain>, which is what we want
-# because cloudless.gr (or whatever vanity domain) should CNAME there.
+# DWORDs that disable the hijack-prone Autodiscover sources.
+# 1 = skip that lookup. ExcludeHttpsAutoDiscoverDomain stays 0 so Outlook
+# can still hit autodiscover.<vanity-domain> if a CNAME exists.
 $Values = @{
-    'ExcludeScpLookup'              = 1
-    'ExcludeHttpsRootDomain'        = 1
-    'ExcludeSrvRecord'              = 1
+    'ExcludeScpLookup'               = 1
+    'ExcludeHttpsRootDomain'         = 1
+    'ExcludeSrvRecord'               = 1
     'ExcludeHttpsAutoDiscoverDomain' = 0
-    'ExcludeLastKnownGoodURL'       = 1
-    'ExcludeExplicitO365Endpoint'   = 1
+    'ExcludeLastKnownGoodURL'        = 1
+    'ExcludeExplicitO365Endpoint'    = 1
 }
 
 function Write-Action {
@@ -135,17 +127,6 @@ function Set-DwordValue {
     }
 }
 
-function Set-StringValue {
-    param([string]$Path, [string]$Name, [string]$Value)
-    if ($DryRun) {
-        Write-Action "DRYRUN would set: $Path\$Name = '$Value'"
-    }
-    else {
-        New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType String -Force | Out-Null
-        Write-Action "Set: $Path\$Name = '$Value'"
-    }
-}
-
 function Remove-NameIfPresent {
     param([string]$Path, [string]$Name)
     try {
@@ -178,4 +159,38 @@ if ($Revert) {
             Write-Action "DRYRUN would remove: $RedirectKey"
         }
         else {
-            Remove-Item -Path $RedirectKey -Recur
+            Remove-Item -Path $RedirectKey -Recurse -Force
+            Write-Action "Removed: $RedirectKey"
+        }
+    }
+
+    Write-Action "Done. Restart Outlook for changes to take effect." 'Green'
+    exit 0
+}
+
+Write-Action "Applying WorkMail Autodiscover fix" 'Green'
+Write-Action "  Region:         $Region"
+Write-Action "  Autodiscover:   $WorkMailHost"
+Write-Action "  Office version: $OfficeVersion"
+Write-Action "  Registry key:   $AutoDiscoverKey"
+if ($DryRun) { Write-Action "  Mode:           DRY RUN -- no changes written" 'Yellow' }
+
+Ensure-Key -Path $AutoDiscoverKey
+
+foreach ($entry in $Values.GetEnumerator()) {
+    Set-DwordValue -Path $AutoDiscoverKey -Name $entry.Key -Value $entry.Value
+}
+
+# Trust the redirect to autodiscover-service.mail.<region>.awsapps.com so
+# Outlook stops prompting on every restart.
+Ensure-Key -Path $RedirectKey
+Set-DwordValue -Path $RedirectKey -Name $WorkMailHost -Value 1
+
+Write-Action ""
+Write-Action "Done." 'Green'
+Write-Action ""
+Write-Action "Next steps:"
+Write-Action "  1. Close Outlook completely (check the system tray)."
+Write-Action "  2. Reopen Outlook, File > Add Account, enter your email."
+Write-Action "  3. When prompted with 'Allow this website to configure...',"
+Write-Action "     tick 'Don't ask again' and click Allow."
