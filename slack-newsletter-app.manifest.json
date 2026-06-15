@@ -1,0 +1,103 @@
+{
+  "display_information": {
+    "name": "Newsletter",
+    "description": "3-layer newsletter pipeline: management, control, check for the cloudless.gr weekly draft + publish chain",
+    "background_color": "#0B5174",
+    "long_description": "Dedicated Slack app for the cloudless.gr newsletter. Surfaces the 3-layer quality-gate state of every weekly draft (deterministic gates, LLM critic, and human ops review), lets approved users send + unpublish from chat, and exposes a live App Home dashboard showing the current draft, recent publishes, subscriber count, and rolling ops actions. Separate from the main Cloudless app so newsletter incidents (token rotation, scope changes, signing-secret leaks) never disrupt the rest of the Cloudless workspace integrations."
+  },
+  "features": {
+    "app_home": {
+      "home_tab_enabled": true,
+      "messages_tab_enabled": true,
+      "messages_tab_read_only_enabled": false
+    },
+    "bot_user": {
+      "display_name": "Newsletter",
+      "always_online": true
+    },
+    "slash_commands": [
+      {
+        "command": "/newsletter-list",
+        "url": "https://cloudless.gr/api/newsletter-slack/commands",
+        "description": "List pending Notion drafts (Draft + In Review) with 3-layer gate verdicts",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/newsletter-send",
+        "url": "https://cloudless.gr/api/newsletter-slack/commands",
+        "description": "Approve a draft + publish + email subscribers (ops allowlist)",
+        "usage_hint": "<slug-or-notion-id>",
+        "should_escape": false
+      },
+      {
+        "command": "/newsletter-unpublish",
+        "url": "https://cloudless.gr/api/newsletter-slack/commands",
+        "description": "Emergency rollback — flip a Published post to Archived (ops allowlist)",
+        "usage_hint": "<slug-or-notion-id>",
+        "should_escape": false
+      },
+      {
+        "command": "/newsletter-rerun-draft",
+        "url": "https://cloudless.gr/api/newsletter-slack/commands",
+        "description": "Re-trigger the weekly-article-draft.yml workflow (generates a fresh draft)",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/newsletter-gates",
+        "url": "https://cloudless.gr/api/newsletter-slack/commands",
+        "description": "Show 3-layer quality-gate thresholds + last verdict",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/newsletter-stats",
+        "url": "https://cloudless.gr/api/newsletter-slack/commands",
+        "description": "Subscriber count, last send time, this-week status",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/newsletter-help",
+        "url": "https://cloudless.gr/api/newsletter-slack/commands",
+        "description": "Show all /newsletter-* commands and the 3-layer flow",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      }
+    ]
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:join",
+        "channels:read",
+        "chat:write",
+        "chat:write.customize",
+        "commands",
+        "im:history",
+        "im:write",
+        "team:read",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://cloudless.gr/api/newsletter-slack/events",
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "message.im"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://cloudless.gr/api/newsletter-slack/interactions"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

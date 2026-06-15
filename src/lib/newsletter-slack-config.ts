@@ -1,0 +1,59 @@
+/**
+ * Dedicated config loader for the Newsletter Slack app.
+ *
+ * The Newsletter app is a SEPARATE Slack app from the main Cloudless one
+ * (see slack-newsletter-app.manifest.json). It has its own bot token and
+ * signing secret so a leak/rotation/scope change on one cannot disrupt the
+ * other.
+ *
+ * Reads NEWSLETTER_SLACK_SIGNING_SECRET / NEWSLETTER_SLACK_BOT_TOKEN from
+ * env first, falls back to SSM (/cloudless/production/NEWSLETTER_SLACK_*).
+ * Cached after first read; tests can call resetNewsletterSlackConfigCache().
+ */
+
+export interface NewsletterSlackConfig {
+  NEWSLETTER_SLACK_BOT_TOKEN: string;
+  NEWSLETTER_SLACK_SIGNING_SECRET: string;
+  /** Channel ID the bot posts management/audit pings to. */
+  NEWSLETTER_SLACK_CHANNEL_ID: string;
+}
+
+let cached: NewsletterSlackConfig | null = null;
+
+export async function getNewsletterSlackConfigAsync(): Promise<NewsletterSlackConfig> {
+  if (cached) return cached;
+
+  let token = process.env.NEWSLETTER_SLACK_BOT_TOKEN ?? "";
+  let signingSecret = process.env.NEWSLETTER_SLACK_SIGNING_SECRET ?? "";
+  let channel = process.env.NEWSLETTER_SLACK_CHANNEL_ID ?? "";
+
+  if (!token || !signingSecret || !channel) {
+    try {
+      const { getConfig } = await import("@/lib/ssm-config");
+      const ssm = (await getConfig()) as unknown as Record<string, string>;
+      if (!token) token = ssm.NEWSLETTER_SLACK_BOT_TOKEN ?? "";
+      if (!signingSecret) signingSecret = ssm.NEWSLETTER_SLACK_SIGNING_SECRET ?? "";
+      if (!channel) channel = ssm.NEWSLETTER_SLACK_CHANNEL_ID ?? "";
+    } catch (err) {
+      console.warn("[NewsletterSlack] SSM fallback failed:", err);
+    }
+  }
+
+  if (!signingSecret) {
+    console.warn(
+      "[NewsletterSlack] NEWSLETTER_SLACK_SIGNING_SECRET not set — " +
+        "every request will be rejected as unauthorized."
+    );
+  }
+
+  cached = {
+    NEWSLETTER_SLACK_BOT_TOKEN: token,
+    NEWSLETTER_SLACK_SIGNING_SECRET: signingSecret,
+    NEWSLETTER_SLACK_CHANNEL_ID: channel,
+  };
+  return cached;
+}
+
+export function resetNewsletterSlackConfigCache(): void {
+  cached = null;
+}
