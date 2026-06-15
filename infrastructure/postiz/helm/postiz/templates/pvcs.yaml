@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postiz-postgres-data
+  labels:
+    {{- include "postiz.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.postgres.pvc.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.pvc.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postiz-redis-data
+  labels:
+    {{- include "postiz.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.redis.pvc.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.redis.pvc.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postiz-uploads
+  labels:
+    {{- include "postiz.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.postiz.uploadsPvc.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.postiz.uploadsPvc.size }}

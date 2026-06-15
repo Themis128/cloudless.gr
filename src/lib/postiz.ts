@@ -6,19 +6,31 @@ import type { CalendarPlatform } from "@/lib/content-calendar";
  *
  * Postiz owns the platform OAuth connections (Facebook, Instagram, LinkedIn,
  * X, TikTok, …); this module is the bridge that turns content-calendar
- * `social_post` items into scheduled posts on the connected channels.
+ * `social_post` items into scheduled posts on the connected channels, and
+ * powers the /admin/postiz console.
  *
  * Config (SSM or env):
  *   POSTIZ_API_URL — base URL of the Postiz instance, e.g. https://postiz.cloudless.gr
- *   POSTIZ_API_KEY — API key from Postiz Settings → API
+ *   POSTIZ_API_KEY — API key from Postiz Settings → Public API
  *
- * All functions are silent no-ops / empty results when unconfigured so the
- * calendar UI stays usable before Postiz is deployed (see docs/POSTIZ.md).
+ * Two flavours of helpers live here:
+ *
+ * 1. Calendar-side (existing): `isPostizConfigured`, `listPostizIntegrations`,
+ *    `schedulePost` — silent no-ops / `{ ok: false }` when unconfigured so the
+ *    calendar UI stays usable.
+ *
+ * 2. Admin-console (added 2026-06-15): `PostizApiError`,
+ *    `PostizNotConfiguredError`, `createPost`, `listPosts`, `deletePost`,
+ *    `uploadFromUrl`, `findSlot` — throw typed errors so the /admin/postiz
+ *    route handlers can distinguish "not configured" (503) from "upstream
+ *    failure" (502) from real bugs.
+ *
+ * Both share the same `postizFetch` / `getPostizConfig` plumbing.
  */
 
 async function getPostizConfig(): Promise<{ baseUrl: string; apiKey: string }> {
   const cfg = await getConfig();
-  if (!cfg.POSTIZ_API_URL || !cfg.POSTIZ_API_KEY) throw new Error("Postiz not configured");
+  if (!cfg.POSTIZ_API_URL || !cfg.POSTIZ_API_KEY) throw new PostizNotConfiguredError();
   return {
     baseUrl: cfg.POSTIZ_API_URL.replace(/\/$/, ""),
     apiKey: cfg.POSTIZ_API_KEY,
@@ -37,6 +49,39 @@ async function postizFetch(path: string, options: RequestInit = {}): Promise<Res
     signal: AbortSignal.timeout(10_000),
   });
 }
+
+// --- Typed errors used by the admin console -------------------------------
+
+export class PostizNotConfiguredError extends Error {
+  constructor() {
+    super("Postiz API key not configured");
+    this.name = "PostizNotConfiguredError";
+  }
+}
+
+export class PostizApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly body: string,
+  ) {
+    super(`Postiz API error ${status}: ${body.slice(0, 200)}`);
+    this.name = "PostizApiError";
+  }
+}
+
+async function callThrowing<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const res = await postizFetch(path, init);
+  if (!res.ok) throw new PostizApiError(res.status, await res.text().catch(() => ""));
+  if (res.status === 204) return undefined as T;
+  const ct = res.headers.get("content-type") ?? "";
+  if (!ct.includes("application/json")) return undefined as T;
+  return (await res.json()) as T;
+}
+
+// --- Calendar-side surface (preserved) -----------------------------------
 
 export async function isPostizConfigured(): Promise<boolean> {
   try {
@@ -115,43 +160,4 @@ export async function schedulePost(input: SchedulePostInput): Promise<SchedulePo
   }
 
   const now = Date.now();
-  const scheduleTime = input.scheduleAt ? new Date(input.scheduleAt).getTime() : now;
-  let type: "draft" | "schedule" | "now";
-  if (input.asDraft) {
-    type = "draft";
-  } else {
-    type = Number.isNaN(scheduleTime) || scheduleTime <= now ? "now" : "schedule";
-  }
-
-  try {
-    const res = await postizFetch("/posts", {
-      method: "POST",
-      body: JSON.stringify({
-        type,
-        date: new Date(Number.isNaN(scheduleTime) ? now : scheduleTime).toISOString(),
-        shortLink: false,
-        tags: [],
-        posts: input.integrationIds.map((id) => ({
-          integration: { id },
-          // `image` must always be present as an array — the live Postiz
-          // v2.11.2 validator rejects value items without it
-          // ("posts.0.value.0.image must be an array", verified 2026-06-12).
-          value: [{ content: input.content, image: [] }],
-        })),
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("[Postiz] post create failed:", res.status, body.slice(0, 300));
-      return { ok: false, postIds: [], error: `Postiz returned ${res.status}` };
-    }
-    const data = (await res.json()) as Array<{ id?: string; postId?: string }> | { id?: string };
-    const postIds = Array.isArray(data)
-      ? data.map((p) => p.id ?? p.postId ?? "").filter(Boolean)
-      : [data.id ?? ""].filter(Boolean);
-    return { ok: true, postIds };
-  } catch (err) {
-    console.error("[Postiz] post create error:", err);
-    return { ok: false, postIds: [], error: "Postiz request failed." };
-  }
-}
+  const scheduleTime = input.scheduleAt ? new Date(input.scheduleAt).
