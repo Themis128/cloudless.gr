@@ -28,6 +28,10 @@ jobs:
       NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
       NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # When both are set, the script posts to #newsletter via the bot
+      # instead of falling back to the generic SLACK_WEBHOOK_URL.
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      NEWSLETTER_SLACK_CHANNEL_ID: ${{ secrets.NEWSLETTER_SLACK_CHANNEL_ID }}
 
     steps:
       - name: Checkout

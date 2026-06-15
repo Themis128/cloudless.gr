@@ -66,6 +66,13 @@
         "should_escape": false
       },
       {
+        "command": "/cloudless-newsletter",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "List pending Notion drafts or approve+send the newsletter",
+        "usage_hint": "list | send <slug>",
+        "should_escape": false
+      },
+      {
         "command": "/cloudless-help",
         "url": "https://cloudless.gr/api/slack/commands",
         "description": "Show all available Cloudless slash commands",
@@ -98,12 +105,7 @@
   "settings": {
     "event_subscriptions": {
       "request_url": "https://cloudless.gr/api/slack/events",
-      "bot_events": [
-        "app_home_opened",
-        "app_mention",
-        "member_joined_channel",
-        "message.im"
-      ]
+      "bot_events": ["app_home_opened", "app_mention", "member_joined_channel", "message.im"]
     },
     "interactivity": {
       "is_enabled": true,

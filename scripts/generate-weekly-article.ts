@@ -540,6 +540,29 @@ async function createDraftPage(
 }
 
 async function slackPing(text: string): Promise<void> {
+  // Prefer the bot-token path when both NEWSLETTER_SLACK_CHANNEL_ID and
+  // SLACK_BOT_TOKEN are set — keeps editorial pings scoped to #newsletter
+  // instead of fanning out via the generic incoming webhook.
+  const botToken = process.env.SLACK_BOT_TOKEN;
+  const channelId = process.env.NEWSLETTER_SLACK_CHANNEL_ID;
+  if (botToken && channelId) {
+    try {
+      await fetch("https://slack.com/api/chat.postMessage", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${botToken}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ channel: channelId, text }),
+      });
+      return;
+    } catch (err) {
+      console.warn(
+        "[generate-weekly-article] chat.postMessage failed, falling back to webhook:",
+        err,
+      );
+    }
+  }
   const url = process.env.SLACK_WEBHOOK_URL;
   if (!url) return;
   try {

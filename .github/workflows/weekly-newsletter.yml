@@ -31,6 +31,10 @@ jobs:
       NEWSLETTER_SEND_SECRET: ${{ secrets.NEWSLETTER_SEND_SECRET }}
       SITE_URL: ${{ secrets.SITE_URL }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # When both are set, the publisher posts confirmations to #newsletter
+      # via the bot instead of falling back to the generic SLACK_WEBHOOK_URL.
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      NEWSLETTER_SLACK_CHANNEL_ID: ${{ secrets.NEWSLETTER_SLACK_CHANNEL_ID }}
 
     steps:
       - name: Checkout
