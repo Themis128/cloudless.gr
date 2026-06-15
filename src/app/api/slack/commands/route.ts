@@ -9,6 +9,7 @@
  *   /cloudless-analytics — Stripe revenue summary
  *   /cloudless-deploy    — trigger production deploy (confirmation modal)
  *   /cloudless-draft     — re-run the weekly article draft workflow
+ *   /cloudless-newsletter — list pending drafts, approve + send a draft
  *   /cloudless-help      — show all available commands
  *
  * Slack delivers slash command payloads as application/x-www-form-urlencoded.
@@ -24,6 +25,12 @@ import { listChannels } from "@/lib/slack-admin";
 import { getBotInfo } from "@/lib/slack-workspace";
 import { getSlackConfigAsync } from "@/lib/integrations";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
+import {
+  listEditorialPosts,
+  findEditorialPost,
+  setEditorialStatus,
+  type NotionBlogDraft,
+} from "@/lib/notion-blog-admin";
 
 /**
  * Slack user-ID allowlist for slash-command-driven workflow dispatch.
@@ -95,6 +102,9 @@ export async function POST(request: Request): Promise<Response> {
 
     case "/cloudless-draft":
       return handleDraftRerun(payload);
+
+    case "/cloudless-newsletter":
+      return handleNewsletter(payload);
 
     case "/cloudless-help":
       return handleHelp();
@@ -590,6 +600,8 @@ function handleHelp(): Response {
             "• `/cloudless-analytics` — Stripe revenue summary",
             "• `/cloudless-deploy` — deploy latest code to production",
             "• `/cloudless-draft rerun` — re-run the weekly article draft generator",
+            "• `/cloudless-newsletter list` — show pending Notion drafts",
+            "• `/cloudless-newsletter send <slug|id>` — approve in Notion + publish + email subscribers",
             "• `/cloudless-help` — show this message",
           ].join("\n"),
         },
@@ -671,5 +683,211 @@ async function handleDraftRerun(payload: SlashCommandPayload): Promise<Response>
     text:
       `:warning: Re-run failed (HTTP ${result.status}): \`${result.error.slice(0, 200)}\`. ` +
       "Check that `GITHUB_DISPATCH_TOKEN` (or `GITHUB_TOKEN`) is set in SSM with Actions write permission.",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// /cloudless-newsletter — Notion → publish chain operated from Slack
+//
+// Subcommands:
+//   list                    — show pending Notion drafts (Draft + In Review)
+//   send <slug|page-id>     — flip Status to "In Review" + dispatch the
+//                             weekly-newsletter.yml workflow which:
+//                               · renders the page to HTML/text
+//                               · marks the row Published in Notion
+//                               · revalidates /blog/[slug] on the live site
+//                               · POSTs the rendered email to
+//                                 /api/newsletter/send → SES → subscribers
+//
+// Optional SLACK_OPS_USERS allowlist gates the `send` subcommand (the
+// destructive one — actually emails subscribers). `list` is read-only and
+// available to anyone in the workspace.
+// ---------------------------------------------------------------------------
+
+function formatPostLine(p: NotionBlogDraft): string {
+  const statusEmoji = p.status === "In Review" ? ":eyes:" : ":memo:";
+  const createdTs = p.createdAt ? Math.floor(new Date(p.createdAt).getTime() / 1000) : 0;
+  const dateLabel = createdTs
+    ? `<!date^${createdTs}^{date_short_pretty}|${p.createdAt.slice(0, 10)}>`
+    : "—";
+  // Slug is the operator-friendly handle for the `send` subcommand.
+  const slugBit = p.slug ? `\`${p.slug}\`` : `\`${p.id.slice(0, 8)}\``;
+  return `${statusEmoji} *<${p.url}|${p.title}>* — ${p.category} · ${p.readTime} · ${dateLabel}\n   ${slugBit}`;
+}
+
+async function handleNewsletter(payload: SlashCommandPayload): Promise<Response> {
+  const args = payload.text.trim().split(/\s+/).filter(Boolean);
+  const sub = (args[0] ?? "").toLowerCase();
+
+  if (sub === "list") {
+    const posts = await listEditorialPosts();
+    if (posts.length === 0) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          ":mailbox_with_no_mail: No pending drafts in Notion. " +
+          "Run `/cloudless-draft rerun` to generate one.",
+      });
+    }
+    return slackResponse({
+      response_type: "ephemeral",
+      blocks: [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: `:newspaper: Pending Newsletter Drafts (${posts.length})`,
+            emoji: true,
+          },
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: posts.map(formatPostLine).join("\n\n"),
+          },
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: "Send any of these with: `/cloudless-newsletter send <slug>`",
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  if (sub === "send") {
+    const target = args[1];
+    if (!target) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          "Usage: `/cloudless-newsletter send <slug-or-notion-id>`\n" +
+          "Tip: run `/cloudless-newsletter list` first to see available drafts.",
+      });
+    }
+
+    if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(payload.user_id)) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          ":no_entry: You're not on the ops allowlist for newsletter sends. " +
+          "Ask the admin to add your Slack user ID to `SLACK_OPS_USERS`.",
+      });
+    }
+
+    const post = await findEditorialPost(target);
+    if (!post) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          `:warning: Could not find a Notion draft matching \`${target}\`. ` +
+          "Run `/cloudless-newsletter list` to see what's available.",
+      });
+    }
+
+    if (post.status === "Published") {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          `:information_source: *${post.title}* is already Published. ` +
+          "The publisher won't pick it up again. Revert Status to Draft in Notion to resend.",
+      });
+    }
+
+    // Flip Status → In Review so the publisher picks it up.
+    const flipped = await setEditorialStatus(post.id, "In Review");
+    if (!flipped) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          ":warning: Failed to update Notion status. Check NOTION_API_KEY in SSM " +
+          "and that the integration is shared with the Blog database.",
+      });
+    }
+
+    // Dispatch the publisher workflow.
+    const result = await dispatchWorkflow("weekly-newsletter.yml", "main");
+    if (!result.ok) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          `:warning: Notion was updated to *In Review* but workflow dispatch failed ` +
+          `(HTTP ${result.status}): \`${result.error.slice(0, 200)}\`. ` +
+          "Re-run with `/cloudless-newsletter send " +
+          (post.slug || post.id) +
+          "` once dispatch is fixed, or trigger weekly-newsletter.yml from the Actions tab.",
+      });
+    }
+
+    return slackResponse({
+      response_type: "in_channel",
+      blocks: [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: ":rocket: Newsletter Send Initiated",
+            emoji: true,
+          },
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text:
+              `<@${payload.user_id}> approved *<${post.url}|${post.title}>* ` +
+              `(${post.category} · ${post.readTime}) and triggered the publisher.\n\n` +
+              "The workflow will render the page, mark it Published in Notion, revalidate " +
+              `\`/blog/${post.slug}\` on the live site, and SES-send to every newsletter subscriber.`,
+          },
+        },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text: "Check progress in the GitHub Actions tab (~5 seconds to start).",
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  // No subcommand / unknown subcommand → usage.
+  return slackResponse({
+    response_type: "ephemeral",
+    blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: ":newspaper: /cloudless-newsletter — Usage",
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: [
+            "*Subcommands:*",
+            "• `list` — show pending Notion drafts (Draft + In Review)",
+            "• `send <slug|notion-id>` — approve in Notion + publish + email subscribers",
+            "",
+            "*Example flow:*",
+            "1. `/cloudless-draft rerun` — generate a new draft (Claude → Notion)",
+            "2. Read it in Notion, edit if needed",
+            "3. `/cloudless-newsletter list` — copy the slug",
+            "4. `/cloudless-newsletter send <slug>` — flips Status, dispatches publisher",
+          ].join("\n"),
+        },
+      },
+    ],
   });
 }
