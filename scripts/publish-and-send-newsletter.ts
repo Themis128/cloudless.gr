@@ -453,6 +453,30 @@ async function revalidate(slug: string): Promise<void> {
 
 async function slackPing(text: string): Promise<void> {
   const url = process.env.SLACK_WEBHOOK_URL;
+  // Prefer the bot-token path when both NEWSLETTER_SLACK_CHANNEL_ID and
+  // SLACK_BOT_TOKEN are set — it posts to the dedicated #newsletter channel
+  // so the cron pings are scoped to the editorial channel instead of fanning
+  // out via a generic incoming webhook.
+  const botToken = process.env.SLACK_BOT_TOKEN;
+  const channelId = process.env.NEWSLETTER_SLACK_CHANNEL_ID;
+  if (botToken && channelId) {
+    try {
+      await fetch("https://slack.com/api/chat.postMessage", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${botToken}`,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        body: JSON.stringify({ channel: channelId, text }),
+      });
+      return;
+    } catch (err) {
+      console.warn(
+        "[publish-and-send-newsletter] chat.postMessage failed, falling back to webhook:",
+        err,
+      );
+    }
+  }
   if (!url) return;
   try {
     await fetch(url, {
