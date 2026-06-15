@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
   uploadFromUrl,
@@ -8,9 +8,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
-  if (auth instanceof NextResponse) return auth;
+  if (!auth.ok) return auth.response;
 
   const body = (await req.json().catch(() => null)) as { url?: string } | null;
   if (!body?.url) {
