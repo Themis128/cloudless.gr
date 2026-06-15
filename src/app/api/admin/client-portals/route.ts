@@ -39,10 +39,17 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const portals = await readPortals();
-  // Computed, non-persisted health score per portal (Phase 4).
-  const withHealth = portals.map((p) => ({ ...p, health: scoreClientHealth(p) }));
-  return NextResponse.json({ portals: withHealth });
+  try {
+    const portals = await readPortals();
+    // Computed, non-persisted health score per portal (Phase 4). readPortals
+    // normalizes record shape, so scoring can't throw on legacy data — the
+    // try/catch is defense-in-depth, matching the sibling admin routes.
+    const withHealth = portals.map((p) => ({ ...p, health: scoreClientHealth(p) }));
+    return NextResponse.json({ portals: withHealth });
+  } catch (err) {
+    console.error("[client-portals] GET failed:", err);
+    return NextResponse.json({ error: "Failed to load client portals." }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {

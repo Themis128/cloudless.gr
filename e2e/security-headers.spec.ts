@@ -85,7 +85,8 @@ test.describe("security headers — cloud", () => {
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
-      "form-action 'self'",
+      // Meta Pixel form-post fallback hosts are appended to 'self'.
+      "form-action 'self' https://www.facebook.com https://connect.facebook.net",
       "report-uri /api/csp-report",
       "report-to csp-endpoint",
     ]) {
