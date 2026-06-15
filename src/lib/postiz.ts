@@ -160,4 +160,117 @@ export async function schedulePost(input: SchedulePostInput): Promise<SchedulePo
   }
 
   const now = Date.now();
-  const scheduleTime = input.scheduleAt ? new Date(input.scheduleAt).
+  const scheduleTime = input.scheduleAt ? new Date(input.scheduleAt).getTime() : now;
+  let type: "draft" | "schedule" | "now";
+  if (input.asDraft) {
+    type = "draft";
+  } else {
+    type = Number.isNaN(scheduleTime) || scheduleTime <= now ? "now" : "schedule";
+  }
+
+  try {
+    const res = await postizFetch("/posts", {
+      method: "POST",
+      body: JSON.stringify({
+        type,
+        date: new Date(Number.isNaN(scheduleTime) ? now : scheduleTime).toISOString(),
+        shortLink: false,
+        tags: [],
+        posts: input.integrationIds.map((id) => ({
+          integration: { id },
+          // `image` must always be present as an array — the live Postiz
+          // v2.11.2 validator rejects value items without it
+          // ("posts.0.value.0.image must be an array", verified 2026-06-12).
+          value: [{ content: input.content, image: [] }],
+        })),
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[Postiz] post create failed:", res.status, body.slice(0, 300));
+      return { ok: false, postIds: [], error: `Postiz returned ${res.status}` };
+    }
+    const data = (await res.json()) as Array<{ id?: string; postId?: string }> | { id?: string };
+    const postIds = Array.isArray(data)
+      ? data.map((p) => p.id ?? p.postId ?? "").filter(Boolean)
+      : [data.id ?? ""].filter(Boolean);
+    return { ok: true, postIds };
+  } catch (err) {
+    console.error("[Postiz] post create error:", err);
+    return { ok: false, postIds: [], error: "Postiz request failed." };
+  }
+}
+
+// --- Admin-console surface (added 2026-06-15) ----------------------------
+
+export interface PostizPost {
+  id: string;
+  content: string;
+  publishDate: string;
+  releaseURL?: string | null;
+  releaseId?: string | null;
+  state: "QUEUE" | "PUBLISHED" | "ERROR" | "DRAFT";
+  integration: { id: string; name: string; identifier: string };
+}
+
+export interface CreatePostBody {
+  type: "now" | "schedule" | "draft";
+  date: string; // ISO 8601
+  shortLink: boolean;
+  tags: Array<{ value: string; label: string }>;
+  posts: Array<{
+    integration: { id: string };
+    value: Array<{ content: string; image?: Array<{ id: string; path: string }> }>;
+    settings: { __type: string } & Record<string, unknown>;
+  }>;
+}
+
+export interface UploadedFile {
+  id: string;
+  path: string;
+}
+
+/** Throwing variant of `listPostizIntegrations` for /admin/postiz routes. */
+export function listIntegrations(): Promise<PostizIntegration[]> {
+  return callThrowing<PostizIntegration[]>("/integrations");
+}
+
+/** List posts in a window (ISO 8601 dates). */
+export function listPosts(startDate: string, endDate: string): Promise<PostizPost[]> {
+  const qs = new URLSearchParams({ startDate, endDate });
+  return callThrowing<PostizPost[]>(`/posts?${qs.toString()}`);
+}
+
+/** Full create-post — exposes the entire Postiz schema. Throws on non-OK. */
+export function createPost(
+  body: CreatePostBody,
+): Promise<Array<{ postId: string; integration: string }>> {
+  return callThrowing<Array<{ postId: string; integration: string }>>("/posts", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** Delete a post. Swallows 404 ("already deleted") per Postiz docs. */
+export async function deletePost(id: string): Promise<void> {
+  try {
+    await callThrowing<void>(`/posts/${encodeURIComponent(id)}`, { method: "DELETE" });
+  } catch (err) {
+    if (err instanceof PostizApiError && err.status === 404) return;
+    throw err;
+  }
+}
+
+/** Upload media to Postiz by URL — returns an `{id,path}` usable in posts. */
+export function uploadFromUrl(url: string): Promise<UploadedFile> {
+  return callThrowing<UploadedFile>("/upload-from-url", {
+    method: "POST",
+    body: JSON.stringify({ url }),
+  });
+}
+
+/** Ask Postiz for the next available time slot on a channel. */
+export function findSlot(integrationId: string): Promise<{ date: string }> {
+  const qs = new URLSearchParams({ id: integrationId });
+  return callThrowing<{ date: string }>(`/integrations/find-slot?${qs.toString()}`);
+}
