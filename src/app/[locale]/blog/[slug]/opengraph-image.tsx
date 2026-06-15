@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getPostBySlug } from "@/lib/notion-blog";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -15,7 +15,7 @@ export default async function Image({
   let title = "Blog Post";
   let category = "Blog";
 
-  if (isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
+  if (await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
     try {
       const post = await getPostBySlug(slug);
       if (post) {

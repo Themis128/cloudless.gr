@@ -10,7 +10,7 @@ import {
   getRelatedPosts,
   getAllSlugs,
 } from "@/lib/notion-blog";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 import { trackEvent } from "@/lib/notion-analytics";
 import JsonLd from "@/components/JsonLd";
 import { getBlogPostSchema, getBreadcrumbSchema } from "@/lib/structured-data";
@@ -107,7 +107,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export async function generateStaticParams() {
-  const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
   const notionSlugs = useNotion ? await getAllSlugs() : [];
 
   // Combine Notion slugs with static slugs (deduplicated)
@@ -121,7 +121,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const canonical = `https://cloudless.gr/${locale}/blog/${slug}`;
-  const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
   // Try Notion first
   if (useNotion) {
@@ -161,7 +161,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
   // Track blog view (fire-and-forget — never blocks render)
   trackEvent({

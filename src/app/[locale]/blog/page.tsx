@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { posts as staticPosts, formatDate } from "@/lib/blog";
 import { getPosts, getCategoryCounts, getTagCounts } from "@/lib/notion-blog";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
@@ -47,7 +47,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
 
   // Fetch from Notion when configured, otherwise fall back to static posts
-  const useNotion = isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
   const notionPosts = useNotion ? await getPosts() : [];
 
   // Fetch category and tag counts for sidebar
