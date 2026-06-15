@@ -322,8 +322,6 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
     const { signOut: signOutEvent } = capturedConfig.events as {
       signOut: (msg: { token?: { idToken?: string } }) => Promise<void>;
     };
-    await expect(
-      signOutEvent({ token: { idToken: "tok" } })
-    ).resolves.toBeUndefined();
+    await expect(signOutEvent({ token: { idToken: "tok" } })).resolves.toBeUndefined();
   });
 });

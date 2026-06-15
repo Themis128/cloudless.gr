@@ -6,9 +6,16 @@ const { mockSSMSend, putCalls } = vi.hoisted(() => ({
 }));
 
 vi.mock("@aws-sdk/client-ssm", () => ({
-  SSMClient: vi.fn().mockImplementation(function () { return { send: mockSSMSend }; }),
-  GetParameterCommand: vi.fn().mockImplementation(function (input: unknown) { return { __cmd: "Get", input }; }),
-  PutParameterCommand: vi.fn().mockImplementation(function (input: unknown) { putCalls.push(input); return { __cmd: "Put", input }; }),
+  SSMClient: vi.fn().mockImplementation(function () {
+    return { send: mockSSMSend };
+  }),
+  GetParameterCommand: vi.fn().mockImplementation(function (input: unknown) {
+    return { __cmd: "Get", input };
+  }),
+  PutParameterCommand: vi.fn().mockImplementation(function (input: unknown) {
+    putCalls.push(input);
+    return { __cmd: "Put", input };
+  }),
 }));
 
 import {
@@ -92,9 +99,17 @@ describe("client-portals", () => {
       mockSSMSend.mockResolvedValueOnce({});
       await writePortals([SAMPLE_PORTAL]);
       expect(putCalls).toHaveLength(1);
-      const input = putCalls[0] as { Value: string; Overwrite: boolean; Type: string };
+      const input = putCalls[0] as {
+        Value: string;
+        Overwrite: boolean;
+        Type: string;
+        Tier: string;
+      };
       expect(input.Overwrite).toBe(true);
       expect(input.Type).toBe("String");
+      // Intelligent-Tiering auto-upgrades past the 4KB Standard cap as the
+      // portals JSON grows, instead of throwing (which surfaced as a 500).
+      expect(input.Tier).toBe("Intelligent-Tiering");
       expect(JSON.parse(input.Value)).toHaveLength(1);
     });
   });
@@ -231,19 +246,14 @@ describe("client-portals", () => {
         portalWith("in_review"),
         "d-1",
         "request_changes",
-        "needs work",
+        "needs work"
       );
       if (typeof r === "string") throw new Error(r);
       expect(r.status).toBe("changes_requested");
     });
 
     it("truncates client comment to 2000 chars", () => {
-      const r = applyClientResponse(
-        portalWith("in_review"),
-        "d-1",
-        "approve",
-        "x".repeat(3000),
-      );
+      const r = applyClientResponse(portalWith("in_review"), "d-1", "approve", "x".repeat(3000));
       if (typeof r === "string") throw new Error(r);
       expect(r.clientComment?.length).toBe(2000);
     });
@@ -259,7 +269,7 @@ describe("client-portals", () => {
           { id: "3", title: "a", status: "approved", createdAt: "x", updatedAt: "x" },
         ],
       });
-      expect(visible.map(d => d.id)).toEqual(["2", "3"]);
+      expect(visible.map((d) => d.id)).toEqual(["2", "3"]);
     });
 
     it("returns empty array when deliverables is undefined", () => {

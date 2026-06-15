@@ -45,9 +45,7 @@ test.describe("security headers — cloud", () => {
     expect(r.headers()["x-powered-by"]).toBeUndefined();
   });
 
-  test("Permissions-Policy hard-blocks 24 features (post-audit hardening)", async ({
-    request,
-  }) => {
+  test("Permissions-Policy hard-blocks 24 features (post-audit hardening)", async ({ request }) => {
     const r = await request.get(PROBE);
     const pp = r.headers()["permissions-policy"] ?? "";
     // Sample a representative subset of the locked-down directives.
@@ -73,9 +71,7 @@ test.describe("security headers — cloud", () => {
     expect(pp).toContain("fullscreen=(self)");
   });
 
-  test("CSP header is set with all expected directives", async ({
-    request,
-  }) => {
+  test("CSP header is set with all expected directives", async ({ request }) => {
     const r = await request.get(PROBE);
     const csp = r.headers()["content-security-policy"] ?? "";
     expect(csp.length, "expected CSP header").toBeGreaterThan(0);
@@ -129,9 +125,7 @@ test.describe("security headers — cloud", () => {
     expect(r.status()).toBe(204);
   });
 
-  test("CSP report endpoint accepts modern Reporting-API payload (204)", async ({
-    request,
-  }) => {
+  test("CSP report endpoint accepts modern Reporting-API payload (204)", async ({ request }) => {
     const r = await request.post("/api/csp-report", {
       headers: { "content-type": "application/reports+json" },
       data: [

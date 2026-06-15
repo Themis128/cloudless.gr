@@ -121,6 +121,12 @@ export async function writePortals(portals: ClientPortal[]): Promise<void> {
       Value: JSON.stringify(portals),
       Type: "String",
       Overwrite: true,
+      // Standard String parameters cap at 4KB; as portals accumulate (steps,
+      // comments, deliverables) the JSON crosses that and PutParameter throws,
+      // surfacing as a 500 on POST/PATCH/DELETE. Intelligent-Tiering stays
+      // Standard (free) until the value exceeds 4KB, then auto-upgrades to the
+      // 8KB Advanced tier — no crash, no cost for the common small case.
+      Tier: "Intelligent-Tiering",
     })
   );
 }
