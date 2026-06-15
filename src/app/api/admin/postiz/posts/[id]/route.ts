@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
   deletePost,
@@ -9,11 +9,11 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function DELETE(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const auth = await requireAdmin(req);
-  if (auth instanceof NextResponse) return auth;
+  if (!auth.ok) return auth.response;
 
   const { id } = await params;
   if (!id) {
