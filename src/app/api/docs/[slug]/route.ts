@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDocBySlug, getDocContent } from "@/lib/notion-docs";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 /**
  * GET /api/docs/[slug]
@@ -11,7 +11,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_DOCS_DB_ID")) {
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID"))) {
     return NextResponse.json({ error: "Docs not configured" }, { status: 503 });
   }
 

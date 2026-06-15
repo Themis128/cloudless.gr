@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { getPostBySlug } from "@/lib/notion-blog";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
     const blogModule = await import("@/lib/blog");
     const blogPosts = blogModule.posts;
     const post = blogPosts.find((p: { slug: string }) => p.slug === slug);
