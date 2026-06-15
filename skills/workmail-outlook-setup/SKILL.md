@@ -1,6 +1,5 @@
-# workmail-outlook-setup
-
-Add an Amazon WorkMail mailbox to Microsoft Outlook (new or classic), or
+old: 7909 bytes, new: 12873 bytes (+4964)
+rkMail mailbox to Microsoft Outlook (new or classic), or
 diagnose why one won't connect. Region-aware; covers EWS/Autodiscover and
 IMAP/SMTP fallbacks; includes a connectivity-doctor script.
 
@@ -129,6 +128,97 @@ endpoint, and (with `--password`) a real IMAP LOGIN.
   is the account password. For unattended integrations (forwarders,
   sync agents), create a dedicated mailbox rather than reusing the human
   user's credentials.
+
+## Post-install tuning (IMAP-mode in New Outlook)
+
+Once the account is wired up, four axes are worth checking. Each step is
+marked **(verify)** = test, no change needed if it passes; **(action)** =
+click through; **(limitation)** = a real cap of the IMAP-in-New-Outlook
+combination with workarounds.
+
+### A. Folder mapping
+
+The risk: New Outlook's IMAP wizard sometimes creates its own `Sent` /
+`Trash` / `Junk` folders alongside WorkMail's server folders (`Sent Items`,
+`Deleted Items`, `Junk E-Mail`). Mail you send from New Outlook then
+silently does NOT appear in WorkMail webmail's `Sent Items`. WorkMail's
+IMAP server doesn't advertise SPECIAL-USE flags, so clients have to guess.
+
+- **(verify)** Send yourself a test message from New Outlook → open WorkMail
+  webmail (`https://<org>.awsapps.com/mail`) → confirm it shows up in
+  `Sent Items`. Also delete a message from New Outlook → confirm it lands
+  in `Deleted Items` on the web (not a new `Trash` folder).
+- **(action) if the test fails:** Settings → Accounts → click the WorkMail
+  account → Sync (or "Folders") → map Sent → `Sent Items`, Drafts →
+  `Drafts`, Deleted → `Deleted Items`, Junk → `Junk E-Mail`. If the UI
+  doesn't expose mapping, delete the duplicate client-side folders so
+  New Outlook falls back to the canonical server folders.
+
+### B. Identity (display name, reply-to, signatures, aliases)
+
+- **(action) Display name:** Settings → Accounts → the WorkMail account →
+  Account name & sync → set "Name people see" to a human name. Default is
+  often just the email local-part.
+- **(action) Reply-to:** Same pane → "Reply address". Leave blank unless
+  replies should land in a different mailbox.
+- **(action) Signature:** Settings → Mail → Compose and reply → Signatures
+  → New → write HTML → bottom of pane set as default for "New messages"
+  and "Replies/forwards" **for the WorkMail account specifically** (the
+  per-account dropdown is easy to miss).
+- **(action + limitation) Send-as aliases:** WorkMail supports aliases on
+  user objects. Add via AWS Console → WorkMail → org → Users → your user →
+  Aliases. New Outlook's IMAP profile has no per-message "From" picker, so
+  to actually SEND from `info@cloudless.gr` etc., add the alias as a
+  second IMAP account in New Outlook pointing at the same WorkMail
+  mailbox (same hostnames, alias address as username, same password). Two
+  account entries in the sidebar, one mailbox under both.
+
+### C. Sync behavior
+
+- **(verify) IMAP IDLE (push):** WorkMail's IMAP server supports IDLE, so
+  New Outlook should receive instant pushes. Test: send from webmail,
+  expect arrival in New Outlook within ~5 s. If it takes minutes, a
+  firewall or NAT is killing idle TCP connections; raise the poll
+  interval explicitly.
+- **(action) Sync window:** Settings → Mail → Storage (or General →
+  Storage) → "Sync only the last N days" if the mailbox is large.
+- **(action) Attachment auto-download:** Settings → Mail → Attachments →
+  toggle "Always download all attachments" based on bandwidth posture.
+- **(action) External images:** Settings → Mail → Junk email → "Block
+  external images" defaults ON for tracking-pixel defense. Leave on.
+- **(verify) Metered connection:** Settings → General → Battery / metered
+  connection → confirm New Outlook isn't auto-disabling sync on Wi-Fi.
+
+### D. The calendar + contacts gap
+
+IMAP carries only mail. WorkMail itself supports EWS, ActiveSync, and
+iCal publishing — the gap is on the New Outlook side. Three options in
+increasing scope:
+
+1. **Read-only calendar via published iCal.** WorkMail webmail → Calendar
+   → Publish → copy the `.ics` URL → New Outlook Calendar view → Add
+   calendar → Subscribe from web. Read-only — view but can't RSVP.
+2. **Windows 11 Calendar/People apps via EAS (read-write).** The built-in
+   `outlookcalendar:` / `outlookpeople:` apps speak Exchange ActiveSync,
+   which WorkMail supports natively. Add Account → Advanced setup →
+   Exchange ActiveSync → server `mobile.mail.<region>.awsapps.com` →
+   domain blank → username = full email. Calendar + contacts now sync
+   read-write. Mail stays in New Outlook. Caveat: split UX, two apps.
+3. **Replace New Outlook with an EWS client.** eM Client (free up to 2
+   accounts) or Thunderbird + TbSync both speak EWS to WorkMail and give
+   mail + calendar + contacts + tasks in one app. The most "native"
+   experience for WorkMail; means leaving Outlook.
+
+### Default recommendation for a fresh WorkMail-in-New-Outlook setup
+
+1. Run (A) folder-mapping verify immediately — it's the only step that
+   silently breaks something visible (sent mail missing from webmail).
+2. Set display name + signature while you're in Settings anyway.
+3. Add aliases in WorkMail admin only when needed; use the second-IMAP
+   workaround for send-as.
+4. Add Windows 11 Calendar app via EAS (Option D.2). Best ratio of
+   "works" to "effort" for the IMAP-mode constraint.
+5. Leave sync defaults alone unless something feels slow.
 
 ## Files
 
