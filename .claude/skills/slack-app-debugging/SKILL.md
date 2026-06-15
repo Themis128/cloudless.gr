@@ -16,12 +16,14 @@ Companion skills: `slack-app-builder` (manifest design), `slack-app-routes-nextj
 ## §1 — Symptom table (alphabetical)
 
 ### `app_home_disabled`
+
 **Where:** `views.publish` response.
 **Cause:** `features.app_home.home_tab_enabled: false` in the manifest.
 **Fix:** Flip it to `true` in the manifest, save, reinstall the app. The
 event subscription does not need to change.
 
 ### `channel_not_found` (from `chat.postMessage` or `conversations.invite`)
+
 **Where:** Web API call returns 200 with `{ok:false, error:"channel_not_found"}`.
 **Cause #1:** The bot isn't a member of the target channel and lacks
 `chat:write.public`. **Fix:** add `chat:write.public` scope, reinstall.
@@ -31,11 +33,13 @@ event subscription does not need to change.
 **Fix:** Re-resolve via `conversations.list`.
 
 ### `chat.postMessage` returns `{ok:true}` but no message appears in user's DM
+
 **Cause:** `features.app_home.messages_tab_enabled: false`.
 **Fix:** Set to `true` in the manifest, save, reinstall. This is the single
 most surprising silent failure in the Slack API.
 
 ### Daily / hourly workflow stops posting to Slack overnight
+
 **Cause:** The repo became public and Slack's secret scanning auto-revoked
 the webhook URL within hours (you'll find a Slack notification in the owner's
 inbox).
@@ -44,12 +48,14 @@ the URL into a secret manager (SSM, env, 1Password) — never commit. See
 `scripts/restore-slack-webhook.sh` for the one-shot helper.
 
 ### Generator/publisher worked at midnight, fails at 08:15
+
 **Cause:** App-config token (`xoxe.xoxp-…`) expired at the 12-hour mark.
 **Fix:** Run `scripts/rotate-slack-app-config-token.sh` (uses
 `tooling.tokens.rotate`). **Don't put `refresh_token` in the Bearer header**
 — it goes in the form body. Otherwise: `invalid_auth`.
 
 ### `invalid_arguments` from `chat.postMessage` with Block Kit
+
 **Cause #1:** Unescaped apostrophe / curly quote in a JSON heredoc.
 **Fix:** Use a JSON file + `--data @file.json` instead of a heredoc; or
 switch to plain `text` and skip blocks.
@@ -57,24 +63,28 @@ switch to plain `text` and skip blocks.
 **Fix:** Trim or paginate.
 
 ### `invalid_auth` on every Web API call after a reinstall
+
 **Cause:** Cached the old bot token at module load; reinstall minted a new
 one but the cache wasn't invalidated.
 **Fix:** Call your config-reset (`resetSlackConfigCache()` in this repo) or
 restart the Lambda. **Bot tokens change on every reinstall.**
 
 ### `missing_scope` after manifest update
+
 **Cause:** Adding a scope to the manifest does **not** backfill existing
 tokens — the user has to **re-OAuth**.
 **Fix:** Open app settings → Install App → "Reinstall" button. The new
 token (`xoxb-…`) has the added scope; rotate it into your secret store.
 
 ### `not_allowed_token_type` from `users.profile.set`
+
 **Cause:** Bot tokens (`xoxb-…`) can't modify user profiles — that needs a
 user token (`xoxp-…`) with `users.profile:write`.
 **Fix:** Ask the user to do it in the Slack UI, or add `user_scope:
 users.profile:write` to the manifest and have them re-OAuth.
 
 ### Signature 401s on every request (production-only)
+
 **Cause #1:** Cached the signing secret with an empty string (env not set in
 Lambda). **Fix:** Add a missing-secret check at module load that logs
 loudly; verify `SLACK_SIGNING_SECRET` is in SSM and the Lambda IAM role can
@@ -85,28 +95,35 @@ verifier hashes empty bytes.
 verifier and the JSON parser.
 
 ### Slash command shows "we had trouble" / "darn — that didn't work"
+
 **Cause:** Handler returned non-200 *or* took longer than 3 s.
 **Fix:** Return 200 immediately (with the response body or just
 `{ok:true}`); defer work to `response_url` follow-up.
 
 ### `trigger_expired` from `views.open`
+
 **Cause:** `trigger_id` is **single-use, 3-second TTL**. You held it across
 an `await` to a slow API.
 **Fix:** Call `views.open` *immediately* with a skeleton view, then
 `views.update` once your data is ready.
 
 ### `tooling.tokens.rotate` returns `invalid_auth`
+
 **Cause:** Tried to send `refresh_token` as `Authorization: Bearer
 <refresh-token>`. The endpoint requires it in the **form body**.
 **Fix:**
+
 ```bash
 curl -sS https://slack.com/api/tooling.tokens.rotate \
   -H 'Content-Type: application/x-www-form-urlencoded' \
   --data-urlencode "refresh_token=$REFRESH_TOKEN"
+
 ```
+
 Reference: `scripts/rotate-slack-app-config-token.sh` in this repo (PR #899).
 
 ### `url_verification` fails when saving the Request URL
+
 **Cause:** Endpoint responded with anything other than the exact `challenge`
 string. Common bug: tried to JSON-parse the body but the route handler
 shortcircuits on type mismatch before reaching that branch.
@@ -131,6 +148,7 @@ bash scripts/slack-app-doctor.sh \
   --token "$SLACK_BOT_TOKEN" \
   --signing-secret "$SLACK_SIGNING_SECRET" \
   --channel "$NEWSLETTER_SLACK_CHANNEL_ID"
+
 ```
 
 Prints: `auth.test` result, granted scope list, channel reachability, and a
@@ -158,8 +176,10 @@ apps created on/after 2025-05-29 have `conversations.history` and
 - **Public-repo commits** of an `https://hooks.slack.com/services/…` URL get
   auto-revoked by Slack within hours (sometimes minutes). The workspace
   owner gets an email.
+
 - **Webhooks die silently** — your script will POST and get a 404; nothing
   surfaces in Slack itself. Always assert on the response status.
+
 - **Re-minting:** app settings → Incoming Webhooks → "Add New Webhook to
   Workspace". The URL is per-channel — picking a different channel mints a
   new URL.

@@ -88,6 +88,7 @@ Save as `<thing>-app.manifest.json` and paste at
     "token_rotation_enabled": false
   }
 }
+
 ```
 
 Manifest validation reference: <https://docs.slack.dev/reference/app-manifest>.
@@ -133,6 +134,7 @@ If you want a public **"Add to Slack"** install button anyway:
 3. Exchange: `POST https://slack.com/api/oauth.v2.access` form-encoded with
    `code`, `client_id`, `client_secret`, optional `redirect_uri`. The `code`
    expires in 10 min.
+
 4. Response: top-level `access_token` is the **bot token (`xoxb-…`)**;
    `authed_user.access_token` is the **user token (`xoxp-…`)** if you asked
    for any `user_scope`.
@@ -161,6 +163,7 @@ await fetch("https://slack.com/api/views.publish", {
   },
   body: JSON.stringify({ user_id: userId, view }),
 });
+
 ```
 
 Hard caps: **100 blocks per Home view, 100 per modal, 50 per chat message.**
@@ -171,8 +174,10 @@ Server code lives in `slack-app-routes-nextjs` skill (events route).
 - **Slash command** (`/<thing>-list`): the user is creating an action.
   Payload is form-encoded; you respond synchronously in 3s or post via
   `response_url`.
+
 - **Message shortcut**: the user is acting on a specific message.
   Payload is the interactions endpoint; needs `commands` scope still.
+
 - **Global shortcut**: lives in the ⚡ menu; no message context.
 - All slash commands share the same Request URL — switch on `payload.command`
   inside one handler.
@@ -210,14 +215,18 @@ For **public distribution** (Marketplace):
 1. **Asking for the legacy `bot` scope.** Use granular (`chat:write`,
    `app_mentions:read`, …). The `bot` scope only works for classic apps,
    which can't be created anymore on a new app form.
+
 2. **Forgetting `messages_tab_enabled`.** If the bot DMs users and this is
    `false`, `chat.postMessage` returns `ok:true` but the user never sees it.
+
 3. **Putting the wrong URL paths in the manifest.** Slash commands /
    interactivity / events all point to *different* endpoints — Slack does
    not auto-discover.
+
 4. **Reusing the same app for two unrelated domains.** A scope rotation,
    token leak, or quota incident on one will take down the other. Spin a
    dedicated app per domain (e.g. newsletter ops vs general bookings).
+
 5. **Adding a scope without re-installing.** Existing tokens don't backfill
    new scopes. After every manifest scope change, the install button on
    the app page is the *required* second step.
