@@ -29,7 +29,9 @@ vi.mock("@aws-sdk/client-ssm", async () => {
   const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
   return {
     ...actual,
-    SSMClient: vi.fn().mockImplementation(function() { return { send: mockSSMSend }; }),
+    SSMClient: vi.fn().mockImplementation(function () {
+      return { send: mockSSMSend };
+    }),
   };
 });
 
@@ -39,7 +41,7 @@ vi.mock("@aws-sdk/client-ssm", async () => {
 function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -71,7 +73,12 @@ const MOCK_PORTAL: ClientPortal = {
       name: "Free Audit",
       status: "pending",
       comments: [
-        { id: COMMENT_ID, author: "Cloudless Team", text: "Audit scheduled.", createdAt: new Date().toISOString() },
+        {
+          id: COMMENT_ID,
+          author: "Cloudless Team",
+          text: "Audit scheduled.",
+          createdAt: new Date().toISOString(),
+        },
       ],
     },
     { id: "step-2", name: "Implementation", status: "pending", comments: [] },
@@ -129,19 +136,23 @@ describe("POST /api/admin/client-portals", () => {
 
   it("returns 400 when clientEmail is missing", async () => {
     const { POST } = await import("@/app/api/admin/client-portals/route");
-    const res = await POST(adminReq(CLIENT_PORTALS_URL, {
-      method: "POST",
-      body: JSON.stringify({ label: "Test" }),
-    }));
+    const res = await POST(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "POST",
+        body: JSON.stringify({ label: "Test" }),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when label is missing", async () => {
     const { POST } = await import("@/app/api/admin/client-portals/route");
-    const res = await POST(adminReq(CLIENT_PORTALS_URL, {
-      method: "POST",
-      body: JSON.stringify({ clientEmail: "test@example.com" }),
-    }));
+    const res = await POST(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "POST",
+        body: JSON.stringify({ clientEmail: "test@example.com" }),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
@@ -150,14 +161,16 @@ describe("POST /api/admin/client-portals", () => {
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
       .mockResolvedValue({});
     const { POST } = await import("@/app/api/admin/client-portals/route");
-    const res = await POST(adminReq(CLIENT_PORTALS_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        label: "Beta Corp",
-        clientEmail: "beta@example.com",
-        clientName: "John Beta",
-      }),
-    }));
+    const res = await POST(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          label: "Beta Corp",
+          clientEmail: "beta@example.com",
+          clientName: "John Beta",
+        }),
+      })
+    );
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.portal).toMatchObject({
@@ -167,6 +180,23 @@ describe("POST /api/admin/client-portals", () => {
     });
     expect(typeof data.portal.token).toBe("string");
     expect(data.portal.token.length).toBeGreaterThan(10);
+  });
+
+  it("returns 502 (not an opaque 500) when the SSM write fails", async () => {
+    // Regression: writePortals had no error handling, so an SSM PutParameter
+    // failure (e.g. value over the size cap) surfaced as an unhandled 500.
+    mockSSMSend.mockReset();
+    mockSSMSend
+      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } }) // readPortals
+      .mockRejectedValueOnce(new Error("ParameterMaxValueExceeded")); // writePortals
+    const { POST } = await import("@/app/api/admin/client-portals/route");
+    const res = await POST(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "POST",
+        body: JSON.stringify({ label: "Big Corp", clientEmail: "big@example.com" }),
+      })
+    );
+    expect(res.status).toBe(502);
   });
 });
 
@@ -178,10 +208,12 @@ it("created portal includes default steps", async () => {
     .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
     .mockResolvedValue({});
   const { POST } = await import("@/app/api/admin/client-portals/route");
-  const res = await POST(adminReq(CLIENT_PORTALS_URL, {
-    method: "POST",
-    body: JSON.stringify({ label: "Steps Corp", clientEmail: "steps@example.com" }),
-  }));
+  const res = await POST(
+    adminReq(CLIENT_PORTALS_URL, {
+      method: "POST",
+      body: JSON.stringify({ label: "Steps Corp", clientEmail: "steps@example.com" }),
+    })
+  );
   expect(res.status).toBe(201);
   const data = await res.json();
   expect(Array.isArray(data.portal.steps)).toBe(true);
@@ -202,24 +234,28 @@ describe("PATCH /api/admin/client-portals", () => {
 
   it("returns 400 when token is missing", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({ action: ACTION_UPDATE_STEP, stepId: STEP_ID, status: "completed" }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({ action: ACTION_UPDATE_STEP, stepId: STEP_ID, status: "completed" }),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("updates step status to completed", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({
-        token: MOCK_PORTAL.token,
-        action: ACTION_UPDATE_STEP,
-        stepId: STEP_ID,
-        status: "completed",
-      }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: ACTION_UPDATE_STEP,
+          stepId: STEP_ID,
+          status: "completed",
+        }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     const step = data.portal.steps.find((s: { id: string }) => s.id === STEP_ID);
@@ -229,49 +265,58 @@ describe("PATCH /api/admin/client-portals", () => {
 
   it("adds a comment to a step", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({
-        token: MOCK_PORTAL.token,
-        action: "add-comment",
-        stepId: STEP_ID,
-        author: TEST_NAME,
-        text: "Work started on this step.",
-      }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "add-comment",
+          stepId: STEP_ID,
+          author: TEST_NAME,
+          text: "Work started on this step.",
+        }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     const step = data.portal.steps.find((s: { id: string }) => s.id === STEP_ID);
     expect(step.comments).toHaveLength(2);
-    expect(step.comments[1]).toMatchObject({ author: TEST_NAME, text: "Work started on this step." });
+    expect(step.comments[1]).toMatchObject({
+      author: TEST_NAME,
+      text: "Work started on this step.",
+    });
   });
 
   it("returns 400 for add-comment with empty text", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({
-        token: MOCK_PORTAL.token,
-        action: "add-comment",
-        stepId: STEP_ID,
-        author: TEST_NAME,
-        text: "  ",
-      }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "add-comment",
+          stepId: STEP_ID,
+          author: TEST_NAME,
+          text: "  ",
+        }),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("deletes a comment from a step", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({
-        token: MOCK_PORTAL.token,
-        action: "delete-comment",
-        stepId: STEP_ID,
-        commentId: COMMENT_ID,
-      }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "delete-comment",
+          stepId: STEP_ID,
+          commentId: COMMENT_ID,
+        }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     const step = data.portal.steps.find((s: { id: string }) => s.id === STEP_ID);
@@ -280,14 +325,16 @@ describe("PATCH /api/admin/client-portals", () => {
 
   it("adds a new custom step", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({
-        token: MOCK_PORTAL.token,
-        action: "add-step",
-        name: "Custom Review",
-      }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "add-step",
+          name: "Custom Review",
+        }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.portal.steps).toHaveLength(3);
@@ -296,14 +343,16 @@ describe("PATCH /api/admin/client-portals", () => {
 
   it("deletes a step", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({
-        token: MOCK_PORTAL.token,
-        action: "delete-step",
-        stepId: STEP_ID,
-      }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: MOCK_PORTAL.token,
+          action: "delete-step",
+          stepId: STEP_ID,
+        }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.portal.steps).toHaveLength(1);
@@ -312,15 +361,17 @@ describe("PATCH /api/admin/client-portals", () => {
 
   it("returns 404 for unknown portal token", async () => {
     const { PATCH } = await import("@/app/api/admin/client-portals/route");
-    const res = await PATCH(adminReq(CLIENT_PORTALS_URL, {
-      method: "PATCH",
-      body: JSON.stringify({
-        token: "nonexistent-token-that-does-not-exist",
-        action: ACTION_UPDATE_STEP,
-        stepId: STEP_ID,
-        status: "completed",
-      }),
-    }));
+    const res = await PATCH(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "PATCH",
+        body: JSON.stringify({
+          token: "nonexistent-token-that-does-not-exist",
+          action: ACTION_UPDATE_STEP,
+          stepId: STEP_ID,
+          status: "completed",
+        }),
+      })
+    );
     expect(res.status).toBe(404);
   });
 });
@@ -338,10 +389,12 @@ describe("DELETE /api/admin/client-portals", () => {
 
   it("returns 400 when token is missing", async () => {
     const { DELETE } = await import("@/app/api/admin/client-portals/route");
-    const res = await DELETE(adminReq(CLIENT_PORTALS_URL, {
-      method: "DELETE",
-      body: JSON.stringify({}),
-    }));
+    const res = await DELETE(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "DELETE",
+        body: JSON.stringify({}),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
@@ -350,10 +403,12 @@ describe("DELETE /api/admin/client-portals", () => {
       .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } })
       .mockResolvedValue({});
     const { DELETE } = await import("@/app/api/admin/client-portals/route");
-    const res = await DELETE(adminReq(CLIENT_PORTALS_URL, {
-      method: "DELETE",
-      body: JSON.stringify({ token: MOCK_PORTAL.token }),
-    }));
+    const res = await DELETE(
+      adminReq(CLIENT_PORTALS_URL, {
+        method: "DELETE",
+        body: JSON.stringify({ token: MOCK_PORTAL.token }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);

@@ -35,6 +35,21 @@ function makeDefaultSteps(): PortalStep[] {
   }));
 }
 
+/**
+ * Persist portals, converting an SSM write failure into a clean, logged 502
+ * instead of an unhandled exception (which surfaced as an opaque 500 on
+ * POST/PATCH/DELETE). Returns the error response, or null on success.
+ */
+async function persistPortals(portals: ClientPortal[]): Promise<NextResponse | null> {
+  try {
+    await writePortals(portals);
+    return null;
+  } catch (err) {
+    console.error("[client-portals] write failed:", err);
+    return NextResponse.json({ error: "Failed to save client portals." }, { status: 502 });
+  }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -87,7 +102,8 @@ export async function POST(request: NextRequest) {
   };
 
   portals.push(portal);
-  await writePortals(portals);
+  const writeErr = await persistPortals(portals);
+  if (writeErr) return writeErr;
 
   return NextResponse.json({ portal }, { status: 201 });
 }
@@ -345,7 +361,8 @@ export async function PATCH(request: NextRequest) {
   if (errorResponse) return errorResponse;
 
   portals[idx] = portal;
-  await writePortals(portals);
+  const writeErr = await persistPortals(portals);
+  if (writeErr) return writeErr;
   return NextResponse.json({ portal });
 }
 
@@ -358,7 +375,8 @@ export async function DELETE(request: NextRequest) {
 
   const portals = await readPortals();
   const updated = portals.filter((p) => p.token !== token);
-  await writePortals(updated);
+  const writeErr = await persistPortals(updated);
+  if (writeErr) return writeErr;
 
   return NextResponse.json({ ok: true });
 }
