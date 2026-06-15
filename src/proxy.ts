@@ -84,8 +84,12 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   // Public analytics tracking — writes to Notion on every call. Cap matches in-handler limit.
   "/api/track": { windowMs: 60_000, max: 30 },
   // Mass-email sender — shared-secret-authenticated but one call triggers SES
-  // sends to all subscribers. 1 per hour is enough for any legitimate newsletter.
-  "/api/newsletter/send": { windowMs: 3_600_000, max: 1 },
+  // sends to all subscribers. The secret is the real auth gate; this is
+  // belt-and-suspenders against credential-leak abuse. Allow up to 6/hour
+  // so an operator can re-dispatch the publisher (Slack `/cloudless-newsletter
+  // send`, GitHub Actions retry) without waiting an hour each time. Was 1/hour
+  // — that blocked every legitimate retry the moment the weekly cron ran.
+  "/api/newsletter/send": { windowMs: 3_600_000, max: 6 },
 };
 
 // Admin endpoints are JWT-auth-gated, but we still rate-limit them to cap
