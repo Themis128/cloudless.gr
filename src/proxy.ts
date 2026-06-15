@@ -195,7 +195,12 @@ function buildCSP(nonce: string): string {
     "media-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    // Meta Pixel (fbevents.js) falls back to submitting a hidden <form> to
+    // https://www.facebook.com/tr/ when it can't use an image/beacon transport.
+    // connect.facebook.net is the documented companion host. Without these the
+    // browser blocks the post ("violates form-action 'self'") and conversions
+    // silently stop being reported. 'self' stays first so our own forms work.
+    "form-action 'self' https://www.facebook.com https://connect.facebook.net",
     "frame-ancestors 'none'",
     "report-uri /api/csp-report",
     "report-to csp-endpoint",

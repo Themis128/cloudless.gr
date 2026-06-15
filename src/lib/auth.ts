@@ -18,7 +18,6 @@ type RefreshTokenError = typeof REFRESH_TOKEN_ERROR;
 
 declare module "next-auth" {
   interface Session {
-    accessToken?: string;
     idToken?: string;
     error?: RefreshTokenError;
     user: {
@@ -31,7 +30,6 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    accessToken?: string;
     idToken?: string;
     refreshToken?: string;
     expiresAt?: number;
@@ -170,7 +168,12 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
     callbacks: {
       async jwt({ token, account, profile }) {
         if (account) {
-          token.accessToken = account.access_token;
+          // accessToken is intentionally NOT persisted on the JWT. Nothing reads
+          // session.accessToken, and dropping it shrinks the encrypted session
+          // cookie — which chunks past the 4KB limit and can push the combined
+          // Cookie header over the CloudFront/Lambda edge limit (→ 413 on
+          // authenticated requests). idToken (used by fetch-with-auth) and
+          // refreshToken (used to refresh) are still needed, so they stay.
           token.idToken = account.id_token;
           token.refreshToken = account.refresh_token;
           token.expiresAt =
@@ -201,7 +204,8 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
 
         try {
           const refreshed = await refreshAccessToken(token.refreshToken, env);
-          token.accessToken = refreshed.access_token;
+          // accessToken not stored (see jwt account branch above); we still decode
+          // the fresh access_token below to refresh the groups claim.
           if (refreshed.refresh_token) token.refreshToken = refreshed.refresh_token;
           if (refreshed.id_token) token.idToken = refreshed.id_token;
           token.expiresAt = now + refreshed.expires_in;
@@ -215,7 +219,6 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
         }
       },
       async session({ session, token }) {
-        session.accessToken = token.accessToken;
         session.idToken = token.idToken;
         session.user.id = token.sub ?? "";
         session.user.groups = token.groups ?? [];
