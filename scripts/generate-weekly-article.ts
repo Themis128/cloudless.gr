@@ -50,12 +50,7 @@ const SITE_URL_DEFAULT = "https://cloudless.gr";
  *  Bedrock Claude 3.5 Haiku if this model errors or is rate-limited. */
 const CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
-export const CATEGORIES = [
-  "Cloud",
-  "Serverless",
-  "Analytics",
-  "AI Marketing",
-] as const;
+export const CATEGORIES = ["Cloud", "Serverless", "Analytics", "AI Marketing"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 function requireEnv(name: string): string {
@@ -74,10 +69,7 @@ export interface RecentPost {
   date: string;
 }
 
-async function notionFetch(
-  path: string,
-  init: RequestInit = {},
-): Promise<Response> {
+async function notionFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = requireEnv("NOTION_API_KEY");
   return fetch(`${NOTION_API}${path}`, {
     ...init,
@@ -107,22 +99,14 @@ async function fetchRecentPosts(): Promise<RecentPost[]> {
     }),
   });
   if (!res.ok) {
-    throw new Error(
-      `Notion query failed: ${res.status} ${await res.text().catch(() => "")}`,
-    );
+    throw new Error(`Notion query failed: ${res.status} ${await res.text().catch(() => "")}`);
   }
   const data = (await res.json()) as { results: NotionPage[] };
   return data.results.map((page) => {
     const p = page.properties ?? {};
-    const title = (p.Title?.title ?? p.Name?.title ?? [])
-      .map((t) => t.plain_text ?? "")
-      .join("");
+    const title = (p.Title?.title ?? p.Name?.title ?? []).map((t) => t.plain_text ?? "").join("");
     const cat = (p.Category?.select?.name ?? "Cloud") as Category;
-    const date =
-      p.PublishedAt?.date?.start ??
-      p.Date?.date?.start ??
-      page.created_time ??
-      "";
+    const date = p.PublishedAt?.date?.start ?? p.Date?.date?.start ?? page.created_time ?? "";
     return { title, category: cat, date };
   });
 }
@@ -140,8 +124,8 @@ export function pickLruCategory(recent: RecentPost[]): Category {
   for (const cat of CATEGORIES) {
     if (!lastSeen.has(cat)) return cat;
   }
-  return [...CATEGORIES].sort(
-    (a, b) => (lastSeen.get(a) ?? "").localeCompare(lastSeen.get(b) ?? ""),
+  return [...CATEGORIES].sort((a, b) =>
+    (lastSeen.get(a) ?? "").localeCompare(lastSeen.get(b) ?? "")
   )[0];
 }
 
@@ -193,9 +177,7 @@ function buildUserMessage(category: Category, avoidTitles: string[]): string {
     `Write this week's blog post for the **${category}** category.`,
     "",
     "Recent posts (avoid repeating these topics):",
-    avoidTitles.length
-      ? avoidTitles.map((t) => `- ${t}`).join("\n")
-      : "- (none)",
+    avoidTitles.length ? avoidTitles.map((t) => `- ${t}`).join("\n") : "- (none)",
     "",
     "Pick a fresh angle that hasn't been covered. Output the JSON object only.",
   ].join("\n");
@@ -207,7 +189,7 @@ async function generateViaCloudflare(
   accountId: string,
   apiToken: string,
   category: Category,
-  avoidTitles: string[],
+  avoidTitles: string[]
 ): Promise<{ text: string; model: string }> {
   // Force schema-valid JSON. Without this, llama-3.3-70b will sometimes
   // emit `"content": [## Heading\nbody...]` — an array with unquoted
@@ -245,11 +227,11 @@ async function generateViaCloudflare(
           json_schema: { name: "article", schema: articleSchema, strict: true },
         },
       }),
-    },
+    }
   );
   if (!res.ok) {
     throw new Error(
-      `Cloudflare Workers AI failed: ${res.status} ${await res.text().catch(() => "")}`,
+      `Cloudflare Workers AI failed: ${res.status} ${await res.text().catch(() => "")}`
     );
   }
   const data = (await res.json()) as {
@@ -259,12 +241,11 @@ async function generateViaCloudflare(
   };
   if (!data.success) {
     throw new Error(
-      `Cloudflare Workers AI rejected the request: ${data.errors?.[0]?.message ?? "unknown"}`,
+      `Cloudflare Workers AI rejected the request: ${data.errors?.[0]?.message ?? "unknown"}`
     );
   }
   const raw = data.result?.response;
-  const text =
-    typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
+  const text = typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
   return { text, model: CF_MODEL };
 }
 
@@ -272,7 +253,7 @@ async function generateViaCloudflare(
  *  and any environment where CF creds can't be held by the cron runner. */
 async function generateViaRoute(
   category: Category,
-  avoidTitles: string[],
+  avoidTitles: string[]
 ): Promise<{ text: string; model: string; source: string }> {
   const secret = requireEnv("AI_GENERATE_SECRET");
   const siteUrl = (process.env.SITE_URL || SITE_URL_DEFAULT).replace(/\/$/, "");
@@ -286,14 +267,12 @@ async function generateViaRoute(
       model: CF_MODEL,
       maxTokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildUserMessage(category, avoidTitles) },
-      ],
+      messages: [{ role: "user", content: buildUserMessage(category, avoidTitles) }],
     }),
   });
   if (!res.ok) {
     throw new Error(
-      `Internal AI generation failed: ${res.status} ${await res.text().catch(() => "")}`,
+      `Internal AI generation failed: ${res.status} ${await res.text().catch(() => "")}`
     );
   }
   const data = (await res.json()) as {
@@ -330,7 +309,7 @@ export function parseArticleJson(raw: string): GeneratedArticle {
       } catch (err2) {
         throw new Error(
           `Could not parse article JSON (after extraction). Raw: ${candidate.slice(0, 500)}`,
-          { cause: err2 },
+          { cause: err2 }
         );
       }
     }
@@ -340,7 +319,7 @@ export function parseArticleJson(raw: string): GeneratedArticle {
 
 async function generateArticle(
   category: Category,
-  avoidTitles: string[],
+  avoidTitles: string[]
 ): Promise<GeneratedArticle> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
@@ -349,15 +328,11 @@ async function generateArticle(
   if (accountId && apiToken) {
     const r = await generateViaCloudflare(accountId, apiToken, category, avoidTitles);
     text = r.text;
-    console.log(
-      `[generate-weekly-article] generated via cloudflare-direct (${r.model})`,
-    );
+    console.log(`[generate-weekly-article] generated via cloudflare-direct (${r.model})`);
   } else {
     const r = await generateViaRoute(category, avoidTitles);
     text = r.text;
-    console.log(
-      `[generate-weekly-article] generated via ${r.source} (${r.model})`,
-    );
+    console.log(`[generate-weekly-article] generated via ${r.source} (${r.model})`);
   }
 
   // Strip ```json fences if the model adds them despite instructions.
@@ -481,7 +456,7 @@ function numberedBlock(text: string): NotionBlock {
 
 async function createDraftPage(
   article: GeneratedArticle,
-  category: Category,
+  category: Category
 ): Promise<{ id: string; url: string }> {
   const dbId = requireEnv("NOTION_BLOG_DB_ID");
   const blocks = markdownToNotionBlocks(article.content);
@@ -514,9 +489,7 @@ async function createDraftPage(
 
   if (!createRes.ok) {
     throw new Error(
-      `Notion create failed: ${createRes.status} ${await createRes
-        .text()
-        .catch(() => "")}`,
+      `Notion create failed: ${createRes.status} ${await createRes.text().catch(() => "")}`
     );
   }
   const created = (await createRes.json()) as { id: string; url: string };
@@ -525,14 +498,12 @@ async function createDraftPage(
     // Append in chunks of 100 — should never exceed 200 for an 800-1200 word article.
     for (let i = 0; i < remainingChildren.length; i += 100) {
       const chunk = remainingChildren.slice(i, i + 100);
-      const appendRes = await notionFetch(
-        `/blocks/${created.id}/children`,
-        { method: "PATCH", body: JSON.stringify({ children: chunk }) },
-      );
+      const appendRes = await notionFetch(`/blocks/${created.id}/children`, {
+        method: "PATCH",
+        body: JSON.stringify({ children: chunk }),
+      });
       if (!appendRes.ok) {
-        console.warn(
-          `[generate-weekly-article] block append failed: ${appendRes.status}`,
-        );
+        console.warn(`[generate-weekly-article] block append failed: ${appendRes.status}`);
       }
     }
   }
@@ -547,7 +518,7 @@ async function slackPing(text: string): Promise<void> {
   const channelId = process.env.NEWSLETTER_SLACK_CHANNEL_ID;
   if (botToken && channelId) {
     try {
-      await fetch("https://slack.com/api/chat.postMessage", {
+      const r = await fetch("https://slack.com/api/chat.postMessage", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${botToken}`,
@@ -555,22 +526,38 @@ async function slackPing(text: string): Promise<void> {
         },
         body: JSON.stringify({ channel: channelId, text }),
       });
-      return;
+      const data = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (data.ok) {
+        console.log(
+          `[generate-weekly-article] Slack ping posted to ${channelId} via chat.postMessage`
+        );
+        return;
+      }
+      console.warn(
+        `[generate-weekly-article] chat.postMessage rejected (${data.error}), falling back to webhook`
+      );
     } catch (err) {
       console.warn(
         "[generate-weekly-article] chat.postMessage failed, falling back to webhook:",
-        err,
+        err
       );
     }
   }
   const url = process.env.SLACK_WEBHOOK_URL;
-  if (!url) return;
+  if (!url) {
+    console.warn(
+      "[generate-weekly-article] no Slack destination configured " +
+        "(NEWSLETTER_SLACK_CHANNEL_ID + SLACK_BOT_TOKEN unset, SLACK_WEBHOOK_URL also unset) — ping skipped"
+    );
+    return;
+  }
   try {
     await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
     });
+    console.log("[generate-weekly-article] Slack ping posted via SLACK_WEBHOOK_URL");
   } catch (err) {
     console.warn("[generate-weekly-article] Slack ping failed:", err);
   }
@@ -582,19 +569,17 @@ async function main(): Promise<void> {
   const category = pickLruCategory(recent);
   const avoidTitles = recent.slice(0, 8).map((p) => p.title);
   console.log(
-    `[generate-weekly-article] picked category=${category}; avoiding ${avoidTitles.length} recent titles`,
+    `[generate-weekly-article] picked category=${category}; avoiding ${avoidTitles.length} recent titles`
   );
 
   const article = await generateArticle(category, avoidTitles);
-  console.log(
-    `[generate-weekly-article] generated: "${article.title}" (${article.slug})`,
-  );
+  console.log(`[generate-weekly-article] generated: "${article.title}" (${article.slug})`);
 
   const page = await createDraftPage(article, category);
   console.log(`[generate-weekly-article] draft created: ${page.url}`);
 
   await slackPing(
-    `:newspaper: Weekly draft ready for review (${category}): *${article.title}*\n${page.url}\n\nApprove in Notion before Mon 09:00 UTC to publish + send newsletter.`,
+    `:newspaper: Weekly draft ready for review (${category}): *${article.title}*\n${page.url}\n\nApprove in Notion before Mon 09:00 UTC to publish + send newsletter.`
   );
 }
 
@@ -603,9 +588,10 @@ if (process.argv[1]?.includes("generate-weekly-article")) {
   main().catch(async (err) => {
     console.error("[generate-weekly-article] FAILED:", err);
     await slackPing(
-      `:warning: Weekly article generator FAILED: \`${String(
-        (err as Error)?.message ?? err,
-      ).slice(0, 500)}\``,
+      `:warning: Weekly article generator FAILED: \`${String((err as Error)?.message ?? err).slice(
+        0,
+        500
+      )}\``
     );
     process.exit(1);
   });
