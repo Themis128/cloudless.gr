@@ -602,6 +602,7 @@ function handleHelp(): Response {
             "• `/cloudless-draft rerun` — re-run the weekly article draft generator",
             "• `/cloudless-newsletter list` — show pending Notion drafts",
             "• `/cloudless-newsletter send <slug|id>` — approve in Notion + publish + email subscribers",
+            "• `/cloudless-newsletter unpublish <slug|id>` — emergency rollback: flip Status=Archived",
             "• `/cloudless-help` — show this message",
           ].join("\n"),
         },
@@ -760,6 +761,64 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
     });
   }
 
+  if (sub === "unpublish") {
+    const target = args[1];
+    if (!target) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          "Usage: `/cloudless-newsletter unpublish <slug-or-notion-id>`\n" +
+          "Flips Notion Status to `Archived`. The post stops being indexed on the public blog. " +
+          "Use this for emergency rollback of a misfired auto-promoted article. " +
+          "Allowlist applies (only `SLACK_OPS_USERS` can run this).",
+      });
+    }
+
+    if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(payload.user_id)) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":no_entry: You're not on the ops allowlist. Ask the admin to add your user ID to `SLACK_OPS_USERS`.",
+      });
+    }
+
+    const post = await findEditorialPost(target);
+    if (!post) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text: `:warning: Could not find a Notion post matching \`${target}\`.`,
+      });
+    }
+
+    const flipped = await setEditorialStatus(post.id, "Archived");
+    if (!flipped) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":warning: Failed to update Notion. Check NOTION_API_KEY in SSM.",
+      });
+    }
+
+    return slackResponse({
+      response_type: "in_channel",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: ":wastebasket: Newsletter Unpublished", emoji: true },
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text:
+              `<@${payload.user_id}> flipped *<${post.url}|${post.title}>* to Notion Status=\`Archived\`.\n\n` +
+              `\`/blog/${post.slug}\` will start returning 404 within the next ISR cycle (5 min). ` +
+              `The email is already in subscriber inboxes — nothing the API can do about that. ` +
+              `If correction is needed, send a corrigendum via \`/cloudless-newsletter send\` for a fresh draft.`,
+          },
+        },
+      ],
+    });
+  }
+
   if (sub === "send") {
     const target = args[1];
     if (!target) {
@@ -879,12 +938,14 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
             "*Subcommands:*",
             "• `list` — show pending Notion drafts (Draft + In Review)",
             "• `send <slug|notion-id>` — approve in Notion + publish + email subscribers",
+            "• `unpublish <slug|notion-id>` — emergency rollback (flip Status=Archived)",
             "",
             "*Example flow:*",
             "1. `/cloudless-draft rerun` — generate a new draft (Claude → Notion)",
-            "2. Read it in Notion, edit if needed",
-            "3. `/cloudless-newsletter list` — copy the slug",
-            "4. `/cloudless-newsletter send <slug>` — flips Status, dispatches publisher",
+            "2. Quality gates auto-promote to `In Review` if they pass",
+            "3. `/cloudless-newsletter list` — see pending drafts",
+            "4. `/cloudless-newsletter send <slug>` — manual publish + send",
+            "5. `/cloudless-newsletter unpublish <slug>` — kill a misfired post",
           ].join("\n"),
         },
       },
