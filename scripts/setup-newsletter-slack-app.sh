@@ -81,11 +81,11 @@ do
   REST="${pair#*:}"
   VALUE="${REST%:*}"
   TYPE="${REST##*:}"
-  PATH="/cloudless/production/$NAME"
+  SSM_PATH="/cloudless/production/$NAME"
   aws ssm put-parameter --region "$REGION" \
-    --name "$PATH" --type "$TYPE" --value "$VALUE" --overwrite \
+    --name "$SSM_PATH" --type "$TYPE" --value "$VALUE" --overwrite \
     >/dev/null
-  echo "  ✓ $PATH ($TYPE)"
+  echo "  ✓ $SSM_PATH ($TYPE)"
 done
 
 # ---------------------------------------------------------------------------
