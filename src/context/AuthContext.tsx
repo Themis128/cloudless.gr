@@ -169,10 +169,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
           preferences: { ...DEFAULT_PREFERENCES },
         };
         setIsAdmin(isAdminFromSession(data.user));
-        // Enrich with stored profile attributes (company/phone/preferences)
-        // the session JWT doesn't carry, so saved values render instead of
-        // blanks. Best-effort — falls back to the session-only user.
-        setUser(await enrichWithProfile(base));
+        // Render the session-only user immediately so isLoading flips false
+        // and the admin layout stops showing the centred spinner. The profile
+        // enrichment (company/phone/preferences) runs without await — when it
+        // resolves it patches the state in. Avoids blocking the whole admin
+        // boot on /api/user/profile, which returns 413 today because the
+        // Cognito-cookie + headers combo exceeds the edge header limit
+        // (documented in src/lib/auth.ts:172). The 413 itself is harmless —
+        // enrichWithProfile swallows it and returns the base — but awaiting
+        // it added a full request RTT to every admin page load.
+        setUser(base);
+        void enrichWithProfile(base).then((enriched) => {
+          if (enriched !== base) setUser(enriched);
+        });
       } else {
         setUser(null);
         setIsAdmin(false);
