@@ -17,11 +17,12 @@ first try:
 3. **Replay attack protection** (signature + event_id dedup)
 4. **Response routing** — sync body vs `response_url` follow-up
 
-> Where helpers live in this repo:
-> - `src/lib/slack-verify.ts` — main Cloudless app verifier
-> - `src/lib/newsletter-slack-verify.ts` — Newsletter app verifier (dedicated secret)
-> - `src/lib/slack-rate-limit.ts` — token-bucket per-IP rate limiter
-> - `src/lib/slack-notify.ts` — `SlackClient` wrapper for `chat.postMessage`
+**Where helpers live in this repo:**
+
+- `src/lib/slack-verify.ts` — main Cloudless app verifier
+- `src/lib/newsletter-slack-verify.ts` — Newsletter app verifier (dedicated secret)
+- `src/lib/slack-rate-limit.ts` — token-bucket per-IP rate limiter
+- `src/lib/slack-notify.ts` — `SlackClient` wrapper for `chat.postMessage`
 
 ## Pattern 1 — Signature verification (do this first, in every route)
 
@@ -62,6 +63,7 @@ export async function verifySlackRequest(
   }
   return { ok: true, body };
 }
+
 ```
 
 Also keep an in-process **replay set** keyed on the signature with a 5-minute
@@ -115,6 +117,7 @@ function slackResponse(body: unknown): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
 ```
 
 Response body shape:
@@ -154,6 +157,7 @@ export async function POST(request: Request): Promise<Response> {
 
   return Response.json({ ok: true });
 }
+
 ```
 
 The `isDuplicate(event_id)` cache prevents processing the same event twice
@@ -206,9 +210,11 @@ export async function POST(request: Request): Promise<Response> {
 
   return Response.json({ ok: true });
 }
+
 ```
 
 **Critical timings** to memorise:
+
 - `trigger_id` — **3 seconds, single-use** for the first `views.open`.
 - `views.push` from inside a modal generates a *new* `trigger_id` valid ~5s.
 - `response_url` — **30 minutes, up to 5 sends**.
@@ -228,6 +234,7 @@ async function replyEphemeral(responseUrl: string, text: string): Promise<void> 
     body: JSON.stringify({ response_type: "ephemeral", text }),
   }).catch((err) => console.warn("[Slack] response_url POST failed:", err));
 }
+
 ```
 
 Add `"replace_original": true` (on a button-triggered follow-up) to update the
@@ -249,6 +256,7 @@ const resp = await fetch("https://slack.com/api/views.publish", {
 });
 const json = await resp.json();
 if (!json.ok) console.warn("[Slack] views.publish failed:", json.error);
+
 ```
 
 Block limits: **100 blocks per Home view, 100 per modal, 50 per chat message**.
@@ -273,6 +281,7 @@ export async function getSlackConfigAsync(): Promise<SlackConfig> {
   }
   return { SLACK_BOT_TOKEN: token, SLACK_SIGNING_SECRET: signingSecret, ... };
 }
+
 ```
 
 For a **second** Slack app (e.g. Newsletter), copy this pattern with a
@@ -284,14 +293,18 @@ See `src/lib/newsletter-slack-config.ts` for the reference implementation.
 
 1. **Calling `await req.json()` before `verifySlackRequest`.** The verifier
    needs the raw bytes; once you've consumed the stream, it can't.
+
 2. **Doing the work inside the handler.** Slack's 3 s window fires before
    your DB / API call returns. Pattern: `res.status(200).end()` first,
    `void doWork().catch(log)` after.
+
 3. **Not deduping events.** Slack retries up to 3x on no-200. Hash on
    `event.event_id` with a 5-min TTL.
+
 4. **Forgetting that `response_url` ≠ chat.postMessage.** `response_url` is
    ephemeral by default, expires in 30 min, and only allows 5 sends. For
    permanent posts use the Web API.
+
 5. **Verifying with the wrong signing secret.** Each Slack app has its own
    secret — never reuse. Per-app verifier files (`slack-verify.ts`,
    `newsletter-slack-verify.ts`) keep them isolated.
