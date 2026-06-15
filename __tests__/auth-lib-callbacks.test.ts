@@ -227,14 +227,15 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
       }),
     });
     const expired = {
-      accessToken: "old-atk",
       refreshToken: "rtk-old",
       expiresAt: Math.floor(Date.now() / 1000) - 60,
       groups: ["member"],
       roles: [],
     };
     const result = await jwt.jwt({ token: { ...expired } });
-    expect(result.accessToken).toBe(newAccessToken);
+    // accessToken is no longer persisted on the JWT (cookie-size slim); the
+    // refresh still rotates the refresh_token and clears the error flag.
+    expect(result.accessToken).toBeUndefined();
     expect(result.refreshToken).toBe("rtk-new");
     expect(result.error).toBeUndefined();
   });
@@ -256,7 +257,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
 
   // ── session callback ───────────────────────────────────────────────────────
 
-  it("session callback surfaces accessToken, idToken, groups, roles, and user.id", async () => {
+  it("session callback surfaces idToken, groups, roles, and user.id", async () => {
     const { session: sessionCb } = capturedConfig.callbacks as {
       session: (a: SessionInput) => Promise<SessionInput["session"]>;
     };
@@ -264,14 +265,14 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
       session: { user: { id: "" } },
       token: {
         sub: "u-1",
-        accessToken: "atk",
         idToken: "itk",
         groups: ["admin"],
         roles: [],
       },
     });
     expect(out.user.id).toBe("u-1");
-    expect(out.accessToken).toBe("atk");
+    // accessToken is no longer surfaced on the session (cookie-size slim).
+    expect(out.accessToken).toBeUndefined();
     expect(out.idToken).toBe("itk");
     expect((out as Record<string, unknown>).user).toMatchObject({
       groups: ["admin"],
