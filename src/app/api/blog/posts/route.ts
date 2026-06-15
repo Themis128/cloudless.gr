@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getPosts } from "@/lib/notion-blog";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET() {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
     // Fall back to static blog data when Notion is not configured
     const blogModule = await import("@/lib/blog");
     const blogPosts = blogModule.posts;

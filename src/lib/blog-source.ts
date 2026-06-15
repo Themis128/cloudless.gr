@@ -3,7 +3,7 @@ import {
   getPostBySlug as getStaticPostBySlug,
   type BlogPost,
 } from "@/lib/blog";
-import { isConfigured } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/integrations";
 import {
   getPosts as getNotionPosts,
   getPostBySlug as getNotionPostBySlug,
@@ -135,7 +135,7 @@ function mapNotionPost(post: NotionPost & { content: NotionBlock[] }): BlogPost 
 }
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
     return staticPosts;
   }
 
@@ -148,7 +148,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
-  if (!isConfigured("NOTION_API_KEY", "NOTION_BLOG_DB_ID")) {
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
     return getStaticPostBySlug(slug);
   }
 
