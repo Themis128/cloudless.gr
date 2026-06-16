@@ -57,6 +57,7 @@ jobs:
       - name: Warm CDN cache
         run: |
           for url in \
+            https://cloudless.gr \
             https://cloudless.gr/en \
             https://cloudless.gr/en/services \
             https://cloudless.gr/en/contact \
