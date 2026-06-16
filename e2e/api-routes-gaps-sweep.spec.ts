@@ -105,6 +105,14 @@ test.describe("Admin API gap sweep (authenticated GETs)", () => {
     `/api/admin/postiz/slot?id=${SENTINEL_ID}`,
     "/api/admin/postiz/health",
     "/api/admin/postiz/health?format=prom",
+    "/api/admin/postiz/is-connected",
+    "/api/admin/postiz/groups",
+    "/api/admin/postiz/notifications",
+    `/api/admin/postiz/integrations/${SENTINEL_ID}/connect`,
+    `/api/admin/postiz/integrations/${SENTINEL_ID}/settings`,
+    `/api/admin/postiz/posts/${SENTINEL_ID}/missing-content`,
+    `/api/admin/postiz/analytics/post/${SENTINEL_ID}`,
+    `/api/admin/postiz/analytics/integration/${SENTINEL_ID}`,
     `/api/admin/reports/${SENTINEL_ID}`,
     `/api/admin/reports/${SENTINEL_ID}/pdf`,
   ] as const;
@@ -129,6 +137,7 @@ test.describe("Admin API gap sweep (authenticated POSTs)", () => {
     "/api/admin/postiz/posts",
     "/api/admin/postiz/upload",
     "/api/admin/postiz/upload-file",
+    `/api/admin/postiz/integrations/${SENTINEL_ID}/trigger`,
   ] as const;
 
   for (const url of ADMIN_POST_GAPS) {
@@ -164,6 +173,32 @@ test.describe("Admin API gap sweep (authenticated PUTs)", () => {
     expect([401, 403]).not.toContain(r.status());
     expect(r.status()).toBeGreaterThanOrEqual(200);
   });
+
+  for (const url of [
+    `/api/admin/postiz/posts/${SENTINEL_ID}/status`,
+    `/api/admin/postiz/posts/${SENTINEL_ID}/release-id`,
+  ] as const) {
+    test(`PUT ${url} (empty body)`, async ({ request }) => {
+      const a = await adminRequest(request);
+      const r = await a.put(url, { data: {} });
+      expect([401, 403]).not.toContain(r.status());
+      expect(r.status()).toBeGreaterThanOrEqual(200);
+    });
+  }
+});
+
+test.describe("Admin API gap sweep — extra DELETEs (Postiz)", () => {
+  for (const url of [
+    `/api/admin/postiz/posts/group/${SENTINEL_ID}`,
+    `/api/admin/postiz/integrations/${SENTINEL_ID}`,
+  ] as const) {
+    test(`DELETE ${url}`, async ({ request }) => {
+      const a = await adminRequest(request);
+      const r = await a.delete(url);
+      expect([401, 403]).not.toContain(r.status());
+      expect(r.status()).toBeGreaterThanOrEqual(200);
+    });
+  }
 });
 
 test.describe("Postiz cron endpoints (unauthenticated — reject without 5xx)", () => {

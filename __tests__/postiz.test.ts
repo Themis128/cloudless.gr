@@ -9,12 +9,22 @@ vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
 vi.stubGlobal("fetch", mockFetch);
 
 import {
+  changePostStatus,
   createPost,
+  deleteIntegration,
   deletePost,
+  deletePostsByGroup,
   findSlot,
+  getIntegrationAnalytics,
+  getIntegrationConnectUrl,
+  getIntegrationSettings,
+  getPostMissingContent,
   getPostStats,
+  isApiKeyValid,
   isPostizConfigured,
+  listGroups,
   listIntegrations,
+  listNotifications,
   listPostizIntegrations,
   listPosts,
   matchIntegrationsForPlatform,
@@ -23,7 +33,9 @@ import {
   PostizApiError,
   PostizNotConfiguredError,
   schedulePost,
+  triggerIntegrationTool,
   updatePost,
+  updatePostReleaseId,
   uploadFile,
   uploadFromUrl,
   verifyPostizWebhookSignature,
@@ -280,6 +292,140 @@ describe("postIdentifier helper", () => {
 
   it("returns empty string when neither field is set", () => {
     expect(postIdentifier({ integration: { id: "i", name: "n" } })).toBe("");
+  });
+});
+
+describe("deletePostsByGroup", () => {
+  it("DELETEs /posts/group/:group and URL-encodes the id", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: "grp-1" }));
+    await expect(deletePostsByGroup("grp/1")).resolves.toEqual({ id: "grp-1" });
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/posts/group/grp%2F1");
+    expect(init.method).toBe("DELETE");
+  });
+});
+
+describe("changePostStatus", () => {
+  it("PUTs /posts/:id/status with the status body and returns {id,state}", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: "p1", state: "QUEUE" }));
+    const result = await changePostStatus("p1", "schedule");
+    expect(result).toEqual({ id: "p1", state: "QUEUE" });
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/posts/p1/status");
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body)).toEqual({ status: "schedule" });
+  });
+});
+
+describe("getPostMissingContent", () => {
+  it("GETs /posts/:id/missing-content", async () => {
+    const items = [{ id: "x1", url: "https://x.com/post/1" }];
+    mockFetch.mockResolvedValueOnce(jsonResponse(items));
+    await expect(getPostMissingContent("p1")).resolves.toEqual(items);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/posts/p1/missing-content");
+  });
+});
+
+describe("updatePostReleaseId", () => {
+  it("PUTs /posts/:id/release-id with the new release id", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: "p1", releaseId: "r1" }));
+    const r = await updatePostReleaseId("p1", "r1");
+    expect(r).toEqual({ id: "p1", releaseId: "r1" });
+    const [, init] = mockFetch.mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({ releaseId: "r1" });
+  });
+});
+
+describe("listGroups", () => {
+  it("GETs /groups and returns the array", async () => {
+    const groups = [{ id: "g1", name: "Acme" }];
+    mockFetch.mockResolvedValueOnce(jsonResponse(groups));
+    await expect(listGroups()).resolves.toEqual(groups);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toMatch(/\/groups$/);
+  });
+});
+
+describe("isApiKeyValid", () => {
+  it("GETs /integrations/is-connected", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ connected: true }));
+    await expect(isApiKeyValid()).resolves.toEqual({ connected: true });
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/integrations/is-connected");
+  });
+
+  it("propagates 401 as PostizApiError so the admin route can map it", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: "no" }, 401));
+    await expect(isApiKeyValid()).rejects.toBeInstanceOf(PostizApiError);
+  });
+});
+
+describe("deleteIntegration", () => {
+  it("DELETEs /integrations/:id and URL-encodes", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await expect(deleteIntegration("i/1")).resolves.toBeUndefined();
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/integrations/i%2F1");
+    expect(init.method).toBe("DELETE");
+  });
+});
+
+describe("getIntegrationConnectUrl", () => {
+  it("GETs /integrations/:provider/connect", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ url: "https://oauth.example/start" }));
+    await expect(getIntegrationConnectUrl("facebook")).resolves.toEqual({
+      url: "https://oauth.example/start",
+    });
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/integrations/facebook/connect");
+  });
+});
+
+describe("getIntegrationSettings", () => {
+  it("GETs /integrations/:id/settings", async () => {
+    const settings = { maxLength: 280, tools: ["search"] };
+    mockFetch.mockResolvedValueOnce(jsonResponse(settings));
+    await expect(getIntegrationSettings("int-1")).resolves.toEqual(settings);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/integrations/int-1/settings");
+  });
+});
+
+describe("triggerIntegrationTool", () => {
+  it("POSTs the tool body to /integrations/:id/trigger", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ items: ["a", "b"] }));
+    await triggerIntegrationTool("int-1", { tool: "search-audio", data: { q: "lofi" } });
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/integrations/int-1/trigger");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ tool: "search-audio", data: { q: "lofi" } });
+  });
+});
+
+describe("listNotifications", () => {
+  it("GETs /notifications with the page param", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]));
+    await listNotifications(3);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/notifications?page=3");
+  });
+
+  it("defaults page=1", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]));
+    await listNotifications();
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/notifications?page=1");
+  });
+});
+
+describe("getIntegrationAnalytics", () => {
+  it("GETs /analytics/integration/:id with the date window", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]));
+    await getIntegrationAnalytics("int-1", 30);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/analytics/integration/int-1");
+    expect(url).toContain("date=30");
   });
 });
 

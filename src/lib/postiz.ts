@@ -410,6 +410,131 @@ export async function uploadFile(file: Blob, filename: string): Promise<Uploaded
   return (await res.json()) as UploadedFile;
 }
 
+// --- Full Public-API coverage per docs.postiz.com ------------------------
+
+/** Delete every post in a group with a single call. */
+export function deletePostsByGroup(group: string): Promise<{ id: string }> {
+  return callThrowing<{ id: string }>(`/posts/group/${encodeURIComponent(group)}`, {
+    method: "DELETE",
+  });
+}
+
+/** Move a post between `draft` and `schedule` state. Date is preserved.
+ *  `schedule` → state QUEUE (workflow restarted), `draft` → state DRAFT
+ *  (workflow terminated). */
+export function changePostStatus(
+  id: string,
+  status: "draft" | "schedule"
+): Promise<{ id: string; state: "DRAFT" | "QUEUE" }> {
+  return callThrowing<{ id: string; state: "DRAFT" | "QUEUE" }>(
+    `/posts/${encodeURIComponent(id)}/status`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    }
+  );
+}
+
+/** When Postiz publishes but can't get a real post-id back from the platform
+ *  (`releaseId === "missing"`), this lists recent content from the provider
+ *  so you can match and connect the right one. */
+export interface PostizMissingContentItem {
+  id: string;
+  url: string;
+}
+export function getPostMissingContent(id: string): Promise<PostizMissingContentItem[]> {
+  return callThrowing<PostizMissingContentItem[]>(
+    `/posts/${encodeURIComponent(id)}/missing-content`
+  );
+}
+
+/** Connect a missing post to the real platform post-id, restoring
+ *  analytics + statistics tracking. */
+export function updatePostReleaseId(
+  id: string,
+  releaseId: string
+): Promise<{ id: string; releaseId: string }> {
+  return callThrowing<{ id: string; releaseId: string }>(
+    `/posts/${encodeURIComponent(id)}/release-id`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ releaseId }),
+    }
+  );
+}
+
+/** A customer group — the API counterpart of the multi-tenancy UI. */
+export interface PostizGroup {
+  id: string;
+  name: string;
+}
+export function listGroups(): Promise<PostizGroup[]> {
+  return callThrowing<PostizGroup[]>("/groups");
+}
+
+/** Probe whether the configured Postiz API key is currently valid. Returns
+ *  the upstream JSON (typically `{connected: true}`) on success and throws
+ *  PostizApiError on 401/403/etc. */
+export function isApiKeyValid(): Promise<{ connected: boolean }> {
+  return callThrowing<{ connected: boolean }>("/integrations/is-connected");
+}
+
+/** Delete a connected channel by integration id. Any scheduled posts on the
+ *  channel are also deleted (per docs). */
+export function deleteIntegration(id: string): Promise<void> {
+  return callThrowing<void>(`/integrations/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/** Generate an OAuth authorization URL for a brand-new channel. Only OAuth
+ *  providers are supported (Mastodon and friends that need a URL return 4xx). */
+export function getIntegrationConnectUrl(integrationName: string): Promise<{ url: string }> {
+  return callThrowing<{ url: string }>(`/integrations/${encodeURIComponent(integrationName)}/connect`);
+}
+
+/** Provider posting rules + settings JSON schema + available tools.
+ *  Shape varies per provider so we keep it open. */
+export function getIntegrationSettings(id: string): Promise<Record<string, unknown>> {
+  return callThrowing<Record<string, unknown>>(
+    `/integrations/${encodeURIComponent(id)}/settings`
+  );
+}
+
+/** Execute a provider-specific tool (e.g. listing Discord channels, fetching
+ *  Reddit flairs). Tool names + body shape discovered via `getIntegrationSettings`. */
+export function triggerIntegrationTool(
+  id: string,
+  body: { tool: string; data?: Record<string, unknown> }
+): Promise<Record<string, unknown>> {
+  return callThrowing<Record<string, unknown>>(
+    `/integrations/${encodeURIComponent(id)}/trigger`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+/** Org notifications, newest first. 100 per page. */
+export interface PostizNotification {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+export function listNotifications(page = 1): Promise<PostizNotification[]> {
+  return callThrowing<PostizNotification[]>(`/notifications?page=${page}`);
+}
+
+/** Per-integration analytics (followers, impressions, engagement, …). Same
+ *  AnalyticsData[] shape as the per-post variant. */
+export function getIntegrationAnalytics(
+  id: string,
+  lookbackDays: 7 | 14 | 30 | 60 | 90 = 7
+): Promise<PostizAnalyticsMetric[]> {
+  return callThrowing<PostizAnalyticsMetric[]>(
+    `/analytics/integration/${encodeURIComponent(id)}?date=${lookbackDays}`
+  );
+}
+
 /**
  * Verify an inbound Postiz webhook request.
  *
