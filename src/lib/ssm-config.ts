@@ -105,6 +105,10 @@ interface AppConfig {
   // Postiz (self-hosted social publishing)
   POSTIZ_API_URL: string;
   POSTIZ_API_KEY: string;
+  /** HMAC secret shared with Postiz webhook config — verifies inbound events. */
+  POSTIZ_WEBHOOK_SECRET: string;
+  /** Optional Slack channel override for Postiz publish/error/oauth events. */
+  POSTIZ_SLACK_CHANNEL: string;
   // Cron auth
   CRON_SECRET: string;
   // AI
@@ -237,6 +241,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     GITHUB_DISPATCH_TOKEN: params.get("GITHUB_DISPATCH_TOKEN") ?? "",
     POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
     POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
+    POSTIZ_WEBHOOK_SECRET: params.get("POSTIZ_WEBHOOK_SECRET") ?? "",
+    POSTIZ_SLACK_CHANNEL: params.get("POSTIZ_SLACK_CHANNEL") ?? "",
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
@@ -317,6 +323,8 @@ function buildConfigFromEnv(): AppConfig {
     GITHUB_DISPATCH_TOKEN: process.env.GITHUB_DISPATCH_TOKEN || "",
     POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
     POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
+    POSTIZ_WEBHOOK_SECRET: process.env.POSTIZ_WEBHOOK_SECRET || "",
+    POSTIZ_SLACK_CHANNEL: process.env.POSTIZ_SLACK_CHANNEL || "",
     CRON_SECRET: process.env.CRON_SECRET || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",

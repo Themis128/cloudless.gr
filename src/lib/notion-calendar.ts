@@ -13,7 +13,13 @@
  * │ Status       │ Select (draft | scheduled | published | cancelled)     │
  * │ URL          │ URL                                                    │
  * │ Notes        │ Rich text                                              │
+ * │ PostizIDs    │ Rich text (optional; comma-separated Postiz post IDs)  │
  * └──────────────┴────────────────────────────────────────────────────────┘
+ *
+ * The PostizIDs column is added on-demand: when an item is published via
+ * Postiz the publish route writes the IDs back so the sync cron / webhook
+ * receiver can correlate inbound events. Existing rows without the column
+ * remain valid — the adapter degrades silently when the property is absent.
  */
 
 import { notionFetch } from "@/lib/notion";
@@ -68,6 +74,13 @@ function pageToItem(page: Record<string, unknown>): CalendarItem | null {
 
     const dateRange = dateField("Date");
     const calId = richText("CalID");
+    const postizIdsRaw = richText("PostizIDs");
+    const postizPostIds = postizIdsRaw
+      ? postizIdsRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
 
     return {
       id: calId || (page as { id: string }).id,
@@ -79,6 +92,7 @@ function pageToItem(page: Record<string, unknown>): CalendarItem | null {
       status: sel("Status") as CalendarItem["status"],
       url: urlField("URL"),
       notes: richText("Notes") || undefined,
+      postizPostIds: postizPostIds && postizPostIds.length > 0 ? postizPostIds : undefined,
     };
   } catch {
     return null;
@@ -145,6 +159,9 @@ export async function notionCreateCalendarItem(item: CalendarItem): Promise<stri
 
   if (item.url) properties.URL = { url: item.url };
   if (item.notes) properties.Notes = { rich_text: rt(item.notes) };
+  if (item.postizPostIds && item.postizPostIds.length > 0) {
+    properties.PostizIDs = { rich_text: rt(item.postizPostIds.join(",")) };
+  }
 
   // No try/catch: a Notion failure (e.g. the calendar DB was deleted or
   // unshared from the integration → object_not_found) must propagate so the
@@ -185,6 +202,12 @@ export async function notionUpdateCalendarItem(item: CalendarItem): Promise<bool
       Status: { select: { name: item.status } },
       URL: item.url ? { url: item.url } : { url: null },
       Notes: { rich_text: item.notes ? rt(item.notes) : [] },
+      PostizIDs: {
+        rich_text:
+          item.postizPostIds && item.postizPostIds.length > 0
+            ? rt(item.postizPostIds.join(","))
+            : [],
+      },
     };
 
     await notionFetch(`/pages/${pageId}`, {

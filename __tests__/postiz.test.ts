@@ -12,6 +12,7 @@ import {
   createPost,
   deletePost,
   findSlot,
+  getPostStats,
   isPostizConfigured,
   listIntegrations,
   listPostizIntegrations,
@@ -20,7 +21,10 @@ import {
   PostizApiError,
   PostizNotConfiguredError,
   schedulePost,
+  updatePost,
+  uploadFile,
   uploadFromUrl,
+  verifyPostizWebhookSignature,
   type PostizIntegration,
 } from "@/lib/postiz";
 
@@ -270,6 +274,130 @@ describe("findSlot (throwing)", () => {
     await findSlot("fb/page-1");
     const [url] = mockFetch.mock.calls[0];
     expect(url).toContain("/find-slot/fb%2Fpage-1");
+  });
+});
+
+describe("updatePost (throwing)", () => {
+  it("PUTs the body to /posts/:id and returns the upstream array", async () => {
+    const upstream = [{ postId: "p1", integration: "fb" }];
+    mockFetch.mockResolvedValueOnce(jsonResponse(upstream));
+    const result = await updatePost("p1", {
+      type: "schedule",
+      date: "2026-06-20T10:00:00.000Z",
+      shortLink: false,
+      tags: [],
+      posts: [
+        {
+          integration: { id: "fb" },
+          value: [{ content: "edited", image: [] }],
+          settings: { __type: "facebook" },
+        },
+      ],
+    });
+    expect(result).toEqual(upstream);
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/posts/p1");
+    expect(init.method).toBe("PUT");
+  });
+
+  it("URL-encodes the id", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]));
+    await updatePost("abc/123", {
+      type: "draft",
+      date: new Date().toISOString(),
+      shortLink: false,
+      tags: [],
+      posts: [
+        {
+          integration: { id: "fb" },
+          value: [{ content: "x", image: [] }],
+          settings: { __type: "facebook" },
+        },
+      ],
+    });
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/posts/abc%2F123");
+  });
+});
+
+describe("getPostStats (throwing)", () => {
+  it("GETs /posts/:id/statistics and returns the JSON shape verbatim", async () => {
+    const stats = { reach: 1234, impressions: 9876 };
+    mockFetch.mockResolvedValueOnce(jsonResponse(stats));
+    await expect(getPostStats("p1")).resolves.toEqual(stats);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/posts/p1/statistics");
+  });
+});
+
+describe("uploadFile (multipart)", () => {
+  it("POSTs multipart/form-data with a `file` field and the API key header", async () => {
+    const uploaded = { id: "u1", name: "x.png", path: "https://cdn/u1.png", thumbnail: null, alt: null };
+    mockFetch.mockResolvedValueOnce(jsonResponse(uploaded));
+    const blob = new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" });
+    await expect(uploadFile(blob, "x.png")).resolves.toEqual(uploaded);
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/api/public/v1/upload");
+    expect(init.method).toBe("POST");
+    // No JSON Content-Type — fetch sets the multipart boundary automatically.
+    expect(init.headers["Content-Type"]).toBeUndefined();
+    expect(init.headers.Authorization).toBe("pk_test_123");
+    expect(init.body).toBeInstanceOf(FormData);
+  });
+
+  it("throws PostizApiError on an upstream non-OK", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: "too big" }, 413));
+    const blob = new Blob(["x"], { type: "image/png" });
+    await expect(uploadFile(blob, "x.png")).rejects.toBeInstanceOf(PostizApiError);
+  });
+});
+
+describe("verifyPostizWebhookSignature", () => {
+  it("returns false when the signature header is missing", async () => {
+    mockGetConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://x",
+      POSTIZ_API_KEY: "k",
+      POSTIZ_WEBHOOK_SECRET: "secret",
+    });
+    await expect(verifyPostizWebhookSignature("body", null)).resolves.toBe(false);
+  });
+
+  it("returns false when no secret is configured", async () => {
+    mockGetConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://x",
+      POSTIZ_API_KEY: "k",
+      POSTIZ_WEBHOOK_SECRET: "",
+    });
+    await expect(verifyPostizWebhookSignature("body", "abc")).resolves.toBe(false);
+  });
+
+  it("returns true on a matching HMAC-SHA256 hex digest of the raw body", async () => {
+    const { createHmac } = await import("node:crypto");
+    const secret = "shhh";
+    const body = '{"event":"post.published","post":{"id":"p1"}}';
+    const sig = createHmac("sha256", secret).update(body).digest("hex");
+    mockGetConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://x",
+      POSTIZ_API_KEY: "k",
+      POSTIZ_WEBHOOK_SECRET: secret,
+    });
+    await expect(verifyPostizWebhookSignature(body, sig)).resolves.toBe(true);
+    // Also accepts the `sha256=` prefix variant.
+    await expect(verifyPostizWebhookSignature(body, `sha256=${sig}`)).resolves.toBe(true);
+    // And tolerates uppercase hex.
+    await expect(verifyPostizWebhookSignature(body, sig.toUpperCase())).resolves.toBe(true);
+  });
+
+  it("returns false on tampered body", async () => {
+    const { createHmac } = await import("node:crypto");
+    const secret = "shhh";
+    const sig = createHmac("sha256", secret).update("original").digest("hex");
+    mockGetConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://x",
+      POSTIZ_API_KEY: "k",
+      POSTIZ_WEBHOOK_SECRET: secret,
+    });
+    await expect(verifyPostizWebhookSignature("tampered", sig)).resolves.toBe(false);
   });
 });
 
