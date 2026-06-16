@@ -5,6 +5,7 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac } from "crypto";
 import { recordNotification } from "@/lib/admin-notifications";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 function makeClient(): CognitoIdentityProviderClient {
   const issuer = process.env.COGNITO_ISSUER ?? "";
@@ -22,12 +23,18 @@ function secretHash(username: string): string | undefined {
 }
 
 export async function POST(req: NextRequest) {
+  // Two-tier rate limit:
+  //  - per IP, generous (handles corporate NAT)
+  //  - per email body, strict (prevents account enumeration grinding)
+  const ipRl = rateLimit(`auth-register:ip:${getClientIp(req)}`, 20, 60_000);
+  if (!ipRl.ok) return ipRl.response;
+
   let email: string | undefined;
   let password: string | undefined;
   let fullName: string | undefined;
   try {
     const body = (await req.json()) as { email?: string; password?: string; fullName?: string };
-    email = body.email;
+    email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     password = body.password;
     fullName = body.fullName;
   } catch {
@@ -37,8 +44,19 @@ export async function POST(req: NextRequest) {
   if (!email || !password)
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
 
+  const emailRl = rateLimit(`auth-register:email:${email}`, 5, 600_000);
+  if (!emailRl.ok) return emailRl.response;
+
   const clientId = process.env.COGNITO_CLIENT_ID;
   if (!clientId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+
+  // Always succeed-or-look-like-success to defeat account enumeration.
+  // The legitimate flow continues via the Cognito verification email
+  // (the user can't proceed without clicking it). For real errors that
+  // would block ANY signup (invalid password, service down), we still
+  // return 400/503 — but we never confirm or deny whether a given email
+  // already exists.
+  const ENUM_SAFE_OK = NextResponse.json({ ok: true });
 
   try {
     await makeClient().send(
@@ -62,14 +80,17 @@ export async function POST(req: NextRequest) {
       route: "/api/auth/register",
       metadata: { fullName: fullName ?? null },
     });
-    return NextResponse.json({ ok: true });
+    return ENUM_SAFE_OK;
   } catch (err: unknown) {
     const name = (err as { name?: string }).name;
-    if (name === "UsernameExistsException")
-      return NextResponse.json(
-        { error: "An account with this email already exists" },
-        { status: 409 }
-      );
+    // Account already exists — DO NOT confirm to the caller. Log it server-
+    // side and return the same 200 OK as a fresh signup; the legitimate
+    // owner of the email already has an account and will see "we sent you a
+    // verification email" (none was sent, but they're already in).
+    if (name === "UsernameExistsException") {
+      console.warn(`[auth/register] enumeration probe blocked for ${email}`);
+      return ENUM_SAFE_OK;
+    }
     if (name === "InvalidPasswordException" || name === "InvalidParameterException")
       return NextResponse.json(
         { error: "Password does not meet requirements (min 8 chars, mixed case, number, symbol)" },

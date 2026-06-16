@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { isSupportedLocale } from "@/lib/i18n";
 
 // Post-login landing resolver. next-auth's callbackUrl is fixed at sign-in time
 // (before the session exists), so we can't decide admin-vs-dashboard there. The
@@ -10,7 +11,12 @@ export const dynamic = "force-dynamic";
 export default async function PostLoginPage({
   params,
 }: Readonly<{ params: Promise<{ locale: string }> }>) {
-  const { locale } = await params;
+  const { locale: rawLocale } = await params;
+  // Defence in depth: validate the locale segment before interpolating it
+  // into a server-side redirect. Next's typed-routes catches this at build
+  // time, but a hand-crafted URL like /x%2F..%2Fetc/auth/post-login should
+  // still fall back to a safe default rather than producing a weird redirect.
+  const locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
   const session = await auth();
 
   if (!session?.user) {
