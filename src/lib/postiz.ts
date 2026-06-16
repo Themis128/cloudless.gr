@@ -224,7 +224,12 @@ export interface CreatePostBody {
 
 export interface UploadedFile {
   id: string;
+  /** Empty string when uploaded by URL. */
+  name: string;
+  /** Full URL to the uploaded media. */
   path: string;
+  thumbnail: string | null;
+  alt: string | null;
 }
 
 /** Throwing variant of `listPostizIntegrations` for /admin/postiz routes. */
@@ -232,10 +237,14 @@ export function listIntegrations(): Promise<PostizIntegration[]> {
   return callThrowing<PostizIntegration[]>("/integrations");
 }
 
-/** List posts in a window (ISO 8601 dates). */
-export function listPosts(startDate: string, endDate: string): Promise<PostizPost[]> {
+/** List posts in a window (ISO 8601 dates).
+ *
+ * Postiz wraps the response as `{ posts: PostizPost[] }`. Unwrap so callers
+ * get a flat array. Verified against live API 2026-06-16. */
+export async function listPosts(startDate: string, endDate: string): Promise<PostizPost[]> {
   const qs = new URLSearchParams({ startDate, endDate });
-  return callThrowing<PostizPost[]>(`/posts?${qs.toString()}`);
+  const wrapped = await callThrowing<{ posts: PostizPost[] }>(`/posts?${qs.toString()}`);
+  return wrapped.posts ?? [];
 }
 
 /** Full create-post — exposes the entire Postiz schema. Throws on non-OK. */
@@ -268,6 +277,10 @@ export function uploadFromUrl(url: string): Promise<UploadedFile> {
 
 /** Ask Postiz for the next available time slot on a channel. */
 export function findSlot(integrationId: string): Promise<{ date: string }> {
-  const qs = new URLSearchParams({ id: integrationId });
-  return callThrowing<{ date: string }>(`/integrations/find-slot?${qs.toString()}`);
+  // Postiz v2.11.2 mounts find-slot at `/find-slot/:id` (path param, no query),
+  // see apps/backend/src/public-api/routes/v1/public.integrations.controller.ts.
+  // The old `/integrations/find-slot?id=` path returns 404.
+  return callThrowing<{ date: string }>(
+    `/find-slot/${encodeURIComponent(integrationId)}`
+  );
 }
