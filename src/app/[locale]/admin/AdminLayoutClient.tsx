@@ -77,6 +77,11 @@ const adminGroups: AdminGroup[] = [
     links: [
       { href: "/admin/client-portals", label: "Client Portals", Icon: Link2 },
       { href: "/admin/workspaces", label: "Workspaces", Icon: Building2 },
+      {
+        href: "/admin/analytics/workspaces",
+        label: "Workspace Analytics",
+        Icon: Activity,
+      },
     ],
   },
   {
