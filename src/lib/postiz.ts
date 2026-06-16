@@ -214,7 +214,27 @@ export interface PostizPost {
   releaseURL?: string | null;
   releaseId?: string | null;
   state: "QUEUE" | "PUBLISHED" | "ERROR" | "DRAFT";
-  integration: { id: string; name: string; identifier: string };
+  /**
+   * Per docs.postiz.com the embedded integration field on a post uses
+   * `providerIdentifier`, not `identifier`. Both names are present here for
+   * backward-compat — old call sites still read `identifier`, and we
+   * normalise via {@link postIdentifier} so neither path silently goes
+   * `undefined` if Postiz changes either label.
+   */
+  integration: {
+    id: string;
+    name: string;
+    providerIdentifier?: string;
+    identifier?: string;
+    picture?: string;
+  };
+}
+
+/** Resolve the platform identifier from a Postiz post's embedded integration,
+ *  tolerating both `providerIdentifier` (docs shape) and `identifier`
+ *  (older shape used by `/integrations` and our internal types). */
+export function postIdentifier(post: Pick<PostizPost, "integration">): string {
+  return post.integration.providerIdentifier ?? post.integration.identifier ?? "";
 }
 
 export interface CreatePostBody {
@@ -229,15 +249,34 @@ export interface CreatePostBody {
   }>;
 }
 
+/**
+ * Postiz `MediaFile` shape returned by both /upload and /upload-from-url.
+ * The earlier `thumbnail` / `alt` fields were speculative and aren't part of
+ * the documented response. Confirmed against docs.postiz.com on 2026-06-16. */
 export interface UploadedFile {
   id: string;
-  /** Empty string when uploaded by URL. */
   name: string;
   /** Full URL to the uploaded media. */
   path: string;
-  thumbnail: string | null;
-  alt: string | null;
+  organizationId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
+
+/** MIME types the Postiz `/upload` endpoint will accept. The backend
+ *  sniffs the actual content (not just the extension) and 4xxs anything
+ *  outside this list — enforcing here lets us fail fast and surface a
+ *  useful error before the round-trip to Postiz. */
+export const POSTIZ_ALLOWED_UPLOAD_MIME = new Set<string>([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "image/bmp",
+  "image/tiff",
+  "video/mp4",
+]);
 
 /** Throwing variant of `listPostizIntegrations` for /admin/postiz routes.
  *
@@ -271,12 +310,23 @@ export function createPost(
   });
 }
 
-/** Delete a post. Swallows 404 ("already deleted") per Postiz docs. */
+/** Delete a post.
+ *
+ * Per docs.postiz.com / API Overview, `DELETE` on a missing post should
+ * return 404 — but there's a documented known issue where a missing post id
+ * surfaces as a 500 instead. We swallow 404 unconditionally, and we swallow
+ * 500 only when the body text looks like a "not found" response (so we
+ * don't accidentally hide a real upstream crash). Anything else propagates. */
 export async function deletePost(id: string): Promise<void> {
   try {
     await callThrowing<void>(`/posts/${encodeURIComponent(id)}`, { method: "DELETE" });
   } catch (err) {
-    if (err instanceof PostizApiError && err.status === 404) return;
+    if (err instanceof PostizApiError) {
+      if (err.status === 404) return;
+      if (err.status === 500 && /not\s*found|no\s*such|cannot find/i.test(err.body)) {
+        return;
+      }
+    }
     throw err;
   }
 }
@@ -319,11 +369,24 @@ export function updatePost(
   );
 }
 
-/** Per-post analytics, when the channel supports it. Postiz exposes
- *  GET /posts/:id/statistics; shape varies by provider so we keep it loose. */
-export function getPostStats(id: string): Promise<Record<string, unknown>> {
-  return callThrowing<Record<string, unknown>>(
-    `/posts/${encodeURIComponent(id)}/statistics`
+/** One metric in a Postiz post-analytics response (`/analytics/post/:id`). */
+export interface PostizAnalyticsMetric {
+  label: string;
+  data: Array<{ total: string; date: string }>;
+  percentageChange: number;
+}
+
+/** Per-post analytics. The documented endpoint is
+ *  `GET /analytics/post/:postId?date=<lookback-days>` — NOT the
+ *  `/posts/:id/statistics` shape that was previously guessed here. The lookback
+ *  window must be supplied; common values are 7, 30, 90. Empty array is
+ *  returned for providers that don't surface per-post analytics. */
+export function getPostStats(
+  id: string,
+  lookbackDays: 7 | 14 | 30 | 60 | 90 = 7
+): Promise<PostizAnalyticsMetric[]> {
+  return callThrowing<PostizAnalyticsMetric[]>(
+    `/analytics/post/${encodeURIComponent(id)}?date=${lookbackDays}`
   );
 }
 

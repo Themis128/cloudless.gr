@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { uploadFile, PostizApiError, PostizNotConfiguredError } from "@/lib/postiz";
+import {
+  POSTIZ_ALLOWED_UPLOAD_MIME,
+  PostizApiError,
+  PostizNotConfiguredError,
+  uploadFile,
+} from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -42,6 +47,22 @@ export async function POST(req: NextRequest) {
   const filename =
     (form.get("filename") as string | null) ??
     (file instanceof File ? file.name : "upload.bin");
+
+  // Fail fast on disallowed MIME types so the user gets a clean 4xx instead
+  // of waiting on a round-trip to Postiz that ends in a content-sniff 400.
+  // The Postiz allowlist is jpeg/png/gif/webp/avif/bmp/tiff/mp4 (no PDFs,
+  // no svg, no audio). A blank/absent `file.type` falls through — let
+  // Postiz make the call.
+  if (file.type && !POSTIZ_ALLOWED_UPLOAD_MIME.has(file.type)) {
+    return NextResponse.json(
+      {
+        error: "unsupported_mime",
+        mime: file.type,
+        allowed: [...POSTIZ_ALLOWED_UPLOAD_MIME],
+      },
+      { status: 415 }
+    );
+  }
 
   try {
     const uploaded = await uploadFile(file, filename);
