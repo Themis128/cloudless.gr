@@ -47,7 +47,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Project Structure
 
-> Full architecture documentation → **[ARCHITECTURE.md](ARCHITECTURE.md)**
+> Full architecture documentation → **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
 ```
 src/
@@ -129,7 +129,7 @@ src/
 │   ├── CartContext.tsx           # Cart (useReducer, in-memory)
 │   └── CookieConsentContext.tsx
 │
-├── lib/                         # Server + shared utilities (see ARCHITECTURE.md §9)
+├── lib/                         # Server + shared utilities (see docs/ARCHITECTURE.md §9)
 │   ├── ssm-config.ts            # SSM secrets loader (5-min TTL, fails fast on required keys)
 │   ├── integrations.ts          # isConfigured() guards for all optional integrations
 │   ├── api-auth.ts              # requireAuth() / requireAdmin() — OIDC JWKS verification (Cognito)
