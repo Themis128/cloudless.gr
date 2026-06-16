@@ -137,7 +137,13 @@ function WaitingRoomContent() {
   useEffect(() => {
     if (!isLoading && !user) {
       const next = encodeURIComponent("/portal/waiting" + (planParam ? `?plan=${planParam}` : ""));
-      router.push(`/auth/login?next=${next}`);
+      // /auth/login only exists under /[locale]/auth/login — there is no
+      // top-level /auth/login. Read NEXT_LOCALE the same way next-intl's
+      // middleware does and prefix it; fall back to the default locale.
+      const cookieLocale = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)?.[1];
+      const allowed = new Set(["en", "el", "fr", "de"]);
+      const locale = cookieLocale && allowed.has(cookieLocale) ? cookieLocale : "en";
+      router.push(`/${locale}/auth/login?next=${next}`);
     }
   }, [user, isLoading, router, planParam]);
 
