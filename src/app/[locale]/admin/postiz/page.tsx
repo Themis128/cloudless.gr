@@ -64,7 +64,13 @@ export default function PostizAdminPage() {
   }, []);
 
   useEffect(() => {
+    // reloadIntegrations / reloadPosts are async; the setState calls inside
+    // them happen after the fetch resolves, not synchronously in the effect
+    // body. The new react-hooks/set-state-in-effect rule can't tell the
+    // difference. Matches the existing pattern in AuthContext.tsx:199.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reloadIntegrations();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reloadPosts();
   }, [reloadIntegrations, reloadPosts]);
 
