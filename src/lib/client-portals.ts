@@ -83,7 +83,28 @@ export interface ClientPortal {
   /** Monthly status email opt-in (cron client-reports). */
   reportsEnabled?: boolean;
   lastReportAt?: string;
+  /**
+   * Workspace foreign key (multi-tenant link). Stamped on create from the
+   * active workspace cookie. Legacy portals without a workspaceId remain
+   * accessible to global admins (org-wide), so this is a non-breaking
+   * additive change. Industry pattern: organization_id / workspace_id as
+   * an indexed FK on every tenant-scoped resource (clockwise / Northflank /
+   * flightcontrol 2026 multi-tenant guides). */
+  workspaceId?: string;
+  /**
+   * Token expiry (ISO 8601). When set and in the past, `findPortalByToken`
+   * refuses to resolve the portal. Magic-link best practice — tokens are the
+   * sole client credential, so long-lived ones are dangerous. Existing
+   * portals without an expiry stay valid forever (back-compat); newly
+   * created portals default to 90 days. */
+  expiresAt?: string;
 }
+
+/** Default token lifetime for newly minted portals (90 days). Aligns with
+ *  the magic-link / long-lived-link guidance: short enough to bound exposure
+ *  if a client forwards the URL, long enough that an active engagement
+ *  doesn't re-issue weekly. Adjust per deployment if you want stricter. */
+export const DEFAULT_PORTAL_TOKEN_TTL_DAYS = 90;
 
 /**
  * Coerce a stored record into a well-formed portal. Legacy/partial entries in
@@ -144,7 +165,33 @@ export function tokenMatches(candidate: string, actual: string): boolean {
 
 export async function findPortalByToken(token: string): Promise<ClientPortal | null> {
   const portals = await readPortals();
-  return portals.find((p) => tokenMatches(token, p.token)) ?? null;
+  const portal = portals.find((p) => tokenMatches(token, p.token));
+  if (!portal) return null;
+  // Honour expiry — once a token's TTL has passed, treat the portal as if
+  // it didn't exist. The admin can re-mint a token (or extend expiresAt)
+  // via the existing admin route. Magic-link security best practice: never
+  // serve a portal with an expired token, even if the row still exists.
+  if (portal.expiresAt) {
+    const expiresMs = Date.parse(portal.expiresAt);
+    if (Number.isFinite(expiresMs) && Date.now() > expiresMs) return null;
+  }
+  return portal;
+}
+
+/** Filter portals to only those belonging to a workspace. Org-wide portals
+ *  (no workspaceId) are always included so the global admin keeps full
+ *  visibility regardless of the active workspace context. */
+export function filterPortalsByWorkspace(
+  portals: ClientPortal[],
+  workspaceId: string | null | undefined
+): ClientPortal[] {
+  if (!workspaceId) return portals;
+  return portals.filter((p) => !p.workspaceId || p.workspaceId === workspaceId);
+}
+
+/** Compute a portal expiry from "now" plus a TTL in days. */
+export function computePortalExpiry(ttlDays: number = DEFAULT_PORTAL_TOKEN_TTL_DAYS): string {
+  return new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000).toISOString();
 }
 
 export function newDeliverable(input: {

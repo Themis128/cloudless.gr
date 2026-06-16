@@ -40,6 +40,15 @@ export interface CalendarItem {
    * created them. One ID per channel the item fanned out to.
    */
   postizPostIds?: string[];
+  /**
+   * Workspace id (multi-tenant). When set, queries that supply a workspace
+   * filter will only return items whose `workspaceId` matches. New items
+   * created via the calendar API are stamped with the active workspace
+   * (cookie-derived) when one is selected. Items without a workspaceId are
+   * treated as "org-wide" and remain visible regardless of which workspace
+   * is active — protecting all the legacy rows that pre-date this column.
+   */
+  workspaceId?: string;
 }
 
 export const CALENDAR_ITEM_COLORS: Record<CalendarItemType, string> = {
@@ -71,7 +80,20 @@ async function notionEnabled(): Promise<boolean> {
   return !!(cfg.NOTION_API_KEY && cfg.NOTION_CALENDAR_DB_ID);
 }
 
-export async function getCalendarItems(from?: string, to?: string): Promise<CalendarItem[]> {
+export async function getCalendarItems(
+  from?: string,
+  to?: string,
+  options?: { workspaceId?: string | null }
+): Promise<CalendarItem[]> {
+  const all = await readAllItems(from, to);
+  const ws = options?.workspaceId;
+  if (!ws) return all;
+  // Items without a workspaceId are org-wide and remain visible regardless
+  // of which workspace is active.
+  return all.filter((i) => !i.workspaceId || i.workspaceId === ws);
+}
+
+async function readAllItems(from?: string, to?: string): Promise<CalendarItem[]> {
   if (await notionEnabled()) {
     return (await notionGetCalendarItems(from, to)) ?? [];
   }
