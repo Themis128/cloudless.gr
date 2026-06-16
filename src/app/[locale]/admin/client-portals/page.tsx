@@ -1,7 +1,7 @@
 "use client";
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ClientPortal, PortalStep } from "@/app/api/admin/client-portals/route";
 import type { PendingClient } from "@/lib/pending-clients";
 
@@ -621,6 +621,138 @@ function ReportsToggle({
   );
 }
 
+/** Token lifecycle controls — show expiry + Extend/Rotate buttons.
+ *  Backed by the PATCH `extend-token` / `rotate-token` actions on
+ *  /api/admin/client-portals (90-day default TTL, configurable per call). */
+function TokenLifecycle({
+  portal,
+  onUpdate,
+}: Readonly<{ portal: ClientPortal; onUpdate: () => void }>) {
+  const [busy, setBusy] = useState<"" | "extend" | "rotate">("");
+  const [newTokenHint, setNewTokenHint] = useState<string | null>(null);
+
+  // `Date.now()` is impure for React's purity rule, so pin it in state at
+  // mount and bump it every minute via an interval. The displayed
+  // "expires in Xd" updates passively without a render-time impure call.
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = globalThis.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => globalThis.clearInterval(id);
+  }, []);
+
+  const expiryView = useMemo(() => {
+    const expiresAtMs = portal.expiresAt ? Date.parse(portal.expiresAt) : Number.NaN;
+    const hasExpiry = Number.isFinite(expiresAtMs);
+    const expired = hasExpiry && expiresAtMs < nowMs;
+    const daysLeft = hasExpiry ? Math.ceil((expiresAtMs - nowMs) / 86_400_000) : null;
+    const soon = !expired && daysLeft !== null && daysLeft <= 14;
+    return { expiresAtMs, hasExpiry, expired, daysLeft, soon };
+  }, [portal.expiresAt, nowMs]);
+  const { expiresAtMs, hasExpiry, expired, daysLeft, soon } = expiryView;
+
+  let badgeClass = "border-slate-700 text-slate-500";
+  let badgeLabel = "no expiry";
+  if (expired) {
+    badgeClass = "border-red-900/50 bg-red-950/30 text-red-300";
+    badgeLabel = "EXPIRED";
+  } else if (soon) {
+    badgeClass = "border-amber-900/50 bg-amber-950/30 text-amber-300";
+    badgeLabel = `expires in ${daysLeft}d`;
+  } else if (hasExpiry) {
+    badgeClass = "border-emerald-900/40 bg-emerald-950/20 text-emerald-300";
+    badgeLabel = `expires in ${daysLeft}d`;
+  }
+
+  async function extend() {
+    setBusy("extend");
+    setNewTokenHint(null);
+    try {
+      await patchPortal({ token: portal.token, action: "extend-token" });
+      onUpdate();
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function rotate() {
+    // `globalThis.confirm` per repo SonarCloud `prefer-global-this`.
+    if (
+      !globalThis.confirm(
+        "Rotate this portal token? The current URL stops working immediately — " +
+          "make sure you have a way to send the new link to the client."
+      )
+    ) {
+      return;
+    }
+    setBusy("rotate");
+    setNewTokenHint(null);
+    try {
+      const res = await fetchWithAuth("/api/admin/client-portals", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: portal.token, action: "rotate-token" }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data?.portal?.token) {
+          setNewTokenHint(data.portal.token);
+        }
+        onUpdate();
+      }
+    } finally {
+      setBusy("");
+    }
+  }
+
+  const created = new Date(portal.createdAt).toLocaleDateString("en-IE");
+  const expiresAt = hasExpiry ? new Date(expiresAtMs).toLocaleDateString("en-IE") : null;
+
+  return (
+    <div className="mt-6 rounded-lg border border-slate-800 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-mono text-xs text-slate-500">
+          <span className="text-slate-400">token</span> · created {created}
+          {expiresAt && (
+            <>
+              {" · "}
+              <span className="text-slate-400">expires</span> {expiresAt}
+            </>
+          )}
+        </div>
+        <span className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${badgeClass}`}>
+          {badgeLabel}
+        </span>
+      </div>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={extend}
+          disabled={busy !== ""}
+          className="border-neon-cyan/30 text-neon-cyan hover:border-neon-cyan/60 rounded-lg border px-3 py-1.5 font-mono text-xs transition disabled:opacity-50"
+        >
+          {busy === "extend" ? "Extending…" : "Extend +90d"}
+        </button>
+        <button
+          type="button"
+          onClick={rotate}
+          disabled={busy !== ""}
+          className="rounded-lg border border-amber-900/40 px-3 py-1.5 font-mono text-xs text-amber-300 transition hover:border-amber-700 disabled:opacity-50"
+        >
+          {busy === "rotate" ? "Rotating…" : "Rotate token"}
+        </button>
+      </div>
+      {newTokenHint && (
+        <p className="font-body mt-2 text-xs text-amber-300">
+          Token rotated. Send the client the new portal URL:&nbsp;
+          <code className="bg-void rounded px-1.5 py-0.5 font-mono text-[10px] text-amber-200">
+            /portal/{newTokenHint}
+          </code>
+        </p>
+      )}
+    </div>
+  );
+}
+
 function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   const [clients, setClients] = useState<PendingClient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1075,6 +1207,7 @@ export default function ClientPortalsPage() {
                       Payment Links
                     </p>
                     <PaymentLinkManager portal={portal} onUpdate={load} />
+                    <TokenLifecycle portal={portal} onUpdate={load} />
                     <ReportsToggle portal={portal} onUpdate={load} />
                   </div>
                 )}

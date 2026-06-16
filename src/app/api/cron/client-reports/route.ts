@@ -16,7 +16,10 @@ import { sendEmail } from "@/lib/email";
  * the other /api/cron routes). Schedule it monthly from your scheduler of
  * choice (GitHub Actions cron, EventBridge, or the Pi's systemd timers).
  * Idempotent within the 25-day window — safe to run more often.
- */
+ *
+ * Workspace filter: pass `?workspace=<id>` to mail only that tenant's
+ * clients. Org-wide portals (no workspaceId) are included only when the
+ * query param is omitted — passing a workspace id is a strict scope. */
 
 const MIN_DAYS_BETWEEN_REPORTS = 25;
 const BASE_URL = "https://cloudless.gr";
@@ -35,11 +38,17 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const portals = await readPortals();
-  const due = portals.filter((p) => isDue(p, now));
+  const workspaceFilter = new URL(request.url).searchParams.get("workspace");
+  const all = await readPortals();
+  const scoped = workspaceFilter ? all.filter((p) => p.workspaceId === workspaceFilter) : all;
+  const due = scoped.filter((p) => isDue(p, now));
 
   if (due.length === 0) {
-    return NextResponse.json({ sent: 0, message: "No client reports due." });
+    return NextResponse.json({
+      sent: 0,
+      message: "No client reports due.",
+      ...(workspaceFilter ? { workspace: workspaceFilter } : {}),
+    });
   }
 
   const sent: string[] = [];
@@ -63,10 +72,17 @@ export async function GET(request: NextRequest) {
   }
 
   if (sent.length > 0) {
-    await writePortals(portals);
+    // Re-read + merge: we only mutated the `scoped` slice, so write the
+    // original `all` (which shares object refs with `scoped`) back to SSM.
+    await writePortals(all);
   }
 
-  return NextResponse.json({ sent: sent.length, failed: failed.length, recipients: sent });
+  return NextResponse.json({
+    sent: sent.length,
+    failed: failed.length,
+    recipients: sent,
+    ...(workspaceFilter ? { workspace: workspaceFilter } : {}),
+  });
 }
 
 export const runtime = "nodejs";

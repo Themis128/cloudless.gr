@@ -182,7 +182,15 @@ type PatchAction =
       status: PaymentLinkStatus;
     }
   | { token: string; action: "delete-payment-link"; paymentLinkId: string }
-  | { token: string; action: "set-reports-enabled"; enabled: boolean };
+  | { token: string; action: "set-reports-enabled"; enabled: boolean }
+  /** Push expiresAt out by `ttlDays` (default 90). Token stays the same —
+   *  any URL already shared with the client keeps working. */
+  | { token: string; action: "extend-token"; ttlDays?: number }
+  /** Mint a brand-new token AND reset expiresAt. The old URL is invalidated
+   *  immediately. Use for security incidents (URL forwarded by mistake,
+   *  client device compromised, etc.). Body includes the new token in the
+   *  response so the admin can copy it to a fresh email. */
+  | { token: string; action: "rotate-token"; ttlDays?: number };
 
 function stepNotFound() {
   return NextResponse.json({ error: "Step not found" }, { status: 404 });
@@ -323,6 +331,25 @@ function applyUpdatePaymentLink(
   return null;
 }
 
+function applyExtendToken(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "extend-token" }>
+): NextResponse | null {
+  const ttl = typeof body.ttlDays === "number" && body.ttlDays > 0 ? body.ttlDays : undefined;
+  portal.expiresAt = computePortalExpiry(ttl);
+  return null;
+}
+
+function applyRotateToken(
+  portal: ClientPortal,
+  body: Extract<PatchAction, { action: "rotate-token" }>
+): NextResponse | null {
+  const ttl = typeof body.ttlDays === "number" && body.ttlDays > 0 ? body.ttlDays : undefined;
+  portal.token = randomUUID();
+  portal.expiresAt = computePortalExpiry(ttl);
+  return null;
+}
+
 function dispatchPatch(portal: ClientPortal, body: PatchAction): NextResponse | null {
   switch (body.action) {
     case "update-step":
@@ -355,6 +382,10 @@ function dispatchPatch(portal: ClientPortal, body: PatchAction): NextResponse | 
     case "set-reports-enabled":
       portal.reportsEnabled = Boolean(body.enabled);
       return null;
+    case "extend-token":
+      return applyExtendToken(portal, body);
+    case "rotate-token":
+      return applyRotateToken(portal, body);
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }
