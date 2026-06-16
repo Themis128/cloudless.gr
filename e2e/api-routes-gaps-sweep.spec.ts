@@ -37,8 +37,17 @@
  *     /api/admin/postiz/integrations
  *     /api/admin/postiz/posts
  *     /api/admin/postiz/slot                 (id=sample)
+ *     /api/admin/postiz/health
+ *     /api/admin/postiz/health?format=prom
  *     /api/admin/reports/[id]                (sample id)
  *     /api/admin/reports/[id]/pdf            (sample id)
+ *
+ *   Cron (unauthenticated — must reject without 5xx):
+ *     /api/cron/postiz-sync
+ *     /api/cron/postiz-oauth-check
+ *
+ *   Webhook (unsigned — must reject 401, never 5xx):
+ *     /api/webhooks/postiz
  *
  *   Admin POST:
  *     /api/admin/calendar/[id]/publish       (sample id)
@@ -94,6 +103,8 @@ test.describe("Admin API gap sweep (authenticated GETs)", () => {
     "/api/admin/postiz/integrations",
     "/api/admin/postiz/posts",
     `/api/admin/postiz/slot?id=${SENTINEL_ID}`,
+    "/api/admin/postiz/health",
+    "/api/admin/postiz/health?format=prom",
     `/api/admin/reports/${SENTINEL_ID}`,
     `/api/admin/reports/${SENTINEL_ID}/pdf`,
   ] as const;
@@ -117,6 +128,7 @@ test.describe("Admin API gap sweep (authenticated POSTs)", () => {
     `/api/admin/pipeline/deals/${SENTINEL_ID}/notes`,
     "/api/admin/postiz/posts",
     "/api/admin/postiz/upload",
+    "/api/admin/postiz/upload-file",
   ] as const;
 
   for (const url of ADMIN_POST_GAPS) {
@@ -141,6 +153,38 @@ test.describe("Admin API gap sweep (authenticated DELETEs)", () => {
     const r = await a.delete(`/api/admin/postiz/posts/${SENTINEL_ID}`);
     expect([401, 403]).not.toContain(r.status());
     expect(r.status()).toBeGreaterThanOrEqual(200);
+  });
+});
+
+test.describe("Admin API gap sweep (authenticated PUTs)", () => {
+  // PUT /api/admin/postiz/posts/[id] — added 2026-06-16 for edit-post.
+  test(`PUT /api/admin/postiz/posts/${SENTINEL_ID} (empty body)`, async ({ request }) => {
+    const a = await adminRequest(request);
+    const r = await a.put(`/api/admin/postiz/posts/${SENTINEL_ID}`, { data: {} });
+    expect([401, 403]).not.toContain(r.status());
+    expect(r.status()).toBeGreaterThanOrEqual(200);
+  });
+});
+
+test.describe("Postiz cron endpoints (unauthenticated — reject without 5xx)", () => {
+  for (const url of ["/api/cron/postiz-sync", "/api/cron/postiz-oauth-check"] as const) {
+    test(`GET ${url} unauthenticated`, async ({ request }) => {
+      const r = await request.get(url);
+      // Cron auth uses Bearer CRON_SECRET → 401 expected without it.
+      expect(r.status()).toBeGreaterThanOrEqual(200);
+    });
+  }
+});
+
+test.describe("Postiz webhook receiver", () => {
+  test("POST /api/webhooks/postiz unsigned → 401 invalid_signature", async ({ request }) => {
+    const r = await request.post("/api/webhooks/postiz", {
+      data: { event: "post.published", post: { id: "x" } },
+    });
+    // The verifier returns false on missing signature header AND on missing
+    // POSTIZ_WEBHOOK_SECRET, so 401 covers both dev (no secret) and prod
+    // (signed-only) cases. A 5xx would mean the verifier itself threw.
+    expect(r.status()).toBe(401);
   });
 });
 

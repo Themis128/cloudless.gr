@@ -33,6 +33,13 @@ export interface CalendarItem {
   status: "draft" | "scheduled" | "published" | "cancelled";
   url?: string;
   notes?: string;
+  /**
+   * Postiz post IDs returned when a `social_post` item is published. Stored so
+   * the postiz-sync cron and the webhook receiver can match upstream
+   * post.published / post.errored events back to the calendar row that
+   * created them. One ID per channel the item fanned out to.
+   */
+  postizPostIds?: string[];
 }
 
 export const CALENDAR_ITEM_COLORS: Record<CalendarItemType, string> = {
