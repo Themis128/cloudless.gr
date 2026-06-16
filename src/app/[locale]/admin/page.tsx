@@ -109,6 +109,12 @@ const NAV_GROUPS: NavGroup[] = [
       ),
       card("Content Calendar", "Plan and publish social posts via Postiz", "🗓", "/admin/calendar"),
       card(
+        "Postiz",
+        "Compose, schedule and review posts on connected social channels",
+        "📨",
+        "/admin/postiz"
+      ),
+      card(
         "Email Campaigns",
         "ActiveCampaign sends and automations",
         "📧",
