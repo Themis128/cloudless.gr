@@ -147,7 +147,10 @@
       "brace-expansion@>=5.0.0 <5.0.6": ">=5.0.6",
       "js-cookie@<3.0.7": ">=3.0.7",
       "postcss@<8.5.10": ">=8.5.10",
-      "esbuild": ">=0.28.1"
+      "esbuild": ">=0.28.1",
+      "ws@<8.21.0": ">=8.21.0",
+      "js-yaml@<4.2.0": ">=4.2.0",
+      "markdown-it@<14.2.0": ">=14.2.0"
     },
     "onlyBuiltDependencies": [
       "@parcel/watcher",
