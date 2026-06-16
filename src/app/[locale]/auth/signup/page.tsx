@@ -320,7 +320,13 @@ function SignUpForm() {
 
 export default function SignUpPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <div className="bg-void flex min-h-screen items-center justify-center">
+          <div className="border-neon-cyan h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+        </div>
+      }
+    >
       <SignUpForm />
     </Suspense>
   );
