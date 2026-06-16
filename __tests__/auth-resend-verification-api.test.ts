@@ -44,12 +44,14 @@ describe("POST /api/auth/resend-verification", () => {
     delete process.env.COGNITO_CLIENT_SECRET;
   });
 
-  it("always returns 200 { ok: true }", async () => {
+  it("always returns 200 with ok and a token", async () => {
     sendMock.mockResolvedValueOnce({});
     const { POST } = await import("@/app/api/auth/resend-verification/route");
     const res = await POST(req({ email: "u@b.com" }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    const body = (await res.json()) as { ok: boolean; token?: string };
+    expect(body.ok).toBe(true);
+    expect(typeof body.token).toBe("string");
   });
 
   it("calls ResendConfirmationCodeCommand when email and clientId are present", async () => {
@@ -64,12 +66,13 @@ describe("POST /api/auth/resend-verification", () => {
     expect(cmd.input.ClientId).toBe(CLIENT_ID);
   });
 
-  it("swallows errors from Cognito and still returns 200", async () => {
+  it("swallows errors from Cognito and still returns 200 ok", async () => {
     sendMock.mockRejectedValueOnce(new Error("Cognito error"));
     const { POST } = await import("@/app/api/auth/resend-verification/route");
     const res = await POST(req({ email: "u@b.com" }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
   });
 
   it("returns 200 without calling SDK when COGNITO_CLIENT_ID is not set", async () => {

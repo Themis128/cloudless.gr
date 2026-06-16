@@ -82,14 +82,14 @@ describe("POST /api/auth/register", () => {
 
   // ── Cognito error handling ─────────────────────────────────────────────────
 
-  it("returns 409 when Cognito throws UsernameExistsException", async () => {
+  it("returns 200 { ok: true } (enum-safe) when Cognito throws UsernameExistsException", async () => {
     const err = Object.assign(new Error("User exists"), { name: "UsernameExistsException" });
     sendMock.mockRejectedValueOnce(err);
     const { POST } = await import("@/app/api/auth/register/route");
     const res = await POST(req({ email: "existing@b.com", password: "Test123!" }));
-    expect(res.status).toBe(409);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/already exists/i);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
   });
 
   it("returns 400 when Cognito throws InvalidPasswordException", async () => {
@@ -119,12 +119,15 @@ describe("POST /api/auth/register", () => {
 
   // ── success path ───────────────────────────────────────────────────────────
 
-  it("returns { ok: true } on successful registration", async () => {
+  it("returns { ok: true, token: string } on successful registration", async () => {
     sendMock.mockResolvedValueOnce({});
     const { POST } = await import("@/app/api/auth/register/route");
     const res = await POST(req({ email: "new@b.com", password: "Test123!" }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    const body = (await res.json()) as { ok: boolean; token: string };
+    expect(body.ok).toBe(true);
+    expect(typeof body.token).toBe("string");
+    expect(body.token.split(".")).toHaveLength(3);
   });
 
   it("includes fullName as UserAttributes name when provided", async () => {

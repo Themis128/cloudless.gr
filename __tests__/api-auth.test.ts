@@ -325,6 +325,8 @@ describe("api-auth.ts (coverage backfill)", () => {
     delete process.env.COGNITO_ISSUER;
     delete process.env.COGNITO_USER_POOL_ID;
     delete process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+    delete process.env.COGNITO_CLIENT_ID;
+    delete process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
     delete process.env.AWS_REGION;
   });
 

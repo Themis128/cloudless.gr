@@ -48,6 +48,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   // ?next= (preferred) or ?redirect= (legacy / AdminLayoutClient compat)
   const nextParam = searchParams.get("next") ?? searchParams.get("redirect");
+  const activated = searchParams.get("activated") === "1";
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -103,6 +104,11 @@ function LoginContent() {
         </div>
 
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8">
+          {activated && (
+            <div className="bg-neon-green/10 border-neon-green/30 text-neon-green mb-6 rounded-lg border p-3 font-mono text-sm">
+              Account activated — you can now sign in.
+            </div>
+          )}
           {error && (
             <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta mb-6 rounded-lg border p-3 font-mono text-sm">
               {error}

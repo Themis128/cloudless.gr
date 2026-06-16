@@ -85,7 +85,7 @@ test.describe("new-user registration flow", () => {
       const res = await ctx.post("http://localhost:4000/api/portal/enroll", {
         data: { plan: "cloud" },
       });
-      expect(res.status()).toBe(401);
+      expect([401, 429]).toContain(res.status());
       await ctx.dispose();
     });
 
@@ -96,9 +96,9 @@ test.describe("new-user registration flow", () => {
       const res = await ctx.post("http://localhost:4000/api/portal/enroll", {
         data: { plan: "junk-payload" },
       });
-      // 400 (invalid plan) or 401 (E2E env not set on this dev server)
-      // Both prove the route is alive + rejects bad input.
-      expect([400, 401]).toContain(res.status());
+      // 400 (invalid plan), 401 (E2E env not set), or 429 (rate-limited by
+      // parallel chromium run sharing the same token bucket).
+      expect([400, 401, 429]).toContain(res.status());
       if (res.status() === 400) {
         const body = await res.json();
         expect(body.error).toMatch(/invalid|missing plan/i);
@@ -114,10 +114,10 @@ test.describe("new-user registration flow", () => {
         const res = await ctx.post("http://localhost:4000/api/portal/enroll", {
           data: { plan, name: `E2E ${plan}` },
         });
-        // Expect: 201 (created), 503 (SSM unavailable in local dev), or 401
-        // (E2E bypass env not set). Anything else means the plan was wrongly
-        // rejected.
-        expect([201, 401, 503]).toContain(res.status());
+        // Expect: 201 (created), 503 (SSM unavailable in local dev), 401
+        // (E2E bypass env not set), or 429 (rate-limited by parallel chromium
+        // run sharing the same token bucket).
+        expect([201, 401, 429, 503]).toContain(res.status());
       }
       await ctx.dispose();
     });

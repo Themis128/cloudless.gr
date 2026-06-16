@@ -152,6 +152,7 @@ describe("POST /api/portal/enroll", () => {
     const { POST } = await import("@/app/api/portal/enroll/route");
     const res1 = await POST(authReq(ENROLL_URL, {
       method: "POST",
+      email: "web-user@example.com",
       body: JSON.stringify({ plan: "web" }),
     }));
     expect(res1.status).toBe(201);
@@ -163,6 +164,7 @@ describe("POST /api/portal/enroll", () => {
 
     const res2 = await POST(authReq(ENROLL_URL, {
       method: "POST",
+      email: "hosting-user@example.com",
       body: JSON.stringify({ plan: "hosting" }),
     }));
     expect(res2.status).toBe(201);

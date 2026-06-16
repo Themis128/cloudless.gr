@@ -43,11 +43,15 @@ function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [step, setStep] = useState<"signup" | "check-email">("signup");
+  const [step, setStep] = useState<"signup" | "confirm-code" | "done">("signup");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [code, setCode] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  // token is returned by /api/auth/register and needed to verify the OTP
+  const [activationToken, setActivationToken] = useState("");
 
   const handleCognitoSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,12 +81,13 @@ function SignUpForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, fullName: fullName || undefined }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as { ok?: boolean; error?: string; token?: string };
       if (!res.ok) {
         setError(data.error ?? t("auth.signupFailed", "Sign up failed"));
         return;
       }
-      setStep("check-email");
+      if (data.token) setActivationToken(data.token);
+      setStep("confirm-code");
     } catch {
       setError(t("auth.signupFailed", "Sign up failed"));
     } finally {
@@ -90,16 +95,41 @@ function SignUpForm() {
     }
   };
 
+  const handleConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setConfirming(true);
+    try {
+      const res = await globalThis.fetch("/api/auth/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: code, token: activationToken }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok) {
+        setError(data.error ?? t("auth.confirmFailed", "Confirmation failed"));
+        return;
+      }
+      setStep("done");
+    } catch {
+      setError(t("auth.confirmFailed", "Confirmation failed"));
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   const handleResend = async () => {
     setResending(true);
+    setResent(false);
     try {
-      // The endpoint always returns ok (anti-enumeration), so a successful
-      // request is all we can confirm to the user.
-      await globalThis.fetch("/api/auth/resend-verification", {
+      const res = await globalThis.fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+      // resend-verification returns a new token so the OTP stays in sync
+      const data = (await res.json()) as { ok?: boolean; token?: string };
+      if (data.token) setActivationToken(data.token);
       setResent(true);
     } catch {
       // Keep the button available so the user can retry.
@@ -119,12 +149,16 @@ function SignUpForm() {
           <h1 className="font-heading text-3xl font-bold text-white">
             {step === "signup"
               ? t("auth.signup", "Create Account")
-              : t("auth.checkYourEmail", "Check Your Email")}
+              : step === "confirm-code"
+                ? t("auth.verifyEmail", "Verify Your Email")
+                : t("auth.checkYourEmail", "Account Activated")}
           </h1>
           <p className="font-body mt-2 text-slate-400">
             {step === "signup"
               ? t("auth.signupDesc", "Join Cloudless to access your dashboard")
-              : t("auth.checkEmailDesc", "A verification link has been sent to your inbox")}
+              : step === "confirm-code"
+                ? t("auth.enterCodeDesc", "Enter the 6-digit code from your email")
+                : t("auth.checkEmailDesc", "Your account is ready — sign in below")}
           </p>
         </div>
 
@@ -159,35 +193,43 @@ function SignUpForm() {
                 </Link>
               </p>
             </form>
-          ) : step === "check-email" ? (
-            <div className="space-y-5 text-center">
-              <div className="bg-neon-green/10 border-neon-green/20 mx-auto flex h-16 w-16 items-center justify-center rounded-full border">
-                <svg
-                  className="text-neon-green h-8 w-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
+          ) : step === "confirm-code" ? (
+            <form onSubmit={handleConfirm} className="space-y-5">
+              {error && (
+                <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta rounded-lg border p-3 font-mono text-sm">
+                  {error}
+                </div>
+              )}
               <p className="font-mono text-sm text-slate-300">
-                {t("auth.verificationSentTo", "We sent a verification link to")}{" "}
+                {t("auth.verificationSentTo", "We sent a verification code to")}{" "}
                 <span className="text-white">{email}</span>
               </p>
-              <p className="font-mono text-xs text-slate-500">
-                {t(
-                  "auth.clickLinkToActivate",
-                  "Click the link in the email to activate your account. After verification, you can sign in."
-                )}
-              </p>
-              <div className="space-y-2">
+              <div>
+                <label htmlFor="confirm-code" className="mb-2 block font-mono text-sm text-slate-400">
+                  {t("auth.verificationCode", "Verification Code")}
+                </label>
+                <input
+                  id="confirm-code"
+                  type="text"
+                  inputMode="numeric"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  required
+                  autoComplete="one-time-code"
+                  className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm text-white tracking-widest transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
+                  placeholder="123456"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={confirming}
+                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
+              >
+                {confirming
+                  ? t("auth.confirming", "Confirming...")
+                  : t("auth.confirmAccount", "Confirm Account")}
+              </button>
+              <div className="space-y-2 text-center">
                 <p className="font-mono text-xs text-slate-500">
                   {t("auth.didntGetEmail", "Didn't get the email?")}
                 </p>
@@ -195,19 +237,30 @@ function SignUpForm() {
                   type="button"
                   onClick={handleResend}
                   disabled={resending || resent}
-                  className="bg-void-light/60 hover:border-neon-cyan/40 min-h-11 w-full rounded-lg border border-slate-700 py-2.5 font-mono text-sm text-slate-300 transition-all disabled:opacity-60"
+                  className="font-mono text-xs text-slate-400 hover:text-white disabled:opacity-60"
                 >
                   {resending
                     ? t("auth.resending", "Resending…")
                     : resent
-                      ? t("auth.verificationResent", "Verification email sent ✓")
-                      : t("auth.resendVerification", "Resend verification email")}
+                      ? t("auth.verificationResent", "Code resent ✓")
+                      : t("auth.resendVerification", "Resend code")}
                 </button>
               </div>
-              <Link
-                href="/auth/login"
-                className="text-neon-cyan block font-mono text-sm hover:underline"
-              >
+            </form>
+          ) : step === "done" ? (
+            <div className="space-y-5 text-center">
+              <div className="bg-neon-green/10 border-neon-green/20 mx-auto flex h-16 w-16 items-center justify-center rounded-full border">
+                <svg className="text-neon-green h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="font-mono text-sm text-slate-300">
+                {t("auth.accountActivated", "Your account has been activated.")}
+              </p>
+              <p className="font-mono text-xs text-slate-500">
+                {t("auth.canSignInNow", "You can now sign in with your email and password.")}
+              </p>
+              <Link href="/auth/login" className="text-neon-cyan block font-mono text-sm hover:underline">
                 {t("auth.goToSignIn", "Go to Sign In →")}
               </Link>
             </div>
