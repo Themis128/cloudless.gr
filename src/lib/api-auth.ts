@@ -43,12 +43,15 @@ export function resetJwksCache(): void {
 export interface DecodedToken {
   sub: string;
   email?: string;
+  email_verified?: boolean;
   preferred_username?: string;
   name?: string;
   exp?: number;
   iat?: number;
   iss?: string;
   aud?: string | string[];
+  token_use?: "id" | "access";
+  client_id?: string;
   groups?: string[];
   /** Cognito conveys group membership under this claim. */
   "cognito:groups"?: string[];
@@ -103,7 +106,19 @@ export async function verifyToken(token: string): Promise<DecodedToken | null> {
       const { payload } = await jwtVerify(token, jwks, {
         ...(issuer ? { issuer } : {}),
       });
-      return payload as unknown as DecodedToken;
+      const decoded = payload as unknown as DecodedToken;
+      // Audience check (fix #4 from audit). Cognito ID tokens carry `aud`
+      // (the app client_id); access tokens carry `client_id`. Either must
+      // match COGNITO_CLIENT_ID when set. This stops cross-app-client tokens
+      // from the same user pool from authenticating against this app.
+      const expectedAud =
+        process.env.COGNITO_CLIENT_ID ?? process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+      if (expectedAud) {
+        const aud = Array.isArray(decoded.aud) ? decoded.aud : decoded.aud ? [decoded.aud] : [];
+        const audMatch = aud.includes(expectedAud) || decoded.client_id === expectedAud;
+        if (!audMatch) return null;
+      }
+      return decoded;
     } catch {
       return null;
     }
@@ -156,8 +171,13 @@ export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   // E2E test bypass: only active when BOTH NEXT_PUBLIC_E2E=1 AND a matching
   // E2E_ADMIN_TOKEN env var are configured AND the Bearer token matches.
-  // Production sets neither env var, so this is dead code in prod.
-  if (process.env.NEXT_PUBLIC_E2E === "1" && process.env.E2E_ADMIN_TOKEN) {
+  // Belt-and-braces: also require NODE_ENV !== "production" so this is
+  // physically dead code in prod even if env vars are misconfigured (fix #25).
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.NEXT_PUBLIC_E2E === "1" &&
+    process.env.E2E_ADMIN_TOKEN
+  ) {
     const e2eToken = getTokenFromHeader(request);
     if (e2eToken && e2eToken === process.env.E2E_ADMIN_TOKEN) {
       return {
@@ -198,6 +218,38 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       { status: 401 },
     ),
   };
+}
+
+/**
+ * Like `requireAuth` but additionally requires `email_verified === true` on
+ * the Cognito ID token. Use this for any flow that takes the user's email at
+ * face value to send notifications (portal enroll, contact, billing), so an
+ * attacker can't sign up with `victim@somewhere` and trigger emails to the
+ * real victim before they've clicked the Cognito confirmation link.
+ *
+ * Session-cookie users are always considered verified (the cookie is only
+ * set after a successful next-auth callback, which requires confirmation in
+ * the Cognito Hosted UI flow).
+ */
+export async function requireVerifiedAuth(request: NextRequest): Promise<AuthResult> {
+  const authResult = await requireAuth(request);
+  if (!authResult.ok) return authResult;
+  // Bearer-token path: enforce explicit email_verified claim. The
+  // session-cookie path doesn't expose this field (next-auth strips it),
+  // and the cookie is only set after the user clicks through Cognito's
+  // confirmation, so treat session-cookie users as verified by construction.
+  const u = authResult.user;
+  const cameViaBearer = u.email_verified !== undefined || u.token_use !== undefined;
+  if (cameViaBearer && u.email_verified !== true) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Email not verified. Confirm via the link in your inbox first." },
+        { status: 403 },
+      ),
+    };
+  }
+  return authResult;
 }
 
 /** Require admin authentication -- returns user or 401/403. */

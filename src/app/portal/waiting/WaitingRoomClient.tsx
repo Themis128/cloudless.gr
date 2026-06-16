@@ -2,6 +2,11 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
+// useRouter from next/navigation is intentional here: the page lives OUTSIDE
+// [locale]/ (portal URLs are locale-neutral by design, see PR #955), so
+// @/i18n/navigation's router can't infer a locale. We resolve locale below
+// via the NEXT_LOCALE cookie for the one place we link to a locale-prefixed
+// route (/<locale>/auth/login).
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
@@ -10,7 +15,7 @@ import TerminalBlock from "@/components/TerminalBlock";
 // src/lib/pending-clients.ts (server) and the signup gate (client).
 // Lives in a dependency-free module so the AWS SDK isn't pulled into the
 // browser bundle.
-import { PLAN_LABELS } from "@/lib/plans";
+import { isValidPlan, PLAN_LABELS } from "@/lib/plans";
 
 interface PortalStatus {
   status: "none" | "waiting" | "approved";
@@ -124,10 +129,14 @@ function WaitingRoomContent() {
   const [status, setStatus] = useState<PortalStatus | null>(null);
   const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [redirecting, setRedirecting] = useState(false);
-  const enrollAttempted = useRef(false);
+  // Ref-Set keyed by planParam so:
+  //  - failures don't lock the user out from retry on a different plan
+  //  - successful enrolls don't reuse the post-success flag for a different plan
+  //  - two-tab races each see their own entry
+  const enrollAttemptedFor = useRef<Set<string>>(new Set());
 
-  const planParam = searchParams.get("plan");
+  const rawPlan = searchParams.get("plan");
+  const planParam = isValidPlan(rawPlan) ? rawPlan : null;
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -151,8 +160,7 @@ function WaitingRoomContent() {
         if (!meRes.ok) throw new Error(`HTTP ${meRes.status}`);
         const me: PortalStatus = await meRes.json();
 
-        if (planParam && PLAN_LABELS[planParam] && !enrollAttempted.current) {
-          enrollAttempted.current = true;
+        if (planParam && !enrollAttemptedFor.current.has(planParam)) {
           if (me.status === "none" || (me.status === "waiting" && me.plan !== planParam)) {
             setEnrolling(true);
             const enrollRes = await fetchWithAuth("/api/portal/enroll", {
@@ -160,6 +168,12 @@ function WaitingRoomContent() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ plan: planParam, name: user?.name }),
             });
+            // Record the attempt AFTER receiving any kind of response. On
+            // success: stops the next render from re-firing the POST. On
+            // 4xx (e.g. email_verified=false → 403): the message is shown
+            // and we don't grind. On network error: the catch below clears
+            // the entry so the next user action (refresh, retry) can retry.
+            enrollAttemptedFor.current.add(planParam);
             if (!enrollRes.ok) {
               const data = await enrollRes.json().catch(() => ({}));
               throw new Error(data.error ?? `Enrollment failed (HTTP ${enrollRes.status})`);
@@ -169,10 +183,17 @@ function WaitingRoomContent() {
             setEnrolling(false);
             return;
           }
+          // Plan already enrolled with — just record as attempted to avoid
+          // doing this branch repeatedly.
+          enrollAttemptedFor.current.add(planParam);
         }
 
         setStatus(me);
       } catch (e) {
+        // Allow retry on the next prop/state change (e.g. user picks a new
+        // plan, refreshes the page, or hits the in-page retry button).
+        if (planParam) enrollAttemptedFor.current.delete(planParam);
+        setEnrolling(false);
         setError(e instanceof Error ? e.message : "Failed to load status");
       }
     }
@@ -182,27 +203,48 @@ function WaitingRoomContent() {
 
   useEffect(() => {
     if (status?.status !== "waiting") return;
-    const intervalId = setInterval(async () => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    async function pollOnce() {
       try {
         const res = await fetchWithAuth("/api/portal/me");
         if (res.ok) setStatus(await res.json());
       } catch {
         // silent
       }
-    }, POLL_INTERVAL_MS);
-    return () => clearInterval(intervalId);
+    }
+    function startPolling() {
+      if (intervalId) return;
+      intervalId = setInterval(pollOnce, POLL_INTERVAL_MS);
+    }
+    function stopPolling() {
+      if (!intervalId) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+    function onVisibility() {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        // Immediate refresh on tab-focus return, then resume background poll.
+        pollOnce();
+        startPolling();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    if (!document.hidden) startPolling();
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      stopPolling();
+    };
   }, [status?.status]);
 
   useEffect(() => {
-    if (status?.status !== "approved" || !status.portalToken || redirecting) {
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRedirecting(true);
-    const token = status.portalToken;
-    const t = setTimeout(() => router.push(`/portal/${token}`), 1800);
-    return () => clearTimeout(t);
-  }, [status, router, redirecting]);
+    // Immediate redirect on the approved transition. The previous
+    // setTimeout(1800ms) + setRedirecting flag dance had a stale-closure
+    // bug that could pin the user to an outdated portalToken (audit #8/#21).
+    if (status?.status !== "approved" || !status.portalToken) return;
+    router.push(`/portal/${status.portalToken}`);
+  }, [status?.status, status?.portalToken, router]);
 
   if (isLoading || !user) {
     return (
@@ -395,11 +437,7 @@ function WaitingRoomContent() {
               <h1 className="font-heading text-3xl font-bold text-white md:text-4xl">
                 You&rsquo;re all set!
               </h1>
-              <p className="mx-auto mt-4 max-w-md text-slate-400">
-                {redirecting
-                  ? "Taking you to your portal now..."
-                  : "Your personalized portal is ready. Click below to enter."}
-              </p>
+              <p className="mx-auto mt-4 max-w-md text-slate-400">Taking you to your portal now…</p>
             </div>
 
             <div className="bg-void-light/30 rounded-2xl border border-slate-800 p-8 backdrop-blur-sm">

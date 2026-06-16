@@ -9,8 +9,27 @@ import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
+/**
+ * Returns true when `path` is a safe same-origin internal path that the
+ * router can push to. Defeats open-redirect attempts via:
+ *   //evil.example/x        (protocol-relative URL — browsers treat as cross-origin)
+ *   /\evil.example/x        (backslash-prefix — Chrome interprets as protocol-relative)
+ *   non-/-prefixed URLs     (relative-to-current — surprising semantics)
+ *   embedded \r\n           (header smuggling)
+ * Also bounds length so we don't ship a /portal/waiting?... gigaparam.
+ */
+function isSafeRedirectPath(path: string | null | undefined): path is string {
+  if (typeof path !== "string" || path.length === 0 || path.length > 2048) return false;
+  if (!path.startsWith("/")) return false;
+  // Defang protocol-relative URLs ("//evil") and Chrome's backslash variant.
+  if (path.startsWith("//") || path.startsWith("/\\")) return false;
+  // Defang header-injection / control codepoints.
+  if (/[ -]/.test(path)) return false;
+  return true;
+}
+
 function normalizeRedirectPath(path: string): string {
-  if (!path.startsWith("/")) return path;
+  if (!isSafeRedirectPath(path)) return "/";
 
   const match = path.match(/^\/([^/]+)(\/.*|$)/);
   if (!match) return path;
@@ -34,7 +53,7 @@ function LoginContent() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      if (nextParam && nextParam.startsWith("/")) {
+      if (isSafeRedirectPath(nextParam)) {
         router.push(normalizeRedirectPath(nextParam));
       } else {
         router.push(isAdmin ? "/admin" : "/dashboard");
@@ -42,7 +61,7 @@ function LoginContent() {
     }
   }, [user, isAdmin, isLoading, router, nextParam]);
 
-  const callbackUrl = nextParam?.startsWith("/")
+  const callbackUrl = isSafeRedirectPath(nextParam)
     ? normalizeRedirectPath(nextParam)
     : "/auth/post-login";
 

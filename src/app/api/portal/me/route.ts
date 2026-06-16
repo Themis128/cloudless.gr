@@ -23,26 +23,32 @@ export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;
 
-  const email = auth.user.email;
+  const email = auth.user.email?.toLowerCase();
+  // Personal-data response — never edge-cache, never CDN-cache.
+  const NO_STORE = { "Cache-Control": "private, no-store" } as const;
+
   if (!email) {
-    return NextResponse.json({ status: "none" });
+    return NextResponse.json({ status: "none" }, { headers: NO_STORE });
   }
 
   const pending = await findPendingByEmail(email);
   if (!pending) {
-    return NextResponse.json({ status: "none", email });
+    return NextResponse.json({ status: "none", email }, { headers: NO_STORE });
   }
 
-  return NextResponse.json({
-    status: pending.status,
-    portalToken: pending.portalToken,
-    plan: pending.plan,
-    planLabel: pending.planLabel,
-    submittedAt: pending.submittedAt,
-    approvedAt: pending.approvedAt,
-    email: pending.email,
-    name: pending.name,
-  });
+  return NextResponse.json(
+    {
+      status: pending.status,
+      portalToken: pending.portalToken,
+      plan: pending.plan,
+      planLabel: pending.planLabel,
+      submittedAt: pending.submittedAt,
+      approvedAt: pending.approvedAt,
+      email: pending.email,
+      name: pending.name,
+    },
+    { headers: NO_STORE },
+  );
 }
 
 export const runtime = "nodejs";
