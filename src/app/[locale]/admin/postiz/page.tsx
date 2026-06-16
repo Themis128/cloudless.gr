@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
-import type {
-  PostizIntegration,
-  PostizPost,
-  CreatePostBody,
-} from "@/lib/postiz";
+import type { PostizIntegration, PostizPost, CreatePostBody } from "@/lib/postiz";
 
 /**
  * Postiz admin page — /[locale]/admin/postiz
@@ -23,12 +19,8 @@ import type {
  *   GET    /api/admin/postiz/slot?id=...   → next free time slot
  */
 export default function PostizAdminPage() {
-  const [tab, setTab] = useState<"channels" | "compose" | "schedule">(
-    "compose",
-  );
-  const [integrations, setIntegrations] = useState<PostizIntegration[] | null>(
-    null,
-  );
+  const [tab, setTab] = useState<"channels" | "compose" | "schedule">("compose");
+  const [integrations, setIntegrations] = useState<PostizIntegration[] | null>(null);
   const [posts, setPosts] = useState<PostizPost[] | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,9 +97,7 @@ export default function PostizAdminPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm capitalize ${
-              tab === t
-                ? "border-b-2 border-blue-600 font-medium text-blue-700"
-                : "text-gray-600"
+              tab === t ? "border-b-2 border-blue-600 font-medium text-blue-700" : "text-gray-600"
             }`}
           >
             {t}
@@ -116,10 +106,7 @@ export default function PostizAdminPage() {
       </nav>
 
       {tab === "channels" && (
-        <ChannelsTab
-          integrations={integrations}
-          onReload={reloadIntegrations}
-        />
+        <ChannelsTab integrations={integrations} onReload={reloadIntegrations} />
       )}
       {tab === "compose" && (
         <ComposeTab
@@ -130,9 +117,7 @@ export default function PostizAdminPage() {
           }}
         />
       )}
-      {tab === "schedule" && (
-        <ScheduleTab posts={posts} onReload={reloadPosts} />
-      )}
+      {tab === "schedule" && <ScheduleTab posts={posts} onReload={reloadPosts} />}
     </div>
   );
 }
@@ -142,8 +127,7 @@ function NotConfigured() {
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <h1 className="text-2xl font-semibold">Postiz not configured</h1>
       <p className="text-gray-700">
-        Set <code>POSTIZ_API_KEY</code> (and optionally{" "}
-        <code>POSTIZ_BASE_URL</code>) in SSM under{" "}
+        Set <code>POSTIZ_API_KEY</code> (and optionally <code>POSTIZ_BASE_URL</code>) in SSM under{" "}
         <code>/cloudless/postiz/</code>. Get the key from{" "}
         <a
           href="https://postiz.cloudless.gr"
@@ -156,8 +140,8 @@ function NotConfigured() {
         → Settings → Developers → Public API.
       </p>
       <p className="text-gray-700">
-        After setting the SSM parameter, the Lambda needs to refresh its config
-        — either re-deploy or wait out the SSM cache TTL.
+        After setting the SSM parameter, the Lambda needs to refresh its config — either re-deploy
+        or wait out the SSM cache TTL.
       </p>
       <Link href="/admin" className="text-blue-600 underline">
         ← Back to admin
@@ -177,9 +161,7 @@ function ChannelsTab({
   if (integrations.length === 0) {
     return (
       <div className="space-y-3">
-        <p className="text-gray-700">
-          No channels connected yet. Connect them via the Postiz UI.
-        </p>
+        <p className="text-gray-700">No channels connected yet. Connect them via the Postiz UI.</p>
         <a
           href="https://postiz.cloudless.gr/launches"
           target="_blank"
@@ -194,20 +176,13 @@ function ChannelsTab({
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onReload}
-          className="text-sm text-blue-600 underline"
-        >
+        <button type="button" onClick={onReload} className="text-sm text-blue-600 underline">
           Refresh
         </button>
       </div>
       <ul className="divide-y rounded border">
         {integrations.map((i) => (
-          <li
-            key={i.id}
-            className="flex items-center justify-between gap-3 p-3"
-          >
+          <li key={i.id} className="flex items-center justify-between gap-3 p-3">
             <div>
               <div className="font-medium">{i.name}</div>
               <div className="text-xs text-gray-500">
@@ -215,9 +190,7 @@ function ChannelsTab({
               </div>
             </div>
             {i.disabled && (
-              <span className="rounded bg-red-100 px-2 py-1 text-xs text-red-800">
-                disabled
-              </span>
+              <span className="rounded bg-red-100 px-2 py-1 text-xs text-red-800">disabled</span>
             )}
           </li>
         ))}
@@ -242,13 +215,11 @@ function ComposeTab({
 
   const selectedIntegrations = useMemo(
     () => integrations.filter((i) => selectedIds.includes(i.id)),
-    [integrations, selectedIds],
+    [integrations, selectedIds]
   );
 
   const toggleId = (id: string) =>
-    setSelectedIds((cur) =>
-      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id],
-    );
+    setSelectedIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   const onSubmit = async (mode: "now" | "schedule" | "draft") => {
     setSubmitting(true);
@@ -308,10 +279,7 @@ function ComposeTab({
   return (
     <div className="space-y-4">
       <div>
-        <label
-          htmlFor="postiz-channels"
-          className="mb-1 block text-sm font-medium"
-        >
+        <label htmlFor="postiz-channels" className="mb-1 block text-sm font-medium">
           Channels ({selectedIds.length} selected)
         </label>
         <div id="postiz-channels" className="flex flex-wrap gap-2">
@@ -323,9 +291,7 @@ function ComposeTab({
                 key={i.id}
                 onClick={() => toggleId(i.id)}
                 className={`rounded border px-3 py-1 text-sm ${
-                  on
-                    ? "border-blue-600 bg-blue-50 text-blue-700"
-                    : "border-gray-300 text-gray-700"
+                  on ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-300 text-gray-700"
                 }`}
               >
                 {i.name} <span className="text-xs">({i.identifier})</span>
@@ -336,10 +302,7 @@ function ComposeTab({
       </div>
 
       <div>
-        <label
-          htmlFor="postiz-content"
-          className="mb-1 block text-sm font-medium"
-        >
+        <label htmlFor="postiz-content" className="mb-1 block text-sm font-medium">
           Content
         </label>
         <textarea
@@ -353,10 +316,7 @@ function ComposeTab({
       </div>
 
       <div>
-        <label
-          htmlFor="postiz-image"
-          className="mb-1 block text-sm font-medium"
-        >
+        <label htmlFor="postiz-image" className="mb-1 block text-sm font-medium">
           Media URL (optional)
         </label>
         <input
@@ -373,10 +333,7 @@ function ComposeTab({
       </div>
 
       <div>
-        <label
-          htmlFor="postiz-schedule"
-          className="mb-1 block text-sm font-medium"
-        >
+        <label htmlFor="postiz-schedule" className="mb-1 block text-sm font-medium">
           Schedule at (local time)
         </label>
         <input
@@ -391,9 +348,7 @@ function ComposeTab({
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={
-            submitting || !content || selectedIds.length === 0
-          }
+          disabled={submitting || !content || selectedIds.length === 0}
           onClick={() => onSubmit("now")}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
@@ -401,9 +356,7 @@ function ComposeTab({
         </button>
         <button
           type="button"
-          disabled={
-            submitting || !content || selectedIds.length === 0 || !scheduleAt
-          }
+          disabled={submitting || !content || selectedIds.length === 0 || !scheduleAt}
           onClick={() => onSubmit("schedule")}
           className="rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
@@ -411,9 +364,7 @@ function ComposeTab({
         </button>
         <button
           type="button"
-          disabled={
-            submitting || !content || selectedIds.length === 0
-          }
+          disabled={submitting || !content || selectedIds.length === 0}
           onClick={() => onSubmit("draft")}
           className="rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 disabled:opacity-50"
         >
@@ -426,16 +377,9 @@ function ComposeTab({
   );
 }
 
-function ScheduleTab({
-  posts,
-  onReload,
-}: {
-  posts: PostizPost[] | null;
-  onReload: () => void;
-}) {
+function ScheduleTab({ posts, onReload }: { posts: PostizPost[] | null; onReload: () => void }) {
   if (posts === null) return <p>Loading…</p>;
-  if (posts.length === 0)
-    return <p className="text-gray-600">No posts in the current window.</p>;
+  if (posts.length === 0) return <p className="text-gray-600">No posts in the current window.</p>;
 
   const onDelete = async (id: string) => {
     if (!confirm("Delete this post?")) return;
@@ -448,11 +392,7 @@ function ScheduleTab({
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onReload}
-          className="text-sm text-blue-600 underline"
-        >
+        <button type="button" onClick={onReload} className="text-sm text-blue-600 underline">
           Refresh
         </button>
       </div>
@@ -461,8 +401,8 @@ function ScheduleTab({
           <li key={p.id} className="space-y-1 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs text-gray-500">
-                {new Date(p.publishDate).toLocaleString()} · {p.state} ·{" "}
-                {p.integration.name} ({p.integration.identifier})
+                {new Date(p.publishDate).toLocaleString()} · {p.state} · {p.integration.name} (
+                {p.integration.identifier})
               </div>
               <button
                 type="button"
@@ -472,9 +412,7 @@ function ScheduleTab({
                 Delete
               </button>
             </div>
-            <pre className="whitespace-pre-wrap font-sans text-sm">
-              {p.content}
-            </pre>
+            <pre className="whitespace-pre-wrap font-sans text-sm">{p.content}</pre>
             {p.releaseURL && (
               <a
                 href={p.releaseURL}
@@ -499,9 +437,7 @@ function ScheduleTab({
  * create-post API. Extend this as you wire up more provider-specific knobs in
  * the UI (TikTok privacy_level, YouTube title, etc.).
  */
-function settingsFor(
-  i: PostizIntegration,
-): { __type: string } & Record<string, unknown> {
+function settingsFor(i: PostizIntegration): { __type: string } & Record<string, unknown> {
   switch (i.identifier) {
     case "x":
       return { __type: "x", who_can_reply_post: "everyone" };

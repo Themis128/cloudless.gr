@@ -43,10 +43,7 @@ export function clearSessionCache(): void {
   cachedSession = null;
 }
 
-export async function fetchWithAuth(
-  url: string,
-  init?: RequestInit,
-): Promise<Response> {
+export async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   const session = await getCachedSession();
   const idToken = session?.idToken;
 

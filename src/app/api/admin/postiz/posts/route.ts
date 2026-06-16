@@ -27,15 +27,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ posts });
   } catch (err) {
     if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json(
-        { error: "postiz_not_configured" },
-        { status: 503 },
-      );
+      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
     }
     if (err instanceof PostizApiError) {
       return NextResponse.json(
         { error: "postiz_upstream", status: err.status, body: err.body },
-        { status: 502 },
+        { status: 502 }
       );
     }
     throw err;
@@ -56,7 +53,7 @@ export async function POST(req: NextRequest) {
   if (!body.type || !Array.isArray(body.posts) || body.posts.length === 0) {
     return NextResponse.json(
       { error: "invalid_payload", detail: "type and posts[] are required" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -65,15 +62,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ result }, { status: 201 });
   } catch (err) {
     if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json(
-        { error: "postiz_not_configured" },
-        { status: 503 },
-      );
+      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
     }
     if (err instanceof PostizApiError) {
       return NextResponse.json(
         { error: "postiz_upstream", status: err.status, body: err.body },
-        { status: err.status === 429 ? 429 : 502 },
+        { status: err.status === 429 ? 429 : 502 }
       );
     }
     throw err;
