@@ -256,6 +256,13 @@ spec:
               value: "/uploads"
             - name: NEXT_PUBLIC_UPLOAD_DIRECTORY
               value: "/uploads"
+            # Server-side allowlist for POST /public/v1/upload-from-url, per
+            # docs.postiz.com → Configuration Reference. Defense in depth on
+            # top of the route-level SSRF prefilter in src/app/api/admin/
+            # postiz/upload/route.ts. Only hostnames in this comma-separated
+            # list will be fetched by Postiz; everything else is rejected.
+            - name: RESTRICT_UPLOAD_DOMAINS
+              value: "cloudless.gr,uploads.postiz.cloudless.gr"
           volumeMounts:
             - name: uploads
               mountPath: /uploads
