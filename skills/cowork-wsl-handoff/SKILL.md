@@ -81,6 +81,7 @@ scripts/cowork-bundle.sh \
 ```
 
 Output (in the Cowork outputs folder):
+
 - `<slug>.tar.gz` — the bundle (only your paths, nothing extra).
 - `APPLY-<slug>.md` — copy-paste-runnable recipe with the exact `git add`
   list, the commit message, the PR body, the `gh pr merge --squash`.
