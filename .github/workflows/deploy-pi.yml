@@ -58,7 +58,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2
+        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
 
       - name: Check if image tag already exists in ECR
         id: check_ecr
@@ -86,7 +86,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'
@@ -155,19 +155,30 @@ jobs:
           # re-push returns: "tag invalid: ... already exists ... cannot be
           # overwritten because the tag is immutable." That means the image IS
           # in ECR — success for our purposes, so the rollout must still run.
-          push_log=$(docker push "${TAG}" 2>&1)
-          rc=$?
-          echo "${push_log}"
-          if [ "${rc}" -eq 0 ]; then
+          #
+          # IMPORTANT — `if ! push_log=$(...)` pattern, not `push_log=$(...); rc=$?`:
+          # GitHub's default shell is `bash -e {0}`, so a bare command
+          # substitution whose command exits non-zero aborts the whole script
+          # BEFORE we ever reach the rc check. Wrapping in `if` is the only
+          # way to capture both stdout/stderr AND the non-zero exit without
+          # tripping -e. Same pattern used by build-pi-image.yml's push step.
+          # Lost-race seen 2026-06-16 (deploy run 27596604011 on c880628):
+          # build-pi-image.yml pushed first at 05:49:18, deploy-pi.yml's push
+          # failed at 05:50:18, but the old code never saw the error string.
+          if push_log=$(docker push "${TAG}" 2>&1); then
+            echo "${push_log}"
             echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
             echo "Pushed ${TAG}."
-          elif echo "${push_log}" | grep -qiE 'already exists.*immutable|tag.*immutable'; then
-            echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Tag already present (immutable) — concurrent build won the race; image is in ECR, proceeding to rollout."
           else
-            echo "pushed_or_exists=false" >> "$GITHUB_OUTPUT"
-            echo "::error::docker push failed for a reason other than the immutable-tag race."
-            exit 1
+            echo "${push_log}"
+            if echo "${push_log}" | grep -qiE 'already exists.*immutable|tag.*immutable'; then
+              echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::Tag already present (immutable) — concurrent build won the race; image is in ECR, proceeding to rollout."
+            else
+              echo "pushed_or_exists=false" >> "$GITHUB_OUTPUT"
+              echo "::error::docker push failed for a reason other than the immutable-tag race."
+              exit 1
+            fi
           fi
 
       - name: Update SSM Pi image tracking
@@ -268,17 +279,4 @@ jobs:
             return 1
           }
 
-          echo "Waiting for k3s API to be stable (3x kubectl /readyz ok)..."
-          if wait_for_api; then
-            echo "k3s API stable — proceeding to rollout"
-          else
-            echo "::error::k3s /readyz never returned 3x ok in 5 min — aborting"
-            exit 1
-          fi
-      - name: Set image and roll out
-        run: |
-          kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
-            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
-            -n ${{ env.K3S_NAMESPACE }}
-          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=600s
-# re-triggered 2026-06-04T20:50Z — run #319 OIDC auth transient failure
+          echo "Waiting for k3s API to be
