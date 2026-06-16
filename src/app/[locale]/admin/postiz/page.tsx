@@ -25,20 +25,29 @@ export default function PostizAdminPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Concurrent reloads race against `configured` — once a 503 is observed,
+  // Postiz is definitively unconfigured and the success path of the other
+  // request must NOT flip the flag back to `true`. Use the functional setter
+  // so `false` is sticky; `null` (initial) → `true` is the only upgrade.
+  const markConfigured = useCallback(() => {
+    setConfigured((cur) => (cur === false ? false : true));
+  }, []);
+
   const reloadIntegrations = useCallback(async () => {
     const res = await fetch("/api/admin/postiz/integrations");
     if (res.status === 503) {
       setConfigured(false);
       return;
     }
-    setConfigured(true);
+    markConfigured();
     if (!res.ok) {
       setError(`integrations: ${res.status}`);
       return;
     }
     const data = (await res.json()) as { integrations: PostizIntegration[] };
     setIntegrations(data.integrations ?? []);
-  }, []);
+    setError(null);
+  }, [markConfigured]);
 
   const reloadPosts = useCallback(async () => {
     const res = await fetch("/api/admin/postiz/posts");
@@ -46,14 +55,15 @@ export default function PostizAdminPage() {
       setConfigured(false);
       return;
     }
-    setConfigured(true);
+    markConfigured();
     if (!res.ok) {
       setError(`posts: ${res.status}`);
       return;
     }
     const data = (await res.json()) as { posts: PostizPost[] };
     setPosts(data.posts ?? []);
-  }, []);
+    setError(null);
+  }, [markConfigured]);
 
   useEffect(() => {
     // reloadIntegrations / reloadPosts are async; the setState calls inside
@@ -62,7 +72,6 @@ export default function PostizAdminPage() {
     // difference. Matches the existing pattern in AuthContext.tsx:199.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void reloadIntegrations();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reloadPosts();
   }, [reloadIntegrations, reloadPosts]);
 
@@ -382,7 +391,9 @@ function ScheduleTab({ posts, onReload }: { posts: PostizPost[] | null; onReload
   if (posts.length === 0) return <p className="text-gray-600">No posts in the current window.</p>;
 
   const onDelete = async (id: string) => {
-    if (!confirm("Delete this post?")) return;
+    // `globalThis.confirm` satisfies SonarCloud `prefer-global-this` (S7059);
+    // direct `confirm` would also lint as `no-alert`.
+    if (!globalThis.confirm("Delete this post?")) return;
     const res = await fetch(`/api/admin/postiz/posts/${id}`, {
       method: "DELETE",
     });

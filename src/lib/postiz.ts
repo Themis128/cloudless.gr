@@ -37,16 +37,20 @@ async function getPostizConfig(): Promise<{ baseUrl: string; apiKey: string }> {
   };
 }
 
-async function postizFetch(path: string, options: RequestInit = {}): Promise<Response> {
+async function postizFetch(
+  path: string,
+  options: RequestInit & { timeoutMs?: number } = {}
+): Promise<Response> {
   const { baseUrl, apiKey } = await getPostizConfig();
+  const { timeoutMs, ...init } = options;
   return fetch(`${baseUrl}/api/public/v1${path}`, {
-    ...options,
+    ...init,
     headers: {
       "Content-Type": "application/json",
       Authorization: apiKey,
-      ...options.headers,
+      ...init.headers,
     },
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(timeoutMs ?? 10_000),
   });
 }
 
@@ -69,7 +73,10 @@ export class PostizApiError extends Error {
   }
 }
 
-async function callThrowing<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function callThrowing<T>(
+  path: string,
+  init: RequestInit & { timeoutMs?: number } = {}
+): Promise<T> {
   const res = await postizFetch(path, init);
   if (!res.ok) throw new PostizApiError(res.status, await res.text().catch(() => ""));
   if (res.status === 204) return undefined as T;
@@ -232,9 +239,16 @@ export interface UploadedFile {
   alt: string | null;
 }
 
-/** Throwing variant of `listPostizIntegrations` for /admin/postiz routes. */
-export function listIntegrations(): Promise<PostizIntegration[]> {
-  return callThrowing<PostizIntegration[]>("/integrations");
+/** Throwing variant of `listPostizIntegrations` for /admin/postiz routes.
+ *
+ * Postiz can return either a bare array or `{ integrations: PostizIntegration[] }`
+ * depending on version — we defensively unwrap the same way `listPostizIntegrations`
+ * and `listPosts` do. Verified against live API 2026-06-16. */
+export async function listIntegrations(): Promise<PostizIntegration[]> {
+  const data = await callThrowing<PostizIntegration[] | { integrations?: PostizIntegration[] }>(
+    "/integrations"
+  );
+  return Array.isArray(data) ? data : (data.integrations ?? []);
 }
 
 /** List posts in a window (ISO 8601 dates).
@@ -267,11 +281,17 @@ export async function deletePost(id: string): Promise<void> {
   }
 }
 
-/** Upload media to Postiz by URL — returns an `{id,path}` usable in posts. */
+/** Upload media to Postiz by URL — returns an `{id,path}` usable in posts.
+ *
+ * Postiz fetches the remote URL server-side, which can take longer than the
+ * default 10s when the source is a large image or a slow CDN. Bump the
+ * timeout to 30s so a 5 MB media URL doesn't trip an AbortError on the
+ * upstream fetch. */
 export function uploadFromUrl(url: string): Promise<UploadedFile> {
   return callThrowing<UploadedFile>("/upload-from-url", {
     method: "POST",
     body: JSON.stringify({ url }),
+    timeoutMs: 30_000,
   });
 }
 
