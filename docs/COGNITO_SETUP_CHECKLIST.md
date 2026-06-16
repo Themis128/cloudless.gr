@@ -16,8 +16,8 @@
 
 ### Documentation
 
-- [x] `docs/COGNITO_SETUP.md` — User guide (comprehensive)
-- [x] `docs/COGNITO_AUTOMATION.md` — Architecture & overview
+- [x] `COGNITO_SETUP.md` — User guide (comprehensive)
+- [x] `COGNITO_AUTOMATION.md` — Architecture & overview
 - [x] `COGNITO_SETUP_SUMMARY.md` — Executive summary
 - [x] `tools/cognito-setup-mcp/README.md` — MCP server docs
 - [x] `.claude/skills/cognito-setup/index.md` — Skill docs
