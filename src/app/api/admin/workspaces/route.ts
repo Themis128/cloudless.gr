@@ -1,50 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api-auth";
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID } from "node:crypto";
+import { requireAdmin } from "@/lib/api-auth";
+import {
+  readWorkspaces,
+  writeWorkspaces,
+  WORKSPACE_COOKIE,
+  type Workspace,
+} from "@/lib/workspace-server";
+import { auditWorkspaceEvent } from "@/lib/workspace-audit";
 
-const SSM_KEY = "/cloudless/WORKSPACES_JSON";
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
-const CACHE_TTL_MS = 30_000;
-
-let cachedWorkspaces: { data: Workspace[]; expiresAt: number } | null = null;
-
-export interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  adminEmails: string[];
-  createdAt: string;
-}
-
-async function readWorkspaces(): Promise<Workspace[]> {
-  if (cachedWorkspaces && Date.now() < cachedWorkspaces.expiresAt) {
-    return cachedWorkspaces.data;
-  }
-  try {
-    const client = new SSMClient({ region: REGION });
-    const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
-    const data = JSON.parse(res.Parameter?.Value ?? "[]") as Workspace[];
-    cachedWorkspaces = { data, expiresAt: Date.now() + CACHE_TTL_MS };
-    return data;
-  } catch {
-    return cachedWorkspaces?.data ?? [];
-  }
-}
-
-async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
-  const client = new SSMClient({ region: REGION });
-  await client.send(
-    new PutParameterCommand({
-      Name: SSM_KEY,
-      Value: JSON.stringify(workspaces),
-      Type: "String",
-      Overwrite: true,
-    })
-  );
-  cachedWorkspaces = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
-}
+// Re-export the Workspace type so existing imports
+// (`@/app/api/admin/workspaces/route`) keep resolving without a churn-PR.
+export type { Workspace };
 
 function toSlug(name: string): string {
   return name
@@ -52,6 +19,12 @@ function toSlug(name: string): string {
     .replaceAll(/[^a-z0-9]+/g, "-")
     .replaceAll(/^-|-$/g, "")
     .slice(0, 40);
+}
+
+function trim(str: unknown, max: number): string {
+  return String(str ?? "")
+    .trim()
+    .slice(0, max);
 }
 
 export async function GET(request: NextRequest) {
@@ -66,18 +39,12 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = (await request.json()) as {
-    name?: string;
-    description?: string;
-    adminEmails?: string[];
-  };
-
+  const body = (await request.json()) as Partial<Workspace> & { name?: string };
   if (!body.name?.trim()) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
 
   const workspaces = await readWorkspaces();
-
   const slug = toSlug(body.name);
   if (workspaces.some((w) => w.slug === slug)) {
     return NextResponse.json(
@@ -88,30 +55,42 @@ export async function POST(request: NextRequest) {
 
   const workspace: Workspace = {
     id: randomUUID(),
-    name: String(body.name).trim().slice(0, 100),
+    name: trim(body.name, 100),
     slug,
-    description: String(body.description ?? "").slice(0, 300),
+    description: trim(body.description, 300),
     adminEmails: Array.isArray(body.adminEmails) ? body.adminEmails.map(String).slice(0, 20) : [],
     createdAt: new Date().toISOString(),
+    ...(body.postizGroupId ? { postizGroupId: trim(body.postizGroupId, 100) } : {}),
+    ...(body.notionTag ? { notionTag: trim(body.notionTag, 100) } : {}),
   };
 
   workspaces.push(workspace);
   await writeWorkspaces(workspaces);
 
-  return NextResponse.json({ workspace }, { status: 201 });
+  // Fire-and-forget audit log — never block on Slack failures.
+  auditWorkspaceEvent("created", workspace, auth.user.email).catch((e) =>
+    console.error("[workspaces audit]", e)
+  );
+
+  // Set the cookie so the freshly-created workspace becomes active for
+  // subsequent requests on this session. Mirrors localStorage in the client.
+  const res = NextResponse.json({ workspace }, { status: 201 });
+  res.cookies.set({
+    name: WORKSPACE_COOKIE,
+    value: workspace.id,
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+    secure: true,
+  });
+  return res;
 }
 
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = (await request.json()) as {
-    id?: string;
-    name?: string;
-    description?: string;
-    adminEmails?: string[];
-  };
-
+  const body = (await request.json()) as Partial<Workspace>;
   if (!body.id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const workspaces = await readWorkspaces();
@@ -119,17 +98,32 @@ export async function PATCH(request: NextRequest) {
   if (idx === -1) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
 
   if (body.name) {
-    workspaces[idx].name = String(body.name).trim().slice(0, 100);
+    workspaces[idx].name = trim(body.name, 100);
     workspaces[idx].slug = toSlug(body.name);
   }
   if (body.description !== undefined) {
-    workspaces[idx].description = String(body.description).slice(0, 300);
+    workspaces[idx].description = trim(body.description, 300);
   }
   if (Array.isArray(body.adminEmails)) {
     workspaces[idx].adminEmails = body.adminEmails.map(String).slice(0, 20);
   }
+  if (body.postizGroupId !== undefined) {
+    const v = trim(body.postizGroupId, 100);
+    if (v) workspaces[idx].postizGroupId = v;
+    else delete workspaces[idx].postizGroupId;
+  }
+  if (body.notionTag !== undefined) {
+    const v = trim(body.notionTag, 100);
+    if (v) workspaces[idx].notionTag = v;
+    else delete workspaces[idx].notionTag;
+  }
 
   await writeWorkspaces(workspaces);
+
+  auditWorkspaceEvent("updated", workspaces[idx], auth.user.email).catch((e) =>
+    console.error("[workspaces audit]", e)
+  );
+
   return NextResponse.json({ workspace: workspaces[idx] });
 }
 
@@ -141,8 +135,15 @@ export async function DELETE(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const workspaces = await readWorkspaces();
+  const deleted = workspaces.find((w) => w.id === id);
   const updated = workspaces.filter((w) => w.id !== id);
   await writeWorkspaces(updated);
+
+  if (deleted) {
+    auditWorkspaceEvent("deleted", deleted, auth.user.email).catch((e) =>
+      console.error("[workspaces audit]", e)
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }

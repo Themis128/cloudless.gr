@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { createCalendarItem, type CalendarItem } from "@/lib/content-calendar";
+import { getActiveWorkspaceId } from "@/lib/workspace-server";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -19,9 +20,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Stamp the active workspace on new items so future filtered queries see
+  // them. Body-provided workspaceId takes precedence (admin tooling can pin
+  // a row to a specific tenant); otherwise the cookie wins. Falls through to
+  // org-wide if neither is present.
+  const cookieWorkspaceId = await getActiveWorkspaceId(request);
+  const enriched: Omit<CalendarItem, "id"> = {
+    ...input,
+    workspaceId: input.workspaceId ?? cookieWorkspaceId ?? undefined,
+  };
+
   let item;
   try {
-    item = await createCalendarItem(input);
+    item = await createCalendarItem(enriched);
   } catch (e) {
     console.error("[calendar/create] failed to persist calendar item:", e);
     return NextResponse.json(

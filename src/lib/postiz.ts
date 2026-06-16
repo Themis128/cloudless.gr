@@ -105,10 +105,15 @@ export interface PostizIntegration {
   disabled?: boolean;
 }
 
-/** Channels connected inside Postiz. Empty array when unreachable/unconfigured. */
-export async function listPostizIntegrations(): Promise<PostizIntegration[]> {
+/** Channels connected inside Postiz. Empty array when unreachable/unconfigured.
+ *
+ *  When `groupId` is supplied, filters to channels assigned to that Postiz
+ *  group (customer) — used to partition workspaces by Postiz `group.id`.
+ *  Pass-through to the documented `?group=<id>` query param. */
+export async function listPostizIntegrations(groupId?: string): Promise<PostizIntegration[]> {
   try {
-    const res = await postizFetch("/integrations");
+    const path = groupId ? `/integrations?group=${encodeURIComponent(groupId)}` : "/integrations";
+    const res = await postizFetch(path);
     if (!res.ok) {
       console.error("[Postiz] integrations request failed:", res.status);
       return [];
