@@ -279,4 +279,17 @@ jobs:
             return 1
           }
 
-          echo "Waiting for k3s API to be
+          echo "Waiting for k3s API to be stable (3x kubectl /readyz ok)..."
+          if wait_for_api; then
+            echo "k3s API stable — proceeding to rollout"
+          else
+            echo "::error::k3s /readyz never returned 3x ok in 5 min — aborting"
+            exit 1
+          fi
+      - name: Set image and roll out
+        run: |
+          kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
+            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
+            -n ${{ env.K3S_NAMESPACE }}
+          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=600s
+# re-triggered 2026-06-04T20:50Z — run #319 OIDC auth transient failure
