@@ -82,14 +82,15 @@ describe("POST /api/auth/register", () => {
 
   // ── Cognito error handling ─────────────────────────────────────────────────
 
-  it("returns 409 when Cognito throws UsernameExistsException", async () => {
+  it("returns 200 when Cognito throws UsernameExistsException (anti-enumeration)", async () => {
     const err = Object.assign(new Error("User exists"), { name: "UsernameExistsException" });
     sendMock.mockRejectedValueOnce(err);
     const { POST } = await import("@/app/api/auth/register/route");
     const res = await POST(req({ email: "existing@b.com", password: "Test123!" }));
-    expect(res.status).toBe(409);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/already exists/i);
+    // Returns 200 to prevent account enumeration — caller cannot distinguish
+    // between a new signup and an existing account.
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
   });
 
   it("returns 400 when Cognito throws InvalidPasswordException", async () => {
