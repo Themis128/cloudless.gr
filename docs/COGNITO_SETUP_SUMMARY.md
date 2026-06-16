@@ -40,13 +40,13 @@ All options automatically:
 
 ### Documentation
 
-- **`docs/COGNITO_SETUP.md`** (detailed user guide)
+- **`COGNITO_SETUP.md` (sibling)** (detailed user guide)
   - Step-by-step instructions
   - Prerequisites and troubleshooting
   - Manual setup fallback
   - AWS credential setup options
 
-- **`docs/COGNITO_AUTOMATION.md`** (architecture overview)
+- **`COGNITO_AUTOMATION.md` (sibling)** (architecture overview)
   - Explains all 3 automation levels
   - Data flow diagrams
   - Usage scenarios
@@ -246,8 +246,8 @@ bash -x scripts/cognito-setup.sh
 
 | Document | Purpose | Location |
 |----------|---------|----------|
-| COGNITO_SETUP.md | User guide | `docs/COGNITO_SETUP.md` |
-| COGNITO_AUTOMATION.md | Architecture | `docs/COGNITO_AUTOMATION.md` |
+| COGNITO_SETUP.md | User guide | `COGNITO_SETUP.md` (sibling) |
+| COGNITO_AUTOMATION.md | Architecture | `COGNITO_AUTOMATION.md` (sibling) |
 | MCP README | Programmatic API | `tools/cognito-setup-mcp/README.md` |
 | Skill README | Claude Code skill | `.claude/skills/cognito-setup/index.md` |
 | This file | Executive summary | (current) |
@@ -304,7 +304,7 @@ pnpm install                # Update dependencies
 pnpm dev                    # Restart dev server
 ```
 
-For more troubleshooting, see `docs/COGNITO_SETUP.md`
+For more troubleshooting, see `COGNITO_SETUP.md` (sibling)
 
 ## 📞 Getting Help
 
@@ -313,7 +313,7 @@ If something doesn't work:
 1. Check the error message — it includes the solution
 2. Try dry-run to see what would happen: `pnpm cognito:setup:dry`
 3. Check logs: `bash -x scripts/cognito-setup.sh`
-4. Read `docs/COGNITO_SETUP.md` troubleshooting section
+4. Read `COGNITO_SETUP.md` (sibling) troubleshooting section
 5. Ask in #cloudless Slack or open an issue
 
 ---
