@@ -353,13 +353,14 @@ describe("uploadFile (multipart)", () => {
 });
 
 describe("verifyPostizWebhookSignature", () => {
-  it("returns false when the signature header is missing", async () => {
+  it("returns false when both signature header AND URL secret are missing", async () => {
     mockGetConfig.mockResolvedValue({
       POSTIZ_API_URL: "https://x",
       POSTIZ_API_KEY: "k",
       POSTIZ_WEBHOOK_SECRET: "secret",
     });
     await expect(verifyPostizWebhookSignature("body", null)).resolves.toBe(false);
+    await expect(verifyPostizWebhookSignature("body", null, null)).resolves.toBe(false);
   });
 
   it("returns false when no secret is configured", async () => {
@@ -369,6 +370,32 @@ describe("verifyPostizWebhookSignature", () => {
       POSTIZ_WEBHOOK_SECRET: "",
     });
     await expect(verifyPostizWebhookSignature("body", "abc")).resolves.toBe(false);
+    await expect(verifyPostizWebhookSignature("body", null, "abc")).resolves.toBe(false);
+  });
+
+  it("returns true on a matching URL-secret query param", async () => {
+    mockGetConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://x",
+      POSTIZ_API_KEY: "k",
+      POSTIZ_WEBHOOK_SECRET: "exact-secret-value",
+    });
+    await expect(
+      verifyPostizWebhookSignature("any-body", null, "exact-secret-value")
+    ).resolves.toBe(true);
+  });
+
+  it("returns false on a wrong URL-secret query param", async () => {
+    mockGetConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://x",
+      POSTIZ_API_KEY: "k",
+      POSTIZ_WEBHOOK_SECRET: "exact-secret-value",
+    });
+    // Same length, different bytes — exercises the constant-time arm.
+    await expect(
+      verifyPostizWebhookSignature("body", null, "wrong-secret-value")
+    ).resolves.toBe(false);
+    // Different length — exercises the length-prefilter.
+    await expect(verifyPostizWebhookSignature("body", null, "short")).resolves.toBe(false);
   });
 
   it("returns true on a matching HMAC-SHA256 hex digest of the raw body", async () => {
@@ -388,7 +415,7 @@ describe("verifyPostizWebhookSignature", () => {
     await expect(verifyPostizWebhookSignature(body, sig.toUpperCase())).resolves.toBe(true);
   });
 
-  it("returns false on tampered body", async () => {
+  it("returns false on tampered body (HMAC arm)", async () => {
     const { createHmac } = await import("node:crypto");
     const secret = "shhh";
     const sig = createHmac("sha256", secret).update("original").digest("hex");
@@ -398,6 +425,17 @@ describe("verifyPostizWebhookSignature", () => {
       POSTIZ_WEBHOOK_SECRET: secret,
     });
     await expect(verifyPostizWebhookSignature("tampered", sig)).resolves.toBe(false);
+  });
+
+  it("accepts either arm — URL-secret wins even if signature is wrong", async () => {
+    mockGetConfig.mockResolvedValue({
+      POSTIZ_API_URL: "https://x",
+      POSTIZ_API_KEY: "k",
+      POSTIZ_WEBHOOK_SECRET: "shared",
+    });
+    await expect(
+      verifyPostizWebhookSignature("body", "definitely-not-a-hash", "shared")
+    ).resolves.toBe(true);
   });
 });
 
