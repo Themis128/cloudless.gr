@@ -376,6 +376,37 @@ sudo systemctl disable --now cloudless-cleanup.timer
 
 **Verified on first install (2026-06-16):** omv-ha run freed 2024 MB on the SD card and pruned 3 stale containerd images in 9s, exit 0.
 
+## k3s Tuning (omv control plane, applied 2026-06-16)
+
+The USB3-SATA SSD on omv is misdetected as rotational by the kernel.
+Persistent fix in `/etc/udev/rules.d/60-ssd-rotational.rules` sets
+`queue/rotational=0`, `nr_requests=256`, `read_ahead_kb=128` on sda
+add/change. Mount opts on `/dev/sda1` plus both k3s bind-mounts changed
+to `noatime,nodiratime` (apply at OMV UI too, so OMV's config rewrite
+doesn't reset them).
+
+etcd config in `/etc/rancher/k3s/config.yaml`:
+
+- `heartbeat-interval=300` + `election-timeout=3000` — tuned for
+  USB-SSD fsync latency, avoids spurious leader elections.
+- `auto-compaction-retention=1h` periodic + `quota-backend-bytes=2GiB`.
+- `etcd-snapshot-schedule-cron: 0 */1 * * *` (hourly, was 6h), 24
+  retained locally + compressed S3 mirror.
+
+Weekly defrag at Sunday 04:30 EEST via `k3s-etcd-defrag.timer` —
+auto-compaction marks revisions removable but does NOT reclaim disk;
+per etcd docs §Defragmentation, defrag must be triggered manually. The
+script at `/usr/local/sbin/k3s-etcd-defrag.sh` takes a pre-snapshot,
+runs `etcdctl defrag` against the local member, verifies endpoint
+health, disarms any NOSPACE alarm.
+
+**Why no 2-node etcd HA:** Raft consensus needs odd-numbered quorum.
+2-node = quorum 2 = 0 failures tolerated = worse than 1-node. K3s
+docs require 3 server nodes for HA. With only 2 Pis the right path is
+warm-standby (hourly snapshot pull to omv-ha + dormant promotion
+script). When a 3rd Pi is added, follow the runbook on Notion:
+[🏗️ k3s Cluster Architecture, Tuning & Third-Pi Promotion Runbook](https://www.notion.so/3817d82c410a8143ab76e80e4bfdd013).
+
 ## Terraform Doctor
 
 When a Terraform CI workflow fails, **invoke the `terraform-doctor` skill first**
