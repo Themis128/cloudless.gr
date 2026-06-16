@@ -34,6 +34,9 @@
  *     /api/admin/notion/testimonials
  *     /api/admin/ops/errors/[id]             (sample id)
  *     /api/admin/postiz
+ *     /api/admin/postiz/integrations
+ *     /api/admin/postiz/posts
+ *     /api/admin/postiz/slot                 (id=sample)
  *     /api/admin/reports/[id]                (sample id)
  *     /api/admin/reports/[id]/pdf            (sample id)
  *
@@ -88,6 +91,9 @@ test.describe("Admin API gap sweep (authenticated GETs)", () => {
     "/api/admin/notion/testimonials",
     `/api/admin/ops/errors/${SENTINEL_ID}`,
     "/api/admin/postiz",
+    "/api/admin/postiz/integrations",
+    "/api/admin/postiz/posts",
+    `/api/admin/postiz/slot?id=${SENTINEL_ID}`,
     `/api/admin/reports/${SENTINEL_ID}`,
     `/api/admin/reports/${SENTINEL_ID}/pdf`,
   ] as const;
@@ -109,6 +115,8 @@ test.describe("Admin API gap sweep (authenticated POSTs)", () => {
     `/api/admin/calendar/${SENTINEL_ID}/publish`,
     `/api/admin/pipeline/deals/${SENTINEL_ID}/move`,
     `/api/admin/pipeline/deals/${SENTINEL_ID}/notes`,
+    "/api/admin/postiz/posts",
+    "/api/admin/postiz/upload",
   ] as const;
 
   for (const url of ADMIN_POST_GAPS) {
@@ -121,6 +129,19 @@ test.describe("Admin API gap sweep (authenticated POSTs)", () => {
       expect(r.status()).toBeGreaterThanOrEqual(200);
     });
   }
+});
+
+test.describe("Admin API gap sweep (authenticated DELETEs)", () => {
+  // /api/admin/postiz/posts/[id] DELETE — the gap sweep didn't cover any
+  // DELETE-only admin routes before. Confirm the auth gate holds; the
+  // handler may 4xx (Postiz says "not found") or 5xx (no upstream creds in
+  // dev). We just care the route is wired and admin auth flowed through.
+  test(`DELETE /api/admin/postiz/posts/${SENTINEL_ID}`, async ({ request }) => {
+    const a = await adminRequest(request);
+    const r = await a.delete(`/api/admin/postiz/posts/${SENTINEL_ID}`);
+    expect([401, 403]).not.toContain(r.status());
+    expect(r.status()).toBeGreaterThanOrEqual(200);
+  });
 });
 
 test.describe("Admin OAuth entry point", () => {
