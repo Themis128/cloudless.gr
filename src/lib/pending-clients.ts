@@ -33,15 +33,13 @@ export interface PendingClient {
   notes?: string;
 }
 
-export const PLAN_LABELS: Record<string, string> = {
-  cloud: "Cloud Architecture & Migration",
-  serverless: "Serverless Development",
-  analytics: "Data Analytics & Dashboards",
-  marketing: "AI & Digital Marketing",
-  web: "Web Design & Development",
-  hosting: "Managed Hosting & Maintenance",
-  bundle: "Full-Stack Growth Engine (Bundle)",
-};
+// PLAN_LABELS lives in the shared, dependency-free `./plans` module so
+// the client-side waiting room (which must not pull AWS SDK into the
+// browser bundle) and the server enroll route both consume the same map.
+// We import + re-export so callers of this file get the same name they
+// always did AND we can use it ourselves below.
+import { PLAN_LABELS } from "./plans";
+export { PLAN_LABELS };
 
 export async function readPendingClients(): Promise<PendingClient[]> {
   try {
