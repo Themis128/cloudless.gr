@@ -31,13 +31,21 @@ export const runtime = "nodejs";
  * v2 webhook payload isn't authoritatively documented yet, so we tolerate both
  * `payload.post` (older) and `payload.data` (proposal shape) — whichever side
  * provides post fields wins. Also accepts `post.published` and the synonym
- * `post.publish` we see in some forks. */
+ * `post.publish` we see in some forks.
+ *
+ * `verification: true` is an extension WE added (not part of the Postiz spec).
+ * When present at any level of the payload, the receiver proves the wire
+ * format and auth path work end-to-end (200 ACK with `verification:true`)
+ * but skips BOTH the Slack notifier and the calendar mutation. Use it when
+ * smoke-testing the endpoint so you don't pollute Slack and don't fake-flip
+ * a calendar item by accident. */
 interface PostizWebhookPayload {
   event?: string;
-  post?: Partial<PostizPost>;
-  data?: Partial<PostizPost> & { error?: string };
+  post?: Partial<PostizPost> & { verification?: boolean };
+  data?: Partial<PostizPost> & { error?: string; verification?: boolean };
   error?: string;
   timestamp?: string;
+  verification?: boolean;
 }
 
 async function markByPostizId(postId: string, status: "published" | "draft"): Promise<boolean> {
@@ -84,6 +92,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ accepted: false, reason: "missing_post_fields" }, { status: 202 });
   }
 
+  // Verification mode — payload marked as a probe. Auth passed and shape
+  // parsed cleanly, but we skip ALL side effects so smoke-testing the
+  // endpoint doesn't fire Slack or mutate calendar items. Marker is
+  // recognised at any level (top-level, payload.post, payload.data) so the
+  // sender can put it wherever is convenient.
+  const isVerification =
+    payload.verification === true ||
+    payload.post?.verification === true ||
+    payload.data?.verification === true;
+
   // Build a full-ish PostizPost for the Slack helper (it tolerates loose shape).
   const full: PostizPost = {
     id: post.id,
@@ -97,6 +115,9 @@ export async function POST(req: NextRequest) {
   };
 
   if (event === "post.published" || event === "post.publish") {
+    if (isVerification) {
+      return NextResponse.json({ accepted: true, event, postId: post.id, verification: true });
+    }
     await markByPostizId(post.id, "published");
     // Slack failures must not break the webhook ACK back to Postiz; if the
     // receiver 5xxs Postiz will retry, and we'd double-update the calendar.
@@ -105,6 +126,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (event === "post.errored" || event === "post.failed") {
+    if (isVerification) {
+      return NextResponse.json({ accepted: true, event, postId: post.id, verification: true });
+    }
     await markByPostizId(post.id, "draft");
     const reason = payload.error ?? payload.data?.error ?? null;
     await notifyPostErrored(full, reason).catch((e) =>
