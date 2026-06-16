@@ -34,9 +34,7 @@ export async function GET(request: NextRequest) {
 
   await Promise.all(
     disabled.map((integration) =>
-      notifyOauthExpiry(integration).catch((e) =>
-        console.error("[postiz-oauth-check] slack:", e)
-      )
+      notifyOauthExpiry(integration).catch((e) => console.error("[postiz-oauth-check] slack:", e))
     )
   );
 

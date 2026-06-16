@@ -45,8 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const filename =
-    (form.get("filename") as string | null) ??
-    (file instanceof File ? file.name : "upload.bin");
+    (form.get("filename") as string | null) ?? (file instanceof File ? file.name : "upload.bin");
 
   // Fail fast on disallowed MIME types so the user gets a clean 4xx instead
   // of waiting on a round-trip to Postiz that ends in a content-sniff 400.

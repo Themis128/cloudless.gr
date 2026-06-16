@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  getIntegrationConnectUrl,
-  PostizApiError,
-  PostizNotConfiguredError,
-} from "@/lib/postiz";
+import { getIntegrationConnectUrl, PostizApiError, PostizNotConfiguredError } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 

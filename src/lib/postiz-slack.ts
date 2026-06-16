@@ -26,9 +26,7 @@ function shorten(s: string, max = 280): string {
 export async function notifyPostPublished(post: PostizPost): Promise<void> {
   const client = await getClient();
   const identifier = postIdentifier(post);
-  const releaseLink = post.releaseURL
-    ? ` <${post.releaseURL}|view on ${identifier}>`
-    : "";
+  const releaseLink = post.releaseURL ? ` <${post.releaseURL}|view on ${identifier}>` : "";
   await client.post({
     text: `Postiz: ${post.integration.name} published`,
     blocks: [

@@ -87,9 +87,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
   // Merge with any previously-stored ids — republishing an item is rare but
   // happens (e.g. user re-runs after fixing notes); never lose history.
-  const mergedIds = Array.from(
-    new Set([...(item.postizPostIds ?? []), ...result.postIds])
-  );
+  const mergedIds = Array.from(new Set([...(item.postizPostIds ?? []), ...result.postIds]));
   const updated = await updateCalendarItem(id, {
     status: newStatus,
     postizPostIds: mergedIds,
