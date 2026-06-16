@@ -26,10 +26,18 @@ export const runtime = "nodejs";
  * and JSON.parse must match exactly.
  */
 
+/**
+ * Postiz upstream issue #1191 proposed `{event, timestamp, data}`. The shipped
+ * v2 webhook payload isn't authoritatively documented yet, so we tolerate both
+ * `payload.post` (older) and `payload.data` (proposal shape) — whichever side
+ * provides post fields wins. Also accepts `post.published` and the synonym
+ * `post.publish` we see in some forks. */
 interface PostizWebhookPayload {
   event?: string;
   post?: Partial<PostizPost>;
+  data?: Partial<PostizPost> & { error?: string };
   error?: string;
+  timestamp?: string;
 }
 
 async function markByPostizId(postId: string, status: "published" | "draft"): Promise<boolean> {
@@ -57,7 +65,10 @@ export async function POST(req: NextRequest) {
   if (!valid) {
     // 401 vs 400: a missing-secret deployment looks identical to an attacker;
     // returning 401 for any unverifiable request keeps both cases consistent.
-    return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
+    // Label is `unauthorized` (not `invalid_signature`) because the URL-secret
+    // arm is the primary path in Postiz v2 — calling it a signature failure
+    // would mislead anyone reading logs.
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   let payload: PostizWebhookPayload;
@@ -68,7 +79,7 @@ export async function POST(req: NextRequest) {
   }
 
   const event = payload.event ?? "";
-  const post = payload.post;
+  const post = payload.post ?? payload.data;
   if (!post?.id || !post.integration) {
     return NextResponse.json({ accepted: false, reason: "missing_post_fields" }, { status: 202 });
   }
@@ -78,13 +89,14 @@ export async function POST(req: NextRequest) {
     id: post.id,
     content: post.content ?? "",
     publishDate: post.publishDate ?? new Date().toISOString(),
-    state: (post.state ?? (event === "post.published" ? "PUBLISHED" : "QUEUE")) as PostizPost["state"],
+    state: (post.state ??
+      (event === "post.published" || event === "post.publish" ? "PUBLISHED" : "QUEUE")) as PostizPost["state"],
     integration: post.integration as PostizPost["integration"],
     releaseURL: post.releaseURL ?? null,
     releaseId: post.releaseId ?? null,
   };
 
-  if (event === "post.published") {
+  if (event === "post.published" || event === "post.publish") {
     await markByPostizId(post.id, "published");
     // Slack failures must not break the webhook ACK back to Postiz; if the
     // receiver 5xxs Postiz will retry, and we'd double-update the calendar.
@@ -92,9 +104,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ accepted: true, event, postId: post.id });
   }
 
-  if (event === "post.errored") {
+  if (event === "post.errored" || event === "post.failed") {
     await markByPostizId(post.id, "draft");
-    await notifyPostErrored(full, payload.error ?? null).catch((e) =>
+    const reason = payload.error ?? payload.data?.error ?? null;
+    await notifyPostErrored(full, reason).catch((e) =>
       console.error("[postiz-webhook] slack:", e)
     );
     return NextResponse.json({ accepted: true, event, postId: post.id });

@@ -18,6 +18,8 @@ import {
   listPostizIntegrations,
   listPosts,
   matchIntegrationsForPlatform,
+  postIdentifier,
+  POSTIZ_ALLOWED_UPLOAD_MIME,
   PostizApiError,
   PostizNotConfiguredError,
   schedulePost,
@@ -248,9 +250,54 @@ describe("deletePost (throwing)", () => {
     await expect(deletePost("p1")).resolves.toBeUndefined();
   });
 
-  it("rethrows non-404 PostizApiError", async () => {
+  it("rethrows non-404 PostizApiError when body doesn't look like 'not found'", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ error: "boom" }, 500));
     await expect(deletePost("p1")).rejects.toBeInstanceOf(PostizApiError);
+  });
+
+  it("swallows 500 only when body indicates not-found (docs known issue)", async () => {
+    // Postiz docs note a known issue where a missing post id surfaces as a
+    // 500. We swallow only those — anything else propagates.
+    mockFetch.mockResolvedValueOnce(jsonResponse({ message: "Post not found" }, 500));
+    await expect(deletePost("p1")).resolves.toBeUndefined();
+  });
+});
+
+describe("postIdentifier helper", () => {
+  it("prefers providerIdentifier (docs shape) over identifier (legacy)", () => {
+    expect(
+      postIdentifier({
+        integration: { id: "i", name: "n", providerIdentifier: "x", identifier: "stale" },
+      })
+    ).toBe("x");
+  });
+
+  it("falls back to identifier when providerIdentifier is missing", () => {
+    expect(
+      postIdentifier({ integration: { id: "i", name: "n", identifier: "facebook" } })
+    ).toBe("facebook");
+  });
+
+  it("returns empty string when neither field is set", () => {
+    expect(postIdentifier({ integration: { id: "i", name: "n" } })).toBe("");
+  });
+});
+
+describe("POSTIZ_ALLOWED_UPLOAD_MIME", () => {
+  it("matches the documented allowlist exactly", () => {
+    // docs.postiz.com /upload — jpeg, png, gif, webp, avif, bmp, tiff, mp4.
+    expect([...POSTIZ_ALLOWED_UPLOAD_MIME].toSorted()).toEqual(
+      [
+        "image/avif",
+        "image/bmp",
+        "image/gif",
+        "image/jpeg",
+        "image/png",
+        "image/tiff",
+        "image/webp",
+        "video/mp4",
+      ].toSorted()
+    );
   });
 });
 
@@ -321,12 +368,22 @@ describe("updatePost (throwing)", () => {
 });
 
 describe("getPostStats (throwing)", () => {
-  it("GETs /posts/:id/statistics and returns the JSON shape verbatim", async () => {
-    const stats = { reach: 1234, impressions: 9876 };
+  it("GETs /analytics/post/:id?date=<lookback> per docs.postiz.com", async () => {
+    const stats = [
+      { label: "Likes", data: [{ total: "150", date: "2026-06-15" }], percentageChange: 16.7 },
+    ];
     mockFetch.mockResolvedValueOnce(jsonResponse(stats));
     await expect(getPostStats("p1")).resolves.toEqual(stats);
     const [url] = mockFetch.mock.calls[0];
-    expect(url).toContain("/posts/p1/statistics");
+    expect(url).toContain("/analytics/post/p1");
+    expect(url).toContain("date=7");
+  });
+
+  it("honours a custom lookback window", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([]));
+    await getPostStats("p1", 30);
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("date=30");
   });
 });
 
