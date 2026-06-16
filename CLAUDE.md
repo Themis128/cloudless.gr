@@ -339,24 +339,26 @@ still fail the spec on a fully-configured environment.
 
 ## Pi Housekeeping
 
-Daily disk cleanup runs at **03:00 EEST** on `omv-main` via systemd timer
-`cloudless-cleanup.timer` (installed 2026-06-10).
+Daily disk cleanup runs on **both cluster nodes** via systemd timers
+named `cloudless-cleanup.timer`. Schedules are staggered so the two Pis
+never prune concurrently:
 
-**What it prunes:**
+| Node           | Schedule (EEST) | Installed   | Prunes                                                                                  |
+| -------------- | --------------- | ----------- | --------------------------------------------------------------------------------------- |
+| `omv` / `omv-main` (control-plane Pi 5) | **03:00** + 10min jitter | 2026-06-10 | journal, apt cache, pnpm store, buildx volumes, docker image+builder, VS Code Server, k3s crictl |
+| `omv-ha` (worker Pi)                    | **03:45** + 10min jitter | 2026-06-16 | journal, apt cache, k3s crictl, GH Actions runner `_temp`/`_actions` (>7-14 days old), VS Code Server |
 
-- `journalctl --vacuum-time=14d`
-- `apt-get clean`
-- `pnpm store prune` (as user `tbaltzakis`)
-- All `buildx_buildkit_builder-*` Docker volumes (orphaned from arm64 builds)
-- `docker image prune -af` + `docker builder prune -af`
-- Stale VS Code Insiders / Server folders (keeps newest 2)
-- `k3s crictl rmi --prune`
+The worker script skips Docker/pnpm steps because omv-ha doesn't ship
+either toolchain (k3s containerd is the only container runtime). The
+GH Actions runner step is omv-ha-specific — it has the self-hosted
+`omv-2-build` runner that leaves stale `_work` directories from
+cancelled or OOM-killed jobs.
 
-**Files:**
+**Files (identical paths on both nodes):**
 
-- `/usr/local/sbin/cloudless-cleanup.sh` — the script
+- `/usr/local/sbin/cloudless-cleanup.sh` — the script (slightly different content per node)
 - `/etc/systemd/system/cloudless-cleanup.service`
-- `/etc/systemd/system/cloudless-cleanup.timer` (daily 03:00 + 10min random delay)
+- `/etc/systemd/system/cloudless-cleanup.timer`
 - `/var/log/cloudless-cleanup.log` — output log
 
 **Manual run:**
@@ -371,6 +373,8 @@ sudo tail -f /var/log/cloudless-cleanup.log
 ```bash
 sudo systemctl disable --now cloudless-cleanup.timer
 ```
+
+**Verified on first install (2026-06-16):** omv-ha run freed 2024 MB on the SD card and pruned 3 stale containerd images in 9s, exit 0.
 
 ## Terraform Doctor
 
