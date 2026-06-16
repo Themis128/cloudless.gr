@@ -6,6 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import TerminalBlock from "@/components/TerminalBlock";
+// Single source of truth — also consumed by /api/portal/enroll +
+// src/lib/pending-clients.ts (server) and the signup gate (client).
+// Lives in a dependency-free module so the AWS SDK isn't pulled into the
+// browser bundle.
+import { PLAN_LABELS } from "@/lib/plans";
 
 interface PortalStatus {
   status: "none" | "waiting" | "approved";
@@ -17,16 +22,6 @@ interface PortalStatus {
   email?: string;
   name?: string;
 }
-
-const PLAN_LABELS: Record<string, string> = {
-  cloud: "Cloud Architecture & Migration",
-  serverless: "Serverless Development",
-  analytics: "Data Analytics & Dashboards",
-  marketing: "AI & Digital Marketing",
-  web: "Web Design & Development",
-  hosting: "Managed Hosting & Maintenance",
-  bundle: "Full-Stack Growth Engine (Bundle)",
-};
 
 const POLL_INTERVAL_MS = 30_000;
 

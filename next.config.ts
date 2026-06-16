@@ -102,29 +102,17 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
-// in the App Router before next/manifest.ts can handle them.
-// Lighthouse Win #2 — avoid the locale redirect round-trip for top
-// landing-page paths. The middleware would 302 /services → /en/services
-// (~300-500ms first-load penalty); rewriting server-side cuts that latency
-// without changing what the user sees in the address bar.
-const LOCALE_REWRITE_PATHS = [
-  "/services",
-  "/store",
-  "/contact",
-  "/blog",
-  "/docs",
-  "/case-studies",
-  "/work",
-];
+// next-intl middleware (localePrefix: "always") intercepts every unprefixed
+// route on its own and 307s to the appropriate locale BEFORE Next.js
+// rewrites() get a chance. An earlier attempt to pre-rewrite hot landing
+// paths (/services, /store, /contact, /blog, /docs, /case-studies, /work)
+// here to /en/* was dead code — verified live: both with and without the
+// NEXT_LOCALE cookie those URLs still produce a 307 from middleware. Per
+// next-intl docs, the middleware IS the locale layer; we keep
+// /manifest.webmanifest → /api/pwa-manifest as the only legitimate rewrite.
 nextConfig.rewrites = async () => ({
   beforeFiles: [
     { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
-    ...LOCALE_REWRITE_PATHS.map((path) => ({
-      source: path,
-      destination: `/en${path}`,
-      missing: [{ type: "cookie" as const, key: "NEXT_LOCALE" }],
-    })),
   ],
   afterFiles: [],
   fallback: [],
