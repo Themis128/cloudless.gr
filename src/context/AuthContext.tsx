@@ -199,6 +199,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [checkAuth]);
 
+  // bfcache restore: when the user navigates back via browser back/forward
+  // cache, the page is restored from frozen state (pageshow with
+  // persisted=true) without a fresh HTTP request. The session cookie may
+  // have changed (e.g. refresh token rotated, session expired, another tab
+  // signed out), so re-check auth to keep the UI consistent.
+  useEffect(() => {
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        checkAuth().catch(() => {});
+      }
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [checkAuth]);
+
   // Sign-in delegates to Cognito's hosted flow. The email/password arguments
   // are ignored — Cognito Hosted UI shows its own login page. They're kept in
   // the signature for interface compat with any callers that pass them.
