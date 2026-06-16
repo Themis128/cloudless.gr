@@ -304,3 +304,70 @@ export function findSlot(integrationId: string): Promise<{ date: string }> {
     `/find-slot/${encodeURIComponent(integrationId)}`
   );
 }
+
+/** Update an existing scheduled / draft post via PUT /posts/:id. */
+export function updatePost(
+  id: string,
+  body: CreatePostBody
+): Promise<Array<{ postId: string; integration: string }>> {
+  return callThrowing<Array<{ postId: string; integration: string }>>(
+    `/posts/${encodeURIComponent(id)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+/** Per-post analytics, when the channel supports it. Postiz exposes
+ *  GET /posts/:id/statistics; shape varies by provider so we keep it loose. */
+export function getPostStats(id: string): Promise<Record<string, unknown>> {
+  return callThrowing<Record<string, unknown>>(
+    `/posts/${encodeURIComponent(id)}/statistics`
+  );
+}
+
+/** Multipart upload — for users uploading a local file rather than a URL.
+ *
+ *  Postiz v2.11.2 exposes POST /upload (multipart/form-data, field name
+ *  "file"). Unlike `uploadFromUrl`, this path streams the bytes the
+ *  browser sent us through to Postiz with no intermediate fetch. */
+export async function uploadFile(file: Blob, filename: string): Promise<UploadedFile> {
+  const { baseUrl, apiKey } = await getPostizConfig();
+  const form = new FormData();
+  form.append("file", file, filename);
+  const res = await fetch(`${baseUrl}/api/public/v1/upload`, {
+    method: "POST",
+    // No Content-Type — let fetch set the multipart boundary itself.
+    headers: { Authorization: apiKey },
+    body: form,
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!res.ok) throw new PostizApiError(res.status, await res.text().catch(() => ""));
+  return (await res.json()) as UploadedFile;
+}
+
+/**
+ * Verify an inbound Postiz webhook signature.
+ *
+ * Postiz signs the raw JSON body with HMAC-SHA256 using
+ * `POSTIZ_WEBHOOK_SECRET` and sends the hex digest in the
+ * `X-Postiz-Signature` header (lowercase hex, no `sha256=` prefix).
+ *
+ * Returns `true` only when the secret is configured AND the digest matches.
+ * Performs a constant-time comparison. */
+export async function verifyPostizWebhookSignature(
+  rawBody: string,
+  signatureHeader: string | null
+): Promise<boolean> {
+  if (!signatureHeader) return false;
+  const cfg = await getConfig();
+  const secret = cfg.POSTIZ_WEBHOOK_SECRET;
+  if (!secret) return false;
+  const { createHmac, timingSafeEqual } = await import("node:crypto");
+  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+  // Both arms must be the same length for timingSafeEqual.
+  const got = signatureHeader.toLowerCase().replace(/^sha256=/, "");
+  if (got.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(got, "utf8"), Buffer.from(expected, "utf8"));
+}

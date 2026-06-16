@@ -85,7 +85,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } else {
     newStatus = isFuture ? "scheduled" : "published";
   }
-  const updated = await updateCalendarItem(id, { status: newStatus });
+  // Merge with any previously-stored ids — republishing an item is rare but
+  // happens (e.g. user re-runs after fixing notes); never lose history.
+  const mergedIds = Array.from(
+    new Set([...(item.postizPostIds ?? []), ...result.postIds])
+  );
+  const updated = await updateCalendarItem(id, {
+    status: newStatus,
+    postizPostIds: mergedIds,
+  });
 
   return NextResponse.json({
     success: true,
