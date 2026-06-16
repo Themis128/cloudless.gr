@@ -141,6 +141,73 @@ export default function WorkspacesPage() {
         </p>
       </div>
 
+      {/* How it works */}
+      <details className="bg-void-light/30 mb-6 rounded-xl border border-slate-800 p-5 [&[open]>summary]:mb-3">
+        <summary className="font-heading flex cursor-pointer items-center gap-2 text-sm font-semibold text-white select-none">
+          <svg
+            className="h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform [details[open]>summary>&]:rotate-90"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
+          How the workspaces flow works
+        </summary>
+        <ol className="font-body mt-1 space-y-3 text-sm text-slate-300">
+          <li>
+            <span className="text-neon-blue font-mono text-xs">1 · STORAGE</span>
+            <p className="mt-1 text-slate-400">
+              Workspaces are persisted in AWS SSM at{" "}
+              <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
+                /cloudless/WORKSPACES_JSON
+              </code>{" "}
+              as a single JSON array. The API caches reads server-side for 30&nbsp;s; writes
+              invalidate the cache immediately.
+            </p>
+          </li>
+          <li>
+            <span className="text-neon-blue font-mono text-xs">2 · CRUD API</span>
+            <p className="mt-1 text-slate-400">
+              <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
+                GET / POST / PATCH / DELETE /api/admin/workspaces
+              </code>{" "}
+              — all admin-gated. The form above POSTs to create; <em>Edit</em> sends PATCH;{" "}
+              <em>Delete</em> sends DELETE. Slugs are auto-derived from the name and must be unique
+              across the org (409 on collision).
+            </p>
+          </li>
+          <li>
+            <span className="text-neon-blue font-mono text-xs">3 · ACTIVE WORKSPACE</span>
+            <p className="mt-1 text-slate-400">
+              The sidebar selector and this page share state via{" "}
+              <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
+                useWorkspace()
+              </code>
+              . The active id is persisted in <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">localStorage</code> under{" "}
+              <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
+                cloudless_workspace_id
+              </code>
+              . A fresh visit auto-selects the stored id if it still exists, otherwise the first
+              workspace in the list.
+            </p>
+          </li>
+          <li>
+            <span className="text-neon-blue font-mono text-xs">4 · DATA SCOPING</span>
+            <p className="mt-1 text-slate-400">
+              Other admin surfaces (analytics, calendar, postiz, …) read{" "}
+              <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
+                current.id
+              </code>{" "}
+              and filter their queries by it. Switching workspace re-runs each page&rsquo;s fetches
+              against the new context — no full reload needed.
+            </p>
+          </li>
+        </ol>
+      </details>
+
       {/* Create form */}
       <div className="bg-void-light/30 mb-8 rounded-xl border border-slate-800 p-6">
         <h2 className="font-heading mb-4 text-sm font-semibold text-white">Create Workspace</h2>
