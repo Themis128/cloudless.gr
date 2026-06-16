@@ -412,7 +412,7 @@ function ScheduleTab({ posts, onReload }: { posts: PostizPost[] | null; onReload
                 Delete
               </button>
             </div>
-            <pre className="whitespace-pre-wrap font-sans text-sm">{p.content}</pre>
+            <pre className="font-sans text-sm whitespace-pre-wrap">{p.content}</pre>
             {p.releaseURL && (
               <a
                 href={p.releaseURL}
