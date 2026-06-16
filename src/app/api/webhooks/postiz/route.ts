@@ -17,10 +17,13 @@ export const runtime = "nodejs";
  *                        event types over time; ignoring them keeps the
  *                        receiver forward-compatible.
  *
- * Signature: `X-Postiz-Signature` carries the HMAC-SHA256 hex digest of the
- * raw body using `POSTIZ_WEBHOOK_SECRET`. Verification is constant-time and
- * happens on the raw body BEFORE JSON.parse — never reorder these steps,
- * the bytes used for HMAC and JSON parse must match exactly.
+ * Authentication: see `verifyPostizWebhookSignature` — accepts either an
+ * `X-Postiz-Signature` HMAC over the raw body OR a `?secret=<hex>` query
+ * param matching `POSTIZ_WEBHOOK_SECRET`. Postiz v2's webhook UI has no
+ * signing-secret field, so the URL-secret path is the primary one in
+ * production. Verification is constant-time and happens on the raw body
+ * BEFORE JSON.parse — never reorder these steps; the bytes used for HMAC
+ * and JSON.parse must match exactly.
  */
 
 interface PostizWebhookPayload {
@@ -48,8 +51,9 @@ export async function POST(req: NextRequest) {
   // Raw body FIRST so we can HMAC the exact bytes Postiz signed.
   const rawBody = await req.text();
   const signatureHeader = req.headers.get("x-postiz-signature");
+  const urlSecret = new URL(req.url).searchParams.get("secret");
 
-  const valid = await verifyPostizWebhookSignature(rawBody, signatureHeader);
+  const valid = await verifyPostizWebhookSignature(rawBody, signatureHeader, urlSecret);
   if (!valid) {
     // 401 vs 400: a missing-secret deployment looks identical to an attacker;
     // returning 401 for any unverifiable request keeps both cases consistent.

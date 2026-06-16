@@ -348,26 +348,57 @@ export async function uploadFile(file: Blob, filename: string): Promise<Uploaded
 }
 
 /**
- * Verify an inbound Postiz webhook signature.
+ * Verify an inbound Postiz webhook request.
  *
- * Postiz signs the raw JSON body with HMAC-SHA256 using
- * `POSTIZ_WEBHOOK_SECRET` and sends the hex digest in the
- * `X-Postiz-Signature` header (lowercase hex, no `sha256=` prefix).
+ * Postiz v2.11.2's webhook UI exposes only Name / URL / Integrations — there
+ * is no signing-secret field. So we authenticate inbound events two ways and
+ * accept EITHER:
  *
- * Returns `true` only when the secret is configured AND the digest matches.
- * Performs a constant-time comparison. */
+ *   1. **URL-secret** (primary in v2): the configured URL is
+ *      `https://cloudless.gr/api/webhooks/postiz?secret=<hex>`. The receiver
+ *      pulls `secret` from the query string and compares it constant-time
+ *      against `POSTIZ_WEBHOOK_SECRET`. The full URL itself is the
+ *      capability token; rotate the SSM param and the URL together.
+ *
+ *   2. **HMAC-SHA256 signature** (forward-compat): if Postiz starts shipping
+ *      `X-Postiz-Signature` (or the user runs a downstream fork that does),
+ *      we accept a hex digest of the raw body using the same SSM secret.
+ *      Lowercase hex, with or without a `sha256=` prefix.
+ *
+ * Returns `true` only when the secret is configured AND one of the two paths
+ * matches. Both comparisons are constant-time.
+ *
+ * Callers MUST pass the raw body (pre-JSON.parse) so the HMAC arm has the
+ * exact bytes Postiz signed if it does sign. */
 export async function verifyPostizWebhookSignature(
   rawBody: string,
-  signatureHeader: string | null
+  signatureHeader: string | null,
+  urlSecret?: string | null
 ): Promise<boolean> {
-  if (!signatureHeader) return false;
   const cfg = await getConfig();
   const secret = cfg.POSTIZ_WEBHOOK_SECRET;
   if (!secret) return false;
+
   const { createHmac, timingSafeEqual } = await import("node:crypto");
-  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  // Both arms must be the same length for timingSafeEqual.
-  const got = signatureHeader.toLowerCase().replace(/^sha256=/, "");
-  if (got.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(got, "utf8"), Buffer.from(expected, "utf8"));
+
+  // Path 1 — URL secret. Equal-length check first so timingSafeEqual doesn't
+  // throw on a mismatch; constant-time compare otherwise.
+  if (urlSecret && urlSecret.length === secret.length) {
+    if (timingSafeEqual(Buffer.from(urlSecret, "utf8"), Buffer.from(secret, "utf8"))) {
+      return true;
+    }
+  }
+
+  // Path 2 — HMAC-SHA256 over the raw body.
+  if (signatureHeader) {
+    const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+    const got = signatureHeader.toLowerCase().replace(/^sha256=/, "");
+    if (got.length === expected.length) {
+      if (timingSafeEqual(Buffer.from(got, "utf8"), Buffer.from(expected, "utf8"))) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
