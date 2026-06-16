@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { clearSessionCache } from "@/lib/fetch-with-auth";
 
 const mockGetSession = vi.fn();
 
@@ -14,6 +15,8 @@ describe("fetch-with-auth.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", vi.fn());
+    // Reset the module-level session cache so each test starts fresh.
+    clearSessionCache();
   });
 
   it("calls fetch without Authorization when no session", async () => {
