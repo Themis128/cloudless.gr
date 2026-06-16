@@ -35,6 +35,13 @@ postiz:
   disableRegistration: "true"
   storageProvider: "local"
   uploadDirectory: "/uploads"
+  # Server-side allowlist for POST /public/v1/upload-from-url
+  # (docs.postiz.com → Configuration Reference → RESTRICT_UPLOAD_DOMAINS).
+  # Comma-separated list of hostnames Postiz will fetch from. Defense in
+  # depth on top of the route's own SSRF prefilter in
+  # src/app/api/admin/postiz/upload/route.ts — leave commented to allow any
+  # public URL; set when you want to restrict to your own CDNs.
+  restrictUploadDomains: "cloudless.gr,uploads.postiz.cloudless.gr"
   resources:
     requests:
       cpu: "200m"
