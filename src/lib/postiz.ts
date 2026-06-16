@@ -355,9 +355,7 @@ export function findSlot(integrationId: string): Promise<{ date: string }> {
   // Postiz v2.11.2 mounts find-slot at `/find-slot/:id` (path param, no query),
   // see apps/backend/src/public-api/routes/v1/public.integrations.controller.ts.
   // The old `/integrations/find-slot?id=` path returns 404.
-  return callThrowing<{ date: string }>(
-    `/find-slot/${encodeURIComponent(integrationId)}`
-  );
+  return callThrowing<{ date: string }>(`/find-slot/${encodeURIComponent(integrationId)}`);
 }
 
 /** Update an existing scheduled / draft post via PUT /posts/:id. */
@@ -493,15 +491,15 @@ export function deleteIntegration(id: string): Promise<void> {
 /** Generate an OAuth authorization URL for a brand-new channel. Only OAuth
  *  providers are supported (Mastodon and friends that need a URL return 4xx). */
 export function getIntegrationConnectUrl(integrationName: string): Promise<{ url: string }> {
-  return callThrowing<{ url: string }>(`/integrations/${encodeURIComponent(integrationName)}/connect`);
+  return callThrowing<{ url: string }>(
+    `/integrations/${encodeURIComponent(integrationName)}/connect`
+  );
 }
 
 /** Provider posting rules + settings JSON schema + available tools.
  *  Shape varies per provider so we keep it open. */
 export function getIntegrationSettings(id: string): Promise<Record<string, unknown>> {
-  return callThrowing<Record<string, unknown>>(
-    `/integrations/${encodeURIComponent(id)}/settings`
-  );
+  return callThrowing<Record<string, unknown>>(`/integrations/${encodeURIComponent(id)}/settings`);
 }
 
 /** Execute a provider-specific tool (e.g. listing Discord channels, fetching
@@ -510,13 +508,10 @@ export function triggerIntegrationTool(
   id: string,
   body: { tool: string; data?: Record<string, unknown> }
 ): Promise<Record<string, unknown>> {
-  return callThrowing<Record<string, unknown>>(
-    `/integrations/${encodeURIComponent(id)}/trigger`,
-    {
-      method: "POST",
-      body: JSON.stringify(body),
-    }
-  );
+  return callThrowing<Record<string, unknown>>(`/integrations/${encodeURIComponent(id)}/trigger`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 /** Org notifications, newest first. 100 per page. */

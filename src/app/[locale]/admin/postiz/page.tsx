@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
-import { postIdentifier, type PostizIntegration, type PostizPost, type CreatePostBody } from "@/lib/postiz";
+import {
+  postIdentifier,
+  type PostizIntegration,
+  type PostizPost,
+  type CreatePostBody,
+} from "@/lib/postiz";
 
 /** Accept attribute for file picker — matches Postiz `/upload` MIME allowlist
  *  per docs.postiz.com (jpeg, png, gif, webp, avif, bmp, tiff, mp4).
@@ -183,9 +188,7 @@ export default function PostizAdminPage() {
           }}
         />
       )}
-      {tab === "schedule" && (
-        <ScheduleTab posts={posts} onReload={reloadPosts} onEdit={editPost} />
-      )}
+      {tab === "schedule" && <ScheduleTab posts={posts} onReload={reloadPosts} onEdit={editPost} />}
       {tab === "calendar" && <CalendarTab posts={posts} onReload={reloadPosts} />}
     </div>
   );
@@ -329,8 +332,7 @@ function ComposeTab({
     setDraft({ images: [...draft.images, { id: uploaded.id, path: uploaded.path }] });
   };
 
-  const removeImage = (id: string) =>
-    setDraft({ images: draft.images.filter((i) => i.id !== id) });
+  const removeImage = (id: string) => setDraft({ images: draft.images.filter((i) => i.id !== id) });
 
   const findNextSlot = async () => {
     if (draft.selectedIds.length === 0) {
@@ -486,12 +488,10 @@ function ComposeTab({
                 key={img.id}
                 className="flex items-center gap-2 rounded border bg-gray-50 px-2 py-1 text-xs"
               >
-                <span className="max-w-[200px] truncate">{img.path.split("/").pop() ?? img.id}</span>
-                <button
-                  type="button"
-                  onClick={() => removeImage(img.id)}
-                  className="text-red-600"
-                >
+                <span className="max-w-[200px] truncate">
+                  {img.path.split("/").pop() ?? img.id}
+                </span>
+                <button type="button" onClick={() => removeImage(img.id)} className="text-red-600">
                   ×
                 </button>
               </li>
@@ -535,11 +535,7 @@ function ComposeTab({
           <label htmlFor="postiz-schedule" className="block text-sm font-medium">
             Schedule at (local time)
           </label>
-          <button
-            type="button"
-            onClick={findNextSlot}
-            className="text-xs text-blue-600 underline"
-          >
+          <button type="button" onClick={findNextSlot} className="text-xs text-blue-600 underline">
             Use next free slot
           </button>
         </div>
@@ -690,13 +686,7 @@ const MONTHS = [
   "December",
 ];
 
-function CalendarTab({
-  posts,
-  onReload,
-}: {
-  posts: PostizPost[] | null;
-  onReload: () => void;
-}) {
+function CalendarTab({ posts, onReload }: { posts: PostizPost[] | null; onReload: () => void }) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -774,7 +764,10 @@ function CalendarTab({
         ))}
         {cells.map((cell, idx) =>
           cell === null ? (
-            <div key={`empty-${idx}`} className="min-h-[80px] rounded border border-dashed border-gray-100" />
+            <div
+              key={`empty-${idx}`}
+              className="min-h-[80px] rounded border border-dashed border-gray-100"
+            />
           ) : (
             <div
               key={cell.key}
@@ -822,7 +815,10 @@ function ProviderSettings({
         onClick={() => setExpanded((e) => !e)}
         className="flex w-full items-center justify-between p-2 text-left text-sm font-medium"
       >
-        <span>Provider-specific settings ({integrations.length} channel{integrations.length === 1 ? "" : "s"})</span>
+        <span>
+          Provider-specific settings ({integrations.length} channel
+          {integrations.length === 1 ? "" : "s"})
+        </span>
         <span className="text-gray-500">{expanded ? "▾" : "▸"}</span>
       </button>
       {expanded && (

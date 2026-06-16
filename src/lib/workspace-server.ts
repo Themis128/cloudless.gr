@@ -153,9 +153,6 @@ export async function requireWorkspaceAdmin(request: NextRequest): Promise<Works
 
   return {
     ok: false,
-    response: NextResponse.json(
-      { error: "Workspace admin access required" },
-      { status: 403 }
-    ),
+    response: NextResponse.json({ error: "Workspace admin access required" }, { status: 403 }),
   };
 }

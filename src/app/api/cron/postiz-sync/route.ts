@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 import { getCalendarItems, updateCalendarItem } from "@/lib/content-calendar";
-import {
-  isPostizConfigured,
-  listPosts,
-  type PostizPost,
-} from "@/lib/postiz";
+import { isPostizConfigured, listPosts, type PostizPost } from "@/lib/postiz";
 import { notifyPostErrored, notifyPostPublished } from "@/lib/postiz-slack";
 
 export const dynamic = "force-dynamic";
