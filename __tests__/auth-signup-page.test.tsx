@@ -145,11 +145,11 @@ describe("SignUpPage component", () => {
     expect(body.fullName).toBe("Jane Doe");
   });
 
-  it("transitions to check-email step on successful registration", async () => {
+  it("transitions to confirm-code step on successful registration", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ ok: true }),
+      json: async () => ({ ok: true, token: "nonce.12345.sig" }),
     });
     await renderSignUp();
     fillForm("user@cloudless.gr", "mypassword", "mypassword");
@@ -157,10 +157,9 @@ describe("SignUpPage component", () => {
       fireEvent.submit(screen.getByRole("button", { name: /create account/i }).closest("form")!);
     });
     await waitFor(() =>
-      expect(screen.queryByRole("heading", { name: /check your email/i })).toBeTruthy()
+      expect(screen.queryByRole("heading", { name: /verify your email/i })).toBeTruthy()
     );
-    expect(screen.getByText("user@cloudless.gr")).toBeTruthy();
-    expect(screen.getByRole("link", { name: /go to sign in/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /confirm account/i })).toBeTruthy();
   });
 
   it("shows 409 duplicate-email error from API", async () => {

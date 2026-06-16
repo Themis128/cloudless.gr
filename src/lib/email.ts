@@ -368,6 +368,57 @@ export async function sendUnsubscribeConfirmation(email: string): Promise<void> 
   });
 }
 
+export async function sendActivationEmail(
+  to: string,
+  token: string,
+  otp: string,
+  name?: string
+): Promise<void> {
+  const activationUrl = `https://cloudless.gr/api/auth/activate?email=${encodeURIComponent(to)}&token=${encodeURIComponent(token)}`;
+  const safeUrl = escapeHtml(activationUrl);
+  const greeting = name ? escapeHtml(name) : "there";
+  await sendEmail({
+    to,
+    subject: "Activate your Cloudless account",
+    fromLabel: "Cloudless",
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0f;color:#e2e8f0;border-radius:12px;overflow:hidden;">
+        <div style="padding:32px 40px 24px;border-bottom:1px solid #1e293b;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#00fff5;">Cloudless</p>
+          <h1 style="margin:0;font-size:26px;font-weight:700;color:#f1f5f9;">Activate your account</h1>
+        </div>
+        <div style="padding:28px 40px 32px;">
+          <p style="margin:0 0 20px;font-size:15px;color:#94a3b8;line-height:1.7;">Hi ${greeting}, thanks for signing up. Tap the button below to activate your account.</p>
+          <div style="text-align:center;margin:0 0 28px;">
+            <a href="${safeUrl}" style="display:inline-block;padding:14px 36px;background:#00fff5;color:#0a0a0f;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:0.3px;">Activate Account</a>
+          </div>
+          <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:20px;text-align:center;margin:0 0 20px;">
+            <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;">Can&rsquo;t tap the button? Enter this code instead</p>
+            <p style="margin:0;font-size:36px;font-weight:700;letter-spacing:12px;color:#00fff5;font-family:monospace;">${otp}</p>
+          </div>
+          <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">Both the button and the code expire in <strong style="color:#94a3b8;">24 hours</strong>. If you didn&rsquo;t create an account, ignore this email.</p>
+        </div>
+        <div style="padding:16px 40px;background:#080811;border-top:1px solid #1e293b;">
+          <p style="margin:0;font-size:12px;color:#475569;">Cloudless &middot; <a href="https://cloudless.gr" style="color:#00fff5;text-decoration:none;">cloudless.gr</a></p>
+        </div>
+      </div>`,
+    text: [
+      `Hi ${name ?? "there"},`,
+      "",
+      "Thanks for signing up to Cloudless.",
+      "",
+      "OPTION 1 — tap this link to activate your account:",
+      activationUrl,
+      "",
+      `OPTION 2 — enter this 6-digit code on the verification page: ${otp}`,
+      "",
+      "Both expire in 24 hours. If you didn't create an account, ignore this email.",
+      "",
+      "Cloudless · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
 export async function notifyTeam(subject: string, body: string): Promise<void> {
   const config = await getConfig();
   await sendEmail({

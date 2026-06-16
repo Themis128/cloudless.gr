@@ -3,8 +3,9 @@ import {
   CognitoIdentityProviderClient,
   SignUpCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { createHmac } from "crypto";
+import { createHmac, randomBytes } from "crypto";
 import { recordNotification } from "@/lib/admin-notifications";
+import { sendActivationEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 function makeClient(): CognitoIdentityProviderClient {
@@ -71,6 +72,23 @@ export async function POST(req: NextRequest) {
         ],
       })
     );
+    // Generate a 24-hour HMAC activation token and send our branded SES email.
+    // The token is: base64url(randomNonce) + "." + HMAC(email:exp:nonce, AUTH_SECRET)
+    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
+    const exp = Date.now() + 24 * 60 * 60 * 1000;
+    const nonce = randomBytes(16).toString("hex");
+    const sig = createHmac("sha256", secret).update(`${email}:${exp}:${nonce}`).digest("base64url");
+    const token = `${nonce}.${exp}.${sig}`;
+    // Derive a 6-digit OTP from the same material — mobile users who can't
+    // tap the link can type this code on the signup page instead.
+    const otp = (
+      parseInt(createHmac("sha256", secret).update(`otp:${email}:${exp}:${nonce}`).digest("hex").slice(0, 8), 16) %
+      1_000_000
+    ).toString().padStart(6, "0");
+    // Fire-and-forget — don't fail the signup if SES is down
+    sendActivationEmail(email, token, otp, fullName).catch((e) =>
+      console.error("[auth/register] activation email failed:", e)
+    );
     recordNotification({
       category: "auth",
       type: "info",
@@ -80,16 +98,15 @@ export async function POST(req: NextRequest) {
       route: "/api/auth/register",
       metadata: { fullName: fullName ?? null },
     });
-    return ENUM_SAFE_OK;
+    // Return token so the client can verify the OTP without a separate lookup.
+    // For existing accounts (UsernameExistsException handled below) we still
+    // return ENUM_SAFE_OK without a token — no OTP was generated.
+    return NextResponse.json({ ok: true, token });
   } catch (err: unknown) {
     const name = (err as { name?: string }).name;
-    // Account already exists — DO NOT confirm to the caller. Log it server-
-    // side and return the same 200 OK as a fresh signup; the legitimate
-    // owner of the email already has an account and will see "we sent you a
-    // verification email" (none was sent, but they're already in).
     if (name === "UsernameExistsException") {
       console.warn(`[auth/register] enumeration probe blocked for ${email}`);
-      return ENUM_SAFE_OK;
+      return NextResponse.json({ ok: true });
     }
     if (name === "InvalidPasswordException" || name === "InvalidParameterException")
       return NextResponse.json(
