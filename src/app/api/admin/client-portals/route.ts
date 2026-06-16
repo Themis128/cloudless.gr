@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { randomUUID } from "node:crypto";
 import {
-  readPortals,
-  writePortals,
+  computePortalExpiry,
+  filterPortalsByWorkspace,
   newDeliverable,
   newPaymentLink,
+  readPortals,
+  writePortals,
   type ClientPortal,
-  type PortalStep,
   type DeliverableStatus,
   type PaymentLinkStatus,
+  type PortalStep,
 } from "@/lib/client-portals";
-
+import { getActiveWorkspaceId } from "@/lib/workspace-server";
 import { scoreClientHealth } from "@/lib/client-health";
 
 // Re-exported for existing imports (portal token route, admin pages).
@@ -55,12 +57,18 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const portals = await readPortals();
+    const all = await readPortals();
+    // Filter by active workspace cookie. Legacy portals without a
+    // workspaceId remain visible org-wide. `?all=1` query param overrides
+    // for the case where the admin actually wants the global view.
+    const showAll = new URL(request.url).searchParams.get("all") === "1";
+    const workspaceId = showAll ? null : await getActiveWorkspaceId(request);
+    const portals = filterPortalsByWorkspace(all, workspaceId);
     // Computed, non-persisted health score per portal (Phase 4). readPortals
     // normalizes record shape, so scoring can't throw on legacy data — the
     // try/catch is defense-in-depth, matching the sibling admin routes.
     const withHealth = portals.map((p) => ({ ...p, health: scoreClientHealth(p) }));
-    return NextResponse.json({ portals: withHealth });
+    return NextResponse.json({ portals: withHealth, workspaceId });
   } catch (err) {
     console.error("[client-portals] GET failed:", err);
     return NextResponse.json({ error: "Failed to load client portals." }, { status: 500 });
@@ -83,12 +91,22 @@ export async function POST(request: NextRequest) {
 
   const portals = await readPortals();
 
+  // Stamp the workspace FK from the active cookie. Caller can override by
+  // passing an explicit workspaceId in the body (e.g. admin tooling
+  // creating portals across tenants); null/empty clears it (org-wide).
+  const explicitWorkspaceId = (body as { workspaceId?: string | null }).workspaceId;
+  const workspaceId =
+    explicitWorkspaceId !== undefined
+      ? (explicitWorkspaceId || undefined)
+      : ((await getActiveWorkspaceId(request)) ?? undefined);
+
   const portal: ClientPortal = {
     token: randomUUID(),
     label: String(body.label).slice(0, 100),
     clientEmail: String(body.clientEmail).slice(0, 200),
     clientName: String(body.clientName ?? "").slice(0, 200),
     createdAt: new Date().toISOString(),
+    expiresAt: computePortalExpiry(),
     steps: body.stepNames?.length
       ? body.stepNames.slice(0, 12).map((name) => ({
           id: randomUUID(),
@@ -99,6 +117,7 @@ export async function POST(request: NextRequest) {
       : makeDefaultSteps(),
     deliverables: [],
     paymentLinks: [],
+    ...(workspaceId ? { workspaceId } : {}),
   };
 
   portals.push(portal);

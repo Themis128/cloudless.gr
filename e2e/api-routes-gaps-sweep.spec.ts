@@ -108,6 +108,8 @@ test.describe("Admin API gap sweep (authenticated GETs)", () => {
     "/api/admin/postiz/is-connected",
     "/api/admin/postiz/groups",
     "/api/admin/postiz/notifications",
+    "/api/admin/analytics/workspaces",
+    `/api/admin/analytics/workspaces/${SENTINEL_ID}`,
     `/api/admin/postiz/integrations/${SENTINEL_ID}/connect`,
     `/api/admin/postiz/integrations/${SENTINEL_ID}/settings`,
     `/api/admin/postiz/posts/${SENTINEL_ID}/missing-content`,
