@@ -130,6 +130,20 @@ nextConfig.rewrites = async () => ({
   fallback: [],
 });
 
+// /portal/* is a private, token-driven, authenticated surface — kept
+// locale-neutral on purpose (magic-link URLs emailed to clients carry
+// no locale). When a user manually types /en/portal/... (or any other
+// supported locale prefix), 308 them to the canonical /portal/* so the
+// URL bar settles where every other link in the app points. Query
+// string is preserved automatically.
+nextConfig.redirects = async () => [
+  {
+    source: "/:locale(en|el|fr|de)/portal/:path*",
+    destination: "/portal/:path*",
+    permanent: true,
+  },
+];
+
 const configured = withNextIntl(nextConfig) as NextConfig & {
   experimental?: Record<string, unknown>;
 };
