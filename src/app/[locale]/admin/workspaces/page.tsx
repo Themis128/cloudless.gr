@@ -214,7 +214,11 @@ export default function WorkspacesPage() {
               <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
                 useWorkspace()
               </code>
-              . The active id is persisted in <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">localStorage</code> under{" "}
+              . The active id is persisted in{" "}
+              <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
+                localStorage
+              </code>{" "}
+              under{" "}
               <code className="bg-void rounded px-1.5 py-0.5 font-mono text-xs text-slate-300">
                 cloudless_workspace_id
               </code>
@@ -383,17 +387,13 @@ export default function WorkspacesPage() {
                     <PostizGroupField
                       id={`ws-postiz-${ws.id}`}
                       value={editForm.postizGroupId}
-                      onChange={(v) =>
-                        setEditForm((f) => ({ ...f, postizGroupId: v }))
-                      }
+                      onChange={(v) => setEditForm((f) => ({ ...f, postizGroupId: v }))}
                       groups={postizGroups}
                     />
                     <NotionTagField
                       id={`ws-notion-${ws.id}`}
                       value={editForm.notionTag}
-                      onChange={(v) =>
-                        setEditForm((f) => ({ ...f, notionTag: v }))
-                      }
+                      onChange={(v) => setEditForm((f) => ({ ...f, notionTag: v }))}
                     />
                   </div>
                   <div className="flex gap-2">

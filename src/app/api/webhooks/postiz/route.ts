@@ -108,7 +108,9 @@ export async function POST(req: NextRequest) {
     content: post.content ?? "",
     publishDate: post.publishDate ?? new Date().toISOString(),
     state: (post.state ??
-      (event === "post.published" || event === "post.publish" ? "PUBLISHED" : "QUEUE")) as PostizPost["state"],
+      (event === "post.published" || event === "post.publish"
+        ? "PUBLISHED"
+        : "QUEUE")) as PostizPost["state"],
     integration: post.integration as PostizPost["integration"],
     releaseURL: post.releaseURL ?? null,
     releaseId: post.releaseId ?? null,
@@ -131,9 +133,7 @@ export async function POST(req: NextRequest) {
     }
     await markByPostizId(post.id, "draft");
     const reason = payload.error ?? payload.data?.error ?? null;
-    await notifyPostErrored(full, reason).catch((e) =>
-      console.error("[postiz-webhook] slack:", e)
-    );
+    await notifyPostErrored(full, reason).catch((e) => console.error("[postiz-webhook] slack:", e));
     return NextResponse.json({ accepted: true, event, postId: post.id });
   }
 

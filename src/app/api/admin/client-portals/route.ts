@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   const explicitWorkspaceId = (body as { workspaceId?: string | null }).workspaceId;
   const workspaceId =
     explicitWorkspaceId !== undefined
-      ? (explicitWorkspaceId || undefined)
+      ? explicitWorkspaceId || undefined
       : ((await getActiveWorkspaceId(request)) ?? undefined);
 
   const portal: ClientPortal = {

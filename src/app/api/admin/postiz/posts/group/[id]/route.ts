@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  deletePostsByGroup,
-  PostizApiError,
-  PostizNotConfiguredError,
-} from "@/lib/postiz";
+import { deletePostsByGroup, PostizApiError, PostizNotConfiguredError } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 

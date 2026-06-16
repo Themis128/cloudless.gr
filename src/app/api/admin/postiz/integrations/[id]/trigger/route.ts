@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  triggerIntegrationTool,
-  PostizApiError,
-  PostizNotConfiguredError,
-} from "@/lib/postiz";
+import { triggerIntegrationTool, PostizApiError, PostizNotConfiguredError } from "@/lib/postiz";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +26,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     const data =
-      body.data && typeof body.data === "object" ? (body.data as Record<string, unknown>) : undefined;
+      body.data && typeof body.data === "object"
+        ? (body.data as Record<string, unknown>)
+        : undefined;
     const result = await triggerIntegrationTool(id, { tool: body.tool, data });
     return NextResponse.json(result);
   } catch (err) {

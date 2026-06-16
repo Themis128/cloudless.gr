@@ -157,7 +157,9 @@ function reduceCalendar(out: WorkspaceAnalytics, items: CalendarItem[]): void {
 }
 
 /** Aggregate analytics for ONE workspace. */
-export async function aggregateWorkspaceAnalytics(workspaceId: string): Promise<WorkspaceAnalytics> {
+export async function aggregateWorkspaceAnalytics(
+  workspaceId: string
+): Promise<WorkspaceAnalytics> {
   const [workspaces, portals, calendarAll] = await Promise.all([
     readWorkspaces(),
     readPortals(),
