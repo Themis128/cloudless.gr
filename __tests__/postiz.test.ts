@@ -9,10 +9,18 @@ vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
 vi.stubGlobal("fetch", mockFetch);
 
 import {
+  createPost,
+  deletePost,
+  findSlot,
   isPostizConfigured,
+  listIntegrations,
   listPostizIntegrations,
+  listPosts,
   matchIntegrationsForPlatform,
+  PostizApiError,
+  PostizNotConfiguredError,
   schedulePost,
+  uploadFromUrl,
   type PostizIntegration,
 } from "@/lib/postiz";
 
@@ -141,5 +149,143 @@ describe("schedulePost", () => {
     mockFetch.mockRejectedValue(new Error("down"));
     const result = await schedulePost({ content: "hi", integrationIds: ["fb"] });
     expect(result.ok).toBe(false);
+  });
+});
+
+// ------------------------------------------------------------------
+// Admin-console surface (throwing variants used by /api/admin/postiz/*)
+// ------------------------------------------------------------------
+
+describe("listIntegrations (throwing)", () => {
+  it("unwraps both bare-array and {integrations} shapes", async () => {
+    const channels: PostizIntegration[] = [{ id: "1", name: "FB", identifier: "facebook" }];
+
+    mockFetch.mockResolvedValueOnce(jsonResponse(channels));
+    await expect(listIntegrations()).resolves.toEqual(channels);
+
+    mockFetch.mockResolvedValueOnce(jsonResponse({ integrations: channels }));
+    await expect(listIntegrations()).resolves.toEqual(channels);
+  });
+
+  it("throws PostizNotConfiguredError when SSM is empty", async () => {
+    mockGetConfig.mockResolvedValue({ POSTIZ_API_URL: "", POSTIZ_API_KEY: "" });
+    await expect(listIntegrations()).rejects.toBeInstanceOf(PostizNotConfiguredError);
+  });
+
+  it("throws PostizApiError on a non-OK response", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: "unauthorized" }, 401));
+    await expect(listIntegrations()).rejects.toBeInstanceOf(PostizApiError);
+  });
+});
+
+describe("listPosts (throwing)", () => {
+  it("unwraps {posts} envelope returned by Postiz", async () => {
+    const items = [
+      {
+        id: "p1",
+        content: "hi",
+        publishDate: "2026-06-16T10:00:00.000Z",
+        state: "QUEUE",
+        integration: { id: "fb", name: "FB", identifier: "facebook" },
+      },
+    ];
+    mockFetch.mockResolvedValueOnce(jsonResponse({ posts: items }));
+    await expect(listPosts("2026-06-01", "2026-06-30")).resolves.toEqual(items);
+  });
+
+  it("passes startDate and endDate as query params", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ posts: [] }));
+    await listPosts("2026-06-01", "2026-06-30");
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("startDate=2026-06-01");
+    expect(url).toContain("endDate=2026-06-30");
+  });
+
+  it("returns [] when Postiz returns an empty envelope", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({}));
+    await expect(listPosts("a", "b")).resolves.toEqual([]);
+  });
+});
+
+describe("createPost (throwing)", () => {
+  it("POSTs the body and returns the upstream array", async () => {
+    const upstream = [{ postId: "p1", integration: "fb" }];
+    mockFetch.mockResolvedValueOnce(jsonResponse(upstream));
+    const result = await createPost({
+      type: "now",
+      date: "2026-06-16T10:00:00.000Z",
+      shortLink: false,
+      tags: [],
+      posts: [
+        {
+          integration: { id: "fb" },
+          value: [{ content: "hi", image: [] }],
+          settings: { __type: "facebook" },
+        },
+      ],
+    });
+    expect(result).toEqual(upstream);
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init.method).toBe("POST");
+  });
+});
+
+describe("deletePost (throwing)", () => {
+  it("issues DELETE on the post id with URL encoding", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await deletePost("abc/123");
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/posts/abc%2F123");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("swallows 404 (idempotent)", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: "not found" }, 404));
+    await expect(deletePost("p1")).resolves.toBeUndefined();
+  });
+
+  it("rethrows non-404 PostizApiError", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: "boom" }, 500));
+    await expect(deletePost("p1")).rejects.toBeInstanceOf(PostizApiError);
+  });
+});
+
+describe("uploadFromUrl (throwing)", () => {
+  it("POSTs the source URL and returns the UploadedFile", async () => {
+    const uploaded = { id: "u1", name: "", path: "https://cdn/u1.png", thumbnail: null, alt: null };
+    mockFetch.mockResolvedValueOnce(jsonResponse(uploaded));
+    await expect(uploadFromUrl("https://x.example/i.png")).resolves.toEqual(uploaded);
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(JSON.stringify({ url: "https://x.example/i.png" }));
+    // 30s timeout — see uploadFromUrl docstring; a 10s default trips on
+    // 5 MB+ source images.
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("findSlot (throwing)", () => {
+  it("calls /find-slot/:id with the integration id URL-encoded", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ date: "2026-06-17T09:00:00.000Z" }));
+    await findSlot("fb/page-1");
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/find-slot/fb%2Fpage-1");
+  });
+});
+
+describe("error class shapes", () => {
+  it("PostizApiError exposes status and a truncated body", () => {
+    const err = new PostizApiError(429, "rate limited and a long message ".repeat(20));
+    expect(err.status).toBe(429);
+    expect(err.body).toContain("rate limited");
+    // Truncated to 200 chars in the message; the body field keeps the original.
+    expect(err.message.length).toBeLessThan(250);
+    expect(err.name).toBe("PostizApiError");
+  });
+
+  it("PostizNotConfiguredError keeps its name for instanceof routing", () => {
+    const err = new PostizNotConfiguredError();
+    expect(err.name).toBe("PostizNotConfiguredError");
+    expect(err.message).toContain("not configured");
   });
 });
