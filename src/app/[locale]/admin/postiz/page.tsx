@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
-import type { PostizIntegration, PostizPost, CreatePostBody } from "@/lib/postiz";
+import { postIdentifier, type PostizIntegration, type PostizPost, type CreatePostBody } from "@/lib/postiz";
+
+/** Accept attribute for file picker — matches Postiz `/upload` MIME allowlist
+ *  per docs.postiz.com (jpeg, png, gif, webp, avif, bmp, tiff, mp4).
+ *  Anything else is rejected by the backend with a 400. */
+const POSTIZ_FILE_ACCEPT =
+  "image/jpeg,image/png,image/gif,image/webp,image/avif,image/bmp,image/tiff,video/mp4";
 
 /**
  * Postiz admin page — /[locale]/admin/postiz
@@ -511,7 +517,7 @@ function ComposeTab({
           <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm text-gray-700">
             <input
               type="file"
-              accept="image/*,video/*"
+              accept={POSTIZ_FILE_ACCEPT}
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -623,7 +629,7 @@ function ScheduleTab({
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs text-gray-500">
                 {new Date(p.publishDate).toLocaleString()} · {p.state} · {p.integration.name} (
-                {p.integration.identifier})
+                {postIdentifier(p)})
               </div>
               <div className="flex gap-3 text-xs">
                 {(p.state === "QUEUE" || p.state === "DRAFT") && (
@@ -781,7 +787,7 @@ function CalendarTab({
                   className={`truncate rounded border px-1 py-0.5 text-[10px] ${STATE_COLORS[p.state]}`}
                   title={`${p.integration.name} — ${p.state}\n${p.content}`}
                 >
-                  {p.integration.identifier}: {p.content.slice(0, 18)}
+                  {postIdentifier(p)}: {p.content.slice(0, 18)}
                 </div>
               ))}
               {(byDay.get(cell.key)?.length ?? 0) > 3 && (

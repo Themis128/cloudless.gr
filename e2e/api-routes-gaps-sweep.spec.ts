@@ -177,7 +177,7 @@ test.describe("Postiz cron endpoints (unauthenticated — reject without 5xx)", 
 });
 
 test.describe("Postiz webhook receiver", () => {
-  test("POST /api/webhooks/postiz unsigned → 401 invalid_signature", async ({ request }) => {
+  test("POST /api/webhooks/postiz unsigned → 401 unauthorized", async ({ request }) => {
     const r = await request.post("/api/webhooks/postiz", {
       data: { event: "post.published", post: { id: "x" } },
     });

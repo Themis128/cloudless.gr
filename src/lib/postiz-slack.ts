@@ -1,6 +1,6 @@
 import { getConfig } from "@/lib/ssm-config";
 import { SlackClient } from "@/lib/slack-notify";
-import type { PostizIntegration, PostizPost } from "@/lib/postiz";
+import { postIdentifier, type PostizIntegration, type PostizPost } from "@/lib/postiz";
 
 /**
  * Slack notifications for Postiz lifecycle events.
@@ -25,8 +25,9 @@ function shorten(s: string, max = 280): string {
 /** Successful publish — fires on Postiz `post.published` webhook events. */
 export async function notifyPostPublished(post: PostizPost): Promise<void> {
   const client = await getClient();
+  const identifier = postIdentifier(post);
   const releaseLink = post.releaseURL
-    ? ` <${post.releaseURL}|view on ${post.integration.identifier}>`
+    ? ` <${post.releaseURL}|view on ${identifier}>`
     : "";
   await client.post({
     text: `Postiz: ${post.integration.name} published`,
@@ -37,7 +38,7 @@ export async function notifyPostPublished(post: PostizPost): Promise<void> {
           type: "mrkdwn",
           text:
             `:white_check_mark: *Postiz published* on *${post.integration.name}* ` +
-            `(${post.integration.identifier})${releaseLink}\n` +
+            `(${identifier})${releaseLink}\n` +
             `> ${shorten(post.content)}`,
         },
       },
@@ -54,6 +55,7 @@ export async function notifyPostErrored(
 ): Promise<void> {
   const client = await getClient();
   const detail = reason ? `\n> Reason: \`${shorten(reason, 200)}\`` : "";
+  const identifier = postIdentifier(post);
   await client.post({
     text: `Postiz: ${post.integration.name} failed to publish`,
     blocks: [
@@ -63,7 +65,7 @@ export async function notifyPostErrored(
           type: "mrkdwn",
           text:
             `:rotating_light: *Postiz publish failed* on *${post.integration.name}* ` +
-            `(${post.integration.identifier})\n` +
+            `(${identifier})\n` +
             `> ${shorten(post.content)}${detail}\n` +
             `Post ID: \`${post.id}\``,
         },
