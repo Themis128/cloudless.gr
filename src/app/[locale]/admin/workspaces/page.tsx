@@ -5,23 +5,26 @@ import { useEffect, useState } from "react";
 import type { Workspace } from "@/app/api/admin/workspaces/route";
 import { useWorkspace } from "@/context/WorkspaceContext";
 
+interface PostizGroupOption {
+  id: string;
+  name: string;
+}
+
+const EMPTY_FORM = { name: "", description: "", adminEmails: "", postizGroupId: "", notionTag: "" };
+
 export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    adminEmails: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-    adminEmails: "",
-  });
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  /** Postiz groups for the dropdown. `null` = not loaded yet, `[]` = either
+   *  Postiz isn't configured (503) or the org has no groups — both cases
+   *  fall back to a free-text input. */
+  const [postizGroups, setPostizGroups] = useState<PostizGroupOption[] | null>(null);
   const { setWorkspaces: setCtxWorkspaces, current } = useWorkspace();
 
   async function load() {
@@ -59,11 +62,13 @@ export default function WorkspacesPage() {
             .split(",")
             .map((e) => e.trim())
             .filter(Boolean),
+          postizGroupId: form.postizGroupId.trim() || undefined,
+          notionTag: form.notionTag.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      setForm({ name: "", description: "", adminEmails: "" });
+      setForm(EMPTY_FORM);
       load();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : "Failed to create workspace");
@@ -85,6 +90,10 @@ export default function WorkspacesPage() {
             .split(",")
             .map((e) => e.trim())
             .filter(Boolean),
+          // Pass through whether set or cleared — backend treats "" as a
+          // clear instruction, undefined as "leave unchanged".
+          postizGroupId: editForm.postizGroupId.trim(),
+          notionTag: editForm.notionTag.trim(),
         }),
       });
       if (!res.ok) {
@@ -118,6 +127,8 @@ export default function WorkspacesPage() {
       name: ws.name,
       description: ws.description,
       adminEmails: ws.adminEmails.join(", "),
+      postizGroupId: ws.postizGroupId ?? "",
+      notionTag: ws.notionTag ?? "",
     });
   }
 
@@ -125,6 +136,23 @@ export default function WorkspacesPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Optimistically fetch Postiz groups once on mount. 503 (not configured)
+  // and other errors leave `postizGroups` at `null` so the inputs degrade
+  // to free text. The `groups` route on the server reads from SSM, so this
+  // is a single round-trip per page visit.
+  useEffect(() => {
+    fetchWithAuth("/api/admin/postiz/groups")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.groups)) {
+          setPostizGroups(data.groups as PostizGroupOption[]);
+        }
+      })
+      .catch(() => {
+        /* silent — UI just falls back to free-text */
+      });
   }, []);
 
   return (
@@ -256,6 +284,19 @@ export default function WorkspacesPage() {
               className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
             />
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <PostizGroupField
+              id="ws-postiz"
+              value={form.postizGroupId}
+              onChange={(v) => setForm((f) => ({ ...f, postizGroupId: v }))}
+              groups={postizGroups}
+            />
+            <NotionTagField
+              id="ws-notion"
+              value={form.notionTag}
+              onChange={(v) => setForm((f) => ({ ...f, notionTag: v }))}
+            />
+          </div>
           {formError && <p className="font-mono text-xs text-red-400">{formError}</p>}
           <button
             type="submit"
@@ -338,6 +379,23 @@ export default function WorkspacesPage() {
                     }
                     className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
                   />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <PostizGroupField
+                      id={`ws-postiz-${ws.id}`}
+                      value={editForm.postizGroupId}
+                      onChange={(v) =>
+                        setEditForm((f) => ({ ...f, postizGroupId: v }))
+                      }
+                      groups={postizGroups}
+                    />
+                    <NotionTagField
+                      id={`ws-notion-${ws.id}`}
+                      value={editForm.notionTag}
+                      onChange={(v) =>
+                        setEditForm((f) => ({ ...f, notionTag: v }))
+                      }
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -377,6 +435,24 @@ export default function WorkspacesPage() {
                         admins: {ws.adminEmails.join(", ")}
                       </p>
                     )}
+                    {(ws.postizGroupId || ws.notionTag) && (
+                      <p className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[10px] text-slate-600">
+                        {ws.postizGroupId && (
+                          <span className="rounded border border-slate-800 px-1.5 py-0.5">
+                            postiz:{" "}
+                            <span className="text-slate-400">
+                              {postizGroups?.find((g) => g.id === ws.postizGroupId)?.name ??
+                                ws.postizGroupId}
+                            </span>
+                          </span>
+                        )}
+                        {ws.notionTag && (
+                          <span className="rounded border border-slate-800 px-1.5 py-0.5">
+                            notion: <span className="text-slate-400">{ws.notionTag}</span>
+                          </span>
+                        )}
+                      </p>
+                    )}
                     <p className="mt-1 font-mono text-xs text-slate-700">
                       created {new Date(ws.createdAt).toLocaleDateString("en-IE")}
                     </p>
@@ -403,6 +479,84 @@ export default function WorkspacesPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Postiz group picker — dropdown of `/api/admin/postiz/groups` when the
+ *  upstream is reachable, free-text fallback when it isn't (Postiz not
+ *  configured, network error, etc.). The Workspace.postizGroupId stores the
+ *  group id; the dropdown shows the friendly name. */
+function PostizGroupField({
+  id,
+  value,
+  onChange,
+  groups,
+}: Readonly<{
+  id: string;
+  value: string;
+  onChange: (next: string) => void;
+  groups: PostizGroupOption[] | null;
+}>) {
+  const helper = "Filter this workspace's Postiz channels + posts to one Postiz group (customer).";
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block font-mono text-xs text-slate-500">
+        Postiz group (optional)
+      </label>
+      {groups && groups.length > 0 ? (
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white focus:outline-none"
+        >
+          <option value="">— None (all groups) —</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name} ({g.id.slice(0, 8)}…)
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id={id}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="paste the Postiz group id"
+          className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
+        />
+      )}
+      <p className="mt-1 font-mono text-[10px] text-slate-600">{helper}</p>
+    </div>
+  );
+}
+
+/** Notion workspace tag — written into the WorkspaceID rich-text column on
+ *  calendar items so the calendar GET can filter by it. Free text — usually
+ *  matches the workspace slug. */
+function NotionTagField({
+  id,
+  value,
+  onChange,
+}: Readonly<{ id: string; value: string; onChange: (next: string) => void }>) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block font-mono text-xs text-slate-500">
+        Notion tag (optional)
+      </label>
+      <input
+        id={id}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="acme-corp"
+        className="bg-void focus:border-neon-blue/50 w-full rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder-slate-600 focus:outline-none"
+      />
+      <p className="mt-1 font-mono text-[10px] text-slate-600">
+        Tag written to the Notion calendar WorkspaceID column for filtering.
+      </p>
     </div>
   );
 }
