@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+import { isValidPlan } from "@/lib/plans";
 
 const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
 const USE_COGNITO = AUTH_PROVIDER === "cognito";
@@ -18,7 +19,12 @@ function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const planParam = searchParams.get("plan");
+  // Validate against the shared plan allowlist. An unknown ?plan= would
+  // forward into /portal/waiting and silently dead-end at the server
+  // enroll step (which validates the same allowlist) — drop it here so
+  // the user isn't shipped to a confusing waiting room with no enroll.
+  const rawPlan = searchParams.get("plan");
+  const planParam = isValidPlan(rawPlan) ? rawPlan : null;
   const postSignupDestination = planParam
     ? `/portal/waiting?plan=${encodeURIComponent(planParam)}`
     : null;
