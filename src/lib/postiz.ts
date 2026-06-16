@@ -62,17 +62,14 @@ export class PostizNotConfiguredError extends Error {
 export class PostizApiError extends Error {
   constructor(
     public readonly status: number,
-    public readonly body: string,
+    public readonly body: string
   ) {
     super(`Postiz API error ${status}: ${body.slice(0, 200)}`);
     this.name = "PostizApiError";
   }
 }
 
-async function callThrowing<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function callThrowing<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await postizFetch(path, init);
   if (!res.ok) throw new PostizApiError(res.status, await res.text().catch(() => ""));
   if (res.status === 204) return undefined as T;
@@ -243,7 +240,7 @@ export function listPosts(startDate: string, endDate: string): Promise<PostizPos
 
 /** Full create-post — exposes the entire Postiz schema. Throws on non-OK. */
 export function createPost(
-  body: CreatePostBody,
+  body: CreatePostBody
 ): Promise<Array<{ postId: string; integration: string }>> {
   return callThrowing<Array<{ postId: string; integration: string }>>("/posts", {
     method: "POST",

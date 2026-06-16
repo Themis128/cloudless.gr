@@ -200,4 +200,16 @@ useful for any Cowork → WSL handoff, not just Postiz.
   bodies without `image: []` on each `value` item. Always include it. Our
   `schedulePost()` already does this; don't remove it.
 - **LinkedIn page connect: red `!` badge stuck** — `inBetweenSteps` stays
-  true because the avatar download vi
+  true because the avatar download via the LinkedIn CDN returns 403 and
+  aborts the save. Hot-fix in-pod (documented in `docs/POSTIZ.md`,
+  Troubleshooting). Reverts on pod restart and only needed once per
+  channel.
+
+## Future work (don't do unsolicited)
+
+- MCP tool wrappers (`mcp__cloudless-infra__postiz_*`) for status / logs /
+  smoke from Cowork. Plumb through `tools/ssh-mcp/src/` once the shape is
+  stable.
+- Auto-restart watchdog like the k3s one (`Restart=always` on
+  cloudflared if not already).
+- Phase 2 nightly metrics pull-back into the content calendar.
