@@ -4,7 +4,7 @@
  * Queryable via Athena using the DDL in docs/analytics-athena.sql
  */
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
@@ -38,6 +38,12 @@ export interface AnalyticsEvent {
   properties?: Record<string, unknown>;
 }
 
+/** One-way SHA-256 hash of an IP — GDPR-safe pseudonym, not reversible. */
+function pseudonymiseIp(ip: string | undefined): string | undefined {
+  if (!ip || ip === "unknown") return undefined;
+  return createHash("sha256").update(ip).digest("hex").slice(0, 16);
+}
+
 export function trackS3Event(evt: AnalyticsEvent): void {
   const now = new Date();
   const y = now.getUTCFullYear();
@@ -48,6 +54,7 @@ export function trackS3Event(evt: AnalyticsEvent): void {
   const record = JSON.stringify({
     timestamp: now.toISOString(),
     ...evt,
+    ip: pseudonymiseIp(evt.ip),
   });
 
   getS3()

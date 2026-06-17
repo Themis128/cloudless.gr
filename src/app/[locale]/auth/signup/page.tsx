@@ -124,25 +124,6 @@ function SignUpForm() {
   };
 
   // Countdown timer + auto-resend when it hits zero
-  useEffect(() => {
-    if (step !== "confirm-code" || secondsLeft <= 0) return;
-    const id = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(id);
-          if (!autoResendFiredRef.current) {
-            autoResendFiredRef.current = true;
-            handleResend();
-          }
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, secondsLeft > 0]);
-
   const handleResend = async () => {
     setResending(true);
     setResent(false);
@@ -164,6 +145,25 @@ function SignUpForm() {
       setResending(false);
     }
   };
+
+  useEffect(() => {
+    if (step !== "confirm-code" || secondsLeft <= 0) return;
+    const id = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(id);
+          if (!autoResendFiredRef.current) {
+            autoResendFiredRef.current = true;
+            handleResend();
+          }
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, secondsLeft > 0]);
 
   return (
     <div className="bg-void flex min-h-screen items-center justify-center px-4 py-20">

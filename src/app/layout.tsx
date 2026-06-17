@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import { HubSpotScript } from "@/components/HubSpotScript";
+import ConsentGatedPixel from "@/components/ConsentGatedPixel";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import "./globals.css";
 
@@ -126,29 +127,10 @@ export default async function RootLayout({
         </a>
         <ChunkReloadGuard />
         {META_PIXEL_ID ? (
-          <>
-            <Script id="meta-pixel-init" strategy="afterInteractive" nonce={nonce}>
-              {`
-                !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-                n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-                t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-                document,'script','https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '${META_PIXEL_ID}');
-                fbq('track', 'PageView');
-              `}
-            </Script>
-            <noscript>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                height="1"
-                width="1"
-                style={{ display: "none" }}
-                src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
-                alt=""
-              />
-            </noscript>
-          </>
+          // Pixel is initialised only after the user grants marketing consent.
+          // ConsentGatedPixel listens to CookieConsentContext and injects the
+          // fbevents.js script dynamically when marketing === true.
+          <ConsentGatedPixel pixelId={META_PIXEL_ID} nonce={nonce} />
         ) : null}
         <HubSpotScript nonce={nonce} />
         {GA_ID ? (

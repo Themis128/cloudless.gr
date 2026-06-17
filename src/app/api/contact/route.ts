@@ -191,12 +191,19 @@ export async function POST(request: Request) {
       source: service ?? "website_contact_form",
     }).catch(() => {});
 
-    // Meta CAPI — Lead event. eventId is shared with the browser pixel for dedup.
-    // Short-circuits if NEXT_PUBLIC_META_PIXEL_ID / META_CAPI_ACCESS_TOKEN are unset.
+    // Meta CAPI — Lead event. Only read fbp/fbc marketing cookies when the
+    // visitor has granted marketing consent (GDPR Art.6(1)(a)).
     const eventId = generateEventId("lead");
     const userAgent = request.headers.get("user-agent") ?? undefined;
-    const fbp = request.headers.get("cookie")?.match(/_fbp=([^;]+)/)?.[1];
-    const fbc = request.headers.get("cookie")?.match(/_fbc=([^;]+)/)?.[1];
+    const cookieHeader = request.headers.get("cookie") ?? "";
+    const marketingConsented = (() => {
+      try {
+        const raw = cookieHeader.match(/cookieConsent=([^;]+)/)?.[1];
+        return raw ? JSON.parse(decodeURIComponent(raw)).marketing === true : false;
+      } catch { return false; }
+    })();
+    const fbp = marketingConsented ? cookieHeader.match(/_fbp=([^;]+)/)?.[1] : undefined;
+    const fbc = marketingConsented ? cookieHeader.match(/_fbc=([^;]+)/)?.[1] : undefined;
     sendLeadEvent({
       eventId,
       email,
