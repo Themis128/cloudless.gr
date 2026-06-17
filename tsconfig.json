@@ -46,6 +46,7 @@
     "__tests__",
     ".claude",
     "scripts",
-    "tools"
+    "tools",
+    "workers"
   ]
 }

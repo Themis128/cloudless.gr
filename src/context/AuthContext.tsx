@@ -247,12 +247,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     phone?: string;
   }) => {
     // Go through our own same-origin API route, which persists the profile in
-    // DynamoDB keyed by the Cognito user sub.
-    const res = await globalThis.fetch(PROFILE_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(attrs),
-    });
+    // DynamoDB keyed by the Cognito user sub. Retry once on 502/503 (Pi origin
+    // may lack DynamoDB; retry hits AWS via Cloudflare Worker failover).
+    const doFetch = () =>
+      globalThis.fetch(PROFILE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(attrs),
+      });
+
+    let res = await doFetch();
+    if ((res.status === 502 || res.status === 503) && res.headers.get("x-served-by") !== "aws-fallback") {
+      // Retry once — the Worker may route to AWS on the second attempt
+      res = await doFetch();
+    }
     if (!res.ok) {
       const data = (await res.json().catch(() => null)) as { error?: string } | null;
       throw new Error(data?.error ?? `Failed to update profile: ${res.status}`);

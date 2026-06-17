@@ -75,7 +75,17 @@ export async function POST(req: Request) {
       preferences: body.preferences,
     });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[user/profile] PUT failed:", msg);
+    // When USER_PROFILE_TABLE is not configured (e.g., Pi k3s origin without
+    // DynamoDB), return 503 so the Cloudflare Worker falls through to AWS.
+    if (msg.includes("USER_PROFILE_TABLE")) {
+      return NextResponse.json(
+        { error: "Profile storage not available — please retry" },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: "Failed to update profile" }, { status: 502 });
   }
 }
