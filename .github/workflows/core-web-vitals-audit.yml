@@ -85,8 +85,6 @@ jobs:
             https://cloudless.gr/en/services
             https://cloudless.gr/en/contact
             https://cloudless.gr/en/store
-          # 3 runs per URL → median absorbs single-run CI variance.
-          runs: 3
           budgetPath: .github/lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true

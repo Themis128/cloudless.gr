@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
   if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
 
   // Always succeed-or-look-like-success to defeat account enumeration.
-  const ENUM_SAFE_OK = NextResponse.json({ ok: true });
 
   try {
     const client = makeClient();
@@ -102,7 +101,7 @@ export async function POST(req: NextRequest) {
     const name = (err as { name?: string }).name;
     if (name === "UsernameExistsException") {
       console.warn(`[auth/register] enumeration probe blocked for ${email}`);
-      return ENUM_SAFE_OK;
+      return NextResponse.json({ ok: true });
     }
     if (name === "InvalidPasswordException" || name === "InvalidParameterException")
       return NextResponse.json(
