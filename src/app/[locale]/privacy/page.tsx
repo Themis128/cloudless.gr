@@ -56,7 +56,7 @@ export default async function PrivacyPolicyPage() {
               {t("legal.privacyTitle", "Privacy Policy")}
             </h1>
             <p className="mb-2 font-mono text-xs text-slate-500">
-              {t("legal.lastUpdated", "Last updated")}: April 2026
+              {t("legal.lastUpdated", "Last updated")}: June 2026
             </p>
             <p className="mb-12 text-sm leading-relaxed text-slate-400">
               {t(
@@ -210,7 +210,7 @@ export default async function PrivacyPolicyPage() {
                 <p>
                   {t(
                     "legal.rightsExercise",
-                    "To exercise any of these rights, email us at tbaltzakis@cloudless.gr. We will respond within 30 days (GDPR) or 45 days (CCPA)."
+                    "To exercise any of these rights, email us at tbaltzakis@cloudless.gr or use the account deletion option in your dashboard settings. We will respond within 30 days (GDPR) or 45 days (CCPA)."
                   )}
                 </p>
               </Section>
