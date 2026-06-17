@@ -17,6 +17,16 @@ export async function POST(req: NextRequest) {
   const event = typeof body.event === "string" ? body.event.slice(0, 100) : null;
   if (!event) return NextResponse.json({ error: "event required" }, { status: 400 });
 
+  // Require analytics consent for client-submitted events (GDPR Art.6(1)(a))
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  const analyticsConsented = (() => {
+    try {
+      const raw = cookieHeader.match(/cookieConsent=([^;]+)/)?.[1];
+      return raw ? JSON.parse(decodeURIComponent(raw)).analytics === true : false;
+    } catch { return false; }
+  })();
+  if (!analyticsConsented) return NextResponse.json({ ok: true }); // silent no-op
+
   // Enrich with server-side session if available
   const session = await auth().catch(() => null);
 
