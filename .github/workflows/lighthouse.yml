@@ -89,9 +89,9 @@ jobs:
           urls: |
             ${{ github.event.inputs.url || 'https://cloudless.gr' }}
             ${{ github.event.inputs.url || 'https://cloudless.gr/en' }}
-            ${{ github.event.inputs.url || 'https://cloudless.gr/services' }}
-            ${{ github.event.inputs.url || 'https://cloudless.gr/contact' }}
-            ${{ github.event.inputs.url || 'https://cloudless.gr/store' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/en/services' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/en/contact' }}
+            ${{ github.event.inputs.url || 'https://cloudless.gr/en/store' }}
           # 5 runs per URL → median absorbs single-run CI variance. TBT alone
           # has been observed to swing 11x between runs on identical infra,
           # and the homepage with charts + carousel has scored 0.61, 0.64, 0.75
@@ -159,7 +159,7 @@ jobs:
           #   - https://cloudless.gr/         (hero animation + carousel + GSC)
           #   - https://cloudless.gr/<locale> (same home content, just localised
           #                                    — /en, /el, etc.)
-          #   - https://cloudless.gr/services (service cards + animations)
+          #   - https://cloudless.gr/en/services (service cards + animations)
           # Other routes stay on the stricter 65 bar.
           # TODO(perf): once /services and the home route land a CLS/LCP
           # optimisation pass and consistently median ≥ 0.70, drop them back

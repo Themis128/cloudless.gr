@@ -33,7 +33,9 @@ jobs:
       #   1700KB → 1800KB (Phase 6.3): calm-cloud rebrand (theme-v2.css + alpha override list)
       #   1800KB → 1900KB (portal feature): customer portal flow added /portal/waiting,
       #     /portal/[token] timeline, admin pending-clients UI, lucide-react icons (~25KB).
-      BUNDLE_MAX_KB: "1900"
+      #   1900KB → 2300KB (analytics warehouse): @aws-sdk/client-s3 server-side only;
+      #     client bundle growth from portal/dashboard/admin expansion (~292KB).
+      BUNDLE_MAX_KB: "2300"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
