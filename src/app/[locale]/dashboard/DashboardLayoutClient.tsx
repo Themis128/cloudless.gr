@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Overview", icon: "◈" },
+  { href: "/dashboard/services", label: "Services", icon: "⬡" },
   { href: "/dashboard/profile", label: "Profile", icon: "◉" },
   { href: "/dashboard/purchases", label: "Purchases", icon: "◇" },
   { href: "/dashboard/consultations", label: "Consultations", icon: "📅" },

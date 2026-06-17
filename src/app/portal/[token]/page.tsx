@@ -197,7 +197,51 @@ function CommentCard({ comment }: Readonly<{ comment: PortalComment }>) {
   );
 }
 
-function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
+function ReplyForm({ token, stepId, onSent }: Readonly<{ token: string; stepId: string; onSent: (c: PortalComment) => void }>) {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/api/portal/${token}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stepId, text: text.trim() }),
+      });
+      if (res.ok) {
+        const { comment } = await res.json();
+        onSent(comment);
+        setText("");
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Write a reply..."
+        className="bg-void flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder:text-slate-600 focus:border-neon-cyan/50 focus:outline-none"
+      />
+      <button
+        type="submit"
+        disabled={sending || !text.trim()}
+        className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 rounded-lg border px-4 py-2 font-mono text-xs font-semibold transition-all disabled:opacity-40"
+      >
+        {sending ? "..." : "Send"}
+      </button>
+    </form>
+  );
+}
+
+function ProjectTimeline({ steps, token }: Readonly<{ steps: PortalStep[]; token: string }>) {
   const [expanded, setExpanded] = useState<string | null>(() => {
     const active = steps.find((s) => s.status === "in-progress" || s.status === "blocked");
     return active?.id ?? null;
@@ -371,6 +415,10 @@ function ProjectTimeline({ steps }: Readonly<{ steps: PortalStep[] }>) {
                       ))}
                     </div>
                   )}
+                  <ReplyForm token={token} stepId={step.id} onSent={(c) => {
+                    step.comments.push(c);
+                    setExpanded(step.id);
+                  }} />
                 </div>
               )}
             </div>
@@ -609,7 +657,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
             {/* Project Timeline — the main view */}
             {data.steps.length > 0 && (
               <div className="bg-void-light/20 rounded-2xl border border-slate-800 p-6">
-                <ProjectTimeline steps={data.steps} />
+                <ProjectTimeline steps={data.steps} token={token} />
               </div>
             )}
 
