@@ -43,9 +43,9 @@ If you're building a new product today, start serverless by default. Use API Gat
   },
   {
     slug: "cloud-cost-optimization-guide",
-    title: "5 Cloud Cost Mistakes SMBs Make (and How to Fix Them)",
+    title: "AWS Cost Optimization for Startups: 5 Mistakes Costing You 30–40% More",
     excerpt:
-      "Most small businesses overspend on cloud by 30–40%. These five common mistakes are easy to fix once you know what to look for.",
+      "Most startups overspend on AWS by 30–40%. These five cloud cost mistakes are easy to fix — here's how to cut your bill without sacrificing performance.",
     date: "2026-03-21",
     readTime: "7 min read",
     category: "Cloud",
@@ -74,7 +74,7 @@ If you can't attribute costs to teams or projects, you can't optimize them. Impl
 
 ## The fix is simpler than you think
 
-A structured cost review — even once a quarter — can save 30% or more. We offer free audit calls to help SMBs identify their biggest savings opportunities.
+A structured cost review — even once a quarter — can save 30% or more. We helped [TechFlow reduce their AWS bill by 42%](/case-studies/techflow-aws-cost-reduction) in just 8 weeks using these exact strategies. We offer free audit calls to help startups identify their biggest savings opportunities.
     `.trim(),
   },
   {
@@ -139,6 +139,198 @@ Put dashboards on a TV in the office. Send automated email digests every Monday.
 ## The tech stack
 
 We typically build with a combination of a cloud data warehouse (BigQuery, Redshift, or Snowflake), a transformation layer (dbt), and a visualization tool (Looker, Metabase, or custom React dashboards). The right choice depends on your team's technical capacity and budget.
+    `.trim(),
+  },
+  {
+    slug: "cloud-migration-guide-small-business",
+    title: "Cloud Migration Guide for Small Businesses (2026)",
+    excerpt:
+      "A step-by-step cloud migration plan for SMBs — from audit to production. No jargon, no fluff, just the exact process we use with 2–20 person teams.",
+    date: "2026-06-18",
+    readTime: "10 min read",
+    category: "Cloud",
+    content: `
+Moving to the cloud doesn't have to be a six-month enterprise project. For small businesses with 2–20 people, a focused migration can be done in 2–4 weeks — if you follow the right sequence.
+
+## Why migrate now?
+
+Small businesses running on-premises servers or basic shared hosting face three problems that get worse every year:
+
+1. **Scaling costs more than it should.** Adding capacity means buying hardware, waiting for delivery, and over-provisioning for peaks you hit once a month.
+2. **Security is your problem.** Patches, backups, disaster recovery — if your "IT person" is also your lead developer, something is getting neglected.
+3. **You're paying for idle capacity.** That server running at 8% utilization on weekends? That's money burning.
+
+Cloud infrastructure solves all three — but only if you migrate intentionally.
+
+## Step 1: Audit what you have (Day 1–2)
+
+Before touching anything, inventory your current setup:
+
+- **Applications:** What's running? Web app, database, email, file storage, CRM?
+- **Dependencies:** What talks to what? Draw the arrows.
+- **Data volume:** How much data are you moving? This determines timeline and cost.
+- **Compliance:** Any GDPR, PCI, or industry-specific requirements?
+
+Don't skip this. We've seen migrations stall because someone forgot about the legacy FTP server that three suppliers depend on.
+
+## Step 2: Choose your cloud strategy (Day 3)
+
+For each workload, pick one:
+
+| Strategy | When to use | Example |
+|----------|------------|---------|
+| **Rehost** (lift and shift) | Works fine, just move it | VM-based web app → EC2 |
+| **Replatform** | Minor tweaks for cloud benefits | MySQL on bare metal → RDS |
+| **Refactor** | Worth rebuilding for scale/cost | Monolith → serverless functions |
+| **Replace** | SaaS does it better | Self-hosted email → Google Workspace |
+
+**For most SMBs:** Rehost or replatform 80% of workloads. Refactor only the 1–2 things that will benefit most (usually the web app).
+
+## Step 3: Set up your cloud foundation (Day 4–5)
+
+Before migrating anything, build the landing zone:
+
+- **Networking:** VPC with public/private subnets, NAT gateway for outbound traffic
+- **IAM:** Least-privilege roles — never use root credentials
+- **Monitoring:** CloudWatch alarms for billing, CPU, disk
+- **Backups:** Automated snapshots with cross-region replication
+
+This takes a day to set up properly. Skip it, and you'll spend weeks fixing security holes later.
+
+## Step 4: Migrate in waves (Week 2–3)
+
+**Wave 1: Low-risk, high-learning.** Move your staging environment or a non-critical internal tool first. Learn the deployment process without risking production.
+
+**Wave 2: Data layer.** Migrate databases using native tools (AWS DMS, pg_dump/restore for PostgreSQL). Always run the old and new in parallel for at least 48 hours.
+
+**Wave 3: Production application.** Deploy the app to cloud, test thoroughly, then cut DNS. Keep the old environment running for 7 days as fallback.
+
+## Step 5: Optimize and monitor (Week 4+)
+
+The first bill will look wrong — that's normal. After 2 weeks of real usage data:
+
+- Right-size instances based on actual CPU/memory usage
+- Enable Savings Plans for predictable workloads
+- Set up billing alerts (we recommend alerts at 50%, 80%, and 100% of budget)
+- Schedule dev/staging to shut down outside business hours
+
+## What this costs (real numbers)
+
+For a typical small business (web app + database + file storage):
+
+| Phase | Cost | Timeline |
+|-------|------|----------|
+| Audit + planning | €0 (we do this free) | 2 days |
+| Foundation setup | €800–1,200 | 2 days |
+| Migration execution | €1,500–3,000 | 1–2 weeks |
+| Monthly cloud bill | €100–500 | Ongoing |
+
+Compare that to a dedicated server at €200–400/month that doesn't scale and has no redundancy.
+
+## Common mistakes to avoid
+
+- **Migrating everything at once.** Go in waves. Always have a rollback plan.
+- **Not testing DNS propagation.** TTL changes take time. Lower your TTL to 60s a week before cutover.
+- **Forgetting about email.** MX records, SPF, DKIM — don't break email delivery during migration.
+- **No cost controls.** Set hard budget limits. A misconfigured service can generate a €10K bill overnight.
+
+## Ready to start?
+
+We offer a [free cloud audit](/contact) where we review your current setup and give you a concrete migration plan — no commitment required. Most of our clients see their first results within 14 days of starting.
+    `.trim(),
+  },
+  {
+    slug: "serverless-development-agency-europe",
+    title: "Why Choose a Serverless Development Agency in Europe",
+    excerpt:
+      "Serverless development agencies cut your infrastructure costs by 60–80% while shipping faster. Here's what to look for and why European agencies have the edge.",
+    date: "2026-06-18",
+    readTime: "8 min read",
+    category: "Serverless",
+    content: `
+You've decided to go serverless. Smart move. But should you build the team in-house or hire a specialized agency? And if an agency, why pick one based in Europe?
+
+## The case for serverless (in 30 seconds)
+
+- **Pay per execution, not per hour.** Your app costs €0 when nobody's using it.
+- **Auto-scales to zero and to infinity.** Black Friday traffic spike? Handled. Sunday morning? You're not paying for idle servers.
+- **Ship faster.** No infrastructure to manage means developers spend time on features, not on patching kernels.
+
+The catch: serverless architecture is genuinely different from traditional development. The patterns, testing approaches, observability, and cost models are all new. This is where specialized agencies earn their fee.
+
+## What a serverless agency actually does
+
+A good serverless development agency handles:
+
+| Capability | What it means for you |
+|-----------|---------------------|
+| **Architecture design** | Event-driven patterns, proper service boundaries, cost modeling before you build |
+| **Implementation** | Lambda/Step Functions, API Gateway, DynamoDB, EventBridge — the full AWS serverless stack |
+| **CI/CD** | Automated deployments with rollback. Infrastructure as code (CDK, SST, or Terraform) |
+| **Cost optimization** | Right-sizing memory, batching, caching strategies that keep bills low |
+| **Monitoring & alerting** | Structured logging, distributed tracing, alarms that catch problems before users do |
+
+## Why European agencies have an edge
+
+### 1. GDPR native
+
+European agencies build data protection into architecture from day one — not as an afterthought. Data residency, encryption at rest, right to deletion — these are standard patterns, not special requests.
+
+### 2. Timezone alignment
+
+If your customers or team are in the EU, having your development partner in the same timezone means:
+- Real-time collaboration during business hours
+- Incident response without 8-hour delays
+- Sprint ceremonies that don't require 6am calls
+
+### 3. Cost-effective without cutting corners
+
+European agencies (especially in Southern and Eastern Europe) offer rates 40–60% lower than US-based firms while delivering the same or better quality. A senior serverless architect in Greece bills €100–150/hour vs. $250–350/hour in SF.
+
+### 4. EU cloud infrastructure expertise
+
+Many EU businesses need workloads running in eu-west-1, eu-central-1, or eu-south-1 for compliance. European agencies know these regions intimately — the service availability differences, latency characteristics, and pricing nuances.
+
+## What to look for when hiring
+
+Red flags:
+- ❌ "We do everything" — serverless requires specialization
+- ❌ No case studies with actual cost/performance numbers
+- ❌ Proposing containers when serverless fits better (or vice versa)
+- ❌ Can't explain their testing strategy for event-driven systems
+
+Green flags:
+- ✅ Published content about serverless architecture
+- ✅ AWS certifications (Solutions Architect, Developer, or Serverless specialty)
+- ✅ Open-source contributions
+- ✅ Transparent pricing — fixed project quotes or clear hourly rates
+- ✅ Will show you real before/after cost comparisons
+
+## Real cost comparison
+
+A typical SaaS application handling 100K requests/day:
+
+| Setup | Monthly cost | Scaling | Maintenance |
+|-------|-------------|---------|-------------|
+| Traditional (2x EC2 + RDS + ALB) | €400–800 | Manual | 10+ hrs/month |
+| Serverless (Lambda + DynamoDB + API GW) | €50–150 | Automatic | 2 hrs/month |
+
+The serverless setup is 5–8x cheaper AND scales automatically. The development cost is similar or lower because there's less infrastructure code to write.
+
+## How we work
+
+At Cloudless, we're a serverless-first agency based in Greece. Our typical engagement:
+
+1. **Free audit** (30 min) — We review your current architecture and identify serverless opportunities
+2. **Architecture proposal** (1 week) — Detailed design with cost projections
+3. **Build sprint** (2–4 weeks) — Working production system with CI/CD
+4. **Handoff** — Full documentation, your team owns everything
+
+No lock-in contracts. Month-to-month if you want ongoing support.
+
+## Ready to go serverless?
+
+[Book a free architecture review](/contact) — we'll tell you exactly what to migrate, what to leave alone, and what it'll cost. No commitment, no pitch deck, just honest technical advice.
     `.trim(),
   },
 ];
