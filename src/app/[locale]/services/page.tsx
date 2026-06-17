@@ -20,22 +20,24 @@ const BASE_URL = "https://cloudless.gr";
 const canonical = `${BASE_URL}/services`;
 
 export const metadata: Metadata = {
-  title: "Services",
+  title: "Cloud Consulting & Serverless Services in Greece",
   description:
-    "Cloud architecture, serverless development, data analytics, and AI-powered digital marketing services for startups and SMBs.",
+    "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.",
   alternates: {
     canonical,
     languages: {
       en: `${BASE_URL}/en/services`,
       el: `${BASE_URL}/el/services`,
+      de: `${BASE_URL}/de/services`,
+      fr: `${BASE_URL}/fr/services`,
       "x-default": `${BASE_URL}/en/services`,
     },
   },
   openGraph: {
     type: "website",
-    title: "Services",
+    title: "Cloud Consulting & Serverless Services in Greece",
     description:
-      "Cloud architecture, serverless development, data analytics, and AI-powered digital marketing services for startups and SMBs.",
+      "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.",
     url: canonical,
     siteName: "Cloudless",
   },
