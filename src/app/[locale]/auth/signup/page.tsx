@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { signIn as nextAuthSignIn } from "next-auth/react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
@@ -52,6 +52,9 @@ function SignUpForm() {
   const [confirming, setConfirming] = useState(false);
   // token is returned by /api/auth/register and needed to verify the OTP
   const [activationToken, setActivationToken] = useState("");
+  // 5-min countdown — seconds remaining until auto-resend fires
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const autoResendFiredRef = useRef(false);
 
   const handleCognitoSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +91,8 @@ function SignUpForm() {
       }
       if (data.token) setActivationToken(data.token);
       setStep("confirm-code");
+      setSecondsLeft(5 * 60);
+      autoResendFiredRef.current = false;
     } catch {
       setError(t("auth.signupFailed", "Sign up failed"));
     } finally {
@@ -118,6 +123,26 @@ function SignUpForm() {
     }
   };
 
+  // Countdown timer + auto-resend when it hits zero
+  useEffect(() => {
+    if (step !== "confirm-code" || secondsLeft <= 0) return;
+    const id = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(id);
+          if (!autoResendFiredRef.current) {
+            autoResendFiredRef.current = true;
+            handleResend();
+          }
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, secondsLeft > 0]);
+
   const handleResend = async () => {
     setResending(true);
     setResent(false);
@@ -131,6 +156,8 @@ function SignUpForm() {
       const data = (await res.json()) as { ok?: boolean; token?: string };
       if (data.token) setActivationToken(data.token);
       setResent(true);
+      setSecondsLeft(5 * 60);
+      autoResendFiredRef.current = false;
     } catch {
       // Keep the button available so the user can retry.
     } finally {
@@ -231,18 +258,21 @@ function SignUpForm() {
               </button>
               <div className="space-y-2 text-center">
                 <p className="font-mono text-xs text-slate-500">
-                  {t("auth.didntGetEmail", "Didn't get the email?")}
+                  {secondsLeft > 0
+                    ? t("auth.codeExpiresIn", "Code expires in") +
+                      ` ${String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:${String(secondsLeft % 60).padStart(2, "0")}`
+                    : t("auth.didntGetEmail", "Didn't get the email?")}
                 </p>
                 <button
                   type="button"
                   onClick={handleResend}
-                  disabled={resending || resent}
+                  disabled={resending || (resent && secondsLeft > 0)}
                   className="font-mono text-xs text-slate-400 hover:text-white disabled:opacity-60"
                 >
                   {resending
                     ? t("auth.resending", "Resending…")
-                    : resent
-                      ? t("auth.verificationResent", "Code resent ✓")
+                    : resent && secondsLeft > 0
+                      ? t("auth.verificationResent", "New code sent ✓")
                       : t("auth.resendVerification", "Resend code")}
                 </button>
               </div>

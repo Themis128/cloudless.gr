@@ -396,7 +396,7 @@ export async function sendActivationEmail(
             <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;">Can&rsquo;t tap the button? Enter this code instead</p>
             <p style="margin:0;font-size:36px;font-weight:700;letter-spacing:12px;color:#00fff5;font-family:monospace;">${otp}</p>
           </div>
-          <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">Both the button and the code expire in <strong style="color:#94a3b8;">24 hours</strong>. If you didn&rsquo;t create an account, ignore this email.</p>
+          <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">Both the button and the code expire in <strong style="color:#94a3b8;">5 minutes</strong>. If you didn&rsquo;t create an account, ignore this email.</p>
         </div>
         <div style="padding:16px 40px;background:#080811;border-top:1px solid #1e293b;">
           <p style="margin:0;font-size:12px;color:#475569;">Cloudless &middot; <a href="https://cloudless.gr" style="color:#00fff5;text-decoration:none;">cloudless.gr</a></p>
@@ -412,7 +412,7 @@ export async function sendActivationEmail(
       "",
       `OPTION 2 — enter this 6-digit code on the verification page: ${otp}`,
       "",
-      "Both expire in 24 hours. If you didn't create an account, ignore this email.",
+      "Both expire in 5 minutes. If you didn't create an account, ignore this email.",
       "",
       "Cloudless · cloudless.gr",
     ].join("\n"),

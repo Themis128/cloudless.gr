@@ -28,13 +28,11 @@ function verifyToken(email: string, token: string): boolean {
 }
 
 function verifyOtp(email: string, otp: string, token: string): boolean {
-  // OTP is derived from the same token material — verify the token first,
-  // then recompute the expected OTP and compare.
-  const parts = token.split(".");
-  if (parts.length !== 3) return false;
-  const [nonce, expStr] = parts;
+  // Must pass full token verification first (HMAC + expiry),
+  // then recompute the OTP from the same nonce+exp material.
+  if (!verifyToken(email, token)) return false;
+  const [nonce, expStr] = token.split(".");
   const exp = parseInt(expStr, 10);
-  if (isNaN(exp) || Date.now() > exp) return false;
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
   const expected = (
     parseInt(
