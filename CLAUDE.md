@@ -435,3 +435,62 @@ which automates Stages 0-3 from the Pi.
 - `hashicorp/aws`: `~> 5.80.0`
 - `aws-actions/configure-aws-credentials`: `v4.x`
 - `hashicorp/setup-terraform`: prefer `v3.x` (v2 nears Node 20 EOL)
+
+
+
+## OpenClaudia Marketing Skills
+
+67 marketing skills from [OpenClaudia](https://github.com/OpenClaudia/openclaudia-skills) are installed at `.claude/skills/`. They provide slash-command marketing automation for cloudless.gr.
+
+### Target Site
+
+- **URL:** https://cloudless.gr
+- **Stack:** Next.js (App Router), deployed on Pi5 k3s cluster + Vercel
+- **Auth:** Cognito
+- **CMS:** Notion databases
+
+### Available Skill Categories
+
+| Category | Example skills |
+|----------|---------------|
+| SEO | `seo-audit`, `keyword-research`, `serp-analyzer`, `backlink-audit`, `schema-markup`, `programmatic-seo` |
+| Content | `write-blog`, `write-landing`, `copywriting`, `copy-editing`, `content-strategy`, `seo-content-brief` |
+| Email | `email-sequence`, `email-subject-lines` |
+| Social | `social-content`, `thread-writer`, `linkedin-content`, `reddit-marketing`, `bluesky` |
+| Ads | `google-ads`, `facebook-ads`, `linkedin-ads`, `page-cro`, `ab-test-setup` |
+| Analytics | `google-analytics`, `search-console`, `semrush-research`, `google-ads-report` |
+| Strategy | `competitor-analysis`, `icp-builder`, `growth-strategy`, `launch-strategy`, `pricing-strategy` |
+| Messaging | `discord-bot`, `slack-bot`, `telegram-bot` |
+
+### API Keys (in `~/.claude/.env.global`)
+
+Currently configured:
+- `CLOUDFLARE_API_TOKEN` — DNS/CDN operations
+- `NOTION_API_KEY` — content management queries
+- `SITE_URL` — https://cloudless.gr
+
+Add these for richer skill output when available:
+- `SEMRUSH_API_KEY` — keyword/backlink data
+- `RESEND_API_KEY` — send emails directly
+- `UNSPLASH_CLIENT_ID` — stock images for blog posts
+- `HUBSPOT_ACCESS_TOKEN` — CRM integration
+- `SLACK_BOT_TOKEN` or `SLACK_WEBHOOK_URL` — Slack posting
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — GA4, Search Console, Ads
+
+### Usage
+
+Invoke skills directly in conversation or via slash commands:
+
+```
+> /seo-audit https://cloudless.gr
+> /write-blog "Cloud hosting for Greek businesses"
+> /competitor-analysis competitor.com
+> /keyword-research "cloud services greece"
+```
+
+Skills chain naturally — describe a goal and Claude orchestrates multiple skills:
+
+```
+> Audit cloudless.gr SEO, find keyword gaps vs competitors, then create a content
+> strategy and write the first blog post.
+```

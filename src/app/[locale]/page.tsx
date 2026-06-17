@@ -43,11 +43,14 @@ export async function generateMetadata({
     en: "https://cloudless.gr",
     el: "https://cloudless.gr/el",
     fr: "https://cloudless.gr/fr",
+    de: "https://cloudless.gr/de",
   };
   const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
 
   return {
-    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+    title: {
+      absolute: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+    },
     description:
       "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
     alternates: {
@@ -56,6 +59,7 @@ export async function generateMetadata({
         en: localePaths.en,
         el: localePaths.el,
         fr: localePaths.fr,
+        de: localePaths.de,
         "x-default": localePaths.en,
       },
     },
