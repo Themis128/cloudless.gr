@@ -1160,6 +1160,15 @@ export default function ClientPortalsPage() {
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
+                    <a
+                      href={`/portal/${portal.token}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded-lg border border-neon-cyan/30 px-3 py-1.5 font-mono text-xs text-neon-cyan transition hover:border-neon-cyan/60 hover:bg-neon-cyan/10"
+                    >
+                      Open Portal
+                    </a>
                     <button
                       type="button"
                       onClick={(e) => {

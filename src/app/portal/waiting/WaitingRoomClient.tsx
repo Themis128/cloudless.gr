@@ -157,7 +157,7 @@ function WaitingRoomContent() {
     async function loadAndEnroll() {
       try {
         const meRes = await fetchWithAuth("/api/portal/me");
-        if (!meRes.ok) throw new Error(`HTTP ${meRes.status}`);
+        if (!meRes.ok) throw new Error(`Portal status check failed (HTTP ${meRes.status})`);
         const me: PortalStatus = await meRes.json();
 
         if (planParam && !enrollAttemptedFor.current.has(planParam)) {
