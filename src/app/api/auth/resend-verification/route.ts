@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
   // Generate a fresh token + OTP
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
-  const exp = Date.now() + 24 * 60 * 60 * 1000;
+  const exp = Date.now() + 5 * 60 * 1000; // 5-minute window
   const nonce = randomBytes(16).toString("hex");
   const sig = createHmac("sha256", secret).update(`${email}:${exp}:${nonce}`).digest("base64url");
   const token = `${nonce}.${exp}.${sig}`;
