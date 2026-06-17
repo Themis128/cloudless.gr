@@ -41,7 +41,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
  *   - image: URL or path (default: /store/default.svg)
  *   - features: comma-separated list
  */
-function mapStripeProduct(sp: StripeProduct): StoreProduct {
+export function mapStripeProduct(sp: StripeProduct): StoreProduct {
   const category = (sp.metadata.category as ProductCategory) || "service";
   const image = sp.metadata.image || sp.images[0] || "/store/default.svg";
   const features = sp.metadata.features

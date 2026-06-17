@@ -7,13 +7,79 @@ const ADS_SCOPE = "https://www.googleapis.com/auth/adwords";
 // Module-level token cache to avoid minting a new JWT on every request.
 let cachedToken: { value: string; expiresAt: number } | null = null;
 
-function base64url(input: string | Buffer): string {
+// ---------------------------------------------------------------------------
+// Pure helpers (exported for testability)
+// ---------------------------------------------------------------------------
+
+/** URL-safe Base64 encoding (no padding). */
+export function base64url(input: string | Buffer): string {
   return Buffer.from(input)
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 }
+
+/** Raw Google Ads API campaign row shape. */
+export interface GoogleCampaignRow {
+  campaign: {
+    id: string;
+    name: string;
+    status: string;
+    advertisingChannelType: string;
+    startDate: string;
+    endDate: string;
+  };
+  campaignBudget?: { amountMicros: string };
+}
+
+/** Transform a raw Google Ads campaign row into the normalized shape. */
+export function mapCampaignRow(r: GoogleCampaignRow): GoogleCampaign {
+  return {
+    id: r.campaign.id,
+    name: r.campaign.name,
+    status: r.campaign.status,
+    advertisingChannelType: r.campaign.advertisingChannelType,
+    budgetAmountMicros: r.campaignBudget?.amountMicros ?? "0",
+    startDate: r.campaign.startDate,
+    endDate: r.campaign.endDate,
+  };
+}
+
+/** Raw Google Ads metrics row shape. */
+export interface GoogleMetricsRow {
+  impressions?: string;
+  clicks?: string;
+  costMicros?: string;
+  conversions?: string;
+  ctr?: string;
+}
+
+/** Transform raw metrics into the normalized shape. Returns the empty
+ *  metrics object when input is null/undefined. */
+export function parseMetricsRow(m: GoogleMetricsRow | null | undefined): GoogleMetrics {
+  if (!m) return emptyMetrics();
+  return {
+    impressions: parseInt(m.impressions ?? "0", 10),
+    clicks: parseInt(m.clicks ?? "0", 10),
+    costMicros: parseInt(m.costMicros ?? "0", 10),
+    conversions: parseFloat(m.conversions ?? "0"),
+    ctr: parseFloat(m.ctr ?? "0"),
+  };
+}
+
+export function emptyMetrics(): GoogleMetrics {
+  return { impressions: 0, clicks: 0, costMicros: 0, conversions: 0, ctr: 0 };
+}
+
+/** Strip dashes from a customer ID string (Google Ads requires plain digits). */
+export function normalizeCustomerId(raw: string): string {
+  return raw.replace(/-/g, "");
+}
+
+// ---------------------------------------------------------------------------
+// I/O layer (adapters)
+// ---------------------------------------------------------------------------
 
 async function getServiceAccountAccessToken(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
@@ -69,7 +135,7 @@ async function getGoogleAdsConfig(): Promise<{
   const accessToken = await getServiceAccountAccessToken();
   return {
     devToken: cfg.GOOGLE_ADS_DEVELOPER_TOKEN,
-    customerId: cfg.GOOGLE_ADS_CUSTOMER_ID.replace(/-/g, ""),
+    customerId: normalizeCustomerId(cfg.GOOGLE_ADS_CUSTOMER_ID),
     accessToken,
   };
 }
@@ -126,27 +192,7 @@ export async function listGoogleCampaigns(): Promise<GoogleCampaign[]> {
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).map(
-      (r: {
-        campaign: {
-          id: string;
-          name: string;
-          status: string;
-          advertisingChannelType: string;
-          startDate: string;
-          endDate: string;
-        };
-        campaignBudget?: { amountMicros: string };
-      }) => ({
-        id: r.campaign.id,
-        name: r.campaign.name,
-        status: r.campaign.status,
-        advertisingChannelType: r.campaign.advertisingChannelType,
-        budgetAmountMicros: r.campaignBudget?.amountMicros ?? "0",
-        startDate: r.campaign.startDate,
-        endDate: r.campaign.endDate,
-      })
-    );
+    return (data.results ?? []).map((r: GoogleCampaignRow) => mapCampaignRow(r));
   } catch {
     return [];
   }
@@ -161,13 +207,6 @@ export interface GoogleMetrics {
 }
 
 export async function getGoogleMetrics(dateStart: string, dateEnd: string): Promise<GoogleMetrics> {
-  const empty: GoogleMetrics = {
-    impressions: 0,
-    clicks: 0,
-    costMicros: 0,
-    conversions: 0,
-    ctr: 0,
-  };
   try {
     const { customerId } = await getGoogleAdsConfig();
     const query = `
@@ -180,17 +219,10 @@ export async function getGoogleMetrics(dateStart: string, dateEnd: string): Prom
       method: "POST",
       body: JSON.stringify({ query }),
     });
-    if (!res.ok) return empty;
+    if (!res.ok) return emptyMetrics();
     const data = await res.json();
-    const m = data.results?.[0]?.metrics ?? {};
-    return {
-      impressions: parseInt(m.impressions ?? "0", 10),
-      clicks: parseInt(m.clicks ?? "0", 10),
-      costMicros: parseInt(m.costMicros ?? "0", 10),
-      conversions: parseFloat(m.conversions ?? "0"),
-      ctr: parseFloat(m.ctr ?? "0"),
-    };
+    return parseMetricsRow(data.results?.[0]?.metrics);
   } catch {
-    return empty;
+    return emptyMetrics();
   }
 }

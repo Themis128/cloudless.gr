@@ -112,6 +112,23 @@ export type WorkspaceAuthResult =
   | { ok: false; response: NextResponse };
 
 /**
+ * Pure authorization decision: determine if a user has access to a workspace.
+ * Returns "granted" | "no_workspace" | "forbidden".
+ * Exported for testability — the actual gate wraps this with I/O.
+ */
+export function checkWorkspaceAccess(
+  user: DecodedToken,
+  workspace: Workspace | null,
+  isGlobalAdmin: boolean
+): "granted" | "no_workspace" | "forbidden" {
+  if (!workspace) return "no_workspace";
+  if (isGlobalAdmin) return "granted";
+  const email = user.email?.toLowerCase();
+  if (email && workspace.adminEmails.some((e) => e.toLowerCase() === email)) return "granted";
+  return "forbidden";
+}
+
+/**
  * Workspace-scoped admin gate.
  *
  * Decision tree:
@@ -130,7 +147,9 @@ export async function requireWorkspaceAdmin(request: NextRequest): Promise<Works
   if (!authResult.ok) return authResult;
 
   const workspace = await getActiveWorkspace(request);
-  if (!workspace) {
+  const decision = checkWorkspaceAccess(authResult.user, workspace, isAdmin(authResult.user));
+
+  if (decision === "no_workspace") {
     return {
       ok: false,
       response: NextResponse.json(
@@ -140,19 +159,12 @@ export async function requireWorkspaceAdmin(request: NextRequest): Promise<Works
     };
   }
 
-  // Global admin → any workspace.
-  if (isAdmin(authResult.user)) {
-    return { ok: true, user: authResult.user, workspace };
+  if (decision === "forbidden") {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Workspace admin access required" }, { status: 403 }),
+    };
   }
 
-  // Workspace admin → only this workspace.
-  const email = authResult.user.email?.toLowerCase();
-  if (email && workspace.adminEmails.some((e) => e.toLowerCase() === email)) {
-    return { ok: true, user: authResult.user, workspace };
-  }
-
-  return {
-    ok: false,
-    response: NextResponse.json({ error: "Workspace admin access required" }, { status: 403 }),
-  };
+  return { ok: true, user: authResult.user, workspace: workspace! };
 }
