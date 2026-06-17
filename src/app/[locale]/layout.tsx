@@ -40,17 +40,29 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<import("next").Metadata> {
-  await params;
+  const { locale } = await params;
+
+  const ogLocaleMap: Record<string, string> = {
+    en: "en_US",
+    el: "el_GR",
+    fr: "fr_FR",
+    de: "de_DE",
+  };
 
   return {
     alternates: {
       languages: {
-        en: `${BASE_URL}`,
+        en: `${BASE_URL}/en`,
         el: `${BASE_URL}/el`,
         fr: `${BASE_URL}/fr`,
         de: `${BASE_URL}/de`,
-        "x-default": `${BASE_URL}`,
+        "x-default": `${BASE_URL}/en`,
       },
+    },
+    openGraph: {
+      url: `${BASE_URL}/${locale}`,
+      siteName: "Cloudless",
+      locale: ogLocaleMap[locale] ?? "en_US",
     },
   };
 }

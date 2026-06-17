@@ -48,41 +48,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: `${baseUrl}/en`,
       lastModified: new Date(LAST_MODIFIED["/"]),
       changeFrequency: "weekly",
       priority: 1,
       alternates: localeAlternates(""),
     },
     {
-      url: `${baseUrl}/services`,
+      url: `${baseUrl}/en/services`,
       lastModified: new Date(LAST_MODIFIED["/services"]),
       changeFrequency: "monthly",
       priority: 0.9,
+      alternates: localeAlternates("/services"),
     },
     {
-      url: `${baseUrl}/store`,
+      url: `${baseUrl}/en/store`,
       lastModified: new Date(LAST_MODIFIED["/store"]),
       changeFrequency: "weekly",
       priority: 0.8,
+      alternates: localeAlternates("/store"),
     },
     {
-      url: `${baseUrl}/blog`,
+      url: `${baseUrl}/en/blog`,
       lastModified: new Date(LAST_MODIFIED["/blog"]),
       changeFrequency: "weekly",
       priority: 0.8,
+      alternates: localeAlternates("/blog"),
     },
     {
-      url: `${baseUrl}/contact`,
+      url: `${baseUrl}/en/contact`,
       lastModified: new Date(LAST_MODIFIED["/contact"]),
       changeFrequency: "monthly",
       priority: 0.7,
+      alternates: localeAlternates("/contact"),
     },
   ];
 
   // Blog posts already carry their own publish date — use it directly
   const blogPages: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
+    url: `${baseUrl}/en/blog/${post.slug}`,
     lastModified: new Date(post.date),
     changeFrequency: "monthly" as const,
     priority: 0.6,
@@ -93,10 +97,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // catalogue date so it only resets when the catalogue is actually updated
   const catalogueDate = new Date(LAST_MODIFIED["/store/products"]);
   const productPages: MetadataRoute.Sitemap = defaultProducts.map((product) => ({
-    url: `${baseUrl}/store/${product.id}`,
+    url: `${baseUrl}/en/store/${product.id}`,
     lastModified: catalogueDate,
     changeFrequency: "monthly" as const,
     priority: 0.5,
+    alternates: localeAlternates(`/store/${product.id}`),
   }));
 
   // Case studies (Notion-backed with static fallback)
@@ -108,7 +113,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // fall back to static list
   }
   const caseStudyPages: MetadataRoute.Sitemap = caseStudyList.map((cs) => ({
-    url: `${baseUrl}/case-studies/${cs.slug}`,
+    url: `${baseUrl}/en/case-studies/${cs.slug}`,
     lastModified: new Date(cs.date),
     changeFrequency: "monthly" as const,
     priority: 0.7,
@@ -127,10 +132,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map((line) => {
         const [path, lastmod] = line.split("\t");
         return {
-          url: `${baseUrl}${path}`,
+          url: `${baseUrl}/en${path}`,
           lastModified: lastmod ? new Date(lastmod) : new Date(),
           changeFrequency: "weekly" as const,
           priority: path.startsWith("/docs/") ? 0.6 : 0.65,
+          alternates: localeAlternates(path),
         };
       });
   } catch {

@@ -439,5 +439,8 @@
     "by": "von",
     "result": "Ergebnis",
     "results": "Ergebnisse"
+  },
+  "meta": {
+    "description": "Klarer Himmel. Null Reibung. Wir helfen Startups und KMU mit Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestütztem digitalem Marketing."
   }
 }

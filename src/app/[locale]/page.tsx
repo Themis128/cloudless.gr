@@ -40,19 +40,26 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const localePaths: Record<string, string> = {
-    en: "https://cloudless.gr",
+    en: "https://cloudless.gr/en",
     el: "https://cloudless.gr/el",
     fr: "https://cloudless.gr/fr",
     de: "https://cloudless.gr/de",
   };
   const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
 
+  const descriptions: Record<string, string> = {
+    en: "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+    el: "Καθαροί ουρανοί. Μηδέν τριβή. Βοηθάμε startups και μικρομεσαίες επιχειρήσεις με cloud αρχιτεκτονική, serverless ανάπτυξη, data analytics και AI-powered digital marketing.",
+    fr: "Ciel dégagé. Zéro friction. Nous aidons les startups et PME avec l'architecture cloud, le développement serverless, l'analyse de données et le marketing digital propulsé par l'IA.",
+    de: "Klarer Himmel. Null Reibung. Wir helfen Startups und KMU mit Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestütztem digitalem Marketing.",
+  };
+  const description = descriptions[locale] ?? descriptions.en;
+
   return {
     title: {
       absolute: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     },
-    description:
-      "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+    description,
     alternates: {
       canonical,
       languages: {

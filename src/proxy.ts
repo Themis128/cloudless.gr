@@ -383,7 +383,24 @@ async function handlePageRoute(
   // layout) can call themeForRoute() and render <html data-theme=...>
   // server-side with no first-paint flash. next/headers reads request-side.
   request.headers.set("x-pathname", pathname);
-  const response = intlMiddleware(request);
+  let response = intlMiddleware(request);
+
+  // next-intl uses 307 (temporary) for locale redirects. Override to 308
+  // (permanent) so search engines consolidate PageRank and stop re-crawling
+  // the redirecting URLs.
+  if (response.status === 307) {
+    const location = response.headers.get("location");
+    if (location) {
+      const permanent = NextResponse.redirect(location, 308);
+      response.headers.forEach((value, key) => {
+        if (key.toLowerCase() !== "location") {
+          permanent.headers.set(key, value);
+        }
+      });
+      response = permanent;
+    }
+  }
+
   addSecurityHeaders(response, nonce);
   return response;
 }
