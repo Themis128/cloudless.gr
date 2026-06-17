@@ -74,18 +74,22 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get("email")?.toLowerCase().trim();
   const token = searchParams.get("token");
 
+  // Auth pages are under /[locale]/auth/*, default to /en
+  const base = new URL(req.url);
+  const origin = base.origin;
+
   if (!email || !token || !verifyToken(email, token))
-    return NextResponse.redirect(new URL("/auth/signup?activated=invalid", req.url));
+    return NextResponse.redirect(`${origin}/en/auth/signup?activated=invalid`);
 
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
   if (!userPoolId)
-    return NextResponse.redirect(new URL("/auth/signup?activated=error", req.url));
+    return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
 
   const ok = await confirmUser(userPoolId, email);
   if (!ok)
-    return NextResponse.redirect(new URL("/auth/signup?activated=error", req.url));
+    return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
 
-  return NextResponse.redirect(new URL("/auth/login?activated=1", req.url));
+  return NextResponse.redirect(`${origin}/en/auth/login?activated=1`);
 }
 
 /** POST /api/auth/activate  — OTP code typed manually on mobile */

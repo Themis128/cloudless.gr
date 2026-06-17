@@ -2,7 +2,7 @@
 /**
  * Unit tests for POST /api/auth/register
  *
- * The route creates a Cognito user via SignUpCommand.
+ * The route creates a Cognito user via AdminCreateUser + AdminSetUserPassword.
  * The AWS SDK client is mocked so no real AWS call is made.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -12,7 +12,10 @@ vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
   CognitoIdentityProviderClient: class {
     send = sendMock;
   },
-  SignUpCommand: class {
+  AdminCreateUserCommand: class {
+    constructor(public input: Record<string, unknown>) {}
+  },
+  AdminSetUserPasswordCommand: class {
     constructor(public input: Record<string, unknown>) {}
   },
 }));
@@ -26,27 +29,25 @@ function req(body: unknown) {
 }
 
 const COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
-const CLIENT_ID = "test-client-id";
+const USER_POOL_ID = "us-east-1_TEST";
 
 describe("POST /api/auth/register", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env.COGNITO_ISSUER = COGNITO_ISSUER;
-    process.env.COGNITO_CLIENT_ID = CLIENT_ID;
-    delete process.env.COGNITO_CLIENT_SECRET;
+    process.env.COGNITO_USER_POOL_ID = USER_POOL_ID;
   });
 
   afterEach(() => {
     delete process.env.COGNITO_ISSUER;
-    delete process.env.COGNITO_CLIENT_ID;
-    delete process.env.COGNITO_CLIENT_SECRET;
+    delete process.env.COGNITO_USER_POOL_ID;
   });
 
   // ── config guards ──────────────────────────────────────────────────────────
 
-  it("returns 503 when COGNITO_CLIENT_ID is not set", async () => {
-    delete process.env.COGNITO_CLIENT_ID;
+  it("returns 503 when COGNITO_USER_POOL_ID is not set", async () => {
+    delete process.env.COGNITO_USER_POOL_ID;
     const { POST } = await import("@/app/api/auth/register/route");
     const res = await POST(req({ email: "a@b.com", password: "Test123!" }));
     expect(res.status).toBe(503);
@@ -120,7 +121,8 @@ describe("POST /api/auth/register", () => {
   // ── success path ───────────────────────────────────────────────────────────
 
   it("returns { ok: true, token: string } on successful registration", async () => {
-    sendMock.mockResolvedValueOnce({});
+    // AdminCreateUser + AdminSetUserPassword = two send calls
+    sendMock.mockResolvedValueOnce({}).mockResolvedValueOnce({});
     const { POST } = await import("@/app/api/auth/register/route");
     const res = await POST(req({ email: "new@b.com", password: "Test123!" }));
     expect(res.status).toBe(200);
@@ -130,11 +132,19 @@ describe("POST /api/auth/register", () => {
     expect(body.token.split(".")).toHaveLength(3);
   });
 
+  it("uses AdminCreateUser with MessageAction=SUPPRESS", async () => {
+    sendMock.mockResolvedValueOnce({}).mockResolvedValueOnce({});
+    const { POST } = await import("@/app/api/auth/register/route");
+    await POST(req({ email: "a@b.com", password: "Test123!" }));
+    const cmd = sendMock.mock.calls[0][0] as { input: Record<string, unknown> };
+    expect(cmd.input.MessageAction).toBe("SUPPRESS");
+    expect(cmd.input.UserPoolId).toBe(USER_POOL_ID);
+  });
+
   it("includes fullName as UserAttributes name when provided", async () => {
-    sendMock.mockResolvedValueOnce({});
+    sendMock.mockResolvedValueOnce({}).mockResolvedValueOnce({});
     const { POST } = await import("@/app/api/auth/register/route");
     await POST(req({ email: "a@b.com", password: "Test123!", fullName: "John Doe" }));
-    expect(sendMock).toHaveBeenCalledTimes(1);
     const cmd = sendMock.mock.calls[0][0] as {
       input: { UserAttributes: Array<{ Name: string; Value: string }> };
     };
@@ -142,30 +152,12 @@ describe("POST /api/auth/register", () => {
   });
 
   it("omits name attribute when fullName is absent", async () => {
-    sendMock.mockResolvedValueOnce({});
+    sendMock.mockResolvedValueOnce({}).mockResolvedValueOnce({});
     const { POST } = await import("@/app/api/auth/register/route");
     await POST(req({ email: "a@b.com", password: "Test123!" }));
     const cmd = sendMock.mock.calls[0][0] as {
       input: { UserAttributes: Array<{ Name: string }> };
     };
     expect(cmd.input.UserAttributes.find((a) => a.Name === "name")).toBeUndefined();
-  });
-
-  it("includes SecretHash when COGNITO_CLIENT_SECRET is set", async () => {
-    process.env.COGNITO_CLIENT_SECRET = "s3cr3t";
-    sendMock.mockResolvedValueOnce({});
-    const { POST } = await import("@/app/api/auth/register/route");
-    await POST(req({ email: "a@b.com", password: "Test123!" }));
-    const cmd = sendMock.mock.calls[0][0] as { input: { SecretHash?: string } };
-    expect(typeof cmd.input.SecretHash).toBe("string");
-    expect(cmd.input.SecretHash!.length).toBeGreaterThan(0);
-  });
-
-  it("omits SecretHash when COGNITO_CLIENT_SECRET is not set", async () => {
-    sendMock.mockResolvedValueOnce({});
-    const { POST } = await import("@/app/api/auth/register/route");
-    await POST(req({ email: "a@b.com", password: "Test123!" }));
-    const cmd = sendMock.mock.calls[0][0] as { input: { SecretHash?: string } };
-    expect(cmd.input.SecretHash).toBeUndefined();
   });
 });

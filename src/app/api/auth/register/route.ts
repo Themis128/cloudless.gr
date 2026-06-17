@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   CognitoIdentityProviderClient,
-  SignUpCommand,
+  AdminCreateUserCommand,
+  AdminSetUserPasswordCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac, randomBytes } from "crypto";
 import { recordNotification } from "@/lib/admin-notifications";
@@ -14,19 +15,7 @@ function makeClient(): CognitoIdentityProviderClient {
   return new CognitoIdentityProviderClient({ region });
 }
 
-function secretHash(username: string): string | undefined {
-  const secret = process.env.COGNITO_CLIENT_SECRET;
-  const clientId = process.env.COGNITO_CLIENT_ID ?? "";
-  if (!secret) return undefined;
-  return createHmac("sha256", secret)
-    .update(username + clientId)
-    .digest("base64");
-}
-
 export async function POST(req: NextRequest) {
-  // Two-tier rate limit:
-  //  - per IP, generous (handles corporate NAT)
-  //  - per email body, strict (prevents account enumeration grinding)
   const ipRl = rateLimit(`auth-register:ip:${getClientIp(req)}`, 20, 60_000);
   if (!ipRl.ok) return ipRl.response;
 
@@ -48,28 +37,37 @@ export async function POST(req: NextRequest) {
   const emailRl = rateLimit(`auth-register:email:${email}`, 5, 600_000);
   if (!emailRl.ok) return emailRl.response;
 
-  const clientId = process.env.COGNITO_CLIENT_ID;
-  if (!clientId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
 
   // Always succeed-or-look-like-success to defeat account enumeration.
-  // The legitimate flow continues via the Cognito verification email
-  // (the user can't proceed without clicking it). For real errors that
-  // would block ANY signup (invalid password, service down), we still
-  // return 400/503 — but we never confirm or deny whether a given email
-  // already exists.
   const ENUM_SAFE_OK = NextResponse.json({ ok: true });
 
   try {
-    await makeClient().send(
-      new SignUpCommand({
-        ClientId: clientId,
+    const client = makeClient();
+    // AdminCreateUser with MessageAction=SUPPRESS creates the user without
+    // sending Cognito's own verification email — our branded SES email below
+    // is the only activation message the user receives.
+    await client.send(
+      new AdminCreateUserCommand({
+        UserPoolId: userPoolId,
         Username: email,
-        Password: password,
-        SecretHash: secretHash(email),
+        MessageAction: "SUPPRESS",
         UserAttributes: [
           { Name: "email", Value: email },
+          { Name: "email_verified", Value: "false" },
           ...(fullName ? [{ Name: "name", Value: fullName }] : []),
         ],
+      })
+    );
+    // Set the permanent password immediately so the user isn't forced into a
+    // FORCE_CHANGE_PASSWORD state after confirming their email.
+    await client.send(
+      new AdminSetUserPasswordCommand({
+        UserPoolId: userPoolId,
+        Username: email,
+        Password: password,
+        Permanent: true,
       })
     );
     // Generate a 24-hour HMAC activation token and send our branded SES email.
@@ -99,20 +97,19 @@ export async function POST(req: NextRequest) {
       metadata: { fullName: fullName ?? null },
     });
     // Return token so the client can verify the OTP without a separate lookup.
-    // For existing accounts (UsernameExistsException handled below) we still
-    // return ENUM_SAFE_OK without a token — no OTP was generated.
     return NextResponse.json({ ok: true, token });
   } catch (err: unknown) {
     const name = (err as { name?: string }).name;
     if (name === "UsernameExistsException") {
       console.warn(`[auth/register] enumeration probe blocked for ${email}`);
-      return NextResponse.json({ ok: true });
+      return ENUM_SAFE_OK;
     }
     if (name === "InvalidPasswordException" || name === "InvalidParameterException")
       return NextResponse.json(
         { error: "Password does not meet requirements (min 8 chars, mixed case, number, symbol)" },
         { status: 400 }
       );
+    console.error("[auth/register] AdminCreateUser failed:", err);
     return NextResponse.json({ error: "Sign up failed" }, { status: 500 });
   }
 }
