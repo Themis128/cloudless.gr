@@ -36,7 +36,13 @@ export async function GET() {
       phone: profile.phone,
       preferences: profile.preferences,
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("USER_PROFILE_TABLE")) {
+      return NextResponse.json({
+        name: session.user.name ?? undefined,
+        email: session.user.email ?? undefined,
+      });
+    }
     return NextResponse.json({ error: "Could not read profile" }, { status: 502 });
   }
 }

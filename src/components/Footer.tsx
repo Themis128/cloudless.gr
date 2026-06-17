@@ -159,6 +159,11 @@ export default function Footer() {
                 key: "legal.refundTitle",
                 fallback: "Refund & Returns",
               },
+              {
+                href: "/accessibility",
+                key: "legal.accessibilityTitle",
+                fallback: "Accessibility",
+              },
             ].map((link) => (
               <Link
                 key={link.href}
