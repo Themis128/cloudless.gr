@@ -67,7 +67,9 @@ describe("admin-notifications", () => {
         title: "T",
         message: "M",
       });
-      expect(r).toBeNull();
+      // Lake-only mode: returns the notification (written to S3) but skips DynamoDB.
+      expect(r).not.toBeNull();
+      expect(r!.title).toBe("T");
       expect(mockDynamoSend).not.toHaveBeenCalled();
     });
 
