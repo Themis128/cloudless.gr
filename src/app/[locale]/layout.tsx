@@ -18,6 +18,9 @@ import ClientCartSlideOver from "@/components/ClientCartSlideOver";
 import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
 import AttributionCapture from "@/components/AttributionCapture";
+import ConsentGatedPixel from "@/components/ConsentGatedPixel";
+
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
 
 type Props = {
   children: React.ReactNode;
@@ -73,6 +76,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           <CartProvider>
             <CookieConsentProvider>
               <GoogleAnalyticsConsent />
+              {META_PIXEL_ID && <ConsentGatedPixel pixelId={META_PIXEL_ID} />}
               <AttributionCapture />
               <JsonLd data={getOrganizationSchema()} />
               <TrainingBanner locale={locale} />

@@ -5,7 +5,6 @@ import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import { HubSpotScript } from "@/components/HubSpotScript";
-import ConsentGatedPixel from "@/components/ConsentGatedPixel";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import "./globals.css";
 
@@ -126,12 +125,6 @@ export default async function RootLayout({
           Skip to content
         </a>
         <ChunkReloadGuard />
-        {META_PIXEL_ID ? (
-          // Pixel is initialised only after the user grants marketing consent.
-          // ConsentGatedPixel listens to CookieConsentContext and injects the
-          // fbevents.js script dynamically when marketing === true.
-          <ConsentGatedPixel pixelId={META_PIXEL_ID} nonce={nonce} />
-        ) : null}
         <HubSpotScript nonce={nonce} />
         {GA_ID ? (
           <>
