@@ -20,10 +20,10 @@ export const revalidate = 3600;
 // that haven't changed — which harms crawl-priority signals.
 // ---------------------------------------------------------------------------
 const LAST_MODIFIED: Record<string, string> = {
-  "/": "2026-04-19",
-  "/services": "2026-04-19",
+  "/": "2026-06-18",
+  "/services": "2026-06-18",
   "/store": "2026-04-19",
-  "/blog": "2026-04-19",
+  "/blog": "2026-06-17",
   "/contact": "2026-04-19",
   // Store product catalogue — bump when the catalogue is updated
   "/store/products": "2026-04-19",
@@ -36,6 +36,8 @@ function localeAlternates(path: string) {
     languages: {
       en: (base + "/en" + path) as string,
       el: (base + "/el" + path) as string,
+      fr: (base + "/fr" + path) as string,
+      de: (base + "/de" + path) as string,
       "x-default": (base + "/en" + path) as string,
     },
   };

@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     template: "%s | Cloudless",
   },
   description:
-    "Training & portfolio project — built for educational purposes only, not a commercial service. Demonstrates cloud architecture, serverless, data analytics, and AI-powered marketing on Next.js & AWS.",
+    "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
   keywords: [
     "cloud computing",
     "serverless",
@@ -68,9 +68,9 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
   },
   openGraph: {
-    title: "Cloudless — Training & Portfolio Project",
+    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     description:
-      "Educational & portfolio project only — not a commercial service. Demonstrates cloud architecture, serverless, analytics & AI marketing on Next.js & AWS.",
+      "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
     url: "https://cloudless.gr",
     siteName: "Cloudless",
     locale: "en_US",
@@ -78,9 +78,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cloudless — Training & Portfolio Project",
+    title: "Cloudless — Cloud Computing, Serverless & AI Marketing",
     description:
-      "Educational & portfolio project only — not a commercial service. Cloud architecture, serverless, analytics & AI marketing on Next.js & AWS.",
+      "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
   },
 };
 
