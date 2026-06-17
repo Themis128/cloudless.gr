@@ -6,6 +6,7 @@ import {
   BatchWriteItemCommand,
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
 /**
@@ -146,23 +147,27 @@ export async function recordNotification(input: {
   route?: string;
   metadata?: Record<string, unknown>;
 }): Promise<AdminNotification | null> {
+  const notif: AdminNotification = {
+    id: randomId(),
+    createdAt: new Date().toISOString(),
+    category: input.category,
+    type: input.type ?? "info",
+    title: input.title,
+    message: input.message,
+    actor: input.actor,
+    route: input.route,
+    metadata: input.metadata,
+    read: false,
+  };
+
+  // Always write to data lake (S3) for analytics — fire and forget.
+  sinkToLake(notif).catch(() => {});
+
   if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    // Table not configured (local dev, partial deploys) — caller can ignore.
-    return null;
+    // DynamoDB table not configured — lake-only mode.
+    return notif;
   }
   try {
-    const notif: AdminNotification = {
-      id: randomId(),
-      createdAt: new Date().toISOString(),
-      category: input.category,
-      type: input.type ?? "info",
-      title: input.title,
-      message: input.message,
-      actor: input.actor,
-      route: input.route,
-      metadata: input.metadata,
-      read: false,
-    };
     await getDynamoClient().send(
       new PutItemCommand({
         TableName: getTableName(),
@@ -367,4 +372,40 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
     lastKey = res.LastEvaluatedKey;
   } while (lastKey);
   return purged;
+}
+
+
+// ---------------------------------------------------------------------------
+// Data Lake sink — writes notifications to S3 as NDJSON for Athena queries.
+// Partitioned by year/month for the notifications table schema.
+// ---------------------------------------------------------------------------
+
+const LAKE_BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
+
+let s3Client: S3Client | null = null;
+function getS3(): S3Client {
+  s3Client ??= new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+  return s3Client;
+}
+
+async function sinkToLake(notif: AdminNotification): Promise<void> {
+  const d = new Date(notif.createdAt);
+  const year = String(d.getUTCFullYear());
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const key = `lake/notifications/year=${year}/month=${month}/${notif.id}.json`;
+
+  const record = JSON.stringify({
+    id: notif.id,
+    type: notif.type,
+    title: notif.title,
+    message: notif.message,
+    email: notif.actor,
+    channel: "system",
+    created_at: notif.createdAt,
+    metadata: notif.metadata ? JSON.stringify(notif.metadata) : null,
+  });
+
+  await getS3().send(
+    new PutObjectCommand({ Bucket: LAKE_BUCKET, Key: key, Body: record, ContentType: "application/json" })
+  );
 }

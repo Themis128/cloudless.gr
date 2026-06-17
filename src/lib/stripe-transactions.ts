@@ -146,6 +146,8 @@ export async function persistStripeEvent(event: Stripe.Event): Promise<PersistSt
         ConditionExpression: "attribute_not_exists(eventId)",
       })
     );
+    // Sink to data lake for analytics (fire-and-forget)
+    sinkStripeEventToLake(event).catch(() => {});
     return { duplicate: false };
   } catch (error) {
     if (
@@ -190,5 +192,46 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
         ":error": { S: errorMessage.slice(0, 1000) },
       },
     })
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Data Lake sink — writes Stripe events to S3 for Athena analytics.
+// ---------------------------------------------------------------------------
+
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+const LAKE_BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
+
+let s3Lake: S3Client | null = null;
+function getLakeS3(): S3Client {
+  s3Lake ??= new S3Client({ region: REGION });
+  return s3Lake;
+}
+
+async function sinkStripeEventToLake(event: Stripe.Event): Promise<void> {
+  const d = new Date(event.created * 1000);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const key = `events/year=${year}/month=${month}/day=${day}/stripe_${event.id}.ndjson`;
+
+  const obj = event.data.object as unknown as Record<string, unknown>;
+  const record = JSON.stringify({
+    timestamp: d.toISOString(),
+    event: event.type,
+    user_id: (obj.customer as string) ?? undefined,
+    email: (obj.customer_email as string) ??
+           ((obj.customer_details as Record<string, unknown>)?.email as string) ?? undefined,
+    amount: (obj.amount_total as number) ?? undefined,
+    currency: (obj.currency as string) ?? undefined,
+    product_id: event.type,
+    source: "stripe_webhook",
+    properties: { stripe_event_id: event.id, type: event.type },
+  });
+
+  await getLakeS3().send(
+    new PutObjectCommand({ Bucket: LAKE_BUCKET, Key: key, Body: record, ContentType: "application/x-ndjson" })
   );
 }
