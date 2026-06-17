@@ -54,9 +54,10 @@ export interface WorkspaceAnalytics {
   };
 }
 
-const EXPIRING_SOON_DAYS = 14;
+export const EXPIRING_SOON_DAYS = 14;
 
-function bucketPortal(portal: ClientPortal) {
+/** Determine if a portal is expired or expiring soon. Exported for testability. */
+export function bucketPortal(portal: ClientPortal) {
   const now = Date.now();
   let expired = false;
   let expiringSoon = false;
@@ -70,7 +71,8 @@ function bucketPortal(portal: ClientPortal) {
   return { expired, expiringSoon };
 }
 
-function emptyAnalytics(workspaceId: string | null): WorkspaceAnalytics {
+/** Create a zeroed-out analytics object. Exported for testability. */
+export function emptyAnalytics(workspaceId: string | null): WorkspaceAnalytics {
   return {
     workspaceId,
     workspace: null,
@@ -95,7 +97,8 @@ function emptyAnalytics(workspaceId: string | null): WorkspaceAnalytics {
   };
 }
 
-function reducePortals(out: WorkspaceAnalytics, portals: ClientPortal[]): void {
+/** Aggregate portal data into an analytics object. Exported for testability. */
+export function reducePortals(out: WorkspaceAnalytics, portals: ClientPortal[]): void {
   let healthSum = 0;
   let healthCount = 0;
   for (const p of portals) {
@@ -139,7 +142,8 @@ function reducePortals(out: WorkspaceAnalytics, portals: ClientPortal[]): void {
   out.portals.averageHealth = healthCount > 0 ? Math.round(healthSum / healthCount) : 0;
 }
 
-function reduceCalendar(out: WorkspaceAnalytics, items: CalendarItem[]): void {
+/** Aggregate calendar items into an analytics object. Exported for testability. */
+export function reduceCalendar(out: WorkspaceAnalytics, items: CalendarItem[]): void {
   const nowIso = new Date().toISOString();
   let nextScheduled: string | null = null;
   for (const i of items) {
