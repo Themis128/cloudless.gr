@@ -1,24 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  CognitoIdentityProviderClient,
-  ResendConfirmationCodeCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac, randomBytes } from "crypto";
 import { sendActivationEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-
-function makeClient(): CognitoIdentityProviderClient {
-  const issuer = process.env.COGNITO_ISSUER ?? "";
-  const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";
-  return new CognitoIdentityProviderClient({ region });
-}
-
-function secretHash(username: string): string | undefined {
-  const secret = process.env.COGNITO_CLIENT_SECRET;
-  const clientId = process.env.COGNITO_CLIENT_ID ?? "";
-  if (!secret) return undefined;
-  return createHmac("sha256", secret).update(username + clientId).digest("base64");
-}
 
 export async function POST(req: NextRequest) {
   const ipRl = rateLimit(`auth-resend:ip:${getClientIp(req)}`, 5, 60_000);
@@ -32,8 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const clientId = process.env.COGNITO_CLIENT_ID;
-  if (!email || !clientId) return NextResponse.json({ ok: true });
+  if (!email) return NextResponse.json({ ok: true });
 
   // Generate a fresh token + OTP
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
@@ -50,12 +32,7 @@ export async function POST(req: NextRequest) {
     .toString()
     .padStart(6, "0");
 
-  // Resend Cognito's own code too (keeps Cognito state in sync), fire-and-forget
-  makeClient()
-    .send(new ResendConfirmationCodeCommand({ ClientId: clientId, Username: email, SecretHash: secretHash(email) }))
-    .catch(() => {});
-
-  // Send our branded email with the new token+OTP, fire-and-forget
+  // Send our branded SES email with the new token+OTP, fire-and-forget
   sendActivationEmail(email, token, otp).catch(() => {});
 
   // Return the new token so the client can verify the fresh OTP
