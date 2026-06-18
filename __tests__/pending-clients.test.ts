@@ -1,24 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the entire DynamoDB module at the lowest level
+// SSMClient is instantiated at module level in pending-clients.ts, so mockSend
+// must be hoisted to be available when the vi.mock factory executes at module init.
 const mockSend = vi.hoisted(() => vi.fn());
 
-vi.mock("@aws-sdk/client-dynamodb", () => ({
-  // When a constructor returns an object, `new` uses that object as the instance.
-  // This ensures `dynamoClient.send === mockSend` at module level.
-  DynamoDBClient: vi.fn().mockImplementation(() => ({ send: mockSend })),
-  GetItemCommand: vi.fn(),
-  PutItemCommand: vi.fn(),
-  UpdateItemCommand: vi.fn(),
-  QueryCommand: vi.fn(),
-  ScanCommand: vi.fn(),
+vi.mock("@aws-sdk/client-ssm", () => ({
+  SSMClient: vi.fn(function (this: { send: typeof mockSend }) {
+    this.send = mockSend;
+  }),
+  GetParameterCommand: vi.fn(function (this: { input: unknown }, input: unknown) {
+    this.input = input;
+  }),
+  PutParameterCommand: vi.fn(function (this: { input: unknown }, input: unknown) {
+    this.input = input;
+  }),
 }));
 
-vi.mock("@aws-sdk/util-dynamodb", () => ({
-  marshall: vi.fn((v: unknown) => v),
-  unmarshall: vi.fn((v: Record<string, unknown>) => v),
-}));
-
+// Static import — works with the module-level ssmClient singleton
 import {
   PLAN_LABELS,
   readPendingClients,
@@ -28,39 +26,29 @@ import {
   approvePendingClient,
 } from "@/lib/pending-clients";
 
-/** Build a ConditionalCheckFailedException that passes `err instanceof Error` */
-function ccf(): Error {
-  const e = new Error("The conditional request failed");
-  e.name = "ConditionalCheckFailedException";
-  return e;
-}
-
 const sampleClients = [
   {
     email: "alice@example.com",
-    type: "pending" as const,
     name: "Alice",
     plan: "cloud",
     planLabel: "Cloud Architecture & Migration",
     submittedAt: "2026-01-01T00:00:00.000Z",
     status: "waiting" as const,
-    version: 1,
   },
   {
     email: "bob@example.com",
-    type: "pending" as const,
     plan: "serverless",
     planLabel: "Serverless Development",
     submittedAt: "2026-01-02T00:00:00.000Z",
     status: "approved" as const,
     portalToken: "tok_bob",
     approvedAt: "2026-01-03T00:00:00.000Z",
-    version: 1,
   },
 ];
 
 describe("PLAN_LABELS", () => {
   it("contains expected plan keys", () => {
+    expect(Object.keys(PLAN_LABELS).length).toBeGreaterThan(0);
     expect(PLAN_LABELS.cloud).toBeDefined();
     expect(PLAN_LABELS.serverless).toBeDefined();
     expect(PLAN_LABELS.bundle).toBeDefined();
@@ -75,136 +63,154 @@ describe("PLAN_LABELS", () => {
 });
 
 describe("readPendingClients()", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-  it("returns parsed clients from DynamoDB query", async () => {
-    mockSend.mockResolvedValue({ Items: sampleClients });
+  it("returns parsed clients from SSM", async () => {
+    mockSend.mockResolvedValue({
+      Parameter: { Value: JSON.stringify(sampleClients) },
+    });
     const result = await readPendingClients();
     expect(result).toHaveLength(2);
     expect(result[0].email).toBe("alice@example.com");
   });
 
-  it("returns empty array when query returns no items", async () => {
-    mockSend.mockResolvedValue({ Items: [] });
-    expect(await readPendingClients()).toEqual([]);
+  it("returns empty array when SSM has no value", async () => {
+    mockSend.mockResolvedValue({ Parameter: { Value: undefined } });
+    const result = await readPendingClients();
+    expect(result).toEqual([]);
   });
 
-  it("returns empty array when both query and scan throw", async () => {
-    mockSend.mockRejectedValue(new Error("DynamoDB error"));
-    expect(await readPendingClients()).toEqual([]);
+  it("returns empty array when SSM throws", async () => {
+    mockSend.mockRejectedValue(new Error("SSM error"));
+    const result = await readPendingClients();
+    expect(result).toEqual([]);
   });
 });
 
 describe("writePendingClients()", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-  it("calls PutItem for each client; falls back to UpdateItem on collision", async () => {
-    // alice: PutItem succeeds
-    // bob: PutItem fails ConditionalCheckFailed → UpdateItem
-    mockSend
-      .mockResolvedValueOnce({}) // PutItem alice
-      .mockRejectedValueOnce(ccf()) // PutItem bob
-      .mockResolvedValueOnce({}); // UpdateItem bob
+  it("calls SSM PutParameterCommand with serialized clients", async () => {
+    mockSend.mockResolvedValue({});
     await writePendingClients(sampleClients);
-    expect(mockSend).toHaveBeenCalledTimes(3);
+    expect(mockSend).toHaveBeenCalledOnce();
   });
 });
 
 describe("upsertPendingClient()", () => {
-  beforeEach(() => mockSend.mockReset());
-
-  it("creates a new client when email does not exist", async () => {
-    mockSend.mockResolvedValueOnce({});
-    const r = await upsertPendingClient({ email: "new@example.com", plan: "cloud" });
-    expect(r.email).toBe("new@example.com");
-    expect(r.status).toBe("waiting");
-    expect(r.planLabel).toBe(PLAN_LABELS.cloud);
+  beforeEach(() => {
+    mockSend.mockReset();
   });
 
-  it("returns existing approved record unchanged", async () => {
-    mockSend.mockRejectedValueOnce(ccf()).mockRejectedValueOnce(ccf());
-    const r = await upsertPendingClient({ email: "approved@example.com", plan: "cloud" });
-    expect(r.email).toBe("approved@example.com");
+  it("creates a new client when email does not exist", async () => {
+    mockSend
+      .mockResolvedValueOnce({ Parameter: { Value: "[]" } }) // read
+      .mockResolvedValueOnce({}); // write
+    const result = await upsertPendingClient({ email: "new@example.com", plan: "cloud" });
+    expect(result.email).toBe("new@example.com");
+    expect(result.status).toBe("waiting");
+    expect(result.planLabel).toBe(PLAN_LABELS.cloud);
+  });
+
+  it("does not reset status when client is already approved", async () => {
+    const existing = [
+      {
+        email: "approved@example.com",
+        plan: "serverless",
+        planLabel: "Serverless Development",
+        submittedAt: "2026-01-01T00:00:00.000Z",
+        status: "approved" as const,
+        portalToken: "tok_123",
+      },
+    ];
+    mockSend
+      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(existing) } })
+      .mockResolvedValueOnce({});
+    const result = await upsertPendingClient({ email: "approved@example.com", plan: "cloud" });
+    expect(result.status).toBe("approved");
   });
 
   it("updates plan for a waiting client", async () => {
+    const existing = [
+      {
+        email: "waiting@example.com",
+        plan: "cloud",
+        planLabel: "Cloud Architecture & Migration",
+        submittedAt: "2026-01-01T00:00:00.000Z",
+        status: "waiting" as const,
+      },
+    ];
     mockSend
-      .mockRejectedValueOnce(ccf())
-      .mockResolvedValueOnce({
-        Attributes: {
-          email: "waiting@example.com",
-          plan: "serverless",
-          planLabel: PLAN_LABELS.serverless,
-          submittedAt: "2026-01-01T00:00:00.000Z",
-          status: "waiting",
-          version: 2,
-        },
-      });
-    const r = await upsertPendingClient({ email: "waiting@example.com", plan: "serverless" });
-    expect(r.plan).toBe("serverless");
-    expect(r.planLabel).toBe(PLAN_LABELS.serverless);
+      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(existing) } })
+      .mockResolvedValueOnce({});
+    const result = await upsertPendingClient({ email: "waiting@example.com", plan: "serverless" });
+    expect(result.plan).toBe("serverless");
+    expect(result.planLabel).toBe(PLAN_LABELS.serverless);
   });
 
   it("uses provided planLabel when given", async () => {
-    mockSend.mockResolvedValueOnce({});
-    const r = await upsertPendingClient({
+    mockSend
+      .mockResolvedValueOnce({ Parameter: { Value: "[]" } })
+      .mockResolvedValueOnce({});
+    const result = await upsertPendingClient({
       email: "custom@example.com",
       plan: "custom",
       planLabel: "Custom Plan",
     });
-    expect(r.planLabel).toBe("Custom Plan");
+    expect(result.planLabel).toBe("Custom Plan");
   });
+
 });
 
 describe("findPendingByEmail()", () => {
-  beforeEach(() => mockSend.mockReset());
+  beforeEach(() => {
+    mockSend.mockReset();
+  });
 
   it("returns the matching client (case-insensitive)", async () => {
-    mockSend.mockResolvedValue({
-      Item: { email: "alice@example.com", type: "pending", plan: "cloud", status: "waiting" },
-    });
-    const r = await findPendingByEmail("ALICE@EXAMPLE.COM");
-    expect(r?.email).toBe("alice@example.com");
+    mockSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(sampleClients) } });
+    const result = await findPendingByEmail("ALICE@EXAMPLE.COM");
+    expect(result?.email).toBe("alice@example.com");
   });
 
   it("returns null when no client matches", async () => {
-    mockSend.mockResolvedValue({ Item: undefined });
-    expect(await findPendingByEmail("nobody@example.com")).toBeNull();
-  });
-
-  it("returns null when item type is not pending", async () => {
-    mockSend.mockResolvedValue({
-      Item: { email: "x@y.com", type: "portal", plan: "cloud", status: "approved" },
-    });
-    expect(await findPendingByEmail("x@y.com")).toBeNull();
+    mockSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(sampleClients) } });
+    const result = await findPendingByEmail("nobody@example.com");
+    expect(result).toBeNull();
   });
 });
 
 describe("approvePendingClient()", () => {
-  beforeEach(() => mockSend.mockReset());
+  beforeEach(() => {
+    mockSend.mockReset();
+  });
 
   it("sets status to approved and stores portalToken", async () => {
-    mockSend.mockResolvedValueOnce({
-      Attributes: {
+    const existing = [
+      {
         email: "client@example.com",
         plan: "cloud",
         planLabel: "Cloud Architecture & Migration",
         submittedAt: "2026-01-01T00:00:00.000Z",
-        status: "approved",
-        portalToken: "tok_newportal",
-        approvedAt: "2026-01-15T00:00:00.000Z",
-        version: 2,
+        status: "waiting" as const,
       },
-    });
-    const r = await approvePendingClient("client@example.com", "tok_newportal");
-    expect(r?.status).toBe("approved");
-    expect(r?.portalToken).toBe("tok_newportal");
-    expect(r?.approvedAt).toBeDefined();
+    ];
+    mockSend
+      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(existing) } })
+      .mockResolvedValueOnce({});
+    const result = await approvePendingClient("client@example.com", "tok_newportal");
+    expect(result?.status).toBe("approved");
+    expect(result?.portalToken).toBe("tok_newportal");
+    expect(result?.approvedAt).toBeDefined();
   });
 
   it("returns null when client does not exist", async () => {
-    mockSend.mockRejectedValue(ccf());
-    const r = await approvePendingClient("nobody@example.com", "tok_x");
-    expect(r).toBeNull();
+    mockSend.mockResolvedValue({ Parameter: { Value: "[]" } });
+    const result = await approvePendingClient("nobody@example.com", "tok_x");
+    expect(result).toBeNull();
   });
 });
