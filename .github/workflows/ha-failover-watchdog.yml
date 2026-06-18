@@ -39,7 +39,7 @@ env:
 
 on:
   schedule:
-    - cron: "* * * * *" # every minute
+    - cron: "*/5 * * * *" # every 5 minutes (GitHub minimum)
   workflow_dispatch:
     inputs:
       force_state:

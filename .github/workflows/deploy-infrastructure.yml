@@ -30,7 +30,7 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest
     outputs:
-      plan-output: ${{ steps.plan.outputs.stdout }}
+      plan-output: ${{ steps.plan-cloudfront.outputs.stdout }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
