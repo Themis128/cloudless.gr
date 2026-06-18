@@ -30,7 +30,7 @@ def main() -> int:
     html = fetch(BASE + PAGE)
     print(f"  html size: {len(html)} chars")
     if PARTNER_ID in html:
-        print(f"  HIT in raw HTML (unexpected — tag is consent-gated)")
+        print("  HIT in raw HTML (unexpected — tag is consent-gated)")
     chunks = sorted(set(re.findall(r"/_next/static/chunks/[a-zA-Z0-9._/-]+\.js", html)))
     print(f"=== scanning {len(chunks)} chunks for '{PARTNER_ID}'")
     hits: list[str] = []
