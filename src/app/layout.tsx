@@ -8,7 +8,6 @@ import { HubSpotScript } from "@/components/HubSpotScript";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import "./globals.css";
 
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
 
 const instrumentSans = Instrument_Sans({
