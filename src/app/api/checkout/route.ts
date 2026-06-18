@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getProductById } from "@/lib/store-products";
 import { getTokenFromHeader, verifyToken } from "@/lib/api-auth";
-import { campaigns, type CampaignSlug } from "@/data/campaigns";
+import { getCampaign } from "@/data/campaigns";
 import { routing } from "@/i18n/routing";
 
 interface CheckoutItem {
@@ -35,13 +35,20 @@ function pickLocale(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest) {
-  const slug = request.nextUrl.searchParams.get("campaign") as CampaignSlug | null;
+  const slug = request.nextUrl.searchParams.get("campaign");
   const tier = request.nextUrl.searchParams.get("tier");
-  if (!slug || !tier || !(slug in campaigns)) {
-    return NextResponse.json({ error: "Unknown campaign or tier" }, { status: 400 });
+  if (!slug || !tier) {
+    return NextResponse.json({ error: "Missing campaign or tier" }, { status: 400 });
   }
-  const campaign = campaigns[slug];
-  if (!campaign.tiers.find((t) => t.id === tier)) {
+  const campaign = getCampaign(slug);
+  if (!campaign || campaign.status === "archived") {
+    return NextResponse.json({ error: "Unknown campaign" }, { status: 400 });
+  }
+  // `fit-call` is a valid "tier" even though it's not in `campaign.tiers` — it's
+  // the lead-form conversion path used by the campaign's secondary CTA.
+  const knownTier =
+    tier === "fit-call" || campaign.tiers.some((t) => t.id === tier);
+  if (!knownTier) {
     return NextResponse.json({ error: "Unknown tier" }, { status: 400 });
   }
 

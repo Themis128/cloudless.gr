@@ -1,105 +1,244 @@
 /**
- * Campaign definitions for paid-acquisition landing pages.
+ * Cloudless Campaigns — single source of truth.
  *
- * Each campaign maps to a route under `/[locale]/campaigns/<slug>/`.
- * Tiers define the three CTAs shown on the landing page. The `checkoutHref`
- * for each tier currently points at a stub query on `/api/checkout` — wire it
- * to your real Stripe checkout session creator and set its `success_url` to
- *   /<locale>/campaigns/<slug>/thanks?tier=<tier.id>&order=<stripe_id>
- * so the LinkedIn conversion fires on the thanks page.
+ * Add a new entry here to publish a new campaign page at
+ * /[locale]/campaigns/<slug>.
  *
- * `linkedinConversionId` is the numeric conversion ID issued by LinkedIn
- * Campaign Manager on the Conversion Tracking step (alongside the partner ID
- * that lives in `NEXT_PUBLIC_LINKEDIN_PARTNER_ID`). Set to `null` to skip
- * conversion firing for that campaign while the value is pending.
+ * Conventions:
+ * - `slug` is URL-safe kebab-case and used in routing.
+ * - `status: "live"` makes it visible on /[locale]/campaigns.
+ *   "draft" hides it from the index but the URL still resolves
+ *   (useful for QA before launch).
+ * - All copy is keyed by locale ("el" | "en"). Campaigns target Greek
+ *   retail; the rest of the site supports "fr" and "de" too but we don't
+ *   surface campaign pages there yet — see `LOCALES` below.
+ * - `tiers` is ordered cheapest → flagship; the `featured` tier is highlighted.
+ * - `linkedinConversionId` is the numeric ID from LinkedIn Campaign Manager.
+ *   Leave `null` while the conversion is still being defined; the thanks
+ *   page's browser-side fire becomes a no-op and the CAPI mirror skips too.
+ *
+ * Wiring guide: `docs/linkedin-campaigns.md` + `skills/linkedin-campaigns/SKILL.md`.
  */
 
-export type CampaignSlug = "shop-online";
+export const CAMPAIGN_LOCALES = ["el", "en"] as const;
+export type Locale = (typeof CAMPAIGN_LOCALES)[number];
+export type CampaignStatus = "live" | "draft" | "archived";
 
-export interface CampaignTier {
-  /** URL-safe ID — appears in `?tier=…` query string. */
+export type Tier = {
   id: string;
-  /** Display name on the landing-page card. */
-  name: string;
-  /** Headline number on the card, e.g. "€990 one-off". */
-  priceLabel: string;
-  /** Short one-liner under the price. */
-  blurb: string;
-  /** What's included — kept terse, max ~6 bullets renders cleanly. */
-  bullets: string[];
-  /** Stripe-bound checkout URL. Stub until wired. */
+  badge?: string;
+  name: Record<Locale, string>;
+  oneOff?: string;
+  monthly?: string;
+  savings?: Record<Locale, string>;
+  highlights: Record<Locale, string[]>;
+  cta: Record<Locale, string>;
+  /** Where the Buy button goes. Stubs to /api/checkout until Stripe is wired. */
   checkoutHref: string;
-  /** Highlight the middle card visually. */
-  recommended?: boolean;
-}
+  featured?: boolean;
+};
 
-export interface Campaign {
-  slug: CampaignSlug;
-  /** SEO + hero title. */
-  title: string;
-  /** SEO description + hero subtitle. */
-  description: string;
-  /** Three tiers — the landing page hard-codes a 3-column grid. */
-  tiers: [CampaignTier, CampaignTier, CampaignTier];
-  /** LinkedIn Campaign Manager numeric conversion ID. `null` = not yet set. */
+export type Campaign = {
+  slug: string;
+  status: CampaignStatus;
+  /** ISO date when the campaign goes live (informational). */
+  startsAt: string;
+  /** ISO date when the campaign ends; used for scarcity. */
+  endsAt: string;
+  /** Brand tagline that overrides the global one on this page. */
+  tagline: Record<Locale, string>;
+  /** Above-the-fold H1. */
+  headline: Record<Locale, string>;
+  /** Italic accent inside the headline (matches Quiet Commerce aesthetic). */
+  headlineAccent: Record<Locale, string>;
+  /** Sub-line under the H1. */
+  subhead: Record<Locale, string>;
+  /** Image in /public/campaigns. */
+  heroImage: string;
+  /** Image used for og:image (LinkedIn share preview). */
+  ogImage: string;
+  tiers: Tier[];
+  /** Limit number for Founding Client framing. */
+  slotsRemaining?: number;
+  faq: Array<{
+    q: Record<Locale, string>;
+    a: Record<Locale, string>;
+  }>;
+  /** Source of paid traffic for analytics tagging. */
+  utmCampaign: string;
+  /** LinkedIn Campaign Manager numeric conversion ID. null until set. */
   linkedinConversionId: number | null;
-}
+};
 
-export const campaigns: Record<CampaignSlug, Campaign> = {
-  "shop-online": {
+export const campaigns: Campaign[] = [
+  {
     slug: "shop-online",
-    title: "Launch your online store",
-    description:
-      "Turnkey ecommerce on Stripe + a Next.js storefront. Pick the tier that matches where you are — we ship the rest.",
+    status: "live",
+    startsAt: "2026-06-19",
+    endsAt: "2026-07-01",
+    tagline: {
+      el: "Clear skies. Zero friction.",
+      en: "Clear skies. Zero friction.",
+    },
+    headline: {
+      el: "Βγάλε το κατάστημά σου online —",
+      en: "Get your shop online —",
+    },
+    headlineAccent: {
+      el: "και δες κάθε Δευτέρα τι δουλεύει.",
+      en: "and finally see what's working.",
+    },
+    subhead: {
+      el:
+        "Website + e-shop + η εβδομαδιαία αναφορά για τις πωλήσεις σου. " +
+        "Για ελληνικά retail καταστήματα. Φτιάχνεται και τρέχει από μία ομάδα.",
+      en:
+        "Website + e-shop + the weekly answers about your sales. " +
+        "For Greek retailers. Built and run by one team.",
+    },
+    heroImage: "/campaigns/shop-online-hero.png",
+    ogImage: "/campaigns/shop-online-ad-a.png",
+    slotsRemaining: 5,
+    utmCampaign: "shop_online_founding",
+    linkedinConversionId: null,
     tiers: [
       {
         id: "starter",
-        name: "Starter",
-        priceLabel: "€990 one-off",
-        blurb: "Sell your first 10 products this month.",
-        bullets: [
-          "Branded Next.js storefront",
-          "Stripe Checkout integration",
-          "Up to 10 products configured",
-          "1-page legal + cookie banner",
-          "DNS, SSL, deploy on Cloudflare",
-        ],
+        name: { el: "Online Starter", en: "Online Starter" },
+        oneOff: "€890",
+        monthly: "€29/μήνα",
+        highlights: {
+          el: [
+            "5-σέλιδη επώνυμη ιστοσελίδα",
+            "Domain · hosting · SSL · GDPR",
+            "Google Business Profile",
+            "Βασικό GA4",
+            "10 εργάσιμες παράδοση",
+          ],
+          en: [
+            "5-page branded website",
+            "Domain · hosting · SSL · GDPR",
+            "Google Business Profile",
+            "Basic GA4",
+            "10 business days delivery",
+          ],
+        },
+        cta: { el: "Επιλέγω Starter", en: "Choose Starter" },
         checkoutHref: "/api/checkout?campaign=shop-online&tier=starter",
       },
       {
-        id: "growth",
-        name: "Growth",
-        priceLabel: "€2 490 one-off + €49/mo",
-        blurb: "Everything in Starter, plus the muscle to scale.",
-        bullets: [
-          "Up to 100 products + variants",
-          "Inventory + order admin",
-          "Email receipts + abandoned-cart",
-          "Google Analytics + Meta Pixel",
-          "30 days of post-launch support",
-        ],
-        checkoutHref: "/api/checkout?campaign=shop-online&tier=growth",
-        recommended: true,
+        id: "eshop-launch",
+        name: { el: "E-shop Launch", en: "E-shop Launch" },
+        oneOff: "€1.800",
+        monthly: "€59/μήνα",
+        highlights: {
+          el: [
+            "Όλα τα Starter +",
+            "Πλήρες e-shop (WooCommerce/Next.js)",
+            "Έως 50 προϊόντα · Stripe / Viva / PayPal",
+            "ELTA · ACS · Speedex",
+            "Skroutz + BestPrice XML feed",
+            "Abandoned-cart email · Meta Pixel",
+            "21 εργάσιμες παράδοση",
+          ],
+          en: [
+            "Everything in Starter +",
+            "Full e-shop (WooCommerce/Next.js)",
+            "Up to 50 SKUs · Stripe / Viva / PayPal",
+            "ELTA · ACS · Speedex shipping",
+            "Skroutz + BestPrice XML feed",
+            "Abandoned-cart email · Meta Pixel",
+            "21 business days delivery",
+          ],
+        },
+        cta: { el: "Επιλέγω E-shop", en: "Choose E-shop" },
+        checkoutHref: "/api/checkout?campaign=shop-online&tier=eshop-launch",
       },
       {
-        id: "scale",
-        name: "Scale",
-        priceLabel: "From €5 900 + €149/mo",
-        blurb: "Custom catalogue, subscriptions, multi-currency.",
-        bullets: [
-          "Unlimited products + collections",
-          "Stripe Subscriptions + Customer Portal",
-          "Multi-currency + EU VAT handling",
-          "Headless CMS for content team",
-          "90 days of post-launch support",
-        ],
-        checkoutHref: "/api/checkout?campaign=shop-online&tier=scale",
+        id: "full-bundle",
+        featured: true,
+        badge: "1 + 2 + 3",
+        name: { el: "Full Bundle", en: "Full Bundle" },
+        oneOff: "€2.900",
+        monthly: "€149/μήνα · €112/μήνα Founding",
+        savings: {
+          el: "Κερδίζεις €990 vs. ξεχωριστά",
+          en: "Save €990 vs. buying separately",
+        },
+        highlights: {
+          el: [
+            "Όλα τα προηγούμενα +",
+            "Cloudless Shop Insights dashboard",
+            "Live data: shop · GA4 · Meta · Google · Skroutz",
+            "Εβδομαδιαίο email Δευτέρα 08:00",
+            "Μηνιαία τηλεδιάσκεψη ανασκόπησης",
+            "30 εργάσιμες παράδοση",
+          ],
+          en: [
+            "Everything above +",
+            "Cloudless Shop Insights dashboard",
+            "Live data: shop · GA4 · Meta · Google · Skroutz",
+            "Monday 08:00 email digest",
+            "Monthly review call",
+            "30 business days delivery",
+          ],
+        },
+        cta: { el: "Επιλέγω Full Bundle", en: "Choose Full Bundle" },
+        checkoutHref: "/api/checkout?campaign=shop-online&tier=full-bundle",
       },
     ],
-    linkedinConversionId: null,
+    faq: [
+      {
+        q: { el: "Πόσο γρήγορα παραδίδετε;", en: "How long until it's live?" },
+        a: {
+          el: "Starter 10 εργάσιμες · E-shop 21 · Full Bundle 30. Milestone-billed.",
+          en: "Starter 10 business days · E-shop 21 · Full Bundle 30. Milestone-billed.",
+        },
+      },
+      {
+        q: { el: "Ποιανού είναι ο κώδικας;", en: "Who owns the code?" },
+        a: {
+          el: "Δικός σας. Με documentation. Καμία εξάρτηση.",
+          en: "You. Fully documented, no lock-in.",
+        },
+      },
+      {
+        q: { el: "Μπορώ να ακυρώσω;", en: "Can I cancel?" },
+        a: {
+          el: "Ναι. Μηνιαία συνδρομή. Καμία υπαναχώρηση, καμία ποινή.",
+          en: "Yes. Month-to-month. No exit fees.",
+        },
+      },
+      {
+        q: { el: "Τιμολόγιο με ΦΠΑ;", en: "Greek VAT invoice?" },
+        a: {
+          el: "Ναι, αυτόματη έκδοση μέσω Stripe.",
+          en: "Yes, auto-issued via Stripe.",
+        },
+      },
+      {
+        q: { el: "Είστε στην περιοχή μου;", en: "Are you in my area?" },
+        a: {
+          el:
+            "Σε όλη την Ελλάδα remote. On-site επισκέψεις σε Αττική και " +
+            "Θεσσαλονίκη τις πρώτες 90 ημέρες.",
+          en:
+            "Remote across Greece. On-site visits in Attica and Thessaloniki " +
+            "during the first 90 days.",
+        },
+      },
+    ],
   },
-};
+];
 
-export function getCampaign(slug: CampaignSlug): Campaign {
-  return campaigns[slug];
+export function getCampaign(slug: string): Campaign | undefined {
+  return campaigns.find((c) => c.slug === slug);
+}
+
+export function getLiveCampaigns(): Campaign[] {
+  return campaigns.filter((c) => c.status === "live");
+}
+
+export function isCampaignLocale(value: string): value is Locale {
+  return (CAMPAIGN_LOCALES as readonly string[]).includes(value);
 }

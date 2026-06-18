@@ -4,21 +4,22 @@ import { useEffect, useRef } from "react";
 import { trackLinkedInConversion } from "@/lib/linkedin-track";
 
 /**
- * Fires the LinkedIn Insight Tag conversion event exactly once, then posts to
- * `/api/campaigns/conversion` so the same event can be sent server-side via
- * the Conversions API (CAPI). LinkedIn deduplicates events that arrive via
- * both channels, so dual-firing is the recommended pattern — see
- * `docs/linkedin-campaigns.md`.
+ * Dual-fires the LinkedIn conversion exactly once:
+ *   1. Browser: window.lintrk("track", { conversion_id })
+ *   2. Server:  POST /api/campaigns/conversion → LinkedIn CAPI mirror
  *
- * The component renders nothing. The duplicate-fire guard uses a ref so a
- * React 18 strict-mode double mount in dev does not double-count.
+ * LinkedIn dedupes the two arrivals by eventId (= the Stripe order ID), so
+ * the customer is counted once even if both paths succeed. Reload-safe via
+ * the React 18 strict-mode-aware ref guard.
  */
 export default function ThanksConversion({
   conversionId,
+  campaign,
   tier,
   orderId,
 }: {
   conversionId: number | null;
+  campaign: string;
   tier: string | null;
   orderId: string | null;
 }) {
@@ -32,22 +33,22 @@ export default function ThanksConversion({
       trackLinkedInConversion(conversionId);
     }
 
-    // Server-side CAPI ping. Failures are silent — the client-side Insight
-    // Tag conversion above is enough on its own; CAPI is purely additive.
     fetch("/api/campaigns/conversion", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        campaign: "shop-online",
+        campaign,
         tier,
         orderId,
         conversionId,
-        // Browser-side fields LinkedIn CAPI accepts as hints.
         url: typeof window !== "undefined" ? window.location.href : null,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
       }),
-    }).catch(() => {});
-  }, [conversionId, tier, orderId]);
+    }).catch(() => {
+      // CAPI is purely additive — the browser-side Insight Tag fire above
+      // already counts the conversion. Server outages are silent.
+    });
+  }, [conversionId, campaign, tier, orderId]);
 
   return null;
 }
