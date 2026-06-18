@@ -17,7 +17,7 @@ type PageProps = {
 
 export async function generateStaticParams() {
   return campaigns.flatMap((c) =>
-    (["el", "en"] as const).map((locale) => ({ locale, slug: c.slug })),
+    (["el", "en"] as const).map((locale) => ({ locale, slug: c.slug }))
   );
 }
 

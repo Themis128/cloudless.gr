@@ -58,8 +58,7 @@ const COPY = {
     orderLabel: "Order ID:",
     fitcallH1: "Your fit-call request is in.",
     fitcallSub:
-      "We'll email you 2-3 time slots within the next 4 working hours. " +
-      "No pressure, no pitch.",
+      "We'll email you 2-3 time slots within the next 4 working hours. " + "No pressure, no pitch.",
   },
 } as const satisfies Record<Locale, unknown>;
 

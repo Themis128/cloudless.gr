@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
     try {
       const raw = cookieHeader.match(/cookieConsent=([^;]+)/)?.[1];
       return raw ? JSON.parse(decodeURIComponent(raw)).analytics === true : false;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   })();
   if (!analyticsConsented) return NextResponse.json({ ok: true }); // silent no-op
 
@@ -41,9 +43,10 @@ export async function POST(req: NextRequest) {
     medium: typeof body.medium === "string" ? body.medium : undefined,
     ip: getClientIp(req),
     user_agent: req.headers.get("user-agent") ?? undefined,
-    properties: typeof body.properties === "object" && body.properties !== null
-      ? body.properties as Record<string, unknown>
-      : undefined,
+    properties:
+      typeof body.properties === "object" && body.properties !== null
+        ? (body.properties as Record<string, unknown>)
+        : undefined,
   });
 
   return NextResponse.json({ ok: true });

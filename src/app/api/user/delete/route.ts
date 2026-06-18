@@ -4,7 +4,10 @@
  * Deletes the authenticated user from Cognito and their DynamoDB profile.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { CognitoIdentityProviderClient, AdminDeleteUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import {
+  CognitoIdentityProviderClient,
+  AdminDeleteUserCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
 import { DynamoDBClient, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
 import { requireAuth } from "@/lib/api-auth";
 
@@ -48,7 +51,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (errors.length) {
-    return NextResponse.json({ error: `Partial deletion failure: ${errors.join(", ")}` }, { status: 500 });
+    return NextResponse.json(
+      { error: `Partial deletion failure: ${errors.join(", ")}` },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true });

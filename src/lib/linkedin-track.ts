@@ -15,8 +15,9 @@
 export function trackLinkedInConversion(conversionId: number | string): void {
   if (typeof window === "undefined") return;
 
-  const lintrk = (window as { lintrk?: (action: string, payload?: Record<string, unknown>) => void })
-    .lintrk;
+  const lintrk = (
+    window as { lintrk?: (action: string, payload?: Record<string, unknown>) => void }
+  ).lintrk;
   if (!lintrk) return;
 
   lintrk("track", { conversion_id: conversionId });

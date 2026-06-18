@@ -16,7 +16,9 @@ function secretHash(username: string): string | undefined {
   const secret = process.env.COGNITO_CLIENT_SECRET;
   const clientId = process.env.COGNITO_CLIENT_ID ?? "";
   if (!secret) return undefined;
-  return createHmac("sha256", secret).update(username + clientId).digest("base64");
+  return createHmac("sha256", secret)
+    .update(username + clientId)
+    .digest("base64");
 }
 
 export async function POST(req: NextRequest) {
@@ -53,7 +55,10 @@ export async function POST(req: NextRequest) {
     const name = (err as { name?: string }).name;
     if (name === "CodeMismatchException" || name === "ExpiredCodeException")
       return NextResponse.json(
-        { error: name === "ExpiredCodeException" ? "Code expired — request a new one" : "Invalid code" },
+        {
+          error:
+            name === "ExpiredCodeException" ? "Code expired — request a new one" : "Invalid code",
+        },
         { status: 400 }
       );
     if (name === "NotAuthorizedException")
