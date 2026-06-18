@@ -6,7 +6,7 @@ import {
   BatchWriteItemCommand,
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
 /**
