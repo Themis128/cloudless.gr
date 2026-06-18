@@ -1,11 +1,68 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getProductById } from "@/lib/store-products";
 import { getTokenFromHeader, verifyToken } from "@/lib/api-auth";
+import { getCampaign } from "@/data/campaigns";
+import { routing } from "@/i18n/routing";
 
 interface CheckoutItem {
   id: string;
   quantity: number;
+}
+
+/**
+ * GET /api/checkout?campaign=<slug>&tier=<id>
+ *
+ * Campaign landing-page CTAs (`data/campaigns.ts` → `checkoutHref`) hit this
+ * endpoint. When Stripe is configured this should create a Checkout Session
+ * with `success_url` set to the per-campaign thanks page so the LinkedIn
+ * conversion fires. While Stripe is unconfigured (e.g. local dev, preview
+ * envs) the handler 302-redirects straight to the thanks page with a
+ * synthetic `order=stub-<ts>` so the rest of the flow can be exercised.
+ *
+ * Wiring this to a real Stripe session is the work referenced in the
+ * project README under "Integration in 5 minutes" step 4 — replace the
+ * `STUB BRANCH` block with a `stripe.checkout.sessions.create({...})` call
+ * whose `success_url` matches the same `/campaigns/<slug>/thanks` shape.
+ */
+function pickLocale(request: NextRequest): string {
+  // Honor x-pathname (set by `src/proxy.ts`) so we keep the visitor on the
+  // locale they arrived on. Falls back to defaultLocale.
+  const pathname = request.headers.get("x-pathname") ?? request.nextUrl.pathname;
+  const seg = pathname.split("/").filter(Boolean)[0];
+  if ((routing.locales as readonly string[]).includes(seg)) return seg;
+  return routing.defaultLocale;
+}
+
+export async function GET(request: NextRequest) {
+  const slug = request.nextUrl.searchParams.get("campaign");
+  const tier = request.nextUrl.searchParams.get("tier");
+  if (!slug || !tier) {
+    return NextResponse.json({ error: "Missing campaign or tier" }, { status: 400 });
+  }
+  const campaign = getCampaign(slug);
+  if (!campaign || campaign.status === "archived") {
+    return NextResponse.json({ error: "Unknown campaign" }, { status: 400 });
+  }
+  // `fit-call` is a valid "tier" even though it's not in `campaign.tiers` — it's
+  // the lead-form conversion path used by the campaign's secondary CTA.
+  const knownTier =
+    tier === "fit-call" || campaign.tiers.some((t) => t.id === tier);
+  if (!knownTier) {
+    return NextResponse.json({ error: "Unknown tier" }, { status: 400 });
+  }
+
+  const locale = pickLocale(request);
+
+  // STUB BRANCH — replace with stripe.checkout.sessions.create when Stripe is
+  // wired. Keep the success_url shape identical: tier + order params drive
+  // the LinkedIn conversion fired by ThanksConversion.tsx.
+  const order = `stub-${Date.now()}`;
+  const url = new URL(
+    `/${locale}/campaigns/${campaign.slug}/thanks?tier=${encodeURIComponent(tier)}&order=${encodeURIComponent(order)}`,
+    request.nextUrl.origin
+  );
+  return NextResponse.redirect(url, { status: 302 });
 }
 
 function getIdempotencyKey(request: NextRequest): string | undefined {
