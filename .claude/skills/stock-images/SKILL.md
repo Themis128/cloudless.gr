@@ -77,6 +77,7 @@ python ~/.agents/tools/unsplash-search.py \
 ## Text Overlay
 
 When `--title` is provided, the script adds a text overlay to the bottom portion of the image with:
+
 - Semi-transparent dark background behind the text
 - White title text with shadow
 - Gray subtitle text (if provided)
@@ -90,6 +91,7 @@ When `--title` is provided, the script adds a text overlay to the bottom portion
 - `Pillow` (only needed if using text overlay with `--title`)
 
 Install if needed:
+
 ```bash
 pip install requests Pillow
 ```
@@ -97,6 +99,7 @@ pip install requests Pillow
 ## Output
 
 The script prints:
+
 - The download URL
 - Photographer attribution (required by Unsplash)
 - The saved file path

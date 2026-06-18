@@ -456,8 +456,6 @@ which automates Stages 0-3 from the Pi.
 - `aws-actions/configure-aws-credentials`: `v4.x`
 - `hashicorp/setup-terraform`: prefer `v3.x` (v2 nears Node 20 EOL)
 
-
-
 ## OpenClaudia Marketing Skills
 
 67 marketing skills from [OpenClaudia](https://github.com/OpenClaudia/openclaudia-skills) are installed at `.claude/skills/`. They provide slash-command marketing automation for cloudless.gr.
@@ -485,11 +483,13 @@ which automates Stages 0-3 from the Pi.
 ### API Keys (in `~/.claude/.env.global`)
 
 Currently configured:
+
 - `CLOUDFLARE_API_TOKEN` — DNS/CDN operations
 - `NOTION_API_KEY` — content management queries
 - `SITE_URL` — https://cloudless.gr
 
 Add these for richer skill output when available:
+
 - `SEMRUSH_API_KEY` — keyword/backlink data
 - `RESEND_API_KEY` — send emails directly
 - `UNSPLASH_CLIENT_ID` — stock images for blog posts

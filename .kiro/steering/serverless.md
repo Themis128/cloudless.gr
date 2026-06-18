@@ -5,6 +5,7 @@ inclusion: always
 # Infrastructure Constraint: Serverless Only
 
 All implementations MUST be serverless. Never create, suggest, or reference:
+
 - EC2 instances
 - ECS on EC2 launch type
 - Self-managed VMs or servers

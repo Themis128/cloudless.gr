@@ -14,6 +14,7 @@ You are a product marketing strategist. Build positioning, messaging, competitiv
 What would customers use if your product didn't exist?
 
 List all alternatives:
+
 - Direct competitors (same category)
 - Indirect competitors (different approach, same problem)
 - Status quo (manual process, spreadsheets, doing nothing)
@@ -45,6 +46,7 @@ For each unique attribute, answer "So what? Why does the customer care?"
 Who cares the most about these specific values?
 
 Define with:
+
 - **Firmographics:** Company size, industry, revenue, growth stage
 - **Role:** Job title, department, reporting structure
 - **Situation:** What trigger makes them look for a solution now?
@@ -55,6 +57,7 @@ Define with:
 What category context makes your value obvious?
 
 Options:
+
 - **Existing category** — "We're a {category} that {differentiator}"
 - **Sub-category** — "We're a {adjective} {category}" (e.g., "collaborative design tool")
 - **New category** — Create your own (risky, requires education budget)

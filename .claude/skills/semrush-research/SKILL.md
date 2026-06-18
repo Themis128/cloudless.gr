@@ -151,6 +151,7 @@ https://api.semrush.com/?type=phrase_kdi&key={KEY}&phrase={keyword}&database=us&
 | `Kd` | Keyword difficulty (0-100) |
 
 Interpretation:
+
 - 0-29: Easy - achievable with quality content
 - 30-49: Moderate - needs solid content + some backlinks
 - 50-69: Hard - needs strong domain authority + backlinks
@@ -271,6 +272,7 @@ Present results as a comparison table:
 ```
 
 Then highlight:
+
 - **Keyword gaps**: Keywords competitors rank for but target does not
 - **Quick wins**: Keywords where target ranks positions 5-20 (improvement opportunities)
 - **Content gaps**: Topics competitors cover but target does not
@@ -293,6 +295,7 @@ Then highlight:
 | Empty response | Usually means no data available for the query parameters |
 
 When you get "NOTHING FOUND", try:
+
 - Different database (e.g., `uk` instead of `us`)
 - Root domain instead of subdomain
 - Broader keyword phrase

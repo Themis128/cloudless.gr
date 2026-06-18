@@ -9,6 +9,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 ## Key Features & Capabilities
 
 ### Public / Marketing
+
 - Multi-locale site (en, el, fr, de) with cookie-based locale switching
 - Blog via Notion CMS, services listing, contact form (SES + Slack + HubSpot)
 - Newsletter signup with SES welcome email + Slack notification
@@ -17,6 +18,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 - SEO: sitemap, robots.txt, structured data (JSON-LD), OpenGraph images
 
 ### Authentication & Users
+
 - AWS Cognito Hosted UI (OIDC + PKCE) via next-auth v5
 - Admin detection via Cognito `admin` group → JWT `groups` claim
 - RP-initiated logout (full SSO session termination)
@@ -24,12 +26,14 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 - Theme preference (dark/light/system) synced across tabs and to user profile
 
 ### Client Dashboard (`/dashboard`)
+
 - Authenticated client portal with settings, subscriptions, orders
 - User profile management
 - Consultation booking (Google Calendar integration)
 - Portal deliverables and client-specific workspace
 
 ### Admin Panel (`/admin`)
+
 - Full analytics: GSC (Google Search Console), Stripe, DuckDB
 - CRM: HubSpot contacts, pipelines, deals
 - Notion CMS management: blog, docs, forms, case studies, tasks
@@ -43,6 +47,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 - Calendar and content calendar management
 
 ### Integrations
+
 - Slack: full two-way (outbound notify + inbound slash commands, events, interactions)
 - Notion: blog, docs, forms, projects, analytics, calendar, reports
 - HubSpot: CRM contacts, deals, pipelines, webhooks
@@ -58,6 +63,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 - TikTok OAuth, LinkedIn, X Ads, Google Ads
 
 ### Infrastructure
+
 - k3s Kubernetes on Raspberry Pi for HA standby / self-hosted workloads
 - ESP32 watchdog hardware with MQTT alerts → Notion + Slack
 - Cloudflare tunnels for Pi exposure
@@ -65,6 +71,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 - GitHub Actions: 80+ workflows for CI, deploy, audits, cluster ops
 
 ## Target Users
+
 - **Clients**: Greek/EU startups and SMBs receiving cloud/marketing services
 - **Admin (owner)**: Single-tenant internal ops — analytics, CRM, content management
 - **Anonymous visitors**: Lead generation through contact form, newsletter, blog, store

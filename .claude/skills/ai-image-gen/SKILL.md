@@ -125,6 +125,7 @@ python ~/.agents/tools/generate-image.py \
 - `requests` (for API calls)
 
 Install if needed:
+
 ```bash
 pip install requests
 ```
@@ -132,6 +133,7 @@ pip install requests
 ## Output
 
 The script prints:
+
 - The provider and model used
 - The prompt (and revised prompt if applicable)
 - The saved file path

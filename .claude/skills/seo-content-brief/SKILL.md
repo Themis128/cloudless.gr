@@ -35,6 +35,7 @@ For the target keyword, analyze top 5-10 results:
 | #2 | ... | ... | ... | ... |
 
 **Extract from top results:**
+
 - Common H2/H3 topics (every result covers these → mandatory sections)
 - Unique sections (only 1-2 results cover → differentiation opportunity)
 - Questions answered (People Also Ask + in-content FAQs)
@@ -48,6 +49,7 @@ For the target keyword, analyze top 5-10 results:
 **LSI keywords:** Related terms that signal topical depth
 
 If SemRush API is available (`SEMRUSH_API_KEY`), pull:
+
 ```bash
 # Primary keyword data
 curl -s "https://api.semrush.com/?type=phrase_all&key=${SEMRUSH_API_KEY}&phrase={keyword}&database=us&export_columns=Ph,Nq,Cp,Co,Nr,Td"
@@ -76,6 +78,7 @@ H1: {Title with primary keyword}
 ```
 
 **Heading rules:**
+
 - H1: One per page, includes primary keyword
 - H2: Every 200-300 words, includes secondary keywords where natural
 - H3: Only when a section needs subdivision
@@ -138,7 +141,9 @@ What will make this article better than the current #1 result?
 ## Heading Structure
 
 ```
+
 {Full H1-H3 outline as designed in Step 4}
+
 ```
 
 ## Section-by-Section Guidance

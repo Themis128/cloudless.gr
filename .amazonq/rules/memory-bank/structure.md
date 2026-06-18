@@ -38,7 +38,9 @@ cloudless.gr/
 ## App Router Structure (`src/app/`)
 
 ### Locale-Prefixed Pages (`src/app/[locale]/`)
+
 All user-facing pages live under the `[locale]` segment (en/el/fr/de):
+
 - `/` — Homepage (hero, services, CTA, newsletter)
 - `/blog/`, `/blog/[slug]` — Notion-powered blog
 - `/case-studies/`, `/case-studies/[slug]` — Portfolio
@@ -51,7 +53,9 @@ All user-facing pages live under the `[locale]` segment (en/el/fr/de):
 - `/admin/` — Admin panel (40+ sub-pages: analytics, CRM, AI, CMS, etc.)
 
 ### API Routes (`src/app/api/`)
+
 Organized by domain:
+
 - `/api/admin/**` — Admin-only endpoints (analytics, CRM, AI, Notion, campaigns)
 - `/api/auth/[...nextauth]` — next-auth v5 handlers
 - `/api/webhooks/stripe|notion|hubspot|postiz` — Inbound webhooks
@@ -65,11 +69,13 @@ Organized by domain:
 - `/api/portal/**` — Client portal token endpoints
 
 ### Non-Locale Routes
+
 - `/portal/[token]` — Client portal (locale-neutral, token-driven)
 - `/services/page.tsx` — Redirect to locale-prefixed version
 - Root `layout.tsx` / `page.tsx` — Shell + locale redirect
 
 ## Source Library (`src/lib/`)
+
 Flat module directory — one file per concern:
 
 | Category | Files |
@@ -88,23 +94,28 @@ Flat module directory — one file per concern:
 | Utils | `api-errors.ts`, `validation.ts`, `escape-html.ts`, `format-price.ts`, `structured-data.ts`, `sha-drift.ts` |
 
 ## Components (`src/components/`)
+
 - Flat + two subdirectories: `admin/` and `store/`
 - Key: `Navbar.tsx`, `Footer.tsx`, `ThemeSwitcher.tsx`, `LocaleSwitcher.tsx`, `NewsletterForm.tsx`, `ChatWidget.tsx`, `CommandPalette.tsx`, `CookieConsent.tsx`
 
 ## Context Providers (`src/context/`)
+
 - `AuthContext.tsx` — `useAuth()` hook (session, isAdmin, signIn/Out)
 - `CartContext.tsx` — Shopping cart with useReducer
 - `CookieConsentContext.tsx` — GDPR consent state
 - `WorkspaceContext.tsx` — Multi-workspace switcher
 
 ## Middleware (`src/proxy.ts`)
+
 Single middleware file handling:
+
 1. next-intl locale routing (prefix-based)
 2. Auth protection: redirects unauthenticated users away from `/dashboard` and `/admin`
 3. Admin group check for `/admin` routes
 4. Locale normalization before auth checks
 
 ## Test Architecture
+
 - `__tests__/` — Vitest unit tests mirror `src/lib/` and `src/app/api/` structure
 - `__tests__/stubs/` — Module stubs for AWS SDKs, Next.js server/navigation
 - `__tests__/setup.ts` — Global test setup
@@ -112,6 +123,7 @@ Single middleware file handling:
 - `e2e/_internal/`, `e2e/fixtures/`, `e2e/helpers/` — Shared test utilities
 
 ## Infrastructure Components
+
 - `infrastructure/pi-alert-api/` — Python FastAPI service running on Pi: receives ESP32 MQTT alerts, forwards to Notion + Slack
 - `infrastructure/esp32-watchdog/` — ESP32 firmware (Arduino/ESPHome/PlatformIO)
 - `workers/esp32-proxy/` — Cloudflare Worker bridging ESP32 → Pi API
@@ -119,6 +131,7 @@ Single middleware file handling:
 - `k8s/` — k3s manifests: app deployment, cluster protection, Grafana dashboards
 
 ## Key Configuration Files
+
 | File | Purpose |
 |---|---|
 | `next.config.ts` | Next.js config: next-intl plugin, SST/Docker output, coverage mode, image optimization |

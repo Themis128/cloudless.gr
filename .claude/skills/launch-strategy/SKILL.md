@@ -27,6 +27,7 @@ Establish: product (new/feature/update), target audience, launch type (soft/beta
 ### Week 8-6: Foundation
 
 **Positioning**: One-sentence value prop. Elevator pitch (30s/60s/2min). Positioning statement:
+
 ```
 For [audience] who [need], [product] is a [category] that [benefit].
 Unlike [alternative], we [differentiator].
@@ -55,6 +56,7 @@ Unlike [alternative], we [differentiator].
 ## Step 4: Launch Week
 
 ### Day Before
+
 - [ ] Final QA of product, page, links
 - [ ] Queue social posts, pre-schedule email
 - [ ] Brief team on roles

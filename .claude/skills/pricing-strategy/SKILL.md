@@ -28,24 +28,31 @@ Establish: product/service, target market (B2B/B2C/SMB/enterprise), current pric
 ## Step 3: Pricing Psychology
 
 ### 1. Price Anchoring
+
 Show highest tier first, compare to alternatives ("vs. hiring at $80K/year"), compare to outcome value ("Generates $10K savings. Costs $99/month").
 
 ### 2. Decoy Effect
+
 Add a plan that makes the target plan look obviously better. Example: Basic $9 (5 users), Plus $25 (10 users, DECOY), Pro $29 (25 users, TARGET).
 
 ### 3. Charm Pricing
+
 $99 feels cheaper than $100. Use .99 for consumer/SMB, round numbers for enterprise/premium.
 
 ### 4. Center-Stage Effect
+
 People choose the middle of 3 options. Make your target plan the middle tier and highlight it.
 
 ### 5. Loss Aversion
+
 Frame around what they lose without your product. Use "downgrade" language. Show features they would lose.
 
 ### 6. Endowment Effect
+
 Full-featured trials, then keep. Show personalized data that makes leaving painful.
 
 ### 7. Price-Quality Signal
+
 Premium products should not underprice. Own higher prices: "We cost more because we deliver more."
 
 ## Step 4: Tier Design

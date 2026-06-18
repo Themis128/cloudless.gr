@@ -36,21 +36,25 @@ echo "FEISHU_APP_SECRET is ${FEISHU_APP_SECRET:+set}"
 If no credentials are set, instruct the user:
 
 > **Custom Bot Webhook (quickest setup):**
+>
 > 1. Open a Feishu/Lark group chat
 > 2. Click the group name at the top to open Group Settings
 > 3. Go to **Bots** > **Add Bot** > **Custom Bot**
 > 4. Name the bot and optionally set a Signature Verification secret
 > 5. Copy the webhook URL and add to `.env`:
+>
 >    ```
 >    FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/{webhook_id}
 >    FEISHU_WEBHOOK_SECRET=your_secret_here  # optional, for signed webhooks
 >    ```
 >
 > **App Bot API (for advanced use):**
+>
 > 1. Go to [Feishu Open Platform](https://open.feishu.cn/app) or [Lark Developer Console](https://open.larksuite.com/app)
 > 2. Create a new app, enable the Bot capability
 > 3. Add required permissions: `im:message:send_as_bot`, `im:chat:readonly`
 > 4. Publish and approve the app, then add to `.env`:
+>
 >    ```
 >    FEISHU_APP_ID=cli_xxxxx
 >    FEISHU_APP_SECRET=xxxxx
@@ -202,6 +206,7 @@ curl -s -X POST "${FEISHU_WEBHOOK_URL}" \
 ```
 
 **Feishu signature algorithm details:**
+
 1. Concatenate `timestamp + "\n" + secret` as the string to sign
 2. Compute HMAC-SHA256 with an empty key over that string
 3. Base64-encode the result
@@ -853,16 +858,19 @@ curl -s -X POST "${FEISHU_WEBHOOK_URL}" \
 ### Common Troubleshooting
 
 **Message not delivered:**
+
 - Verify the webhook URL is correct and the bot is still in the group
 - Check that `msg_type` matches the content structure
 - For signed webhooks, ensure the timestamp is within 1 hour of current time
 
 **Card not rendering:**
+
 - Validate JSON structure: header and elements are both required
 - Button URLs must start with `http://` or `https://`
 - Markdown in cards supports a limited subset: bold, italic, links, lists, tables
 
 **API token errors:**
+
 - Tenant access tokens expire after 2 hours; re-fetch before sending
 - Ensure the app has been published and approved in the developer console
 - Verify `im:message:send_as_bot` permission is granted

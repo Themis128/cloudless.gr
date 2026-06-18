@@ -23,6 +23,7 @@ Use when the user asks to "find queries for [brand]", "check GEO visibility", "w
 ```
 
 **Examples:**
+
 - `/geo-query-finder "Acme Corp"` — auto-researches the brand and generates queries
 - `/geo-query-finder "Acme Corp" --industry "smart TV OS" --features "white-label,voice-control,OEM licensing"`
 - `/geo-query-finder "Acme Corp" --queries "best regulatory AI;eCTD validation tool;pharma compliance software"`
@@ -45,11 +46,13 @@ curl -s -X POST "https://api.dataforseo.com/v3/ai_optimization/llm_mentions/sear
 ```
 
 **Critical flags:**
+
 - `"include_subdomains": true` — without it, apex domains return 0 results (www.X treated as a different domain).
 - Omit `location_code` to get global results; add `"location_code": 2840` only to scope to US.
 - `platform` options: `"google"` (AI Overview), `"chat_gpt"`. Perplexity is NOT supported via this dataset.
 
 **Extract from each `items[]`:**
+
 - `question` — the real search query where the brand was cited
 - `ai_search_volume` — monthly AI search volume (use to prioritize)
 - `sources[]` — entries with `domain` matching the brand have the exact cited URL
@@ -57,18 +60,23 @@ curl -s -X POST "https://api.dataforseo.com/v3/ai_optimization/llm_mentions/sear
 - `answer` — the LLM answer text (for context)
 
 **Decision rule:**
+
 - If ≥20 queries returned → skip Steps 1–4 entirely; report these as ground-truth mentions and focus Step 5 on gap analysis (sort by volume, find URL-section winners like `/guides/` vs `/tools/`).
 - If <20 queries → use them as seed input for Step 2 (generate variations of the query themes DataForSEO already confirmed), then run Steps 3–4 only on the gaps.
 - If 0 queries → the domain has no AI citations; proceed with the original Steps 1–5 (speculative testing) as fallback.
 
 ### Step 1: Research the Brand
+
 If no `--industry` or `--features` provided, use web search to understand:
+
 - What the brand does / what industry it's in
 - Key differentiators vs competitors
 - Unique features that competitors DON'T have
 
 ### Step 2: Generate Long-Tail Queries
+
 Generate 15-20 long-tail queries across these categories:
+
 1. **Feature-specific** (unique capabilities only this brand has)
 2. **B2B/decision-maker** (queries from buyers, not consumers)
 3. **Problem-solving** ("how to X without Y")
@@ -114,6 +122,7 @@ answer = result["choices"][0]["message"]["content"]
 ### Step 4: Check Mentions
 
 For each query, check if the brand name (or known aliases) appears in ChatGPT's response:
+
 - Check case-insensitive match
 - Check variations (with/without spaces, dots, hyphens)
 - If mentioned, extract the surrounding context (200 chars around the mention)

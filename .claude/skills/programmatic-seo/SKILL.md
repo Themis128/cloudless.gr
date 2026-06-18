@@ -10,12 +10,14 @@ You are an expert in programmatic SEO (pSEO) -- the strategy of creating large n
 ## What is Programmatic SEO?
 
 Programmatic SEO creates pages at scale by combining:
+
 - A **page template** (layout + structure)
 - A **data source** (database, API, CSV)
 - **Dynamic content** (unique per page, not just variable substitution)
 - **SEO optimization** (meta tags, internal links, schema)
 
 **Examples of successful pSEO:**
+
 - Zapier: "How to connect {App A} to {App B}" (150K+ pages)
 - Nomad List: "{City} for digital nomads" (1000+ city pages)
 - Wise: "{Currency A} to {Currency B} exchange rate" (10K+ pages)
@@ -44,6 +46,7 @@ Help the user find their pSEO opportunity. Look for patterns where:
 | Cost/Pricing | "How much does {service} cost" | "How much does a website cost" | Services count |
 
 **Qualification criteria for a good pSEO opportunity:**
+
 - [ ] Pattern has 100+ possible pages minimum
 - [ ] Each combination has measurable search volume (even 10-50/mo is fine at scale)
 - [ ] You can generate genuinely useful, unique content for each page
@@ -82,6 +85,7 @@ interface PageData {
 ```
 
 **Data sources to consider:**
+
 - Public APIs (government data, Wikipedia, industry databases)
 - Web scraping (with permission/robots.txt compliance)
 - User-generated content (reviews, contributions)
@@ -283,6 +287,7 @@ export default function robots(): MetadataRoute.Robots {
 Internal linking is critical for pSEO. Implement these patterns:
 
 **1. Hub-and-Spoke:**
+
 ```
 Hub: /services/plumber/
   |- /plumber/austin-tx
@@ -297,6 +302,7 @@ Each city page links to 5-10 nearby city pages for the same service.
 Each city page links to other services in the same city.
 
 **4. Breadcrumb Navigation:**
+
 ```
 Home > Services > Plumber > Austin, TX
 ```
@@ -305,6 +311,7 @@ Home > Services > Plumber > Austin, TX
 Popular pages and category indexes.
 
 **Implementation pattern:**
+
 ```typescript
 // Internal linking component
 function RelatedPages({ currentSlug, relatedPages }) {
@@ -332,6 +339,7 @@ function RelatedPages({ currentSlug, relatedPages }) {
 When deploying thousands of pages, manage indexation carefully:
 
 **Gradual rollout:**
+
 1. Deploy 50-100 pages first
 2. Monitor indexation in Google Search Console
 3. Check for "Discovered - currently not indexed" and "Crawled - currently not indexed"
@@ -339,12 +347,14 @@ When deploying thousands of pages, manage indexation carefully:
 5. If indexation rate < 50%, improve page quality before deploying more
 
 **Indexation signals:**
+
 - Submit sitemap to Google Search Console
 - Use IndexNow API (Bing, Yandex) for faster discovery
 - Internal link from high-authority existing pages
 - Share initial pages on social media for crawl signals
 
 **Quality thresholds:**
+
 - If Google indexes < 30% of pages, your template likely produces thin content
 - If pages get indexed then dropped, content quality is borderline
 - Monitor "Page experience" and "Core Web Vitals" in GSC for pSEO pages
@@ -354,6 +364,7 @@ When deploying thousands of pages, manage indexation carefully:
 Use these formulas for generating meta tags at scale:
 
 **Title tag formulas (50-60 chars):**
+
 ```
 "{Primary Keyword} in {Location} | {Brand}"
 "Best {Service} in {City}, {State} ({Year})"
@@ -363,6 +374,7 @@ Use these formulas for generating meta tags at scale:
 ```
 
 **Meta description formulas (150-160 chars):**
+
 ```
 "Find the best {service} in {city}. Compare {X} local providers, read {Y} reviews, and get free quotes. Average cost: ${Z}."
 "Detailed comparison of {A} vs {B}. See features, pricing, pros/cons, and which is better for {use case}."
@@ -370,6 +382,7 @@ Use these formulas for generating meta tags at scale:
 ```
 
 **H1 formulas:**
+
 ```
 "Best {Service} in {City}, {State}"
 "{Product A} vs {Product B}: Complete Comparison"

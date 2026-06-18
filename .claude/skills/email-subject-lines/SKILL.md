@@ -36,6 +36,7 @@ Before generating subject lines, collect these inputs:
 **Target: 30-50 characters (6-10 words).** This range is fully visible on mobile and desktop.
 
 **Mobile preview widths:**
+
 - iPhone: ~35-40 characters
 - Android: ~33-43 characters
 - Gmail app: ~40 characters
@@ -57,6 +58,7 @@ Create an information gap that can only be closed by opening the email.
 | "I was wrong about cold email" | Contrarian + personal admission |
 
 **Rules:**
+
 - Do not be vague to the point of irrelevance ("You won't believe this!").
 - The email body must deliver on the curiosity promise.
 - Use sparingly; overuse trains subscribers to distrust.
@@ -74,6 +76,7 @@ Create time pressure that motivates immediate action.
 | "Flash sale: 6 hours only" | Time-limited |
 
 **Rules:**
+
 - Urgency must be real. Fake urgency destroys trust permanently.
 - Do not use urgency in every email. Reserve for genuine time-sensitive offers.
 - Avoid all-caps urgency words (LAST CHANCE, HURRY).
@@ -92,6 +95,7 @@ Use subscriber data to make the subject feel individually crafted.
 | "[Name], you left items in your cart" | Name + behavior |
 
 **Rules:**
+
 - Personalization boosts open rates by 10-20% on average.
 - Do not overuse first names. If every email starts with "[Name]," it loses effect.
 - Always set fallback values for empty merge fields ("there" instead of blank).
@@ -110,6 +114,7 @@ Pose a question the reader wants answered.
 | "Can you write a landing page in 30 min?" | Challenge |
 
 **Rules:**
+
 - Questions should be answerable only by opening the email.
 - Avoid yes/no questions where the answer is obvious.
 - Rhetorical questions ("Want to make more money?") feel spammy.
@@ -128,6 +133,7 @@ Include a specific number for concreteness and scannability.
 | "11 subject line formulas (steal these)" | Odd numbers outperform even |
 
 **Rules:**
+
 - Odd numbers (3, 5, 7, 9, 11) tend to outperform even numbers.
 - Specific numbers (247%) outperform round numbers (250%).
 - Use digits, not words ("7" not "seven") for visual impact in the inbox.
@@ -145,6 +151,7 @@ Promise a practical, actionable skill or outcome.
 | "How top founders write investor updates" | How [authority] [does thing] |
 
 **Rules:**
+
 - "How to" subjects set a learning expectation. The email must teach.
 - Pair with a specific, measurable outcome when possible.
 - Avoid vague how-to's ("How to improve your marketing").
@@ -162,6 +169,7 @@ Challenge a widely held belief to provoke engagement.
 | "Forget about SEO for 6 months" | SEO is always important |
 
 **Rules:**
+
 - You must back up the contrarian claim in the email body.
 - Do not be contrarian for shock value alone. Have a genuine insight.
 - This formula generates high opens AND high unsubscribes. Use intentionally.
@@ -301,6 +309,7 @@ rates in your Resend dashboard.
 For every subject line request, deliver:
 
 ### 1. Subject Line Options (10-15)
+
 Organized by formula type with character count:
 
 ```
@@ -316,9 +325,11 @@ URGENCY
 ```
 
 ### 2. Top 3 Recommendations
+
 Ranked by predicted open rate with reasoning.
 
 ### 3. A/B Test Pairs
+
 3 recommended A/B pairs with hypothesis for each:
 
 ```
@@ -329,4 +340,5 @@ Test 1: Curiosity vs. Direct
 ```
 
 ### 4. Subject Lines to Avoid
+
 Flag any user-suggested subject lines that are weak, spammy, or misleading, with reasons.

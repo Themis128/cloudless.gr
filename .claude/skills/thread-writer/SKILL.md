@@ -34,6 +34,7 @@ Every great thread follows a consistent structure:
 ### 1. Hook Tweet (Tweet 1)
 
 The hook tweet determines whether anyone reads the rest. It must:
+
 - Stop the scroll in under 2 seconds.
 - Make a bold promise, surprising claim, or emotional statement.
 - Not include "Thread:" or "[1/N]" (these reduce engagement).
@@ -55,11 +56,13 @@ The hook tweet determines whether anyone reads the rest. It must:
 ### 2. Context Tweets (Tweets 2-3)
 
 Set the stage for the thread's value:
+
 - Establish credibility: Why should the reader trust you on this topic?
 - Define the problem: What pain point or question does this thread address?
 - Set expectations: What will the reader learn or gain?
 
 **Example:**
+
 ```
 Tweet 2: "I've spent 5 years building email lists. Tested 200+ lead magnets.
 Most advice out there is outdated. Here's what actually works in 2025:"
@@ -73,6 +76,7 @@ The strategies below get 5-12%. The difference is worth millions."
 The meat of the thread. Each tweet delivers one point, lesson, or step.
 
 **Value tweet rules:**
+
 - One idea per tweet. Never cram two points into one tweet.
 - Start each tweet with a bold statement or number.
 - Use concrete examples, not abstract advice.
@@ -117,6 +121,7 @@ The final tweet drives a specific action:
 | Engage | "Which tip was most surprising? I'll elaborate on the most popular one." |
 
 **CTA rules:**
+
 - Always include a CTA. Threads without CTAs waste distribution.
 - Pair a follow CTA with a retweet request for maximum growth.
 - Link CTAs should go in the last tweet or a reply, never the hook tweet.
@@ -266,15 +271,19 @@ Here's every change we made:"
 For every thread request, deliver:
 
 ### 1. Thread Outline
+
 A brief bullet-point plan showing the arc of the thread.
 
 ### 2. Full Thread
+
 Each tweet numbered, with character count. Formatted exactly as it would be posted.
 
 ### 3. Hook Variations
+
 3-5 alternative hook tweets for the user to choose from.
 
 ### 4. Posting Instructions
+
 - Suggested posting time.
 - Whether to post all at once or with delays.
 - Recommended first reply (often the link or bonus tip).

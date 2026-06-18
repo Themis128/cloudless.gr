@@ -33,6 +33,7 @@ cd ~/.agents/tools && node fetch-google-reviews.js "Business Name" "City,Provinc
 ```
 
 Example:
+
 ```bash
 cd ~/.agents/tools && node fetch-google-reviews.js "Trust Auto Sales" "Richmond,British Columbia,Canada"
 ```
@@ -46,6 +47,7 @@ cd ~/.agents/tools && node fetch-google-reviews.js --batch /path/to/businesses.j
 ```
 
 JSON file format:
+
 ```json
 [
   {"keyword": "Business One", "location": "Vancouver,British Columbia,Canada"},
@@ -88,6 +90,7 @@ Prints a markdown table followed by full JSON:
 Use the DataForSEO location format: `City,Province/State,Country`
 
 Examples:
+
 - `Richmond,British Columbia,Canada`
 - `Vancouver,British Columbia,Canada`
 - `Toronto,Ontario,Canada`

@@ -15,6 +15,7 @@ Before writing a single word, gather intelligence:
 
 **1A. Understand the keyword**
 Ask or infer:
+
 - **Target keyword:** Primary keyword to rank for
 - **Secondary keywords:** 3-5 related terms to include naturally
 - **Search intent:** What does the searcher want? (Answer, comparison, tutorial, list)
@@ -31,6 +32,7 @@ curl -s "https://api.semrush.com/?type=phrase_all&key=${SEMRUSH_API_KEY}&phrase=
 ```
 
 The response is semicolon-delimited with columns:
+
 - **Ph** - Keyword phrase
 - **Nq** - Monthly search volume (use this to gauge content depth: higher volume = more comprehensive article)
 - **Cp** - CPC in dollars (high CPC signals strong commercial intent - emphasize CTAs and product mentions)
@@ -38,12 +40,14 @@ The response is semicolon-delimited with columns:
 - **Nr** - Number of organic results (more results = more competitive SERP)
 
 Use these insights to:
+
 - **Calibrate word count:** Keywords with volume >5,000 typically need 2,500+ word articles
 - **Adjust commercial angle:** CPC > $5 means readers have buying intent - include product recommendations, comparisons, or pricing info
 - **Identify difficulty:** Competition > 0.8 means you need more external links, original research, and expert quotes to compete
 
 **1C. Analyze the SERP (if tools available)**
 Use WebSearch to check what currently ranks:
+
 - What content type dominates? (Listicle, how-to, guide, comparison)
 - What's the average word count of top 5?
 - What topics do all top results cover?
@@ -120,6 +124,7 @@ Choose the best pattern for the intent:
 | Question | "{Question}? {Promise}" | "Is SEO Dead? What the Data Actually Shows" |
 
 **Title rules:**
+
 - Primary keyword within first 30 characters
 - Add a power word: Ultimate, Complete, Proven, Essential, Definitive
 - Include year if the topic is time-sensitive
@@ -133,10 +138,12 @@ Choose the best pattern for the intent:
 ```
 
 Examples:
+
 - "Learn how to start a blog in 2025 with our step-by-step guide. Covers hosting, design, content, and monetization. Free checklist included."
 - "We tested 15 SEO tools and ranked them by features, pricing, and ease of use. See which tool is best for your budget and goals."
 
 **Meta description rules:**
+
 - Include primary keyword naturally
 - Include a CTA or curiosity element
 - Use active voice
@@ -146,6 +153,7 @@ Examples:
 #### Writing Style Rules
 
 **Readability:**
+
 - Paragraphs: 2-4 sentences max
 - Sentences: 15-20 words average
 - Use short sentences for emphasis. Like this.
@@ -154,6 +162,7 @@ Examples:
 - Active voice > passive voice (aim for 90%+ active)
 
 **Structure & Scannability:**
+
 - H2 every 200-300 words
 - H3 for subsections within H2s
 - Bullet points for lists of 3+ items
@@ -163,6 +172,7 @@ Examples:
 - Tables for comparisons (Google loves tables for featured snippets)
 
 **SEO Integration (natural, not forced):**
+
 - Primary keyword in: H1, first 100 words, 1-2 H2s, conclusion, alt text
 - Primary keyword density: 0.5-1.5% (roughly every 200 words in a 2000-word post)
 - Secondary keywords: each appears 2-3 times throughout
@@ -170,6 +180,7 @@ Examples:
 - Never keyword stuff - if it sounds unnatural, rewrite it
 
 **E-E-A-T Signals:**
+
 - **Experience:** Include first-hand observations, "In my experience...", "When I tested..."
 - **Expertise:** Reference specific methodologies, use precise terminology, show deep knowledge
 - **Authoritativeness:** Cite authoritative sources (studies, official docs, industry leaders)
@@ -191,6 +202,7 @@ Examples:
 Target featured snippets with these patterns:
 
 **Paragraph snippet (definition/what is):**
+
 ```markdown
 ## What Is {Topic}?
 
@@ -199,6 +211,7 @@ Target featured snippets with these patterns:
 ```
 
 **List snippet (how-to/best of):**
+
 ```markdown
 ## How to {Action}
 
@@ -209,6 +222,7 @@ Target featured snippets with these patterns:
 ```
 
 **Table snippet (comparison/data):**
+
 ```markdown
 ## {Comparison Topic}
 
@@ -221,12 +235,14 @@ Target featured snippets with these patterns:
 
 **Image suggestions:**
 For each major section, suggest an image:
+
 ```markdown
 [IMAGE: {Description of what the image should show}]
 Alt text: "{Descriptive alt text with keyword where natural}"
 ```
 
 **Image types to suggest:**
+
 - Hero image (featured image for social sharing)
 - Screenshots (for tutorials)
 - Comparison tables (as images for Pinterest)
@@ -265,6 +281,7 @@ curl -s "https://api.unsplash.com/search/photos?query={topic}&per_page=5&orienta
 ```
 
 Key fields from the response:
+
 - **`.urls.regular`** - Optimized image (1080px wide, good for blog featured images)
 - **`.urls.full`** - Full resolution image
 - **`.urls.small`** - Thumbnail (400px wide, good for social sharing previews)
@@ -281,6 +298,7 @@ Photo by [Photographer Name](https://unsplash.com/@username?utm_source=your_app&
 ```
 
 Place the attribution either:
+
 - In the image caption directly below the featured image
 - In an image credits section at the bottom of the post
 - In the alt text or title attribute of the image tag
@@ -288,12 +306,14 @@ Place the attribution either:
 **Tip:** Search with specific, descriptive queries rather than broad terms. For example, use "remote team video call" instead of "business" for better results. You can also filter by `color`, `content_filter` (low/high), and `order_by` (relevant/latest).
 
 **Internal link placement:**
+
 - Contextual links within body paragraphs (most valuable)
 - "Related reading" callout boxes between sections
 - "Further reading" section at the end
 - Anchor text should be descriptive, not "click here"
 
 **External link rules:**
+
 - Link to authoritative sources (studies, official docs, .edu, .gov)
 - Open external links in new tab
 - No-follow affiliate links and sponsored content
@@ -318,6 +338,7 @@ This format optimizes for both featured snippets and FAQ rich results.}
 ```
 
 **FAQ rules:**
+
 - 4-6 questions
 - Questions should use natural language (how, what, why, when, can, does)
 - Answer the question in the first sentence
@@ -329,6 +350,7 @@ This format optimizes for both featured snippets and FAQ rich results.}
 Before delivering the post, verify:
 
 **SEO Checklist:**
+
 - [ ] Title tag: 50-60 characters, keyword front-loaded
 - [ ] Meta description: 150-160 characters, includes keyword, has CTA
 - [ ] URL slug: Short, includes keyword, hyphenated
@@ -344,6 +366,7 @@ Before delivering the post, verify:
 - [ ] No duplicate content or thin sections
 
 **Readability Checklist:**
+
 - [ ] Average paragraph: 2-4 sentences
 - [ ] Average sentence: under 20 words
 - [ ] Grade level: 7-9
@@ -353,6 +376,7 @@ Before delivering the post, verify:
 - [ ] Bold text highlights key points
 
 **E-E-A-T Checklist:**
+
 - [ ] Author byline with credentials suggested
 - [ ] Sources cited and linked
 - [ ] First-hand experience or expertise demonstrated
@@ -380,6 +404,7 @@ author: "{Author name}"
 ```
 
 After the article, provide:
+
 1. **SEO metadata summary** (title, description, slug, word count)
 2. **Internal linking recommendations** (which pages to link to/from)
 3. **Schema markup** (Article or BlogPosting JSON-LD)

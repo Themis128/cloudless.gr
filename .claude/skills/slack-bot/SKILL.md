@@ -523,7 +523,7 @@ several ways.
 | Formatting | Syntax | Example |
 |-----------|--------|---------|
 | Bold | `*text*` | *bold text* |
-| Italic | `_text_` | _italic text_ |
+| Italic | `_text_` | *italic text* |
 | Strikethrough | `~text~` | ~strikethrough~ |
 | Code (inline) | `` `text` `` | `inline code` |
 | Code block | ` ```text``` ` | Multi-line code block |
@@ -532,11 +532,12 @@ several ways.
 | User mention | `<@U0123456>` | @username |
 | Channel mention | `<#C0123456>` | #channel |
 | Emoji | `:emoji_name:` | :rocket: |
-| Bulleted list | Start line with `- ` or `* ` | Bullet point |
-| Numbered list | Start line with `1. ` | Numbered item |
+| Bulleted list | Start line with `-` or `*` | Bullet point |
+| Numbered list | Start line with `1.` | Numbered item |
 | Line break | `\n` in JSON string | New line |
 
 **Important differences from standard Markdown:**
+
 - Bold uses single asterisks `*bold*`, not double `**bold**`.
 - Italic uses underscores `_italic_`, not single asterisks.
 - Links use `<url|text>` format with a pipe, not `[text](url)`.

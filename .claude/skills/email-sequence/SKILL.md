@@ -32,6 +32,7 @@ Before creating any sequence, collect these inputs:
 ## Universal Email Principles
 
 ### Subject Line Rules
+
 - Keep between 30-50 characters (6-10 words).
 - Front-load the most important word.
 - Use lowercase for a casual feel, title case for professional.
@@ -40,12 +41,14 @@ Before creating any sequence, collect these inputs:
 - A/B test every subject line in your ESP.
 
 ### Preview Text Rules
+
 - Always write custom preview text (40-90 characters).
 - Do not repeat the subject line.
 - Complement the subject line by adding context or intrigue.
 - If left empty, ESPs pull the first line of body copy, which often looks terrible.
 
 ### Email Structure
+
 1. **Hook** (first 2 lines) - Must earn the scroll. Ask a question, state a bold claim,
    or reference something personal.
 2. **Body** (3-8 sentences) - One idea per email. Do not try to cover everything.
@@ -64,6 +67,7 @@ Before creating any sequence, collect these inputs:
 ### Segmentation Rules
 
 Segment sequences based on:
+
 - **Behavior** - Pages visited, features used, emails opened, links clicked.
 - **Demographics** - Industry, company size, role, location.
 - **Lifecycle stage** - New lead, trial user, paying customer, churned user.
@@ -162,6 +166,7 @@ Segment sequences based on:
 ### Spam Trigger Avoidance
 
 **Avoid these in subject lines and body:**
+
 - ALL CAPS words (e.g., "FREE", "BUY NOW", "CLICK HERE")
 - Excessive exclamation marks (!!!)
 - Spam trigger phrases: "Act now", "Limited time", "You've been selected", "Congratulations",
@@ -266,11 +271,14 @@ curl -X POST https://api.resend.com/emails/batch \
 For every email sequence, deliver:
 
 ### 1. Sequence Overview
+
 - Sequence name, goal, trigger, audience segment.
 - Visual flow diagram (text-based).
 
 ### 2. Individual Emails
+
 For each email in the sequence:
+
 - **Email number and name** (e.g., "Email 3: Social Proof")
 - **Timing** (delay from previous email or trigger)
 - **Subject line** (primary + 2 A/B variants)
@@ -282,10 +290,13 @@ For each email in the sequence:
 - **Branch logic** (if applicable: what happens if they open/click/don't)
 
 ### 3. Segmentation Rules
+
 Who enters this sequence, who exits, and any branch conditions.
 
 ### 4. Success Metrics
+
 Target open rates, click rates, and conversion rates for each email.
 
 ### 5. A/B Test Plan
+
 Recommended tests for the first 30 days (subject lines, send times, CTA copy).

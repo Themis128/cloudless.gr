@@ -10,6 +10,7 @@ You are an expert SERP analyst. Given a target keyword, analyze what currently r
 ## Prerequisites
 
 Optional API keys for enriched data (the skill can work without any of them using web search):
+
 - `SEMRUSH_API_KEY` - for keyword and organic results data
 - `SERPAPI_API_KEY` - for real-time Google SERP data including SERP features
 - `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` - for advanced SERP data
@@ -21,10 +22,12 @@ Optional API keys for enriched data (the skill can work without any of them usin
 Use multiple data sources to build a complete SERP picture:
 
 **Method A: SemRush API (if available)**
+
 ```
 # Get organic results for keyword
 https://api.semrush.com/?type=phrase_organic&key={KEY}&phrase={keyword}&database=us&export_columns=Dn,Ur,Fk,Fp&display_limit=20
 ```
+
 Columns: Dn=Domain, Ur=URL, Fk=SERP Features, Fp=Position
 
 **Method B: Web Search (always do this)**
@@ -36,12 +39,14 @@ Use WebFetch on the top 5-10 ranking URLs to analyze actual content.
 **Method D: SerpAPI (if SERPAPI_API_KEY available)**
 
 Real-time Google SERP data with structured SERP features:
+
 ```bash
 # Real-time Google SERP data via SerpAPI
 curl -s "https://serpapi.com/search.json?q={keyword}&api_key=${SERPAPI_API_KEY}&num=20&gl=us&hl=en"
 ```
 
 The JSON response includes:
+
 - `organic_results` - Array of organic listings with `position`, `title`, `link`, `snippet`, `displayed_link`
 - `related_questions` - People Also Ask questions with `question`, `snippet`, `title`, `link`
 - `knowledge_graph` - Knowledge panel data with `title`, `description`, `entity_type`, and attributes
@@ -52,6 +57,7 @@ The JSON response includes:
 - `related_searches` - Related search queries
 
 Parse example:
+
 ```bash
 # Extract organic results
 curl -s "https://serpapi.com/search.json?q={keyword}&api_key=${SERPAPI_API_KEY}&num=20&gl=us&hl=en" | \
@@ -71,6 +77,7 @@ SerpAPI is especially useful for mapping SERP features in Step 2, as it returns 
 **Method E: DataForSEO (if DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD available)**
 
 Advanced SERP data with detailed item types and ranking metrics:
+
 ```bash
 # DataForSEO SERP API
 curl -s -X POST "https://api.dataforseo.com/v3/serp/google/organic/live/advanced" \
@@ -80,6 +87,7 @@ curl -s -X POST "https://api.dataforseo.com/v3/serp/google/organic/live/advanced
 ```
 
 The response provides:
+
 - `result[0].items` - Array of all SERP items, each with a `type` field:
   - `"organic"` - Standard organic results with `url`, `title`, `description`, `rank_group`, `rank_absolute`
   - `"featured_snippet"` - Featured snippet with `description`, `url`, `type` (paragraph/list/table)
@@ -115,6 +123,7 @@ Document every SERP feature present for this keyword:
 | Breadcrumbs | Yes/No | {domains} | - |
 
 **SERP Intent Signal Analysis:**
+
 - Mostly blog posts/guides = Informational intent
 - Mostly product/service pages = Transactional intent
 - Mix of reviews + product pages = Commercial investigation
@@ -207,6 +216,7 @@ Competitor 2 ({domain}): {Positioning summary}
 ```
 
 **Find your differentiation angle:**
+
 - Can you be more comprehensive? (10x content)
 - Can you be more actionable? (templates, tools, checklists)
 - Can you be more current? (latest data, 2025 updates)
@@ -291,6 +301,7 @@ Write 3 options following these patterns from top results:
 ## Output Format
 
 Always present:
+
 1. **SERP Overview** - Feature map and intent analysis
 2. **Top 10 Analysis Table** - Key metrics for each result
 3. **Pattern Summary** - What the SERP rewards

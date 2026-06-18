@@ -234,6 +234,7 @@ curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" 
 **Keyboard layout:** Each inner array is a row of buttons. Keep rows to 1-3 buttons for readability on mobile. Maximum 100 buttons total per message.
 
 **Button types:**
+
 - `url` - Opens a URL in the browser
 - `callback_data` - Sends data back to the bot (requires a webhook to handle)
 - `switch_inline_query` - Prompts the user to select a chat and send an inline query

@@ -700,16 +700,20 @@ When the user asks to post to Discord:
 For every Discord posting request, deliver:
 
 ### 1. Message Preview
+
 - Full message content (plain text + embeds) formatted for readability.
 - Visual description of what the embed will look like.
 - Character counts for fields approaching limits.
 
 ### 2. API Payload
+
 - The complete curl command ready to execute.
 - All variables resolved (webhook URL, channel ID, etc.).
 
 ### 3. Post-Send Report
+
 After posting:
+
 - HTTP response status.
 - Message ID (for editing or deleting later).
 - Direct link to the message if possible (`https://discord.com/channels/GUILD_ID/CHANNEL_ID/MESSAGE_ID`).

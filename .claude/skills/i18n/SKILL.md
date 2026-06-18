@@ -27,6 +27,7 @@ npm install next-intl
 Create 4 files under `src/i18n/`:
 
 ### `src/i18n/config.ts`
+
 ```typescript
 export const locales = ['en', 'es', 'fr', 'de', 'pt', 'ja', 'ar', 'zh', 'zh-tw', 'id', 'vi', 'ms', 'ru', 'hi'] as const
 
@@ -54,6 +55,7 @@ export const rtlLocales: Locale[] = ['ar']
 ```
 
 ### `src/i18n/routing.ts`
+
 ```typescript
 import { defineRouting } from 'next-intl/routing'
 import { defaultLocale, locales } from './config'
@@ -66,6 +68,7 @@ export const routing = defineRouting({
 ```
 
 ### `src/i18n/navigation.ts`
+
 ```typescript
 import { createNavigation } from 'next-intl/navigation'
 import { routing } from './routing'
@@ -74,6 +77,7 @@ export const { Link, redirect, usePathname, useRouter } = createNavigation(routi
 ```
 
 ### `src/i18n/request.ts`
+
 ```typescript
 import { getRequestConfig } from 'next-intl/server'
 import { routing } from './routing'
@@ -93,6 +97,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
 ## Step 4: Create Middleware
 
 Create `src/middleware.ts`:
+
 ```typescript
 import createMiddleware from 'next-intl/middleware'
 import { routing } from '@/i18n/routing'
@@ -138,6 +143,7 @@ Move all page content under `src/app/[locale]/`:
 ## Step 7: Extract Strings into Translation Files
 
 1. Create `src/messages/en.json` with all user-facing strings organized by section:
+
    ```json
    {
      "common": { "signIn": "Sign In", ... },
@@ -147,12 +153,14 @@ Move all page content under `src/app/[locale]/`:
    ```
 
 2. Replace all hardcoded strings in components with `useTranslations()`:
+
    ```typescript
    const t = useTranslations('common')
    return <button>{t('signIn')}</button>
    ```
 
 3. For server components, use `getTranslations()`:
+
    ```typescript
    const t = await getTranslations('common')
    ```
