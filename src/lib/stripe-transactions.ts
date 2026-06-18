@@ -195,7 +195,6 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
   );
 }
 
-
 // ---------------------------------------------------------------------------
 // Data Lake sink — writes Stripe events to S3 for Athena analytics.
 // ---------------------------------------------------------------------------
@@ -222,8 +221,10 @@ async function sinkStripeEventToLake(event: Stripe.Event): Promise<void> {
     timestamp: d.toISOString(),
     event: event.type,
     user_id: (obj.customer as string) ?? undefined,
-    email: (obj.customer_email as string) ??
-           ((obj.customer_details as Record<string, unknown>)?.email as string) ?? undefined,
+    email:
+      (obj.customer_email as string) ??
+      ((obj.customer_details as Record<string, unknown>)?.email as string) ??
+      undefined,
     amount: (obj.amount_total as number) ?? undefined,
     currency: (obj.currency as string) ?? undefined,
     product_id: event.type,
@@ -232,6 +233,11 @@ async function sinkStripeEventToLake(event: Stripe.Event): Promise<void> {
   });
 
   await getLakeS3().send(
-    new PutObjectCommand({ Bucket: LAKE_BUCKET, Key: key, Body: record, ContentType: "application/x-ndjson" })
+    new PutObjectCommand({
+      Bucket: LAKE_BUCKET,
+      Key: key,
+      Body: record,
+      ContentType: "application/x-ndjson",
+    })
   );
 }

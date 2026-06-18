@@ -1165,7 +1165,7 @@ export default function ClientPortalsPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="rounded-lg border border-neon-cyan/30 px-3 py-1.5 font-mono text-xs text-neon-cyan transition hover:border-neon-cyan/60 hover:bg-neon-cyan/10"
+                      className="border-neon-cyan/30 text-neon-cyan hover:border-neon-cyan/60 hover:bg-neon-cyan/10 rounded-lg border px-3 py-1.5 font-mono text-xs transition"
                     >
                       Open Portal
                     </a>

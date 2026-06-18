@@ -374,7 +374,6 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
   return purged;
 }
 
-
 // ---------------------------------------------------------------------------
 // Data Lake sink — writes notifications to S3 as NDJSON for Athena queries.
 // Partitioned by year/month for the notifications table schema.
@@ -406,6 +405,11 @@ async function sinkToLake(notif: AdminNotification): Promise<void> {
   });
 
   await getS3().send(
-    new PutObjectCommand({ Bucket: LAKE_BUCKET, Key: key, Body: record, ContentType: "application/json" })
+    new PutObjectCommand({
+      Bucket: LAKE_BUCKET,
+      Key: key,
+      Body: record,
+      ContentType: "application/json",
+    })
   );
 }

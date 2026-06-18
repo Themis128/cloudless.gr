@@ -16,8 +16,7 @@ type PageProps = {
 
 export const metadata: Metadata = {
   title: "Campaigns — Cloudless",
-  description:
-    "Active offers and time-bound campaigns from Cloudless. Greek SMB focus.",
+  description: "Active offers and time-bound campaigns from Cloudless. Greek SMB focus.",
   robots: { index: false, follow: true },
 };
 
@@ -64,13 +63,9 @@ export default async function CampaignsIndex({ params }: PageProps) {
           {campaigns.map((c) => (
             <li key={c.slug} className="cl-cam-card">
               <div className="cl-cam-card__meta">
-                <time dateTime={c.startsAt}>
-                  {new Date(c.startsAt).toLocaleDateString(locale)}
-                </time>
+                <time dateTime={c.startsAt}>{new Date(c.startsAt).toLocaleDateString(locale)}</time>
                 <span aria-hidden> — </span>
-                <time dateTime={c.endsAt}>
-                  {new Date(c.endsAt).toLocaleDateString(locale)}
-                </time>
+                <time dateTime={c.endsAt}>{new Date(c.endsAt).toLocaleDateString(locale)}</time>
               </div>
               <h2>{c.headline[locale]}</h2>
               <p>{c.subhead[locale]}</p>

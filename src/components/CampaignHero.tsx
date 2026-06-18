@@ -49,9 +49,7 @@ export default function CampaignHero({ campaign, locale }: Props) {
           <Image
             src={campaign.heroImage}
             alt={
-              locale === "el"
-                ? "Εβδομαδιαία αναφορά Shop Insights"
-                : "Weekly Shop Insights digest"
+              locale === "el" ? "Εβδομαδιαία αναφορά Shop Insights" : "Weekly Shop Insights digest"
             }
             width={760}
             height={1380}
