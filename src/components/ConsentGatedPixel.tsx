@@ -17,7 +17,9 @@ export default function ConsentGatedPixel({ pixelId, nonce }: { pixelId: string;
     };
     if (!w.fbq) {
       const q: unknown[][] = [];
-      const fbq = (...args: unknown[]) => { q.push(args); };
+      const fbq = (...args: unknown[]) => {
+        q.push(args);
+      };
       (fbq as unknown as { queue: unknown[][]; loaded: boolean; version: string }).queue = q;
       (fbq as unknown as { loaded: boolean }).loaded = true;
       (fbq as unknown as { version: string }).version = "2.0";
