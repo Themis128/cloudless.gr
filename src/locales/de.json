@@ -48,7 +48,7 @@
     "subtitleHighlight": "Endlich.",
     "ctaPrimary": "Kostenloses Audit",
     "ctaSecondary": "Leistungen ansehen",
-    "microCopy1": "Kein Commitment. Umsetzbare Insights in 30 Min.",
+    "microCopy1": "Keine Verpflichtung. Umsetzbare Erkenntnisse in 30 Min.",
     "microCopy2": "Transparente Preise. Kein Lock-in.",
     "terminalTitle": "cloudless-cli v2.0"
   },
@@ -68,10 +68,10 @@
   },
   "credibility": {
     "builtBy": "Entwickelt von Themistokles Baltzakis",
-    "bio": "— AWS Certified Cloud Architect mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr gegründet, weil Startups Enterprise-Cloud-Qualität verdienen — ohne Enterprise-Preise.",
+    "bio": "— AWS Certified Cloud Architect mit über 8 Jahren Erfahrung im Aufbau serverloser Infrastrukturen und Wachstumssysteme. Ich habe cloudless.gr gegründet, weil Startups Enterprise-Cloud-Qualität verdienen — ohne Enterprise-Preise oder Enterprise-Bürokratie.",
     "badgeAws": "AWS-zertifiziert",
     "badgeOss": "Open-Source-Contributor",
-    "badgeCapacity": "Aktuell 5 neue Kunden für Q2 2026"
+    "badgeCapacity": "Noch 5 Plätze frei für Q2 2026"
   },
   "servicesSection": {
     "label": "[ UNSERE LEISTUNGEN ]",
@@ -80,15 +80,15 @@
     "subtitle": "Von Infrastruktur bis Marketing — wir decken den gesamten Stack modernen Unternehmenswachstums ab.",
     "viewPricing": "Preise & Details anzeigen",
     "service1Title": "Cloud-Architektur & Migration",
-    "service1Desc": "Konzeption und Migration Ihrer Infrastruktur zu AWS, GCP oder Azure mit null Ausfallzeit. Skalierbar, sicher, kostenoptimiert.",
+    "service1Desc": "Ihre Infrastruktur zu AWS, GCP oder Azure migrieren — mit null Ausfallzeit. Skalierbar, sicher, kostenoptimiert.",
     "service1Tag": "CLOUD",
     "service1For": "Für Teams, die €500+/Monat für Infrastruktur bezahlen, die sie nicht erklären können.",
     "service2Title": "Serverlose Entwicklung",
-    "service2Desc": "Entwickeln Sie ereignisgesteuerte Anwendungen, die automatisch skalieren und im Leerlauf nichts kosten. Lambda, API Gateway, DynamoDB.",
+    "service2Desc": "Ereignisgesteuerte Anwendungen, die automatisch skalieren und im Leerlauf nichts kosten. Lambda, API Gateway, DynamoDB.",
     "service2Tag": "SERVERLESS",
     "service2For": "Für Gründer, die es leid sind, für Server zu bezahlen, die 90 % der Zeit idle sind.",
     "service3Title": "Datenanalyse & Dashboards",
-    "service3Desc": "Verwandeln Sie Rohdaten in umsetzbare Erkenntnisse mit individuellen Dashboards, Pipelines und Echtzeit-Reporting.",
+    "service3Desc": "Rohdaten in umsetzbare Erkenntnisse verwandeln — mit individuellen Dashboards, Pipelines und Echtzeit-Reporting.",
     "service3Tag": "ANALYTICS",
     "service3For": "Für Teams, die Entscheidungen auf Basis von Bauchgefühl statt Daten treffen.",
     "service4Title": "KI & Digitalmarketing",
@@ -98,7 +98,7 @@
   },
   "leadCapture": {
     "notReady": "Noch nicht bereit für ein Gespräch? Kein Problem.",
-    "playbookTitle": "Holen Sie sich unser kostenloses Cloud Migration Playbook — das genaue Framework, das wir mit unseren Kunden nutzen.",
+    "playbookTitle": "Holen Sie sich unser kostenloses Cloud-Migration-Playbook — das genaue Framework, das wir mit unseren Kunden nutzen.",
     "playbookCta": "Playbook herunterladen"
   },
   "faq": {
@@ -108,7 +108,7 @@
     "q1": "Was kostet das wirklich?",
     "a1": "Einzelne Leistungen liegen zwischen €800 und €2.400 je nach Umfang. Das Gesamtpaket kostet €3.600/Monat. Zum Vergleich: Ein Cloud-Engineer im eigenen Team kostet €5K–€8K/Monat. CTO + Marketer + Data Analyst? €20K+/Monat. Wir ersetzen alle drei zu einem Bruchteil der Kosten — jederzeit kündbar.",
     "q2": "Für wen ist das geeignet? Passe ich als Kunde?",
-    "a2": "Wir arbeiten am besten mit Startups und KMUs, die über das MVP-Stadium hinaus sind — typischerweise Teams mit 2–20 Personen und €50K–€500K Umsatz. Sie haben ein funktionierendes Produkt, aber Ihre Infrastruktur ist improvisiert, Ihr Marketing ist Raten und Sie haben keinen CTO, der das behebt. Das kostenlose Audit zeigt Ihnen genau, was als Nächstes zu tun ist.",
+    "a2": "Wir arbeiten am besten mit Startups und KMUs, die über das MVP-Stadium hinaus sind — typischerweise Teams mit 2–20 Personen und €50K–€500K Umsatz. Sie haben ein funktionierendes Produkt, aber Ihre Infrastruktur ist improvisiert, Ihr Marketing basiert auf Vermutungen und Sie haben keinen CTO, der das behebt. Das kostenlose Audit zeigt Ihnen genau, was als Nächstes zu tun ist.",
     "q3": "Was, wenn ich aufhören möchte?",
     "a3": "Jederzeit kündbar. Monat für Monat, kein Lock-in, keine Ausstiegsgebühren. Ihr Code, Ihre Infrastruktur und Ihre Daten gehören immer Ihnen — vollständig dokumentiert und übergabebereit.",
     "q4": "Wie schnell sehe ich Ergebnisse?",
@@ -116,7 +116,7 @@
     "q5": "Was beinhaltet das kostenlose Audit?",
     "a5": "Ein 30-minütiges Gespräch, in dem wir Ihre aktuelle Infrastruktur, Ihr Marketing-Setup oder beides analysieren. Sie erhalten einen konkreten Aktionsplan mit spezifischen Empfehlungen — kein Pitch, kein Druck.",
     "q6": "Kann ich einer neuen Agentur meine Infrastruktur anvertrauen?",
-    "a6": "Berechtigt gefragt. Wir sind durch AWS-Zertifizierungen, Open-Source-Beiträge auf GitHub und 8+ Jahre praktische Cloud-Architektur-Erfahrung abgesichert. Das kostenlose Audit ist risikofrei."
+    "a6": "Berechtigt gefragt. Wir sind durch AWS-Zertifizierungen, Open-Source-Beiträge auf GitHub und über 8 Jahre praktische Cloud-Architektur-Erfahrung abgesichert. Das kostenlose Audit ist risikofrei."
   },
   "founder": {
     "label": "[ ÜBER UNS ]",
@@ -130,7 +130,7 @@
     "title": "Bereit,",
     "titleHighlight": "cloudless zu werden",
     "subtitle": "Buchen Sie ein kostenloses 30-minütiges Audit. Wir überprüfen Ihr aktuelles Setup und zeigen Ihnen genau, wo Sie zu viel bezahlen, underperformen oder beides.",
-    "subtext": "Kein Pitch. Kein Commitment. Nur umsetzbare Insights —, auch wenn Sie nie wieder mit uns sprechen.",
+    "subtext": "Kein Pitch. Keine Verpflichtung. Nur umsetzbare Erkenntnisse — auch wenn Sie nie wieder mit uns sprechen.",
     "ctaPrimary": "Kostenloses Audit buchen",
     "ctaSecondary": "Preise ansehen"
   },
@@ -148,7 +148,7 @@
   },
   "newsletter": {
     "title": "NEWSLETTER",
-    "subtitle": "Cloud-Tipps, Kostenspartipps und Wachstums-Hacks. Kein Spam.",
+    "subtitle": "Cloud-Tipps, Sparstrategien und Wachstums-Hacks. Kein Spam.",
     "placeholder": "ihre@email.com",
     "cta": "Abonnieren",
     "subscribing": "Wird abonniert …",
@@ -229,7 +229,7 @@
     "sendingCode": "Code wird gesendet …",
     "sendResetCode": "Reset-Code senden",
     "resetting": "Wird zurückgesetzt …",
-    "rememberPassword": "Passwort erinnerlich?"
+    "rememberPassword": "Passwort doch bekannt?"
   },
   "dashboard": {
     "title": "Dashboard",
