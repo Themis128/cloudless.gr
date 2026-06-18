@@ -331,5 +331,28 @@ describe("slack-notify", () => {
       expect(rendered).toContain("EUR 99.00");
       expect(rendered).toContain("buyer@x");
     });
+
+    it("includes attribution line when carrying UTM from Stripe metadata", async () => {
+      getSlackConfigAsyncMock.mockResolvedValueOnce({
+        SLACK_BOT_TOKEN: "xoxb-x",
+      });
+      fetchMock.mockResolvedValueOnce(jsonResp({ ok: true }));
+      await slackOrderNotify({
+        sessionId: "cs_test_with_utm",
+        amount: "EUR 890.00",
+        email: "founder@example.com",
+        attribution:
+          "utm_source=linkedin | utm_medium=cpc | utm_campaign=shop_online_founding | utm_content=A_EN | campaign_slug=shop-online | tier=starter",
+      });
+      const body = JSON.parse(
+        (fetchMock.mock.calls[0][1] as { body: string }).body,
+      );
+      const rendered = JSON.stringify(body);
+      // The attribution line surfaces the creative variant so the operator
+      // sees ad-creative-level attribution without round-tripping to Stripe.
+      expect(rendered).toContain("Attribution:");
+      expect(rendered).toContain("utm_content=A_EN");
+      expect(rendered).toContain("tier=starter");
+    });
   });
 });

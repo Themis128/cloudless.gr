@@ -19,6 +19,94 @@ vi.mock("@/lib/api-auth", () => ({
   verifyToken: vi.fn(() => Promise.resolve(null)),
 }));
 
+// ---------------------------------------------------------------------------
+// GET /api/checkout — campaign tier flow (paid + fit-call)
+// ---------------------------------------------------------------------------
+
+describe("GET /api/checkout (campaign tier)", () => {
+  let GET: (request: NextRequest) => Promise<Response>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockCreate.mockResolvedValue({ url: "https://checkout.stripe.com/campaign-session" });
+    const mod = await import("@/app/api/checkout/route");
+    GET = mod.GET;
+  });
+
+  it("redirects fit-call to /contact with topic + campaign + UTM forwarded", async () => {
+    const url =
+      "http://localhost/api/checkout?campaign=shop-online&tier=fit-call" +
+      "&utm_source=linkedin&utm_medium=cpc&utm_campaign=shop_online_founding&utm_content=A_EN";
+    const request = new NextRequest(url, {
+      method: "GET",
+      headers: { "x-pathname": "/en/campaigns/shop-online" },
+    });
+
+    const response = await GET(request);
+    expect(response.status).toBe(302);
+    const location = response.headers.get("location") ?? "";
+    expect(location).toContain("/en/contact");
+    expect(location).toContain("topic=fit-call");
+    expect(location).toContain("campaign=shop-online");
+    expect(location).toContain("utm_source=linkedin");
+    expect(location).toContain("utm_content=A_EN");
+    // Stripe is not involved on the fit-call path.
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("stamps UTM into Stripe metadata when present on a paid tier", async () => {
+    const url =
+      "http://localhost/api/checkout?campaign=shop-online&tier=starter" +
+      "&utm_source=linkedin&utm_medium=cpc&utm_campaign=shop_online_founding&utm_content=A_EN";
+    const request = new NextRequest(url, {
+      method: "GET",
+      headers: { "x-pathname": "/en/campaigns/shop-online" },
+    });
+
+    const response = await GET(request);
+    expect(response.status).toBe(303);
+    const createCall = mockCreate.mock.calls[0][0];
+    expect(createCall.metadata).toMatchObject({
+      source: "cloudless.gr",
+      campaign: "shop-online",
+      tier: "starter",
+      utm_source: "linkedin",
+      utm_medium: "cpc",
+      utm_campaign: "shop_online_founding",
+      utm_content: "A_EN",
+    });
+  });
+
+  it("omits UTM keys from metadata when not present (no empty values)", async () => {
+    const request = new NextRequest(
+      "http://localhost/api/checkout?campaign=shop-online&tier=starter",
+      { method: "GET", headers: { "x-pathname": "/en/campaigns/shop-online" } }
+    );
+
+    const response = await GET(request);
+    expect(response.status).toBe(303);
+    const md = mockCreate.mock.calls[0][0].metadata as Record<string, string>;
+    expect(md.source).toBe("cloudless.gr");
+    expect(md.campaign).toBe("shop-online");
+    expect(md.tier).toBe("starter");
+    // Empty UTM values do not waste Stripe's 50-key metadata budget.
+    expect(md.utm_source).toBeUndefined();
+    expect(md.utm_content).toBeUndefined();
+  });
+
+  it("returns 400 when campaign or tier query param is missing", async () => {
+    const noCampaign = new NextRequest("http://localhost/api/checkout?tier=starter", {
+      method: "GET",
+    });
+    expect((await GET(noCampaign)).status).toBe(400);
+
+    const noTier = new NextRequest("http://localhost/api/checkout?campaign=shop-online", {
+      method: "GET",
+    });
+    expect((await GET(noTier)).status).toBe(400);
+  });
+});
+
 
 describe("POST /api/checkout", () => {
   let POST: (request: NextRequest) => Promise<Response>;

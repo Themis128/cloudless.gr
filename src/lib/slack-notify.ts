@@ -487,19 +487,26 @@ export async function slackOrderNotify(data: {
   email: string;
   amount: string;
   sessionId: string;
+  /** Optional attribution summary (UTM source/medium/campaign/content/term plus
+   *  campaign_slug and tier) extracted from the Stripe Session metadata. When
+   *  present, surfaced as an extra line so the operator can see immediately
+   *  which ad creative drove the conversion. */
+  attribution?: string;
 }): Promise<boolean> {
   const safeEmail = slackEscape(data.email);
+  const lines = [
+    `*Customer:* ${safeEmail}`,
+    `*Amount:* ${data.amount}`,
+    `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
+  ];
+  if (data.attribution) {
+    lines.push(`*Attribution:* ${slackEscape(data.attribution)}`);
+  }
   return ordersClient.post({
     text: `New order: ${data.amount} from ${safeEmail}`,
     blocks: [
       headerBlock("\ud83d\udcb0 New Order"),
-      sectionBlock(
-        [
-          `*Customer:* ${safeEmail}`,
-          `*Amount:* ${data.amount}`,
-          `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
-        ].join("\n")
-      ),
+      sectionBlock(lines.join("\n")),
       contextBlock(slackTimestamp(), "cloudless.gr stripe checkout"),
     ],
     icon_url: BOT_ICON_URL,
