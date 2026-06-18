@@ -98,7 +98,12 @@ export default function ServicesPage() {
         </div>
         {portalStatus?.submittedAt && (
           <p className="mt-3 font-mono text-xs text-slate-500">
-            Enrolled: {new Date(portalStatus.submittedAt).toLocaleDateString("en-IE", { day: "numeric", month: "short", year: "numeric" })}
+            Enrolled:{" "}
+            {new Date(portalStatus.submittedAt).toLocaleDateString("en-IE", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
           </p>
         )}
       </div>
@@ -127,7 +132,7 @@ export default function ServicesPage() {
           </p>
           <Link
             href="/portal/waiting"
-            className="mt-4 inline-block font-mono text-xs text-neon-cyan underline underline-offset-4"
+            className="text-neon-cyan mt-4 inline-block font-mono text-xs underline underline-offset-4"
           >
             View waiting room →
           </Link>
@@ -142,7 +147,7 @@ export default function ServicesPage() {
               <h2 className="font-heading font-semibold text-white">{portalData.label}</h2>
               <a
                 href={`/portal/${portalStatus!.portalToken}`}
-                className="font-mono text-xs text-neon-cyan hover:underline"
+                className="text-neon-cyan font-mono text-xs hover:underline"
               >
                 Open Portal →
               </a>
@@ -152,9 +157,13 @@ export default function ServicesPage() {
             <div className="space-y-2">
               {portalData.steps.map((step) => (
                 <div key={step.id} className="flex items-center gap-3">
-                  <span className={`h-2 w-2 rounded-full ${STEP_STATUS_DOT[step.status] ?? "bg-slate-600"}`} />
+                  <span
+                    className={`h-2 w-2 rounded-full ${STEP_STATUS_DOT[step.status] ?? "bg-slate-600"}`}
+                  />
                   <span className="flex-1 font-mono text-sm text-slate-300">{step.name}</span>
-                  <span className="font-mono text-[10px] text-slate-500 capitalize">{step.status}</span>
+                  <span className="font-mono text-[10px] text-slate-500 capitalize">
+                    {step.status}
+                  </span>
                 </div>
               ))}
             </div>
@@ -165,11 +174,14 @@ export default function ServicesPage() {
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
                   <div
                     className="from-neon-cyan to-neon-green h-full rounded-full bg-gradient-to-r transition-all"
-                    style={{ width: `${Math.round((portalData.steps.filter(s => s.status === "completed").length / portalData.steps.length) * 100)}%` }}
+                    style={{
+                      width: `${Math.round((portalData.steps.filter((s) => s.status === "completed").length / portalData.steps.length) * 100)}%`,
+                    }}
                   />
                 </div>
                 <p className="mt-1 font-mono text-[10px] text-slate-500">
-                  {portalData.steps.filter(s => s.status === "completed").length}/{portalData.steps.length} steps completed
+                  {portalData.steps.filter((s) => s.status === "completed").length}/
+                  {portalData.steps.length} steps completed
                 </p>
               </div>
             )}
@@ -181,9 +193,14 @@ export default function ServicesPage() {
               <h2 className="font-heading mb-3 font-semibold text-white">Deliverables</h2>
               <div className="space-y-2">
                 {portalData.deliverables.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between rounded-lg border border-slate-800 px-4 py-2">
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between rounded-lg border border-slate-800 px-4 py-2"
+                  >
                     <span className="font-mono text-sm text-slate-300">{d.title}</span>
-                    <span className="font-mono text-[10px] text-slate-500 capitalize">{d.status.replace("_", " ")}</span>
+                    <span className="font-mono text-[10px] text-slate-500 capitalize">
+                      {d.status.replace("_", " ")}
+                    </span>
                   </div>
                 ))}
               </div>

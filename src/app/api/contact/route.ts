@@ -200,7 +200,9 @@ export async function POST(request: Request) {
       try {
         const raw = cookieHeader.match(/cookieConsent=([^;]+)/)?.[1];
         return raw ? JSON.parse(decodeURIComponent(raw)).marketing === true : false;
-      } catch { return false; }
+      } catch {
+        return false;
+      }
     })();
     const fbp = marketingConsented ? cookieHeader.match(/_fbp=([^;]+)/)?.[1] : undefined;
     const fbc = marketingConsented ? cookieHeader.match(/_fbc=([^;]+)/)?.[1] : undefined;

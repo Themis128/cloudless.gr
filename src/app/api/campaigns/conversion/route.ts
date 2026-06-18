@@ -82,14 +82,16 @@ export async function POST(request: NextRequest) {
       // Don't leak the raw upstream body to the caller — it can include the
       // CAPI access token in error messages.
       console.error(
-        "LinkedIn CAPI error " + res.status + ": " + text.slice(0, 200).replace(/[\x00-\x1f\x7f]/g, " ")
+        "LinkedIn CAPI error " +
+          res.status +
+          ": " +
+          text.slice(0, 200).replace(/[\x00-\x1f\x7f]/g, " ")
       );
       return NextResponse.json({ ok: false }, { status: 502 });
     }
   } catch (err) {
     console.error(
-      "LinkedIn CAPI fetch failed: " +
-        ((err as Error).message ?? "unknown").slice(0, 200)
+      "LinkedIn CAPI fetch failed: " + ((err as Error).message ?? "unknown").slice(0, 200)
     );
     return NextResponse.json({ ok: false }, { status: 502 });
   }

@@ -16,8 +16,8 @@ function getS3(): S3Client {
 }
 
 export interface AnalyticsEvent {
-  event: string;           // e.g. "signup", "purchase", "page_view"
-  user_id?: string;        // Cognito sub
+  event: string; // e.g. "signup", "purchase", "page_view"
+  user_id?: string; // Cognito sub
   email?: string;
   session_id?: string;
   page?: string;
@@ -58,6 +58,13 @@ export function trackS3Event(evt: AnalyticsEvent): void {
   });
 
   getS3()
-    .send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: record, ContentType: "application/x-ndjson" }))
+    .send(
+      new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+        Body: record,
+        ContentType: "application/x-ndjson",
+      })
+    )
     .catch((e) => console.error("[analytics] S3 write failed:", e));
 }

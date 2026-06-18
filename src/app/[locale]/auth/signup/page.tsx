@@ -162,7 +162,7 @@ function SignUpForm() {
       });
     }, 1000);
     return () => clearInterval(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, secondsLeft > 0]);
 
   return (
@@ -232,7 +232,10 @@ function SignUpForm() {
                 <span className="text-white">{email}</span>
               </p>
               <div>
-                <label htmlFor="confirm-code" className="mb-2 block font-mono text-sm text-slate-400">
+                <label
+                  htmlFor="confirm-code"
+                  className="mb-2 block font-mono text-sm text-slate-400"
+                >
                   {t("auth.verificationCode", "Verification Code")}
                 </label>
                 <input
@@ -243,7 +246,7 @@ function SignUpForm() {
                   onChange={(e) => setCode(e.target.value)}
                   required
                   autoComplete="one-time-code"
-                  className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm text-white tracking-widest transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
+                  className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm tracking-widest text-white transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
                   placeholder="123456"
                 />
               </div>
@@ -280,8 +283,19 @@ function SignUpForm() {
           ) : step === "done" ? (
             <div className="space-y-5 text-center">
               <div className="bg-neon-green/10 border-neon-green/20 mx-auto flex h-16 w-16 items-center justify-center rounded-full border">
-                <svg className="text-neon-green h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                <svg
+                  className="text-neon-green h-8 w-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
               <p className="font-mono text-sm text-slate-300">
@@ -290,7 +304,10 @@ function SignUpForm() {
               <p className="font-mono text-xs text-slate-500">
                 {t("auth.canSignInNow", "You can now sign in with your email and password.")}
               </p>
-              <Link href="/auth/login" className="text-neon-cyan block font-mono text-sm hover:underline">
+              <Link
+                href="/auth/login"
+                className="text-neon-cyan block font-mono text-sm hover:underline"
+              >
                 {t("auth.goToSignIn", "Go to Sign In →")}
               </Link>
             </div>
