@@ -46,8 +46,6 @@ export default function ServiceWorkerRegistration() {
 
     // Listen for install prompt
     const handler = (e: Event) => {
-      e.preventDefault();
-
       // Already running as installed PWA — no banner needed.
       if (window.matchMedia("(display-mode: standalone)").matches) return;
 
@@ -55,6 +53,8 @@ export default function ServiceWorkerRegistration() {
       const dismissed = localStorage.getItem(DISMISSED_KEY);
       if (dismissed && Date.now() - Number(dismissed) < DISMISSED_TTL_MS) return;
 
+      // Only preventDefault (suppress native mini-infobar) when we will show our banner.
+      e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
       setShowBanner(true);
     };

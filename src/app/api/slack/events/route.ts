@@ -85,7 +85,7 @@ type SlackPayload = SlackUrlVerification | SlackEventCallback;
 
 export async function POST(request: Request): Promise<Response> {
   const verified = await verifySlackRequest(request);
-  if (!verified.ok) return unauthorizedSlack(verified.reason);
+  if (!verified.ok) return unauthorizedSlack(verified.reason, request);
 
   // Rate-limit by team (extracted after parse) — pre-parse check uses IP placeholder
   const rateLimitKey = request.headers.get("x-forwarded-for") ?? "unknown";

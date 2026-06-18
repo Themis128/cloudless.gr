@@ -345,7 +345,15 @@ export async function POST(request: NextRequest) {
 
   const valid = await verifySignatureV3(request, rawBody, clientSecret);
   if (!valid) {
-    console.warn("[HubSpot Webhook] Signature verification failed");
+    // Log source IP + UA so we can attribute scanner/bot vs. real HubSpot
+    // misconfig when CloudWatch warns. Mirrors src/lib/slack-verify.ts.
+    const ip =
+      request.headers.get("cf-connecting-ip") ??
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      "?";
+    const ua = request.headers.get("user-agent") ?? "?";
+    console.warn(`[HubSpot Webhook] Signature verification failed (ip=${ip} ua="${ua}")`);
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 

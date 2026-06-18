@@ -124,8 +124,20 @@ export async function verifySlackRequest(
 /**
  * Returns a standard 401 response for failed Slack signature verification.
  * Use this as a one-liner in route handlers.
+ *
+ * Pass the `request` so the log line carries the source IP + User-Agent —
+ * lets us attribute scanner/bot traffic vs. real misconfigured Slack apps
+ * when investigating CloudWatch warning spikes. Both fields fall back to
+ * "?" if absent (CloudFront sets x-forwarded-for behind Cloudflare, which
+ * sets cf-connecting-ip; legacy clients may have neither).
  */
-export function unauthorizedSlack(reason: string): Response {
-  console.warn(`[Slack] Signature verification failed: ${reason}`);
+export function unauthorizedSlack(reason: string, request?: Request): Response {
+  const ip =
+    request?.headers.get("cf-connecting-ip") ??
+    request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request?.headers.get("x-real-ip") ??
+    "?";
+  const ua = request?.headers.get("user-agent") ?? "?";
+  console.warn(`[Slack] Signature verification failed: ${reason} (ip=${ip} ua="${ua}")`);
   return Response.json({ error: "Unauthorized" }, { status: 401 });
 }
