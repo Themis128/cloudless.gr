@@ -1,0 +1,27 @@
+# Bitnami Sealed Secrets controller.
+# Install:
+#   helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+#   helm upgrade --install sealed-secrets sealed-secrets/sealed-secrets \
+#     --namespace kube-system \
+#     -f 10-security/sealed-secrets/values.yaml
+#
+# Then install the `kubeseal` client locally:
+#   brew install kubeseal      # macOS
+#   # Linux: download from https://github.com/bitnami-labs/sealed-secrets/releases
+
+fullnameOverride: sealed-secrets-controller    # required so `kubeseal` auto-discovers it
+
+# The controller's private key never leaves the cluster.
+# Back it up after install! Without it, every SealedSecret in git becomes unrecoverable.
+# Backup command:
+#   kubectl -n kube-system get secret -l sealedsecrets.bitnami.com/sealed-secrets-key \
+#     -o yaml > sealed-secrets-master-key.yaml
+# Store that file in an encrypted vault (1Password / Bitwarden / Vault).
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits:   { cpu: 500m, memory: 256Mi }
+
+metrics:
+  serviceMonitor:
+    enabled: false      # flip on once monitoring is installed

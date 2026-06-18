@@ -1,0 +1,92 @@
+---
+# Traefik -> Grafana / Alertmanager UIs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik-to-monitoring-ui
+  namespace: monitoring
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app.kubernetes.io/name, operator: In, values: [grafana, alertmanager] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { app.kubernetes.io/name: traefik }
+---
+# Prometheus needs egress everywhere it scrapes — all namespaces, all common metrics ports.
+# Plus Alertmanager (9093) and Loki (3100) for remote write / alerting.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-egress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: {}    # any namespace
+      ports:
+        - { protocol: TCP, port: 9100 }   # node-exporter
+        - { protocol: TCP, port: 9187 }   # cnpg postgres-exporter
+        - { protocol: TCP, port: 9121 }   # redis-exporter
+        - { protocol: TCP, port: 9000 }   # MinIO
+        - { protocol: TCP, port: 8080 }   # ArgoCD, n8n, generic
+        - { protocol: TCP, port: 8082 }   # ArgoCD repo-server
+        - { protocol: TCP, port: 8083 }   # ArgoCD application-controller
+        - { protocol: TCP, port: 5678 }   # n8n
+        - { protocol: TCP, port: 10254 }  # traefik metrics
+        - { protocol: TCP, port: 9093 }   # alertmanager
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - { protocol: TCP, port: 443 }    # k8s apiserver
+        - { protocol: TCP, port: 6443 }   # k3s apiserver
+---
+# Alloy needs to read kubelet API on each node + push to Loki.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-alloy-egress
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: alloy
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - { protocol: TCP, port: 10250 }   # kubelet
+        - { protocol: TCP, port: 3100 }    # loki push
+        - { protocol: TCP, port: 443 }     # apiserver
+        - { protocol: TCP, port: 6443 }
+---
+# Loki ingest from Alloy in the same namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-alloy-to-loki
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: loki
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+      ports:
+        - { protocol: TCP, port: 3100 }

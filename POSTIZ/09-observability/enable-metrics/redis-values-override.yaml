@@ -1,0 +1,16 @@
+# MERGED ON TOP of 03-redis/values.yaml. Re-run the Redis Helm install
+# with both files:
+#   helm upgrade --install postiz-redis bitnami/redis \
+#     --namespace postiz \
+#     -f 03-redis/values.yaml \
+#     -f 09-observability/enable-metrics/redis-values-override.yaml
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: postiz
+    # Prometheus picks this up automatically (cluster-wide selector).
+  resources:
+    requests: { cpu: 30m, memory: 32Mi }
+    limits:   { cpu: 200m, memory: 128Mi }

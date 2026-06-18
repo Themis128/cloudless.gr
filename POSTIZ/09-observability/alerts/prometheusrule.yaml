@@ -1,0 +1,103 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: postiz-platform-critical
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack       # picked up by Prometheus operator
+spec:
+  groups:
+    - name: postiz-platform.critical
+      interval: 30s
+      rules:
+        # ---------- App health ----------
+        - alert: PostizPodDown
+          expr: |
+            sum(kube_pod_status_ready{namespace="postiz",pod=~"postiz-.*",condition="true"}) == 0
+          for: 5m
+          labels: { severity: critical }
+          annotations:
+            summary: "Postiz pod has been not-ready for 5m"
+            description: "No Postiz pod is reporting Ready. https://postiz.cloudless.gr is likely down."
+
+        - alert: PostizPodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{namespace="postiz",pod=~"postiz-.*"}[15m]) > 0
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: "Postiz container restarting"
+            description: "{{ $labels.pod }} has restarted within the last 15m. Check `kubectl logs --previous`."
+
+        # ---------- Database ----------
+        - alert: PostizPgClusterDown
+          expr: |
+            cnpg_collector_up{namespace="postiz",cluster="postiz-pg"} == 0
+          for: 5m
+          labels: { severity: critical }
+          annotations:
+            summary: "CNPG cluster postiz-pg is unreachable"
+            description: "Prometheus can't scrape the CNPG collector for 5m. Likely the primary is down."
+
+        - alert: PostizPgBackupStale
+          expr: |
+            (time() - cnpg_backups_last_successful_timestamp{namespace="postiz",cluster="postiz-pg"}) / 3600 > 36
+          for: 10m
+          labels: { severity: critical }
+          annotations:
+            summary: "No successful PG backup in 36h"
+            description: "Latest CNPG backup is >36h old. Check ScheduledBackup + R2 credentials."
+
+        - alert: PostizPgReplicationLag
+          expr: |
+            cnpg_pg_replication_lag{namespace="postiz"} > 60
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: "Postgres replication lag > 60s"
+
+        # ---------- Redis ----------
+        - alert: PostizRedisDown
+          expr: |
+            redis_up{namespace="postiz"} == 0
+          for: 5m
+          labels: { severity: critical }
+          annotations:
+            summary: "Postiz Redis is down — BullMQ queue stopped"
+
+        # ---------- MinIO ----------
+        - alert: PostizMinioOffline
+          expr: |
+            minio_cluster_nodes_offline_total{namespace="postiz"} > 0
+          for: 5m
+          labels: { severity: critical }
+          annotations:
+            summary: "MinIO node offline — media uploads will fail"
+
+        - alert: PostizMinioMirrorStale
+          expr: |
+            (time() - kube_job_status_succeeded{namespace="postiz",job_name=~"minio-r2-mirror.*"}) / 3600 > 36
+          for: 30m
+          labels: { severity: warning }
+          annotations:
+            summary: "MinIO->R2 mirror hasn't succeeded in 36h"
+            description: "Check the minio-r2-mirror CronJob logs and R2 credentials."
+
+        # ---------- TLS / Ingress ----------
+        - alert: PostizCertExpiringSoon
+          expr: |
+            (avg(certmanager_certificate_expiration_timestamp_seconds{namespace=~"postiz|n8n|argocd|monitoring"}) by (name,namespace) - time()) / 86400 < 14
+          for: 1h
+          labels: { severity: warning }
+          annotations:
+            summary: "TLS cert {{ $labels.namespace }}/{{ $labels.name }} expires in <14 days"
+
+        # ---------- Node / cluster ----------
+        - alert: K3sNodeDiskSpaceLow
+          expr: |
+            100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / node_filesystem_size_bytes{mountpoint="/"}) > 85
+          for: 15m
+          labels: { severity: warning }
+          annotations:
+            summary: "Node root disk >85% full"

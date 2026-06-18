@@ -112,5 +112,29 @@ chmod +x install-gitops.sh
 ./install-gitops.sh
 ```
 
-## Next layers (not installed here — ask to add)
-- **Observability:** kube-prometheus-stack, Loki, Grafana dashboards for Postiz, CNPG, Redis, MinIO, n8n, ArgoCD.
+## Observability layer (fifth stage)
+
+Metrics + logs + dashboards + alerts. See `09-observability/README.md`.
+
+```bash
+chmod +x install-observability.sh
+./install-observability.sh
+```
+
+Lands on:
+- `grafana.cloudless.gr` — dashboards (Postiz, CNPG, Redis, MinIO, ArgoCD, n8n) under the **Postiz Platform** folder
+- `alertmanager.cloudless.gr` — fires `PrometheusRule` alerts for app/PG/Redis/MinIO/cert/disk failures
+
+## Security hardening (sixth stage)
+
+Adds NetworkPolicies (default-deny + targeted allows), PodSecurity admission, Sealed Secrets (so secrets can live in git), and an RBAC audit. See `10-security/README.md`.
+
+```bash
+chmod +x install-security.sh
+./install-security.sh
+# Then install kubeseal locally and back up the master key — README says how.
+```
+
+## You're done.
+
+All six layers are in place. The cluster is production-grade: TLS-fronted, externally backed up, GitOps-reconciled, observable, alertable, and security-hardened (deny-by-default networking, restricted Pod Security, encrypted-at-rest secrets in git).

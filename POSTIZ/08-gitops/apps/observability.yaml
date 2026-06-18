@@ -1,0 +1,98 @@
+---
+# kube-prometheus-stack + Loki + Alloy + dashboards + alerts.
+# Adds an ArgoCD-managed Application so the observability layer is also
+# reconciled from git. The Loki and Alloy releases are deployed via separate
+# children (see observability-loki.yaml + observability-alloy.yaml below if
+# you split them further). For now we keep them in one app via multi-source.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-prometheus
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+spec:
+  project: postiz-platform
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 65.x.x
+      helm:
+        releaseName: kube-prometheus-stack
+        valueFiles:
+          - $values/09-observability/kube-prometheus-stack/values.yaml
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      ref: values
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      path: 09-observability
+      directory:
+        recurse: true
+        include: '{kube-prometheus-stack/ingress.yaml,alerts/prometheusrule.yaml,dashboards/postiz.yaml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-loki
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "16"
+spec:
+  project: postiz-platform
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki
+      targetRevision: 6.x.x
+      helm:
+        releaseName: loki
+        valueFiles:
+          - $values/09-observability/loki/values.yaml
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-alloy
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "16"
+spec:
+  project: postiz-platform
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: 0.x.x
+      helm:
+        releaseName: alloy
+        valueFiles:
+          - $values/09-observability/loki/alloy-values.yaml
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

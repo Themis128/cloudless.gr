@@ -1,0 +1,10 @@
+---
+# Flip on the PodMonitor for the Postiz Postgres cluster.
+# Apply with: kubectl -n postiz patch cluster postiz-pg --type merge \
+#               --patch-file 09-observability/enable-metrics/cnpg-cluster-patch.yaml
+#
+# Prometheus will auto-discover the PodMonitor (because we set
+# *MonitorSelectorNilUsesHelmValues=false in the kube-prometheus-stack values).
+spec:
+  monitoring:
+    enablePodMonitor: true

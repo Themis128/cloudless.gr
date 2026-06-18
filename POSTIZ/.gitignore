@@ -8,6 +8,9 @@
 07-backups/minio/r2-creds.yaml
 08-gitops/argocd/repo-creds.yaml
 
+# Sealed Secrets master key — NEVER commit. Restore from your password manager.
+sealed-secrets-master-key.yaml
+
 # Tooling
 *.swp
 .DS_Store

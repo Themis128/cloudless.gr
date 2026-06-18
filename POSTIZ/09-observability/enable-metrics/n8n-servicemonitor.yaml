@@ -1,0 +1,20 @@
+---
+# n8n exposes Prometheus metrics at /metrics when N8N_METRICS=true.
+# Add that env to 06-automation/n8n/values.yaml -> main.config:
+#   N8N_METRICS: "true"
+# Then apply this ServiceMonitor.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: n8n
+  namespace: n8n
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: n8n
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

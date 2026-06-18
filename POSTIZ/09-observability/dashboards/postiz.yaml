@@ -1,0 +1,90 @@
+---
+# Custom Postiz overview dashboard.
+# Postiz doesn't expose Prometheus metrics directly, so this dashboard is
+# built on log queries (Loki) + cross-layer signals (PG, Redis, MinIO).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-postiz
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: "Postiz Platform"
+data:
+  postiz.json: |-
+    {
+      "title": "Postiz Overview",
+      "uid": "postiz-overview",
+      "schemaVersion": 38,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "tags": ["postiz"],
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1, "type": "stat", "title": "Postiz pod ready",
+          "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+          "targets": [{
+            "expr": "sum(kube_pod_status_ready{namespace=\"postiz\",pod=~\"postiz-.*\",condition=\"true\"})",
+            "refId": "A"
+          }],
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } }
+        },
+        {
+          "id": 2, "type": "stat", "title": "PG cluster status",
+          "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+          "targets": [{
+            "expr": "max(cnpg_pg_replication_lag{namespace=\"postiz\"})",
+            "refId": "A"
+          }],
+          "fieldConfig": { "defaults": { "unit": "s" } }
+        },
+        {
+          "id": 3, "type": "stat", "title": "Redis memory used",
+          "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+          "targets": [{
+            "expr": "redis_memory_used_bytes{namespace=\"postiz\"}",
+            "refId": "A"
+          }],
+          "fieldConfig": { "defaults": { "unit": "bytes" } }
+        },
+        {
+          "id": 4, "type": "stat", "title": "MinIO objects",
+          "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+          "targets": [{
+            "expr": "minio_bucket_usage_object_total{bucket=\"postiz-uploads\"}",
+            "refId": "A"
+          }]
+        },
+        {
+          "id": 10, "type": "logs", "title": "Postiz logs (errors only)",
+          "gridPos": { "x": 0, "y": 4, "w": 24, "h": 10 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [{
+            "expr": "{namespace=\"postiz\", app=~\"postiz.*\"} |~ \"(?i)error|fail|exception\"",
+            "refId": "A"
+          }],
+          "options": { "showTime": true, "showLabels": false, "wrapLogMessage": true }
+        },
+        {
+          "id": 11, "type": "timeseries", "title": "Postiz log rate by level",
+          "gridPos": { "x": 0, "y": 14, "w": 12, "h": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            { "expr": "sum(rate({namespace=\"postiz\", app=~\"postiz.*\"} |~ \"(?i)error|fail|exception\" [1m])) by (level)", "legendFormat": "errors", "refId": "A" },
+            { "expr": "sum(rate({namespace=\"postiz\", app=~\"postiz.*\"} |~ \"(?i)warn\" [1m])) by (level)",                  "legendFormat": "warnings", "refId": "B" }
+          ]
+        },
+        {
+          "id": 12, "type": "timeseries", "title": "Latest backup age (hours)",
+          "gridPos": { "x": 12, "y": 14, "w": 12, "h": 8 },
+          "targets": [{
+            "expr": "(time() - cnpg_backups_last_successful_timestamp{namespace=\"postiz\"}) / 3600",
+            "refId": "A"
+          }],
+          "fieldConfig": { "defaults": { "unit": "h", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 25 }, { "color": "red", "value": 48 }] } } }
+        }
+      ]
+    }

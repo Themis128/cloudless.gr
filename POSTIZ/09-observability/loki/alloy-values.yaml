@@ -1,0 +1,61 @@
+# Grafana Alloy — collects pod logs and ships to Loki.
+# Replaces Promtail (Grafana's recommended successor as of 2025).
+# Install:
+#   helm repo add grafana https://grafana.github.io/helm-charts
+#   helm upgrade --install alloy grafana/alloy \
+#     --namespace monitoring \
+#     -f 09-observability/loki/alloy-values.yaml
+
+alloy:
+  configMap:
+    create: true
+    content: |
+      // Discover every pod's log file via the kubelet.
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // Rewrite labels: keep namespace/pod/container/app for Loki indexing.
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+      }
+
+      // Tail the container logs on each node.
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // Ship to in-cluster Loki.
+      loki.write "default" {
+        endpoint {
+          url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+controller:
+  type: daemonset          # one Alloy per node so every pod's logs are reachable
+
+crds:
+  create: false            # no operator-style CRDs needed for log collection

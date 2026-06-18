@@ -1,0 +1,89 @@
+# Grafana Loki — single-binary mode (one pod = all components).
+# Install:
+#   helm repo add grafana https://grafana.github.io/helm-charts
+#   helm upgrade --install loki grafana/loki \
+#     --namespace monitoring \
+#     -f 09-observability/loki/values.yaml
+#
+# Then install Alloy (the log collector) — see alloy-values.yaml below in this file's comments.
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false             # single-tenant; bump to multi-tenant if you ever share this cluster
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem              # PVC-backed; switch to S3/R2 for HA / scale
+  schemaConfig:
+    configs:
+      - from: 2024-01-01
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  limits_config:
+    retention_period: 168h        # 7 days; bump if you want longer log history
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+    ingestion_rate_mb: 8
+    ingestion_burst_size_mb: 16
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 20Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1,    memory: 1Gi }
+
+# Disable the components that single-binary mode doesn't use, to avoid
+# stub services + idle pods.
+backend:    { replicas: 0 }
+read:       { replicas: 0 }
+write:      { replicas: 0 }
+chunksCache: { enabled: false }
+resultsCache: { enabled: false }
+lokiCanary: { enabled: false }
+test:       { enabled: false }
+monitoring:
+  selfMonitoring:
+    enabled: false
+    grafanaAgent: { installOperator: false }
+
+# Provision the Loki datasource into Grafana automatically.
+gateway:
+  enabled: false      # not needed for single-binary
+
+# A labelled ConfigMap that the Grafana sidecar picks up as a datasource.
+# (Defined here so it's installed alongside Loki — keeps everything in one chart.)
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: loki-datasource
+      namespace: monitoring
+      labels:
+        grafana_datasource: "1"
+    data:
+      loki.yaml: |-
+        apiVersion: 1
+        datasources:
+          - name: Loki
+            type: loki
+            access: proxy
+            url: http://loki.monitoring.svc.cluster.local:3100
+            isDefault: false
+            jsonData:
+              maxLines: 1000
+
+# ============================================================================
+# Companion: Grafana Alloy (the log collector).
+# Install separately:
+#   helm upgrade --install alloy grafana/alloy \
+#     --namespace monitoring \
+#     -f 09-observability/loki/alloy-values.yaml
+# ============================================================================

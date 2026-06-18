@@ -1,0 +1,122 @@
+# kube-prometheus-stack values, sized for K3s single-node.
+# Install:
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     --namespace monitoring --create-namespace \
+#     -f 09-observability/kube-prometheus-stack/values.yaml
+
+# ---------- Prometheus ----------
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    retentionSize: "20GiB"
+    resources:
+      requests: { cpu: 250m, memory: 1Gi }
+      limits:   { cpu: 2,    memory: 3Gi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests: { storage: 25Gi }
+          # storageClassName: local-path
+    # Auto-discover ServiceMonitor/PodMonitor in any namespace (so CNPG, Redis,
+    # ArgoCD, etc. need no extra wiring beyond their own monitors).
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+
+# ---------- Alertmanager ----------
+alertmanager:
+  alertmanagerSpec:
+    retention: 120h
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests: { storage: 2Gi }
+
+  config:
+    route:
+      group_by: ['namespace', 'alertname']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: 'null'
+      routes:
+        - matchers: [severity = critical]
+          receiver: 'critical'
+    receivers:
+      - name: 'null'
+      # Wire Slack/Discord/email here. Example Slack receiver:
+      - name: 'critical'
+        # slack_configs:
+        #   - api_url: https://hooks.slack.com/services/T.../B.../...
+        #     channel: '#alerts-prod'
+        #     title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+
+# ---------- Grafana ----------
+grafana:
+  adminPassword: ""            # auto-generates into the secret on first install
+  defaultDashboardsTimezone: Europe/Athens
+
+  persistence:
+    enabled: true
+    size: 4Gi
+
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1,    memory: 1Gi }
+
+  # Sidecar that auto-imports dashboards/datasources from labelled ConfigMaps.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folder: /tmp/dashboards
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      label: grafana_datasource
+      labelValue: "1"
+      searchNamespace: ALL
+
+  # Loki datasource provisioned the moment Loki is installed (it ships a labelled CM).
+  additionalDataSources: []
+
+  ingress:
+    enabled: false           # we apply ingress.yaml separately
+
+# ---------- Exporters ----------
+nodeExporter:
+  resources:
+    requests: { cpu: 30m, memory: 32Mi }
+    limits:   { cpu: 200m, memory: 128Mi }
+
+kubeStateMetrics:
+  resources:
+    requests: { cpu: 30m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }
+
+# K3s exposes the API server on its own listener — disable the kube-system one
+# the chart tries to scrape by default to silence "endpoint not found" errors.
+kubeApiServer:
+  enabled: true
+
+kubeControllerManager:
+  enabled: false   # not exposed in K3s single-node
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false

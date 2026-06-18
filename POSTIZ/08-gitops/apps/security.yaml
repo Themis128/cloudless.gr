@@ -1,0 +1,56 @@
+---
+# Sealed Secrets controller.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: security-sealed-secrets
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-18"   # before anything that consumes secrets
+spec:
+  project: postiz-platform
+  sources:
+    - repoURL: https://bitnami-labs.github.io/sealed-secrets
+      chart: sealed-secrets
+      targetRevision: 2.x.x
+      helm:
+        releaseName: sealed-secrets
+        valueFiles:
+          - $values/10-security/sealed-secrets/values.yaml
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+# NetworkPolicies + PodSecurity labels.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: security-policies
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"   # after every workload is running
+spec:
+  project: postiz-platform
+  source:
+    repoURL: "REPLACE_WITH_REPO_URL"
+    targetRevision: main
+    path: 10-security
+    directory:
+      recurse: true
+      include: '{networkpolicies/*.yaml,pod-security/namespace-labels.yaml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
