@@ -135,6 +135,34 @@ chmod +x install-security.sh
 # Then install kubeseal locally and back up the master key — README says how.
 ```
 
-## You're done.
+## Workflow recipes (using the stack)
 
-All six layers are in place. The cluster is production-grade: TLS-fronted, externally backed up, GitOps-reconciled, observable, alertable, and security-hardened (deny-by-default networking, restricted Pod Security, encrypted-at-rest secrets in git).
+Ready-to-import n8n workflows + CronJobs that actually USE everything you just built. See `11-workflows/README.md`. Highlights:
+
+- **RSS → Claude → multi-platform post** (n8n) — automated content pipeline
+- **Google Drive → IG/TikTok** (n8n) — image/video flow
+- **Weekly analytics digest → Slack** (n8n) — leadership report
+- **Daily brand-voice review** (CronJob) — Claude flags off-brand drafts
+- **PVC folder watcher → IG drafts** (CronJob) — K8s-native alternative to the Drive flow
+
+## DR drills + CI (eighth piece)
+
+Proves the backups actually restore + guards every PR. See `12-dr-and-ci/README.md`.
+
+```bash
+# DR drill — runs automatically every quarter; one-time install:
+kubectl apply -f 12-dr-and-ci/dr-drill/rbac.yaml
+kubectl apply -f 12-dr-and-ci/dr-drill/cronjob.yaml
+
+# CI — GitHub Actions in .github/workflows/ trigger on every PR
+# Local pre-commit:
+pip install pre-commit && pre-commit install
+```
+
+What runs:
+- **Quarterly:** restore drill spins up `postiz-pg-restore-test` from R2, asserts row counts, tears down, alerts to Slack on failure.
+- **Every PR:** yamllint, shellcheck, detect-secrets, kubeconform against all manifests + CRDs, `helm template` + re-validate for chart values changes.
+
+## You're done (for real this time).
+
+Eight pieces: 6 infrastructure layers + workflow recipes + DR/CI. The stack is built, deployed, automated, observed, secured, recipe-equipped, and verified. Nothing material is missing.

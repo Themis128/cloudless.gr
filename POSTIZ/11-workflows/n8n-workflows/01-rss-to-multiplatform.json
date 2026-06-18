@@ -1,0 +1,67 @@
+{
+  "name": "RSS to multi-platform (via Claude)",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://hnrss.org/frontpage",
+        "options": {
+          "pollTimes": {
+            "item": [
+              { "mode": "everyX", "value": 30, "unit": "minutes" }
+            ]
+          }
+        }
+      },
+      "id": "rss-trigger",
+      "name": "RSS Feed Trigger",
+      "type": "n8n-nodes-base.rssFeedReadTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "create",
+        "model": "claude-sonnet-4-6",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "user",
+              "content": "=Write a short, engaging social post (max 240 chars) about this article. End with the URL. No hashtags unless natural.\n\nTitle: {{ $json.title }}\nSummary: {{ $json.contentSnippet }}\nURL: {{ $json.link }}"
+            }
+          ]
+        },
+        "options": { "maxTokens": 300, "temperature": 0.7 }
+      },
+      "id": "claude-write",
+      "name": "Claude - Write post",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1.2,
+      "position": [560, 300],
+      "credentials": { "anthropicApi": { "id": "REPLACE_WITH_CRED_ID", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "resource": "post",
+        "operation": "schedule",
+        "content": "={{ $json.content[0].text }}",
+        "scheduledDate": "={{ $now.plus({ minutes: 5 }).toISO() }}",
+        "integrations": "REPLACE_WITH_TWITTER_ID,REPLACE_WITH_LINKEDIN_ID,REPLACE_WITH_MASTODON_ID",
+        "type": "schedule"
+      },
+      "id": "postiz-schedule",
+      "name": "Postiz - Schedule",
+      "type": "n8n-nodes-postiz.postiz",
+      "typeVersion": 1,
+      "position": [900, 300],
+      "credentials": { "postizApi": { "id": "REPLACE_WITH_CRED_ID", "name": "Postiz" } }
+    }
+  ],
+  "connections": {
+    "RSS Feed Trigger": { "main": [[ { "node": "Claude - Write post", "type": "main", "index": 0 } ]] },
+    "Claude - Write post": { "main": [[ { "node": "Postiz - Schedule", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "postiz" }, { "name": "content-pipeline" }]
+}

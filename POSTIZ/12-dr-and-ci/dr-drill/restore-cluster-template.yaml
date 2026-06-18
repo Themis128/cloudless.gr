@@ -1,0 +1,35 @@
+---
+# Template applied by the DR drill CronJob. The script substitutes
+# <ACCOUNT_ID> and <RECOVERY_TARGET> before applying.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postiz-pg-restore-test
+  namespace: postiz
+  labels:
+    purpose: dr-drill
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  storage:
+    size: 10Gi
+  bootstrap:
+    recovery:
+      source: postiz-pg
+      recoveryTarget:
+        targetTime: "<RECOVERY_TARGET>"
+  externalClusters:
+    - name: postiz-pg
+      barmanObjectStore:
+        destinationPath: "s3://postiz-pg-backups"
+        endpointURL: "https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+        s3Credentials:
+          accessKeyId:
+            name: postiz-pg-r2-creds
+            key: ACCESS_KEY_ID
+          secretAccessKey:
+            name: postiz-pg-r2-creds
+            key: ACCESS_SECRET_KEY
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1, memory: 1Gi }

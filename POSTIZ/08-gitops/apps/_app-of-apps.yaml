@@ -16,7 +16,7 @@ spec:
     path: 08-gitops/apps
     directory:
       recurse: false
-      include: '{cert-manager,cnpg-operator,minio-operator,postiz-pg-cluster,postiz-redis,postiz-minio-tenant,postiz,postiz-ingress,postiz-automation,postiz-backups,n8n,observability,security}.yaml'
+      include: '{cert-manager,cnpg-operator,minio-operator,postiz-pg-cluster,postiz-redis,postiz-minio-tenant,postiz,postiz-ingress,postiz-automation,postiz-backups,n8n,observability,security,dr-drill}.yaml'
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

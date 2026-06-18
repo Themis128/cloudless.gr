@@ -1,0 +1,42 @@
+name: validate-manifests
+
+on:
+  pull_request:
+    paths: ['**/*.yaml', '**/*.yml']
+  push:
+    branches: [main]
+
+jobs:
+  kubeconform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -fsSL -o kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+          tar xzf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate raw manifests against the API server schema
+        run: |
+          # CRDs (CloudNativePG, Cert-manager, MinIO Tenant, ArgoCD, Prometheus operator)
+          # are not in vanilla k8s schemas — use a published CRD catalogue.
+          kubeconform \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -skip 'SealedSecret' \
+            -ignore-missing-schemas \
+            -summary \
+            -verbose \
+            -exclude-kinds 'CustomResourceDefinition' \
+            $(find . -name '*.yaml' \
+              ! -path './.github/*' \
+              ! -path '*/n8n-workflows/*' \
+              ! -path '*/dashboards/cnpg.yaml' \
+              ! -path '*/dashboards/redis.yaml' \
+              ! -path '*/dashboards/minio.yaml' \
+              ! -path '*/dashboards/argocd.yaml' \
+              ! -path '*/dashboards/n8n.yaml' \
+              ! -path '**/*.example*')

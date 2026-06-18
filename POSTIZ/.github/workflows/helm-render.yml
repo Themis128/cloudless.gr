@@ -1,0 +1,65 @@
+name: helm-render
+
+on:
+  pull_request:
+    paths:
+      - '**/values.yaml'
+      - '**/values-*.yaml'
+      - '.github/workflows/helm-render.yml'
+  push:
+    branches: [main]
+
+jobs:
+  template-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with: { version: 'v3.16.0' }
+
+      - name: Install kubeconform
+        run: |
+          curl -fsSL -o kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz
+          tar xzf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Add helm repos
+        run: |
+          helm repo add jetstack            https://charts.jetstack.io
+          helm repo add cnpg                https://cloudnative-pg.github.io/charts
+          helm repo add bitnami             https://charts.bitnami.com/bitnami
+          helm repo add minio-operator      https://operator.min.io
+          helm repo add argo                https://argoproj.github.io/argo-helm
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add grafana             https://grafana.github.io/helm-charts
+          helm repo add sealed-secrets      https://bitnami-labs.github.io/sealed-secrets
+          helm repo update
+
+      - name: Render Postiz chart with our values + validate
+        run: |
+          helm template postiz oci://ghcr.io/gitroomhq/postiz-helmchart/charts/postiz-app \
+            -f 05-postiz/values.yaml \
+            --set secrets.JWT_SECRET=test \
+            --set secrets.DATABASE_URL=postgresql://test:test@host:5432/test \
+            --set secrets.REDIS_URL=redis://host:6379 \
+            > /tmp/postiz-rendered.yaml
+          kubeconform -ignore-missing-schemas /tmp/postiz-rendered.yaml
+
+      - name: Render Bitnami Redis with our values
+        run: |
+          helm template postiz-redis bitnami/redis -f 03-redis/values.yaml \
+            > /tmp/redis-rendered.yaml
+          kubeconform -ignore-missing-schemas /tmp/redis-rendered.yaml
+
+      - name: Render kube-prometheus-stack with our values
+        run: |
+          helm template kps prometheus-community/kube-prometheus-stack \
+            -f 09-observability/kube-prometheus-stack/values.yaml \
+            > /tmp/kps-rendered.yaml
+          kubeconform \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -ignore-missing-schemas \
+            /tmp/kps-rendered.yaml

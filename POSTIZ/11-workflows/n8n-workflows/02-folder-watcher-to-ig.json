@@ -1,0 +1,68 @@
+{
+  "name": "Drive folder -> IG + TikTok",
+  "nodes": [
+    {
+      "parameters": {
+        "event": "fileCreated",
+        "folderToWatch": { "__rl": true, "value": "REPLACE_WITH_DRIVE_FOLDER_ID", "mode": "id" },
+        "options": { "fileType": ["image", "video"] }
+      },
+      "id": "drive-trigger",
+      "name": "Drive - New file",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "credentials": { "googleDriveOAuth2Api": { "id": "REPLACE_WITH_CRED_ID", "name": "Google Drive" } }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.id }}"
+      },
+      "id": "drive-download",
+      "name": "Drive - Download",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [460, 300],
+      "credentials": { "googleDriveOAuth2Api": { "id": "REPLACE_WITH_CRED_ID", "name": "Google Drive" } }
+    },
+    {
+      "parameters": {
+        "resource": "upload",
+        "operation": "upload",
+        "binaryPropertyName": "data"
+      },
+      "id": "postiz-upload",
+      "name": "Postiz - Upload",
+      "type": "n8n-nodes-postiz.postiz",
+      "typeVersion": 1,
+      "position": [720, 300],
+      "credentials": { "postizApi": { "id": "REPLACE_WITH_CRED_ID", "name": "Postiz" } }
+    },
+    {
+      "parameters": {
+        "resource": "post",
+        "operation": "schedule",
+        "content": "={{ ($json.name || 'New drop').replace(/\\.[^/.]+$/, '') }} 📸",
+        "scheduledDate": "={{ $now.plus({ hours: 1 }).toISO() }}",
+        "integrations": "REPLACE_WITH_INSTAGRAM_ID,REPLACE_WITH_TIKTOK_ID",
+        "images": "=[{{ JSON.stringify($json.path) }}]",
+        "type": "schedule"
+      },
+      "id": "postiz-schedule",
+      "name": "Postiz - Schedule",
+      "type": "n8n-nodes-postiz.postiz",
+      "typeVersion": 1,
+      "position": [980, 300],
+      "credentials": { "postizApi": { "id": "REPLACE_WITH_CRED_ID", "name": "Postiz" } }
+    }
+  ],
+  "connections": {
+    "Drive - New file":  { "main": [[ { "node": "Drive - Download",  "type": "main", "index": 0 } ]] },
+    "Drive - Download":  { "main": [[ { "node": "Postiz - Upload",   "type": "main", "index": 0 } ]] },
+    "Postiz - Upload":   { "main": [[ { "node": "Postiz - Schedule", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "postiz" }, { "name": "media-pipeline" }]
+}

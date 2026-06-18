@@ -1,0 +1,87 @@
+---
+# PVC at /uploads-watch — drop image/video files in `inbox/`, this CronJob
+# uploads them to Postiz and creates DRAFT IG posts every 5 minutes.
+#
+# Create the PVC once:
+#   kubectl apply -f - <<EOF
+#   apiVersion: v1
+#   kind: PersistentVolumeClaim
+#   metadata: { name: uploads-watch, namespace: postiz }
+#   spec:
+#     accessModes: [ReadWriteMany]   # or RWO if you only access via this Job
+#     resources: { requests: { storage: 10Gi } }
+#   EOF
+#
+# Then sync your media there however you like (syncthing, NFS, scp, etc.).
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-folder-watcher
+  namespace: postiz
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: watcher
+              image: node:22-alpine
+              envFrom:
+                - secretRef: { name: postiz-api-key }
+              env:
+                - name: INSTAGRAM_INTEGRATION_ID
+                  value: "REPLACE_WITH_INSTAGRAM_INTEGRATION_ID"
+              volumeMounts:
+                - { name: watch, mountPath: /uploads-watch }
+              command: [sh, -c]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache jq findutils >/dev/null
+                  npm install -g postiz --silent
+
+                  STATE=/uploads-watch/.processed
+                  INBOX=/uploads-watch/inbox
+                  mkdir -p "$INBOX"
+                  touch "$STATE"
+
+                  # New files = inbox files not in $STATE
+                  find "$INBOX" -type f \( -name '*.jpg' -o -name '*.jpeg' \
+                       -o -name '*.png' -o -name '*.mp4' \) | while read -r FILE; do
+                    REL="${FILE#$INBOX/}"
+                    if grep -qxF "$REL" "$STATE"; then
+                      continue
+                    fi
+
+                    echo "==> Uploading $REL"
+                    UPLOAD=$(postiz upload "$FILE")
+                    URL=$(echo "$UPLOAD" | jq -r '.path')
+
+                    BASENAME=$(basename "$FILE" | sed 's/\.[^.]*$//')
+                    echo "==> Creating draft IG post for $BASENAME"
+                    postiz posts:create \
+                      -c "${BASENAME} 📸" \
+                      -m "$URL" \
+                      -s "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                      -t draft \
+                      -i "$INSTAGRAM_INTEGRATION_ID"
+
+                    echo "$REL" >> "$STATE"
+                  done
+
+                  echo "Done. Processed list:"
+                  wc -l "$STATE"
+              resources:
+                requests: { cpu: 50m, memory: 128Mi }
+                limits:   { cpu: 500m, memory: 512Mi }
+          volumes:
+            - name: watch
+              persistentVolumeClaim: { claimName: uploads-watch }

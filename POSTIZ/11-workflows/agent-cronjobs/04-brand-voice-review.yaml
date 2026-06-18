@@ -1,0 +1,94 @@
+---
+# Daily brand-voice review of next-24h scheduled posts.
+# Pulls posts via the Postiz CLI, asks Claude to score each, posts findings to Slack.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: brand-voice-review
+  namespace: postiz
+spec:
+  schedule: "0 8 * * *"            # daily 08:00 UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: review
+              image: node:22-alpine
+              envFrom:
+                - secretRef: { name: postiz-api-key }
+                - secretRef: { name: agent-creds }
+              command: [sh, -c]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache curl jq >/dev/null
+                  npm install -g postiz --silent
+
+                  echo "==> Fetching scheduled posts (next 24h)"
+                  START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+                  END=$(date -u -d '+24 hours' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+                       || date -u -v+24H +%Y-%m-%dT%H:%M:%SZ)
+                  POSTS=$(postiz posts:list --startDate "$START" --endDate "$END")
+
+                  # Build a compact text dump for Claude.
+                  DUMP=$(echo "$POSTS" | jq -r '.[]
+                    | "POST \(.id) (\(.state)) on \(.publishDate):\n  \(.content // "(empty)")\n"')
+
+                  if [ -z "$DUMP" ]; then
+                    echo "No posts scheduled in next 24h. Exiting."
+                    exit 0
+                  fi
+
+                  echo "==> Asking Claude for brand-voice review"
+                  PROMPT=$(cat <<'EOF'
+                  You are reviewing scheduled social media posts for brand-voice alignment.
+
+                  Our brand voice is: clear, no-marketing-speak, technically credible, slightly playful.
+                  We avoid: emojis in headers, exclamation marks, "exciting!", "thrilled to", marketing cliches.
+
+                  For each post below, output ONE line of Slack mrkdwn:
+                  - `:white_check_mark: <id>` if on-brand
+                  - `:warning: <id> — <one-sentence issue>` if drifting
+
+                  Posts:
+                  EOF
+                  )
+
+                  CONTENT="${PROMPT}
+
+                  ${DUMP}"
+
+                  PAYLOAD=$(jq -n --arg c "$CONTENT" '{
+                    model: "claude-sonnet-4-6",
+                    max_tokens: 800,
+                    messages: [{role: "user", content: $c}]
+                  }')
+
+                  RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+                    -H "x-api-key: $ANTHROPIC_API_KEY" \
+                    -H "anthropic-version: 2023-06-01" \
+                    -H "content-type: application/json" \
+                    -d "$PAYLOAD")
+
+                  TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text')
+
+                  echo "==> Posting to Slack"
+                  SLACK_PAYLOAD=$(jq -n --arg t "*Brand-voice review — next 24h*
+
+                  ${TEXT}" '{text: $t}')
+
+                  curl -s -X POST "$SLACK_WEBHOOK_URL" \
+                    -H "content-type: application/json" \
+                    -d "$SLACK_PAYLOAD"
+
+                  echo "Done."
+              resources:
+                requests: { cpu: 100m, memory: 256Mi }
+                limits:   { cpu: 1, memory: 1Gi }

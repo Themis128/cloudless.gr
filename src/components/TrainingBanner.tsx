@@ -7,11 +7,20 @@ const DISMISS_KEY = "cloudless-training-banner-dismissed";
 const QUOTE_EN = "Pardon our pixels — we're remodeling the universe.";
 const QUOTE_EL = "Ζητάμε συγγνώμη για τα pixels — ανακαινίζουμε το σύμπαν.";
 
+// Campaign-launch gate. Operational mode (NEXT_PUBLIC_PORTFOLIO_MODE !== "true")
+// suppresses the banner entirely so paid traffic doesn't land on "not accepting
+// clients" copy. Set NEXT_PUBLIC_PORTFOLIO_MODE=true in staging/showcase builds
+// to bring it back. Default = operational (banner hidden).
+const PORTFOLIO_MODE = process.env.NEXT_PUBLIC_PORTFOLIO_MODE === "true";
+
 interface TrainingBannerProps {
   locale?: string;
 }
 
 export default function TrainingBanner({ locale }: Readonly<TrainingBannerProps>) {
+  // Operational mode: never render, regardless of dismiss state.
+  if (!PORTFOLIO_MODE) return null;
+
   // Mount-deferred: SSR renders nothing, client reveals banner after hydration.
   // useSyncExternalStore with getServerSnapshot=false caused React #418 because
   // the client snapshot ran synchronously during hydration, mismatch-ing null→element.

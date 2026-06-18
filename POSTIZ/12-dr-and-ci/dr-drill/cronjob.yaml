@@ -1,0 +1,158 @@
+---
+# Quarterly DR drill: restore from R2, validate, tear down, alert.
+# Prereqs:
+#   - 07-backups/cnpg/cluster-patch.yaml applied (so backups are being taken)
+#   - postiz-pg-r2-creds secret in postiz ns
+#   - agent-creds secret in postiz ns providing SLACK_WEBHOOK_URL
+#   - replace <ACCOUNT_ID> below with your Cloudflare account ID
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dr-drill
+  namespace: postiz
+spec:
+  schedule: "0 3 1 */3 *"           # 03:00 UTC, day 1 of Jan/Apr/Jul/Oct
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 4     # one per quarter retained
+  failedJobsHistoryLimit: 6
+  jobTemplate:
+    spec:
+      backoffLimit: 0               # don't retry — let the failure ping Slack
+      ttlSecondsAfterFinished: 604800   # keep 7d for inspection
+      template:
+        spec:
+          serviceAccountName: dr-drill
+          restartPolicy: Never
+          containers:
+            - name: drill
+              image: bitnami/kubectl:1.31
+              envFrom:
+                - secretRef:
+                    name: agent-creds        # provides SLACK_WEBHOOK_URL
+              env:
+                - name: CF_ACCOUNT_ID
+                  value: "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID"
+                - name: TEST_CLUSTER
+                  value: postiz-pg-restore-test
+                - name: NAMESPACE
+                  value: postiz
+              command: [bash, -c]
+              args:
+                - |
+                  set -u
+                  # Helper — post a Slack message; tolerates webhook absence
+                  notify() {
+                    [ -z "${SLACK_WEBHOOK_URL:-}" ] && return 0
+                    curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+                      -H "content-type: application/json" \
+                      --data "$(printf '{"text":%s}' "$(printf '%s' "$1" | jq -Rs .)")" >/dev/null || true
+                  }
+
+                  fail() {
+                    notify ":rotating_light: *DR drill FAILED* at step: *$1*
+
+\`\`\`$(kubectl -n $NAMESPACE describe cluster $TEST_CLUSTER 2>&1 | tail -30)\`\`\`"
+                    cleanup
+                    exit 1
+                  }
+
+                  cleanup() {
+                    echo "==> Cleanup"
+                    kubectl -n "$NAMESPACE" delete cluster "$TEST_CLUSTER" \
+                      --ignore-not-found --wait=false || true
+                  }
+                  trap cleanup EXIT
+
+                  command -v jq >/dev/null || apt-get update -qq && apt-get install -y -qq jq
+
+                  echo "==> 1/5 Render restore template"
+                  RECOVERY_TARGET=$(date -u -d '12 hours ago' '+%Y-%m-%d %H:%M:%S+00' 2>/dev/null \
+                                  || date -u -v-12H '+%Y-%m-%d %H:%M:%S+00')
+
+                  cat > /tmp/restore.yaml <<EOF
+                  $(sed -e "s|<ACCOUNT_ID>|$CF_ACCOUNT_ID|" \
+                        -e "s|<RECOVERY_TARGET>|$RECOVERY_TARGET|" \
+                        /templates/restore-cluster-template.yaml)
+                  EOF
+
+                  echo "==> 2/5 Apply test cluster"
+                  kubectl -n "$NAMESPACE" delete cluster "$TEST_CLUSTER" --ignore-not-found --wait=true
+                  kubectl apply -f /tmp/restore.yaml || fail "apply restore Cluster"
+
+                  echo "==> 3/5 Wait up to 15 min for Ready"
+                  if ! kubectl -n "$NAMESPACE" wait \
+                       --for=condition=Ready cluster/"$TEST_CLUSTER" \
+                       --timeout=900s; then
+                    fail "cluster Ready timeout (R2 fetch / barman failure?)"
+                  fi
+
+                  echo "==> 4/5 Sanity-check restored DB"
+                  POD=$(kubectl -n "$NAMESPACE" get pod \
+                       -l cnpg.io/cluster="$TEST_CLUSTER",role=primary \
+                       -o jsonpath='{.items[0].metadata.name}')
+
+                  USERS=$(kubectl -n "$NAMESPACE" exec "$POD" -c postgres -- \
+                          psql -U postgres -d postiz -tAc 'SELECT COUNT(*) FROM "User";' 2>&1) || \
+                          fail "psql User count query"
+                  POSTS=$(kubectl -n "$NAMESPACE" exec "$POD" -c postgres -- \
+                          psql -U postgres -d postiz -tAc 'SELECT COUNT(*) FROM "Post";' 2>&1) || \
+                          fail "psql Post count query"
+
+                  echo "Users restored: $USERS"
+                  echo "Posts restored: $POSTS"
+
+                  if [ "$USERS" -lt 1 ]; then
+                    fail "User table empty after restore"
+                  fi
+
+                  echo "==> 5/5 Success"
+                  notify ":white_check_mark: *DR drill passed* (recovery target: $RECOVERY_TARGET)
+- Users: $USERS
+- Posts: $POSTS"
+              volumeMounts:
+                - name: template
+                  mountPath: /templates
+              resources:
+                requests: { cpu: 100m, memory: 128Mi }
+                limits:   { cpu: 500m, memory: 512Mi }
+          volumes:
+            - name: template
+              configMap:
+                name: dr-drill-template
+---
+# Wraps the Cluster template as a ConfigMap so the drill Pod can sed it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dr-drill-template
+  namespace: postiz
+data:
+  restore-cluster-template.yaml: |
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    metadata:
+      name: postiz-pg-restore-test
+      namespace: postiz
+      labels:
+        purpose: dr-drill
+    spec:
+      instances: 1
+      imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+      storage:
+        size: 10Gi
+      bootstrap:
+        recovery:
+          source: postiz-pg
+          recoveryTarget:
+            targetTime: "<RECOVERY_TARGET>"
+      externalClusters:
+        - name: postiz-pg
+          barmanObjectStore:
+            destinationPath: "s3://postiz-pg-backups"
+            endpointURL: "https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+            s3Credentials:
+              accessKeyId:     { name: postiz-pg-r2-creds, key: ACCESS_KEY_ID }
+              secretAccessKey: { name: postiz-pg-r2-creds, key: ACCESS_SECRET_KEY }
+      resources:
+        requests: { cpu: 100m, memory: 256Mi }
+        limits:   { cpu: 1, memory: 1Gi }

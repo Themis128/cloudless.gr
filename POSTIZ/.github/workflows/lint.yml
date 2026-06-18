@@ -1,0 +1,56 @@
+name: lint
+
+on:
+  pull_request:
+    paths:
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.sh'
+  push:
+    branches: [main]
+
+jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: yamllint
+        run: |
+          pip install yamllint
+          # Skip the n8n workflow JSONs (they're not YAML) and downloaded dashboards (huge generated files)
+          yamllint -d '{
+            extends: relaxed,
+            ignore: |
+              09-observability/dashboards/cnpg.yaml
+              09-observability/dashboards/redis.yaml
+              09-observability/dashboards/minio.yaml
+              09-observability/dashboards/argocd.yaml
+              09-observability/dashboards/n8n.yaml,
+            rules: { line-length: { max: 200, allow-non-breakable-words: true } }
+          }' .
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck install.sh + recipes
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          find . -name "install*.sh" -o -name "*.sh" | xargs -I{} shellcheck -x {}
+
+  detect-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: detect-secrets scan
+        run: |
+          pip install detect-secrets
+          # Allow the .example placeholder strings (REPLACE_WITH_*); fail on anything else.
+          detect-secrets scan --exclude-files '\.example$|dashboards/.*\.yaml' \
+            > /tmp/secrets.json
+          # Treat any reported secret as a failure unless it's a known placeholder.
+          if jq -e '.results | to_entries[] | .value[] | select(.is_secret != false)' /tmp/secrets.json >/dev/null; then
+            echo "::error::detect-secrets found a probable secret. Review /tmp/secrets.json."
+            cat /tmp/secrets.json
+            exit 1
+          fi

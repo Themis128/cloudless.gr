@@ -19,8 +19,10 @@ import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
 import AttributionCapture from "@/components/AttributionCapture";
 import ConsentGatedPixel from "@/components/ConsentGatedPixel";
+import LinkedInInsightTag from "@/components/LinkedInInsightTag";
 
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
+const LINKEDIN_PARTNER_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID ?? "";
 
 type Props = {
   children: React.ReactNode;
@@ -89,6 +91,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <CookieConsentProvider>
               <GoogleAnalyticsConsent />
               {META_PIXEL_ID && <ConsentGatedPixel pixelId={META_PIXEL_ID} />}
+              {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
               <AttributionCapture />
               <JsonLd data={getOrganizationSchema()} />
               <TrainingBanner locale={locale} />

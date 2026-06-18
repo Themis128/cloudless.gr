@@ -1,0 +1,97 @@
+{
+  "name": "Weekly analytics digest -> Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "weeks", "weekday": 1, "triggerAtHour": 9 }] }
+      },
+      "id": "cron",
+      "name": "Cron - Mondays 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "resource": "integration",
+        "operation": "getAll"
+      },
+      "id": "postiz-list",
+      "name": "Postiz - List integrations",
+      "type": "n8n-nodes-postiz.postiz",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": { "postizApi": { "id": "REPLACE_WITH_CRED_ID", "name": "Postiz" } }
+    },
+    {
+      "parameters": {
+        "url": "=https://postiz.cloudless.gr/api/public/v1/analytics/{{ $json.id }}?date=7",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "fetch-analytics",
+      "name": "HTTP - Per-channel analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 300],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_WITH_HEADER_AUTH_CRED", "name": "Postiz Auth" } }
+    },
+    {
+      "parameters": {
+        "operation": "aggregateItems",
+        "fieldsToAggregate": { "fieldToAggregate": [{ "fieldToAggregate": "$json" }] }
+      },
+      "id": "aggregate",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3.1,
+      "position": [980, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "create",
+        "model": "claude-sonnet-4-6",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "user",
+              "content": "=You're writing the weekly social-media digest for our team Slack.\n\nHere's the last 7 days of analytics across all connected channels:\n\n{{ JSON.stringify($json.data, null, 2) }}\n\nWrite a 6-bullet Slack message:\n- 1 sentence headline (what was the week)\n- Top 3 wins (specific numbers)\n- Top 1 concern (specific numbers)\n- 1 concrete action for next week\n\nUse Slack mrkdwn formatting. Keep under 250 words."
+            }
+          ]
+        },
+        "options": { "maxTokens": 800, "temperature": 0.4 }
+      },
+      "id": "claude-digest",
+      "name": "Claude - Write digest",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1.2,
+      "position": [1240, 300],
+      "credentials": { "anthropicApi": { "id": "REPLACE_WITH_CRED_ID", "name": "Anthropic" } }
+    },
+    {
+      "parameters": {
+        "url": "REPLACE_WITH_SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": {{ JSON.stringify($json.content[0].text) }}\n}",
+        "options": {}
+      },
+      "id": "slack-post",
+      "name": "Slack - Post digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1500, 300]
+    }
+  ],
+  "connections": {
+    "Cron - Mondays 09:00":         { "main": [[ { "node": "Postiz - List integrations", "type": "main", "index": 0 } ]] },
+    "Postiz - List integrations":   { "main": [[ { "node": "HTTP - Per-channel analytics", "type": "main", "index": 0 } ]] },
+    "HTTP - Per-channel analytics": { "main": [[ { "node": "Aggregate", "type": "main", "index": 0 } ]] },
+    "Aggregate":                    { "main": [[ { "node": "Claude - Write digest", "type": "main", "index": 0 } ]] },
+    "Claude - Write digest":        { "main": [[ { "node": "Slack - Post digest", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": [{ "name": "postiz" }, { "name": "reporting" }]
+}

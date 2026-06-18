@@ -1,0 +1,24 @@
+---
+# Quarterly DR drill: spins up postiz-pg-restore-test from R2, validates, tears down.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dr-drill
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+spec:
+  project: postiz-platform
+  source:
+    repoURL: "REPLACE_WITH_REPO_URL"
+    targetRevision: main
+    path: 12-dr-and-ci/dr-drill
+    directory:
+      include: '{rbac.yaml,cronjob.yaml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postiz
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

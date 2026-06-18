@@ -1,0 +1,55 @@
+# Run the same checks locally that CI runs in GitHub Actions.
+# Install:
+#   pip install pre-commit
+#   pre-commit install
+# Then every `git commit` runs these hooks.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: '^09-observability/dashboards/(cnpg|redis|minio|argocd|n8n)\.yaml$'
+      - id: check-added-large-files
+        args: [--maxkb=512]
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [-d, 'extends: relaxed, rules: { line-length: { max: 200, allow-non-breakable-words: true } }']
+        exclude: '^09-observability/dashboards/(cnpg|redis|minio|argocd|n8n)\.yaml$'
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        args: [-x]
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--exclude-files', '\.example$|dashboards/.*\.yaml']
+
+  # Validates raw manifests against the K8s + CRD schemas, same as CI.
+  - repo: local
+    hooks:
+      - id: kubeconform
+        name: kubeconform
+        language: system
+        files: '\.ya?ml$'
+        exclude: '\.example|/n8n-workflows/|/dashboards/(cnpg|redis|minio|argocd|n8n)\.yaml'
+        entry: bash -c '
+          if ! command -v kubeconform >/dev/null; then
+            echo "kubeconform not installed — skipping"; exit 0;
+          fi
+          kubeconform \
+            -schema-location default \
+            -schema-location "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" \
+            -ignore-missing-schemas -skip SealedSecret "$@"
+        ' --
