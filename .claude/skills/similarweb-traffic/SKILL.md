@@ -26,6 +26,7 @@ node scripts/fetch-similarweb-traffic.js <domain>
 ```
 
 Examples:
+
 ```bash
 # Formatted markdown summary (default)
 node scripts/fetch-similarweb-traffic.js chatslide.ai

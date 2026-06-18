@@ -27,16 +27,19 @@ Base URL: `https://www.googleapis.com/youtube/v3`
 ### Channel Analysis
 
 **Get channel by username or handle:**
+
 ```bash
 curl -s "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails,brandingSettings&forHandle=@{handle}&key=${YOUTUBE_API_KEY}"
 ```
 
 **Get channel by ID:**
+
 ```bash
 curl -s "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id={channelId}&key=${YOUTUBE_API_KEY}"
 ```
 
 Key metrics returned:
+
 - `statistics.viewCount` — Total channel views
 - `statistics.subscriberCount` — Subscriber count
 - `statistics.videoCount` — Total videos published
@@ -45,6 +48,7 @@ Key metrics returned:
 ### List Channel Videos
 
 **Get uploads playlist:**
+
 ```bash
 curl -s "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId={uploadsPlaylistId}&maxResults=50&key=${YOUTUBE_API_KEY}"
 ```
@@ -52,11 +56,13 @@ curl -s "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,conten
 ### Video Performance
 
 **Get video statistics:**
+
 ```bash
 curl -s "https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id={videoId1},{videoId2}&key=${YOUTUBE_API_KEY}"
 ```
 
 Key metrics:
+
 - `statistics.viewCount` — Views
 - `statistics.likeCount` — Likes
 - `statistics.commentCount` — Comments
@@ -67,11 +73,13 @@ Key metrics:
 ### Search
 
 **Search videos by keyword:**
+
 ```bash
 curl -s "https://www.googleapis.com/youtube/v3/search?part=snippet&q={keyword}&type=video&maxResults=10&order=relevance&key=${YOUTUBE_API_KEY}"
 ```
 
 **Search with filters:**
+
 - `order=viewCount` — Most viewed
 - `order=date` — Most recent
 - `order=rating` — Highest rated
@@ -95,12 +103,14 @@ Pull channel data and compute:
 ### Step 2: Top Performing Content
 
 List the last 50 videos and sort by:
+
 1. View count (absolute performance)
 2. Views per day since publish (velocity)
 3. Engagement rate (likes + comments / views)
 4. Like-to-view ratio
 
 Identify patterns in top performers:
+
 - Common topics or keywords
 - Video length sweet spot
 - Thumbnail style (from title patterns)
@@ -109,6 +119,7 @@ Identify patterns in top performers:
 ### Step 3: Content Gaps
 
 Search for the channel's core keywords and compare:
+
 - What top-ranking videos cover vs. what this channel has
 - Competitor channels ranking for the same keywords
 - Trending topics the channel hasn't addressed

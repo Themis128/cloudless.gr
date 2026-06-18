@@ -3,6 +3,7 @@
 ## Code Quality Standards
 
 ### TypeScript
+
 - Strict mode everywhere (`strict: true`, `noEmit: true`)
 - `moduleResolution: "bundler"` — do not use `node16`/`nodenext`
 - Absolute imports via `@/` alias (maps to `src/`) — always prefer over relative paths for `src/` code
@@ -11,6 +12,7 @@
 - Export interface/type for all non-trivial shapes; inline only for one-off props
 
 ### Naming Conventions
+
 - Files: `kebab-case.ts`, `PascalCase.tsx` for components
 - Functions/variables: `camelCase`
 - Types/interfaces: `PascalCase`
@@ -19,6 +21,7 @@
 - Test constants at top of file: named constants instead of magic strings (e.g. `const PAGE_ID = "page-1"`)
 
 ### File-Level Structure
+
 1. JSDoc module comment (optional but used on complex files)
 2. Imports (external → internal `@/` → relative)
 3. Module-level constants (`SCREAMING_SNAKE_CASE`)
@@ -27,7 +30,9 @@
 6. Exported functions / default export
 
 ### Section Separators
+
 Use `// ── Section Name ──────────────────────────────────────────────────` (em-dash + trailing dashes) to visually separate major sections within a file. Seen in both TypeScript and Python files:
+
 ```ts
 // ── Types ────────────────────────────────────────────────────────────────────
 // ── Helper components ─────────────────────────────────────────────────────────
@@ -39,6 +44,7 @@ Use `// ── Section Name ─────────────────�
 ## API Route Patterns
 
 ### Route Handler Structure (`src/app/api/**/route.ts`)
+
 ```ts
 import { NextRequest } from "next/server";
 
@@ -73,6 +79,7 @@ export async function POST(request: NextRequest) {
 ```
 
 ### Key API Route Conventions
+
 - Always use `Response.json()` (not `NextResponse.json()`) for response creation
 - SSM config loaded via `await getConfig()` — never read secrets from `process.env` directly in production routes
 - Fire-and-forget side effects (Slack, HubSpot) call `.catch(() => {})` inline — they never fail the main response
@@ -86,11 +93,13 @@ export async function POST(request: NextRequest) {
 ## React Component Patterns
 
 ### Client Components (`"use client"`)
+
 - All admin dashboard pages are `"use client"` with data fetching via `fetchWithAuth`
 - State organized by concern: data state, loading state (per-tab/section), error state, UI state
 - Per-section loading/error state tracked with `Record<TabName, boolean>` and `Record<TabName, string | null>`
 
 ### Data Fetching in Client Components
+
 ```ts
 // Pattern: lazy load — only fetch when tab is first visited
 const [fetchedTabs, setFetchedTabs] = useState<Set<Tab>>(new Set());
@@ -112,19 +121,23 @@ useEffect(() => {
 ```
 
 ### useState Initialization
+
 - Use lazy initializer `useState(() => expensiveComputation())` to avoid SSR/mount issues
 - For localStorage reads: guard with `typeof window === "undefined"` before accessing
 
 ### useCallback/useMemo
+
 - Wrap fetch functions in `useCallback` with correct `[deps]` array
 - Use `useMemo` for derived values (e.g. `presetForDays(days)`)
 
 ### Component Props
+
 - Always use `readonly` for destructured props
 - Prefer small focused sub-components over monolithic render — extract tab components, card components, state components
 - Loading/error/empty states are dedicated components: `LoadingState`, `ErrorState`
 
 ### Promise.allSettled for Parallel Fetches
+
 ```ts
 const [seoRes, webRes] = await Promise.allSettled([
   fetchWithAuth("/api/admin/analytics/seo"),
@@ -138,6 +151,7 @@ const [seoRes, webRes] = await Promise.allSettled([
 ## Testing Patterns
 
 ### Test File Structure
+
 ```ts
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -161,7 +175,9 @@ describe("module-name — Description", () => {
 ```
 
 ### Dynamic Imports in Tests
+
 Modules are imported **inside test bodies** to pick up mocked globals:
+
 ```ts
 it("sends correct headers", async () => {
   const { notionFetch } = await import("@/lib/notion");
@@ -169,9 +185,11 @@ it("sends correct headers", async () => {
   ...
 });
 ```
+
 This ensures `vi.stubGlobal("fetch", mockFetch)` is in effect when the module initializes.
 
 ### Mock Patterns
+
 - `vi.fn()` for function mocks
 - `vi.stubGlobal()` for globals (`fetch`, `setTimeout`)
 - `vi.spyOn(globalThis, "setTimeout")` to make timers synchronous in retry tests
@@ -179,6 +197,7 @@ This ensures `vi.stubGlobal("fetch", mockFetch)` is in effect when the module in
 - Never mock the module under test — mock its dependencies (external calls)
 
 ### Test Coverage Conventions
+
 - Test both happy path and error/edge cases for every exported function
 - Pagination tests: verify cursor is passed in subsequent calls
 - Error tests: HTTP 4xx/5xx, parse failures, retry exhaustion
@@ -189,13 +208,16 @@ This ensures `vi.stubGlobal("fetch", mockFetch)` is in effect when the module in
 ## Library Module Patterns (`src/lib/`)
 
 ### Self-Contained Modules
+
 Scripts that need portability (e.g. `scripts/article-quality-gates.ts`) are explicitly kept self-contained:
+
 ```ts
 // Self-contained: reads no src/lib/* (kept as a sibling script module so
 // the cron tooling stays portable).
 ```
 
 ### Constants as Single Source of Truth
+
 ```ts
 export const WORD_MIN = 700;    // exported so tests and consumers share the value
 export const WORD_MAX = 1400;
@@ -203,7 +225,9 @@ export const MIN_CRITIC_SCORE = 7.0;
 ```
 
 ### Discriminated Union Return Types
+
 Complex multi-outcome functions return discriminated unions:
+
 ```ts
 export type AutoPromoteVerdict =
   | { promote: true; gates: GateResult[]; critic: CriticResponse }
@@ -211,7 +235,9 @@ export type AutoPromoteVerdict =
 ```
 
 ### Robust JSON Parsing
+
 LLM/external JSON: try strict parse first, then extract largest `{...}` block as fallback:
+
 ```ts
 export function parseCriticJson(raw: string): CriticResponse {
   try { return JSON.parse(raw); } catch {
@@ -223,6 +249,7 @@ export function parseCriticJson(raw: string): CriticResponse {
 ```
 
 ### Error Propagation
+
 - Functions that do I/O: throw on unrecoverable errors, return `null`/`false`/`[]` on expected failures (missing config, 404s)
 - Callers decide whether to surface or swallow
 - Never silently swallow unexpected errors at lib level
@@ -232,12 +259,15 @@ export function parseCriticJson(raw: string): CriticResponse {
 ## Python / Infrastructure Patterns (FastAPI on Pi)
 
 ### Route Module Pattern
+
 ```python
 router = APIRouter()  # Router defined at module level, included in main.py
 ```
 
 ### Pydantic Input Models
+
 All route inputs use Pydantic `BaseModel`:
+
 ```python
 class CommandIn(BaseModel):
     action: str
@@ -245,28 +275,34 @@ class CommandIn(BaseModel):
 ```
 
 ### Async HTTP with httpx
+
 ```python
 async with httpx.AsyncClient(timeout=CMD_TIMEOUT) as client:
     r = await client.post(url, data=params)
 return r.status_code == 200
 ```
+
 Private helpers prefixed with `_`: `_esphome_post`, `_esphome_get`, `_dispatch_command`
 
 ### Error Handling in FastAPI
+
 ```python
 raise HTTPException(status_code=400, detail=f"Unknown command: {action!r}")
 raise HTTPException(status_code=502, detail="ESPHome did not acknowledge")
 ```
 
 ### Background Tasks for Long Operations
+
 ```python
 async def esp32_ota(body: OtaIn, background_tasks: BackgroundTasks):
     background_tasks.add_task(_do_ota)
     return {"ok": True, "message": "OTA triggered — device will reboot after flashing (~30 s)"}
 ```
+
 OTA endpoint returns immediately; actual HTTP call is in background task.
 
 ### Environment-Based Config
+
 ```python
 ESPHOME_BASE = os.getenv("ESPHOME_URL", "http://192.168.1.201:9101")
 ```
@@ -276,6 +312,7 @@ ESPHOME_BASE = os.getenv("ESPHOME_URL", "http://192.168.1.201:9101")
 ## Tailwind CSS / Design System Conventions
 
 ### Custom Design Tokens (from admin pages)
+
 - `font-mono` — monospace labels, table data, badges, metric values
 - `font-heading` — section headings
 - `font-body` — paragraph text
@@ -288,6 +325,7 @@ ESPHOME_BASE = os.getenv("ESPHOME_URL", "http://192.168.1.201:9101")
 - Loading spinner: `border-neon-magenta h-6 w-6 animate-spin rounded-full border-2 border-t-transparent`
 
 ### Accessibility
+
 - Interactive filter groups: `role="group" aria-label="..."` on container
 - Buttons: `aria-pressed` for toggle state, `aria-label` on icon-only buttons
 - Tables: proper `<thead>/<tbody>`, `<th>` elements with scope implied
@@ -297,6 +335,7 @@ ESPHOME_BASE = os.getenv("ESPHOME_URL", "http://192.168.1.201:9101")
 ## i18n Patterns
 
 ### Server Components
+
 ```ts
 import { getServerLocale } from "@/lib/server-locale";
 const locale = await getServerLocale();
@@ -304,12 +343,14 @@ const label = translate(locale, "section.key", "Fallback string");
 ```
 
 ### Client Components
+
 ```ts
 import { useCurrentLocale } from "@/lib/use-locale";
 const locale = useCurrentLocale();
 ```
 
 ### Translation Keys
+
 - Add to both `src/locales/en.json` and `src/locales/el.json` (and fr/de for full parity)
 - The `locales-parity.test.ts` test enforces all four locale files have matching keys — CI will fail if parity breaks
 
@@ -318,7 +359,9 @@ const locale = useCurrentLocale();
 ## Security Patterns
 
 ### Webhook Signature Verification
+
 Always verify before processing payload:
+
 ```ts
 // Stripe
 event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
@@ -331,12 +374,15 @@ crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expectedSecret))
 ```
 
 ### HTML Escaping
+
 Use `escapeHtml()` from `@/lib/escape-html` for all user-controlled data rendered in HTML email bodies.
 
 ### JWT Validation
+
 `src/lib/api-auth.ts` validates Bearer JWTs against the Cognito JWKS endpoint, enforcing `issuer`, `audience`, and group claims. All admin API routes call this before processing.
 
 ### Rate Limiting
+
 `src/lib/rate-limit.ts` provides IP-based rate limiting. Applied to public-facing endpoints like `/api/unsubscribe` (5 req/IP/min).
 
 ---

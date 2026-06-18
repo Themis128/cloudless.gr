@@ -34,6 +34,7 @@ Content pillars are 3-5 core themes that every piece of content ties back to. Th
 variety while maintaining brand relevance.
 
 **Example for a SaaS marketing tool:**
+
 1. **SEO & Organic Growth** - Tips, case studies, algorithm updates.
 2. **Content Marketing** - Strategy, writing, distribution, repurposing.
 3. **Conversion Optimization** - Landing pages, CTAs, A/B testing, UX.
@@ -41,6 +42,7 @@ variety while maintaining brand relevance.
 5. **Industry Trends** - Marketing news, data, predictions.
 
 **Example for a personal brand (marketing consultant):**
+
 1. **Tactical Marketing Tips** - Actionable how-to content.
 2. **Client Stories & Case Studies** - Results and lessons learned.
 3. **Personal Journey** - Career insights, failures, learnings.
@@ -125,21 +127,25 @@ Assign recurring themes to days of the week for consistency and reduced planning
 ### Platform-Specific Optimal Posting Times
 
 **Twitter/X:**
+
 - Weekdays: 8-10am, 12-1pm, 5-6pm (audience timezone)
 - Weekends: 9-11am
 - Best day: Tuesday and Wednesday
 
 **LinkedIn:**
+
 - Weekdays: 7-8am, 12pm, 5-6pm
 - Best days: Tuesday, Wednesday, Thursday
 - Avoid weekends (60% lower engagement)
 
 **Instagram:**
+
 - Weekdays: 11am-1pm, 7-9pm
 - Weekends: 10am-12pm
 - Best days: Monday, Wednesday, Friday
 
 **TikTok:**
+
 - Every day: 7-9am, 12-3pm, 7-11pm
 - Best days: Tuesday, Thursday, Friday
 - Post when your Analytics tab shows your audience is most active
@@ -270,10 +276,13 @@ content types and test new formats or platforms.
 For every content calendar request, deliver:
 
 ### 1. Content Pillars and Mix
+
 Defined pillars with percentage allocations and the 80/20 breakdown.
 
 ### 2. Calendar
+
 Monthly or weekly view in table format with:
+
 - Date and day
 - Platform
 - Content type and format
@@ -282,16 +291,21 @@ Monthly or weekly view in table format with:
 - Status (idea, draft, designed, scheduled, published)
 
 ### 3. Theme Day Schedule
+
 Day-by-day theme assignments with rationale.
 
 ### 4. Batch Workflow
+
 Customized batch schedule based on team size and capacity.
 
 ### 5. Posting Times
+
 Platform-specific recommended posting times based on the user's audience.
 
 ### 6. Content Bank
+
 Starter list of 20-30 content ideas organized by pillar.
 
 ### 7. Metrics Dashboard
+
 Template for tracking weekly and monthly performance.

@@ -7,9 +7,7 @@ The following sections give some examples of filter usage and a full syntax refe
 
 ## Examples
 
-
 > For more real world examples, try applying some filters to a report on ahrefs.com using our visual interface, and then press the `API {}` button to view the `where` parameter of the generated API v3 query.
-
 
 Field "foo" equals 3:
 
@@ -59,7 +57,7 @@ Either the uppercased value of the string field "foo" equals "AHREFS", or all st
 
 ## Language reference
 
-The filter syntax is described by the following grammar, expressed in [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)-style notation. 
+The filter syntax is described by the following grammar, expressed in [BNF](https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form)-style notation.
 
 A term enclosed in angle brackets `<` and `>` denotes a symbol.  A symbol followed by a `+` denotes a non-empty array containing the symbol. A `?` preceding an object field indicates that the field is optional.
 
@@ -69,6 +67,7 @@ The two terminal symbols are defined as follows:
 - `<value>` A JSON value. It should match the type of the field (or of the field's modifier, if one is present).
 
 Permitted patterns in regex filter expressions differs by tool.
+
 - Keywords Explorer: Only `*` as a wildcard operator.
 - Site Explorer: [RE2](https://github.com/google/re2/wiki/Syntax) syntax.
 
@@ -108,5 +107,3 @@ Permitted patterns in regex filter expressions differs by tool.
 <list_condition> ::= { "any" : <condition_bool_filter> }
                  |   { "all" : <condition_bool_filter> }
 ```
-
-

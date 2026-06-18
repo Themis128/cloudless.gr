@@ -66,6 +66,7 @@ Note: Not all ads follow this structure. Document what actually happens.
 ### Dimension 4: Target Audience
 
 Infer the target audience from:
+
 - **Demographics:** Age, gender, location signals in the creative
 - **Psychographics:** Values, lifestyle, interests shown
 - **Awareness level:** Unaware → Problem-aware → Solution-aware → Product-aware → Most-aware

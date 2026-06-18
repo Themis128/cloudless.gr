@@ -50,6 +50,7 @@ curl -s https://api.openai.com/v1/audio/transcriptions \
 ```
 
 Scan transcriptions for:
+
 - **Start markers**: "welcome", "hello everyone", "大家好", "欢迎", intro music, first substantive topic sentence
 - **End markers**: "see you next time", "bye", "下期见", "感谢收听", followed by post-show chat
 
@@ -90,6 +91,7 @@ python3 ./filler_removal.py \
 ```
 
 **Arguments:**
+
 - `--total-duration`: Duration of the trimmed input file in seconds (required)
 - `--end-at`: Cut everything after this timestamp (e.g., post-show chat start)
 - `--cut START:END`: Cut a specific range. Can be repeated.
@@ -132,11 +134,13 @@ loudnorm=I=-16:TP=-1.5:LRA=13                    # Podcast standard loudness
 **Why `dynaudnorm` is the star:** it normalizes in 200 ms rolling windows, so when the guest is speaking, that window gets lifted independently of the host's louder windows. Order matters — run `dynaudnorm` BEFORE `acompressor` so the compressor sees a balanced signal.
 
 **Never add these to the default chain:**
+
 - `agate` (noise gate) — cuts off any speaker quieter than the threshold; kills the guest.
 - Heavy compression (ratio >3:1, makeup >2 dB) — flattens dynamics and makes the guest sound pumped.
 - Narrow LRA (<12) in `loudnorm` — crushes natural speech dynamics.
 
 **Adjust lowpass based on source sample rate:**
+
 - 16kHz source → `lowpass=7500`
 - 44.1kHz+ source → `lowpass=12000` (or skip)
 

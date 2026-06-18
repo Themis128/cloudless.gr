@@ -22,6 +22,7 @@ curl -s "https://api.brand.dev/v1/brand/retrieve?domain=${DOMAIN}" \
 ```
 
 Extract from the response:
+
 - **Brand name** (`.brand.title` or `.brand.name`)
 - **Description** (`.brand.description`)
 - **Logo URLs** (from `.brand.logos[]`) — prefer icon/square logos for card layouts, full logos for headers
@@ -34,23 +35,27 @@ ALWAYS download logos locally for serving. Never reference external `media.brand
 ### Where to save
 
 The save location depends on the project. Look for existing patterns:
+
 - **Next.js / static sites**: `public/logos/<context>/` (served as `/logos/<context>/`)
 - **Other web projects**: check for existing `static/`, `assets/`, `images/`, or `public/` directories
 - **If no convention exists**: create a `logos/` directory under the project's static asset root
 
 ### Naming Convention
+
 - `<brand-slug>.<ext>` where:
   - `<brand-slug>` is the lowercase brand name, spaces replaced by hyphens (e.g., `miss-a` not `miss_a`)
   - `<ext>` matches the original file extension (png, webp, jpg, svg)
 - Optionally group by context subdirectory (e.g., `partners/`, `customers/`) if the project has multiple logo collections
 
 ### Download Command
+
 ```bash
 mkdir -p <logo-dir>
 curl -sL "<logo-url>" -o "<logo-dir>/<brand-slug>.<ext>"
 ```
 
 ### Verify Download
+
 ```bash
 ls -la <logo-dir>/<brand-slug>.<ext>
 ```
@@ -58,6 +63,7 @@ ls -la <logo-dir>/<brand-slug>.<ext>
 ## Step 4: Return Results
 
 Provide the user with:
+
 - Brand name
 - Description
 - Industry

@@ -21,6 +21,7 @@
 | TypeScript | ^6.0.3 | Strict mode, `@/` path alias → `./src/` |
 
 ## Package Management
+
 - **pnpm** 10.33.2 (enforced via `packageManager` field and `engines`)
 - Node.js >= 20 required
 - pnpm workspace: `pnpm-workspace.yaml` (monorepo root + `tools/` packages)
@@ -76,6 +77,7 @@ Coverage thresholds (CI enforced): lines 47%, functions 37%, branches 37%, state
 | k3s | Kubernetes on Raspberry Pi (HA standby) |
 
 ## Dev Port
+
 App runs on **port 4000** (not the default 3000): `next dev -p 4000` / `next start -p 4000`.
 
 ## Development Commands
@@ -112,6 +114,7 @@ pnpm cognito:setup          # Configure Cognito Hosted UI
 ```
 
 ## Infrastructure Languages
+
 - **Terraform** (`infrastructure/terraform/`): Lambda resource optimization
 - **Python FastAPI** (`infrastructure/pi-alert-api/`): ESP32 alert receiver on Pi
   - Typed with mypy, linted with ruff, pylint config in `.codacy/`
@@ -119,6 +122,7 @@ pnpm cognito:setup          # Configure Cognito Hosted UI
 - **Cloudflare Workers TypeScript** (`workers/esp32-proxy/`): Edge proxy
 
 ## TypeScript Configuration Highlights
+
 - `strict: true` — full strict mode
 - `moduleResolution: "bundler"` — Turbopack-compatible resolution
 - `paths: { "@/*": ["./src/*"] }` — absolute imports via `@/`
@@ -126,6 +130,7 @@ pnpm cognito:setup          # Configure Cognito Hosted UI
 - Test and script files excluded from main tsconfig (have their own)
 
 ## Code Quality Tools
+
 - ESLint flat config (`eslint.config.mjs`) with `eslint-config-next`
 - Prettier with `prettier-plugin-tailwindcss` (auto-sorts Tailwind classes)
 - Ruff for Python (lint + format)
@@ -136,6 +141,7 @@ pnpm cognito:setup          # Configure Cognito Hosted UI
 - `.gitattributes`: LF enforcement for all text files
 
 ## Secrets / Config Pattern
+
 - **No `.env` files in production** — all secrets from AWS SSM Parameter Store
 - Path prefix: `/cloudless/production/`
 - Local dev: `.env.local` (git-ignored)

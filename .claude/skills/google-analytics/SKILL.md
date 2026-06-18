@@ -15,6 +15,7 @@ Pull reports and insights from GA4 using the Google Analytics Data API.
 ## Prerequisites
 
 Requires Google OAuth credentials:
+
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - A valid OAuth access token (refreshed as needed)

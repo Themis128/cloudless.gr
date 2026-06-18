@@ -58,6 +58,12 @@
     "coverage",
     "**/node_modules/**",
     ".claude/**/node_modules/**",
+    // .claude/skills/** are vendored OpenClaudia skill docs (~67 SKILL.md
+    // files) installed via the OpenClaudia tooling, not authored here. Linting
+    // them surfaces real authoring issues in external content we don't own
+    // (MD059 "[here]" link text, MD056 malformed tables) — file upstream
+    // rather than patching local copies.
+    ".claude/skills/**",
     "CHANGELOG.md",
     // Generated, gitignored artifacts — not authored docs. markdownlint-cli2
     // does not read .gitignore, so these must be listed explicitly.

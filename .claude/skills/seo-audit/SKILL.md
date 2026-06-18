@@ -20,6 +20,7 @@ Use the available tools to collect information about the target site:
 5. **Check PageSpeed** via `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={URL}&strategy=mobile` and `&strategy=desktop`
 
 If the user provides a project codebase, also inspect:
+
 - Next.js `next.config.js`, `app/layout.tsx`, `middleware.ts`
 - Meta tag generation in page components
 - `<head>` contents, Open Graph tags
@@ -50,6 +51,7 @@ Check these items:
 | Crawl depth | Important pages within 3 clicks of homepage | Medium |
 
 **Scoring formula:**
+
 - Start at 100
 - Critical issue: -25 each
 - High issue: -15 each
@@ -142,6 +144,7 @@ Overall = (Crawlability * 0.20) + (Technical * 0.25) + (On-Page * 0.25) + (Conte
 ```
 
 **Rating scale:**
+
 - 90-100: Excellent - minor optimizations only
 - 75-89: Good - some important fixes needed
 - 50-74: Needs Improvement - significant issues to address

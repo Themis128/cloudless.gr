@@ -21,15 +21,18 @@ Design effective referral programs and viral loops that drive sustainable growth
 Only the referrer gets rewarded.
 
 **Best for:**
+
 - Products with strong organic word-of-mouth
 - Low-friction signups where the referred user needs no extra motivation
 - Cost-sensitive businesses
 
 **Examples:**
+
 - Uber: "$10 credit for every friend you refer"
 - Amazon Associates: Commission on referred purchases
 
 **Template:**
+
 ```
 Refer a friend and get [reward].
 Share your unique link: [referral_url]
@@ -40,16 +43,19 @@ Share your unique link: [referral_url]
 Both referrer and referred user get rewarded.
 
 **Best for:**
+
 - Products requiring activation effort from new users
 - Competitive markets where new users need a nudge
 - Subscription businesses
 
 **Examples:**
+
 - Dropbox: Both get 500MB extra storage
 - Airbnb: Referrer gets $25 credit, friend gets $40 off first stay
 - PayPal: Both get $10 when friend makes first transaction
 
 **Template:**
+
 ```
 Give [friend_reward], get [referrer_reward].
 Share your link and you both win: [referral_url]
@@ -60,6 +66,7 @@ Share your link and you both win: [referral_url]
 Rewards increase with number of successful referrals.
 
 **Example tier structure:**
+
 | Referrals | Reward |
 |-----------|--------|
 | 1 | Free month |
@@ -69,6 +76,7 @@ Rewards increase with number of successful referrals.
 | 25 | Cash payout or swag box |
 
 **Best for:**
+
 - Creating power referrers / ambassadors
 - Products with passionate user bases
 - Building a referral leaderboard culture
@@ -134,6 +142,7 @@ A K of 0.5 with a 1-day cycle > K of 0.8 with a 30-day cycle
 **Cons:** Lower volume, requires email access
 
 Template:
+
 ```
 Subject: I thought you'd like [Product] -- here's [reward] to try it
 
@@ -155,12 +164,14 @@ I wanted to share my referral link so you can get [friend_reward]:
 Platform-specific templates:
 
 **Twitter/X:**
+
 ```
 I just [achievement/milestone] with @Product! If you want to try it,
 use my link and we both get [reward]: [referral_url]
 ```
 
 **LinkedIn:**
+
 ```
 I've been using [Product] to [professional benefit] and the results
 have been impressive: [specific metric].
@@ -170,6 +181,7 @@ If you're looking for [solution], here's my referral link
 ```
 
 **WhatsApp/SMS:**
+
 ```
 Hey! I've been using [Product] and really like it. They have a
 referral deal -- we both get [reward] if you sign up through my link:
@@ -182,6 +194,7 @@ referral deal -- we both get [reward] if you sign up through my link:
 **Cons:** Only reaches existing users
 
 Best practices:
+
 - Show referral prompt after a success moment (completed task, achievement, positive outcome)
 - Pre-populate sharing message
 - Show referral progress and rewards earned

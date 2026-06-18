@@ -79,10 +79,12 @@ Display URL path 2 (max 15 characters): [Offer or category]
 ### Responsive Search Ads (RSA)
 
 Provide exactly:
+
 - **15 headlines** (max 30 chars each)
 - **4 descriptions** (max 90 chars each)
 
 Pin only when necessary:
+
 - Pin your brand name headline to Position 1 or 2
 - Pin your strongest CTA headline to Position 2 or 3
 - Leave remaining slots unpinned to let Google optimize
@@ -154,7 +156,9 @@ Performance Max requires a full asset package:
 Always recommend and write copy for these extensions:
 
 ### Sitelink Extensions
+
 Provide 4-8 sitelinks:
+
 ```
 Sitelink headline (max 25 chars): [Page name]
 Description line 1 (max 35 chars): [What they'll find]
@@ -163,24 +167,31 @@ Final URL: [Specific page URL]
 ```
 
 ### Callout Extensions
+
 Provide 4-6 callouts (max 25 chars each):
+
 - Highlight USPs: "Free Shipping Over $50"
 - Trust signals: "4.9 Star Rating"
 - Features: "24/7 Support"
 
 ### Structured Snippets
+
 Choose a header and provide 3+ values:
+
 - Types: Brands, Courses, Destinations, Featured Hotels, Insurance Coverage, Models, Neighborhoods, Service Catalog, Shows, Styles, Types
 
 ### Call Extensions
+
 - Include phone number if the business accepts calls
 - Set call reporting and call schedule
 
 ### Price Extensions
+
 - At least 3 items with price, description, and URL
 - Use the correct price qualifier (from, up to, average)
 
 ### Image Extensions
+
 - Square (1:1) and landscape (1.91:1) images
 - Must be relevant to the ad and landing page
 
@@ -189,18 +200,21 @@ Choose a header and provide 3+ values:
 Quality Score is determined by three factors. Optimize each:
 
 ### 1. Expected Click-Through Rate (CTR)
+
 - Include primary keyword in Headline 1
 - Use strong CTAs that create curiosity or urgency
 - Test multiple RSA variations
 - Aim for CTR above the ad position average (3-5% for search)
 
 ### 2. Ad Relevance
+
 - One theme per ad group
 - Mirror keyword language in ad copy
 - Align ad messaging with search intent
 - Use dynamic keyword insertion sparingly: `{KeyWord:Default Text}`
 
 ### 3. Landing Page Experience
+
 - Landing page headline must match the ad promise
 - Page must load in under 3 seconds
 - Mobile-responsive design is mandatory
@@ -219,6 +233,7 @@ Quality Score is determined by three factors. Optimize each:
 | Full automation | Maximize Conversions | Sufficient conversion data, flexible CPA |
 
 ### Bidding Best Practices
+
 - Start with Maximize Conversions (no target) for new campaigns
 - Switch to Target CPA after 50+ conversions in 30 days
 - Set Target CPA at 20% above your actual average CPA, then decrease gradually

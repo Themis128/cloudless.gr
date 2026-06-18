@@ -17,6 +17,11 @@ extend-exclude = [
   ".ruff_cache",
   "node_modules",
   ".next",
+  # Vendored OpenClaudia skill scripts (e.g. .claude/skills/podcast-edit/
+  # filler_removal.py) are installed by external tooling and not owned here.
+  # File ruff drift upstream rather than reformatting local copies.
+  ".claude",
+  ".kiro",
 ]
 
 [tool.ruff.lint]

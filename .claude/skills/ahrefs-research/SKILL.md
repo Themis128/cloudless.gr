@@ -10,6 +10,7 @@ description: Manages Ahrefs API usage in Python using `ahrefs-python` library. U
 The Ahrefs API provides programmatic access to Ahrefs SEO data. The official Python SDK (`ahrefs-python`) provides typed request and response models for all endpoints, auto-generated from the OpenAPI spec.
 
 Key capabilities:
+
 - **Site Explorer** - Backlinks, organic keywords, domain rating, traffic, referring domains
 - **Keywords Explorer** - Keyword research, volumes, difficulty, related terms
 - **Rank Tracker** - SERP monitoring, competitor tracking

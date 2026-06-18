@@ -34,11 +34,13 @@ public/campaigns/
 1. **Copy files** into your cloudless.gr Next.js repo, preserving paths (treat the project root as `cloudless-campaigns-code/`).
 2. **Set the env var:** `NEXT_PUBLIC_LINKEDIN_PARTNER_ID=<your partner id>` in `.env.local`. LinkedIn Campaign Manager gives you this number on the "Conversion tracking" step of the ad-set wizard.
 3. **Mount the tag** in `app/layout.tsx`:
+
    ```tsx
    import { LinkedInInsightTag } from "@/components/LinkedInInsightTag";
    // inside <body>, ideally at the top:
    <LinkedInInsightTag />
    ```
+
 4. **Copy the two PNGs** into `public/campaigns/`:
    - `shop-insights-monday-digest-mockup.png` → `shop-online-hero.png`
    - `linkedin-ad-variant-a-creative.png` → `shop-online-ad-a.png`

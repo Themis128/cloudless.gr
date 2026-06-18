@@ -89,6 +89,7 @@ Audience: [Descriptive Name]
 ### ABM (Account-Based Marketing) Strategy
 
 For high-value target accounts:
+
 1. Upload target company list (100-1,000 companies)
 2. Layer job title + seniority targeting on top
 3. Run awareness ads to the full buying committee
@@ -111,6 +112,7 @@ CTA Button: [Sign Up | Download | Learn More | Subscribe | Register | Request De
 ```
 
 **Copy Rules for LinkedIn**:
+
 1. Lead with a stat, question, or bold claim in the first line
 2. Speak to the professional identity ("As a [job title], you know...")
 3. Focus on business outcomes, not features (revenue, efficiency, growth)
@@ -143,6 +145,7 @@ Video specs:
 ```
 
 **Video structure**:
+
 - 0-3s: Visual hook + text overlay with the key message
 - 3-15s: Problem/pain point
 - 15-25s: Solution introduction
@@ -163,6 +166,7 @@ CTA Button (max 20 chars): [Action phrase]
 ```
 
 **InMail Rules**:
+
 1. Keep under 500 characters for best conversion rates
 2. One CTA only — multiple CTAs reduce conversion by 20%+
 3. Use a real person as the sender (not a company page)
@@ -234,6 +238,7 @@ Campaign: [Product] - A/B Test - [Variable]
 | InMail cost per send | $0.50-1.00 |
 
 **Rules**:
+
 - Minimum $10/day per campaign, but $50/day recommended for meaningful data
 - Monthly minimum for reliable optimization: $1,500-3,000
 - Never increase budget more than 25% at a time (resets learning)
