@@ -1,0 +1,34 @@
+---
+# Postiz Helm release. Pre-create the `postiz-secrets` chart-generated Secret
+# OUT OF BAND with secrets-overrides.yaml — never commit secrets to git.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postiz
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: postiz-platform
+  sources:
+    - repoURL: ghcr.io/gitroomhq/postiz-helmchart/charts
+      chart: postiz-app
+      targetRevision: "*"          # pin to a tag in production
+      helm:
+        releaseName: postiz
+        valueFiles:
+          - $values/05-postiz/values.yaml
+        # Secret values are NOT in git. Inject the chart-generated Secret out
+        # of band, OR use sops/sealed-secrets and add another valueFiles entry.
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postiz
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

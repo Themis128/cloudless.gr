@@ -1,0 +1,27 @@
+---
+# Patch the existing postiz-pg Cluster with barmanObjectStore + retention policy.
+# Apply with: kubectl -n postiz patch cluster postiz-pg --type merge \
+#               --patch-file 07-backups/cnpg/cluster-patch.yaml
+#
+# NOTE: do NOT `kubectl apply -f` this file — it's a merge patch, not a full Cluster spec.
+# IMPORTANT: replace <ACCOUNT_ID> with your Cloudflare account ID before applying.
+spec:
+  backup:
+    barmanObjectStore:
+      destinationPath: "s3://postiz-pg-backups"
+      endpointURL: "https://<ACCOUNT_ID>.r2.cloudflarestorage.com"
+      s3Credentials:
+        accessKeyId:
+          name: postiz-pg-r2-creds
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: postiz-pg-r2-creds
+          key: ACCESS_SECRET_KEY
+      wal:
+        compression: gzip       # ~4.3:1 compression; fastest restore. snappy = faster archive, larger.
+        maxParallel: 4
+      data:
+        compression: gzip
+        immediateCheckpoint: false
+        jobs: 2
+    retentionPolicy: "30d"      # keep last 30 days of recoverability

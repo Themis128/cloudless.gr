@@ -1,0 +1,75 @@
+---
+# Postiz CLI as a recurring K8s job. The official CLI is `npm install -g postiz`
+# (https://github.com/gitroomhq/postiz-agent). Edit `schedule:` and `args:`
+# to change what runs.
+#
+# Default sample: every day at 09:00 UTC, list posts from now to +7 days
+# and dump the JSON to the pod log (visible via `kubectl logs`).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postiz-agent-daily-list
+  namespace: postiz
+spec:
+  schedule: "0 9 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400      # auto-clean completed pods after 24h
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: postiz
+              image: node:22-alpine
+              envFrom:
+                - secretRef:
+                    name: postiz-api-key
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  npm install -g postiz --silent
+                  START=$(date -u +%Y-%m-%dT00:00:00Z)
+                  END=$(date -u -d '+7 days' +%Y-%m-%dT23:59:59Z 2>/dev/null \
+                        || date -u -v+7d +%Y-%m-%dT23:59:59Z)
+                  postiz posts:list --startDate "$START" --endDate "$END"
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+---
+# Bonus example: a one-shot Job template you can copy + tweak for ad-hoc runs.
+# Save as a separate file, change name + args, then `kubectl apply -f` it.
+#
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: postiz-agent-publish-now
+#   namespace: postiz
+# spec:
+#   template:
+#     spec:
+#       restartPolicy: Never
+#       containers:
+#         - name: postiz
+#           image: node:22-alpine
+#           envFrom:
+#             - secretRef:
+#                 name: postiz-api-key
+#           command: [sh, -c]
+#           args:
+#             - |
+#               npm install -g postiz --silent
+#               postiz posts:create \
+#                 -c "K3s test post from CronJob" \
+#                 -s "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+#                 -t draft \
+#                 -i "<INTEGRATION_ID>"

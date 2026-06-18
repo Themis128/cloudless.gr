@@ -1,0 +1,20 @@
+# Only needed if your repo is private.
+# For SSH: fill `sshPrivateKey`. For HTTPS+PAT: fill `username` and `password`.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postiz-repo-creds
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  url: "REPLACE_WITH_REPO_URL"          # e.g. https://github.com/baltzakis/cloudless.gr
+  # --- HTTPS + PAT ---
+  username: "baltzakis"
+  password: "REPLACE_WITH_GITHUB_PAT"
+  # --- SSH (instead of HTTPS) ---
+  # sshPrivateKey: |
+  #   -----BEGIN OPENSSH PRIVATE KEY-----
+  #   ...
+  #   -----END OPENSSH PRIVATE KEY-----

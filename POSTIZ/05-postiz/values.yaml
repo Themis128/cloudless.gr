@@ -1,0 +1,57 @@
+# Postiz Helm chart values (OCI chart: ghcr.io/gitroomhq/postiz-helmchart/charts/postiz-app)
+# Install with TWO value files — this one (committed) + a local secrets overlay (gitignored):
+#   helm upgrade --install postiz oci://ghcr.io/gitroomhq/postiz-helmchart/charts/postiz-app \
+#     --namespace postiz \
+#     -f 05-postiz/values.yaml \
+#     -f 05-postiz/secrets-overrides.yaml
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/gitroomhq/postiz-app
+  pullPolicy: IfNotPresent
+  tag: "latest"   # pin to a release tag (e.g. v1.x.x) in production
+
+# Disable bundled subcharts — we use external CloudNativePG + Bitnami Redis.
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Non-secret env vars. The chart envs these directly into the pod.
+env:
+  MAIN_URL: "https://postiz.cloudless.gr"
+  FRONTEND_URL: "https://postiz.cloudless.gr"
+  NEXT_PUBLIC_BACKEND_URL: "https://postiz.cloudless.gr/api"
+  BACKEND_INTERNAL_URL: "http://backend:3000"
+  IS_GENERAL: "true"
+  DISABLE_REGISTRATION: "false"
+  RUN_CRON: "true"
+  STORAGE_PROVIDER: "cloudflare"       # cloudflare = S3-compatible client (also used for MinIO)
+  NX_ADD_PLUGINS: "false"
+  API_LIMIT: "30"
+  UPLOAD_DIRECTORY: ""
+  NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: ""
+
+# Sensitive values live in secrets-overrides.yaml — DO NOT fill them here.
+# The chart renders these into a Secret and envFroms it into the pod.
+secrets: {}
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1500m
+    memory: 2Gi
+
+# Ingress is defined separately (05-postiz/ingress.yaml) for cleaner cert-manager wiring.
+ingress:
+  enabled: false
+
+autoscaling:
+  enabled: false

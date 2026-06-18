@@ -1,0 +1,28 @@
+---
+# Root Application — installs every child Application in `apps/`.
+# Sync waves on the children control install order (operators before CRs).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postiz-platform
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: postiz-platform
+  source:
+    repoURL: "REPLACE_WITH_REPO_URL"
+    targetRevision: main
+    path: 08-gitops/apps
+    directory:
+      recurse: false
+      include: '{cert-manager,cnpg-operator,minio-operator,postiz-pg-cluster,postiz-redis,postiz-minio-tenant,postiz,postiz-ingress,postiz-automation,postiz-backups,n8n}.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

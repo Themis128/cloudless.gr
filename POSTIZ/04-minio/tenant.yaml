@@ -1,0 +1,76 @@
+---
+# MinIO operator (install first):
+#   helm repo add minio-operator https://operator.min.io
+#   helm upgrade --install minio-operator minio-operator/operator \
+#     --namespace minio-operator --create-namespace
+#
+# Then apply this file. Docs: https://min.io/docs/minio/kubernetes/upstream/operations/install-deploy-manage/deploy-minio-tenant.html
+
+# Root credentials secret consumed by the tenant.
+# WARNING: replace both keys with values from `openssl rand -hex 24` before applying.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postiz-minio-root
+  namespace: postiz
+type: Opaque
+stringData:
+  config.env: |
+    export MINIO_ROOT_USER="postizadmin"
+    export MINIO_ROOT_PASSWORD="REPLACE_WITH_STRONG_PASSWORD_MIN_8_CHARS"
+---
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: postiz-minio
+  namespace: postiz
+  annotations:
+    prometheus.io/path: /minio/v2/metrics/cluster
+    prometheus.io/port: "9000"
+    prometheus.io/scrape: "true"
+spec:
+  configuration:
+    name: postiz-minio-root
+  image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+  mountPath: /export
+  pools:
+    - name: pool-0
+      servers: 1               # K3s single-node: 1 server, 2 volumes (min for distributed off)
+      volumesPerServer: 2
+      volumeClaimTemplate:
+        metadata:
+          name: data
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 20Gi
+          # storageClassName: local-path
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+  requestAutoCert: false        # we terminate TLS at Traefik for the console, internal traffic is HTTP
+  buckets:
+    - name: postiz-uploads
+      objectLock: false
+  users:
+    - name: postiz-minio-app-user
+  # Postiz reaches MinIO via the auto-generated svc:
+  #   http://minio.postiz.svc.cluster.local
+  # Console service: postiz-minio-console.postiz.svc.cluster.local:9090
+---
+# Application-level user (least privilege, scoped to postiz-uploads).
+# Set the access/secret keys here; they map into the Postiz secret block.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postiz-minio-app-user
+  namespace: postiz
+type: Opaque
+stringData:
+  CONSOLE_ACCESS_KEY: "postiz-app"
+  CONSOLE_SECRET_KEY: "REPLACE_WITH_STRONG_APP_SECRET_KEY"

@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postiz
+  labels:
+    app.kubernetes.io/part-of: postiz
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minio-operator
+  labels:
+    app.kubernetes.io/part-of: postiz

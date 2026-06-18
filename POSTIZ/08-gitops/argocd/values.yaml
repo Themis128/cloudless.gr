@@ -1,0 +1,49 @@
+# argo-cd helm chart values.
+# Install with:
+#   helm repo add argo https://argoproj.github.io/argo-helm
+#   helm upgrade --install argo-cd argo/argo-cd \
+#     --namespace argocd --create-namespace \
+#     -f 08-gitops/argocd/values.yaml
+
+global:
+  domain: argocd.cloudless.gr
+
+configs:
+  params:
+    # Run server in insecure mode so Traefik can terminate TLS without double-cert headaches.
+    server.insecure: true
+
+server:
+  ingress:
+    enabled: false   # we apply ingress.yaml separately for cleaner cert-manager wiring
+
+  metrics:
+    enabled: false   # flip on with observability tier
+
+# Smaller resource footprint for K3s single-node.
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1500m, memory: 1Gi }
+
+repoServer:
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 1000m, memory: 512Mi }
+
+applicationSet:
+  enabled: true
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 500m, memory: 256Mi }
+
+notifications:
+  enabled: false
+
+dex:
+  enabled: false      # not using SSO yet
+
+redis:
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 128Mi }

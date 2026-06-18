@@ -1,0 +1,16 @@
+---
+# Nightly base backup at 02:30 UTC. WAL archiving runs continuously
+# from the moment the cluster-patch is applied — this CRD only triggers
+# fresh full base backups.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: postiz-pg-nightly
+  namespace: postiz
+spec:
+  schedule: "0 30 2 * * *"        # CNPG uses 6-field cron (s m h dom mon dow)
+  backupOwnerReference: self
+  cluster:
+    name: postiz-pg
+  immediate: true                  # trigger one immediately on apply so retention math works
+  method: barmanObjectStore

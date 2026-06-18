@@ -1,0 +1,29 @@
+---
+# Traefik (K3s default) Ingress for Postiz with cert-manager-managed TLS via Cloudflare DNS-01.
+# Apply AFTER the Helm release so the `postiz` service exists.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: postiz
+  namespace: postiz
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - postiz.cloudless.gr
+      secretName: postiz-tls
+  rules:
+    - host: postiz.cloudless.gr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: postiz
+                port:
+                  number: 80

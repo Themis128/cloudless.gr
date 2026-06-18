@@ -1,0 +1,27 @@
+---
+# Backup wiring: CNPG ScheduledBackup + MinIO->R2 mirror CronJob.
+# The cluster-patch.yaml is NOT applied via ArgoCD (it's a kubectl-merge-patch,
+# not a full CR). Run it manually once. R2 credential secrets must pre-exist.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postiz-backups
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  project: postiz-platform
+  source:
+    repoURL: "REPLACE_WITH_REPO_URL"
+    targetRevision: main
+    path: 07-backups
+    directory:
+      recurse: true
+      include: '{cnpg/scheduledbackup.yaml,minio/mirror-cronjob.yaml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postiz
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

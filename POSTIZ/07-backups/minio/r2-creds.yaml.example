@@ -1,0 +1,16 @@
+# Rename to r2-creds.yaml and fill. `mc` (MinIO Client) reads these
+# alongside the in-cluster MinIO credentials to mirror buckets.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postiz-minio-r2-creds
+  namespace: postiz
+type: Opaque
+stringData:
+  R2_ACCOUNT_ID: "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID"
+  R2_ACCESS_KEY_ID: "REPLACE_WITH_R2_ACCESS_KEY_ID"
+  R2_SECRET_ACCESS_KEY: "REPLACE_WITH_R2_SECRET_ACCESS_KEY"
+  # Reuse the in-cluster MinIO app user from 04-minio/tenant.yaml.
+  MINIO_ENDPOINT: "http://minio.postiz.svc.cluster.local"
+  MINIO_ACCESS_KEY: "postiz-app"
+  MINIO_SECRET_KEY: "REPLACE_WITH_MINIO_APP_SECRET"

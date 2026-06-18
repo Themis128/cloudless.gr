@@ -1,0 +1,55 @@
+# 8gears n8n Helm chart values.
+# Install with:
+#   helm repo add open-8gears https://8gears.container-registry.com/chartrepo/library
+#   helm repo update
+#   helm upgrade --install n8n open-8gears/n8n \
+#     --namespace n8n --create-namespace \
+#     -f 06-automation/n8n/values.yaml
+#
+# Chart docs: https://artifacthub.io/packages/helm/open-8gears/n8n
+
+image:
+  tag: "latest"           # pin to a release tag in production (e.g. 1.x.y)
+
+main:
+  config:
+    # Enable installing the Postiz community node via the n8n UI
+    # (Settings -> Community Nodes -> Install -> n8n-nodes-postiz)
+    N8N_COMMUNITY_PACKAGES_ENABLED: "true"
+    N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"   # required to use the node in AI agent flows
+    N8N_DIAGNOSTICS_ENABLED: "false"
+    EXECUTIONS_MODE: regular
+    GENERIC_TIMEZONE: "Europe/Athens"
+    # Public host — used in webhook callback URLs.
+    N8N_HOST: "n8n.cloudless.gr"
+    N8N_PROTOCOL: "https"
+    WEBHOOK_URL: "https://n8n.cloudless.gr/"
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    # storageClass: local-path
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1500m
+      memory: 1.5Gi
+
+# Bundled SQLite is fine for a single-user / small-team workflow store.
+# For heavier use, point this at the existing CNPG cluster instead:
+#   set db.type=postgresdb and provide host/db/user/password
+db:
+  type: sqlite
+
+# Ingress is defined in a separate manifest for cleaner cert-manager wiring.
+ingress:
+  enabled: false
+
+# Disable extra workers — single main pod is plenty for K3s
+worker:
+  enabled: false
+webhook:
+  enabled: false

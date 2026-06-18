@@ -1,0 +1,32 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
+spec:
+  project: postiz-platform
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: v1.17.0
+      helm:
+        values: |
+          crds:
+            enabled: true
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      path: 01-cert-manager
+      directory:
+        include: 'clusterissuer.yaml'   # don't include the .example secret
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

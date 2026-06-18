@@ -1,0 +1,43 @@
+# Bitnami Redis values for Postiz.
+# Install with:
+#   helm repo add bitnami https://charts.bitnami.com/bitnami
+#   helm upgrade --install postiz-redis bitnami/redis \
+#     --namespace postiz --create-namespace \
+#     -f 03-redis/values.yaml
+#
+# After install, the in-cluster URL is:
+#   redis://:<password>@postiz-redis-master.postiz.svc.cluster.local:6379
+# Password lives in secret `postiz-redis` key `redis-password`.
+
+architecture: standalone   # Postiz uses BullMQ — standalone is enough; bump to replication if you scale workers
+
+auth:
+  enabled: true
+  # Leave password empty to let the chart auto-generate one into the secret.
+  # Or set existingSecret to reuse a pre-created secret.
+  password: ""
+
+master:
+  persistence:
+    enabled: true
+    size: 4Gi
+    # storageClass: local-path
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Disable Sentinel/replica chatter on single-node K3s.
+replica:
+  replicaCount: 0
+
+metrics:
+  enabled: false   # flip on with the observability tier
+
+# Reasonable maxmemory policy for a job-queue Redis.
+commonConfiguration: |-
+  appendonly yes
+  maxmemory-policy allkeys-lru

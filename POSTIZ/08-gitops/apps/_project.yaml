@@ -1,0 +1,25 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: postiz-platform
+  namespace: argocd
+spec:
+  description: "Postiz + supporting platform on K3s"
+  sourceRepos:
+    - "REPLACE_WITH_REPO_URL"
+    - "https://cloudnative-pg.github.io/charts"
+    - "https://charts.bitnami.com/bitnami"
+    - "https://charts.jetstack.io"
+    - "https://operator.min.io"
+    - "ghcr.io/gitroomhq/postiz-helmchart"
+    - "https://8gears.container-registry.com/chartrepo/library"
+  destinations:
+    - namespace: "*"
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

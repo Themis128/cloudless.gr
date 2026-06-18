@@ -1,0 +1,27 @@
+---
+# MinIO Tenant CR. Requires minio-operator (wave -15).
+# The two root/app credentials secrets must exist before sync — apply
+# 04-minio/tenant.yaml manually once with filled-in passwords, OR keep them
+# in this repo (NOT recommended) and remove this comment.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postiz-minio-tenant
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  project: postiz-platform
+  source:
+    repoURL: "REPLACE_WITH_REPO_URL"
+    targetRevision: main
+    path: 04-minio
+    directory:
+      include: 'tenant.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postiz
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

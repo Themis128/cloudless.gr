@@ -1,0 +1,51 @@
+---
+# CloudNativePG cluster for Postiz.
+# Requires the CNPG operator installed in cluster:
+#   helm repo add cnpg https://cloudnative-pg.github.io/charts
+#   helm upgrade --install cnpg cnpg/cloudnative-pg --namespace cnpg-system --create-namespace
+#
+# Docs: https://cloudnative-pg.io/documentation/current/bootstrap/
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postiz-pg
+  namespace: postiz
+spec:
+  instances: 1                # K3s single-node: 1 instance. Bump to 3 for HA on multi-node.
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  storage:
+    size: 10Gi
+    # storageClass: local-path   # K3s default. Uncomment + change if you use longhorn/openebs.
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+
+  # Create the postiz database + role at bootstrap.
+  bootstrap:
+    initdb:
+      database: postiz
+      owner: postiz
+      secret:
+        name: postiz-pg-app-user        # CNPG reads username/password from this secret
+
+  # Superuser secret (used for admin / migrations).
+  superuserSecret:
+    name: postiz-pg-superuser
+
+  # Postgres tuning sensible for a small Postiz workload.
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"
+      effective_cache_size: "768MB"
+      work_mem: "8MB"
+
+  # Enable monitoring (Prometheus picks it up if you add the observability tier later).
+  monitoring:
+    enablePodMonitor: false   # flip to true when you add kube-prometheus-stack

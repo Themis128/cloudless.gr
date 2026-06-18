@@ -1,0 +1,35 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: n8n
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
+spec:
+  project: postiz-platform
+  sources:
+    - repoURL: https://8gears.container-registry.com/chartrepo/library
+      chart: n8n
+      targetRevision: 2.0.x
+      helm:
+        releaseName: n8n
+        valueFiles:
+          - $values/06-automation/n8n/values.yaml
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      ref: values
+    - repoURL: "REPLACE_WITH_REPO_URL"
+      targetRevision: main
+      path: 06-automation/n8n
+      directory:
+        include: 'ingress.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: n8n
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

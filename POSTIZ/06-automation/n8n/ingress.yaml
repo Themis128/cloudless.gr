@@ -1,0 +1,29 @@
+---
+# Ensure DNS record n8n.cloudless.gr -> cluster IP exists (Cloudflare proxy off
+# for the cert-manager DNS-01 challenge to work cleanly).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n
+  namespace: n8n
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - n8n.cloudless.gr
+      secretName: n8n-tls
+  rules:
+    - host: n8n.cloudless.gr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n
+                port:
+                  number: 80

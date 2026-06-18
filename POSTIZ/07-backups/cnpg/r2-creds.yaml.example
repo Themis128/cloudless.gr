@@ -1,0 +1,11 @@
+# Rename to r2-creds.yaml and fill in the R2 API token credentials.
+# These two keys are what barman-cloud (inside CNPG) reads.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postiz-pg-r2-creds
+  namespace: postiz
+type: Opaque
+stringData:
+  ACCESS_KEY_ID: "REPLACE_WITH_R2_ACCESS_KEY_ID"
+  ACCESS_SECRET_KEY: "REPLACE_WITH_R2_SECRET_ACCESS_KEY"

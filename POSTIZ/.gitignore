@@ -1,0 +1,13 @@
+# Filled secrets — never commit
+01-cert-manager/cloudflare-api-token-secret.yaml
+02-cnpg/postiz-db-secret.yaml
+05-postiz/secrets-overrides.yaml
+05-postiz/secrets.yaml
+06-automation/postiz-agent/secret.yaml
+07-backups/cnpg/r2-creds.yaml
+07-backups/minio/r2-creds.yaml
+08-gitops/argocd/repo-creds.yaml
+
+# Tooling
+*.swp
+.DS_Store
