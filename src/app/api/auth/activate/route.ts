@@ -36,10 +36,7 @@ function verifyOtp(email: string, otp: string, token: string): boolean {
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
   const expected = (
     parseInt(
-      createHmac("sha256", secret)
-        .update(`otp:${email}:${exp}:${nonce}`)
-        .digest("hex")
-        .slice(0, 8),
+      createHmac("sha256", secret).update(`otp:${email}:${exp}:${nonce}`).digest("hex").slice(0, 8),
       16
     ) % 1_000_000
   )
@@ -82,12 +79,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/en/auth/signup?activated=invalid`);
 
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (!userPoolId)
-    return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
+  if (!userPoolId) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
 
   const ok = await confirmUser(userPoolId, email);
-  if (!ok)
-    return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
+  if (!ok) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
 
   return NextResponse.redirect(`${origin}/en/auth/login?activated=1`);
 }
@@ -116,12 +111,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
 
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (!userPoolId)
-    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
 
   const ok = await confirmUser(userPoolId, email);
-  if (!ok)
-    return NextResponse.json({ error: "Activation failed" }, { status: 500 });
+  if (!ok) return NextResponse.json({ error: "Activation failed" }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

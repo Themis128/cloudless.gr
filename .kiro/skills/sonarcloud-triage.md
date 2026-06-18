@@ -1,0 +1,124 @@
+---
+inclusion: manual
+---
+
+# SonarCloud Triage
+
+## Issues vs Hotspots — critical distinction
+
+| Type | What it means | How to resolve |
+|---|---|---|
+| **Issue** | Code has a definite defect by SonarCloud's rules. Gate fails if new issues exist. | Fix the code |
+| **Hotspot** | Code pattern *may* be a security concern — needs human review. Gate passes even if hotspots are open. | Acknowledge in the SonarCloud UI (or fix if genuinely wrong) |
+
+**You cannot "fix" a hotspot by changing code** if the underlying pattern (e.g. any use of `node:crypto`) triggers it. The only resolution is a human marking it "Reviewed" in the SonarCloud web UI at `sonarcloud.io/project/...`.
+
+## Common rules in this codebase
+
+### S3699 — `sonarjs/void-use` (Issue)
+
+Calling an async function with `void` to suppress the return value is flagged.
+
+```ts
+// ❌ Flagged
+void someAsyncFn();
+
+// ✅ Fix
+someAsyncFn().catch(() => {});
+```
+
+### S3776 — `sonarjs/cognitive-complexity` (Issue)
+
+Functions with complexity > 15 are flagged. Fix by extracting helper functions.
+
+```ts
+// ❌ Deep nesting, ternaries, short-circuits all add to the score
+function big() { if ... for ... switch ... }
+
+// ✅ Extract inner logic
+function handleCase(x: X) { ... }
+function big() { handleCase(x); }
+```
+
+### S1192 — `sonarjs/no-duplicate-string` (Issue)
+
+String literals used 3+ times must be extracted to a constant.
+
+```ts
+// ❌ "application/json" used 4× in the same file
+res.setHeader("application/json")
+...
+
+// ✅
+const JSON_CONTENT_TYPE = "application/json";
+```
+
+### S4787 — `sonarjs/prefer-using-cryptographic-primitives-correctly` (Hotspot)
+
+Any new `import { ... } from "node:crypto"` triggers this hotspot.
+
+**Do NOT** add a new `node:crypto` import just to use `timingSafeEqual`. Instead, use the project wrapper:
+
+```ts
+import { safeEqual } from "@/lib/cron-auth";
+if (!safeEqual(a, b)) return 401;
+```
+
+If you absolutely must add a new crypto import, acknowledge the hotspot in the SonarCloud UI after it appears. You cannot suppress it in code.
+
+### `sonarjs/prefer-global-this` (Issue)
+
+```ts
+// ❌ Flagged
+global.fetch(...)
+
+// ✅ Fix
+globalThis.fetch(...)
+```
+
+## Triage workflow for a failing PR
+
+1. **Read the SonarCloud bot comment** on the PR — it lists rule IDs and file:line for each new issue.
+
+2. **Classify each finding:**
+   - Contains "Security Hotspot" → UI-only fix (class 4: state to user once, skip duplicates).
+   - Contains a rule ID like `sonarjs/...` → code fix (class 2: fix immediately).
+
+3. **Apply the fix pattern** from the table above. Then push.
+
+4. **Verify locally before pushing:**
+
+   ```bash
+   pnpm lint   # catches most sonarjs/ rule violations via ESLint plugin
+   pnpm typecheck
+   ```
+
+5. **After pushing**, SonarCloud re-runs automatically on the new commit. Wait for the next webhook event to confirm the gate passes.
+
+## When SonarCloud gate still fails after code fix
+
+- Check if it's a **hotspot that looks like an issue** — the gate text says "X Security Hotspots" not "X New Issues". Hotspots never block the gate.
+- Check if the code fix introduced a **new violation** in a different location.
+- Check if the PR branch is behind `main` — SonarCloud compares against the base branch. If `main` advanced, rebase first.
+
+  ```bash
+  git fetch origin main && git rebase origin/main
+  git push --force-with-lease
+  ```
+
+## SonarCloud project identifiers
+
+- **Organization:** `Themis128` (NOT `baltzakisthemiscom` — that is the Sentry org)
+- **Project key:** `Themis128_cloudless.gr`
+- **Dashboard:** `sonarcloud.io/dashboard?id=Themis128_cloudless.gr`
+
+Analysis runs via SonarCloud's **automatic analysis** (the GitHub App) — there is no
+`sonar-project.properties` or Sonar step in the workflows, so the project key is only
+discoverable from the bot comment's dashboard URL (`?id=...`). SonarCloud keys follow the
+`{org}_{repo}` convention, hence org `Themis128`.
+
+Hotspot review URL for a PR:
+`sonarcloud.io/project/security_hotspots?id=Themis128_cloudless.gr&pullRequest=<PR#>&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true`
+
+The hotspot key is in the SonarCloud API response — but the API requires a `SONAR_TOKEN`
+(not present in cloud sessions), so the **UI is the only path** to enumerate and acknowledge.

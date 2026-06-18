@@ -257,7 +257,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
     let res = await doFetch();
-    if ((res.status === 502 || res.status === 503) && res.headers.get("x-served-by") !== "aws-fallback") {
+    if (
+      (res.status === 502 || res.status === 503) &&
+      res.headers.get("x-served-by") !== "aws-fallback"
+    ) {
       // Retry once — the Worker may route to AWS on the second attempt
       res = await doFetch();
     }

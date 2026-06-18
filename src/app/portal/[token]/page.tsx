@@ -197,7 +197,11 @@ function CommentCard({ comment }: Readonly<{ comment: PortalComment }>) {
   );
 }
 
-function ReplyForm({ token, stepId, onSent }: Readonly<{ token: string; stepId: string; onSent: (c: PortalComment) => void }>) {
+function ReplyForm({
+  token,
+  stepId,
+  onSent,
+}: Readonly<{ token: string; stepId: string; onSent: (c: PortalComment) => void }>) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -228,7 +232,7 @@ function ReplyForm({ token, stepId, onSent }: Readonly<{ token: string; stepId: 
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Write a reply..."
-        className="bg-void flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder:text-slate-600 focus:border-neon-cyan/50 focus:outline-none"
+        className="bg-void focus:border-neon-cyan/50 flex-1 rounded-lg border border-slate-700 px-3 py-2 font-mono text-sm text-white placeholder:text-slate-600 focus:outline-none"
       />
       <button
         type="submit"
@@ -415,10 +419,14 @@ function ProjectTimeline({ steps, token }: Readonly<{ steps: PortalStep[]; token
                       ))}
                     </div>
                   )}
-                  <ReplyForm token={token} stepId={step.id} onSent={(c) => {
-                    step.comments.push(c);
-                    setExpanded(step.id);
-                  }} />
+                  <ReplyForm
+                    token={token}
+                    stepId={step.id}
+                    onSent={(c) => {
+                      step.comments.push(c);
+                      setExpanded(step.id);
+                    }}
+                  />
                 </div>
               )}
             </div>

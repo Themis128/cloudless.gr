@@ -79,9 +79,16 @@ export async function POST(req: NextRequest) {
     // Derive a 6-digit OTP from the same material — mobile users who can't
     // tap the link can type this code on the signup page instead.
     const otp = (
-      parseInt(createHmac("sha256", secret).update(`otp:${email}:${exp}:${nonce}`).digest("hex").slice(0, 8), 16) %
-      1_000_000
-    ).toString().padStart(6, "0");
+      parseInt(
+        createHmac("sha256", secret)
+          .update(`otp:${email}:${exp}:${nonce}`)
+          .digest("hex")
+          .slice(0, 8),
+        16
+      ) % 1_000_000
+    )
+      .toString()
+      .padStart(6, "0");
     // Fire-and-forget — don't fail the signup if SES is down
     sendActivationEmail(email, token, otp, fullName).catch((e) =>
       console.error("[auth/register] activation email failed:", e)
