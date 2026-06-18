@@ -21,6 +21,12 @@ vi.mock("next-auth", () => ({
   default: (config: unknown) => nextAuthMock(config),
 }));
 
+vi.mock("@/lib/session-token-store", () => ({
+  getTokens: vi.fn().mockResolvedValue(null),
+  putTokens: vi.fn().mockResolvedValue(undefined),
+  deleteTokens: vi.fn().mockResolvedValue(undefined),
+}));
+
 const ENV_KEYS = [
   "COGNITO_ISSUER",
   "COGNITO_USER_POOL_ID",

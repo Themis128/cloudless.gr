@@ -39,6 +39,12 @@ vi.mock("next-auth", () => ({
   },
 }));
 
+vi.mock("@/lib/session-token-store", () => ({
+  getTokens: vi.fn().mockResolvedValue({ idToken: "stored-id-token", refreshToken: "stored-refresh-token" }),
+  putTokens: vi.fn().mockResolvedValue(undefined),
+  deleteTokens: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("next-auth/providers/cognito", () => ({
   default: (opts: Record<string, unknown>) => ({ ...opts, id: "cognito", name: "cognito" }),
 }));
@@ -167,8 +173,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     globalThis.fetch = fetchMock;
 
     const expired = {
-      accessToken: "old",
-      refreshToken: "rtk-cognito",
+      sub: "user-123",
       expiresAt: Math.floor(Date.now() / 1000) - 60,
     };
     await jwt.jwt({ token: { ...expired } });
@@ -181,9 +186,10 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     expect(headers.Authorization).toBeUndefined();
 
     // Public PKCE: client_id goes in the body, never a client_secret.
+    // refresh_token comes from DynamoDB (mocked as "stored-refresh-token")
     const body = String(init.body);
     expect(body).toContain("grant_type=refresh_token");
-    expect(body).toContain("refresh_token=rtk-cognito");
+    expect(body).toContain("refresh_token=stored-refresh-token");
     expect(body).not.toContain("client_secret");
   });
 
@@ -191,6 +197,7 @@ describe("src/lib/auth.ts — Cognito mode", () => {
 
   it("keeps the existing refresh_token when the response omits one", async () => {
     await loadAuth();
+    const { putTokens } = await import("@/lib/session-token-store") as { putTokens: ReturnType<typeof vi.fn> };
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
@@ -206,12 +213,14 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     });
     const result = await jwt.jwt({
       token: {
-        accessToken: "old",
-        refreshToken: "rtk-keep-me",
+        sub: "user-123",
         expiresAt: Math.floor(Date.now() / 1000) - 60,
       },
     });
-    expect(result.refreshToken).toBe("rtk-keep-me");
+    // putTokens should preserve the existing refresh_token from DynamoDB
+    expect(putTokens).toHaveBeenCalledWith("user-123", expect.objectContaining({
+      refreshToken: "stored-refresh-token",
+    }));
     expect(result.groups).toEqual(["admin"]);
     expect(result.error).toBeUndefined();
   });
@@ -224,9 +233,9 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     globalThis.fetch = fetchMock;
 
     const { signOut: signOutEvent } = capturedConfig.events as {
-      signOut: (msg: { token?: { idToken?: string } }) => Promise<void>;
+      signOut: (msg: { token?: { sub?: string } }) => Promise<void>;
     };
-    await signOutEvent({ token: { idToken: "id-tok" } });
+    await signOutEvent({ token: { sub: "user-123" } });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const url = fetchMock.mock.calls[0][0] as string;
@@ -246,9 +255,9 @@ describe("src/lib/auth.ts — Cognito mode", () => {
     globalThis.fetch = fetchMock;
 
     const { signOut: signOutEvent } = capturedConfig.events as {
-      signOut: (msg: { token?: { idToken?: string } }) => Promise<void>;
+      signOut: (msg: { token?: { sub?: string } }) => Promise<void>;
     };
-    await signOutEvent({ token: { idToken: "id-tok" } });
+    await signOutEvent({ token: { sub: "user-456" } });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

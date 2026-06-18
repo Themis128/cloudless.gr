@@ -84,6 +84,7 @@ process.env.COGNITO_CLIENT_ID = "test-client-id";
 
 // ── next-auth ─────────────────────────────────────────────────────────────────
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
+process.env.SESSION_TOKEN_STORE_TABLE = "test-session-token-store";
 
 // ── Cache resets ──────────────────────────────────────────────────────────────
 // Reset all in-memory caches before each test and restore env vars that tests
