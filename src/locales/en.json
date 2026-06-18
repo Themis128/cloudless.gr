@@ -39,7 +39,7 @@
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
     "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
-    "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20 person team.",
+    "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20-person team.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Get a Free Audit",
     "ctaSecondary": "View Services",
@@ -103,7 +103,7 @@
     "q1": "How much will this actually cost me?",
     "a1": "Individual services range from €800 to €2,400 depending on scope. The full bundle is €3,600/month. For context: hiring a single cloud engineer in-house costs €5K–€8K/month. A CTO + marketer + data analyst? €20K+/month. We replace all three for a fraction of the cost — and you can cancel anytime.",
     "q2": "Who is this for? Am I the right fit?",
-    "a2": "We work best with startups and SMBs that are past the MVP stage — typically 2–20 person teams doing €50K–€500K in revenue. You have a product that works but your infrastructure is duct tape, your marketing is guesswork, and you don't have a CTO to fix it. If that sounds familiar, the free audit will tell you exactly what to do next.",
+    "a2": "We work best with startups and SMBs that are past the MVP stage — typically 2–20-person teams doing €50K–€500K in revenue. You have a product that works, but your infrastructure is duct tape, your marketing is guesswork, and you don't have a CTO to fix it. If that sounds familiar, the free audit will tell you exactly what to do next.",
     "q3": "What if I want to leave?",
     "a3": "Leave whenever you want. Month-to-month, no lock-in, no exit fees. Your code, infrastructure, and data are always yours — fully documented and handoff-ready. We're not in the business of holding your code hostage.",
     "q4": "How quickly can I see results?",
@@ -111,7 +111,7 @@
     "q5": "What does the free audit include?",
     "a5": "A 30-minute call where we review your current infrastructure, marketing setup, or both. You'll get a concrete action plan with specific recommendations — no pitch, no pressure. Most founders say it's the most useful 30 minutes they've spent on their tech stack.",
     "q6": "Can I trust a new agency with my infrastructure?",
-    "a6": "Fair question. We're backed by AWS certifications (check our Credly badges), open-source contributions on GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise."
+    "a6": "Fair question. We're backed by AWS certifications (check our Credly badges), open-source contributions to GitHub, and 8+ years of hands-on cloud architecture. The free audit is zero-risk — you'll see our thinking and decide if it's worth going further. We'd rather lose a deal than overpromise."
   },
   "founder": {
     "label": "[ ABOUT ]",
@@ -154,7 +154,7 @@
   },
   "contact": {
     "title": "Get in touch.",
-    "subtitle": "Ready to go cloudless? Tell us about your project and we'll get back to you within 24 hours.",
+    "subtitle": "Ready to go cloudless? Tell us about your project, and we'll get back to you within 24 hours.",
     "name": "Name",
     "email": "Email",
     "company": "Company",
@@ -419,7 +419,7 @@
   "blog": {
     "label": "[ BLOG ]",
     "titleStatic": "Insights &",
-    "titleHighlight": "practical guides",
+    "titleHighlight": "Practical guides",
     "subtitle": "Cloud architecture, serverless, analytics, and AI marketing — written for founders and technical teams who want to move fast.",
     "searchPlaceholder": "Search posts…",
     "filtering": "Filtering:",
