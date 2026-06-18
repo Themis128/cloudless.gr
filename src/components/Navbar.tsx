@@ -62,7 +62,7 @@ export default function Navbar() {
         className="border-b backdrop-blur-xl"
         style={{ background: "var(--surface-glass)", borderColor: "var(--border-subtle)" }}
       >
-        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           {/* Logo */}
           <Link
             href="/"
@@ -74,7 +74,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden items-center gap-6 lg:flex">
+          <div className="hidden items-center gap-5 lg:flex">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -158,13 +158,13 @@ export default function Navbar() {
                   <>
                     <Link
                       href="/contact"
-                      className="bg-accent hover:bg-accent/90 rounded-lg px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-[var(--accent-on)] transition-all duration-300"
+                      className="bg-accent hover:bg-accent/90 rounded-lg px-4 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-[var(--accent-on)] transition-all duration-300"
                     >
                       {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
                     </Link>
                     <Link
                       href="/auth/login"
-                      className="border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/10 relative rounded-lg border bg-transparent px-5 py-2.5 font-mono text-sm font-semibold whitespace-nowrap transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.2)]"
+                      className="border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/10 relative rounded-lg border bg-transparent px-4 py-2.5 font-mono text-sm font-semibold whitespace-nowrap transition-all duration-300 hover:shadow-[0_0_15px_rgba(0,255,245,0.2)]"
                     >
                       {translate(locale, "navbar.signIn", "Sign In")}
                     </Link>
