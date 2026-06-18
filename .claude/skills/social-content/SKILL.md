@@ -46,6 +46,7 @@ Before creating social content, collect these inputs:
 | Link preview | Yes, but links reduce reach. Put links in replies. |
 
 **Twitter/X Content Rules:**
+
 - First line is everything. 90% of engagement is determined by the hook.
 - Short sentences. Line breaks between thoughts.
 - No hashtags in the main text body. Add 1-2 at the end or in a reply.
@@ -67,6 +68,7 @@ Before creating social content, collect these inputs:
 | Carousel | PDF upload (up to 300 pages), 1080x1080 or 1080x1350 per slide |
 
 **LinkedIn Content Rules:**
+
 - First 2-3 lines must hook before the "See more" fold. This is critical.
 - Use line breaks aggressively. One sentence per line for readability.
 - Personal stories outperform corporate announcements 10:1.
@@ -90,6 +92,7 @@ Before creating social content, collect these inputs:
 | Best posting times | 11am-1pm, 7-9pm Mon-Fri |
 
 **Instagram Content Rules:**
+
 - Visuals come first. The image/video stops the scroll; the caption sells the click.
 - First line of the caption is the hook. Make it bold and curiosity-driven.
 - Carousel posts get 3x more engagement than single images.
@@ -112,6 +115,7 @@ Before creating social content, collect these inputs:
 | Audio | Original or trending audio |
 
 **TikTok Content Rules:**
+
 - Hook in the first 1-3 seconds or viewers scroll away.
 - Native-feeling content outperforms polished/produced content.
 - Use trending audio when relevant (boosts discoverability).
@@ -168,6 +172,7 @@ Structure a carousel for maximum swipe-through:
 | 10 (CTA) | Action | Follow, save, share, visit link, comment. |
 
 **Carousel Design Rules:**
+
 - One idea per slide. Maximum 30-40 words per slide.
 - Use consistent branding (colors, fonts, logo placement).
 - Number the slides ("1/10", "2/10") to show progress and encourage swiping.
@@ -203,21 +208,25 @@ Transform one blog post into platform-specific content:
 ### From a 2000-Word Blog Post, Create:
 
 **Twitter/X:**
+
 - 1 single tweet (key takeaway + link in reply)
 - 1 thread (7-12 tweets covering the main points)
 - 3-5 standalone tweets (one insight per tweet, spread across the week)
 
 **LinkedIn:**
+
 - 1 long-form post (personal angle on the topic, 800-1200 chars)
 - 1 carousel (key points as slides, PDF format)
 - 1 poll (related question to the blog topic)
 
 **Instagram:**
+
 - 1 carousel (10 slides summarizing the post)
 - 1 reel (30-60s video covering the top 3 points)
 - 3 stories (teaser, key insight, swipe-up/link)
 
 **TikTok:**
+
 - 1 explainer video (60-90s covering the core idea)
 - 1 reaction/hot-take video (contrarian angle from the post)
 - 1 listicle video (quick tips from the post)
@@ -248,6 +257,7 @@ Transform one blog post into platform-specific content:
 - **TikTok:** 3-5 hashtags in caption. Include 1-2 trending tags.
 
 ### Hashtag Don'ts
+
 - Do not use banned or shadowbanned hashtags.
 - Do not use the same hashtag set on every post (looks like bot behavior).
 - Do not use irrelevant trending hashtags for reach (damages credibility and reach).
@@ -258,7 +268,9 @@ Transform one blog post into platform-specific content:
 For every social content request, deliver:
 
 ### 1. Platform-Specific Posts
+
 Full post copy formatted for each requested platform with:
+
 - Hook line
 - Body content
 - CTA
@@ -267,16 +279,19 @@ Full post copy formatted for each requested platform with:
 - Character count
 
 ### 2. Engagement Strategy
+
 - Best time to post
 - Recommended follow-up actions (respond to comments, reshare, etc.)
 - Cross-promotion plan across platforms
 
 ### 3. Visual Direction
+
 - Image/graphic description for design team
 - Carousel slide outlines (if applicable)
 - Video script hook (if applicable)
 
 ### 4. Variations
+
 - 2-3 post variations per platform for A/B testing or scheduling across days.
 
 ## API Integrations (Optional Enhancements)
@@ -313,12 +328,14 @@ curl -s "https://api.unsplash.com/search/photos?query={topic}&per_page=3" \
 ```
 
 Key fields for social media:
+
 - **`.urls.regular`** - 1080px wide, good for LinkedIn and Twitter posts
 - **`.urls.small`** - 400px wide, good for thumbnails and previews
 - **`.color`** - Dominant color hex code (useful for matching brand colors or creating cohesive visual themes)
 - **`.width` / `.height`** - Original dimensions (check aspect ratio fits the target platform)
 
 **Platform-specific image tips:**
+
 - For **Instagram** (1080x1080 or 1080x1350): Search with `orientation=squarish`
 - For **Twitter/LinkedIn** (1200x675): Search with `orientation=landscape`
 - For **TikTok/Reels/Stories** (1080x1920): Search with `orientation=portrait`
@@ -344,6 +361,7 @@ curl -s -X POST "https://www.reddit.com/api/v1/access_token" \
 ```
 
 The response contains:
+
 ```json
 {
   "access_token": "your_token_here",
@@ -354,6 +372,7 @@ The response contains:
 ```
 
 Extract the token:
+
 ```bash
 REDDIT_ACCESS_TOKEN=$(curl -s -X POST "https://www.reddit.com/api/v1/access_token" \
   -u "${REDDIT_CLIENT_ID}:${REDDIT_CLIENT_SECRET}" \
@@ -397,6 +416,7 @@ curl -s "https://oauth.reddit.com/search?q={topic}&sort=relevance&t=week&limit=2
 ```
 
 **How to use Reddit data for social content:**
+
 - **Trending topics:** Posts with high scores (500+) and comment counts indicate what the community cares about right now. Use these as content topics.
 - **Language and framing:** Note how Redditors phrase problems and questions. Mirror this language in your social hooks for authenticity.
 - **Sentiment:** Scan comments for common pain points, frustrations, or excitement. Address these directly in your posts.
@@ -404,6 +424,7 @@ curl -s "https://oauth.reddit.com/search?q={topic}&sort=relevance&t=week&limit=2
 - **Timing:** If a topic is trending on Reddit today, create social content about it within 24-48 hours for maximum relevance.
 
 **Useful subreddits by niche:**
+
 - Marketing: r/marketing, r/digital_marketing, r/SEO, r/socialmedia
 - Tech: r/technology, r/programming, r/webdev, r/SaaS
 - Business: r/entrepreneur, r/smallbusiness, r/startups
@@ -478,6 +499,7 @@ curl -s -X POST "https://oauth.reddit.com/api/comment" \
 The `thing_id` is the fullname of the post or comment to reply to (e.g., `t3_abc123` for a post, `t1_abc123` for a comment).
 
 **Reddit posting best practices:**
+
 - Check subreddit rules before posting (`/r/{subreddit}/about/rules`)
 - Many subreddits have minimum karma/age requirements
 - Avoid self-promotion in subreddits that prohibit it — focus on value

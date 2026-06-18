@@ -22,12 +22,14 @@ Design and optimize user onboarding flows that drive activation and long-term re
 The best onboarding flows are organized around the user's job, not the product's features.
 
 **Process:**
+
 1. Identify the user's primary job-to-be-done
 2. Map the minimum steps to complete that job in your product
 3. Guide the user through those steps, removing all distractions
 4. Celebrate completion (aha moment)
 
 **Example (Notion):**
+
 - Job: "I need to organize my team's projects"
 - Steps: Create workspace > Invite team > Create first page > Use a template
 - The onboarding flow guides exactly this path, nothing more
@@ -39,12 +41,14 @@ The best onboarding flows are organized around the user's job, not the product's
 Reveal functionality gradually as users demonstrate readiness.
 
 **Levels:**
+
 1. **First session:** Only show core functionality needed for primary job
 2. **After first success:** Introduce secondary features that enhance the core workflow
 3. **After repeated use:** Surface power features, integrations, customization
 4. **After mastery:** Invite to advanced features, API, automation
 
 **Implementation:**
+
 - Use feature flags or user state to control what's visible
 - Track user actions to determine when to advance disclosure level
 - Never show everything at once
@@ -66,6 +70,7 @@ Define your activation metric before designing onboarding. The activation metric
 | HubSpot | Import contacts + send first email | First 14 days |
 
 **How to find your activation metric:**
+
 1. Cohort analysis: Compare retained vs churned users
 2. Identify actions that retained users took that churned users did not
 3. Find the action with strongest correlation to 30-day retention
@@ -76,16 +81,19 @@ Define your activation metric before designing onboarding. The activation metric
 The aha moment is when a user first experiences the core value of your product.
 
 **Framework for identifying it:**
+
 1. What do users say when they recommend your product? ("It's amazing because...")
 2. When during their journey do users typically say "wow" or "this is cool"?
 3. What single action separates users who stay from those who leave?
 
 **The aha moment is NOT:**
+
 - Signing up
 - Completing onboarding
 - Seeing a feature demo
 
 **The aha moment IS:**
+
 - Getting their first result
 - Experiencing time saved
 - Seeing their data visualized for the first time
@@ -100,6 +108,7 @@ The aha moment is when a user first experiences the core value of your product.
 The first screen after signup. Serves two purposes: make the user feel welcomed and collect information for personalization.
 
 **Best Practices:**
+
 - Use the user's name ("Welcome, Sarah!")
 - Keep it to 1-3 questions maximum
 - Use visual selectors (cards with icons) instead of dropdowns
@@ -107,6 +116,7 @@ The first screen after signup. Serves two purposes: make the user feel welcomed 
 - Always allow skipping
 
 **Template:**
+
 ```
 Welcome to [Product], [Name]!
 
@@ -122,6 +132,7 @@ What's your primary goal?
 ```
 
 **Example (Notion):**
+
 ```
 What will you use Notion for?
 [Personal] [Team] [School]
@@ -137,6 +148,7 @@ Guided multi-step flows that set up the product for use.
 **When to use:** When the product requires configuration before it can deliver value (CRM, analytics, marketing automation).
 
 **Best Practices:**
+
 - Maximum 3-5 steps
 - Show progress indicator
 - Pre-fill defaults where possible
@@ -145,6 +157,7 @@ Guided multi-step flows that set up the product for use.
 - End with a clear next action, not a blank screen
 
 **Template:**
+
 ```
 Step 1: Connect your [data source]
   [Connect Google] [Connect manually] [Use sample data]
@@ -164,12 +177,14 @@ You're all set!
 Interactive walkthroughs of the product interface.
 
 **Types:**
+
 1. **Tooltip tour:** Highlights UI elements with explanatory tooltips (Intercom, Appcues)
 2. **Video walkthrough:** Short video showing key workflows
 3. **Interactive tutorial:** User performs real actions with guidance
 4. **Sandbox mode:** Pre-populated environment for safe exploration
 
 **Best Practices:**
+
 - Keep tours under 5 steps (3 is ideal)
 - Focus on ONE workflow per tour
 - Let users exit at any point
@@ -178,12 +193,14 @@ Interactive walkthroughs of the product interface.
 - Never replay completed tours unless user requests it
 
 **Anti-patterns:**
+
 - 15-step tours that show every button
 - Forced tours that cannot be dismissed
 - Tours that explain obvious UI elements
 - Tours that trigger repeatedly
 
 **Template (per step):**
+
 ```
 Step [X] of [Y]:
 
@@ -199,12 +216,14 @@ Step [X] of [Y]:
 Persistent task lists that guide users through activation.
 
 **Why they work:**
+
 - Zeigarnik effect: People feel compelled to complete unfinished tasks
 - Clear progress visualization
 - Users self-pace through the list
 - Can be dismissed and revisited
 
 **Template:**
+
 ```
 Get started with [Product]  [3/5 complete]
 
@@ -218,6 +237,7 @@ Get started with [Product]  [3/5 complete]
 ```
 
 **Best Practices:**
+
 - 4-6 items maximum
 - Pre-check easy items (account creation) for momentum
 - Order by dependency and importance
@@ -227,6 +247,7 @@ Get started with [Product]  [3/5 complete]
 - Show percentage complete or progress bar
 
 **Example (Slack):**
+
 ```
 Getting started  [2/4]
 [x] Set your profile photo
@@ -236,6 +257,7 @@ Getting started  [2/4]
 ```
 
 **Example (Figma):**
+
 ```
 Welcome to Figma  [1/5]
 [x] Create your account
@@ -262,6 +284,7 @@ Drip emails that complement the in-app experience.
 | 14 | Upgrade prompt | If activated, pitch premium features |
 
 **Day 0 Welcome Email Template:**
+
 ```
 Subject: Welcome to [Product] -- here's your quick start
 
@@ -281,6 +304,7 @@ Need help? Reply to this email or check our [getting started guide].
 ```
 
 **Day 3 Social Proof Email Template:**
+
 ```
 Subject: How [Customer] uses [Product] to [Result]
 
@@ -304,6 +328,7 @@ You can do the same:
 ### Notion
 
 **What they do well:**
+
 - Welcome screen asks role + use case (2 questions)
 - Offers templates based on selection
 - Pre-populates workspace with starter content
@@ -316,6 +341,7 @@ You can do the same:
 ### Slack
 
 **What they do well:**
+
 - Workspace setup wizard is 3 steps (name, invite, channel)
 - Slackbot guides first interactions conversationally
 - Pre-created #general and #random channels with welcome messages
@@ -327,6 +353,7 @@ You can do the same:
 ### Figma
 
 **What they do well:**
+
 - Minimal signup (Google OAuth one-click)
 - Immediately drops user into a canvas with interactive tutorial
 - Tutorial teaches by doing (create shape, move it, style it)
@@ -338,6 +365,7 @@ You can do the same:
 ### Canva
 
 **What they do well:**
+
 - Asks "What will you design today?" with visual categories
 - Immediately shows templates relevant to selection
 - First design experience uses pre-made template (user edits, not creates from scratch)
@@ -346,6 +374,7 @@ You can do the same:
 ### Linear
 
 **What they do well:**
+
 - Import from existing tools (Jira, Asana) as first step
 - Pre-configured with sensible defaults (workflow states, labels)
 - Keyboard shortcuts taught in context
@@ -388,27 +417,32 @@ Track conversion rate between each step. The biggest drop-off is your biggest op
 ## 5. A/B Test Ideas for Onboarding
 
 ### Welcome Screen
+
 1. 1 question vs 3 questions on welcome screen
 2. Visual card selection vs dropdown
 3. Personalized template suggestions vs generic
 
 ### Setup Flow
+
 4. Guided setup vs "explore on your own"
 5. Pre-populated sample data vs empty state
 6. Setup wizard vs onboarding checklist
 
 ### Product Tour
+
 7. Tooltip tour vs video walkthrough
 8. 3-step tour vs 5-step tour
 9. Auto-triggered tour vs user-initiated
 
 ### Activation
+
 10. Email nudge on day 1 vs day 3 for inactive users
 11. In-app prompt for next action vs no prompt
 12. Celebrating milestones (confetti, badge) vs no celebration
 13. Showing progress ("You're 60% set up") vs not showing
 
 ### Engagement
+
 14. Daily tip emails vs weekly digest
 15. Push notifications for incomplete onboarding vs email only
 16. Peer comparison ("Teams like yours usually...") vs no comparison

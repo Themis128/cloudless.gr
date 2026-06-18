@@ -16,6 +16,7 @@ Pull search performance data, index coverage, and Core Web Vitals from Google Se
 ## Prerequisites
 
 Requires Google OAuth credentials:
+
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - A valid OAuth access token with `https://www.googleapis.com/auth/webmasters.readonly` scope

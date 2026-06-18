@@ -25,31 +25,37 @@ Use `curl` via the Bash tool. Base URL: `https://api.semrush.com/analytics/v1/`
 ### Core Endpoints
 
 **1. Backlinks Overview**
+
 ```
 https://api.semrush.com/analytics/v1/?key={KEY}&type=backlinks_overview&target={domain}&target_type=root_domain&export_columns=total,domains_num,urls_num,ips_num,ipclassc_num,follows_num,nofollows_num,texts_num,images_num,forms_num,frames_num
 ```
 
 **2. Backlinks List (individual links)**
+
 ```
 https://api.semrush.com/analytics/v1/?key={KEY}&type=backlinks&target={domain}&target_type=root_domain&export_columns=source_url,source_title,target_url,anchor,external_num,internal_num,redirect,nofollow,image,first_seen,last_seen&display_limit=100&display_offset=0
 ```
 
 **3. Referring Domains**
+
 ```
 https://api.semrush.com/analytics/v1/?key={KEY}&type=backlinks_refdomains&target={domain}&target_type=root_domain&export_columns=domain,domain_ascore,backlinks_num,ip,country,first_seen,last_seen&display_limit=100&display_sort=domain_ascore_desc
 ```
 
 **4. Anchor Text Distribution**
+
 ```
 https://api.semrush.com/analytics/v1/?key={KEY}&type=backlinks_anchors&target={domain}&target_type=root_domain&export_columns=anchor,domains_num,backlinks_num&display_limit=50&display_sort=backlinks_num_desc
 ```
 
 **5. Indexed Pages (pages receiving links)**
+
 ```
 https://api.semrush.com/analytics/v1/?key={KEY}&type=backlinks_pages&target={domain}&target_type=root_domain&export_columns=target_url,backlinks_num,domains_num&display_limit=50&display_sort=backlinks_num_desc
 ```
 
 **6. Competitor Backlinks (for comparison)**
+
 ```
 # Reuse endpoints above with competitor domain as target
 ```
@@ -64,52 +70,65 @@ If `AHREFS_API_KEY` is available (and SemRush is not), use the Ahrefs API v3 end
 ### Ahrefs Core Endpoints
 
 **1. Backlinks Overview (Stats)**
+
 ```bash
 # Ahrefs backlinks overview
 curl -s "https://api.ahrefs.com/v3/site-explorer/backlinks-stats?target={domain}&output=json" \
   -H "Authorization: Bearer ${AHREFS_API_KEY}"
 ```
+
 Returns: `live_backlinks`, `all_time_backlinks`, `live_refdomains`, `all_time_refdomains`, `live_refpages`, `dofollow_backlinks`, `nofollow_backlinks`.
 
 **2. Referring Domains**
+
 ```bash
 # Ahrefs referring domains
 curl -s "https://api.ahrefs.com/v3/site-explorer/refdomains?target={domain}&output=json&limit=100" \
   -H "Authorization: Bearer ${AHREFS_API_KEY}"
 ```
+
 Returns: Array of referring domains with `domain`, `domain_rating`, `backlinks`, `first_seen`, `last_seen`, `dofollow`, `nofollow`. Sort by `domain_rating` to see highest-authority referrers first.
 
 **3. Backlinks List**
+
 ```bash
 curl -s "https://api.ahrefs.com/v3/site-explorer/backlinks?target={domain}&output=json&limit=100&mode=subdomains" \
   -H "Authorization: Bearer ${AHREFS_API_KEY}"
 ```
+
 Returns: Individual backlinks with `url_from`, `url_to`, `anchor`, `domain_rating`, `first_seen`, `last_seen`, `nofollow`, `redirect`, `edu`, `gov`.
 
 **4. Anchors**
+
 ```bash
 curl -s "https://api.ahrefs.com/v3/site-explorer/anchors?target={domain}&output=json&limit=50&mode=subdomains" \
   -H "Authorization: Bearer ${AHREFS_API_KEY}"
 ```
+
 Returns: Anchor text distribution with `anchor`, `backlinks`, `refdomains`.
 
 **5. Pages by Backlinks (Best by Links)**
+
 ```bash
 curl -s "https://api.ahrefs.com/v3/site-explorer/best-by-links?target={domain}&output=json&limit=50" \
   -H "Authorization: Bearer ${AHREFS_API_KEY}"
 ```
+
 Returns: Top linked pages with `url`, `backlinks`, `refdomains`, `dofollow`.
 
 **6. Domain Rating**
+
 ```bash
 curl -s "https://api.ahrefs.com/v3/site-explorer/domain-rating?target={domain}&output=json" \
   -H "Authorization: Bearer ${AHREFS_API_KEY}"
 ```
+
 Returns: `domain_rating` (0-100) and `ahrefs_rank`.
 
 ### Ahrefs vs. SemRush Field Mapping
 
 When using Ahrefs instead of SemRush, map the fields as follows:
+
 | SemRush Field | Ahrefs Equivalent | Notes |
 |---------------|-------------------|-------|
 | `domain_ascore` | `domain_rating` | Both are 0-100 authority scores |
@@ -159,12 +178,14 @@ Pull the top referring domains sorted by authority score. Evaluate:
 
 **Domain Quality Distribution:**
 Calculate the percentage of referring domains in each tier. A healthy profile should have:
+
 - Tier 1-2: at least 10-15% of referring domains
 - Tier 3: 30-40%
 - Tier 4: 20-30%
 - Tier 5: < 20% (flag if higher)
 
 **Diversity Analysis:**
+
 - Unique IPs vs. referring domains (ratio close to 1:1 is healthy)
 - Unique Class C subnets (should be close to IP count)
 - Country distribution (should match target market)
@@ -186,6 +207,7 @@ Pull anchor text data and classify each anchor:
 | Image (no alt) | < 5% | Images without alt text | [image] |
 
 **Red flags in anchor text:**
+
 - Exact match > 10% = Over-optimized (Penguin risk)
 - Single anchor > 15% of total = Unnatural concentration
 - Money keyword anchors from low-quality sites = Likely spam
@@ -212,6 +234,7 @@ Score each backlink for toxicity based on these signals:
 | Foreign language + irrelevant | +15 | From anchor text + domain TLD |
 
 **Toxicity Rating:**
+
 - 0-20: Clean - no action needed
 - 21-40: Monitor - watch for changes
 - 41-60: Suspicious - investigate further
@@ -228,6 +251,7 @@ Analyze the `first_seen` and `last_seen` dates to determine:
 - **Velocity spikes** (unnatural bursts of links)
 
 **Healthy velocity patterns:**
+
 - Steady, gradual growth = Natural
 - Correlated with content publishing = Natural
 - Sudden spike then flat = Likely campaign or mention (investigate)
@@ -252,6 +276,7 @@ Pull backlink overview for 2-3 competitors and compare:
 
 **Link Gap Analysis:**
 Find domains that link to competitors but not to the target:
+
 1. Pull top 100 referring domains for each competitor
 2. Filter out domains already linking to the target
 3. Sort by authority score
@@ -276,6 +301,7 @@ domain:{domain2}
 ```
 
 **Disavow rules:**
+
 - Only disavow domains where 80%+ of their links are toxic
 - For mixed domains, disavow individual URLs
 - Never disavow high-authority domains (AS > 60) without manual verification

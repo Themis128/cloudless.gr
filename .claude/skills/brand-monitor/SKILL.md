@@ -140,6 +140,7 @@ curl -s -H "Authorization: Bearer ${BRANDDEV_API_KEY}" \
 ```
 
 Use logo detection to find:
+
 - Unauthorized logo usage
 - Partner and sponsor visibility
 - Event coverage and media placements
@@ -276,6 +277,7 @@ Get sentiment trends. Flag any negative spikes and investigate root causes.
 ### Step 4: PR Opportunities
 
 From mention data, identify:
+
 - **High-authority sites** that mention competitors but not you
 - **Journalists** who cover your industry
 - **Trending topics** where your brand could contribute

@@ -61,6 +61,7 @@ This skill supports the following schema types. When the user asks for schema, d
 ```
 
 **Google requirements:**
+
 - `headline` is required (max 110 characters)
 - `image` is required (provide 3 aspect ratios: 16:9, 4:3, 1:1; each > 696px wide)
 - `datePublished` is required (ISO 8601 format)
@@ -164,6 +165,7 @@ This skill supports the following schema types. When the user asks for schema, d
 ```
 
 **Google requirements:**
+
 - `name` is required
 - `offers`, `review`, or `aggregateRating` - at least one required
 - `offers.price` and `offers.priceCurrency` required if offers present
@@ -203,6 +205,7 @@ This skill supports the following schema types. When the user asks for schema, d
 ```
 
 **Google requirements:**
+
 - Each `Question` must have exactly one `acceptedAnswer`
 - Answer `text` can include HTML: `<h2>` through `<h6>`, `<br>`, `<ol>`, `<ul>`, `<li>`, `<a>`, `<p>`, `<b>`, `<strong>`, `<i>`, `<em>`
 - Must be visible on the page (not hidden behind tabs/accordions without proper implementation)
@@ -270,6 +273,7 @@ This skill supports the following schema types. When the user asks for schema, d
 ```
 
 **Google requirements:**
+
 - `name` is required
 - `step` array is required with at least one step
 - Each step needs either `text` or `itemListElement` with `HowToDirection`/`HowToTip`
@@ -393,6 +397,7 @@ This skill supports the following schema types. When the user asks for schema, d
 ```
 
 **Google requirements:**
+
 - `name`, `address` are required
 - Use specific subtypes when possible: `Restaurant`, `Dentist`, `LegalService`, `RealEstateAgent`, etc.
 - `geo` coordinates should be accurate to the business location
@@ -432,6 +437,7 @@ This skill supports the following schema types. When the user asks for schema, d
 ```
 
 **Google requirements:**
+
 - `position` must be sequential starting at 1
 - Last item should not have `item` (it's the current page)
 - Must match the visible breadcrumb on the page
@@ -473,6 +479,7 @@ This skill supports the following schema types. When the user asks for schema, d
 ```
 
 **Google requirements:**
+
 - `author` is required (must be a valid `Person` or `Organization`)
 - `itemReviewed` is required
 - `reviewRating` is recommended
@@ -541,6 +548,7 @@ When the user asks for schema markup:
 ## Implementation Instructions
 
 For **Next.js App Router**:
+
 ```tsx
 // In your page component or layout
 export default function Page() {
@@ -559,6 +567,7 @@ export default function Page() {
 ```
 
 For **Next.js with next/head (Pages Router)**:
+
 ```tsx
 import Head from 'next/head';
 
@@ -580,6 +589,7 @@ export default function Page() {
 ```
 
 For **plain HTML**:
+
 ```html
 <head>
   <script type="application/ld+json">
@@ -591,6 +601,7 @@ For **plain HTML**:
 ## Validation
 
 After generating the markup, remind the user to validate using:
+
 1. **Google Rich Results Test:** https://search.google.com/test/rich-results
 2. **Schema.org Validator:** https://validator.schema.org/
 

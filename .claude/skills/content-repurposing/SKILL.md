@@ -35,12 +35,14 @@ You are a content repurposing expert. Take one piece of content and transform it
 ### Recipe 1: Blog Post → Twitter/X Thread
 
 **Process:**
+
 1. Extract the core thesis (this becomes the hook tweet)
 2. Pull 5-10 key points (each becomes a tweet)
 3. Add a personal take or story (for engagement)
 4. End with a CTA tweet
 
 **Format:**
+
 ```
 🧵 {Hook: Bold claim or surprising insight from the article}
 
@@ -54,6 +56,7 @@ You are a content repurposing expert. Take one piece of content and transform it
 ```
 
 **Rules:**
+
 - Each tweet must stand alone (people see individual tweets in feeds)
 - Use numbers or bullet points for scannability
 - Add 1-2 relevant images or data visualizations
@@ -62,12 +65,14 @@ You are a content repurposing expert. Take one piece of content and transform it
 ### Recipe 2: Blog Post → LinkedIn Carousel
 
 **Process:**
+
 1. Extract 7-10 actionable takeaways
 2. Write a hook slide (title + subtitle)
 3. One takeaway per slide with minimal text
 4. Add a CTA final slide
 
 **Format:**
+
 ```
 SLIDE 1 (Cover): {Compelling title}
 {Subtitle: "X lessons from..." or "How to..."}
@@ -82,6 +87,7 @@ SLIDE 10 (CTA): {Follow / Save / Visit link}
 ```
 
 **Rules:**
+
 - Large, readable text (imagine reading on a phone)
 - Max 3 lines of text per slide
 - Use contrasting colors for key words
@@ -90,12 +96,14 @@ SLIDE 10 (CTA): {Follow / Save / Visit link}
 ### Recipe 3: Blog Post → Newsletter Section
 
 **Process:**
+
 1. Write a 2-sentence personal intro connecting to the topic
 2. Summarize the 3 most actionable insights
 3. Add your unique take or commentary
 4. Link to the full post
 
 **Format:**
+
 ```markdown
 ## {Section title}
 
@@ -117,12 +125,14 @@ Here are the 3 biggest takeaways:
 ### Recipe 4: Blog Post → Video Script (60-90 seconds)
 
 **Process:**
+
 1. Open with the most surprising/useful point (hook: 5 seconds)
 2. Quick context on why it matters (10 seconds)
 3. 3 key points, rapid-fire (45 seconds)
 4. CTA (10 seconds)
 
 **Format:**
+
 ```
 HOOK (0-5s): "{Surprising statement or question from the article}"
 
@@ -140,6 +150,7 @@ CTA (60-70s): "Follow for more {topic} content. Link to the full breakdown in my
 ### Recipe 5: Podcast Episode → Blog Post
 
 **Process:**
+
 1. Extract the main topic and thesis
 2. Identify 5-8 distinct segments/talking points
 3. Pull specific quotes and stories
@@ -149,11 +160,13 @@ CTA (60-70s): "Follow for more {topic} content. Link to the full breakdown in my
 ### Recipe 6: Podcast Episode → Quote Cards
 
 **Process:**
+
 1. Find 5-10 quotable moments (surprising, insightful, or contrarian)
 2. Keep quotes under 30 words each
 3. Format with speaker attribution
 
 **Output per quote:**
+
 ```
 "{Quote text}" — {Speaker Name}
 
@@ -164,6 +177,7 @@ Best for: {Platform — Instagram, LinkedIn, Twitter}
 ### Recipe 7: Video → GIF Clips + Social Posts
 
 **Process:**
+
 1. Identify 3-5 key moments (reactions, demonstrations, key statements)
 2. Note timestamps for each clip (3-10 seconds each)
 3. Write a social caption for each clip
@@ -186,9 +200,11 @@ When repurposing, adjust for each platform:
 ## Repurposing Workflow
 
 ### Step 1: Identify Source Content
+
 Ask or infer: What is the pillar content? (URL, text, transcript, etc.)
 
 ### Step 2: Extract Core Elements
+
 - **Thesis:** The one big idea
 - **Key points:** 5-10 supporting arguments or insights
 - **Stories/examples:** Specific anecdotes that illustrate points
@@ -197,6 +213,7 @@ Ask or infer: What is the pillar content? (URL, text, transcript, etc.)
 - **Action items:** Concrete steps the reader can take
 
 ### Step 3: Map to Target Platforms
+
 Based on the user's channels, create a repurposing plan:
 
 ```markdown
@@ -217,10 +234,13 @@ Based on the user's channels, create a repurposing plan:
 ```
 
 ### Step 4: Create Each Piece
+
 Write each content piece following the platform-specific rules above.
 
 ### Step 5: Scheduling Recommendation
+
 Stagger content across days/weeks for maximum reach:
+
 - Day 1: Publish pillar content
 - Day 1-2: Twitter thread + LinkedIn post
 - Day 3-4: Carousel + newsletter mention

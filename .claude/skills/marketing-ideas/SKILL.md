@@ -345,21 +345,25 @@ A comprehensive collection of marketing tactics organized by category. Use this 
 ### By Company Stage
 
 **Pre-launch (0 customers):**
+
 - Focus: Ideas 57, 108, 109, 112 (launch tactics)
 - Build an audience before you build the product
 - Priority: Waitlist, community building, build in public
 
 **Early stage (0-100 customers):**
+
 - Focus: Ideas 1-5, 15, 29, 38, 68 (content + product-led)
 - Do things that do not scale: handwritten notes, 1:1 calls
 - Priority: SEO foundation, founder-led marketing, free tools
 
 **Growth stage (100-1,000 customers):**
+
 - Focus: Ideas 41-52, 69-78, 79-88 (paid + email + partnerships)
 - Start investing in channels with predictable ROI
 - Priority: Paid acquisition, email nurture, integrations
 
 **Scale stage (1,000+ customers):**
+
 - Focus: Ideas 89-96, 97-106, 115-126 (events + PR + product-led)
 - Systematize what works, experiment with new channels
 - Priority: PR, conferences, product virality
@@ -367,24 +371,28 @@ A comprehensive collection of marketing tactics organized by category. Use this 
 ### By Budget
 
 **$0/month (sweat equity only):**
+
 - Content & SEO (1-20)
 - Social & community (53-68)
 - Build in public (38)
 - Product Hunt launch (57, 107)
 
 **$500/month:**
+
 - Newsletter sponsorships (50)
 - Micro-influencer partnerships (51)
 - Basic retargeting (43)
 - Tool subscriptions (SemRush, email provider)
 
 **$2,000/month:**
+
 - Google Ads on high-intent keywords (42)
 - LinkedIn Ads (44)
 - Podcast sponsorships (49)
 - Freelance content writers
 
 **$10,000+/month:**
+
 - Multi-channel paid campaigns (41-52)
 - Agency partnerships (83)
 - Events and webinars (89-96)
@@ -393,6 +401,7 @@ A comprehensive collection of marketing tactics organized by category. Use this 
 ### By Timeline
 
 **This week (quick wins):**
+
 - Optimize email signatures (78)
 - Set up retargeting pixel (43)
 - Post on social media (54, 55)
@@ -400,6 +409,7 @@ A comprehensive collection of marketing tactics organized by category. Use this 
 - Comment on industry posts (67)
 
 **This month:**
+
 - Publish 4 blog posts (1-2)
 - Launch on Product Hunt (107)
 - Start email welcome sequence (69)
@@ -407,6 +417,7 @@ A comprehensive collection of marketing tactics organized by category. Use this 
 - Guest post on one publication (8)
 
 **This quarter:**
+
 - Build a free tool (29)
 - Launch referral program (see referral-program skill)
 - Start a podcast or webinar series (12, 89)
@@ -414,6 +425,7 @@ A comprehensive collection of marketing tactics organized by category. Use this 
 - Publish original research (3, 97)
 
 **This year:**
+
 - Build comprehensive content library (1-20)
 - Establish partner ecosystem (79-88)
 - Scale paid channels (41-52)

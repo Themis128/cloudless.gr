@@ -44,6 +44,7 @@ curl -s -X POST "https://api.apollo.io/api/v1/mixed_people/search" \
 ```
 
 **Useful filters:**
+
 - `q_keywords` - Keyword search across name, title, company
 - `person_titles` - Array of job titles
 - `person_locations` - Array of locations
@@ -93,6 +94,7 @@ curl -s -X POST "https://api.apollo.io/api/v1/people/match" \
 ### Step 1: Define ICP (Ideal Customer Profile)
 
 Ask or infer:
+
 - **Target titles:** What roles are you selling to?
 - **Company size:** Employee count range
 - **Industry:** Specific verticals
@@ -103,6 +105,7 @@ Ask or infer:
 ### Step 2: Build Search Query
 
 Translate ICP into Apollo search filters. Run multiple searches with variations:
+
 - Different title variations (VP Marketing = VP of Marketing = Vice President, Marketing)
 - Adjacent roles (CMO, Director of Marketing, Head of Growth)
 - Company size tiers separately
@@ -110,6 +113,7 @@ Translate ICP into Apollo search filters. Run multiple searches with variations:
 ### Step 3: Enrich Results
 
 For each prospect found:
+
 1. Note their current title, company, and location
 2. Enrich their company domain for additional context
 3. Look for mutual connections or shared background

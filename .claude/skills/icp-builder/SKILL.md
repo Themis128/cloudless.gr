@@ -194,6 +194,7 @@ QUOTE: "[Representative mindset quote]"
 ## Step 9: Validation
 
 ### Checklist
+
 - [ ] Based on data (interviews, surveys, analytics), not just assumptions
 - [ ] 10+ customers/prospects match the profile
 - [ ] ICP customers have higher LTV and lower churn
@@ -202,6 +203,7 @@ QUOTE: "[Representative mindset quote]"
 - [ ] Documented and shared with all customer-facing teams
 
 ### When to Update
+
 After every 50 new customers, after pricing changes, after major features, after new market entry, quarterly minimum.
 
 ## Output Format

@@ -30,6 +30,7 @@ When auditing a signup flow, evaluate each of these dimensions:
 **Rule of thumb:** Every additional step loses 10-20% of users.
 
 **Audit questions:**
+
 - Can any steps be combined?
 - Can any steps be deferred to post-signup?
 - Is every step necessary for the user to start getting value?
@@ -44,6 +45,7 @@ When auditing a signup flow, evaluate each of these dimensions:
 | 5+ fields | -30-50% vs email only |
 
 **Audit questions:**
+
 - Which fields are truly required at signup? (vs. collected later)
 - Can you use progressive profiling instead of upfront collection?
 - Are field labels clear and unambiguous?
@@ -61,6 +63,7 @@ When auditing a signup flow, evaluate each of these dimensions:
 | Facebook | +5-10% | B2C, social products (declining trust) |
 
 **Audit questions:**
+
 - Are social login buttons prominent or buried?
 - Do social logins request minimal permissions?
 - Is there a fallback if social auth fails?
@@ -70,6 +73,7 @@ When auditing a signup flow, evaluate each of these dimensions:
 For multi-step flows, progress indicators reduce abandonment.
 
 **Types:**
+
 - Step counter ("Step 2 of 3")
 - Progress bar (visual fill)
 - Checklist (shows completed and upcoming steps)
@@ -80,6 +84,7 @@ For multi-step flows, progress indicators reduce abandonment.
 ### Error Handling
 
 **Audit checklist:**
+
 - [ ] Inline validation (errors appear next to the field, not at top of form)
 - [ ] Real-time validation (check as user types, not on submit)
 - [ ] Clear error messages (say what's wrong AND how to fix it)
@@ -91,6 +96,7 @@ For multi-step flows, progress indicators reduce abandonment.
 ### Mobile Optimization
 
 **Audit checklist:**
+
 - [ ] Form fills the viewport without horizontal scroll
 - [ ] Input fields are at least 44px tap targets
 - [ ] Keyboard type matches input (email keyboard for email, number pad for phone)
@@ -134,66 +140,80 @@ For multi-step flows, progress indicators reduce abandonment.
 ### Pre-Signup (Landing Page to Signup Start)
 
 **Hypothesis 1: Reducing perceived effort increases signup starts**
+
 - Test: Replace "Create Account" button with "Get Started Free" or "Start in 30 seconds"
 - Expected lift: 5-15%
 
 **Hypothesis 2: Social proof near CTA increases conversion**
+
 - Test: Add "Join 10,000+ teams" or user count next to signup button
 - Expected lift: 5-12%
 
 **Hypothesis 3: Showing the product increases intent**
+
 - Test: Add screenshot or demo GIF above signup form
 - Expected lift: 10-20%
 
 **Hypothesis 4: Reducing options increases action**
+
 - Test: Remove pricing tiers from signup page; show one clear CTA
 - Expected lift: 8-15%
 
 ### Step 1: Account Creation
 
 **Hypothesis 5: Social login as primary option reduces friction**
+
 - Test: Show "Continue with Google" as the primary/largest button, email form secondary
 - Expected lift: 15-25%
 
 **Hypothesis 6: Fewer fields increase completion**
+
 - Test: Email-only signup (collect name later) vs email + name + password
 - Expected lift: 10-20%
 
 **Hypothesis 7: Magic link eliminates password friction**
+
 - Test: "Enter email, we'll send a login link" vs traditional password creation
 - Expected lift: 5-15% (higher for mobile)
 
 **Hypothesis 8: Password visibility toggle reduces errors**
+
 - Test: Add show/hide password toggle
 - Expected lift: 3-8%
 
 ### Step 2: Profile / Preferences
 
 **Hypothesis 9: Making profile completion optional increases flow-through**
+
 - Test: Add "Skip for now" option to profile step
 - Expected lift: 15-25%
 
 **Hypothesis 10: Explaining why increases willingness**
+
 - Test: Add micro-copy explaining why each field is needed ("We use this to personalize your dashboard")
 - Expected lift: 5-10%
 
 **Hypothesis 11: Visual selection beats text input**
+
 - Test: Use icon/image cards for preference selection vs dropdown/text
 - Expected lift: 8-15%
 
 ### Step 3: Verification
 
 **Hypothesis 12: Delayed email verification increases activation**
+
 - Test: Let users access the product immediately, verify email later
 - Expected lift: 20-40% on activation rate
 
 **Hypothesis 13: SMS verification is faster than email**
+
 - Test: Offer phone verification as alternative to email
 - Expected lift: 5-10% on verification completion
 
 ### Post-Signup
 
 **Hypothesis 14: Immediate value delivery reduces churn**
+
 - Test: Drop users into a pre-populated workspace vs empty state
 - Expected lift: 15-30% on day-1 retention
 

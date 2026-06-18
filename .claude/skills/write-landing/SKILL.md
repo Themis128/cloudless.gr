@@ -31,7 +31,9 @@ If the user doesn't provide all of these, ask for the critical ones (product, au
 Select the right framework based on the product type and traffic temperature:
 
 #### Framework A: PAS (Problem-Agitation-Solution)
+
 **Best for:** Cold traffic, awareness stage, complex problems
+
 ```
 Hero (Problem statement)
   -> Agitate (Consequences of not solving)
@@ -42,7 +44,9 @@ Hero (Problem statement)
 ```
 
 #### Framework B: AIDA (Attention-Interest-Desire-Action)
+
 **Best for:** Warm traffic, known product category
+
 ```
 Hero (Attention-grabbing headline)
   -> Interest (Key features and hook)
@@ -51,7 +55,9 @@ Hero (Attention-grabbing headline)
 ```
 
 #### Framework C: Before-After-Bridge
+
 **Best for:** Transformation products (SaaS, courses, coaching)
+
 ```
 Hero (Before: current painful state)
   -> After (Vision of success)
@@ -62,7 +68,9 @@ Hero (Before: current painful state)
 ```
 
 #### Framework D: Feature-Benefit Grid
+
 **Best for:** Technical products, SaaS, feature-rich tools
+
 ```
 Hero (Bold promise)
   -> Feature-benefit grid
@@ -91,6 +99,7 @@ The hero section has 5 seconds to hook the visitor. Every word must earn its pla
 | `{Number} {people} use {product} to {outcome}` | When you have social proof scale | "50,000 marketers use Buffer to grow on social" |
 
 **Headline rules:**
+
 - Max 10 words (6-8 is ideal)
 - Specific > vague ("50% faster" > "blazing fast")
 - Benefit > feature ("Save 10 hours/week" > "AI-powered automation")
@@ -98,18 +107,22 @@ The hero section has 5 seconds to hook the visitor. Every word must earn its pla
 
 **Subheadline (H2):**
 Expand on the headline with specifics. Formula:
+
 ```
 {Product} helps {audience} {achieve outcome} by {mechanism/method}. {Proof point or time frame}.
 ```
+
 Example: "Acme helps SaaS teams automate their deployment pipeline with one-click CI/CD. Ship 10x faster from day one."
 
 **CTA Button:**
+
 - Use first-person: "Start my free trial" > "Start your free trial"
 - Action-oriented: "Get started free" > "Submit" > "Sign up"
 - Add micro-copy below: "No credit card required. Free for 14 days."
 - Button color should contrast with background (high contrast = more clicks)
 
 **Supporting element (choose one):**
+
 - Product screenshot or demo video
 - Key metric ("Trusted by 10,000+ companies")
 - Logo bar of notable customers
@@ -196,12 +209,14 @@ Make the reader feel understood. Describe their current situation precisely.
 ```
 
 **Pain point formula:**
+
 ```
 Title: "{Frustrating situation}"
 Description: "You {specific scenario}. But {consequence}. And {escalation}."
 ```
 
 Example:
+
 - Title: "Deployment takes hours, not minutes"
 - Description: "You push code and wait. Build fails. Fix it. Wait again. By the time it's live, the bug report queue has doubled. And your weekend is gone."
 
@@ -241,6 +256,7 @@ Transition from pain to solution. Show the product as the bridge.
 ```
 
 **Step formula:**
+
 ```
 Step 1: "{Simple first action}" - Lower the barrier to entry
 Step 2: "{Core value action}" - The product doing its thing
@@ -248,6 +264,7 @@ Step 3: "{Desired outcome}" - The result they care about
 ```
 
 Example:
+
 1. "Connect your repo" - Link your GitHub in one click
 2. "Push your code" - Our AI handles builds, tests, and deployment
 3. "Ship with confidence" - Go live in minutes with zero-downtime deploys
@@ -259,6 +276,7 @@ Example:
 Never list features alone. Always pair with the benefit (the "so what?").
 
 **Feature-Benefit formula:**
+
 ```
 Feature: {What it does}
 Benefit: So you can {outcome the user cares about}
@@ -287,6 +305,7 @@ Benefit: So you can {outcome the user cares about}
 ```
 
 **Arrange features by importance:**
+
 1. The feature that solves the #1 pain point (biggest, most prominent)
 2. The feature that differentiates from competitors
 3. Supporting features that round out the product
@@ -355,6 +374,7 @@ Social proof is the most persuasive element on the page. Layer multiple types:
 ```
 
 **Testimonial writing rules:**
+
 - Include specific outcomes ("40% more leads" > "more leads")
 - Include name, role, company, and photo (real > stock)
 - Match testimonials to the objection they overcome
@@ -404,6 +424,7 @@ Address the top 5-7 objections that prevent conversion:
 #### Section 7: Pricing (if applicable)
 
 Only include pricing on the landing page if:
+
 - The product has clear, fixed pricing
 - The user wants pricing on the page
 - The traffic is warm/hot (they already know what the product does)
@@ -448,6 +469,7 @@ Only include pricing on the landing page if:
 ```
 
 **Pricing copy rules:**
+
 - Anchor with the highest plan first (or highlight the middle plan)
 - Use specific numbers ("$49/mo" > "Starting at...")
 - Show value: "$49/mo - less than the cost of one lost lead"
@@ -484,6 +506,7 @@ The closing CTA should create urgency and restate the core value:
 ```
 
 **Final CTA formulas:**
+
 ```
 "Ready to {desired outcome}?"
 "Start {action}ing today"
@@ -497,10 +520,12 @@ The closing CTA should create urgency and restate the core value:
 Landing pages should rank too. Include:
 
 **Meta tags:**
+
 - Title: "{Product} - {Primary benefit} | {Brand}" (50-60 chars)
 - Description: "{Product} helps {audience} {outcome}. {Proof point}. {CTA}." (150-160 chars)
 
 **On-page SEO:**
+
 - H1 includes primary keyword
 - Primary keyword in first 100 words
 - Image alt text with keyword

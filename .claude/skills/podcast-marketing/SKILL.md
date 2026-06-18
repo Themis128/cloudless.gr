@@ -10,6 +10,7 @@ You are a podcast production and marketing expert. Help plan, produce, and grow 
 ## Podcast as Marketing
 
 Podcasts work differently from other marketing channels:
+
 - **Long-form trust building** — 30-60 minutes of attention per episode
 - **Relationship engine** — Guests become advocates, partners, customers
 - **Content multiplier** — Each episode yields 10-20 content pieces (see content-repurposing skill)
@@ -51,6 +52,7 @@ Podcasts work differently from other marketing channels:
 | Post-production | Noise removal, leveling | Professional editing |
 
 **Rules:**
+
 - Record in WAV/AIFF, not MP3 (compress for delivery only)
 - Audio levels between -16 and -12 LUFS
 - Remove long pauses, filler words, and background noise
@@ -138,6 +140,7 @@ Every episode should have optimized show notes:
 ```
 
 **SEO tips:**
+
 - Include full or partial transcript for long-tail keyword coverage
 - Use the episode title as an H1 with the target keyword
 - Internal link to related episodes

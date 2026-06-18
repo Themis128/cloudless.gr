@@ -41,6 +41,7 @@ each other. This structure signals topical authority to search engines.
 List 3-5 core topics that align with your product and audience needs.
 
 Example for a project management SaaS:
+
 - Project management methodologies
 - Team productivity
 - Remote work collaboration
@@ -119,6 +120,7 @@ Map every piece of content to a buyer journey stage.
 **Reader mindset:** "I have a problem but don't know the solution yet."
 
 **Content types:**
+
 - Blog posts answering "what is" and "why" questions
 - Educational guides and how-to articles
 - Industry reports and trend pieces
@@ -136,6 +138,7 @@ Map every piece of content to a buyer journey stage.
 **Reader mindset:** "I know the solution category. Which option is best for me?"
 
 **Content types:**
+
 - Comparison articles (X vs Y)
 - "Best [category] for [use case]" listicles
 - Case studies
@@ -154,6 +157,7 @@ Map every piece of content to a buyer journey stage.
 **Reader mindset:** "I'm ready to buy. Convince me this is the right choice."
 
 **Content types:**
+
 - Product landing pages
 - Pricing pages
 - Customer testimonials and success stories
@@ -172,6 +176,7 @@ Map every piece of content to a buyer journey stage.
 **Reader mindset:** "How do I get the most from this product?"
 
 **Content types:**
+
 - Onboarding guides and tutorials
 - Best practices and tips
 - Product update announcements
@@ -217,18 +222,21 @@ Follow this ratio for a balanced content strategy:
 For every piece of content, plan distribution across these channels:
 
 ### Owned Channels
+
 - **Blog** - Publish the full piece.
 - **Newsletter** - Summarize with a link to full article.
 - **Social media** - Create 3-5 social posts per article (see below).
 - **Podcast/video** - Repurpose written content into audio/video.
 
 ### Earned Channels
+
 - **SEO** - Optimize for target keywords, build internal links.
 - **Backlinks** - Pitch the piece for guest posts, link roundups, resource pages.
 - **PR** - If newsworthy, pitch to journalists and industry publications.
 - **Communities** - Share in relevant Slack groups, Discord servers, Reddit, forums.
 
 ### Paid Channels
+
 - **Social ads** - Boost top-performing organic posts.
 - **Retargeting** - Show content to website visitors who did not convert.
 - **Sponsored newsletters** - Place in niche industry newsletters.
@@ -254,26 +262,34 @@ Turn one blog post into 8+ pieces of content:
 When building a content strategy, deliver:
 
 ### 1. Content Audit Summary
+
 Assessment of current content, gaps, and opportunities.
 
 ### 2. Topic Cluster Map
+
 Visual or tabular representation of all pillar and cluster content.
 
 ### 3. Buyer Journey Content Map
+
 Table mapping each planned piece to a funnel stage.
 
 ### 4. 90-Day Content Calendar
+
 Month-by-month publishing plan with titles, target keywords, funnel stage,
 content type, owner, and due date.
 
 ### 5. Distribution Playbook
+
 Channel-by-channel plan for promoting each content type.
 
 ### 6. KPI Dashboard
+
 Metrics to track for each funnel stage with targets.
 
 ### 7. Content Briefs
+
 For the first month's content, provide detailed content briefs including:
+
 - Title and target keyword
 - Search intent
 - Outline (H2s and H3s)

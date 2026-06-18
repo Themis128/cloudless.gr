@@ -37,24 +37,28 @@ POST-SALE                → Expansion & Advocacy
 ### Campaign Types
 
 **1. Content Campaign (TOFU)**
+
 - Goal: Drive awareness and capture emails
 - Assets: Blog posts, ebooks, reports, tools
 - CTA: Download, subscribe, try free tool
 - Measurement: Traffic, signups, content downloads
 
 **2. Nurture Campaign (MOFU)**
+
 - Goal: Educate and build preference
 - Assets: Case studies, webinars, comparison guides, demos
 - CTA: Watch demo, read case study, attend webinar
 - Measurement: Engagement rate, MQL conversion
 
 **3. Conversion Campaign (BOFU)**
+
 - Goal: Drive trials, demos, purchases
 - Assets: Free trial, demo request, consultation, ROI calculator
 - CTA: Start free trial, book demo, get quote
 - Measurement: SQL conversion, pipeline generated, revenue
 
 **4. ABM Campaign (Targeted)**
+
 - Goal: Engage specific high-value accounts
 - Assets: Personalized content, direct mail, executive dinners
 - CTA: Custom per account

@@ -18,6 +18,7 @@ Inventory the user's current content:
 3. **Map topics covered** — What keywords/topics does each page target?
 
 If the user has a codebase, check:
+
 - Blog post files/directories
 - MDX/markdown content files
 - CMS entries or database content
@@ -31,6 +32,7 @@ For 2-3 competitors, gather their content:
 3. **Categorize their content** by topic cluster
 
 If SemRush API is available:
+
 ```bash
 # Get competitor's top organic keywords
 curl -s "https://api.semrush.com/?type=domain_organic&key=${SEMRUSH_API_KEY}&domain={competitor}&database=us&export_columns=Ph,Po,Nq,Cp,Co,Tr,Tc&display_limit=100"
@@ -51,6 +53,7 @@ curl -s "https://api.semrush.com/?type=domain_organic&key=${SEMRUSH_API_KEY}&dom
 **Gap = Keywords competitors rank for that you don't.**
 
 Filter gaps by:
+
 - Search volume > 100/month
 - Keyword difficulty < 60 (achievable)
 - Relevant to your business

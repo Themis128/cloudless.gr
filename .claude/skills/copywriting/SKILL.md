@@ -136,24 +136,28 @@ Use 1-2 power words per headline or CTA. Rotate to avoid repetition.
 ## Tone Guidelines
 
 ### Professional
+
 - Use complete sentences and proper grammar.
 - Avoid slang, contractions (selectively), and exclamation marks.
 - Lead with data, credentials, and specificity.
 - Suitable for: B2B, enterprise, finance, legal, healthcare.
 
 ### Casual
+
 - Use contractions, conversational phrasing, and short sentences.
 - Address the reader as "you". Write like you are talking to a friend.
 - Use analogies and everyday language.
 - Suitable for: DTC, consumer apps, lifestyle brands.
 
 ### Urgent
+
 - Short sentences. Fragments are fine.
 - Use time-bound language: "Today only", "Ends midnight", "Only 3 spots left".
 - Bold the most important phrases.
 - Suitable for: Sales, launches, limited offers, flash deals.
 
 ### Authoritative
+
 - Use declarative statements. Avoid hedging words (might, maybe, could).
 - Cite sources, data points, and results.
 - Position the brand as the definitive expert.

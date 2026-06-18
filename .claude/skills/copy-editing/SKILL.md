@@ -19,6 +19,7 @@ Follow this exact sequence for every editing job:
 ### Step 1: Read the Full Piece
 
 Read the entire piece before making any edits. Understand:
+
 - What is the goal of this copy? (Convert, inform, persuade, nurture)
 - Who is the audience?
 - What tone is intended?
@@ -27,6 +28,7 @@ Read the entire piece before making any edits. Understand:
 ### Step 2: Structural Review
 
 Before line edits, assess the overall structure:
+
 - Does the opening hook the reader immediately?
 - Is there a logical flow from problem to solution to CTA?
 - Are there sections that should be reordered, merged, or cut entirely?
@@ -126,6 +128,7 @@ audience. Know your reader.
 **Rule:** Marketing copy must make the reader feel something. Facts inform. Emotions convert.
 
 **Techniques:**
+
 - **Specificity creates emotion.** "Save time" is weak. "Get home for dinner instead of staying
   late to fix reports" is strong.
 - **Use sensory language.** "See your revenue dashboard light up green" beats "Track revenue."
@@ -194,6 +197,7 @@ Score every piece using Flesch-Kincaid Grade Level:
 | 12+ | Expert | Probably too complex. Simplify. |
 
 **How to estimate without tools:**
+
 - Count sentences in a 100-word sample.
 - Count words with 3+ syllables.
 - Fewer long words and more sentences = lower grade level.
@@ -205,12 +209,15 @@ Score every piece using Flesch-Kincaid Grade Level:
 For every editing job, deliver:
 
 ### 1. Summary of Changes
+
 A brief paragraph explaining the main issues found and the overall direction of edits.
 
 ### 2. Edited Copy
+
 The full edited piece with changes applied.
 
 ### 3. Change Log
+
 A table of significant changes:
 
 | Location | Original | Edited | Reason |
@@ -219,10 +226,13 @@ A table of significant changes:
 | Para 2, Sent 1 | "We have the ability to help you..." | "We help you..." | Conciseness |
 
 ### 4. Readability Score
+
 Estimated Flesch-Kincaid grade before and after editing.
 
 ### 5. Remaining Suggestions
+
 Things the user should consider that go beyond copy editing:
+
 - Structural changes
 - Missing sections (social proof, CTA, FAQ)
 - Opportunities to add data or proof points

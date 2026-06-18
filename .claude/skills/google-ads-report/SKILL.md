@@ -15,6 +15,7 @@ Pull campaign, keyword, and conversion data from the Google Ads API.
 ## Prerequisites
 
 Requires:
+
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (OAuth)
 - `GOOGLE_ADS_DEVELOPER_TOKEN` (apply at https://ads.google.com/home/tools/manager-accounts/)
 - `GOOGLE_ADS_CUSTOMER_ID` (the account ID, format: `XXX-XXX-XXXX`, passed without dashes)
@@ -50,6 +51,7 @@ POST https://googleads.googleapis.com/v17/customers/{CUSTOMER_ID}/googleAds:sear
 ```
 
 Headers:
+
 ```
 Authorization: Bearer {ACCESS_TOKEN}
 developer-token: {DEVELOPER_TOKEN}
@@ -128,6 +130,7 @@ curl -s -X POST \
 ```
 
 Quality Score Components:
+
 - **quality_score**: Overall score (1-10)
 - **creative_quality_score**: Ad relevance (BELOW_AVERAGE, AVERAGE, ABOVE_AVERAGE)
 - **post_click_quality_score**: Landing page experience
@@ -166,6 +169,7 @@ curl -s -X POST \
 ```
 
 Use this to:
+
 - Find new keyword opportunities (high-converting search terms)
 - Identify negative keyword candidates (irrelevant terms with spend)
 - Discover match type issues (broad match pulling in junk traffic)
@@ -224,6 +228,7 @@ curl -s -X POST \
 ## GAQL Date Ranges
 
 Use these built-in date ranges in GAQL:
+
 - `TODAY`, `YESTERDAY`
 - `LAST_7_DAYS`, `LAST_14_DAYS`, `LAST_30_DAYS`
 - `THIS_MONTH`, `LAST_MONTH`

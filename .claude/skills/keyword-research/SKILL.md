@@ -24,34 +24,43 @@ Use `curl` via the Bash tool for all API calls. The base URL is `https://api.sem
 ### Core Endpoints
 
 **1. Keyword Overview (phrase_all)**
+
 ```
 https://api.semrush.com/?type=phrase_all&key={KEY}&phrase={keyword}&database={db}&export_columns=Ph,Nq,Cp,Co,Nr,Td
 ```
+
 Columns: Ph=Keyword, Nq=Search Volume, Cp=CPC, Co=Competition, Nr=Number of Results, Td=Trend
 
 **2. Related Keywords (phrase_related)**
+
 ```
 https://api.semrush.com/?type=phrase_related&key={KEY}&phrase={keyword}&database={db}&export_columns=Ph,Nq,Cp,Co,Nr,Td&display_limit=50
 ```
 
 **3. Keyword Questions (phrase_questions)**
+
 ```
 https://api.semrush.com/?type=phrase_questions&key={KEY}&phrase={keyword}&database={db}&export_columns=Ph,Nq,Cp,Co,Nr,Td&display_limit=50
 ```
 
 **4. Domain Organic Keywords (domain_organic)**
+
 ```
 https://api.semrush.com/?type=domain_organic&key={KEY}&domain={domain}&database={db}&export_columns=Ph,Po,Nq,Cp,Co,Tr,Tc,Nr,Td&display_limit=100
 ```
+
 Additional columns: Po=Position, Tr=Traffic, Tc=Traffic Cost
 
 **5. Keyword Difficulty (phrase_kdi)**
+
 ```
 https://api.semrush.com/?type=phrase_kdi&key={KEY}&phrase={keyword}&database={db}&export_columns=Ph,Kd
 ```
+
 Columns: Kd=Keyword Difficulty (0-100)
 
 ### Database Codes
+
 - `us` (United States - default)
 - `uk` (United Kingdom)
 - `ca` (Canada)
@@ -65,6 +74,7 @@ Ask the user for target market if not specified. Default to `us`.
 ### Step 1: Understand the Brief
 
 Ask or infer:
+
 - **Niche/Topic:** What is the site about?
 - **Target audience:** Who are they trying to reach?
 - **Business model:** How do they monetize? (SaaS, ecommerce, ads, affiliate)
@@ -77,6 +87,7 @@ Ask or infer:
 Generate 10-20 seed keywords based on the brief. Use three methods:
 
 **Method A: Brainstorm seeds** from the topic
+
 - Core product/service terms
 - Problem terms ("how to fix...", "why is...")
 - Audience terms (job titles, demographics)
@@ -111,6 +122,7 @@ Categorize every keyword into one of four intents:
 | **Transactional** | buy, price, discount, coupon, free trial, sign up | "semrush pricing" | Landing page, product page |
 
 **Intent classification rules:**
+
 - "how to" / "what is" / "why" = Informational
 - "{brand} + {feature}" = Navigational
 - "best" / "top" / "vs" / "alternative" / "review" = Commercial Investigation
@@ -137,6 +149,7 @@ Pillar Page: [Broad topic keyword - high volume, high difficulty]
 ```
 
 **Clustering rules:**
+
 - Pillar: Volume > 5,000, KD 40-80, broad topic
 - Cluster head: Volume 1,000-5,000, KD 20-50, specific subtopic
 - Supporting: Volume 100-1,000, KD < 30, long-tail variations
@@ -157,6 +170,7 @@ Where:
 ```
 
 **Priority tiers:**
+
 - KOB > 50: High priority - target first
 - KOB 20-50: Medium priority - target in months 2-3
 - KOB 5-20: Low priority - target later
@@ -269,6 +283,7 @@ curl -s -X POST "https://api.dataforseo.com/v3/keywords_data/google_ads/search_v
 ```
 
 Key fields:
+
 - **`search_volume`** - Average monthly search volume
 - **`competition`** - Competition level: "LOW", "MEDIUM", or "HIGH"
 - **`competition_index`** - Numeric competition score (0-100)
@@ -276,6 +291,7 @@ Key fields:
 - **`monthly_searches`** - Array of 12 monthly volume data points (useful for identifying seasonal trends)
 
 **Common location codes:**
+
 - `2840` - United States
 - `2826` - United Kingdom
 - `2124` - Canada
@@ -294,6 +310,7 @@ curl -s -X POST "https://api.dataforseo.com/v3/keywords_data/google_ads/keywords
 ```
 
 **When to use DataForSEO vs SemRush:**
+
 - Use **SemRush** as the primary source for keyword difficulty, competitor analysis, and domain organic keywords
 - Use **DataForSEO** for bulk search volume lookups (supports up to 700 keywords per request, more cost-effective for large batches)
 - Use **DataForSEO** when you need Google Ads-aligned data (their data comes directly from Google Keyword Planner)
@@ -324,6 +341,7 @@ curl -s "https://serpapi.com/search.json?q={keyword}&api_key=${SERPAPI_API_KEY}&
 ```
 
 Key response sections:
+
 - **`related_questions`** - Array of "People Also Ask" questions with snippets and source URLs
 - **`related_searches`** - Array of related search queries that Google suggests
 - **`organic_results`** - Top 10 organic results (useful for SERP analysis)
@@ -345,6 +363,7 @@ curl -s "https://serpapi.com/search.json?q={keyword}&api_key=${SERPAPI_API_KEY}&
 5. **Cluster building:** Group PAA questions and related searches by subtopic to identify natural content clusters.
 
 **Additional SerpAPI parameters:**
+
 - `location=United+States` - Geo-target the search
 - `gl=us` - Country code for Google domain
 - `hl=en` - Interface language

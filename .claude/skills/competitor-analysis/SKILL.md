@@ -18,60 +18,76 @@ The following API keys enable richer data collection. All are optional -- the fr
 ### SemRush API (if SEMRUSH_API_KEY available)
 
 **Domain Overview** - Get traffic, keywords, and authority for any competitor:
+
 ```bash
 # Domain overview (organic traffic, keywords, authority score)
 curl -s "https://api.semrush.com/?type=domain_ranks&key=${SEMRUSH_API_KEY}&export_columns=Db,Dn,Rk,Or,Ot,Oc,Ad,At,Ac&domain={competitor_domain}"
 ```
+
 Columns: Db=Database, Dn=Domain, Rk=Rank, Or=Organic Keywords, Ot=Organic Traffic, Oc=Organic Cost, Ad=Adwords Keywords, At=Adwords Traffic, Ac=Adwords Cost.
 
 **Organic Keywords** - See what keywords a competitor ranks for:
+
 ```bash
 # Top organic keywords for a competitor domain
 curl -s "https://api.semrush.com/?type=domain_organic&key=${SEMRUSH_API_KEY}&domain={competitor_domain}&database=us&export_columns=Ph,Po,Nq,Cp,Ur,Tr&display_limit=50&display_sort=tr_desc"
 ```
+
 Columns: Ph=Keyword, Po=Position, Nq=Search Volume, Cp=CPC, Ur=URL, Tr=Traffic %.
 
 **Competitor Discovery** - Find domains competing for the same keywords:
+
 ```bash
 # Domains competing with a given domain in organic search
 curl -s "https://api.semrush.com/?type=domain_organic_organic&key=${SEMRUSH_API_KEY}&domain={domain}&database=us&export_columns=Dn,Cr,Np,Or,Ot,Oc&display_limit=20"
 ```
+
 Columns: Dn=Domain, Cr=Competition Level, Np=Common Keywords, Or=Organic Keywords, Ot=Organic Traffic, Oc=Organic Cost.
 
 **Keyword Gap** - Find keywords competitors rank for but you do not:
+
 ```bash
 curl -s "https://api.semrush.com/?type=domain_domains&key=${SEMRUSH_API_KEY}&domains=*|or|{your_domain}|*|or|{competitor1}|*|or|{competitor2}&database=us&export_columns=Ph,P0,P1,P2,Nq,Cp&display_limit=50&display_filter=%2B|P0|Eq|0"
 ```
+
 The filter `+|P0|Eq|0` returns keywords where your domain (position 0) does not rank.
 
 ### SerpAPI (if SERPAPI_API_KEY available)
 
 **SERP Competitive Analysis** - See who ranks for key terms in real time:
+
 ```bash
 # Real-time SERP for competitive keywords
 curl -s "https://serpapi.com/search.json?q={keyword}&api_key=${SERPAPI_API_KEY}&num=20&gl=us&hl=en"
 ```
+
 Use this to:
+
 - Identify which competitors dominate organic results for target keywords (parse `organic_results`)
 - Extract competitor ad copy from `ads` and `shopping_results` fields
 - Discover related competitor keywords from `related_searches`
 - See competitor presence in SERP features: `knowledge_graph`, `local_results`, `featured_snippet`
 
 **Google Ads Competitor Analysis:**
+
 ```bash
 # Search a commercial keyword to see competitor ads
 curl -s "https://serpapi.com/search.json?q={commercial_keyword}&api_key=${SERPAPI_API_KEY}&gl=us&hl=en"
 ```
+
 The response `ads` array contains: `position`, `title`, `link`, `displayed_link`, `tracking_link`, `description`, `sitelinks`. This reveals competitor ad copy, landing pages, and messaging.
 
 ### ScrapingBee (if SCRAPINGBEE_API_KEY available)
 
 Use ScrapingBee to scrape competitor pages that block direct fetching via WebFetch (e.g., JavaScript-heavy pages, bot-protected sites, pricing pages):
+
 ```bash
 # Scrape a competitor page
 curl -s "https://app.scrapingbee.com/api/v1/?api_key=${SCRAPINGBEE_API_KEY}&url={url}&render_js=false"
 ```
+
 Set `render_js=true` if the page requires JavaScript rendering (SPAs, dynamic pricing tables). Useful for:
+
 - Extracting pricing page details when WebFetch returns incomplete content
 - Scraping competitor landing pages for messaging and positioning analysis
 - Capturing competitor feature comparison pages

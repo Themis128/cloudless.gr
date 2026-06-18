@@ -30,6 +30,7 @@ EVIDENCE_DIR=~/disputes            # Where to save the per-customer evidence fol
 ## Inputs
 
 The user provides any of:
+
 - Stripe dispute ID (`du_xxxxx`) — preferred
 - Customer email — skill will look up the dispute
 - Charge ID (`ch_xxxxx` or `py_xxxxx`)
@@ -191,6 +192,7 @@ curl -s -u "$STRIPE_SECRET_KEY:" \
 ```
 
 Verify the response:
+
 - `status` should be `under_review`
 - `evidence_details.has_evidence` should be `true`
 - `evidence_details.submission_count` should be `1`
@@ -198,7 +200,9 @@ Verify the response:
 ## Evidence Strategy by Dispute Reason
 
 ### `fraudulent`
+
 Goal: prove the cardholder made the purchase.
+
 - Prior undisputed payments on the same card (strongest)
 - OAuth login (Google/Apple) = identity-verified signup
 - Consistent IP / country / device across sessions
@@ -207,19 +211,25 @@ Goal: prove the cardholder made the purchase.
 - Subscription still active and not cancelled
 
 ### `product_not_received`
+
 Goal: prove delivery + use.
+
 - Login activity log
 - Items created / actions taken inside the product
 - **The customer's own self-reported cancel reason**, if they cancelled — quoted verbatim against the dispute claim
 - Receipt and welcome email
 
 ### `product_unacceptable`
+
 Goal: show the product matched its description and the customer used it.
+
 - Same as `product_not_received` PLUS your terms-of-service language about quality / refund policy
 - Highlight that customer never opened a support ticket
 
 ### `subscription_canceled`
+
 Goal: prove the customer never cancelled (or cancelled after the renewal).
+
 - Subscription object showing `cancel_at_period_end=false` at the renewal date
 - All login/use activity from after the renewal date
 - Terms language stating annual renewals require explicit cancellation
@@ -227,12 +237,15 @@ Goal: prove the customer never cancelled (or cancelled after the renewal).
 ## Rebuttal Templates
 
 ### `uncategorized_text`
+>
 > [Customer name] created a [Product name] account on [date] via [auth method] and subscribed to [plan] ($[amount]/[interval]) using the same [card brand]. The first [N] payment(s) were never disputed. The customer actively used the service: [N] login sessions from [country] on [device], [N] items created ([list]), and [N] [units] consumed. The disputed charge is the [renewal/initial] payment on [date]. The subscription was [status] and remains [active/cancelled]. The customer never contacted support to cancel or request a refund. Our cancellation and refund policies are published at [TERMS_URL]. This is not a fraudulent transaction — it is a legitimate purchase from the cardholder who [made/has made] [N] other undisputed payments on this account.
 
 ### `cancellation_policy_disclosure`
+>
 > Our cancellation policy is disclosed at [TERMS_URL]. Subscribers may cancel at any time and retain access through the end of their billing cycle. This customer never cancelled.
 
 ### `refund_policy_disclosure`
+>
 > Our refund policy is disclosed at [TERMS_URL]. We offer a [N]-day money-back guarantee. The customer did not request a refund within that window, nor at any time.
 
 ## Important Notes

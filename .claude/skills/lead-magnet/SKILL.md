@@ -23,6 +23,7 @@ Design and build lead magnets that convert visitors into email subscribers and q
 **Conversion rate:** High (30-50% on dedicated landing pages)
 
 Template structure:
+
 ```
 Title: The Complete [Topic] Checklist
 
@@ -42,6 +43,7 @@ Bonus: [Extra tip or resource link]
 ```
 
 Example titles:
+
 - "The 47-Point Website Launch Checklist"
 - "Pre-Publish Blog Post Checklist (Never Miss a Step)"
 - "The Complete SEO Audit Checklist for 2025"
@@ -53,6 +55,7 @@ Example titles:
 **Conversion rate:** Very high (35-60%)
 
 Types of templates:
+
 - Spreadsheet templates (Google Sheets, Excel)
 - Document templates (Google Docs, Notion)
 - Design templates (Canva, Figma)
@@ -60,6 +63,7 @@ Types of templates:
 - Email templates (copy-paste ready)
 
 Template packaging:
+
 ```
 [Template Name]
 
@@ -84,6 +88,7 @@ EXAMPLE (filled in)
 **Conversion rate:** Very high (40-60%)
 
 Calculator ideas:
+
 - ROI calculator for your product
 - Cost savings estimator
 - "How much are you losing?" audit tool
@@ -91,6 +96,7 @@ Calculator ideas:
 - Carbon footprint / impact calculator
 
 Implementation notes:
+
 - Can be built as a simple HTML/JS page
 - Gate the results (not the calculator itself) behind email
 - Show a preview of results, require email for full report
@@ -103,6 +109,7 @@ Implementation notes:
 **Conversion rate:** Medium-high (25-40%)
 
 Structure:
+
 ```
 Course: [Title] -- [X]-Day [Topic] Course
 
@@ -132,6 +139,7 @@ Day 5: [Summary + next steps + soft pitch]
 **Conversion rate:** Medium (15-30%)
 
 Structure:
+
 ```
 Title: [The State of / The Complete Guide to / X Trends in] [Topic]
 
@@ -167,6 +175,7 @@ About [Company]
 **Conversion rate:** High (30-50%)
 
 Swipe file types:
+
 - Email subject line swipe file (100+ proven subjects)
 - Ad copy swipe file (best-performing ads by industry)
 - Landing page swipe file (screenshots + analysis)
@@ -174,6 +183,7 @@ Swipe file types:
 - Social media post swipe file (viral post formulas)
 
 Structure:
+
 ```
 [Swipe File Title]: [X] Proven [Type] You Can Steal
 
@@ -338,22 +348,27 @@ P.S. If you found this helpful, you might also like [related resource].
 ### Post-Download Nurture Sequence
 
 **Email 2 (Day 2):** "Did you get a chance to use [Lead Magnet]?"
+
 - Quick tip or walkthrough
 - Ask if they have questions
 
 **Email 3 (Day 4):** "Here's how [Customer] used [Lead Magnet] to [Result]"
+
 - Case study or success story
 - Social proof
 
 **Email 4 (Day 7):** "[Related valuable content]"
+
 - Blog post, video, or additional resource
 - Build authority
 
 **Email 5 (Day 10):** "The next step after [Lead Magnet topic]"
+
 - Introduce your product/service as the logical next step
 - Soft pitch with value framing
 
 **Email 6 (Day 14):** "[Direct offer]"
+
 - Special offer for lead magnet downloaders
 - Clear CTA to product/service
 - Urgency element (limited time, limited spots)
@@ -395,6 +410,7 @@ A content upgrade is a lead magnet specific to an individual blog post.
 ```
 
 Place content upgrades:
+
 - After the introduction (for skimmers)
 - At the midpoint (for engaged readers)
 - At the end (for completionists)

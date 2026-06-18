@@ -70,18 +70,23 @@ If duration exceeds 8 weeks: increase MDE, reduce variants, test a higher-traffi
 ## Step 5: Test Design by Element
 
 ### Headline Tests
+
 Test: value prop angle, specificity, social proof integration, question vs. statement, length. Measure: conversion rate, bounce rate, scroll depth.
 
 ### CTA Tests
+
 Test: button copy (action vs. benefit), color (contrast), size, placement, surrounding copy. Measure: click-through rate, conversion rate.
 
 ### Layout Tests
+
 Test: single vs. two column, long vs. short form, section order, video vs. static hero, with vs. without nav. Measure: conversion rate, scroll depth. Guardrail: page load time.
 
 ### Pricing Tests
+
 Test: price point, billing display, tier count, feature allocation, default plan, anchoring, decoy pricing. Measure: **revenue per visitor** (not just CR). Guardrail: support tickets, refund rate.
 
 ### Copy Tests
+
 Test: tone, length, format (paragraphs vs. bullets), emotional angle, proof type. Measure: conversion rate, read depth.
 
 ## Step 6: Running the Test

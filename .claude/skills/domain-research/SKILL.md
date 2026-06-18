@@ -16,6 +16,7 @@ curl -s "https://mcp.domaindetails.com/lookup/{domain}" | jq
 ```
 
 Returns:
+
 - **Registrar:** Who the domain is registered through
 - **Created date:** When the domain was first registered
 - **Expiry date:** When it expires
@@ -31,6 +32,7 @@ curl -s "https://api.domaindetails.com/api/marketplace/search?domain={domain}" |
 ```
 
 Checks listings across:
+
 - **Sedo** — Largest domain marketplace
 - **Afternic** — GoDaddy's marketplace
 - **Atom** — Premium domains
@@ -97,6 +99,7 @@ curl -s "https://api.domaindetails.com/api/marketplace/search?domain={domain}" |
 ### Step 3: Check Domain History
 
 Use WebFetch to check:
+
 - `web.archive.org/web/*/{domain}` — Past versions of the site
 - Historical use, content type, any red flags
 
@@ -115,6 +118,7 @@ curl -s "https://api.semrush.com/?type=backlinks_overview&key=${SEMRUSH_API_KEY}
 If the desired domain is taken, suggest alternatives:
 
 **Patterns:**
+
 - `get{brand}.com` — getnotion.com
 - `{brand}hq.com` — slackhq.com
 - `try{brand}.com` — tryfigma.com

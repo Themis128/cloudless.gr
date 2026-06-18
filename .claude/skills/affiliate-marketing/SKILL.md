@@ -75,6 +75,7 @@ Your affiliate program page should include:
 ### Terms of Service
 
 Key terms to include:
+
 - Commission rates and payment schedule
 - Cookie duration and attribution model
 - Prohibited promotion methods (spam, brand bidding, misleading claims)
@@ -184,6 +185,7 @@ Required disclosures:
 ### Prohibited Activities
 
 Define clearly in your terms:
+
 - Spam (email, social, forum)
 - Brand bidding (PPC ads on your brand name)
 - Cookie stuffing or forced clicks
