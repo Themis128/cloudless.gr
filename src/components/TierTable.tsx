@@ -1,13 +1,56 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import type { Campaign, Locale } from "@/data/campaigns";
+import { getStoredAttribution } from "@/lib/lead-attribution";
 
 type Props = {
   campaign: Campaign;
   locale: Locale;
 };
 
+/**
+ * Read first-touch attribution from sessionStorage and append it to the
+ * outbound `/api/checkout?…` URL so the server can stamp UTM into Stripe
+ * metadata (or carry it to /contact for the fit-call path). Without this
+ * the visitor's creative variant (utm_content=A_EN / B_EN / …) is lost
+ * the moment they leave the landing page.
+ */
+function appendAttributionToHref(href: string): string {
+  if (typeof window === "undefined") return href;
+  const a = getStoredAttribution();
+  if (!a) return href;
+  let url: URL;
+  try {
+    url = new URL(href, window.location.origin);
+  } catch {
+    return href;
+  }
+  if (a.utmSource) url.searchParams.set("utm_source", a.utmSource);
+  if (a.utmMedium) url.searchParams.set("utm_medium", a.utmMedium);
+  if (a.utmCampaign) url.searchParams.set("utm_campaign", a.utmCampaign);
+  if (a.utmTerm) url.searchParams.set("utm_term", a.utmTerm);
+  if (a.utmContent) url.searchParams.set("utm_content", a.utmContent);
+  // Same-origin — drop the origin prefix so the navigation stays a same-origin
+  // redirect (matters for the GET-302 → Stripe Checkout handoff).
+  return url.pathname + url.search;
+}
+
 export default function TierTable({ campaign, locale }: Props) {
+  function handleCtaClick(e: MouseEvent<HTMLAnchorElement>) {
+    // Plain (no modifier) left clicks get the attribution-stamped URL. Cmd /
+    // Ctrl / middle-click / right-click stay default so "open in new tab"
+    // keeps working — those visitors still send the bare URL but session-
+    // storage attribution is preserved for any subsequent paid hit.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    const anchor = e.currentTarget;
+    const stamped = appendAttributionToHref(anchor.getAttribute("href") ?? "");
+    if (stamped && stamped !== anchor.getAttribute("href")) {
+      e.preventDefault();
+      window.location.href = stamped;
+    }
+  }
+
   return (
     <section className="cl-tiers" aria-label={locale === "el" ? "Πακέτα" : "Tiers"}>
       <div className="cl-tiers__grid">
@@ -27,9 +70,12 @@ export default function TierTable({ campaign, locale }: Props) {
             </ul>
             {/* `checkoutHref` is an API path (not a Next.js route) — must be a
                 plain <a>. `@/i18n/navigation`'s Link rewrites to add the locale
-                prefix, which would break the /api/checkout call. */}
+                prefix, which would break the /api/checkout call. The onClick
+                stamps first-touch UTM into the URL so the creative variant
+                survives the Stripe handoff. */}
             <a
               href={t.checkoutHref}
+              onClick={handleCtaClick}
               className="cl-tier__cta"
               data-tier={t.id}
               data-campaign={campaign.slug}

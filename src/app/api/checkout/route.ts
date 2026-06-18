@@ -55,12 +55,29 @@ export async function GET(request: NextRequest) {
   const locale = pickLocale(request);
   const origin = request.nextUrl.origin;
 
-  // fit-call is the lead-form path — redirect to contact, not checkout.
+  // Pick first-touch UTM the TierTable client stamped into the URL.
+  // Bounded length defends Stripe metadata (500-char limit per value) and any
+  // downstream string-formatted log line.
+  const utm = {
+    utm_source: request.nextUrl.searchParams.get("utm_source")?.slice(0, 100) ?? "",
+    utm_medium: request.nextUrl.searchParams.get("utm_medium")?.slice(0, 100) ?? "",
+    utm_campaign: request.nextUrl.searchParams.get("utm_campaign")?.slice(0, 100) ?? "",
+    utm_term: request.nextUrl.searchParams.get("utm_term")?.slice(0, 100) ?? "",
+    utm_content: request.nextUrl.searchParams.get("utm_content")?.slice(0, 100) ?? "",
+  };
+
+  // fit-call is the lead-form path — redirect to the real contact form so we
+  // actually capture an email. Previously we 302'd straight to /thanks which
+  // promised "we'll email you" but never asked for the email. Forward UTM so
+  // the contact handler can stamp HubSpot + Slack with the originating creative.
   if (tier === "fit-call") {
-    return NextResponse.redirect(
-      new URL(`/${locale}/campaigns/${campaign.slug}/thanks?tier=fit-call`, origin),
-      302
-    );
+    const contactUrl = new URL(`/${locale}/contact`, origin);
+    contactUrl.searchParams.set("topic", "fit-call");
+    contactUrl.searchParams.set("campaign", campaign.slug);
+    for (const [k, v] of Object.entries(utm)) {
+      if (v) contactUrl.searchParams.set(k, v);
+    }
+    return NextResponse.redirect(contactUrl, 302);
   }
 
   const tierData = campaign.tiers.find((t) => t.id === tier)!;
@@ -75,6 +92,18 @@ export async function GET(request: NextRequest) {
   const stripe = await getStripe();
   if (!stripe) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
+  }
+
+  // Build Stripe metadata: source/campaign/tier plus first-touch UTM. Stripe
+  // caps each key at 40 chars and each value at 500 chars; we only ship keys
+  // when the value is non-empty so we don't waste the 50-key budget.
+  const metadata: Record<string, string> = {
+    source: "cloudless.gr",
+    campaign: campaign.slug,
+    tier: tier,
+  };
+  for (const [k, v] of Object.entries(utm)) {
+    if (v) metadata[k] = v;
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -95,11 +124,7 @@ export async function GET(request: NextRequest) {
     success_url: `${origin}/${locale}/campaigns/${campaign.slug}/thanks?tier=${encodeURIComponent(tier)}&order={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/${locale}/campaigns/${campaign.slug}`,
     billing_address_collection: "required",
-    metadata: {
-      source: "cloudless.gr",
-      campaign: campaign.slug,
-      tier: tier,
-    },
+    metadata,
   });
 
   return NextResponse.redirect(session.url!, { status: 303 });

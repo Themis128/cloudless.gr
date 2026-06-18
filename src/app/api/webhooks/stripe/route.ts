@@ -14,23 +14,54 @@ import {
   markStripeEventFailed,
 } from "@/lib/stripe-transactions";
 
+/**
+ * Pull UTM fields out of the Stripe Checkout Session's `metadata` (the
+ * checkout route stamps `utm_source / utm_medium / utm_campaign / utm_content
+ * / utm_term` there when present), and return a human-readable one-liner
+ * plus a `[k, v]` list. Empty if no UTM was carried through the click.
+ */
+function extractUtmFromSession(session: Stripe.Checkout.Session): {
+  summary: string;
+  entries: Array<[string, string]>;
+} {
+  const md = session.metadata ?? {};
+  const keys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
+  const entries: Array<[string, string]> = [];
+  for (const k of keys) {
+    const v = md[k];
+    if (typeof v === "string" && v.length > 0) entries.push([k, v]);
+  }
+  // Campaign slug + tier travel in the same metadata bag — surface those too
+  // so the email/Slack note shows "which paid offer was purchased."
+  if (typeof md.campaign === "string" && md.campaign) entries.push(["campaign_slug", md.campaign]);
+  if (typeof md.tier === "string" && md.tier) entries.push(["tier", md.tier]);
+  return {
+    summary: entries.map(([k, v]) => `${k}=${v}`).join(" | "),
+    entries,
+  };
+}
+
 async function syncHubSpotDeal(session: Stripe.Checkout.Session): Promise<void> {
   try {
     const amountEur = (session.amount_total ?? 0) / 100;
     const currency = (session.currency ?? "eur").toUpperCase();
+    const { summary: utmSummary } = extractUtmFromSession(session);
     const contactId = await upsertContact({
       email: session.customer_email ?? "",
       firstname: session.customer_details?.name?.split(" ")[0] ?? "",
       lastname: session.customer_details?.name?.split(" ").slice(1).join(" ") ?? "",
       lead_source: "stripe_checkout",
     });
+    const dealDescription = utmSummary
+      ? `Stripe checkout session ${session.id}\nAttribution: ${utmSummary}`
+      : `Stripe checkout session ${session.id}`;
     const dealId = await createDeal({
       dealname: `Purchase – ${session.id}`,
       amount: amountEur,
       currency,
       dealstage: "closedwon",
       lead_source: "stripe_checkout",
-      description: `Stripe checkout session ${session.id}`,
+      description: dealDescription,
     });
     if (dealId && contactId) {
       await associateDealWithContact(dealId, contactId);
@@ -55,18 +86,25 @@ async function handleCheckoutCompleted(
     );
   }
 
+  const { summary: utmSummary, entries: utmEntries } = extractUtmFromSession(session);
+  const utmHtml = utmSummary
+    ? `<p><strong>Attribution:</strong> ${escapeHtml(utmSummary)}</p>`
+    : "";
+
   await notifyTeam(
     `[Order] New purchase: ${session.id}`,
     `<h3>New order received</h3>
     <p><strong>Customer:</strong> ${escapeHtml(session.customer_email ?? "N/A")}</p>
     <p><strong>Amount:</strong> ${((session.amount_total ?? 0) / 100).toFixed(2)} ${escapeHtml((session.currency ?? "EUR").toUpperCase())}</p>
-    <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>`
+    <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>
+    ${utmHtml}`
   );
 
   slackOrderNotify({
     sessionId: session.id,
     email: session.customer_email ?? "N/A",
     amount: String((session.amount_total ?? 0) / 100),
+    attribution: utmSummary || undefined,
   }).catch(() => {});
 
   recordNotification({
@@ -82,6 +120,9 @@ async function handleCheckoutCompleted(
       currency: (session.currency ?? "eur").toUpperCase(),
       paymentStatus: session.payment_status,
       mode: session.mode,
+      // First-touch attribution so the admin dashboard can filter conversions
+      // by ad creative without having to round-trip back to Stripe.
+      ...Object.fromEntries(utmEntries),
     },
   });
 
