@@ -43,37 +43,136 @@ LANG_MAP = {
 # legitimately omit terminal punctuation, casing of "Cloudless" etc).
 SKIP_RULES_GLOBAL = {
     # Generic / formatting
-    "WHITESPACE_RULE",          # next-intl ICU placeholders break around args
-    "MORFOLOGIK_RULE_EN_US",    # we'll re-include this selectively below
+    "WHITESPACE_RULE",  # next-intl ICU placeholders break around args
+    "MORFOLOGIK_RULE_EN_US",  # we'll re-include this selectively below
 }
 
 # Per-language skip — brand names, technical terms etc that produce noise.
 SKIP_FOR_BRAND = {
-    "cloudless", "Cloudless", "Cloudless.gr", "AWS", "GCP", "Azure",
-    "GA4", "GDPR", "Stripe", "PayPal", "Viva", "WooCommerce", "Next.js",
-    "ELTA", "ACS", "Speedex", "Skroutz", "BestPrice", "Meta Pixel",
-    "Notion", "Lambda", "DynamoDB", "Insight Tag", "Hosted UI",
-    "Cognito", "Slack", "HubSpot", "Sentry", "OpenNext",
-    "Cloudflare", "Tailscale", "Athena", "AI", "MSP", "ETL", "SaaS",
-    "AWS Lambda", "S3", "EC2", "RDS", "Aurora",
-    "GraphQL", "REST", "API", "APIs", "URL", "URLs", "HTTPS", "TLS",
-    "TypeScript", "JavaScript", "Node.js", "React", "Vercel",
-    "Kubernetes", "Docker", "DevOps", "MLOps", "CI/CD",
+    "cloudless",
+    "Cloudless",
+    "Cloudless.gr",
+    "AWS",
+    "GCP",
+    "Azure",
+    "GA4",
+    "GDPR",
+    "Stripe",
+    "PayPal",
+    "Viva",
+    "WooCommerce",
+    "Next.js",
+    "ELTA",
+    "ACS",
+    "Speedex",
+    "Skroutz",
+    "BestPrice",
+    "Meta Pixel",
+    "Notion",
+    "Lambda",
+    "DynamoDB",
+    "Insight Tag",
+    "Hosted UI",
+    "Cognito",
+    "Slack",
+    "HubSpot",
+    "Sentry",
+    "OpenNext",
+    "Cloudflare",
+    "Tailscale",
+    "Athena",
+    "AI",
+    "MSP",
+    "ETL",
+    "SaaS",
+    "AWS Lambda",
+    "S3",
+    "EC2",
+    "RDS",
+    "Aurora",
+    "GraphQL",
+    "REST",
+    "API",
+    "APIs",
+    "URL",
+    "URLs",
+    "HTTPS",
+    "TLS",
+    "TypeScript",
+    "JavaScript",
+    "Node.js",
+    "React",
+    "Vercel",
+    "Kubernetes",
+    "Docker",
+    "DevOps",
+    "MLOps",
+    "CI/CD",
 }
 
 # English/technical loanwords commonly used in Greek/French/German UI copy
 # that LanguageTool flags as misspellings. These are intentional, so skip.
 LOANWORDS = {
-    "growth", "hacks", "spam", "cookies", "cookie", "dashboard",
-    "kickoff", "newsletter", "online", "email", "emails", "domain",
-    "hosting", "feed", "feeds", "logo", "blog", "blogs", "podcast",
-    "checkout", "marketing", "stack", "startup", "startups", "SaaS",
-    "premium", "Insights", "audit", "pipeline", "pipelines", "freemium",
-    "marketplace", "framework", "frameworks", "backup", "backups",
-    "router", "firewall", "POS", "CCTV", "B2B", "B2C", "KPIs",
-    "ETL", "MLOps", "DevOps", "frontend", "backend", "fullstack",
-    "cloud", "serverless", "tokens", "token", "session", "sessions",
-    "Pixel", "OS", "iOS", "Android", "Microsoft",
+    "growth",
+    "hacks",
+    "spam",
+    "cookies",
+    "cookie",
+    "dashboard",
+    "kickoff",
+    "newsletter",
+    "online",
+    "email",
+    "emails",
+    "domain",
+    "hosting",
+    "feed",
+    "feeds",
+    "logo",
+    "blog",
+    "blogs",
+    "podcast",
+    "checkout",
+    "marketing",
+    "stack",
+    "startup",
+    "startups",
+    "SaaS",
+    "premium",
+    "Insights",
+    "audit",
+    "pipeline",
+    "pipelines",
+    "freemium",
+    "marketplace",
+    "framework",
+    "frameworks",
+    "backup",
+    "backups",
+    "router",
+    "firewall",
+    "POS",
+    "CCTV",
+    "B2B",
+    "B2C",
+    "KPIs",
+    "ETL",
+    "MLOps",
+    "DevOps",
+    "frontend",
+    "backend",
+    "fullstack",
+    "cloud",
+    "serverless",
+    "tokens",
+    "token",
+    "session",
+    "sessions",
+    "Pixel",
+    "OS",
+    "iOS",
+    "Android",
+    "Microsoft",
 }
 
 # Interpolation tokens used by next-intl / ICU.
@@ -120,7 +219,11 @@ class Finding:
         # Morphological/spelling rule misfires: in non-English locales, ASCII
         # tokens flagged by MORFOLOGIK_RULE_* are almost always English
         # loanwords the team wrote on purpose (growth, hacks, dashboard…).
-        if self.locale != "en" and self.rule_id.startswith("MORFOLOGIK_RULE_") and ASCII_RE.match(m):
+        if (
+            self.locale != "en"
+            and self.rule_id.startswith("MORFOLOGIK_RULE_")
+            and ASCII_RE.match(m)
+        ):
             return True
         # "ETL pipelines", "Big Data", "AI marketing" etc — short ALL CAPS
         # acronyms are virtually never spelling errors.
@@ -149,7 +252,9 @@ class Finding:
         return True
 
 
-def lint_locale(locale: str, data, tools: dict[str, language_tool_python.LanguageTool]) -> list[Finding]:
+def lint_locale(
+    locale: str, data, tools: dict[str, language_tool_python.LanguageTool]
+) -> list[Finding]:
     lt = tools[locale]
     findings: list[Finding] = []
     for key, text in iter_leaf_strings(data):
@@ -209,10 +314,15 @@ def update_value(data, key_path: str, new_value: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--fix", action="store_true", help="Apply unambiguous fixes in place.")
-    ap.add_argument("--json", action="store_true", help="Print JSON instead of human-readable text.")
+    ap.add_argument(
+        "--json", action="store_true", help="Print JSON instead of human-readable text."
+    )
     args = ap.parse_args()
 
-    print("=== bootstrapping LanguageTool engines (first run downloads ~250 MB jar) ===", file=sys.stderr)
+    print(
+        "=== bootstrapping LanguageTool engines (first run downloads ~250 MB jar) ===",
+        file=sys.stderr,
+    )
     tools = {locale: language_tool_python.LanguageTool(code) for locale, code in LANG_MAP.items()}
 
     all_findings: list[Finding] = []
@@ -257,32 +367,38 @@ def main() -> int:
                     needs_review.append(f)
 
     if args.json:
-        print(json.dumps(
-            {
-                "total": len(all_findings),
-                "applied": applied,
-                "needs_review": [
-                    {
-                        "locale": f.locale,
-                        "key": f.key,
-                        "text": f.text,
-                        "rule_id": f.rule_id,
-                        "message": f.message,
-                        "match": f.context_match,
-                        "replacements": f.replacements,
-                    }
-                    for f in needs_review
-                ],
-            },
-            ensure_ascii=False,
-            indent=2,
-        ))
+        print(
+            json.dumps(
+                {
+                    "total": len(all_findings),
+                    "applied": applied,
+                    "needs_review": [
+                        {
+                            "locale": f.locale,
+                            "key": f.key,
+                            "text": f.text,
+                            "rule_id": f.rule_id,
+                            "message": f.message,
+                            "match": f.context_match,
+                            "replacements": f.replacements,
+                        }
+                        for f in needs_review
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
     else:
         if args.fix:
-            print(f"\n=== applied {applied} unambiguous fixes; {len(needs_review)} need human review ===")
+            print(
+                f"\n=== applied {applied} unambiguous fixes; {len(needs_review)} need human review ==="
+            )
         else:
             safe = sum(1 for f in all_findings if f.safe_to_apply)
-            print(f"\n=== {len(all_findings)} findings total; {safe} are auto-fixable, {len(needs_review)} need human review ===")
+            print(
+                f"\n=== {len(all_findings)} findings total; {safe} are auto-fixable, {len(needs_review)} need human review ==="
+            )
         print()
         for f in needs_review[:60]:
             print(f"[{f.locale}] {f.key}")

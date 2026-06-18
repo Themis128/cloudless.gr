@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Quick sanity check: does the live cloudless.gr serve a JS chunk that
 carries the LinkedIn partner ID 9535068? Run after a deploy."""
+
 from __future__ import annotations
 
 import re
