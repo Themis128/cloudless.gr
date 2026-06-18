@@ -176,19 +176,16 @@ function buildCSP(nonce: string): string {
     : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`;
   const connectSrc = isDev
     ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com"
-    : "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com";
+    : "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com";
 
   return [
     "default-src 'self'",
     scriptSrc,
-    // fonts.googleapis.com is allowlisted because next/font/google emits a
-    // @font-face stylesheet whose src URLs hit Google's CDN even though the
-    // font binaries themselves are self-hosted under /_next/static/media.
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
+    // next/font/google self-hosts all font files at build time under
+    // /_next/static/media — no external font requests are made at runtime.
+    "style-src 'self' 'unsafe-inline' https://p.typekit.net",
     "img-src 'self' data: blob: https:",
-    // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
-    // to it for the woff2 files when the build cannot inline them.
-    "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
+    "font-src 'self' data: https://use.typekit.net",
     connectSrc,
     "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
     "worker-src 'self' blob:",

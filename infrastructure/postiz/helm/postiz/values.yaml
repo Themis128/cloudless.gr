@@ -62,6 +62,15 @@ postiz:
   # cluster boots before this exists.
   providersSecretName: "postiz-providers"
 
+  # AI Copilot chat — requires an OpenAI-compatible API key.
+  # To use Claude via OpenRouter, set:
+  #   openaiSecretName: "postiz-openai"  (k8s secret with OPENAI_API_KEY)
+  #   openaiBaseUrl: "https://openrouter.ai/api/v1"
+  # The OpenRouter key routes gpt-4.1 requests to Claude automatically.
+  # Leave openaiSecretName empty to disable copilot chat (no errors, just no-op).
+  openaiSecretName: ""
+  openaiBaseUrl: ""
+
 postgres:
   user: "postiz"
   database: "postiz"

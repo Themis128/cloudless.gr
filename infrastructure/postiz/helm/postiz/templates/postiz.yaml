@@ -75,6 +75,17 @@ spec:
             - name: RESTRICT_UPLOAD_DOMAINS
               value: {{ . | quote }}
             {{- end }}
+            {{- if .Values.postiz.openaiSecretName }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postiz.openaiSecretName }}
+                  key: OPENAI_API_KEY
+            {{- with .Values.postiz.openaiBaseUrl }}
+            - name: OPENAI_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
           volumeMounts:
             - name: uploads
               mountPath: /uploads

@@ -12,6 +12,11 @@ postiz:
   frontendUrl: "https://postiz.cloudless.gr"
   backendUrl: "https://postiz.cloudless.gr/api"
   disableRegistration: "true"
+  # Route AI copilot chat through OpenRouter → Claude.
+  # Create the secret: kubectl create secret generic postiz-openai \
+  #   --from-literal=OPENAI_API_KEY=sk-or-... -n postiz
+  openaiSecretName: "postiz-openai"
+  openaiBaseUrl: "https://openrouter.ai/api/v1"
 
 service:
   type: NodePort
