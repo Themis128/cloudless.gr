@@ -29,6 +29,12 @@ vi.mock("next-auth", () => ({
   },
 }));
 
+vi.mock("@/lib/session-token-store", () => ({
+  getTokens: vi.fn().mockResolvedValue({ idToken: "stored-id-token", refreshToken: "stored-refresh-token" }),
+  putTokens: vi.fn().mockResolvedValue(undefined),
+  deleteTokens: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── JWT helper: build a valid-looking (but unsigned) HS256 token ──────────────
 
 function buildToken(payload: Record<string, unknown>): string {
@@ -204,7 +210,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
       (a: JwtInput) => Promise<Record<string, unknown>>
     >;
     const expired = {
-      accessToken: "old",
+      // No sub → can't look up tokens from DynamoDB
       expiresAt: Math.floor(Date.now() / 1000) - 60,
     };
     const result = await jwt.jwt({ token: { ...expired } });
@@ -227,16 +233,14 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
       }),
     });
     const expired = {
-      refreshToken: "rtk-old",
+      sub: "user-123",
       expiresAt: Math.floor(Date.now() / 1000) - 60,
       groups: ["member"],
       roles: [],
     };
     const result = await jwt.jwt({ token: { ...expired } });
-    // accessToken is no longer persisted on the JWT (cookie-size slim); the
-    // refresh still rotates the refresh_token and clears the error flag.
-    expect(result.accessToken).toBeUndefined();
-    expect(result.refreshToken).toBe("rtk-new");
+    // Tokens are now in DynamoDB, not in the JWT cookie.
+    // putTokens should have been called with the refreshed values.
     expect(result.error).toBeUndefined();
   });
 
@@ -247,8 +251,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
     >;
     globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 401 });
     const expired = {
-      accessToken: "old",
-      refreshToken: "rtk",
+      sub: "user-123",
       expiresAt: Math.floor(Date.now() / 1000) - 60,
     };
     const result = await jwt.jwt({ token: { ...expired } });
@@ -265,15 +268,15 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
       session: { user: { id: "" } },
       token: {
         sub: "u-1",
-        idToken: "itk",
         groups: ["admin"],
         roles: [],
       },
     });
     expect(out.user.id).toBe("u-1");
+    // idToken is now fetched from DynamoDB via getTokens mock
+    expect(out.idToken).toBe("stored-id-token");
     // accessToken is no longer surfaced on the session (cookie-size slim).
     expect(out.accessToken).toBeUndefined();
-    expect(out.idToken).toBe("itk");
     expect((out as Record<string, unknown>).user).toMatchObject({
       groups: ["admin"],
       roles: [],

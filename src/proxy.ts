@@ -394,6 +394,18 @@ export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const { pathname } = request.nextUrl;
 
+  // Canonical host: cloudless.gr (apex). 308-redirect www.cloudless.gr → apex
+  // so the LinkedIn Insight Tag, GA4, and search-engine canonical signal are
+  // all consolidated on one host. Done before HTTPS upgrade so we don't
+  // double-redirect on plain-HTTP www traffic.
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+  if (process.env.NODE_ENV === "production" && host.toLowerCase().startsWith("www.cloudless.gr")) {
+    const apexUrl = request.nextUrl.clone();
+    apexUrl.host = "cloudless.gr";
+    apexUrl.protocol = "https:";
+    return NextResponse.redirect(apexUrl, 308);
+  }
+
   // Enforce HTTPS in production so all traffic stays encrypted in transit.
   // Exclude /api/* routes: k8s health probes hit the pod directly over HTTP
   // (Next.js sets x-forwarded-proto:http on plain HTTP connections), and

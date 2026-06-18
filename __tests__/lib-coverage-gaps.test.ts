@@ -316,6 +316,12 @@ vi.mock("next-auth", () => ({
   })),
 }));
 
+vi.mock("@/lib/session-token-store", () => ({
+  getTokens: vi.fn().mockResolvedValue(null),
+  putTokens: vi.fn().mockResolvedValue(undefined),
+  deleteTokens: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe("auth.ts", () => {
   beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 

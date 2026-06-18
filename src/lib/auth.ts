@@ -1,10 +1,12 @@
 /**
  * next-auth v5 configuration — Cognito OIDC provider.
  *
- * Token storage: next-auth stores the session in a signed+encrypted JWT
- * cookie. The provider access_token + id_token + refresh_token are kept on
- * the JWT so proxy.ts can validate the id_token directly and the server can
- * refresh transparently when the access_token expires.
+ * Token storage: The session cookie carries only the user sub, groups, and
+ * expiry metadata. The actual id_token and refresh_token are persisted in
+ * DynamoDB (SessionTokenStore table) to keep the cookie well under the 4KB
+ * limit and avoid 413s on CloudFront/Lambda edge. Tokens are fetched from
+ * DynamoDB only when a refresh is needed or when the session callback
+ * populates session.idToken for downstream use (fetch-with-auth).
  *
  * Refresh-token rotation follows the Auth.js documented pattern:
  *   https://authjs.dev/guides/refresh-token-rotation
@@ -12,6 +14,7 @@
 
 import NextAuth, { type DefaultSession } from "next-auth";
 import Cognito from "next-auth/providers/cognito";
+import { getTokens, putTokens, deleteTokens } from "@/lib/session-token-store";
 
 const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
 type RefreshTokenError = typeof REFRESH_TOKEN_ERROR;
@@ -30,8 +33,8 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    idToken?: string;
-    refreshToken?: string;
+    /** Whether tokens have been persisted to DynamoDB for this session */
+    tokensPersisted?: boolean;
     expiresAt?: number;
     groups?: string[];
     roles?: string[];
@@ -168,14 +171,16 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
     callbacks: {
       async jwt({ token, account, profile }) {
         if (account) {
-          // accessToken is intentionally NOT persisted on the JWT. Nothing reads
-          // session.accessToken, and dropping it shrinks the encrypted session
-          // cookie — which chunks past the 4KB limit and can push the combined
-          // Cookie header over the CloudFront/Lambda edge limit (→ 413 on
-          // authenticated requests). idToken (used by fetch-with-auth) and
-          // refreshToken (used to refresh) are still needed, so they stay.
-          token.idToken = account.id_token;
-          token.refreshToken = account.refresh_token;
+          // On initial sign-in, persist tokens to DynamoDB instead of the JWT
+          // cookie. This keeps the cookie thin and avoids the 4KB/413 issue.
+          const userId = token.sub ?? "";
+          if (userId && account.id_token && account.refresh_token) {
+            await putTokens(userId, {
+              idToken: account.id_token as string,
+              refreshToken: account.refresh_token as string,
+            });
+            token.tokensPersisted = true;
+          }
           token.expiresAt =
             typeof account.expires_at === "number"
               ? account.expires_at
@@ -197,17 +202,33 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
           return token;
         }
 
-        if (!token.refreshToken) {
+        // Token expired — refresh using tokens from DynamoDB
+        const userId = token.sub ?? "";
+        if (!userId) {
+          token.error = REFRESH_TOKEN_ERROR;
+          return token;
+        }
+
+        let stored;
+        try {
+          stored = await getTokens(userId);
+        } catch {
+          token.error = REFRESH_TOKEN_ERROR;
+          return token;
+        }
+
+        if (!stored?.refreshToken) {
           token.error = REFRESH_TOKEN_ERROR;
           return token;
         }
 
         try {
-          const refreshed = await refreshAccessToken(token.refreshToken, env);
-          // accessToken not stored (see jwt account branch above); we still decode
-          // the fresh access_token below to refresh the groups claim.
-          if (refreshed.refresh_token) token.refreshToken = refreshed.refresh_token;
-          if (refreshed.id_token) token.idToken = refreshed.id_token;
+          const refreshed = await refreshAccessToken(stored.refreshToken, env);
+          // Persist updated tokens back to DynamoDB
+          await putTokens(userId, {
+            idToken: refreshed.id_token ?? stored.idToken,
+            refreshToken: refreshed.refresh_token ?? stored.refreshToken,
+          });
           token.expiresAt = now + refreshed.expires_in;
           const payload = decodeJwtPayload(refreshed.access_token);
           token.groups = (payload[GROUPS_CLAIM] as string[] | undefined) ?? token.groups ?? [];
@@ -219,8 +240,17 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
         }
       },
       async session({ session, token }) {
-        session.idToken = token.idToken;
-        session.user.id = token.sub ?? "";
+        // Fetch idToken from DynamoDB for downstream use (fetch-with-auth)
+        const userId = token.sub ?? "";
+        if (userId) {
+          try {
+            const stored = await getTokens(userId);
+            session.idToken = stored?.idToken;
+          } catch {
+            // Non-fatal — session still works, just no idToken for API calls
+          }
+        }
+        session.user.id = userId;
         session.user.groups = token.groups ?? [];
         session.user.roles = token.roles ?? [];
         if (token.error) session.error = token.error;
@@ -229,9 +259,17 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
     },
     events: {
       async signOut(message) {
+        // Clean up stored tokens from DynamoDB
+        const idToken = "token" in message ? message.token?.sub : undefined;
+        if (idToken) {
+          try {
+            await deleteTokens(idToken);
+          } catch {
+            // Best-effort cleanup
+          }
+        }
+
         if (!cognitoDomain) return;
-        const idToken = "token" in message ? message.token?.idToken : undefined;
-        void idToken; // Cognito logout uses client_id + logout_uri, not id_token_hint
         try {
           const url = new URL(`${cognitoDomain}/logout`);
           url.searchParams.set("client_id", clientId);

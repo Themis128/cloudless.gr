@@ -17,6 +17,7 @@ function buildSiteEnvironment(
   userProfileTableName: $util.Output<string>,
   adminNotificationsTableName: $util.Output<string>,
   analyticsCacheTableName: $util.Output<string>,
+  sessionTokenStoreTableName: $util.Output<string>,
   authSecret?: $util.Output<string>,
   cognito?: {
     issuer: $util.Output<string>;
@@ -45,6 +46,7 @@ function buildSiteEnvironment(
     USER_PROFILE_TABLE: userProfileTableName,
     ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
     ANALYTICS_CACHE_TABLE: analyticsCacheTableName,
+    SESSION_TOKEN_STORE_TABLE: sessionTokenStoreTableName,
     // Cloudflare Workers AI — consumed by /api/admin/ai/generate. Passed from
     // the deploy workflow env; the route returns 503 when absent.
     ...(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
@@ -196,6 +198,15 @@ export default {
       primaryIndex: { hashKey: "pk", rangeKey: "sk" },
     });
 
+    // Session token store — keeps idToken + refreshToken out of the JWT cookie
+    // to avoid hitting the 4KB cookie / CloudFront header size limit (Issue #933).
+    // Keyed by userId (OIDC sub). TTL via `expiresAt` attribute (DynamoDB TTL).
+    const sessionTokenStoreTable = new sst.aws.Dynamo("SessionTokenStore", {
+      fields: { userId: "string" },
+      primaryIndex: { hashKey: "userId" },
+      ttl: "expiresAt",
+    });
+
     // -------------------------------------------------------------------------
     // Cognito User Pool — always-up AWS auth
     //
@@ -303,6 +314,7 @@ export default {
         userProfileTable.name,
         adminNotificationsTable.name,
         analyticsCacheTable.name,
+        sessionTokenStoreTable.name,
         authSecret,
         {
           issuer: cognitoIssuer,
@@ -311,7 +323,7 @@ export default {
           domain: cognitoHostedDomain,
         }
       ),
-      link: [stripeTransactionsTable, userProfileTable, adminNotificationsTable, analyticsCacheTable],
+      link: [stripeTransactionsTable, userProfileTable, adminNotificationsTable, analyticsCacheTable, sessionTokenStoreTable],
       permissions: [
         {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
