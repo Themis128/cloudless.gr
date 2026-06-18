@@ -135,6 +135,18 @@ function WaitingRoomContent() {
   //  - two-tab races each see their own entry
   const enrollAttemptedFor = useRef<Set<string>>(new Set());
 
+  // Read locale from NEXT_LOCALE cookie for consistent date formatting and
+  // login redirect. The waiting room sits outside [locale]/ so we can't
+  // use next-intl's useLocale() — read the cookie the same way the
+  // middleware does. Fall back to "en-IE" for backward compat (the only
+  // locale the old code supported).
+  const cookieLocale =
+    typeof document !== "undefined"
+      ? document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)?.[1]
+      : undefined;
+  const allowedLocales = new Set(["en", "el", "fr", "de"]);
+  const displayLocale = cookieLocale && allowedLocales.has(cookieLocale) ? cookieLocale : "en-IE";
+
   const rawPlan = searchParams.get("plan");
   const planParam = isValidPlan(rawPlan) ? rawPlan : null;
 
@@ -358,7 +370,7 @@ function WaitingRoomContent() {
                   `$ portal order --status`,
                   `  ✓ account: ${status.email}`,
                   `  ✓ plan: ${status.planLabel ?? PLAN_LABELS[status.plan ?? ""] ?? status.plan}`,
-                  `  ✓ submitted: ${status.submittedAt ? new Date(status.submittedAt).toLocaleString("en-IE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "just now"}`,
+                  `  ✓ submitted: ${status.submittedAt ? new Date(status.submittedAt).toLocaleString(displayLocale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "just now"}`,
                   `  ---`,
                   `  status: pending review`,
                   `  estimated wait: usually < 24h`,
