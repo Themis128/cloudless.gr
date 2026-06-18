@@ -53,16 +53,56 @@ export async function GET(request: NextRequest) {
   }
 
   const locale = pickLocale(request);
+  const origin = request.nextUrl.origin;
 
-  // STUB BRANCH — replace with stripe.checkout.sessions.create when Stripe is
-  // wired. Keep the success_url shape identical: tier + order params drive
-  // the LinkedIn conversion fired by ThanksConversion.tsx.
-  const order = `stub-${Date.now()}`;
-  const url = new URL(
-    `/${locale}/campaigns/${campaign.slug}/thanks?tier=${encodeURIComponent(tier)}&order=${encodeURIComponent(order)}`,
-    request.nextUrl.origin
-  );
-  return NextResponse.redirect(url, { status: 302 });
+  // fit-call is the lead-form path — redirect to contact, not checkout.
+  if (tier === "fit-call") {
+    return NextResponse.redirect(
+      new URL(`/${locale}/campaigns/${campaign.slug}/thanks?tier=fit-call`, origin),
+      302
+    );
+  }
+
+  const tierData = campaign.tiers.find((t) => t.id === tier)!;
+
+  // Parse price from "€890" / "€1.800" / "€2.900" → cents
+  const priceMatch = tierData.oneOff?.replace(/[^0-9]/g, "");
+  if (!priceMatch) {
+    return NextResponse.json({ error: "Tier has no one-off price" }, { status: 400 });
+  }
+  const amountCents = parseInt(priceMatch, 10) * 100;
+
+  const stripe = await getStripe();
+  if (!stripe) {
+    return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          unit_amount: amountCents,
+          product_data: {
+            name: tierData.name.en,
+            description: `${campaign.headline.en} — ${tierData.name.en}`,
+          },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${origin}/${locale}/campaigns/${campaign.slug}/thanks?tier=${encodeURIComponent(tier)}&order={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/${locale}/campaigns/${campaign.slug}`,
+    billing_address_collection: "required",
+    metadata: {
+      source: "cloudless.gr",
+      campaign: campaign.slug,
+      tier: tier,
+    },
+  });
+
+  return NextResponse.redirect(session.url!, { status: 303 });
 }
 
 function getIdempotencyKey(request: NextRequest): string | undefined {
