@@ -201,6 +201,26 @@ lives in `tools/ssh-mcp/src/sftp.ts`; topology is the single source of
 truth in `TOPOLOGY`. Unit tests in `tools/ssh-mcp/src/__tests__/sftp.test.ts`
 cover the path-safety policy. Read the skill before reaching for SSH.
 
+## LinkedIn campaigns (linkedin-campaigns skill)
+
+Paid-acquisition landing pages live under `/<locale>/campaigns/<slug>/` via a
+single dynamic route. The operating playbook — add a new campaign, wire its
+Stripe checkout, dual-fire the LinkedIn conversion (Insight Tag + Conversions
+API) — is in `skills/linkedin-campaigns/SKILL.md`; the architecture
+reference is in `docs/linkedin-campaigns.md`. Read the skill before touching:
+
+- `src/components/LinkedInInsightTag.tsx` (consent-gated loader)
+- `src/lib/linkedin-track.ts` (`trackLinkedInConversion` helper)
+- `src/data/campaigns.ts` (campaign metadata, conversion IDs)
+- `src/app/[locale]/campaigns/**` (index + `[slug]` landing + thanks pages)
+- `src/app/api/checkout/route.ts` (GET branch — campaign → Stripe adapter)
+- `src/app/api/campaigns/conversion/route.ts` (CAPI server-side mirror)
+
+Env: `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` (client, build-time) and
+`LINKEDIN_CAPI_ACCESS_TOKEN` (server-only, SSM-preferred). When either is
+unset the corresponding fire becomes a no-op — the route stays wired so the
+rest of the flow still works.
+
 ## Authentication
 
 Auth is **Cognito**, full-stop (PR #677, 2026-06-08). There is no Keycloak, no
