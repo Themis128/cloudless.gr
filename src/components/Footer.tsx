@@ -183,33 +183,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Training / non-commercial notice — always visible */}
-        <div className="border-neon-cyan/10 mt-6 border-t pt-6">
-          {/*
-            A11y: Footer uses bg var(--surface-subtle) which is LIGHT in
-            light mode (#f4f6f9) and DARK in dark mode (#121823). Use the
-            semantic --ink-body token (same one set on <footer>) so the
-            notice always inherits the canonical body foreground that
-            already passes contrast on both surfaces.
-              light mode: ink-body = #475467 on #f4f6f9 = 6.7:1 (AA)
-              dark  mode: ink-body = #9aa7b8 on #121823 = 7.4:1 (AAA)
-            The ⚠ glyph carries the semantic warning; the tint is
-            decorative not informational, so dropping amber here is fine.
-          */}
-          <p
-            className="text-center font-mono text-[10px] leading-relaxed"
-            style={{ color: "var(--ink-body)" }}
-          >
-            ⚠{" "}
-            {translate(
-              locale,
-              "footer.trainingNotice",
-              "This website is a training and portfolio project built for educational purposes only. It is not a commercial service and does not accept clients."
-            )}
-          </p>
-        </div>
-
-        <div className="border-neon-cyan/10 mt-4 flex flex-col items-center justify-between gap-4 border-t pt-5 font-mono text-xs sm:flex-row">
+        <div className="border-neon-cyan/10 mt-6 flex flex-col items-center justify-between gap-4 border-t pt-5 font-mono text-xs sm:flex-row">
           <p className="text-slate-400">
             &copy; {year ?? ""} Cloudless.{" "}
             {translate(locale, "footer.rightsReserved", "All rights reserved.")}
