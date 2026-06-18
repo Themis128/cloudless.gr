@@ -333,6 +333,83 @@ No lock-in contracts. Month-to-month if you want ongoing support.
 [Book a free architecture review](/contact) — we'll tell you exactly what to migrate, what to leave alone, and what it'll cost. No commitment, no pitch deck, just honest technical advice.
     `.trim(),
   },
+  {
+    slug: "aws-vs-gcp-vs-azure-startup",
+    title: "AWS vs GCP vs Azure: How to Choose the Right Cloud for Your Startup",
+    excerpt:
+      "You don't need multi-cloud. You need one cloud, done well. Here's how to pick between AWS, GCP, and Azure based on your actual needs — not marketing hype.",
+    date: "2026-07-01",
+    readTime: "9 min read",
+    category: "Cloud",
+    content: `
+Every startup hits this decision: AWS, GCP, or Azure?
+
+The internet is full of comparison tables. Most are useless because they compare 200+ services nobody uses. Here's what actually matters when you're a 2–20 person team.
+
+## The honest answer for 80% of startups: AWS
+
+Not because it's the best at everything. Because:
+
+1. **Largest talent pool.** When you hire, more engineers know AWS than GCP or Azure.
+2. **Most documentation and Stack Overflow answers.** When something breaks at 2am, you'll find the fix faster.
+3. **Startup credits are generous.** AWS Activate gives up to $100K in credits.
+4. **Serverless ecosystem is the most mature.** Lambda, DynamoDB, Step Functions, EventBridge — the serverless stack is production-tested at massive scale.
+
+## When to choose GCP instead
+
+Pick GCP if:
+
+- **You're a data/ML company.** BigQuery is genuinely better than Redshift for most analytics workloads. Vertex AI has the tightest ML pipeline integration.
+- **Your team is already on Google Workspace.** Identity management is simpler when everything is Google.
+- **You need global real-time infrastructure.** Spanner and Cloud Run's multi-region setup is elegant.
+- **You want simpler pricing.** GCP's pricing model has fewer gotchas than AWS (looking at you, NAT Gateway).
+
+## When to choose Azure
+
+Pick Azure if:
+
+- **You're a Microsoft shop.** .NET, Active Directory, Teams, Office 365 — the integration is seamless.
+- **Enterprise sales are your go-to-market.** Large enterprises already trust Azure. Being on the same cloud removes procurement friction.
+- **You need hybrid cloud.** Azure Arc and Azure Stack are years ahead of AWS Outposts for hybrid deployments.
+
+## What about multi-cloud?
+
+Don't.
+
+Not at your size. Multi-cloud means:
+- 2x the IAM complexity
+- 2x the monitoring setup
+- 2x the hiring requirements
+- 2x the vendor management
+
+Multi-cloud makes sense at $10M+ cloud spend when vendor lock-in is a real negotiation lever. For startups, it's premature optimization that slows you down.
+
+## The decision framework
+
+Answer these 4 questions:
+
+| Question | AWS | GCP | Azure |
+|----------|-----|-----|-------|
+| What does my team already know? | Most common | Data teams | .NET teams |
+| What's my primary workload? | Web apps, serverless, microservices | Data/ML, analytics | Enterprise SaaS, hybrid |
+| Where are my customers? | Global | Global | Enterprise procurement |
+| What credits can I get? | $100K (Activate) | $100K (for Startups) | $150K (Founders Hub) |
+
+If two or more answers point the same direction, that's your cloud.
+
+## The biggest mistake
+
+Choosing based on a comparison table instead of building a proof-of-concept.
+
+Spend one week building your core service on your top choice. You'll learn more from 40 hours of hands-on than from reading 40 blog posts.
+
+## Our recommendation for Greek/EU startups
+
+**AWS for most.** The EU regions (eu-south-1 Milan, eu-central-1 Frankfurt, eu-west-1 Ireland) have full service availability. GDPR compliance tools are mature. And when you need local support, AWS has partners across Greece.
+
+If you're unsure, [book a free 30-minute call](/contact) — we'll review your stack and tell you which cloud fits. No pitch, just an honest recommendation.
+    `.trim(),
+  },
 ];
 
 export function getPostBySlug(slug: string): BlogPost | undefined {
