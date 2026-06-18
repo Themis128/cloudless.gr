@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import TrainingBanner from "@/components/TrainingBanner";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import NextAuthProvider from "@/components/NextAuthProvider";
@@ -94,7 +93,6 @@ export default async function LocaleLayout({ children, params }: Props) {
               {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
               <AttributionCapture />
               <JsonLd data={getOrganizationSchema()} />
-              <TrainingBanner locale={locale} />
               <Navbar />
               <main id="main-content" className="flex-1">
                 {children}

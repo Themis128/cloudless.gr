@@ -100,7 +100,11 @@ export const campaigns: Campaign[] = [
     ogImage: "/campaigns/shop-online-ad-a.png",
     slotsRemaining: 5,
     utmCampaign: "shop_online_founding",
-    linkedinConversionId: null,
+    // LinkedIn Campaign Manager → Conversion Tracking → "Shop Online — Tier
+    // purchased". Last-touch, 30d post-click + 7d post-view, value €890,
+    // page-load match on URL containing /campaigns/shop-online/thanks.
+    // The browser-side fire (lintrk + CAPI mirror) happens in ThanksConversion.tsx.
+    linkedinConversionId: 26846068,
     tiers: [
       {
         id: "starter",

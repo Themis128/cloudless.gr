@@ -25,11 +25,7 @@ describe("data/campaigns", () => {
 
   it("shop-online ships three tiers with the documented IDs", () => {
     const c = getCampaign("shop-online")!;
-    expect(c.tiers.map((t) => t.id)).toEqual([
-      "starter",
-      "eshop-launch",
-      "full-bundle",
-    ]);
+    expect(c.tiers.map((t) => t.id)).toEqual(["starter", "eshop-launch", "full-bundle"]);
   });
 
   it("marks exactly one tier as featured (and it's the flagship)", () => {
@@ -54,16 +50,17 @@ describe("data/campaigns", () => {
   it("points each tier's checkoutHref at /api/checkout with campaign+tier params", () => {
     const c = getCampaign("shop-online")!;
     for (const t of c.tiers) {
-      expect(t.checkoutHref).toBe(
-        `/api/checkout?campaign=${c.slug}&tier=${t.id}`,
-      );
+      expect(t.checkoutHref).toBe(`/api/checkout?campaign=${c.slug}&tier=${t.id}`);
     }
   });
 
-  it("leaves linkedinConversionId null until set in Campaign Manager", () => {
-    // Guards against accidentally hard-coding a real conversion ID into source.
-    // When wiring a campaign live, set it to a number and update this test.
-    expect(getCampaign("shop-online")?.linkedinConversionId).toBeNull();
+  it("is wired to the live LinkedIn conversion ID for shop-online", () => {
+    // Pinned to the conversion event "Shop Online — Tier purchased" created in
+    // Campaign Manager (account 512642510). Pinning the number in a test means
+    // a stray edit to the data file can't silently break attribution — the
+    // test fails loudly. If the conversion is recreated, update this number
+    // and bump the campaign's tracking version alongside the change.
+    expect(getCampaign("shop-online")?.linkedinConversionId).toBe(26846068);
   });
 
   it("CAMPAIGN_LOCALES is el+en for now", () => {
