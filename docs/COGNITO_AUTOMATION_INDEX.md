@@ -23,17 +23,17 @@ This is your entry point for the complete Cognito setup automation system.
 
 | File | Purpose | How to Use |
 |------|---------|-----------|
-| [scripts/cognito-setup.sh](./scripts/cognito-setup.sh) | Main automation script | `bash scripts/cognito-setup.sh` |
-| [tools/cognito-setup-mcp/src/index.ts](./tools/cognito-setup-mcp/src/index.ts) | MCP server for programmatic access | `npx tsx tools/cognito-setup-mcp/src/index.ts` |
-| [tools/cognito-setup-mcp/README.md](./tools/cognito-setup-mcp/README.md) | MCP API documentation | Reference when using MCP tools |
-| [.claude/skills/cognito-setup/](.//.claude/skills/cognito-setup/) | Claude Code skill | `/cognito-setup` in Claude Code |
-| [.github/workflows/cognito-setup.yml](./.github/workflows/cognito-setup.yml) | GitHub Actions automation | `gh workflow run cognito-setup.yml` |
+| [scripts/cognito-setup.sh](../scripts/cognito-setup.sh) | Main automation script | `bash scripts/cognito-setup.sh` |
+| [tools/cognito-setup-mcp/src/index.ts](../tools/cognito-setup-mcp/src/index.ts) | MCP server for programmatic access | `npx tsx tools/cognito-setup-mcp/src/index.ts` |
+| [tools/cognito-setup-mcp/README.md](../tools/cognito-setup-mcp/README.md) | MCP API documentation | Reference when using MCP tools |
+| [.claude/skills/cognito-setup/](../.claude/skills/cognito-setup/) | Claude Code skill | `/cognito-setup` in Claude Code |
+| [.github/workflows/cognito-setup.yml](../.github/workflows/cognito-setup.yml) | GitHub Actions automation | `gh workflow run cognito-setup.yml` |
 
 ### ⚙️ Configuration
 
 | File | Purpose | Modified |
 |------|---------|----------|
-| [package.json](./package.json) | pnpm script aliases | ✅ Added 3 commands |
+| [package.json](../package.json) | pnpm script aliases | ✅ Added 3 commands |
 
 ## 🚀 Quick Commands
 
