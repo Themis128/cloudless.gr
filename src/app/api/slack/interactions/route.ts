@@ -77,7 +77,7 @@ interface SlackInteractionPayload {
 
 export async function POST(request: Request): Promise<Response> {
   const verified = await verifySlackRequest(request);
-  if (!verified.ok) return unauthorizedSlack(verified.reason);
+  if (!verified.ok) return unauthorizedSlack(verified.reason, request);
 
   const rateLimitKey = request.headers.get("x-forwarded-for") ?? "unknown";
   if (!checkSlackRateLimit(rateLimitKey)) {
