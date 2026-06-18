@@ -175,8 +175,8 @@ function buildCSP(nonce: string): string {
     ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`
     : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`;
   const connectSrc = isDev
-    ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com"
-    : "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com";
+    ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com"
+    : "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com";
 
   return [
     "default-src 'self'",
