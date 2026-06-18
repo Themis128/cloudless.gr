@@ -8,9 +8,12 @@ import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { isValidPlan } from "@/lib/plans";
+import { setPlanCookieClient } from "@/lib/plan-cookie";
 
 const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
 const USE_COGNITO = AUTH_PROVIDER === "cognito";
+
+const COGNITO_TIMEOUT_MS = 15_000;
 
 function SignUpForm() {
   const [locale] = useCurrentLocale();
@@ -48,6 +51,8 @@ function SignUpForm() {
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+
+  // Email-OTP flow state (used by the /api/auth/register path).
   const [code, setCode] = useState("");
   const [confirming, setConfirming] = useState(false);
   // token is returned by /api/auth/register and needed to verify the OTP
@@ -56,10 +61,38 @@ function SignUpForm() {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const autoResendFiredRef = useRef(false);
 
+  // Cognito Hosted UI submit timeout: if the redirect doesn't happen within
+  // 15 seconds, show a fallback button so the user can retry or open the
+  // Hosted UI manually instead of staring at a spinner (audit #12).
+  const [cognitoTimeout, setCognitoTimeout] = useState(false);
+  const cognitoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Start the timeout when submitting=true in Cognito mode. Clear on unmount.
+  useEffect(() => {
+    if (!USE_COGNITO || !submitting) {
+      setCognitoTimeout(false); // eslint-disable-line react-hooks/set-state-in-effect
+      return;
+    }
+    cognitoTimeoutRef.current = setTimeout(() => {
+      setCognitoTimeout(true);
+      setSubmitting(false);
+    }, COGNITO_TIMEOUT_MS);
+    return () => {
+      if (cognitoTimeoutRef.current) clearTimeout(cognitoTimeoutRef.current);
+    };
+  }, [submitting]);
+
   const handleCognitoSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setCognitoTimeout(false);
     setSubmitting(true);
     try {
+      // Set signed plan cookie BEFORE redirecting to Cognito Hosted UI so the
+      // plan survives the round-trip (audit #19). The cookie is HMAC-signed
+      // so tampering is detected server-side.
+      if (planParam) setPlanCookieClient(planParam);
+
       // Cognito Hosted UI handles both sign-in and sign-up.
       // Redirect to it so the user can create an account there.
       const callbackUrl = postSignupDestination ?? "/auth/post-login";
@@ -213,6 +246,31 @@ function SignUpForm() {
                   ? t("auth.redirecting", "Redirecting...")
                   : t("auth.continueWithAws", "Continue with AWS")}
               </button>
+              {/* Fallback shown when Cognito Hosted UI redirect hangs (audit #12) */}
+              {cognitoTimeout && (
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-amber-700/40 bg-amber-900/20 p-3 font-mono text-xs text-amber-400">
+                    The login page didn&rsquo;t open automatically. This can happen if a pop-up
+                    blocker is enabled or the redirect was interrupted.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const callbackUrl = encodeURIComponent(
+                        postSignupDestination ?? "/auth/post-login"
+                      );
+                      window.open(
+                        `/api/auth/signin/cognito?callbackUrl=${callbackUrl}`,
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                    }}
+                    className="bg-void-light/60 hover:border-neon-cyan/40 min-h-11 w-full rounded-lg border border-slate-700 py-2.5 font-mono text-sm text-slate-300 transition-all"
+                  >
+                    Open login page manually
+                  </button>
+                </div>
+              )}
               <p className="text-center font-mono text-sm text-slate-500">
                 {t("auth.hasAccount", "Already have an account?")}{" "}
                 <Link href="/auth/login" className="text-neon-cyan hover:underline">
