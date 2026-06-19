@@ -1,19 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-
 /**
  * Server-side mirror of the LinkedIn Insight-Tag conversion fired from
- * `/[locale]/campaigns/<slug>/thanks`. This route forwards the same
- * conversion event to LinkedIn's Conversions API (CAPI).
+ * `/[locale]/campaigns/<slug>/thanks`.
  *
- * LinkedIn deduplicates events that arrive via both Insight Tag and CAPI as
- * long as the `eventId` field matches — see docs/linkedin-campaigns.md for
- * the full payload spec and the env vars this route reads.
+ * Phase 1 (2026-06-19) — this route delegates to the reusable ad-analytics
+ * runtime instead of POSTing to LinkedIn CAPI directly. The runtime:
+ *   1. Looks up the campaign in `src/data/campaigns.ts`.
+ *   2. For each `adPlatforms[]` entry with `capiConversionId != null`,
+ *      mirrors the conversion via the platform's adapter.
+ *   3. For each `notifyChannels[].level === "event"`, posts a Block Kit
+ *      message (Slack `#ads-realtime` by default).
  *
- * When `LINKEDIN_CAPI_ACCESS_TOKEN` is unset the route is a deliberate no-op
- * (returns 204) so client-side conversion still works end-to-end without any
- * server credentials. This matches how `getStripe()` behaves in
- * `/api/checkout` when Stripe is unconfigured.
+ * Behaviour preserved from the legacy route:
+ *   - Same POST shape (`ThanksConversion.tsx` is unchanged).
+ *   - Returns 204 when nothing fires (no `adPlatforms`, no `notifyChannels`,
+ *     or the CAPI `capiConversionId` is still null because the operator
+ *     hasn't yet created a `CONVERSIONS_API`-typed conversion in Campaign
+ *     Manager — see the Gilgamesh source-bound note in
+ *     `skills/ad-analytics/SKILL.md`).
+ *   - Never throws — failures degrade silently so the browser-side Insight
+ *     Tag (which already counted the conversion) remains the system of record.
  */
+
+import { NextRequest, NextResponse } from "next/server";
+import { dispatchConversion } from "@/lib/ad-analytics/runtime";
 
 type Body = {
   campaign?: string;
@@ -24,8 +33,6 @@ type Body = {
   userAgent?: string | null;
 };
 
-const LINKEDIN_CAPI_ENDPOINT = "https://api.linkedin.com/rest/conversionEvents";
-
 export async function POST(request: NextRequest) {
   let body: Body;
   try {
@@ -34,67 +41,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const token = process.env.LINKEDIN_CAPI_ACCESS_TOKEN;
-  if (!token) {
-    // CAPI not configured — client-side Insight Tag already fired, this is fine.
+  if (!body.campaign) {
+    return NextResponse.json({ error: "Missing campaign" }, { status: 400 });
+  }
+
+  const outcome = await dispatchConversion({
+    campaign: body.campaign,
+    tier: body.tier ?? null,
+    orderId: body.orderId ?? null,
+    conversionId: body.conversionId ?? null,
+    url: body.url ?? undefined,
+    userAgent: body.userAgent ?? undefined,
+    country: request.headers.get("cf-ipcountry") ?? undefined,
+  });
+
+  if (outcome.noop) {
+    // Nothing to fan out — return 204 so the client treats this as "ok,
+    // browser-side Insight Tag is the system of record."
     return new NextResponse(null, { status: 204 });
   }
 
-  const { conversionId, orderId, url, userAgent } = body;
-  if (conversionId == null) {
-    return NextResponse.json({ error: "Missing conversionId" }, { status: 400 });
-  }
-
-  // Stable per-conversion identifier — LinkedIn uses it for dedup against the
-  // browser-side Insight Tag hit.
-  const eventId = orderId ?? `conv-${conversionId}-${Date.now()}`;
-
-  const payload = {
-    conversion: `urn:lla:llaPartnerConversion:${conversionId}`,
-    conversionHappenedAt: Date.now(),
-    eventId,
-    user: {
-      userIds: [],
-      userInfo: undefined,
-    },
-    conversionValue: undefined,
-    requestMetadata: {
-      userAgent: userAgent ?? undefined,
-      acceptLanguage: request.headers.get("accept-language") ?? undefined,
-      pageUrl: url ?? undefined,
-    },
-  };
-
-  try {
-    const res = await fetch(LINKEDIN_CAPI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "LinkedIn-Version": "202506",
-        "X-Restli-Protocol-Version": "2.0.0",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      // Don't leak the raw upstream body to the caller — it can include the
-      // CAPI access token in error messages.
-      console.error(
-        "LinkedIn CAPI error " +
-          res.status +
-          ": " +
-          text.slice(0, 200).replace(/[\x00-\x1f\x7f]/g, " ")
-      );
-      return NextResponse.json({ ok: false }, { status: 502 });
-    }
-  } catch (err) {
-    console.error(
-      "LinkedIn CAPI fetch failed: " + ((err as Error).message ?? "unknown").slice(0, 200)
-    );
-    return NextResponse.json({ ok: false }, { status: 502 });
-  }
-
-  return NextResponse.json({ ok: true });
+  // 200 OK with a small JSON receipt so the dashboard / Sentry breadcrumb
+  // can correlate which platforms and channels accepted the conversion.
+  return NextResponse.json({
+    ok: true,
+    capi: outcome.capi,
+    notifications: outcome.notifications,
+  });
 }
