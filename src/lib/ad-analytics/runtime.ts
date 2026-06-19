@@ -146,6 +146,7 @@ export async function dispatchConversion(event: AdConversionEvent): Promise<Disp
         user: {
           userAgent: event.userAgent,
           ipAddress: event.ipAddress,
+          emailSha256: event.customer?.email ? await sha256(event.customer.email.toLowerCase().trim()) : undefined,
         },
         pageUrl: event.url,
       });
@@ -482,4 +483,10 @@ export async function runAdHocSnapshot(opts: {
     }
   }
   return { campaign: campaign.slug, metrics: all };
+}
+
+
+async function sha256(input: string): Promise<string> {
+  const { createHash } = await import("crypto");
+  return createHash("sha256").update(input).digest("hex");
 }
