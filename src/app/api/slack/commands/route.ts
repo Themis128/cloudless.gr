@@ -557,10 +557,7 @@ async function handleStripeAnalytics(payload: SlashCommandPayload): Promise<Resp
  *   ads <campaign-slug>  → live snapshot (LinkedIn pullMetrics + ICP block)
  *   ads help             → usage
  */
-function handleAdAnalytics(
-  payload: SlashCommandPayload,
-  rest: string[]
-): Response {
+function handleAdAnalytics(payload: SlashCommandPayload, rest: string[]): Response {
   const arg = (rest[0] ?? "").toLowerCase();
 
   if (!arg || arg === "list") {
@@ -580,9 +577,7 @@ function handleAdAnalytics(
       const platforms = (c.adPlatforms ?? [])
         .map((p) => `${p.platform}(${p.campaignIds.length} ids)`)
         .join(", ");
-      const channels = (c.notifyChannels ?? [])
-        .map((ch) => `${ch.target}(${ch.level})`)
-        .join(", ");
+      const channels = (c.notifyChannels ?? []).map((ch) => `${ch.target}(${ch.level})`).join(", ");
       return `• *${c.slug}* — platforms: ${platforms || "—"} · channels: ${channels || "—"}`;
     });
     return slackResponse({
@@ -590,7 +585,11 @@ function handleAdAnalytics(
       blocks: [
         {
           type: "header",
-          text: { type: "plain_text", text: ":chart_with_upwards_trend: Ad analytics — campaigns", emoji: true },
+          text: {
+            type: "plain_text",
+            text: ":chart_with_upwards_trend: Ad analytics — campaigns",
+            emoji: true,
+          },
         },
         { type: "section", text: { type: "mrkdwn", text: rows.join("\n") } },
         {

@@ -40,8 +40,7 @@ async function resolveConfig(): Promise<ResolvedConfig | null> {
     // marketing-API token in SSM. Falls back to the shared
     // `LINKEDIN_ACCESS_TOKEN` (already in AppConfig) when the dedicated
     // CAPI var isn't set — the legacy route did the same thing.
-    const token =
-      process.env.LINKEDIN_CAPI_ACCESS_TOKEN || cfg.LINKEDIN_ACCESS_TOKEN || "";
+    const token = process.env.LINKEDIN_CAPI_ACCESS_TOKEN || cfg.LINKEDIN_ACCESS_TOKEN || "";
     if (!token) return null;
     return {
       token,
@@ -92,12 +91,7 @@ export const linkedinAdapter: AdPlatformAdapter = {
     const results: AdMetrics[] = [];
     for (const campaignId of campaignIds) {
       // 1. Headline metrics (impressions / clicks / cost / conversions).
-      const headline = await fetchHeadlineMetrics(
-        cfg.token,
-        accountId,
-        campaignId,
-        dateRangeParam
-      );
+      const headline = await fetchHeadlineMetrics(cfg.token, accountId, campaignId, dateRangeParam);
       const base: AdMetrics = {
         platform: "linkedin",
         campaignId,
@@ -107,13 +101,12 @@ export const linkedinAdapter: AdPlatformAdapter = {
         clicks: headline.clicks,
         conversions: headline.conversions,
         spendEur: headline.spendEur,
-        ctr: headline.clicks && headline.impressions
-          ? headline.clicks / headline.impressions
-          : undefined,
+        ctr:
+          headline.clicks && headline.impressions
+            ? headline.clicks / headline.impressions
+            : undefined,
         cpcEur: headline.clicks ? headline.spendEur / headline.clicks : undefined,
-        cpaEur: headline.conversions
-          ? headline.spendEur / headline.conversions
-          : undefined,
+        cpaEur: headline.conversions ? headline.spendEur / headline.conversions : undefined,
       };
 
       // 2. Demographic enrichment, one fetch per pivot. Errors degrade

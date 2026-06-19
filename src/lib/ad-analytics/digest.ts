@@ -7,12 +7,7 @@
  *    summary with delta math and the ICP-signal block from architecture §9.
  */
 
-import type {
-  AdConversionEvent,
-  AdMetrics,
-  DemographicBreakdown,
-  DemographicPivot,
-} from "./types";
+import type { AdConversionEvent, AdMetrics, DemographicBreakdown, DemographicPivot } from "./types";
 import type { NotificationBlock } from "./channels/notification";
 
 const FLAG_BY_COUNTRY: Record<string, string> = {
@@ -41,7 +36,7 @@ const FLAG_BY_COUNTRY: Record<string, string> = {
 export function renderConversionBlocks(event: AdConversionEvent): NotificationBlock[] {
   const tier = event.tier ?? "—";
   const order = event.orderId ? truncate(event.orderId, 30) : "—";
-  const flag = event.country ? FLAG_BY_COUNTRY[event.country] ?? event.country : "";
+  const flag = event.country ? (FLAG_BY_COUNTRY[event.country] ?? event.country) : "";
   const creative = formatCreative(event);
   const url = event.url ? truncate(event.url, 200) : "";
 

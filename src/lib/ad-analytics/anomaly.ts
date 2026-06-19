@@ -44,10 +44,12 @@ import type { AdMetrics, AnomalyRules } from "./types";
  * DMs (has a `level: "anomaly"` notify channel) but leaves the corresponding
  * `AnomalyRules` field undefined. Source: see file header.
  */
-export const DEFAULTS: Required<Pick<
-  AnomalyRules,
-  "spendPaceMultiplier" | "cpcSpikeMultiplier" | "zeroConversionsHours" | "minCtr"
->> = {
+export const DEFAULTS: Required<
+  Pick<
+    AnomalyRules,
+    "spendPaceMultiplier" | "cpcSpikeMultiplier" | "zeroConversionsHours" | "minCtr"
+  >
+> = {
   spendPaceMultiplier: 1.5,
   cpcSpikeMultiplier: 1.4,
   zeroConversionsHours: 24,
@@ -131,11 +133,7 @@ export function evaluateAnomalies(opts: EvaluateAnomaliesOpts): AnomalyFinding[]
   // measurement statistically real. Skip when impressions < 200 so a 1-click
   // window doesn't fire a false alarm.
   const minCtr = rules.minCtr ?? DEFAULTS.minCtr;
-  if (
-    current.impressions >= 200 &&
-    typeof current.ctr === "number" &&
-    current.ctr < minCtr
-  ) {
+  if (current.impressions >= 200 && typeof current.ctr === "number" && current.ctr < minCtr) {
     findings.push({
       rule: "ctr_floor",
       severity: "warning",
@@ -153,11 +151,7 @@ export function evaluateAnomalies(opts: EvaluateAnomaliesOpts): AnomalyFinding[]
   // Only fire when the configured window covers at least `zeroHours`. The
   // 15-min poll window can't tell whether conversions are missing for "24h"
   // — that's a derived fact the runtime feeds via `windowHours`.
-  if (
-    windowHours >= zeroHours &&
-    current.spendEur > 0 &&
-    current.conversions === 0
-  ) {
+  if (windowHours >= zeroHours && current.spendEur > 0 && current.conversions === 0) {
     findings.push({
       rule: "zero_conversions",
       severity: "critical",

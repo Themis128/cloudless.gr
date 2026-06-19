@@ -312,10 +312,7 @@ export async function runScheduledPoll(opts?: {
               ok: !messageId.endsWith(":not-sent"),
             });
           } catch (err) {
-            console.error(
-              `[ad-analytics/runtime] digest notification failed:`,
-              err
-            );
+            console.error(`[ad-analytics/runtime] digest notification failed:`, err);
             posted.push({ channel: config.channel, target: config.target, ok: false });
           }
         }
@@ -364,10 +361,7 @@ export async function runScheduledPoll(opts?: {
                   });
                 }
               } catch (err) {
-                console.error(
-                  `[ad-analytics/runtime] anomaly notification failed:`,
-                  err
-                );
+                console.error(`[ad-analytics/runtime] anomaly notification failed:`, err);
                 posted.push({ channel: config.channel, target: config.target, ok: false });
               }
             }

@@ -21,11 +21,7 @@
  * bookmarks) and the Notion architecture page §3.
  */
 
-import {
-  DynamoDBClient,
-  GetItemCommand,
-  PutItemCommand,
-} from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 
 import type { AdMetrics, Bookmark, AdPlatformId } from "./types";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
