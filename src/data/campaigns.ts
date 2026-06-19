@@ -159,6 +159,15 @@ export const campaigns: Campaign[] = [
       // Driven by `/api/cron/ad-analytics-poll` via the
       // `.github/workflows/linkedin-poll.yml` cron.
       { channel: "slack", target: "#ads-digest", level: "digest" },
+      // Phase 4 anomaly alerts (CPC spike, CTR collapse, spend pace,
+      // zero-conversions-with-spend, hard CPC ceiling). Fires on the same
+      // 15-min poll. De-duped per (campaign × platform × rule × day) so the
+      // same alert in the next tick doesn't spam. Target is the same digest
+      // channel for now — switch to a DM (user id `U…`) once anomalies start
+      // firing in real life. Industry default thresholds apply because
+      // `anomalyRules` is unset; tighten with `maxCpcEur` etc. once a
+      // baseline emerges.
+      { channel: "slack", target: "#ads-digest", level: "anomaly" },
     ],
     tiers: [
       {
