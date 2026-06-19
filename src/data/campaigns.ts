@@ -16,9 +16,20 @@
  * - `linkedinConversionId` is the numeric ID from LinkedIn Campaign Manager.
  *   Leave `null` while the conversion is still being defined; the thanks
  *   page's browser-side fire becomes a no-op and the CAPI mirror skips too.
+ * - `adPlatforms[]` + `notifyChannels[]` (added Phase 1, 2026-06-19) are the
+ *   reusable-ad-analytics module's configuration. Each entry describes one
+ *   ad source (LinkedIn, Meta, Google, …) and one notification target. See
+ *   `src/lib/ad-analytics/types.ts` for the shapes and `skills/ad-analytics/
+ *   SKILL.md` for the operating playbook.
  *
  * Wiring guide: `docs/linkedin-campaigns.md` + `skills/linkedin-campaigns/SKILL.md`.
  */
+
+import type {
+  CampaignPlatformConfig,
+  NotifyChannelConfig,
+  AnomalyRules,
+} from "@/lib/ad-analytics/types";
 
 export const CAMPAIGN_LOCALES = ["el", "en"] as const;
 export type Locale = (typeof CAMPAIGN_LOCALES)[number];
@@ -66,8 +77,25 @@ export type Campaign = {
   }>;
   /** Source of paid traffic for analytics tagging. */
   utmCampaign: string;
-  /** LinkedIn Campaign Manager numeric conversion ID. null until set. */
+  /** LinkedIn Campaign Manager numeric conversion ID. null until set.
+   *  Back-compat alias — concrete adapters now read
+   *  `adPlatforms[platform=linkedin].insightTagConversionId` directly. Leave
+   *  this set so the existing `ThanksConversion.tsx` browser fire stays a
+   *  one-liner; the runtime treats it as the LinkedIn browser conversion ID
+   *  when no explicit `adPlatforms` entry exists. */
   linkedinConversionId: number | null;
+  /** Optional — wire-level config for the reusable ad-analytics module.
+   *  When present, each entry tells the runtime how to talk to that ad
+   *  platform (per-platform conversion IDs, account ID, campaign IDs). When
+   *  absent, the runtime falls back to legacy single-platform behaviour
+   *  driven by `linkedinConversionId`. */
+  adPlatforms?: CampaignPlatformConfig[];
+  /** Optional — where the runtime sends notifications. Multiple entries
+   *  (different `level` values) are allowed: typically one `event` channel
+   *  for real-time conversions and one `digest` channel for the 15-min poll. */
+  notifyChannels?: NotifyChannelConfig[];
+  /** Optional — anomaly thresholds for Phase 4 DM alerts. */
+  anomalyRules?: AnomalyRules;
 };
 
 export const campaigns: Campaign[] = [
@@ -105,6 +133,28 @@ export const campaigns: Campaign[] = [
     // page-load match on URL containing /campaigns/shop-online/thanks.
     // The browser-side fire (lintrk + CAPI mirror) happens in ThanksConversion.tsx.
     linkedinConversionId: 26846068,
+    // Phase 1 ad-analytics wiring. `capiConversionId` is null until the
+    // operator creates a `CONVERSIONS_API`-typed conversion in Campaign
+    // Manager — see `skills/ad-analytics/SKILL.md` operating principle #2
+    // for why we cannot reuse `26846068` (it's `EVENT_SPECIFIC_TAG`-typed
+    // and any /rest/conversionEvents POST against it 403s).
+    adPlatforms: [
+      {
+        platform: "linkedin",
+        // Campaign Manager → URL `…/accounts/<accountId>/…`. The Marketing
+        // API expects this same numeric ID, not the URN — `LinkedInAdapter`
+        // wraps it as `urn:li:sponsoredAccount:<id>` internally.
+        accountId: "511588554",
+        campaignIds: ["692134846"],
+        insightTagConversionId: 26846068,
+        capiConversionId: null,
+      },
+    ],
+    notifyChannels: [
+      // Real-time pings on every conversion (paid + fit-call). Operator's
+      // phone lights up the moment a clicker becomes a known person.
+      { channel: "slack", target: "#ads-realtime", level: "event" },
+    ],
     tiers: [
       {
         id: "starter",
