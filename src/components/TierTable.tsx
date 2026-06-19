@@ -1,7 +1,7 @@
 "use client";
 
-import type { MouseEvent } from "react";
-import type { Campaign, Locale } from "@/data/campaigns";
+import { useState, useRef, type FormEvent, type MouseEvent } from "react";
+import type { Campaign, Locale, Tier } from "@/data/campaigns";
 import { getStoredAttribution } from "@/lib/lead-attribution";
 
 type Props = {
@@ -9,45 +9,52 @@ type Props = {
   locale: Locale;
 };
 
-/**
- * Read first-touch attribution from sessionStorage and append it to the
- * outbound `/api/checkout?…` URL so the server can stamp UTM into Stripe
- * metadata (or carry it to /contact for the fit-call path). Without this
- * the visitor's creative variant (utm_content=A_EN / B_EN / …) is lost
- * the moment they leave the landing page.
- */
-function appendAttributionToHref(href: string): string {
-  if (typeof window === "undefined") return href;
-  const a = getStoredAttribution();
-  if (!a) return href;
-  let url: URL;
-  try {
-    url = new URL(href, window.location.origin);
-  } catch {
-    return href;
-  }
-  if (a.utmSource) url.searchParams.set("utm_source", a.utmSource);
-  if (a.utmMedium) url.searchParams.set("utm_medium", a.utmMedium);
-  if (a.utmCampaign) url.searchParams.set("utm_campaign", a.utmCampaign);
-  if (a.utmTerm) url.searchParams.set("utm_term", a.utmTerm);
-  if (a.utmContent) url.searchParams.set("utm_content", a.utmContent);
-  // Same-origin — drop the origin prefix so the navigation stays a same-origin
-  // redirect (matters for the GET-302 → Stripe Checkout handoff).
-  return url.pathname + url.search;
-}
+type FormStatus = "idle" | "sending" | "sent" | "error";
 
 export default function TierTable({ campaign, locale }: Props) {
-  function handleCtaClick(e: MouseEvent<HTMLAnchorElement>) {
-    // Plain (no modifier) left clicks get the attribution-stamped URL. Cmd /
-    // Ctrl / middle-click / right-click stay default so "open in new tab"
-    // keeps working — those visitors still send the bare URL but session-
-    // storage attribution is preserved for any subsequent paid hit.
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    const anchor = e.currentTarget;
-    const stamped = appendAttributionToHref(anchor.getAttribute("href") ?? "");
-    if (stamped && stamped !== anchor.getAttribute("href")) {
-      e.preventDefault();
-      window.location.href = stamped;
+  const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
+  const [formStatus, setFormStatus] = useState<FormStatus>("idle");
+  const formRef = useRef<HTMLDivElement>(null);
+
+  function handleCtaClick(e: MouseEvent<HTMLAnchorElement>, tier: Tier) {
+    e.preventDefault();
+    setSelectedTier(tier);
+    setFormStatus("idle");
+    // Scroll to form after a tick (DOM needs to render)
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selectedTier) return;
+    setFormStatus("sending");
+
+    const form = e.currentTarget;
+    const payload = {
+      name: (form.elements.namedItem("name") as HTMLInputElement).value,
+      email: (form.elements.namedItem("email") as HTMLInputElement).value,
+      phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
+      service: `${campaign.slug} — ${selectedTier.name[locale]}`,
+      message: `Tier: ${selectedTier.name[locale]}\nPrice: ${selectedTier.oneOff ?? selectedTier.monthly ?? ""}\nCampaign: ${campaign.slug}`,
+      attribution: getStoredAttribution() ?? undefined,
+    };
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setFormStatus("sent");
+        form.reset();
+      } else {
+        setFormStatus("error");
+      }
+    } catch {
+      setFormStatus("error");
     }
   }
 
@@ -68,15 +75,10 @@ export default function TierTable({ campaign, locale }: Props) {
                 <li key={h}>{h}</li>
               ))}
             </ul>
-            {/* `checkoutHref` is an API path (not a Next.js route) — must be a
-                plain <a>. `@/i18n/navigation`'s Link rewrites to add the locale
-                prefix, which would break the /api/checkout call. The onClick
-                stamps first-touch UTM into the URL so the creative variant
-                survives the Stripe handoff. */}
             <a
               href={t.checkoutHref}
-              onClick={handleCtaClick}
-              className="cl-tier__cta"
+              onClick={(e) => handleCtaClick(e, t)}
+              className={`cl-tier__cta ${selectedTier?.id === t.id ? "cl-tier__cta--active" : ""}`}
               data-tier={t.id}
               data-campaign={campaign.slug}
             >
@@ -85,6 +87,80 @@ export default function TierTable({ campaign, locale }: Props) {
           </article>
         ))}
       </div>
+
+      {/* Inline request form — appears when a tier is selected */}
+      {selectedTier && (
+        <div ref={formRef} className="cl-tiers__form-wrap">
+          {formStatus === "sent" ? (
+            <div className="cl-tiers__success">
+              <div className="cl-tiers__success-icon">✓</div>
+              <h3>
+                {locale === "el"
+                  ? "Ευχαριστούμε! Θα επικοινωνήσουμε εντός 24 ωρών."
+                  : "Thank you! We'll be in touch within 24 hours."}
+              </h3>
+              <p>
+                {locale === "el"
+                  ? `Επιλογή: ${selectedTier.name[locale]}`
+                  : `Selected: ${selectedTier.name[locale]}`}
+              </p>
+            </div>
+          ) : (
+            <>
+              <h3 className="cl-tiers__form-title">
+                {locale === "el"
+                  ? `Ξεκίνα με ${selectedTier.name[locale]}`
+                  : `Get started with ${selectedTier.name[locale]}`}
+                {selectedTier.oneOff && (
+                  <span className="cl-tiers__form-price">{selectedTier.oneOff}</span>
+                )}
+              </h3>
+              <p className="cl-tiers__form-sub">
+                {locale === "el"
+                  ? "Συμπλήρωσε τα στοιχεία σου και θα σου στείλουμε πρόταση εντός 24 ωρών."
+                  : "Fill in your details and we'll send you a tailored proposal within 24 hours."}
+              </p>
+              <form onSubmit={handleSubmit} className="cl-tiers__form">
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  placeholder={locale === "el" ? "Ονοματεπώνυμο *" : "Full name *"}
+                  autoComplete="name"
+                  className="cl-tiers__input"
+                />
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="Email *"
+                  autoComplete="email"
+                  className="cl-tiers__input"
+                />
+                <input
+                  name="phone"
+                  type="tel"
+                  placeholder={locale === "el" ? "Τηλέφωνο" : "Phone (optional)"}
+                  autoComplete="tel"
+                  className="cl-tiers__input"
+                />
+                {formStatus === "error" && (
+                  <p className="cl-tiers__error">
+                    {locale === "el"
+                      ? "Κάτι πήγε στραβά. Δοκίμασε ξανά."
+                      : "Something went wrong. Please try again."}
+                  </p>
+                )}
+                <button type="submit" disabled={formStatus === "sending"} className="cl-tiers__submit">
+                  {formStatus === "sending"
+                    ? locale === "el" ? "Αποστολή..." : "Sending..."
+                    : locale === "el" ? "Λάβε πρόταση →" : "Get my proposal →"}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      )}
 
       <style jsx>{`
         .cl-tiers {
@@ -188,8 +264,110 @@ export default function TierTable({ campaign, locale }: Props) {
         :global(.cl-tier__cta:hover) {
           background: #064d57;
         }
+        :global(.cl-tier__cta--active) {
+          background: #064d57;
+          box-shadow: 0 0 0 3px rgba(10, 119, 133, 0.3);
+        }
         :global(.cl-tier--featured .cl-tier__cta) {
           background: #1a2528;
+        }
+        .cl-tiers__form-wrap {
+          max-width: 560px;
+          margin: 40px auto 0;
+          padding: 32px;
+          background: #ffffff;
+          border: 2px solid #0a7785;
+          border-radius: 12px;
+          box-shadow: 0 12px 32px -12px rgba(10, 119, 133, 0.15);
+        }
+        .cl-tiers__form-title {
+          font-family: "Fraunces", Georgia, serif;
+          font-size: 22px;
+          font-weight: 500;
+          color: #1a2528;
+          margin: 0 0 6px;
+          display: flex;
+          align-items: baseline;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .cl-tiers__form-price {
+          font-size: 18px;
+          color: #0a7785;
+        }
+        .cl-tiers__form-sub {
+          font-size: 14px;
+          color: #4a5a5f;
+          margin: 0 0 20px;
+          line-height: 1.5;
+        }
+        .cl-tiers__form {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .cl-tiers__input {
+          width: 100%;
+          padding: 12px 16px;
+          border: 1px solid #d8d2c4;
+          border-radius: 6px;
+          font-size: 15px;
+          color: #1a2528;
+          background: #faf8f4;
+          transition: border-color 120ms ease;
+          outline: none;
+        }
+        .cl-tiers__input:focus {
+          border-color: #0a7785;
+          box-shadow: 0 0 0 3px rgba(10, 119, 133, 0.08);
+        }
+        .cl-tiers__input::placeholder {
+          color: #8a9599;
+        }
+        .cl-tiers__error {
+          font-size: 13px;
+          color: #c0392b;
+          margin: 0;
+        }
+        .cl-tiers__submit {
+          padding: 14px 24px;
+          background: #0a7785;
+          color: #f7f3ec;
+          border: none;
+          border-radius: 6px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 120ms ease;
+          letter-spacing: 0.3px;
+        }
+        .cl-tiers__submit:hover {
+          background: #064d57;
+        }
+        .cl-tiers__submit:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .cl-tiers__success {
+          text-align: center;
+          padding: 16px 0;
+        }
+        .cl-tiers__success-icon {
+          font-size: 36px;
+          color: #0a7785;
+          margin-bottom: 12px;
+        }
+        .cl-tiers__success h3 {
+          font-family: "Fraunces", Georgia, serif;
+          font-size: 20px;
+          font-weight: 500;
+          color: #1a2528;
+          margin: 0 0 8px;
+        }
+        .cl-tiers__success p {
+          font-size: 14px;
+          color: #4a5a5f;
+          margin: 0;
         }
       `}</style>
     </section>
