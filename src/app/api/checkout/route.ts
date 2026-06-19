@@ -4,6 +4,7 @@ import { getProductById } from "@/lib/store-products";
 import { getTokenFromHeader, verifyToken } from "@/lib/api-auth";
 import { getCampaign } from "@/data/campaigns";
 import { routing } from "@/i18n/routing";
+import { canonicalOrigin } from "@/lib/canonical-origin";
 
 interface CheckoutItem {
   id: string;
@@ -53,7 +54,11 @@ export async function GET(request: NextRequest) {
   }
 
   const locale = pickLocale(request);
-  const origin = request.nextUrl.origin;
+  // Canonical-origin helper (cloudless.gr or NEXT_PUBLIC_SITE_URL) — Pi pods
+  // see the CloudFront URL via the Host header, so request.nextUrl.origin
+  // would 302 the visitor's address bar to `…cloudfront.net/…`. See
+  // src/lib/canonical-origin.ts for the resolution order.
+  const origin = canonicalOrigin(request);
 
   // Pick first-touch UTM the TierTable client stamped into the URL.
   // Bounded length defends Stripe metadata (500-char limit per value) and any

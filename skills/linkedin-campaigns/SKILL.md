@@ -133,6 +133,27 @@ the client-side fire still works end-to-end.
   switches from "Inactive" to "Active" within ~30 min of the first real
   purchase.
 
+## Troubleshooting
+
+If a campaign is paying for impressions but showing zero conversions in
+Campaign Manager:
+
+1. **Run the doctor first.** Don't blame the ad creative or the audience
+   until tracking is proven healthy.
+   ```bash
+   bash scripts/linkedin-insight-doctor.sh --slug <campaign-slug> --locale el
+   ```
+   Full reference: `skills/linkedin-insight-doctor/SKILL.md`.
+
+2. **Most common cause: `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` GitHub secret
+   is unset or empty.** Webpack bakes it into the client bundle at build
+   time as a literal string; an empty value makes the layout's truthy
+   check skip the `<LinkedInInsightTag />` mount entirely.
+
+3. **PRs touching campaign code trigger the ad-readiness check**
+   (`.github/workflows/ad-readiness.yml`). The PR comment reports which
+   secrets are present.
+
 ## References
 
 - LinkedIn Help: [Add the LinkedIn Insight Tag to your website](https://www.linkedin.com/help/lms/answer/a418880)
