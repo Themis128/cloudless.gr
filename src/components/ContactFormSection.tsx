@@ -23,6 +23,11 @@ const serviceOptions = [
 const LABEL_CLASS = "mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400";
 const INPUT_CLASS =
   "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
+const SELECT_CLASS =
+  "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
+const TEXTAREA_CLASS =
+  "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full resize-y rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
+const SIDEBAR_LABEL_CLASS = "text-xs text-slate-500";
 
 export default function ContactFormSection() {
   const [locale] = useCurrentLocale();
@@ -177,7 +182,7 @@ export default function ContactFormSection() {
                     name="company"
                     type="text"
                     placeholder="Acme Inc."
-                    className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                    className={INPUT_CLASS}
                   />
                 </div>
 
@@ -189,7 +194,7 @@ export default function ContactFormSection() {
                     id="service"
                     name="service"
                     defaultValue={defaultService}
-                    className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                    className={SELECT_CLASS}
                   >
                     <option value="">Select a service</option>
                     {serviceOptions.map((opt) => (
@@ -211,7 +216,7 @@ export default function ContactFormSection() {
                     rows={5}
                     defaultValue={defaultMessage}
                     placeholder="What are you working on? What challenges are you facing?"
-                    className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full resize-y rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                    className={TEXTAREA_CLASS}
                   />
                 </div>
 
@@ -288,7 +293,7 @@ export default function ContactFormSection() {
                 <h3 className="font-heading text-lg font-bold text-white">Direct Contact</h3>
                 <div className="mt-4 space-y-3 font-mono text-sm">
                   <p>
-                    <span className="text-xs text-slate-500">EMAIL:</span>{" "}
+                    <span className={SIDEBAR_LABEL_CLASS}>EMAIL:</span>{" "}
                     <a
                       href="mailto:tbaltzakis@cloudless.gr"
                       className="text-neon-cyan text-xs hover:underline"
@@ -297,11 +302,11 @@ export default function ContactFormSection() {
                     </a>
                   </p>
                   <p>
-                    <span className="text-xs text-slate-500">LOCATION:</span>{" "}
+                    <span className={SIDEBAR_LABEL_CLASS}>LOCATION:</span>{" "}
                     <span className="text-xs text-slate-400">Greece, EU</span>
                   </p>
                   <p>
-                    <span className="text-xs text-slate-500">RESPONSE:</span>{" "}
+                    <span className={SIDEBAR_LABEL_CLASS}>RESPONSE:</span>{" "}
                     <span className="text-xs text-slate-400">Within 24 hours</span>
                   </p>
                 </div>

@@ -6,6 +6,7 @@ import { getStoredAttribution } from "@/lib/lead-attribution";
 
 // Design tokens — extracted to satisfy sonarjs/no-duplicate-string (S1192).
 // Each value is used 3+ times across the JSX and <style jsx> block.
+const LOCALE_EL = "el";
 const COLOR_BRAND = "#0a7785";
 const COLOR_BRAND_DARK = "#064d57";
 const COLOR_INK = "#1a2528";
@@ -92,7 +93,7 @@ export default function TierTable({ campaign, locale }: Props) {
   }
 
   return (
-    <section className="cl-tiers" aria-label={locale === "el" ? "Πακέτα" : "Tiers"}>
+    <section className="cl-tiers" aria-label={locale === LOCALE_EL ? "Πακέτα" : "Tiers"}>
       <div className="cl-tiers__grid">
         {campaign.tiers.map((t) => (
           <article key={t.id} className={`cl-tier ${t.featured ? "cl-tier--featured" : ""}`}>
@@ -128,12 +129,12 @@ export default function TierTable({ campaign, locale }: Props) {
             <div className="cl-tiers__success">
               <div className="cl-tiers__success-icon">✓</div>
               <h3>
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? "Ευχαριστούμε! Θα επικοινωνήσουμε εντός 24 ωρών."
                   : "Thank you! We'll be in touch within 24 hours."}
               </h3>
               <p>
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? `Επιλογή: ${selectedTier.name[locale]}`
                   : `Selected: ${selectedTier.name[locale]}`}
               </p>
@@ -141,7 +142,7 @@ export default function TierTable({ campaign, locale }: Props) {
           ) : (
             <>
               <h3 className="cl-tiers__form-title">
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? `Ξεκίνα με ${selectedTier.name[locale]}`
                   : `Get started with ${selectedTier.name[locale]}`}
                 {selectedTier.oneOff && (
@@ -149,7 +150,7 @@ export default function TierTable({ campaign, locale }: Props) {
                 )}
               </h3>
               <p className="cl-tiers__form-sub">
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? "Συμπλήρωσε τα στοιχεία σου και θα σου στείλουμε πρόταση εντός 24 ωρών."
                   : "Fill in your details and we'll send you a tailored proposal within 24 hours."}
               </p>
@@ -158,7 +159,7 @@ export default function TierTable({ campaign, locale }: Props) {
                   name="name"
                   type="text"
                   required
-                  placeholder={locale === "el" ? "Ονοματεπώνυμο *" : "Full name *"}
+                  placeholder={locale === LOCALE_EL ? "Ονοματεπώνυμο *" : "Full name *"}
                   autoComplete="name"
                   className={CLS_INPUT}
                 />
@@ -173,13 +174,13 @@ export default function TierTable({ campaign, locale }: Props) {
                 <input
                   name="phone"
                   type="tel"
-                  placeholder={locale === "el" ? "Τηλέφωνο" : "Phone (optional)"}
+                  placeholder={locale === LOCALE_EL ? "Τηλέφωνο" : "Phone (optional)"}
                   autoComplete="tel"
                   className={CLS_INPUT}
                 />
                 {formStatus === "error" && (
                   <p className="cl-tiers__error">
-                    {locale === "el"
+                    {locale === LOCALE_EL
                       ? "Κάτι πήγε στραβά. Δοκίμασε ξανά."
                       : "Something went wrong. Please try again."}
                   </p>
@@ -190,10 +191,10 @@ export default function TierTable({ campaign, locale }: Props) {
                   className="cl-tiers__submit"
                 >
                   {formStatus === "sending"
-                    ? locale === "el"
+                    ? locale === LOCALE_EL
                       ? "Αποστολή..."
                       : "Sending..."
-                    : locale === "el"
+                    : locale === LOCALE_EL
                       ? "Λάβε πρόταση →"
                       : "Get my proposal →"}
                 </button>
