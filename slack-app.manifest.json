@@ -78,6 +78,13 @@
         "description": "Show all available Cloudless slash commands",
         "usage_hint": "(no arguments)",
         "should_escape": false
+      },
+      {
+        "command": "/cloudless-ads",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "LinkedIn campaign control — status, pause, resume, budget",
+        "usage_hint": "status | pause | resume | budget <EUR>",
+        "should_escape": false
       }
     ]
   },
