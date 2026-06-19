@@ -54,15 +54,36 @@ export interface NotifyChannelConfig {
 }
 
 /** Per-campaign tunable thresholds for anomaly DMs. All values are optional;
- *  unset = no anomaly check for that dimension. */
+ *  unset = no anomaly check for that dimension. Defaults (when the campaign
+ *  enables anomaly DMs but doesn't override) are documented in
+ *  `skills/ad-analytics/SKILL.md` and inline at evaluator level.
+ *
+ *  Source thresholds for the defaults — distilled from Improvado's 2026 ad
+ *  anomaly playbook, Go-Insights' monitoring rules, and Ryze's "stop wasting
+ *  ad spend" guide:
+ *    - CPM ≥25% vs 7-day average        → alert
+ *    - CTR drops ≥40% with stable freq  → alert
+ *    - CPA increase ≥25% sustained 48h+ → alert
+ *    - CPC spike ≥40%                   → alert
+ *    - Daily budget > 110% of target    → alert
+ *    - Conversion rate drop ≥30% DoD    → alert
+ *  "Start conservative" — a 20% CPA increase over 3 days is more reliable
+ *  than a 10% increase over 1 day. */
 export interface AnomalyRules {
-  /** Today's spend pace > N × yesterday's spend pace at same hour → DM. */
+  /** Today's spend pace > N × yesterday's spend pace at the same hour → fire.
+   *  Industry default 1.5 (50% over). */
   spendPaceMultiplier?: number;
-  /** CPC above this absolute value → DM. */
+  /** Current-window CPC > N × the rolling baseline CPC → fire. Industry
+   *  default 1.4 (40% spike per the Improvado threshold). */
+  cpcSpikeMultiplier?: number;
+  /** CPC above this absolute value (€) → fire. Useful as a hard ceiling
+   *  independent of the rolling baseline. */
   maxCpcEur?: number;
-  /** No conversions in N hours while spend > 0 → DM. */
+  /** No conversions in N hours while spend > 0 → fire. Industry default 24h —
+   *  give the funnel one full day before complaining. */
   zeroConversionsHours?: number;
-  /** CTR below this fraction (e.g. 0.005 = 0.5%) → DM. */
+  /** CTR below this fraction (e.g. 0.003 = 0.3%, LinkedIn's effective floor)
+   *  → fire. Industry default 0.003. */
   minCtr?: number;
 }
 

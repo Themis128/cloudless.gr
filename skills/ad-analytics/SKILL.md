@@ -136,6 +136,26 @@ Live verification of a real conversion via Chrome MCP:
 
 Each phase ships as its own PR with typecheck + tests + a verification log.
 
+## Anomaly thresholds (Phase 4)
+
+`src/lib/ad-analytics/anomaly.ts` `DEFAULTS` are tuned from the 2026 industry
+consensus. Change them only with a cited reason — the test
+`__tests__/ad-analytics/anomaly.test.ts > evaluateAnomalies > DEFAULTS pins
+the contract` is the regression guard.
+
+| Rule                  | Default        | Source                                                        | Notes                                                 |
+| --------------------- | -------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
+| `cpcSpikeMultiplier`  | 1.4 (40% over) | Improvado — "if CPC jumps by 40%, alert"                      | Skipped on cold start (no previous bookmark)          |
+| `spendPaceMultiplier` | 1.5 (50% over) | Go-Insights pacing methodology                                | Skipped on cold start                                 |
+| `zeroConversionsHours`| 24             | Ryze — "give the funnel one full day"                         | Skipped when poll window < this                       |
+| `minCtr`              | 0.003 (0.3%)   | LinkedIn effective floor + Improvado CTR-drop                 | Skipped below 200 impressions (small-sample guard)    |
+| `maxCpcEur`           | unset          | Operator hard ceiling                                         | Fires `critical` when set and exceeded                |
+
+Per-campaign overrides live in `Campaign.anomalyRules` in
+`src/data/campaigns.ts`. Findings are de-duped via the bookmark store on
+`findingDedupKey({ campaign, platform, rule, day })` — the same anomaly
+re-firing in the next 15-min tick stays silent until the next calendar day.
+
 ## References
 
 - Notion: [📊 Reusable Ad Analytics Slack App — Architecture](https://app.notion.com/p/3837d82c410a81bfb560d517d9140138)
@@ -143,4 +163,8 @@ Each phase ships as its own PR with typecheck + tests + a verification log.
 - Gilgamesh: [LinkedIn CAPI Is Not Meta CAPI — the source-bound conversion trap](https://gilgamesh.in/blog/linkedin-capi-source-bound-conversions)
 - Singer.io: [tap-linkedin-ads](https://github.com/singer-io/tap-linkedin-ads) — bookmark pattern reference
 - Microsoft Learn: [LinkedIn Reporting API](https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads-reporting/ads-reporting?view=li-lms-2026-03)
+- Improvado: [Marketing Anomaly Detection & Automated Alerts: 2026 Guide](https://improvado.io/blog/marketing-anomaly-detection-automated-alerts) — Phase 4 threshold source
+- Go-Insights: [How monitoring works](https://www.go-insights.com/anomaly-detection) — pacing methodology
+- Ryze AI: [How to Stop Wasting Ad Spend Automatically (2026)](https://www.get-ryze.ai/answers/how-to-stop-wasting-ad-spend-automatically) — alert cadence + conservative-threshold guidance
+- Tinybird: [Z-score anomaly detection](https://github.com/tinybirdco/use-case-real-time-anomaly-detection/blob/main/content/z-score.md) — statistical layer reference for the planned ≥7-snapshot upgrade
 - Existing repo skill: [linkedin-campaigns](../linkedin-campaigns/SKILL.md)
