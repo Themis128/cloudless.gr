@@ -133,11 +133,10 @@ export const campaigns: Campaign[] = [
     // page-load match on URL containing /campaigns/shop-online/thanks.
     // The browser-side fire (lintrk + CAPI mirror) happens in ThanksConversion.tsx.
     linkedinConversionId: 26846068,
-    // Phase 1 ad-analytics wiring. `capiConversionId` is null until the
-    // operator creates a `CONVERSIONS_API`-typed conversion in Campaign
-    // Manager — see `skills/ad-analytics/SKILL.md` operating principle #2
-    // for why we cannot reuse `26846068` (it's `EVENT_SPECIFIC_TAG`-typed
-    // and any /rest/conversionEvents POST against it 403s).
+    // Phase 1 ad-analytics wiring. `capiConversionId` 26846116 is the
+    // `CONVERSIONS_API`-typed conversion created 2026-06-19 (named
+    // "Conversion - Jun 19, 2026, 15:46:24" in Campaign Manager). Cannot
+    // reuse `26846068` (that's `EVENT_SPECIFIC_TAG`-typed; CAPI POSTs 403).
     adPlatforms: [
       {
         platform: "linkedin",
@@ -147,7 +146,7 @@ export const campaigns: Campaign[] = [
         accountId: "511588554",
         campaignIds: ["692134846"],
         insightTagConversionId: 26846068,
-        capiConversionId: null,
+        capiConversionId: 26846116,
       },
     ],
     notifyChannels: [
