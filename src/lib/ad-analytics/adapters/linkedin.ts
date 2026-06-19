@@ -41,7 +41,7 @@ async function resolveConfig(): Promise<ResolvedConfig | null> {
     // marketing-API token in SSM. Falls back to the shared
     // `LINKEDIN_ACCESS_TOKEN` (already in AppConfig) when the dedicated
     // CAPI var isn't set — the legacy route did the same thing.
-    const token = process.env.LINKEDIN_CAPI_ACCESS_TOKEN || cfg.LINKEDIN_ACCESS_TOKEN || "";
+    const token = process.env.LINKEDIN_CAPI_ACCESS_TOKEN || cfg.LINKEDIN_CAPI_ACCESS_TOKEN || cfg.LINKEDIN_ACCESS_TOKEN || "";
     if (!token) return null;
     return {
       token,

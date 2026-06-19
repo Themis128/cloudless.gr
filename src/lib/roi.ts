@@ -102,7 +102,7 @@ async function collectLinkedIn(start: string, end: string): Promise<ChannelRoi> 
   out.spendCents = currencyStringToCents(i.costInLocalCurrency);
   out.impressions = i.impressions;
   out.clicks = i.clicks;
-  out.platformLeads = i.leads;
+  out.platformLeads = i.conversions;
   return out;
 }
 

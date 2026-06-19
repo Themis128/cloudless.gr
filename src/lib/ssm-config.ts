@@ -74,6 +74,7 @@ interface AppConfig {
   LINKEDIN_CLIENT_ID: string;
   LINKEDIN_CLIENT_SECRET: string;
   LINKEDIN_ACCESS_TOKEN: string;
+  LINKEDIN_CAPI_ACCESS_TOKEN: string;
   LINKEDIN_AD_ACCOUNT_ID: string;
   LINKEDIN_ORGANIZATION_URN: string;
   // TikTok
@@ -221,6 +222,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",
     LINKEDIN_CLIENT_SECRET: params.get("LINKEDIN_CLIENT_SECRET") ?? "",
     LINKEDIN_ACCESS_TOKEN: params.get("LINKEDIN_ACCESS_TOKEN") ?? "",
+    LINKEDIN_CAPI_ACCESS_TOKEN: params.get("LINKEDIN_CAPI_ACCESS_TOKEN") ?? "",
     LINKEDIN_AD_ACCOUNT_ID: params.get("LINKEDIN_AD_ACCOUNT_ID") ?? "",
     LINKEDIN_ORGANIZATION_URN: params.get("LINKEDIN_ORGANIZATION_URN") ?? "",
     TIKTOK_APP_ID: params.get("TIKTOK_APP_ID") ?? "",
@@ -303,6 +305,7 @@ function buildConfigFromEnv(): AppConfig {
     LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID || "",
     LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET || "",
     LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN || "",
+    LINKEDIN_CAPI_ACCESS_TOKEN: process.env.LINKEDIN_CAPI_ACCESS_TOKEN || "",
     LINKEDIN_AD_ACCOUNT_ID: process.env.LINKEDIN_AD_ACCOUNT_ID || "",
     LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN || "",
     TIKTOK_APP_ID: process.env.TIKTOK_APP_ID || "",
