@@ -41,6 +41,14 @@ import {
   getLinkedInCampaignStatus,
   getLinkedInInsights,
 } from "@/lib/campaigns/linkedin";
+import {
+  buildSeoBlocks,
+  buildLeadsBlocks,
+  buildErrorsBlocks,
+  buildUptimeBlocks,
+  buildSubscribersBlocks,
+  buildCacheFlushBlocks,
+} from "@/lib/slack-commands-extra";
 
 /**
  * Slack user-ID allowlist for slash-command-driven workflow dispatch.
@@ -121,6 +129,30 @@ export async function POST(request: Request): Promise<Response> {
 
     case "/cloudless-ads":
       return handleAds(payload);
+
+    case "/cloudless-seo":
+      void runAsyncCommand(payload, buildSeoBlocks);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching SEO data..." });
+
+    case "/cloudless-leads":
+      void runAsyncCommand(payload, buildLeadsBlocks);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching leads..." });
+
+    case "/cloudless-errors":
+      void runAsyncCommand(payload, buildErrorsBlocks);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching errors..." });
+
+    case "/cloudless-uptime":
+      void runAsyncCommand(payload, buildUptimeBlocks);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Pinging endpoints..." });
+
+    case "/cloudless-subscribers":
+      void runAsyncCommand(payload, buildSubscribersBlocks);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching subscribers..." });
+
+    case "/cloudless-cache":
+      void runAsyncCommand(payload, (userId) => buildCacheFlushBlocks(userId, payload.text.trim() || undefined));
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Flushing cache..." });
 
     default:
       return slackResponse({
@@ -738,6 +770,27 @@ async function postToResponseUrl(
   }
 }
 
+async function runAsyncCommand(
+  payload: SlashCommandPayload,
+  buildBlocks: (userId: string) => Promise<unknown[]>
+): Promise<void> {
+  if (!payload.response_url) return;
+  try {
+    const blocks = await buildBlocks(payload.user_id);
+    await postToResponseUrl(payload.response_url, {
+      response_type: "ephemeral",
+      replace_original: true,
+      blocks,
+    });
+  } catch (err) {
+    await postToResponseUrl(payload.response_url, {
+      response_type: "ephemeral",
+      replace_original: true,
+      text: `:warning: Command failed: \`${((err as Error)?.message ?? "unknown").slice(0, 200)}\``,
+    });
+  }
+}
+
 async function handleDeploy(payload: SlashCommandPayload): Promise<Response> {
   const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
 
@@ -818,6 +871,12 @@ function handleHelp(): Response {
             "• `/cloudless-ads status` — LinkedIn campaign status + today's metrics",
             "• `/cloudless-ads pause|resume` — pause or resume LinkedIn campaign",
             "• `/cloudless-ads budget <EUR>` — set daily budget",
+            "• `/cloudless-seo` — GSC top 10 keywords, clicks, impressions, avg position",
+            "• `/cloudless-leads` — recent HubSpot contacts/leads",
+            "• `/cloudless-errors` — top 5 unresolved Sentry errors",
+            "• `/cloudless-uptime` — ping all endpoints (site, CloudFront, Pi)",
+            "• `/cloudless-subscribers` — newsletter subscriber count + recent signups",
+            "• `/cloudless-cache [prefix]` — flush Notion cache",
             "• `/cloudless-deploy` — deploy latest code to production",
             "• `/cloudless-draft rerun` — re-run the weekly article draft generator",
             "• `/cloudless-newsletter list` — show pending Notion drafts",
