@@ -32,16 +32,20 @@ export default function ContactFormSection() {
   const campaign = searchParams.get("campaign");
   const tier = searchParams.get("tier");
   const price = searchParams.get("price");
+  const isPurchaseFlow = topic === "purchase";
 
   let defaultMessage = "";
-  if (topic === "purchase") {
+  if (isPurchaseFlow) {
     const parts: string[] = [];
     if (products) parts.push(`Products: ${products}`);
     if (campaign) parts.push(`Campaign: ${campaign}`);
     if (tier) parts.push(`Tier: ${tier}`);
     if (price) parts.push(`Price: ${price}`);
-    defaultMessage = `Hi, I'd like to discuss a purchase.\n\n${parts.join("\n")}`;
+    defaultMessage = parts.join("\n");
   }
+
+  // Auto-select service based on product context
+  const defaultService = isPurchaseFlow ? "Not sure yet — let's discuss" : "";
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -87,6 +91,25 @@ export default function ContactFormSection() {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
           {/* Form */}
           <div className="lg:col-span-3">
+            {isPurchaseFlow && status !== "sent" && (
+              <div className="mb-6 rounded-xl border border-neon-cyan/30 bg-neon-cyan/5 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-cyan mt-0.5 text-lg">&#9889;</span>
+                  <div>
+                    <p className="font-mono text-sm font-semibold text-white">
+                      {t("contact.purchaseIntent", "Almost there! Tell us about your project.")}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {tier && price
+                        ? `${tier} — ${price}`
+                        : products || ""}
+                      {" — "}
+                      {t("contact.purchaseIntentSub", "Fill in your details and we'll send you a tailored proposal within 24 hours.")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {status === "sent" ? (
               <ScrollReveal>
                 <div className="neon-border bg-void-light rounded-lg p-10 text-center">
@@ -172,6 +195,7 @@ export default function ContactFormSection() {
                   <select
                     id="service"
                     name="service"
+                    defaultValue={defaultService}
                     className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
                   >
                     <option value="">Select a service</option>
