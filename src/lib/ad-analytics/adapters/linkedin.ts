@@ -21,7 +21,7 @@
 
 import { getConfig } from "@/lib/ssm-config";
 import type { AdPlatformAdapter, UserMatch } from "./ad-platform";
-import type { AdMetrics } from "../types";
+import type { AdMetrics, DemographicBreakdown, DemographicPivot } from "../types";
 
 const LINKEDIN_API_ROOT = "https://api.linkedin.com/rest";
 const LINKEDIN_API_VERSION = "202605";
@@ -60,13 +60,88 @@ export const linkedinAdapter: AdPlatformAdapter = {
   },
 
   /**
-   * Phase 2 will fill this in with `/rest/adAnalytics?q=analytics&pivot=…`
-   * partitioned per (campaign × time-window) — see Singer.io tap-linkedin-ads
-   * referenced in the architecture doc. Phase 1 returns an empty snapshot so
-   * the orchestrator can still wire up the registry without runtime errors.
+   * Pull headline metrics + optional demographic pivots from
+   * `/rest/adAnalytics?q=analytics`. Partitioned per `campaignId` because
+   * LinkedIn AdAnalytics has no pagination (Singer.io tap pattern).
+   *
+   * One headline request + one request per pivot. Privacy-suppressed
+   * pivots return an empty `demographics` entry — that's expected on
+   * low-volume campaigns until ~100 clicks accumulate.
    */
-  async pullMetrics(): Promise<AdMetrics[]> {
-    return [];
+  async pullMetrics({
+    accountId,
+    campaignIds,
+    since,
+    until,
+    pivots = [],
+  }: {
+    accountId: string;
+    campaignIds: string[];
+    since: Date;
+    until: Date;
+    pivots?: DemographicPivot[];
+  }): Promise<AdMetrics[]> {
+    const cfg = await resolveConfig();
+    if (!cfg) return [];
+    if (campaignIds.length === 0) return [];
+
+    const windowStart = since.toISOString();
+    const windowEnd = until.toISOString();
+    const dateRangeParam = formatDateRange(since, until);
+
+    const results: AdMetrics[] = [];
+    for (const campaignId of campaignIds) {
+      // 1. Headline metrics (impressions / clicks / cost / conversions).
+      const headline = await fetchHeadlineMetrics(
+        cfg.token,
+        accountId,
+        campaignId,
+        dateRangeParam
+      );
+      const base: AdMetrics = {
+        platform: "linkedin",
+        campaignId,
+        windowStart,
+        windowEnd,
+        impressions: headline.impressions,
+        clicks: headline.clicks,
+        conversions: headline.conversions,
+        spendEur: headline.spendEur,
+        ctr: headline.clicks && headline.impressions
+          ? headline.clicks / headline.impressions
+          : undefined,
+        cpcEur: headline.clicks ? headline.spendEur / headline.clicks : undefined,
+        cpaEur: headline.conversions
+          ? headline.spendEur / headline.conversions
+          : undefined,
+      };
+
+      // 2. Demographic enrichment, one fetch per pivot. Errors degrade
+      //    silently — the headline still renders.
+      if (pivots.length > 0) {
+        const demographics: Partial<Record<DemographicPivot, DemographicBreakdown>> = {};
+        await Promise.all(
+          pivots.map(async (pivot) => {
+            const breakdown = await fetchPivotBreakdown(
+              cfg.token,
+              accountId,
+              campaignId,
+              dateRangeParam,
+              pivot
+            );
+            if (breakdown.length > 0) {
+              demographics[pivot] = breakdown;
+            }
+          })
+        );
+        if (Object.keys(demographics).length > 0) {
+          base.demographics = demographics;
+        }
+      }
+
+      results.push(base);
+    }
+    return results;
   },
 
   async pushConversion({
@@ -172,4 +247,123 @@ function buildUserIds(user?: UserMatch): Array<{ idType: string; idValue: string
   if (user.liFatId)
     ids.push({ idType: "LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID", idValue: user.liFatId });
   return ids;
+}
+
+// ---------------------------------------------------------------------------
+// LinkedIn AdAnalytics helpers (Phase 2)
+// ---------------------------------------------------------------------------
+
+interface HeadlineMetrics {
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  spendEur: number;
+}
+
+/** LinkedIn wants the date-range params spread across `start.day/month/year`
+ *  and `end.day/month/year` — encode here once so both fetch paths reuse it. */
+function formatDateRange(since: Date, until: Date): string {
+  const s = ymd(since);
+  const u = ymd(until);
+  return (
+    `dateRange.start.day=${s.day}` +
+    `&dateRange.start.month=${s.month}` +
+    `&dateRange.start.year=${s.year}` +
+    `&dateRange.end.day=${u.day}` +
+    `&dateRange.end.month=${u.month}` +
+    `&dateRange.end.year=${u.year}`
+  );
+}
+
+function ymd(d: Date): { day: number; month: number; year: number } {
+  return { day: d.getUTCDate(), month: d.getUTCMonth() + 1, year: d.getUTCFullYear() };
+}
+
+async function fetchHeadlineMetrics(
+  token: string,
+  accountId: string,
+  campaignId: string,
+  dateRangeParam: string
+): Promise<HeadlineMetrics> {
+  const empty: HeadlineMetrics = { impressions: 0, clicks: 0, conversions: 0, spendEur: 0 };
+  try {
+    const path =
+      `/adAnalytics?q=analytics&pivot=CAMPAIGN&${dateRangeParam}` +
+      `&campaigns[0]=urn:li:sponsoredCampaign:${encodeURIComponent(campaignId)}` +
+      `&accounts[0]=urn:li:sponsoredAccount:${encodeURIComponent(accountId)}` +
+      `&fields=impressions,clicks,costInLocalCurrency,externalWebsiteConversions`;
+    const res = await fetch(`${LINKEDIN_API_ROOT}${path}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "LinkedIn-Version": LINKEDIN_API_VERSION,
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+    });
+    if (!res.ok) return empty;
+    const data = (await res.json()) as {
+      elements?: Array<{
+        impressions?: number;
+        clicks?: number;
+        costInLocalCurrency?: string | number;
+        externalWebsiteConversions?: number;
+      }>;
+    };
+    const el = data.elements?.[0] ?? {};
+    return {
+      impressions: el.impressions ?? 0,
+      clicks: el.clicks ?? 0,
+      conversions: el.externalWebsiteConversions ?? 0,
+      spendEur: Number(el.costInLocalCurrency ?? 0),
+    };
+  } catch {
+    return empty;
+  }
+}
+
+async function fetchPivotBreakdown(
+  token: string,
+  accountId: string,
+  campaignId: string,
+  dateRangeParam: string,
+  pivot: DemographicPivot
+): Promise<DemographicBreakdown> {
+  try {
+    const path =
+      `/adAnalytics?q=analytics&pivot=${pivot}&${dateRangeParam}` +
+      `&campaigns[0]=urn:li:sponsoredCampaign:${encodeURIComponent(campaignId)}` +
+      `&accounts[0]=urn:li:sponsoredAccount:${encodeURIComponent(accountId)}` +
+      `&fields=clicks,pivotValues`;
+    const res = await fetch(`${LINKEDIN_API_ROOT}${path}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "LinkedIn-Version": LINKEDIN_API_VERSION,
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      elements?: Array<{ clicks?: number; pivotValues?: string[] }>;
+    };
+    const rows = (data.elements ?? [])
+      .map((row) => ({
+        // `pivotValues` is an array of URNs (one per pivot dimension). Take
+        // the last segment as the human label until we add a URN-resolver
+        // for industries/seniorities. Raw URN beats "no signal at all".
+        label: prettifyUrn(row.pivotValues?.[0] ?? "unknown"),
+        clicks: row.clicks ?? 0,
+      }))
+      .filter((r) => r.clicks > 0)
+      .sort((a, b) => b.clicks - a.clicks);
+    return rows.slice(0, 6); // top-6 buckets keeps the digest readable
+  } catch {
+    return [];
+  }
+}
+
+/** "urn:li:industry:6" → "6". Real human labels need a lookup we'll add in a
+ *  follow-up; until then surfacing the bucket id is still useful signal. */
+function prettifyUrn(urn: string): string {
+  if (!urn) return "unknown";
+  const segments = urn.split(":");
+  return segments[segments.length - 1] || urn;
 }

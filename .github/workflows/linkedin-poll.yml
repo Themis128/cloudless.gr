@@ -1,0 +1,74 @@
+name: Ad analytics — LinkedIn poll
+
+# Phase 2 of the reusable ad-analytics module. Hits `/api/cron/ad-analytics-poll`
+# every 15 minutes — the route is gated by CRON_SECRET (Bearer token) so the
+# only thing the workflow needs is the secret + the public origin.
+#
+# Design choices:
+#  - GitHub-hosted runner (ubuntu-latest), NOT a Pi self-hosted runner. The
+#    Pi cluster goes offline during incidents and the poll would queue
+#    forever — defeating the point of a 15-min cadence.
+#  - `cancel-in-progress: true` on the concurrency group so a slow poll never
+#    overlaps the next tick.
+#  - Failure surfaces in the Actions log only; the route itself returns 200
+#    with a per-campaign outcome blob even when some platforms throw.
+#
+# Operator levers:
+#  - `vars.RUNNER_GENERIC` (see docs/runners.md) → flip to the self-hosted
+#    `omv,build` profile if GitHub-hosted billing breaks.
+#  - Manual dispatch (`workflow_dispatch`) to trigger an out-of-band poll for
+#    smoke-testing or rendering a fresh digest after a config change.
+
+on:
+  schedule:
+    # Every 15 minutes, 24/7. GitHub Actions cron is approximate — actual
+    # cadence is closer to 15-18 min in practice. Fine for an ad-analytics
+    # digest where LinkedIn's own reporting pipeline lag is 10-15 min anyway.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you triggering manually? (audit trail only)"
+        required: false
+        default: "manual smoke test"
+
+concurrency:
+  group: ad-analytics-poll
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  poll:
+    name: Hit /api/cron/ad-analytics-poll
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 5
+    steps:
+      - name: Curl the cron endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # SITE_ORIGIN should be https://cloudless.gr in prod. Override via
+          # vars to point at a preview deploy.
+          SITE_ORIGIN: ${{ vars.AD_ANALYTICS_SITE_ORIGIN || 'https://cloudless.gr' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET not configured at the repo level"
+            exit 1
+          fi
+          BODY=$(mktemp)
+          STATUS=$(curl -sS -o "$BODY" -w "%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "User-Agent: github-actions/linkedin-poll" \
+            --max-time 90 \
+            "${SITE_ORIGIN}/api/cron/ad-analytics-poll")
+          echo "HTTP $STATUS"
+          # Truncate to keep the workflow log readable when the campaign set
+          # grows; the full payload lives in CloudWatch.
+          head -c 4096 "$BODY" || true
+          echo
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::poll returned non-200 status: $STATUS"
+            exit 1
+          fi
