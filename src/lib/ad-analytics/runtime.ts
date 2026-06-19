@@ -145,6 +145,7 @@ export async function dispatchConversion(event: AdConversionEvent): Promise<Disp
         happenedAt,
         user: {
           userAgent: event.userAgent,
+          ipAddress: event.ipAddress,
         },
         pageUrl: event.url,
       });

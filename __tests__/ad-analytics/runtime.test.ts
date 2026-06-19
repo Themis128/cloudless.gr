@@ -104,11 +104,9 @@ describe("dispatchConversion", () => {
     expect(outcome.noop).toBe(false);
   });
 
-  it("skips the CAPI mirror when capiConversionId is null (degrades cleanly)", async () => {
-    // shop-online currently ships with capiConversionId: null because the
-    // operator hasn't yet minted the CONVERSIONS_API-typed conversion. The
-    // runtime must NOT call pushConversion in that case — otherwise we'd
-    // generate a 403 on every conversion. This test is the regression guard.
+  it("fires the CAPI mirror now that capiConversionId is wired", async () => {
+    // shop-online ships with capiConversionId: 26846116 (CONVERSIONS_API-typed).
+    // The runtime MUST call pushConversion for it.
     const adapter = fakeAdapter();
     const channel = fakeChannel();
     restore = _setRegistries({ adapters: { linkedin: adapter }, channels: { slack: channel } });
@@ -120,8 +118,12 @@ describe("dispatchConversion", () => {
       conversionId: 26846068,
     });
 
-    expect(adapter.pushConversion).not.toHaveBeenCalled();
-    expect(outcome.capi).toEqual([]);
+    expect(adapter.pushConversion).toHaveBeenCalledTimes(1);
+    const args = (adapter.pushConversion as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(args.conversionId).toBe(26846116);
+    expect(outcome.capi).toEqual([
+      { platform: "linkedin", accepted: true, status: 200, message: undefined },
+    ]);
   });
 
   it("fires CAPI when an adPlatform with capiConversionId set is registered", async () => {
