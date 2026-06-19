@@ -1,6 +1,6 @@
 import { getConfig } from "@/lib/ssm-config";
 
-const LINKEDIN_API = "https://api.linkedin.com/v2";
+const LINKEDIN_API = "https://api.linkedin.com/rest";
 
 async function getLinkedInConfig(): Promise<{
   token: string;
@@ -22,7 +22,7 @@ async function liiFetch(path: string, options: RequestInit = {}): Promise<Respon
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      "LinkedIn-Version": "202401",
+      "LinkedIn-Version": "202506",
       ...options.headers,
     },
   });
@@ -53,7 +53,7 @@ export async function listLinkedInCampaigns(): Promise<LinkedInCampaign[]> {
     const { adAccountId } = await getLinkedInConfig();
     if (!adAccountId) return [];
     const res = await liiFetch(
-      `/adAccounts/${adAccountId}/adCampaigns?q=search&search.status.values[0]=ACTIVE&count=20`
+      `/adAccounts/${adAccountId}/adCampaigns?q=search&count=20`
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -89,7 +89,7 @@ export interface LinkedInInsights {
   impressions: number;
   clicks: number;
   costInLocalCurrency: string;
-  leads: number;
+  conversions: number;
 }
 
 export async function getLinkedInInsights(
@@ -100,13 +100,13 @@ export async function getLinkedInInsights(
     impressions: 0,
     clicks: 0,
     costInLocalCurrency: "0",
-    leads: 0,
+    conversions: 0,
   };
   try {
     const { adAccountId } = await getLinkedInConfig();
     if (!adAccountId) return empty;
     const res = await liiFetch(
-      `/adAnalytics?q=analytics&pivot=ACCOUNT&dateRange.start.day=${dateStart.split("-")[2]}&dateRange.start.month=${dateStart.split("-")[1]}&dateRange.start.year=${dateStart.split("-")[0]}&dateRange.end.day=${dateEnd.split("-")[2]}&dateRange.end.month=${dateEnd.split("-")[1]}&dateRange.end.year=${dateEnd.split("-")[0]}&accounts[0]=urn:li:sponsoredAccount:${adAccountId}&fields=impressions,clicks,costInLocalCurrency,leads`
+      `/adAnalytics?q=analytics&pivot=ACCOUNT&dateRange.start.year=${dateStart.split("-")[0]}&dateRange.start.month=${Number(dateStart.split("-")[1])}&dateRange.start.day=${Number(dateStart.split("-")[2])}&dateRange.end.year=${dateEnd.split("-")[0]}&dateRange.end.month=${Number(dateEnd.split("-")[1])}&dateRange.end.day=${Number(dateEnd.split("-")[2])}&timeGranularity=ALL&accounts%5B0%5D=urn%3Ali%3AsponsoredAccount%3A${adAccountId}&fields=impressions,clicks,costInLocalCurrency,externalWebsiteConversions`
     );
     if (!res.ok) return empty;
     const data = await res.json();
@@ -115,7 +115,7 @@ export async function getLinkedInInsights(
       impressions: el.impressions ?? 0,
       clicks: el.clicks ?? 0,
       costInLocalCurrency: el.costInLocalCurrency ?? "0",
-      leads: el.leads ?? 0,
+      conversions: el.externalWebsiteConversions ?? 0,
     };
   } catch {
     return empty;

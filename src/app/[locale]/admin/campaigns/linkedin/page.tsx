@@ -18,7 +18,7 @@ interface Insights {
   impressions: number;
   clicks: number;
   costInLocalCurrency: string;
-  leads: number;
+  conversions: number;
 }
 
 export default function LinkedInPage() {
@@ -89,7 +89,7 @@ export default function LinkedInPage() {
             label="Spend"
             value={`$${Number.parseFloat(insights.costInLocalCurrency).toFixed(2)}`}
           />
-          <MetricCard label="Leads" value={insights.leads.toLocaleString()} />
+          <MetricCard label="Leads" value={insights.conversions.toLocaleString()} />
         </div>
       )}
 
