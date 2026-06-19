@@ -154,6 +154,11 @@ export const campaigns: Campaign[] = [
       // Real-time pings on every conversion (paid + fit-call). Operator's
       // phone lights up the moment a clicker becomes a known person.
       { channel: "slack", target: "#ads-realtime", level: "event" },
+      // Every-15-min digest of impressions / clicks / spend / CTR / CPC plus
+      // demographic pivots (industry, seniority, job title, company size).
+      // Driven by `/api/cron/ad-analytics-poll` via the
+      // `.github/workflows/linkedin-poll.yml` cron.
+      { channel: "slack", target: "#ads-digest", level: "digest" },
     ],
     tiers: [
       {

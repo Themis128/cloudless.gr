@@ -41,6 +41,50 @@ function fakeChannel(messageId: string): NotificationChannel {
 
 describe("runScheduledPoll", () => {
   it("returns noop when no campaign has a digest channel", async () => {
+    // Use a mocked campaigns module so this assertion stays meaningful even
+    // after the live `shop-online` config opts INTO #ads-digest.
+    vi.doMock("@/data/campaigns", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@/data/campaigns")>();
+      return {
+        ...actual,
+        campaigns: [
+          {
+            slug: "test-no-digest",
+            status: "live",
+            startsAt: "",
+            endsAt: "",
+            tagline: { el: "", en: "" },
+            headline: { el: "", en: "" },
+            headlineAccent: { el: "", en: "" },
+            subhead: { el: "", en: "" },
+            heroImage: "",
+            ogImage: "",
+            tiers: [],
+            faq: [],
+            utmCampaign: "",
+            linkedinConversionId: 26846068,
+            adPlatforms: [
+              {
+                platform: "linkedin",
+                accountId: "511588554",
+                campaignIds: ["692134846"],
+                insightTagConversionId: 26846068,
+                capiConversionId: null,
+              },
+            ],
+            // Only an event-level channel — no digest target. The poll must
+            // skip this campaign entirely instead of spamming a digest
+            // message to the realtime channel.
+            notifyChannels: [
+              { channel: "slack", target: "#ads-realtime", level: "event" },
+            ],
+          },
+        ],
+      };
+    });
+    vi.resetModules();
+    const fresh = await import("@/lib/ad-analytics/runtime");
+
     const adapter = fakeAdapter({
       platform: "linkedin",
       campaignId: "692134846",
@@ -52,18 +96,18 @@ describe("runScheduledPoll", () => {
       spendEur: 0,
     });
     const channel = fakeChannel("slack:#ads-realtime:1");
-    restoreRegistries = _setRegistries({
+    const restore = fresh._setRegistries({
       adapters: { linkedin: adapter },
       channels: { slack: channel },
     });
 
-    // shop-online ships with `notifyChannels: [{ level: "event", ... }]` only
-    // (no digest channel). The poll must return noop instead of spamming
-    // #ads-realtime with a digest block.
-    const outcome = await runScheduledPoll();
+    const outcome = await fresh.runScheduledPoll();
     expect(outcome.noop).toBe(true);
     expect(adapter.pullMetrics).not.toHaveBeenCalled();
     expect(channel.sendBlock).not.toHaveBeenCalled();
+
+    restore();
+    vi.doUnmock("@/data/campaigns");
   });
 
   it("posts a digest + advances bookmark when a digest channel is present", async () => {
