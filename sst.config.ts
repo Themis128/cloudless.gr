@@ -331,11 +331,11 @@ export default {
           actions: ["bedrock:InvokeModel", "bedrock:Converse"],
           resources: [
             // Foundation model — all US regions (cross-region inference routes through any of these)
-            "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-            "arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-            "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+            "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+            "arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+            "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
             // Cross-region inference profile (us.* prefix routes to any US region)
-            "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+            "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
           ],
         },
         {

@@ -41,7 +41,7 @@ graph TB
 
     Widget -->|POST messages| ChatRoute
     ChatRoute --> BedrockLoop
-    BedrockLoop -->|ConverseCommand IAM auth| Bedrock["AWS Bedrock\nus.anthropic.claude-3-5-haiku"]
+    BedrockLoop -->|ConverseCommand IAM auth| Bedrock["AWS Bedrock\nus.anthropic.claude-haiku-4-5"]
     BedrockLoop --> Tools
 
     Copy & Campaign & Audience & Insights -->|callClaude + getAnthropicApiKey| Call & Key
@@ -58,7 +58,7 @@ graph TB
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-api03-...
-ANTHROPIC_CHAT_MODEL=claude-3-5-haiku-latest
+ANTHROPIC_CHAT_MODEL=claude-haiku-4-5
 ```
 
 ### Production (AWS SSM Parameter Store)
@@ -93,7 +93,7 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget"));
 | Property | Value |
 |----------|-------|
 | Backend | AWS Bedrock Converse API — IAM auth via Lambda execution role (no API key) |
-| Model | `BEDROCK_MODEL_ID` env var or `us.anthropic.claude-3-5-haiku-20241022-v1:0` |
+| Model | `BEDROCK_MODEL_ID` env var or `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | `maxTokens` | 600 |
 | Streaming | SSE (`text/event-stream`) — final assistant text chunk-encoded after tool loop |
 | Tools | `lookup_product`, `check_calendar_availability`, `book_slot` (see below) |
@@ -245,9 +245,9 @@ Throws on API errors — callers catch and return 500.
 
 | Surface | Model | Auth |
 |---------|-------|------|
-| Public chatbot (`/api/chat`) | `BEDROCK_MODEL_ID` env var or `us.anthropic.claude-3-5-haiku-20241022-v1:0` | IAM (Lambda execution role via `sst.config.ts` permissions) |
+| Public chatbot (`/api/chat`) | `BEDROCK_MODEL_ID` env var or `us.anthropic.claude-haiku-4-5-20251001-v1:0` | IAM (Lambda execution role via `sst.config.ts` permissions) |
 | Admin AI routes | `claude-sonnet-4-6` | Anthropic API key from SSM (`ANTHROPIC_API_KEY`) |
-| `verifyAnthropicKey()` ping | `ANTHROPIC_CHAT_MODEL` (or `claude-3-5-haiku-latest`) | Anthropic API key |
+| `verifyAnthropicKey()` ping | `ANTHROPIC_CHAT_MODEL` (or `claude-haiku-4-5`) | Anthropic API key |
 
 ---
 

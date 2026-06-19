@@ -17,7 +17,7 @@ import {
 
 const CONFIGURED_CONFIG = {
   ANTHROPIC_API_KEY: "sk-ant-test-key",
-  ANTHROPIC_CHAT_MODEL: "claude-3-5-haiku-latest",
+  ANTHROPIC_CHAT_MODEL: "claude-haiku-4-5",
 };
 const TEST_API_KEY = "sk-ant-key";
 const TEST_API_SECRET = "sk-ant-secret";
