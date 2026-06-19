@@ -28,6 +28,12 @@ const SELECT_CLASS =
 const TEXTAREA_CLASS =
   "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full resize-y rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
 const SIDEBAR_LABEL_CLASS = "text-xs text-slate-500";
+// Form field identifiers — each used as htmlFor, id, name, and in payload extraction.
+const FIELD_NAME = "name";
+const FIELD_EMAIL = "email";
+const FIELD_COMPANY = "company";
+const FIELD_SERVICE = "service";
+const FIELD_MESSAGE = "message";
 
 export default function ContactFormSection() {
   const [locale] = useCurrentLocale();
@@ -62,11 +68,11 @@ export default function ContactFormSection() {
 
     const form = e.currentTarget;
     const payload = {
-      name: (form.elements.namedItem("name") as HTMLInputElement).value,
-      email: (form.elements.namedItem("email") as HTMLInputElement).value,
-      company: (form.elements.namedItem("company") as HTMLInputElement).value,
-      service: (form.elements.namedItem("service") as HTMLSelectElement).value,
-      message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
+      name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
+      email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
+      company: (form.elements.namedItem(FIELD_COMPANY) as HTMLInputElement).value,
+      service: (form.elements.namedItem(FIELD_SERVICE) as HTMLSelectElement).value,
+      message: (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value,
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,
     };
@@ -146,12 +152,12 @@ export default function ContactFormSection() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="name" className={LABEL_CLASS}>
+                    <label htmlFor={FIELD_NAME} className={LABEL_CLASS}>
                       {t("contact.name", "Name")} *
                     </label>
                     <input
-                      id="name"
-                      name="name"
+                      id={FIELD_NAME}
+                      name={FIELD_NAME}
                       type="text"
                       required
                       placeholder="John Doe"
@@ -159,12 +165,12 @@ export default function ContactFormSection() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className={LABEL_CLASS}>
+                    <label htmlFor={FIELD_EMAIL} className={LABEL_CLASS}>
                       {t("contact.email", "Email")} *
                     </label>
                     <input
-                      id="email"
-                      name="email"
+                      id={FIELD_EMAIL}
+                      name={FIELD_EMAIL}
                       type="email"
                       required
                       placeholder="john@company.com"
@@ -174,12 +180,12 @@ export default function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label htmlFor="company" className={LABEL_CLASS}>
+                  <label htmlFor={FIELD_COMPANY} className={LABEL_CLASS}>
                     {t("contact.company", "Company")}
                   </label>
                   <input
-                    id="company"
-                    name="company"
+                    id={FIELD_COMPANY}
+                    name={FIELD_COMPANY}
                     type="text"
                     placeholder="Acme Inc."
                     className={INPUT_CLASS}
@@ -187,12 +193,12 @@ export default function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label htmlFor="service" className={LABEL_CLASS}>
+                  <label htmlFor={FIELD_SERVICE} className={LABEL_CLASS}>
                     {t("contact.serviceOfInterest", "SERVICE OF INTEREST")}
                   </label>
                   <select
-                    id="service"
-                    name="service"
+                    id={FIELD_SERVICE}
+                    name={FIELD_SERVICE}
                     defaultValue={defaultService}
                     className={SELECT_CLASS}
                   >
@@ -206,12 +212,12 @@ export default function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label htmlFor="message" className={LABEL_CLASS}>
+                  <label htmlFor={FIELD_MESSAGE} className={LABEL_CLASS}>
                     {t("contact.message", "Message")} *
                   </label>
                   <textarea
-                    id="message"
-                    name="message"
+                    id={FIELD_MESSAGE}
+                    name={FIELD_MESSAGE}
                     required
                     rows={5}
                     defaultValue={defaultMessage}
