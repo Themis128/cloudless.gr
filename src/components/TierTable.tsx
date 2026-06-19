@@ -15,23 +15,31 @@ const COLOR_MUTED = "#4a5a5f";
 const FONT_FRAUNCES = '"Fraunces", Georgia, serif';
 const TRANSITION_FAST = "120ms ease";
 const CLS_INPUT = "cl-tiers__input";
+const FORM_STATUS_IDLE = "idle" as const;
+const FORM_STATUS_SENDING = "sending" as const;
+const FORM_STATUS_SENT = "sent" as const;
+const FORM_STATUS_ERROR = "error" as const;
 
 type Props = {
   campaign: Campaign;
   locale: Locale;
 };
 
-type FormStatus = "idle" | "sending" | "sent" | "error";
+type FormStatus =
+  | typeof FORM_STATUS_IDLE
+  | typeof FORM_STATUS_SENDING
+  | typeof FORM_STATUS_SENT
+  | typeof FORM_STATUS_ERROR;
 
 export default function TierTable({ campaign, locale }: Props) {
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
-  const [formStatus, setFormStatus] = useState<FormStatus>("idle");
+  const [formStatus, setFormStatus] = useState<FormStatus>(FORM_STATUS_IDLE);
   const formRef = useRef<HTMLDivElement>(null);
 
   function handleCtaClick(e: MouseEvent<HTMLAnchorElement>, tier: Tier) {
     e.preventDefault();
     setSelectedTier(tier);
-    setFormStatus("idle");
+    setFormStatus(FORM_STATUS_IDLE);
     // Scroll to form after a tick (DOM needs to render)
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -41,7 +49,7 @@ export default function TierTable({ campaign, locale }: Props) {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selectedTier) return;
-    setFormStatus("sending");
+    setFormStatus(FORM_STATUS_SENDING);
 
     const form = e.currentTarget;
     const payload = {
@@ -60,7 +68,7 @@ export default function TierTable({ campaign, locale }: Props) {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        setFormStatus("sent");
+        setFormStatus(FORM_STATUS_SENT);
         form.reset();
         // Fire conversion event → #ads-realtime Slack notification
         const attr = getStoredAttribution();
@@ -85,10 +93,10 @@ export default function TierTable({ campaign, locale }: Props) {
           }),
         }).catch(() => {});
       } else {
-        setFormStatus("error");
+        setFormStatus(FORM_STATUS_ERROR);
       }
     } catch {
-      setFormStatus("error");
+      setFormStatus(FORM_STATUS_ERROR);
     }
   }
 
@@ -125,7 +133,7 @@ export default function TierTable({ campaign, locale }: Props) {
       {/* Inline request form — appears when a tier is selected */}
       {selectedTier && (
         <div ref={formRef} className="cl-tiers__form-wrap">
-          {formStatus === "sent" ? (
+          {formStatus === FORM_STATUS_SENT ? (
             <div className="cl-tiers__success">
               <div className="cl-tiers__success-icon">✓</div>
               <h3>
@@ -178,7 +186,7 @@ export default function TierTable({ campaign, locale }: Props) {
                   autoComplete="tel"
                   className={CLS_INPUT}
                 />
-                {formStatus === "error" && (
+                {formStatus === FORM_STATUS_ERROR && (
                   <p className="cl-tiers__error">
                     {locale === LOCALE_EL
                       ? "Κάτι πήγε στραβά. Δοκίμασε ξανά."
@@ -187,10 +195,10 @@ export default function TierTable({ campaign, locale }: Props) {
                 )}
                 <button
                   type="submit"
-                  disabled={formStatus === "sending"}
+                  disabled={formStatus === FORM_STATUS_SENDING}
                   className="cl-tiers__submit"
                 >
-                  {formStatus === "sending"
+                  {formStatus === FORM_STATUS_SENDING
                     ? locale === LOCALE_EL
                       ? "Αποστολή..."
                       : "Sending..."
