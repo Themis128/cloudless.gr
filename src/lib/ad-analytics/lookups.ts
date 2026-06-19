@@ -177,9 +177,7 @@ export const COMPANY_SIZES: Record<string, string> = {
  *   urnOrId — either a full URN like `urn:li:industry:6` or the bare id `"6"`
  */
 export function resolvePivotLabel(pivot: DemographicPivot, urnOrId: string): string {
-  const tail = urnOrId.includes(":")
-    ? urnOrId.slice(urnOrId.lastIndexOf(":") + 1)
-    : urnOrId;
+  const tail = urnOrId.includes(":") ? urnOrId.slice(urnOrId.lastIndexOf(":") + 1) : urnOrId;
   if (!tail) return "unknown";
 
   switch (pivot) {
