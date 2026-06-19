@@ -1,0 +1,208 @@
+/**
+ * Extra slash command handlers: /cloudless-seo, /cloudless-leads,
+ * /cloudless-errors, /cloudless-uptime, /cloudless-subscribers, /cloudless-cache.
+ *
+ * Each returns a Block Kit payload for the Slack response, or uses the
+ * async response_url pattern for slow calls.
+ */
+
+import { getSeoSnapshot, getTopKeywords } from "@/lib/gsc";
+import { listContacts, isHubSpotConfigured } from "@/lib/hubspot";
+import { getTopErrors, isSentryConfigured } from "@/lib/sentry";
+import { invalidateCache } from "@/lib/notion-cache";
+import { listNewsletterSubscribers } from "@/lib/hubspot";
+
+// ---------------------------------------------------------------------------
+// /cloudless-seo — GSC top keywords + snapshot
+// ---------------------------------------------------------------------------
+
+export async function buildSeoBlocks(userId: string): Promise<unknown[]> {
+  try {
+    const [snapshot, keywords] = await Promise.all([
+      getSeoSnapshot(),
+      getTopKeywords(undefined, 10),
+    ]);
+
+    if (!snapshot) {
+      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: GSC not configured or no data available." } }];
+    }
+
+    const keywordRows = keywords
+      .map((k, i) => `${i + 1}. \`${k.keyword}\` — pos *${k.position.toFixed(1)}* · ${k.clicks} clicks · ${k.impressions} impr`)
+      .join("\n");
+
+    return [
+      { type: "header", text: { type: "plain_text", text: ":mag: SEO — Google Search Console", emoji: true } },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Clicks (28d)*\n${snapshot.clicks.toLocaleString()}` },
+          { type: "mrkdwn", text: `*Impressions (28d)*\n${snapshot.impressions.toLocaleString()}` },
+          { type: "mrkdwn", text: `*Avg CTR*\n${snapshot.ctr.toFixed(2)}%` },
+          { type: "mrkdwn", text: `*Avg Position*\n${snapshot.avgPosition.toFixed(1)}` },
+        ],
+      },
+      { type: "divider" },
+      { type: "section", text: { type: "mrkdwn", text: `*Top 10 Keywords*\n${keywordRows}` } },
+      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+    ];
+  } catch (err) {
+    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: SEO data unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// /cloudless-leads — HubSpot recent contacts
+// ---------------------------------------------------------------------------
+
+export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
+  try {
+    if (!(await isHubSpotConfigured())) {
+      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: HubSpot not configured (HUBSPOT_API_KEY missing)." } }];
+    }
+    const contacts = await listContacts(10);
+    const results = (contacts as Array<{ properties?: Record<string, string> }>);
+    if (!results.length) {
+      return [
+        { type: "header", text: { type: "plain_text", text: ":busts_in_silhouette: Leads", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: "No contacts found in HubSpot." } },
+      ];
+    }
+    const rows = results.slice(0, 10).map((c) => {
+      const p = c.properties ?? {};
+      const name = [p.firstname, p.lastname].filter(Boolean).join(" ") || "—";
+      const email = p.email || "—";
+      const created = p.createdate ? `<!date^${Math.floor(new Date(p.createdate).getTime() / 1000)}^{date_short}|${p.createdate}>` : "";
+      return `• *${name}* — ${email} ${created}`;
+    });
+    return [
+      { type: "header", text: { type: "plain_text", text: ":busts_in_silhouette: Recent Leads (HubSpot)", emoji: true } },
+      { type: "section", text: { type: "mrkdwn", text: `*${results.length}* contacts\n\n${rows.join("\n")}` } },
+      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+    ];
+  } catch (err) {
+    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: Leads unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// /cloudless-errors — Sentry top unresolved
+// ---------------------------------------------------------------------------
+
+export async function buildErrorsBlocks(userId: string): Promise<unknown[]> {
+  try {
+    if (!(await isSentryConfigured())) {
+      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: Sentry not configured (SENTRY_AUTH_TOKEN missing)." } }];
+    }
+    const issues = await getTopErrors(5);
+    if (!issues.length) {
+      return [
+        { type: "header", text: { type: "plain_text", text: ":white_check_mark: No Unresolved Errors", emoji: true } },
+        { type: "section", text: { type: "mrkdwn", text: "All clear! No unresolved Sentry issues." } },
+      ];
+    }
+    const rows = issues.map((issue, i) => {
+      const level = issue.level === "error" ? ":red_circle:" : issue.level === "warning" ? ":large_orange_circle:" : ":white_circle:";
+      return `${i + 1}. ${level} *${issue.title?.slice(0, 60)}*\n    ${issue.count ?? "?"} events · last seen ${issue.lastSeen ? `<!date^${Math.floor(new Date(issue.lastSeen).getTime() / 1000)}^{date_short_pretty} {time}|${issue.lastSeen}>` : "?"}`;
+    });
+    return [
+      { type: "header", text: { type: "plain_text", text: ":rotating_light: Top Unresolved Errors", emoji: true } },
+      { type: "section", text: { type: "mrkdwn", text: rows.join("\n\n") } },
+      {
+        type: "actions",
+        elements: [{
+          type: "button",
+          text: { type: "plain_text", text: "Open Sentry", emoji: true },
+          url: "https://sentry.io/issues/",
+          action_id: "open_sentry",
+          style: "primary",
+        }],
+      },
+      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+    ];
+  } catch (err) {
+    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: Errors unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// /cloudless-uptime — ping endpoints
+// ---------------------------------------------------------------------------
+
+const ENDPOINTS = [
+  { name: "cloudless.gr", url: "https://cloudless.gr/api/health" },
+  { name: "CloudFront", url: "https://d3k7muo3c6lw6s.cloudfront.net/api/health" },
+  { name: "Pi origin", url: "https://pi-origin.cloudless.gr/api/health" },
+];
+
+export async function buildUptimeBlocks(userId: string): Promise<unknown[]> {
+  const results = await Promise.all(
+    ENDPOINTS.map(async (ep) => {
+      const start = Date.now();
+      try {
+        const res = await fetch(ep.url, { signal: AbortSignal.timeout(10_000) });
+        const ms = Date.now() - start;
+        return { name: ep.name, status: res.status, ms, ok: res.ok };
+      } catch {
+        return { name: ep.name, status: 0, ms: Date.now() - start, ok: false };
+      }
+    })
+  );
+
+  const rows = results.map((r) => {
+    const icon = r.ok ? ":large_green_circle:" : ":red_circle:";
+    const status = r.ok ? `${r.status} OK` : r.status ? `${r.status}` : "TIMEOUT";
+    return `${icon} *${r.name}* — ${status} (${r.ms}ms)`;
+  });
+
+  const allUp = results.every((r) => r.ok);
+  const header = allUp ? ":white_check_mark: All Systems Operational" : ":warning: Issues Detected";
+
+  return [
+    { type: "header", text: { type: "plain_text", text: header, emoji: true } },
+    { type: "section", text: { type: "mrkdwn", text: rows.join("\n") } },
+    { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// /cloudless-subscribers — newsletter subscriber stats
+// ---------------------------------------------------------------------------
+
+export async function buildSubscribersBlocks(userId: string): Promise<unknown[]> {
+  try {
+    if (!(await isHubSpotConfigured())) {
+      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: HubSpot not configured." } }];
+    }
+    const subs = await listNewsletterSubscribers();
+    const total = subs.length;
+    const recent = subs.slice(0, 5);
+    const rows = recent.map((s) => {
+      const p = (s as { properties?: Record<string, string> }).properties ?? {};
+      const email = p.email || "—";
+      const date = p.createdate ? `<!date^${Math.floor(new Date(p.createdate).getTime() / 1000)}^{date_short}|>` : "";
+      return `• ${email} ${date}`;
+    });
+    return [
+      { type: "header", text: { type: "plain_text", text: ":envelope: Newsletter Subscribers", emoji: true } },
+      { type: "section", text: { type: "mrkdwn", text: `*Total subscribers:* ${total}` } },
+      ...(rows.length ? [{ type: "section", text: { type: "mrkdwn", text: `*Recent signups:*\n${rows.join("\n")}` } }] : []),
+      { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+    ];
+  } catch (err) {
+    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: Subscribers unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// /cloudless-cache — flush Notion cache
+// ---------------------------------------------------------------------------
+
+export async function buildCacheFlushBlocks(userId: string, prefix?: string): Promise<unknown[]> {
+  const cleared = invalidateCache(prefix || undefined);
+  return [
+    { type: "header", text: { type: "plain_text", text: ":broom: Cache Flushed", emoji: true } },
+    { type: "section", text: { type: "mrkdwn", text: `Cleared *${cleared}* cached entries${prefix ? ` matching \`${prefix}\`` : ""}.` } },
+    { type: "context", elements: [{ type: "mrkdwn", text: `Flushed by <@${userId}>` }] },
+  ];
+}

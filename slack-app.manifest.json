@@ -85,6 +85,48 @@
         "description": "LinkedIn campaign control — status, pause, resume, budget",
         "usage_hint": "status | pause | resume | budget <EUR>",
         "should_escape": false
+      },
+      {
+        "command": "/cloudless-seo",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "SEO snapshot — top keywords, clicks, impressions, avg position",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-leads",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Recent leads from HubSpot CRM",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-errors",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Top unresolved Sentry errors",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-uptime",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Ping all endpoints — site, CloudFront, Pi origin",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-subscribers",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Newsletter subscriber count and recent signups",
+        "usage_hint": "(no arguments)",
+        "should_escape": false
+      },
+      {
+        "command": "/cloudless-cache",
+        "url": "https://cloudless.gr/api/slack/commands",
+        "description": "Flush Notion content cache",
+        "usage_hint": "[prefix]",
+        "should_escape": false
       }
     ]
   },
