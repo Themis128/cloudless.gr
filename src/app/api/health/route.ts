@@ -9,3 +9,4 @@ export async function GET() {
     { headers: { "cache-control": "no-store, no-cache, must-revalidate" } }
   );
 }
+
