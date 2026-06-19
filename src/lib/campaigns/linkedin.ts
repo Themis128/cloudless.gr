@@ -119,3 +119,89 @@ export async function getLinkedInInsights(
     return empty;
   }
 }
+
+
+// ---------------------------------------------------------------------------
+// Campaign control (pause / resume / budget)
+// ---------------------------------------------------------------------------
+
+export async function pauseLinkedInCampaign(campaignId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await liiFetch(`/adCampaigns/${campaignId}`, {
+      method: "POST",
+      headers: { "X-Restli-Method": "PARTIAL_UPDATE" },
+      body: JSON.stringify({ patch: { $set: { status: "PAUSED" } } }),
+    });
+    if (res.ok || res.status === 204) return { ok: true };
+    const text = await res.text().catch(() => "");
+    return { ok: false, error: `${res.status}: ${text.slice(0, 200)}` };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
+export async function resumeLinkedInCampaign(campaignId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await liiFetch(`/adCampaigns/${campaignId}`, {
+      method: "POST",
+      headers: { "X-Restli-Method": "PARTIAL_UPDATE" },
+      body: JSON.stringify({ patch: { $set: { status: "ACTIVE" } } }),
+    });
+    if (res.ok || res.status === 204) return { ok: true };
+    const text = await res.text().catch(() => "");
+    return { ok: false, error: `${res.status}: ${text.slice(0, 200)}` };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
+export async function setLinkedInCampaignBudget(
+  campaignId: string,
+  dailyBudgetEur: number
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await liiFetch(`/adCampaigns/${campaignId}`, {
+      method: "POST",
+      headers: { "X-Restli-Method": "PARTIAL_UPDATE" },
+      body: JSON.stringify({
+        patch: {
+          $set: {
+            dailyBudget: { amount: String(Math.round(dailyBudgetEur * 100)), currencyCode: "EUR" },
+          },
+        },
+      }),
+    });
+    if (res.ok || res.status === 204) return { ok: true };
+    const text = await res.text().catch(() => "");
+    return { ok: false, error: `${res.status}: ${text.slice(0, 200)}` };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}
+
+export async function getLinkedInCampaignStatus(campaignId: string): Promise<{
+  ok: boolean;
+  name?: string;
+  status?: string;
+  dailyBudget?: string;
+  error?: string;
+}> {
+  try {
+    const res = await liiFetch(`/adCampaigns/${campaignId}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return { ok: false, error: `${res.status}: ${text.slice(0, 200)}` };
+    }
+    const data = await res.json();
+    return {
+      ok: true,
+      name: data.name,
+      status: data.status,
+      dailyBudget: data.dailyBudget
+        ? `€${(Number(data.dailyBudget.amount) / 100).toFixed(2)}`
+        : "not set",
+    };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
+  }
+}

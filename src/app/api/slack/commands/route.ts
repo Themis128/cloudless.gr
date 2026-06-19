@@ -34,6 +34,13 @@ import {
 import { getLiveCampaigns, getCampaign } from "@/data/campaigns";
 import { runAdHocSnapshot } from "@/lib/ad-analytics/runtime";
 import { renderDigest } from "@/lib/ad-analytics/digest";
+import {
+  pauseLinkedInCampaign,
+  resumeLinkedInCampaign,
+  setLinkedInCampaignBudget,
+  getLinkedInCampaignStatus,
+  getLinkedInInsights,
+} from "@/lib/campaigns/linkedin";
 
 /**
  * Slack user-ID allowlist for slash-command-driven workflow dispatch.
@@ -111,6 +118,9 @@ export async function POST(request: Request): Promise<Response> {
 
     case "/cloudless-help":
       return handleHelp();
+
+    case "/cloudless-ads":
+      return handleAds(payload);
 
     default:
       return slackResponse({
@@ -805,6 +815,9 @@ function handleHelp(): Response {
             "• `/cloudless-analytics` — Stripe revenue summary",
             "• `/cloudless-analytics ads` — list configured LinkedIn ad campaigns",
             "• `/cloudless-analytics ads <slug>` — live LinkedIn snapshot (impressions / clicks / CTR / spend / ICP)",
+            "• `/cloudless-ads status` — LinkedIn campaign status + today's metrics",
+            "• `/cloudless-ads pause|resume` — pause or resume LinkedIn campaign",
+            "• `/cloudless-ads budget <EUR>` — set daily budget",
             "• `/cloudless-deploy` — deploy latest code to production",
             "• `/cloudless-draft rerun` — re-run the weekly article draft generator",
             "• `/cloudless-newsletter list` — show pending Notion drafts",
@@ -835,6 +848,158 @@ interface SlackCommandResponse {
   response_type: "ephemeral" | "in_channel";
   text?: string;
   blocks?: unknown[];
+}
+
+// ---------------------------------------------------------------------------
+// /cloudless-ads — LinkedIn campaign control from Slack
+//
+// Subcommands:
+//   status             → current campaign status + daily budget + today's metrics
+//   pause              → pause the campaign
+//   resume             → resume (activate) the campaign
+//   budget <amount>    → set daily budget in EUR (e.g. "budget 20")
+//   help               → usage
+// ---------------------------------------------------------------------------
+
+function handleAds(payload: SlashCommandPayload): Response {
+  const argv = payload.text.trim().split(/\s+/).filter(Boolean);
+  const sub = (argv[0] ?? "help").toLowerCase();
+
+  // Use the campaign ID from the wired campaign data
+  const campaign = getLiveCampaigns().find((c) => c.adPlatforms?.some((p) => p.platform === "linkedin"));
+  const campaignId = campaign?.adPlatforms?.find((p) => p.platform === "linkedin")?.campaignIds[0];
+
+  if (!campaignId && sub !== "help") {
+    return slackResponse({
+      response_type: "ephemeral",
+      text: ":warning: No LinkedIn campaign configured in `src/data/campaigns.ts`.",
+    });
+  }
+
+  switch (sub) {
+    case "status":
+      void runAdsStatus(campaignId!, payload.response_url, payload.user_id);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching campaign status..." });
+
+    case "pause":
+      void runAdsPause(campaignId!, payload.response_url, payload.user_id);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Pausing campaign..." });
+
+    case "resume":
+      void runAdsResume(campaignId!, payload.response_url, payload.user_id);
+      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Resuming campaign..." });
+
+    case "budget": {
+      const amount = parseFloat(argv[1] ?? "");
+      if (!amount || amount <= 0) {
+        return slackResponse({ response_type: "ephemeral", text: ":warning: Usage: `/cloudless-ads budget 20` (daily EUR amount)" });
+      }
+      void runAdsBudget(campaignId!, amount, payload.response_url, payload.user_id);
+      return slackResponse({ response_type: "ephemeral", text: `:hourglass_flowing_sand: Setting daily budget to €${amount}...` });
+    }
+
+    default:
+      return slackResponse({
+        response_type: "ephemeral",
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: [
+                "*`/cloudless-ads` — LinkedIn Campaign Control*",
+                "",
+                "• `/cloudless-ads status` — campaign status, budget, today's metrics",
+                "• `/cloudless-ads pause` — pause the campaign (stops spending)",
+                "• `/cloudless-ads resume` — resume the campaign",
+                "• `/cloudless-ads budget 20` — set daily budget to €20",
+                "• `/cloudless-ads help` — this message",
+              ].join("\n"),
+            },
+          },
+        ],
+      });
+  }
+}
+
+async function runAdsStatus(campaignId: string, responseUrl: string, userId: string): Promise<void> {
+  try {
+    const [info, insights] = await Promise.all([
+      getLinkedInCampaignStatus(campaignId),
+      (() => {
+        const today = new Date().toISOString().split("T")[0];
+        return getLinkedInInsights(today, today);
+      })(),
+    ]);
+    if (!info.ok) {
+      await postToResponseUrl(responseUrl, { response_type: "ephemeral", replace_original: true, text: `:warning: ${info.error}` });
+      return;
+    }
+    const statusIcon = info.status === "ACTIVE" ? ":large_green_circle:" : info.status === "PAUSED" ? ":double_vertical_bar:" : ":white_circle:";
+    const ctr = insights.impressions > 0 ? ((insights.clicks / insights.impressions) * 100).toFixed(2) + "%" : "—";
+    await postToResponseUrl(responseUrl, {
+      response_type: "ephemeral",
+      replace_original: true,
+      blocks: [
+        { type: "header", text: { type: "plain_text", text: ":chart_with_upwards_trend: LinkedIn Campaign Status", emoji: true } },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Campaign*\n${info.name}` },
+            { type: "mrkdwn", text: `*Status*\n${statusIcon} ${info.status}` },
+            { type: "mrkdwn", text: `*Daily Budget*\n${info.dailyBudget}` },
+            { type: "mrkdwn", text: `*ID*\n\`${campaignId}\`` },
+          ],
+        },
+        { type: "divider" },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*Impressions (today)*\n${insights.impressions.toLocaleString()}` },
+            { type: "mrkdwn", text: `*Clicks*\n${insights.clicks}` },
+            { type: "mrkdwn", text: `*CTR*\n${ctr}` },
+            { type: "mrkdwn", text: `*Spend*\n€${Number(insights.costInLocalCurrency).toFixed(2)}` },
+          ],
+        },
+        { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
+      ],
+    });
+  } catch (err) {
+    await postToResponseUrl(responseUrl, { response_type: "ephemeral", replace_original: true, text: `:warning: ${(err as Error).message}` });
+  }
+}
+
+async function runAdsPause(campaignId: string, responseUrl: string, userId: string): Promise<void> {
+  const result = await pauseLinkedInCampaign(campaignId);
+  await postToResponseUrl(responseUrl, {
+    response_type: "in_channel",
+    replace_original: true,
+    text: result.ok
+      ? `:double_vertical_bar: Campaign \`${campaignId}\` paused by <@${userId}>.`
+      : `:warning: Failed to pause: ${result.error}`,
+  });
+}
+
+async function runAdsResume(campaignId: string, responseUrl: string, userId: string): Promise<void> {
+  const result = await resumeLinkedInCampaign(campaignId);
+  await postToResponseUrl(responseUrl, {
+    response_type: "in_channel",
+    replace_original: true,
+    text: result.ok
+      ? `:arrow_forward: Campaign \`${campaignId}\` resumed by <@${userId}>.`
+      : `:warning: Failed to resume: ${result.error}`,
+  });
+}
+
+async function runAdsBudget(campaignId: string, amount: number, responseUrl: string, userId: string): Promise<void> {
+  const result = await setLinkedInCampaignBudget(campaignId, amount);
+  await postToResponseUrl(responseUrl, {
+    response_type: "in_channel",
+    replace_original: true,
+    text: result.ok
+      ? `:moneybag: Campaign \`${campaignId}\` daily budget set to *€${amount}* by <@${userId}>.`
+      : `:warning: Failed to update budget: ${result.error}`,
+  });
 }
 
 function slackResponse(body: SlackCommandResponse): Response {
