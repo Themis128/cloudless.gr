@@ -487,6 +487,10 @@ export async function slackOrderNotify(data: {
   email: string;
   amount: string;
   sessionId: string;
+  name?: string;
+  phone?: string;
+  campaign?: string;
+  tier?: string;
   /** Optional attribution summary (UTM source/medium/campaign/content/term plus
    *  campaign_slug and tier) extracted from the Stripe Session metadata. When
    *  present, surfaced as an extra line so the operator can see immediately
@@ -495,10 +499,14 @@ export async function slackOrderNotify(data: {
 }): Promise<boolean> {
   const safeEmail = slackEscape(data.email);
   const lines = [
-    `*Customer:* ${safeEmail}`,
+    `*Customer:* ${data.name ? `${slackEscape(data.name)} · ` : ""}${safeEmail}${data.phone ? ` · ${slackEscape(data.phone)}` : ""}`,
     `*Amount:* ${data.amount}`,
     `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
   ];
+  if (data.campaign || data.tier) {
+    const parts = [data.campaign, data.tier].filter(Boolean).map(s => slackEscape(s!));
+    lines.push(`*Campaign:* ${parts.join(" · ")}`);
+  }
   if (data.attribution) {
     lines.push(`*Attribution:* ${slackEscape(data.attribution)}`);
   }
