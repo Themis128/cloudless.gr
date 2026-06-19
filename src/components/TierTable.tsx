@@ -61,13 +61,15 @@ export default function TierTable({ campaign, locale }: Props) {
             orderId: `lead-${Date.now()}`,
             url: window.location.href,
             userAgent: navigator.userAgent,
-            utm: attr ? {
-              source: attr.utmSource,
-              medium: attr.utmMedium,
-              campaign: attr.utmCampaign,
-              content: attr.utmContent,
-              term: attr.utmTerm,
-            } : undefined,
+            utm: attr
+              ? {
+                  source: attr.utmSource,
+                  medium: attr.utmMedium,
+                  campaign: attr.utmCampaign,
+                  content: attr.utmContent,
+                  term: attr.utmTerm,
+                }
+              : undefined,
           }),
         }).catch(() => {});
       } else {
@@ -171,10 +173,18 @@ export default function TierTable({ campaign, locale }: Props) {
                       : "Something went wrong. Please try again."}
                   </p>
                 )}
-                <button type="submit" disabled={formStatus === "sending"} className="cl-tiers__submit">
+                <button
+                  type="submit"
+                  disabled={formStatus === "sending"}
+                  className="cl-tiers__submit"
+                >
                   {formStatus === "sending"
-                    ? locale === "el" ? "Αποστολή..." : "Sending..."
-                    : locale === "el" ? "Λάβε πρόταση →" : "Get my proposal →"}
+                    ? locale === "el"
+                      ? "Αποστολή..."
+                      : "Sending..."
+                    : locale === "el"
+                      ? "Λάβε πρόταση →"
+                      : "Get my proposal →"}
                 </button>
               </form>
             </>

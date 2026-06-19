@@ -92,7 +92,7 @@ export default function ContactFormSection() {
           {/* Form */}
           <div className="lg:col-span-3">
             {isPurchaseFlow && status !== "sent" && (
-              <div className="mb-6 rounded-xl border border-neon-cyan/30 bg-neon-cyan/5 p-4">
+              <div className="border-neon-cyan/30 bg-neon-cyan/5 mb-6 rounded-xl border p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-neon-cyan mt-0.5 text-lg">&#9889;</span>
                   <div>
@@ -100,11 +100,12 @@ export default function ContactFormSection() {
                       {t("contact.purchaseIntent", "Almost there! Tell us about your project.")}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {tier && price
-                        ? `${tier} — ${price}`
-                        : products || ""}
+                      {tier && price ? `${tier} — ${price}` : products || ""}
                       {" — "}
-                      {t("contact.purchaseIntentSub", "Fill in your details and we'll send you a tailored proposal within 24 hours.")}
+                      {t(
+                        "contact.purchaseIntentSub",
+                        "Fill in your details and we'll send you a tailored proposal within 24 hours."
+                      )}
                     </p>
                   </div>
                 </div>

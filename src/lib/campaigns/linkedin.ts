@@ -52,9 +52,7 @@ export async function listLinkedInCampaigns(): Promise<LinkedInCampaign[]> {
   try {
     const { adAccountId } = await getLinkedInConfig();
     if (!adAccountId) return [];
-    const res = await liiFetch(
-      `/adAccounts/${adAccountId}/adCampaigns?q=search&count=20`
-    );
+    const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns?q=search&count=20`);
     if (!res.ok) return [];
     const data = await res.json();
     return (data.elements ?? []).map(

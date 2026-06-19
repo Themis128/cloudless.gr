@@ -289,8 +289,10 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
         // message rather than the error name/type (e.g. when the error is a
         // generic AuthError wrapper). Check both to avoid the CloudWatch
         // SERVERLESS-APP_MAIN-Errors alarm firing on crawler/probe GETs.
+        const CONFIG_ERROR_KEYWORD = "Configuration";
         const isConfigurationError =
-          tag.includes("Configuration") || (error?.message ?? "").includes("Configuration");
+          tag.includes(CONFIG_ERROR_KEYWORD) ||
+          (error?.message ?? "").includes(CONFIG_ERROR_KEYWORD);
         if (isConfigurationError && configured) return;
         console.error(`[auth][error] ${error?.message ?? error}`);
       },

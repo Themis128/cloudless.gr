@@ -7,8 +7,16 @@ import ProductIcon from "@/components/store/ProductIcon";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 export default function CartSlideOver() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, clearCart, totalPrice, totalItems } =
-    useCart();
+  const {
+    items,
+    isOpen,
+    closeCart,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    totalPrice,
+    totalItems,
+  } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
