@@ -33,7 +33,10 @@ const FLAG_BY_COUNTRY: Record<string, string> = {
  *   Page: https://cloudless.gr/en/campaigns/shop-online/thanks?...
  *   ⏰ at 02:14 Athens
  */
-export function renderConversionBlocks(event: AdConversionEvent): NotificationBlock[] {
+export function renderConversionBlocks(
+  event: AdConversionEvent,
+  capiResults?: Array<{ platform: string; accepted: boolean; status: number; message?: string }>,
+): NotificationBlock[] {
   const tier = event.tier ?? "—";
   const order = event.orderId ? truncate(event.orderId, 30) : "—";
   const flag = event.country ? (FLAG_BY_COUNTRY[event.country] ?? event.country) : "";
@@ -44,18 +47,40 @@ export function renderConversionBlocks(event: AdConversionEvent): NotificationBl
   const metaLine = `*Tier:* \`${tier}\`  ·  *Order:* \`${order}\`${flag ? `  ·  ${flag}` : ""}`;
   const creativeLine = creative ? `*Creative:* ${creative}` : "";
   const pageLine = url ? `*Page:* <${url}|${truncate(url, 80)}>` : "";
+  const capiLine = formatCapiStatus(capiResults);
+
+  const athensTime = new Date().toLocaleString("en-GB", {
+    timeZone: "Europe/Athens",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "short",
+  });
 
   return [
     { type: "header", text: headerLine },
     {
       type: "section",
-      text: [metaLine, creativeLine, pageLine].filter(Boolean).join("\n"),
+      text: [metaLine, creativeLine, pageLine, capiLine].filter(Boolean).join("\n"),
     },
     {
       type: "context",
-      text: `cloudless.gr ad-analytics · ${new Date().toISOString()}`,
+      text: `cloudless.gr ad-analytics · ${athensTime} Athens`,
     },
   ];
+}
+
+function formatCapiStatus(
+  results?: Array<{ platform: string; accepted: boolean; status: number; message?: string }>,
+): string {
+  if (!results || results.length === 0) return "*CAPI:* ⏭️ skipped (no platform wired)";
+  return results
+    .map((r) => {
+      const icon = r.accepted ? "✅" : "❌";
+      const detail = r.accepted ? `${r.status}` : `${r.status}${r.message ? ` — ${truncate(r.message, 60)}` : ""}`;
+      return `*CAPI ${r.platform}:* ${icon} ${detail}`;
+    })
+    .join("\n");
 }
 
 function formatCreative(event: AdConversionEvent): string {

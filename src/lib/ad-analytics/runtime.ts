@@ -160,7 +160,7 @@ export async function dispatchConversion(event: AdConversionEvent): Promise<Disp
 
   // ---- Notification fan-out ------------------------------------------------
   const eventChannels = channelsForLevel(campaign.notifyChannels, "event");
-  const blocks = renderConversionBlocks(event);
+  const blocks = renderConversionBlocks(event, capiResults);
   const notificationResults = await Promise.all(
     eventChannels.map(async ({ config, channel }) => {
       try {
