@@ -51,6 +51,7 @@ export default function TierTable({ campaign, locale }: Props) {
         setFormStatus("sent");
         form.reset();
         // Fire conversion event → #ads-realtime Slack notification
+        const attr = getStoredAttribution();
         fetch("/api/campaigns/conversion", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -60,6 +61,13 @@ export default function TierTable({ campaign, locale }: Props) {
             orderId: `lead-${Date.now()}`,
             url: window.location.href,
             userAgent: navigator.userAgent,
+            utm: attr ? {
+              source: attr.utmSource,
+              medium: attr.utmMedium,
+              campaign: attr.utmCampaign,
+              content: attr.utmContent,
+              term: attr.utmTerm,
+            } : undefined,
           }),
         }).catch(() => {});
       } else {

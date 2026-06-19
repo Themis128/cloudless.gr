@@ -31,6 +31,13 @@ type Body = {
   conversionId?: number | null;
   url?: string | null;
   userAgent?: string | null;
+  utm?: {
+    source?: string;
+    medium?: string;
+    campaign?: string;
+    content?: string;
+    term?: string;
+  } | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -53,6 +60,7 @@ export async function POST(request: NextRequest) {
     url: body.url ?? undefined,
     userAgent: body.userAgent ?? undefined,
     country: request.headers.get("cf-ipcountry") ?? undefined,
+    utm: body.utm ?? undefined,
   });
 
   if (outcome.noop) {
