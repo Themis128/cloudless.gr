@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { trackLinkedInConversion } from "@/lib/linkedin-track";
+import { getStoredAttribution } from "@/lib/lead-attribution";
 
 /**
  * Dual-fires the LinkedIn conversion exactly once:
@@ -33,6 +34,17 @@ export default function ThanksConversion({
       trackLinkedInConversion(conversionId);
     }
 
+    const attribution = getStoredAttribution();
+    const utm = attribution
+      ? {
+          source: attribution.utmSource,
+          medium: attribution.utmMedium,
+          campaign: attribution.utmCampaign,
+          content: attribution.utmContent,
+          term: attribution.utmTerm,
+        }
+      : null;
+
     fetch("/api/campaigns/conversion", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,6 +55,7 @@ export default function ThanksConversion({
         conversionId,
         url: typeof window !== "undefined" ? window.location.href : null,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        utm,
       }),
     }).catch(() => {
       // CAPI is purely additive — the browser-side Insight Tag fire above

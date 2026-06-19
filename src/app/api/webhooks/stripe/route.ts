@@ -91,11 +91,19 @@ async function handleCheckoutCompleted(
     ? `<p><strong>Attribution:</strong> ${escapeHtml(utmSummary)}</p>`
     : "";
 
+  const customerName = session.customer_details?.name ?? "";
+  const customerPhone = session.customer_details?.phone ?? "";
+  const campaignSlug = session.metadata?.campaign ?? "";
+  const tierName = session.metadata?.tier ?? "";
+
   await notifyTeam(
     `[Order] New purchase: ${session.id}`,
     `<h3>New order received</h3>
-    <p><strong>Customer:</strong> ${escapeHtml(session.customer_email ?? "N/A")}</p>
+    ${customerName ? `<p><strong>Name:</strong> ${escapeHtml(customerName)}</p>` : ""}
+    <p><strong>Email:</strong> ${escapeHtml(session.customer_email ?? "N/A")}</p>
+    ${customerPhone ? `<p><strong>Phone:</strong> ${escapeHtml(customerPhone)}</p>` : ""}
     <p><strong>Amount:</strong> ${((session.amount_total ?? 0) / 100).toFixed(2)} ${escapeHtml((session.currency ?? "EUR").toUpperCase())}</p>
+    ${campaignSlug ? `<p><strong>Campaign:</strong> ${escapeHtml(campaignSlug)}${tierName ? ` · ${escapeHtml(tierName)}` : ""}</p>` : ""}
     <p><strong>Session:</strong> ${escapeHtml(session.id)}</p>
     ${utmHtml}`
   );
@@ -103,7 +111,11 @@ async function handleCheckoutCompleted(
   slackOrderNotify({
     sessionId: session.id,
     email: session.customer_email ?? "N/A",
-    amount: String((session.amount_total ?? 0) / 100),
+    name: session.customer_details?.name ?? undefined,
+    phone: session.customer_details?.phone ?? undefined,
+    amount: `€${((session.amount_total ?? 0) / 100).toFixed(2)} ${(session.currency ?? "eur").toUpperCase()}`,
+    campaign: session.metadata?.campaign ?? undefined,
+    tier: session.metadata?.tier ?? undefined,
     attribution: utmSummary || undefined,
   }).catch(() => {});
 
