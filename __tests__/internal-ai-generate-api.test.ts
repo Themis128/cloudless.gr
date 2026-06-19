@@ -20,7 +20,7 @@ vi.mock("@/lib/bedrock-shared", () => ({
   getBedrockClient: vi.fn(),
   runBedrockTurn: vi.fn(),
   joinAssistantText: (blocks: { text?: string }[]) => blocks.map((b) => b.text ?? "").join(""),
-  BEDROCK_MODEL_ID: "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+  BEDROCK_MODEL_ID: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
 }));
 
 import { POST } from "../src/app/api/internal/ai/generate/route";

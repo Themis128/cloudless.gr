@@ -16,7 +16,7 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 
 const DEFAULT_REGION = "us-east-1";
-const DEFAULT_MODEL_ID = "us.anthropic.claude-3-5-haiku-20241022-v1:0";
+const DEFAULT_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 export const BEDROCK_REGION = process.env.AWS_REGION ?? DEFAULT_REGION;
 export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID ?? DEFAULT_MODEL_ID;

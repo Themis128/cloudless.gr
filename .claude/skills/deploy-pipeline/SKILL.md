@@ -133,8 +133,8 @@ permissions: [
   {
     actions: ["bedrock:InvokeModel", "bedrock:Converse"],
     resources: [
-      "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-      "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+      "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+      "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
     ],
   },
 ],
@@ -154,8 +154,8 @@ aws iam put-user-policy \
       "Effect":"Allow",
       "Action":["bedrock:InvokeModel","bedrock:Converse"],
       "Resource":[
-        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-        "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0"
+        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0"
       ]
     }]
   }'

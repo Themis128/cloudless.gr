@@ -19,7 +19,7 @@ const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 const VERIFY_TIMEOUT_MS = 8_000;
 const DEFAULT_MAX_TOKENS = 1_000;
-const DEFAULT_CHAT_MODEL = "claude-3-5-haiku-latest";
+const DEFAULT_CHAT_MODEL = "claude-haiku-4-5";
 
 export type AnthropicTokenStatus = "valid" | "rejected" | "not_configured" | "error";
 

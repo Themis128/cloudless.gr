@@ -12,7 +12,7 @@ vi.mock("@aws-sdk/client-bedrock-runtime", () => ({
 }));
 
 vi.mock("@/lib/bedrock-shared", () => ({
-  BEDROCK_MODEL_ID: "anthropic.claude-3-5-haiku",
+  BEDROCK_MODEL_ID: "anthropic.claude-haiku-4-5",
   buildBedrockToolConfig: vi.fn().mockReturnValue({ tools: [] }),
   getBedrockClient: vi.fn(() => ({ send: mockBedrockSend })),
 }));
