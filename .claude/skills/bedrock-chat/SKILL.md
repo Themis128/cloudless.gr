@@ -9,7 +9,7 @@ allowed-tools: mcp__cloudless-infra__aws_get_ssm_parameters, mcp__cloudless-infr
 ## Overview
 
 `/api/chat` uses **AWS Bedrock Converse API** (IAM auth, no Anthropic credits needed).
-Model: `us.anthropic.claude-3-5-haiku-20241022-v1:0` (US cross-region inference profile).
+Model: `us.anthropic.claude-haiku-4-5-20251001-v1:0` (US cross-region inference profile).
 
 **Why Bedrock?** Anthropic direct API requires prepaid credits; Bedrock is pay-per-token billed to the AWS account.
 
@@ -96,8 +96,8 @@ permissions: [
   {
     actions: ["bedrock:InvokeModel", "bedrock:Converse"],
     resources: [
-      "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-      "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+      "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+      "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
     ],
   },
 ],
@@ -119,8 +119,8 @@ aws iam put-user-policy \
       "Effect":"Allow",
       "Action":["bedrock:InvokeModel","bedrock:Converse"],
       "Resource":[
-        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-        "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0"
+        "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0"
       ]
     }]
   }'
@@ -196,4 +196,4 @@ cluster_run_command(node: "omv-main",
 | `MAX_TOKENS` | 600 | Max tokens per Bedrock response |
 | `MAX_TURNS` | 10 | Max message history sent to Bedrock |
 | `MAX_USER_MESSAGE` | 500 | Max chars per user message (trimmed) |
-| `BEDROCK_MODEL_ID` | `us.anthropic.claude-3-5-haiku-20241022-v1:0` | Override via `BEDROCK_MODEL_ID` env var |
+| `BEDROCK_MODEL_ID` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Override via `BEDROCK_MODEL_ID` env var |

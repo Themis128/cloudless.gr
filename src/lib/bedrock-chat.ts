@@ -6,7 +6,7 @@
  * bedrock:InvokeModel on the foundation-model resource (granted via
  * sst.config.ts permissions).
  *
- * Model: us.anthropic.claude-3-5-haiku-20241022-v1:0 (US cross-region inference)
+ * Model: us.anthropic.claude-haiku-4-5-20251001-v1:0 (US cross-region inference)
  * Region: us-east-1 (Lambda deployment region; falls back to AWS_REGION env var)
  */
 
