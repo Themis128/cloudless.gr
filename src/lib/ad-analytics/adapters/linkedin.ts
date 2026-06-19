@@ -168,23 +168,12 @@ export const linkedinAdapter: AdPlatformAdapter = {
       return { accepted: false, status: 204, message: "LinkedIn CAPI not configured" };
     }
 
-    const payload = {
+    const userIds = buildUserIds(user);
+    const payload: Record<string, unknown> = {
       conversion: `urn:lla:llaPartnerConversion:${conversionId}`,
       conversionHappenedAt: happenedAt.getTime(),
       eventId,
-      user: {
-        // LinkedIn's `userIds` array is the canonical CAPI match key shape
-        // (SHA256_EMAIL, SHA256_PHONE, LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID).
-        // Phase 1 only forwards what the thanks-page POST already carries —
-        // empty by default; the Phase 2 admin tooling can enrich.
-        userIds: buildUserIds(user),
-        userInfo: undefined,
-      },
-      conversionValue: undefined,
-      requestMetadata: {
-        userAgent: user?.userAgent,
-        pageUrl,
-      },
+      user: { userIds, userInfo: { firstName: "", lastName: "" } },
     };
 
     try {

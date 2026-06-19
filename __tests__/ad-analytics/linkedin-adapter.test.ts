@@ -45,9 +45,7 @@ describe("linkedinAdapter.pushConversion", () => {
     const body = JSON.parse(init.body as string);
     expect(body.conversion).toBe("urn:lla:llaPartnerConversion:99999999");
     expect(body.eventId).toBe("cs_test_abc");
-    expect(body.requestMetadata.pageUrl).toBe(
-      "https://cloudless.gr/en/campaigns/shop-online/thanks"
-    );
+    expect(body.requestMetadata).toBeUndefined();
   });
 
   it("returns { accepted: false, status: 403 } on the source-bound CAPI rejection", async () => {
