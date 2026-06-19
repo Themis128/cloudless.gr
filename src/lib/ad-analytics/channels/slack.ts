@@ -114,12 +114,7 @@ export const slackChannel: NotificationChannel = {
     return { messageId: sent ? `slack:${target}:${Date.now()}` : "slack:not-sent" };
   },
 
-  async reply({
-    blocks,
-  }: {
-    threadKey: string;
-    blocks: NotificationBlock[];
-  }): Promise<void> {
+  async reply({ blocks }: { threadKey: string; blocks: NotificationBlock[] }): Promise<void> {
     // Phase 1 doesn't need threading. When Phase 3 needs reply-in-thread
     // semantics (slash-command lazy-listener `chat.update`), we'll extend
     // `SlackClient` to return the `ts` and feed it back here.
