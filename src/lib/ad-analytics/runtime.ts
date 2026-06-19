@@ -335,3 +335,52 @@ export async function runScheduledPoll(opts?: {
 
   return { digests, noop: digests.length === 0 };
 }
+
+// ---------------------------------------------------------------------------
+// Phase 3 — on-demand snapshot for the /cloudless-analytics ads <slug>
+// slash command. Same metric path as the scheduled poll but does NOT post to
+// any channel and does NOT touch the bookmark — purely read-only.
+// ---------------------------------------------------------------------------
+
+export interface AdHocSnapshot {
+  campaign: string;
+  metrics: AdMetrics[];
+}
+
+export async function runAdHocSnapshot(opts: {
+  campaignSlug: string;
+  now?: Date;
+  windowMs?: number;
+  pivots?: DemographicPivot[];
+}): Promise<AdHocSnapshot | null> {
+  const campaign = getCampaign(opts.campaignSlug);
+  if (!campaign || !campaign.adPlatforms || campaign.adPlatforms.length === 0) {
+    return null;
+  }
+  const now = opts.now ?? new Date();
+  const windowMs = opts.windowMs ?? DEFAULT_DIGEST_WINDOW_MS;
+  const pivots = opts.pivots ?? DEFAULT_DIGEST_PIVOTS;
+  const since = new Date(now.getTime() - windowMs);
+
+  const all: AdMetrics[] = [];
+  for (const platformConfig of campaign.adPlatforms) {
+    const adapter = ADAPTERS[platformConfig.platform];
+    if (!adapter) continue;
+    try {
+      const rows = await adapter.pullMetrics({
+        accountId: platformConfig.accountId,
+        campaignIds: platformConfig.campaignIds,
+        since,
+        until: now,
+        pivots,
+      });
+      all.push(...rows);
+    } catch (err) {
+      console.error(
+        `[ad-analytics/runtime] ad-hoc snapshot pullMetrics failed for ${campaign.slug}/${platformConfig.platform}:`,
+        err
+      );
+    }
+  }
+  return { campaign: campaign.slug, metrics: all };
+}

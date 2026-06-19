@@ -31,6 +31,9 @@ import {
   setEditorialStatus,
   type NotionBlogDraft,
 } from "@/lib/notion-blog-admin";
+import { getLiveCampaigns, getCampaign } from "@/data/campaigns";
+import { runAdHocSnapshot } from "@/lib/ad-analytics/runtime";
+import { renderDigest } from "@/lib/ad-analytics/digest";
 
 /**
  * Slack user-ID allowlist for slash-command-driven workflow dispatch.
@@ -431,6 +434,29 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
 }
 
 async function handleAnalytics(payload: SlashCommandPayload): Promise<Response> {
+  // The slash command now multiplexes by `payload.text`:
+  //   (empty) / "stripe"   → existing Stripe revenue summary (back-compat).
+  //   "ads"                → list every campaign that's wired into the
+  //                          ad-analytics module + the channels it posts to.
+  //   "ads <slug>"         → live LinkedIn snapshot for one campaign. Heavy
+  //                          (N+1 fetches → ~3-5 s) so we use Slack's lazy-
+  //                          listener pattern: ack immediately with a
+  //                          "loading…" ephemeral, finish the work in the
+  //                          background, then POST the final Block Kit to
+  //                          `payload.response_url`.
+  //   "ads help"           → usage.
+  const argv = payload.text.trim().split(/\s+/).filter(Boolean);
+  const head = (argv[0] ?? "").toLowerCase();
+
+  if (head === "ads") {
+    return handleAdAnalytics(payload, argv.slice(1));
+  }
+  // Fall through: empty text, "stripe", or anything else lands in the
+  // pre-existing Stripe revenue path.
+  return handleStripeAnalytics(payload);
+}
+
+async function handleStripeAnalytics(payload: SlashCommandPayload): Promise<Response> {
   try {
     const { orders, hasMore } = await listRecentCheckoutSessions(10);
 
@@ -508,7 +534,7 @@ async function handleAnalytics(payload: SlashCommandPayload): Promise<Response> 
           elements: [
             {
               type: "mrkdwn",
-              text: `Requested by <@${payload.user_id}>`,
+              text: `Requested by <@${payload.user_id}> · Tip: \`/cloudless-analytics ads\` for LinkedIn ad metrics`,
             },
           ],
         },
@@ -520,6 +546,186 @@ async function handleAnalytics(payload: SlashCommandPayload): Promise<Response> 
       response_type: "ephemeral",
       text: ":warning: Analytics unavailable. Failed to fetch orders from Stripe.",
     });
+  }
+}
+
+/**
+ * `/cloudless-analytics ads …` — surfaces the reusable ad-analytics module
+ * inside Slack.
+ *
+ *   ads                  → list configured campaigns
+ *   ads <campaign-slug>  → live snapshot (LinkedIn pullMetrics + ICP block)
+ *   ads help             → usage
+ */
+function handleAdAnalytics(
+  payload: SlashCommandPayload,
+  rest: string[]
+): Response {
+  const arg = (rest[0] ?? "").toLowerCase();
+
+  if (!arg || arg === "list") {
+    const live = getLiveCampaigns().filter(
+      (c) => (c.adPlatforms?.length ?? 0) > 0 || (c.notifyChannels?.length ?? 0) > 0
+    );
+    if (live.length === 0) {
+      return slackResponse({
+        response_type: "ephemeral",
+        text:
+          ":information_source: No campaigns have ad-analytics wiring yet. " +
+          "Add `adPlatforms[]` and `notifyChannels[]` to a campaign in " +
+          "`src/data/campaigns.ts` and redeploy.",
+      });
+    }
+    const rows = live.map((c) => {
+      const platforms = (c.adPlatforms ?? [])
+        .map((p) => `${p.platform}(${p.campaignIds.length} ids)`)
+        .join(", ");
+      const channels = (c.notifyChannels ?? [])
+        .map((ch) => `${ch.target}(${ch.level})`)
+        .join(", ");
+      return `• *${c.slug}* — platforms: ${platforms || "—"} · channels: ${channels || "—"}`;
+    });
+    return slackResponse({
+      response_type: "ephemeral",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: ":chart_with_upwards_trend: Ad analytics — campaigns", emoji: true },
+        },
+        { type: "section", text: { type: "mrkdwn", text: rows.join("\n") } },
+        {
+          type: "context",
+          elements: [
+            {
+              type: "mrkdwn",
+              text:
+                "Snapshot one with `/cloudless-analytics ads <slug>`. " +
+                `Requested by <@${payload.user_id}>.`,
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  if (arg === "help") {
+    return slackResponse({
+      response_type: "ephemeral",
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: [
+              "*`/cloudless-analytics ads` — subcommands*",
+              "• `/cloudless-analytics ads` — list configured campaigns + channels",
+              "• `/cloudless-analytics ads <slug>` — live snapshot (impressions / clicks / CTR / spend / CPC + ICP demographic breakdown)",
+              "• `/cloudless-analytics ads help` — this message",
+              "",
+              "_Live snapshot does N+1 LinkedIn API calls, so the response arrives in 3-5 seconds after the immediate ack._",
+            ].join("\n"),
+          },
+        },
+      ],
+    });
+  }
+
+  // Treat `arg` as a campaign slug.
+  const campaign = getCampaign(arg);
+  if (!campaign) {
+    return slackResponse({
+      response_type: "ephemeral",
+      text:
+        `:warning: No campaign named \`${arg}\`. ` +
+        "Run `/cloudless-analytics ads` to see what's available.",
+    });
+  }
+  if (!campaign.adPlatforms || campaign.adPlatforms.length === 0) {
+    return slackResponse({
+      response_type: "ephemeral",
+      text:
+        `:information_source: Campaign \`${arg}\` is configured but has no ` +
+        "`adPlatforms[]` entry. Nothing to snapshot.",
+    });
+  }
+
+  // Slack 3-second budget: ack immediately, do the work in the background,
+  // POST the final Block Kit message to `payload.response_url`.
+  void runAndReplyAdSnapshot(campaign.slug, payload.response_url, payload.user_id);
+
+  return slackResponse({
+    response_type: "ephemeral",
+    text:
+      `:hourglass_flowing_sand: Fetching live metrics for *${campaign.slug}* — ` +
+      "snapshot will replace this message in a few seconds.",
+  });
+}
+
+/**
+ * Background worker for the lazy-listener pattern. Pulls fresh metrics from
+ * every configured ad platform on the campaign, renders the same digest the
+ * scheduled poll uses, and POSTs the result to Slack's `response_url`.
+ *
+ * Never throws — failures surface as a Block Kit error message at
+ * `response_url` so the operator always gets visible feedback instead of a
+ * silent "loading…" stuck state.
+ */
+async function runAndReplyAdSnapshot(
+  campaignSlug: string,
+  responseUrl: string,
+  userId: string
+): Promise<void> {
+  if (!responseUrl) return;
+  try {
+    const snapshot = await runAdHocSnapshot({ campaignSlug });
+    if (!snapshot || snapshot.metrics.length === 0) {
+      await postToResponseUrl(responseUrl, {
+        response_type: "ephemeral",
+        replace_original: true,
+        text: `:warning: No metrics returned for *${campaignSlug}* — check that LINKEDIN_ACCESS_TOKEN and LINKEDIN_AD_ACCOUNT_ID are configured.`,
+      });
+      return;
+    }
+    const blocks = snapshot.metrics.flatMap((m) =>
+      renderDigest({
+        campaignSlug,
+        current: m,
+        previous: null, // on-demand snapshot has no bookmark context
+        windowLabel: `live snapshot (rolling 60 min)`,
+      })
+    );
+    blocks.push({
+      type: "context",
+      text: `Requested by <@${userId}>`,
+    });
+    await postToResponseUrl(responseUrl, {
+      response_type: "ephemeral",
+      replace_original: true,
+      blocks,
+    });
+  } catch (err) {
+    console.error("[Slack Commands] ad snapshot worker failed:", err);
+    await postToResponseUrl(responseUrl, {
+      response_type: "ephemeral",
+      replace_original: true,
+      text: `:warning: Ad-analytics snapshot failed: \`${((err as Error)?.message ?? "unknown").slice(0, 200)}\`.`,
+    });
+  }
+}
+
+async function postToResponseUrl(
+  responseUrl: string,
+  body: Record<string, unknown>
+): Promise<void> {
+  try {
+    await fetch(responseUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch (err) {
+    console.error("[Slack Commands] response_url POST failed:", err);
   }
 }
 
@@ -598,6 +804,8 @@ function handleHelp(): Response {
             "• `/cloudless-channels` — notification channel status",
             "• `/cloudless-ticket` — submit a support ticket",
             "• `/cloudless-analytics` — Stripe revenue summary",
+            "• `/cloudless-analytics ads` — list configured LinkedIn ad campaigns",
+            "• `/cloudless-analytics ads <slug>` — live LinkedIn snapshot (impressions / clicks / CTR / spend / ICP)",
             "• `/cloudless-deploy` — deploy latest code to production",
             "• `/cloudless-draft rerun` — re-run the weekly article draft generator",
             "• `/cloudless-newsletter list` — show pending Notion drafts",
