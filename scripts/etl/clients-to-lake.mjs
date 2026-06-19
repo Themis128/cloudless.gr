@@ -84,7 +84,7 @@ async function loadScores(key) {
   try {
     const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
     const buf = Buffer.from(await res.Body.transformToByteArray());
-    const tmp = `/tmp/_scores_${Date.now()}.parquet`;
+    const tmp = `/tmp/_scores_${crypto.randomUUID()}.parquet`;
     writeFileSync(tmp, buf);
     const reader = await ParquetReader.openFile(tmp);
     const cursor = reader.getCursor();

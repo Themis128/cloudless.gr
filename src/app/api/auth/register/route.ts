@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const name = (err as { name?: string }).name;
     if (name === "UsernameExistsException") {
-      console.warn(`[auth/register] enumeration probe blocked for ${email}`);
+      console.warn(`[auth/register] enumeration probe blocked for ${JSON.stringify(email)}`);
       return NextResponse.json({ ok: true });
     }
     if (name === "InvalidPasswordException" || name === "InvalidParameterException")
