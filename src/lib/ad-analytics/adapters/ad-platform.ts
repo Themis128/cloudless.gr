@@ -11,7 +11,7 @@
  * bumped to `202605`).
  */
 
-import type { AdMetrics, AdPlatformId } from "../types";
+import type { AdMetrics, AdPlatformId, DemographicPivot } from "../types";
 
 /** Minimal user identifiers a CAPI push can use to match the event.
  *  LinkedIn supports hashed email, hashed phone, LiFatId, and a few others.
@@ -39,12 +39,18 @@ export interface AdPlatformAdapter {
    * lack pagination (LinkedIn AdAnalytics) partition internally by
    * campaign × time-window so callers never have to. Implementations MUST
    * return one `AdMetrics` per `campaignIds[i]`, in the same order.
+   *
+   * When `pivots` is non-empty the adapter makes N+1 calls — one for
+   * headline metrics plus one per pivot — and merges the breakdowns into
+   * `AdMetrics.demographics`. Pivots the platform doesn't recognise are
+   * silently skipped.
    */
   pullMetrics(opts: {
     accountId: string;
     campaignIds: string[];
     since: Date;
     until: Date;
+    pivots?: DemographicPivot[];
   }): Promise<AdMetrics[]>;
 
   /**
