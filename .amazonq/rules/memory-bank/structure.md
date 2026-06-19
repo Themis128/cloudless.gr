@@ -63,7 +63,7 @@ Organized by domain:
 - `/api/newsletter-slack/**` — Newsletter-specific Slack app
 - `/api/cron/**` — Scheduled job endpoints (called by platform-crons workflow)
 - `/api/user/**` — Authenticated user endpoints
-- `/api/contact|subscribe|checkout|unsubscribe` — Core public actions
+- `/api/contact|subscribe|checkout|unsubscribe` — Core public actions (checkout redirects to contact page)
 - `/api/calendar/availability|book` — Booking
 - `/api/chat` — AI chat (Bedrock/Anthropic)
 - `/api/portal/**` — Client portal token endpoints

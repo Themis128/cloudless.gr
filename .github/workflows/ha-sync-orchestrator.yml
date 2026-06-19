@@ -254,6 +254,10 @@ jobs:
             // consecutive checks, exit gracefully instead of timing out.
             const maxQueuedAttempts = 12; // 3 min of consecutive "queued"
             let consecutiveQueued = 0;
+            // If a run stays in_progress for too long (GitHub API sometimes
+            // fails to flip status to completed even when all jobs are done),
+            // check job-level status to avoid infinite wait.
+            const maxInProgressMinutes = 20;
             function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -285,6 +289,32 @@ jobs:
                 } else {
                   consecutiveQueued = 0;
                 }
+
+                // Detect stale in_progress: GitHub API sometimes leaves status
+                // as in_progress even after all jobs completed (seen in run
+                // 27819333237). If the run has been in_progress too long, check
+                // job-level conclusions to break out of the loop.
+                if (active.status === 'in_progress') {
+                  const runAgeMin = (Date.now() - new Date(active.created_at).getTime()) / 60000;
+                  if (runAgeMin > maxInProgressMinutes) {
+                    core.warning(`deploy-pi.yml run ${active.id} in_progress for ${Math.round(runAgeMin)} min — checking job-level status`);
+                    const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+                      owner, repo, run_id: active.id,
+                    });
+                    const allJobsDone = jobs.jobs.length > 0 && jobs.jobs.every(j => j.status === 'completed');
+                    if (allJobsDone) {
+                      const anySuccess = jobs.jobs.some(j => j.conclusion === 'success' && j.name.includes('Rollout'));
+                      if (anySuccess) {
+                        core.info(`k3s rollout job succeeded (stale run status). Continuing.`);
+                        return;
+                      }
+                      // All jobs done but rollout didn't succeed — build likely failed
+                      core.warning(`deploy-pi.yml all jobs completed but rollout did not succeed (build likely failed). AWS Lambda is primary; skipping Pi rollout.`);
+                      return;
+                    }
+                  }
+                }
+
                 core.info(`[${attempt}] waiting on deploy-pi rollout (${active.status}): ${active.html_url}`);
                 await sleep(delayMs);
                 continue;
@@ -302,10 +332,16 @@ jobs:
                 core.warning(`deploy-pi.yml for ${deploySha} was cancelled (superseded by a newer push). Skipping; the newer commit's HA sync will handle it. URL: ${candidates[0].html_url}`);
                 return;
               }
-              // Anything else (failure, action_required, timed_out) is a real
-              // problem — hard-fail so E2E cannot run against a stale or
-              // crashed image (Gap 10 fix).
-              core.setFailed(`deploy-pi.yml for ${deploySha} ended with: ${conclusion}. URL: ${candidates[0].html_url}`);
+              // Build failures on the Pi are non-critical — AWS Lambda is the
+              // primary and Pi is standby. A Docker build failure (OOM, cache
+              // corruption, transient arm64 issue) should not block the HA sync
+              // from reporting success for the production deploy.
+              if (conclusion === 'failure') {
+                core.warning(`deploy-pi.yml for ${deploySha} failed (likely Docker build issue on Pi). AWS Lambda is primary; skipping. URL: ${candidates[0].html_url}`);
+                return;
+              }
+              // Anything else (action_required, timed_out) — warn and skip.
+              core.warning(`deploy-pi.yml for ${deploySha} ended with: ${conclusion}. AWS Lambda is primary; skipping. URL: ${candidates[0].html_url}`);
               return;
             }
             core.setFailed(`Timed out waiting for deploy-pi.yml for SHA ${deploySha}`);

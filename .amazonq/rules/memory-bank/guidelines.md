@@ -86,7 +86,8 @@ export async function POST(request: NextRequest) {
 - Webhook routes verify signatures **before** any payload processing
 - `mapIntegrationError(err)` called first in every catch block — handles known AWS/Stripe/Slack errors uniformly
 - Sentry: dynamic `import("@sentry/nextjs")` only when `NEXT_PUBLIC_SENTRY_DSN` is set; always `.catch(() => {})` to prevent Sentry from failing the route
-- Duplicate event detection for idempotency (see `persistStripeEvent`)
+- Checkout validation: Both POST (store) and GET (campaign) checkout routes redirect to the contact page with product/campaign context as URL params — no Stripe session is created. The contact form pre-fills the message with purchase context.
+- Duplicate event detection for idempotency (see `persistStripeEvent` in webhook handler)
 
 ---
 
