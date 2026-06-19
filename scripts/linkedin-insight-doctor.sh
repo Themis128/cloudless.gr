@@ -127,9 +127,25 @@ else
     for CHUNK in $CHUNKS; do
       CHUNK_BODY="$(curl -fsSL --max-time 10 "${SITE_URL}${CHUNK}" 2>/dev/null || true)"
       [[ -z "$CHUNK_BODY" ]] && continue
-      MATCH=$(printf '%s' "$CHUNK_BODY" | grep -oE '_linkedin_(data_)?partner_id[s]?[^"]{0,40}"[0-9]{6,8}"' | head -1 || true)
+      # Two patterns webpack can produce after minification:
+      #  (a) Inline literal:   _linkedin_partner_id="12345678"
+      #  (b) Minified variable: let t="12345678"; ...; _linkedin_partner_id=t
+      # Detect by anchoring on the licdn URL (always present in the Insight
+      # Tag loader code) and a nearby quoted numeric ID 6-9 digits long.
+      # Verified on production bundle chunk 2zllz81i5lj6d.js (2026-06-19).
+      if ! printf '%s' "$CHUNK_BODY" | grep -qE 'snap\.licdn\.com/li\.lms-analytics/insight\.min\.js|_linkedin_partner_id|lintrk'; then
+        continue
+      fi
+      MATCH=""
+      # Try inline literal first.
+      MATCH=$(printf '%s' "$CHUNK_BODY" | grep -oE '_linkedin_(data_)?partner_id[s]?[^"]{0,40}"[0-9]{6,9}"' | head -1 || true)
+      if [[ -z "$MATCH" ]]; then
+        # Then: any 6-9 digit quoted ID assigned to a short var near the loader.
+        # Anchor on lintrk/_linkedin_partner_id context (within ~400 chars before).
+        MATCH=$(printf '%s' "$CHUNK_BODY" | grep -oE '[A-Za-z_$][A-Za-z0-9_$]{0,2}="[0-9]{6,9}"[^"]{0,400}(lintrk|_linkedin_partner_id)' | head -1 || true)
+      fi
       if [[ -n "$MATCH" ]]; then
-        FOUND_ID=$(printf '%s' "$MATCH" | grep -oE '[0-9]{6,8}' | head -1)
+        FOUND_ID=$(printf '%s' "$MATCH" | grep -oE '"[0-9]{6,9}"' | head -1 | tr -d '"')
         ok "Partner ID literal found in bundle: $FOUND_ID  ($CHUNK)"
         PARTNER_ID_LITERAL="$FOUND_ID"
         break
