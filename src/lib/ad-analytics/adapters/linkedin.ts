@@ -22,6 +22,7 @@
 import { getConfig } from "@/lib/ssm-config";
 import type { AdPlatformAdapter, UserMatch } from "./ad-platform";
 import type { AdMetrics, DemographicBreakdown, DemographicPivot } from "../types";
+import { resolvePivotLabel } from "../lookups";
 
 const LINKEDIN_API_ROOT = "https://api.linkedin.com/rest";
 const LINKEDIN_API_VERSION = "202605";
@@ -339,10 +340,12 @@ async function fetchPivotBreakdown(
     };
     const rows = (data.elements ?? [])
       .map((row) => ({
-        // `pivotValues` is an array of URNs (one per pivot dimension). Take
-        // the last segment as the human label until we add a URN-resolver
-        // for industries/seniorities. Raw URN beats "no signal at all".
-        label: prettifyUrn(row.pivotValues?.[0] ?? "unknown"),
+        // `pivotValues` is an array of URNs (one per pivot dimension). The
+        // static lookup table in `../lookups.ts` resolves industries,
+        // seniorities, and company sizes to human labels. Unknown ids fall
+        // back to `Industry #6` shape so the digest still shows actionable
+        // signal even when LinkedIn returns an id outside our table.
+        label: resolvePivotLabel(pivot, row.pivotValues?.[0] ?? "unknown"),
         clicks: row.clicks ?? 0,
       }))
       .filter((r) => r.clicks > 0)
@@ -351,12 +354,4 @@ async function fetchPivotBreakdown(
   } catch {
     return [];
   }
-}
-
-/** "urn:li:industry:6" → "6". Real human labels need a lookup we'll add in a
- *  follow-up; until then surfacing the bucket id is still useful signal. */
-function prettifyUrn(urn: string): string {
-  if (!urn) return "unknown";
-  const segments = urn.split(":");
-  return segments[segments.length - 1] || urn;
 }
