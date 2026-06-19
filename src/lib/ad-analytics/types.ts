@@ -109,7 +109,26 @@ export interface AdMetrics {
   ctr?: number;
   cpcEur?: number;
   cpaEur?: number;
+  /** Optional demographic breakdowns of clickers for this window — used by
+   *  the digest's "ICP signal" block (Notion architecture §9). One entry
+   *  per enabled pivot. Empty when the enrichment fetch returned no data
+   *  (privacy threshold / suppressed / not requested). */
+  demographics?: Partial<Record<DemographicPivot, DemographicBreakdown>>;
 }
+
+/** The four pivots the digest surfaces today. The string values are the
+ *  same `pivot=` query-param the LinkedIn `adAnalytics` endpoint accepts, so
+ *  the adapter can pass them through verbatim. */
+export type DemographicPivot =
+  | "MEMBER_INDUSTRY"
+  | "MEMBER_SENIORITY"
+  | "MEMBER_JOB_TITLE"
+  | "MEMBER_COMPANY_SIZE";
+
+/** Bucket-label → click-count map for one pivot. Label is whatever the
+ *  platform returned (resolved against LinkedIn's lookups when available,
+ *  raw URN otherwise). */
+export type DemographicBreakdown = Array<{ label: string; clicks: number }>;
 
 /** Delta of `current` vs the previous `bookmark` snapshot. */
 export interface AdMetricsDelta {

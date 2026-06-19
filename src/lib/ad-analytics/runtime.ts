@@ -21,17 +21,20 @@
  * Notion architecture page for the design rationale.
  */
 
-import { getCampaign } from "@/data/campaigns";
+import { getCampaign, campaigns as allCampaigns } from "@/data/campaigns";
 import type {
   AdConversionEvent,
+  AdMetrics,
   CampaignPlatformConfig,
+  DemographicPivot,
   NotifyChannelConfig,
 } from "./types";
 import type { AdPlatformAdapter } from "./adapters/ad-platform";
 import type { NotificationChannel } from "./channels/notification";
 import { linkedinAdapter } from "./adapters/linkedin";
 import { slackChannel } from "./channels/slack";
-import { renderConversionBlocks } from "./digest";
+import { renderConversionBlocks, renderDigest } from "./digest";
+import { bookmarkKeyOf, getBookmarkStore } from "./bookmarks";
 
 /**
  * Registry of concrete adapters. Keep this map literal — `as const` enforces
@@ -180,4 +183,155 @@ export async function dispatchConversion(event: AdConversionEvent): Promise<Disp
     notifications: notificationResults,
     noop: capiResults.length === 0 && notificationResults.length === 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — scheduled digest poll
+// ---------------------------------------------------------------------------
+
+/** Default rolling window for the 15-min poll. LinkedIn's reporting pipeline
+ *  lag means anything tighter than 15 min is wasteful; we still query the
+ *  rolling 1h to smooth out late-arriving impressions. */
+const DEFAULT_DIGEST_WINDOW_MS = 60 * 60 * 1000;
+
+/** Demographic pivots we ask LinkedIn for on every poll. Architecture §9. */
+const DEFAULT_DIGEST_PIVOTS: DemographicPivot[] = [
+  "MEMBER_INDUSTRY",
+  "MEMBER_SENIORITY",
+  "MEMBER_JOB_TITLE",
+  "MEMBER_COMPANY_SIZE",
+];
+
+export interface PollOutcome {
+  /** One result per (campaign × platform). */
+  digests: Array<{
+    campaign: string;
+    platform: string;
+    campaignIds: string[];
+    metrics: AdMetrics[];
+    posted: Array<{ channel: string; target: string; ok: boolean }>;
+    skipped?: string;
+  }>;
+  /** True if there was nothing to poll (no campaigns with digest channels). */
+  noop: boolean;
+}
+
+/**
+ * Iterate every live campaign × every configured ad platform, pull fresh
+ * metrics, diff against the bookmark, post a digest to every notify channel
+ * with `level: "digest"`, then update the bookmark.
+ *
+ * Failures degrade per-campaign — one broken adapter doesn't take down the
+ * others. The caller (cron route) just returns 200 with the outcome blob.
+ */
+export async function runScheduledPoll(opts?: {
+  now?: Date;
+  windowMs?: number;
+  pivots?: DemographicPivot[];
+}): Promise<PollOutcome> {
+  const now = opts?.now ?? new Date();
+  const windowMs = opts?.windowMs ?? DEFAULT_DIGEST_WINDOW_MS;
+  const pivots = opts?.pivots ?? DEFAULT_DIGEST_PIVOTS;
+  const since = new Date(now.getTime() - windowMs);
+
+  const store = getBookmarkStore();
+  const digests: PollOutcome["digests"] = [];
+
+  for (const campaign of allCampaigns) {
+    if (campaign.status !== "live") continue;
+    const digestChannels = channelsForLevel(campaign.notifyChannels, "digest");
+    if (digestChannels.length === 0) continue;
+    if (!campaign.adPlatforms || campaign.adPlatforms.length === 0) continue;
+
+    for (const platformConfig of campaign.adPlatforms) {
+      const adapter = ADAPTERS[platformConfig.platform];
+      if (!adapter) {
+        digests.push({
+          campaign: campaign.slug,
+          platform: platformConfig.platform,
+          campaignIds: platformConfig.campaignIds,
+          metrics: [],
+          posted: [],
+          skipped: `no adapter registered for ${platformConfig.platform}`,
+        });
+        continue;
+      }
+
+      let metrics: AdMetrics[];
+      try {
+        metrics = await adapter.pullMetrics({
+          accountId: platformConfig.accountId,
+          campaignIds: platformConfig.campaignIds,
+          since,
+          until: now,
+          pivots,
+        });
+      } catch (err) {
+        console.error(
+          `[ad-analytics/runtime] pullMetrics failed for ${campaign.slug}/${platformConfig.platform}:`,
+          err
+        );
+        digests.push({
+          campaign: campaign.slug,
+          platform: platformConfig.platform,
+          campaignIds: platformConfig.campaignIds,
+          metrics: [],
+          posted: [],
+          skipped: "pullMetrics threw",
+        });
+        continue;
+      }
+
+      const posted: Array<{ channel: string; target: string; ok: boolean }> = [];
+      for (const current of metrics) {
+        const key = bookmarkKeyOf({
+          campaignSlug: campaign.slug,
+          platform: platformConfig.platform,
+          metric: "headline",
+          window: `${Math.round(windowMs / 60000)}m`,
+        });
+        const bookmark = await store.getBookmark(key);
+        const blocks = renderDigest({
+          campaignSlug: campaign.slug,
+          current,
+          previous: bookmark?.snapshot ?? null,
+          windowLabel: `rolling ${Math.round(windowMs / 60000)} min`,
+        });
+        for (const { config, channel } of digestChannels) {
+          try {
+            const { messageId } = await channel.sendBlock({
+              target: config.target,
+              blocks,
+            });
+            posted.push({
+              channel: config.channel,
+              target: config.target,
+              ok: !messageId.endsWith(":not-sent"),
+            });
+          } catch (err) {
+            console.error(
+              `[ad-analytics/runtime] digest notification failed:`,
+              err
+            );
+            posted.push({ channel: config.channel, target: config.target, ok: false });
+          }
+        }
+        // Only advance the bookmark when at least one channel accepted the
+        // post — otherwise a Slack outage would silently drop a window.
+        if (posted.some((p) => p.ok)) {
+          await store.putBookmark(key, current);
+        }
+      }
+
+      digests.push({
+        campaign: campaign.slug,
+        platform: platformConfig.platform,
+        campaignIds: platformConfig.campaignIds,
+        metrics,
+        posted,
+      });
+    }
+  }
+
+  return { digests, noop: digests.length === 0 };
 }
