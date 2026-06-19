@@ -23,6 +23,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { dispatchConversion } from "@/lib/ad-analytics/runtime";
+import { getStripe } from "@/lib/stripe";
 
 type Body = {
   campaign?: string;
@@ -52,6 +53,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing campaign" }, { status: 400 });
   }
 
+  // Enrich with Stripe customer details when orderId is a checkout session
+  let customer: { name?: string; email?: string; phone?: string } | undefined;
+  if (body.orderId && body.orderId.startsWith("cs_")) {
+    try {
+      const stripe = await getStripe();
+      if (stripe) {
+        const session = await stripe.checkout.sessions.retrieve(body.orderId);
+        const d = session.customer_details;
+        if (d) {
+          customer = {
+            name: d.name ?? undefined,
+            email: d.email ?? undefined,
+            phone: d.phone ?? undefined,
+          };
+        }
+      }
+    } catch {
+      // Non-critical — Slack still fires without customer info
+    }
+  }
+
   const outcome = await dispatchConversion({
     campaign: body.campaign,
     tier: body.tier ?? null,
@@ -62,6 +84,7 @@ export async function POST(request: NextRequest) {
     country: request.headers.get("cf-ipcountry") ?? undefined,
     ipAddress: request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined,
     utm: body.utm ?? undefined,
+    customer,
   });
 
   if (outcome.noop) {

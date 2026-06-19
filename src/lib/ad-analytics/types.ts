@@ -108,6 +108,12 @@ export interface AdConversionEvent {
   country?: string;
   /** Client IP for CAPI user matching (from x-forwarded-for or cf-connecting-ip). */
   ipAddress?: string;
+  /** Customer details enriched from Stripe checkout session. */
+  customer?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
   /** Captured first-touch UTM if `AttributionCapture` set them. */
   utm?: {
     source?: string;

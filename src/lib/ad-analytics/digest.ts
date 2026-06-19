@@ -45,6 +45,7 @@ export function renderConversionBlocks(
 
   const headerLine = `🎯 New conversion · ${event.campaign}`;
   const metaLine = `*Tier:* \`${tier}\`  ·  *Order:* \`${order}\`${flag ? `  ·  ${flag}` : ""}`;
+  const customerLine = formatCustomer(event.customer);
   const creativeLine = creative ? `*Creative:* ${creative}` : "";
   const pageLine = url ? `*Page:* <${url}|${truncate(url, 80)}>` : "";
   const capiLine = formatCapiStatus(capiResults);
@@ -61,13 +62,23 @@ export function renderConversionBlocks(
     { type: "header", text: headerLine },
     {
       type: "section",
-      text: [metaLine, creativeLine, pageLine, capiLine].filter(Boolean).join("\n"),
+      text: [metaLine, customerLine, creativeLine, pageLine, capiLine].filter(Boolean).join("\n"),
     },
     {
       type: "context",
       text: `cloudless.gr ad-analytics · ${athensTime} Athens`,
     },
   ];
+}
+
+function formatCustomer(customer?: { name?: string; email?: string; phone?: string }): string {
+  if (!customer) return "";
+  const parts: string[] = [];
+  if (customer.name) parts.push(`*${escapeMrkdwn(customer.name)}*`);
+  if (customer.email) parts.push(escapeMrkdwn(customer.email));
+  if (customer.phone) parts.push(escapeMrkdwn(customer.phone));
+  if (parts.length === 0) return "";
+  return `👤 ${parts.join("  ·  ")}`;
 }
 
 function formatCapiStatus(
