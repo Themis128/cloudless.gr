@@ -285,7 +285,13 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
       error(error: Error) {
         const tag = `${error?.name ?? ""} ${(error as { type?: string })?.type ?? ""}`;
         const configured = !!(issuer && clientId && clientSecret);
-        if (tag.includes("Configuration") && configured) return;
+        // Auth.js v5 can surface Configuration errors with the word in the
+        // message rather than the error name/type (e.g. when the error is a
+        // generic AuthError wrapper). Check both to avoid the CloudWatch
+        // SERVERLESS-APP_MAIN-Errors alarm firing on crawler/probe GETs.
+        const isConfigurationError =
+          tag.includes("Configuration") || (error?.message ?? "").includes("Configuration");
+        if (isConfigurationError && configured) return;
         console.error(`[auth][error] ${error?.message ?? error}`);
       },
     },
@@ -307,7 +313,7 @@ let memoizedConfigured = false;
 function getNextAuth(): NextAuthResult | null {
   if (memoizedConfigured) return memoizedResult;
   const env = resolveAuthEnv();
-  if (!env.authSecret || !env.issuer) {
+  if (!env.authSecret || !env.issuer || !env.clientId || !env.clientSecret) {
     // Don't memoize: values may still be hydrating on a cold start or dev-server
     // restart, so a later request should retry rather than be permanently locked
     // to a broken instance.  (next-auth throws "missing issuer" when issuer is
