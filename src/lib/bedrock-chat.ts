@@ -6,7 +6,12 @@
  * bedrock:InvokeModel on the foundation-model resource (granted via
  * sst.config.ts permissions).
  *
- * Model: us.anthropic.claude-haiku-4-5-20251001-v1:0 (US cross-region inference)
+ * Model: us.amazon.nova-micro-v1:0 (US cross-region inference)
+ *   - Switched from Claude Haiku 4.5 on 2026-06-19 (Marketplace subscription
+ *     never enabled on this account; Nova Micro is ~30x cheaper anyway).
+ *   - Nova sometimes wraps reasoning in <thinking>…</thinking> XML — we strip
+ *     those before returning text to the user. The system prompt also asks
+ *     Nova not to emit them, but stripping is the safety net.
  * Region: us-east-1 (Lambda deployment region; falls back to AWS_REGION env var)
  */
 
@@ -27,6 +32,15 @@ const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 4;
 
 const BEDROCK_TOOL_CONFIG = buildBedrockToolConfig(CHAT_TOOLS);
+
+// Nova models occasionally emit internal reasoning wrapped in
+// <thinking>…</thinking> tags. The system prompt asks them not to, but we
+// strip defensively in case they slip through (the alternative is the user
+// seeing the chatbot's monologue).
+const THINKING_TAG_RE = /<thinking>[\s\S]*?<\/thinking>\s*/gi;
+function stripThinkingTags(text: string): string {
+  return text.replace(THINKING_TAG_RE, "").trim();
+}
 
 // ---------------------------------------------------------------------------
 // Core loop
@@ -64,11 +78,13 @@ export async function runBedrockChatLoop(
     const assistantContent: AnyBlock[] = (response.output?.message?.content as AnyBlock[]) ?? [];
 
     if (stopReason !== "tool_use") {
-      // Extract and concatenate all text blocks.
-      return (assistantContent as TextBlock[])
+      // Extract and concatenate all text blocks, stripping any Nova
+      // <thinking>…</thinking> markers before returning to the user.
+      const joined = (assistantContent as TextBlock[])
         .filter((b) => typeof b.text === "string")
         .map((b) => b.text)
         .join("");
+      return stripThinkingTags(joined);
     }
 
     // Append assistant turn (may contain both text and toolUse blocks).

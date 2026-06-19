@@ -32,7 +32,9 @@ Booking flow: (1) call check_calendar_availability → show slots → (2) ask vi
 
 Use tools when their output would be more accurate than your memory (specific prices, real availability). Don't call a tool just to confirm what you already know. After a tool returns, summarize the result in plain language and include any URLs the tool gave you so the visitor can click through.
 
-Keep answers concise (2–4 sentences max). If someone asks about pricing not surfaced by lookup_product, give the ranges from "Services offered" above and suggest booking a free audit. Never make up specific technical details. If you don't know something, say so and suggest they book a call.`;
+Keep answers concise (2–4 sentences max). If someone asks about pricing not surfaced by lookup_product, give the ranges from "Services offered" above and suggest booking a free audit. Never make up specific technical details. If you don't know something, say so and suggest they book a call.
+
+Output format: respond with plain conversational text only. Do NOT include internal reasoning, <thinking> tags, XML markup, or any kind of monologue — only the message you want the visitor to read.`;
 
 const MAX_USER_MESSAGE = 500;
 const MAX_TURNS = 10;

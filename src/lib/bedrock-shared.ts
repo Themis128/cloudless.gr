@@ -16,7 +16,12 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 
 const DEFAULT_REGION = "us-east-1";
-const DEFAULT_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+// Switched 2026-06-19 from us.anthropic.claude-haiku-4-5-20251001-v1:0 to Nova
+// Micro: Haiku 4.5 Marketplace subscription was never enabled on this account,
+// and Nova Micro is ~30x cheaper ($0.035/M in, $0.14/M out) while still
+// supporting the Bedrock Converse tool-use loop the chat widget + booking
+// agent depend on. IAM grants in sst.config.ts must match this model.
+const DEFAULT_MODEL_ID = "us.amazon.nova-micro-v1:0";
 
 export const BEDROCK_REGION = process.env.AWS_REGION ?? DEFAULT_REGION;
 export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID ?? DEFAULT_MODEL_ID;
