@@ -289,9 +289,23 @@ jobs:
                 await sleep(delayMs);
                 continue;
               }
-              // Completed but not succeeded — hard-fail so E2E cannot run against
-              // a stale or crashed image (Gap 10 fix).
-              core.setFailed(`deploy-pi.yml for ${deploySha} ended with: ${candidates[0].conclusion}. URL: ${candidates[0].html_url}`);
+              // Completed but not succeeded.
+              const conclusion = candidates[0].conclusion;
+              // `cancelled` is benign here: deploy-pi.yml uses
+              // `concurrency: cancel-in-progress` so a newer push to `main`
+              // supersedes its older sibling. The HA sync run for the newer
+              // commit will catch up — this older run has nothing useful to do
+              // and would be a false-failure if we hard-failed. Mirrors the
+              // same handling used for `build-pi-image.yml` above (where we
+              // already treat cancellation as "superseded → continue").
+              if (conclusion === 'cancelled') {
+                core.warning(`deploy-pi.yml for ${deploySha} was cancelled (superseded by a newer push). Skipping; the newer commit's HA sync will handle it. URL: ${candidates[0].html_url}`);
+                return;
+              }
+              // Anything else (failure, action_required, timed_out) is a real
+              // problem — hard-fail so E2E cannot run against a stale or
+              // crashed image (Gap 10 fix).
+              core.setFailed(`deploy-pi.yml for ${deploySha} ended with: ${conclusion}. URL: ${candidates[0].html_url}`);
               return;
             }
             core.setFailed(`Timed out waiting for deploy-pi.yml for SHA ${deploySha}`);
