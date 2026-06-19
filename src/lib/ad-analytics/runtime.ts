@@ -33,8 +33,9 @@ import type { AdPlatformAdapter } from "./adapters/ad-platform";
 import type { NotificationChannel } from "./channels/notification";
 import { linkedinAdapter } from "./adapters/linkedin";
 import { slackChannel } from "./channels/slack";
-import { renderConversionBlocks, renderDigest } from "./digest";
+import { renderConversionBlocks, renderDigest, renderAnomalyBlocks } from "./digest";
 import { bookmarkKeyOf, getBookmarkStore } from "./bookmarks";
+import { evaluateAnomalies, findingDedupKey, type AnomalyFinding } from "./anomaly";
 
 /**
  * Registry of concrete adapters. Keep this map literal — `as const` enforces
@@ -283,6 +284,8 @@ export async function runScheduledPoll(opts?: {
       }
 
       const posted: Array<{ channel: string; target: string; ok: boolean }> = [];
+      const anomalyChannels = channelsForLevel(campaign.notifyChannels, "anomaly");
+      const windowHours = Math.max(1, Math.round(windowMs / 3_600_000));
       for (const current of metrics) {
         const key = bookmarkKeyOf({
           campaignSlug: campaign.slug,
@@ -316,8 +319,64 @@ export async function runScheduledPoll(opts?: {
             posted.push({ channel: config.channel, target: config.target, ok: false });
           }
         }
-        // Only advance the bookmark when at least one channel accepted the
-        // post — otherwise a Slack outage would silently drop a window.
+
+        // ---- Anomaly evaluation + DM fan-out ------------------------------
+        // Runs on every digest tick so the operator sees an alert within the
+        // same 15-min window the digest reports it in. De-dup keys live in
+        // the bookmark store under their own keys so the SAME anomaly in the
+        // next tick doesn't spam.
+        if (anomalyChannels.length > 0) {
+          const findings = evaluateAnomalies({
+            current,
+            previous: bookmark?.snapshot ?? null,
+            rules: campaign.anomalyRules,
+            windowHours,
+          });
+          const unsent = await filterAlreadySent(store, findings, {
+            campaignSlug: campaign.slug,
+            platform: platformConfig.platform,
+            windowEnd: current.windowEnd,
+          });
+          if (unsent.length > 0) {
+            const anomalyBlocks = renderAnomalyBlocks({
+              campaignSlug: campaign.slug,
+              platform: platformConfig.platform,
+              findings: unsent,
+            });
+            for (const { config, channel } of anomalyChannels) {
+              try {
+                const { messageId } = await channel.sendBlock({
+                  target: config.target,
+                  blocks: anomalyBlocks,
+                });
+                const ok = !messageId.endsWith(":not-sent");
+                posted.push({
+                  channel: config.channel,
+                  target: config.target,
+                  ok,
+                });
+                if (ok) {
+                  await markFindingsSent(store, unsent, {
+                    campaignSlug: campaign.slug,
+                    platform: platformConfig.platform,
+                    windowEnd: current.windowEnd,
+                    snapshot: current,
+                  });
+                }
+              } catch (err) {
+                console.error(
+                  `[ad-analytics/runtime] anomaly notification failed:`,
+                  err
+                );
+                posted.push({ channel: config.channel, target: config.target, ok: false });
+              }
+            }
+          }
+        }
+
+        // Only advance the bookmark when at least one digest/anomaly channel
+        // accepted the post — otherwise a Slack outage would silently drop a
+        // window.
         if (posted.some((p) => p.ok)) {
           await store.putBookmark(key, current);
         }
@@ -334,6 +393,51 @@ export async function runScheduledPoll(opts?: {
   }
 
   return { digests, noop: digests.length === 0 };
+}
+
+/**
+ * Drop findings that already fired and were DM'd in this dedup window (a
+ * day, currently). The bookmark store doubles as a de-dup ledger here so we
+ * don't need a second AWS resource — the same `pk` schema works.
+ */
+async function filterAlreadySent(
+  store: ReturnType<typeof getBookmarkStore>,
+  findings: AnomalyFinding[],
+  ctx: { campaignSlug: string; platform: string; windowEnd: string }
+): Promise<AnomalyFinding[]> {
+  const out: AnomalyFinding[] = [];
+  for (const f of findings) {
+    const key = findingDedupKey({
+      campaignSlug: ctx.campaignSlug,
+      platform: ctx.platform,
+      rule: f.rule,
+      windowEnd: ctx.windowEnd,
+    });
+    const existing = await store.getBookmark(key);
+    if (!existing) out.push(f);
+  }
+  return out;
+}
+
+async function markFindingsSent(
+  store: ReturnType<typeof getBookmarkStore>,
+  findings: AnomalyFinding[],
+  ctx: {
+    campaignSlug: string;
+    platform: string;
+    windowEnd: string;
+    snapshot: AdMetrics;
+  }
+): Promise<void> {
+  for (const f of findings) {
+    const key = findingDedupKey({
+      campaignSlug: ctx.campaignSlug,
+      platform: ctx.platform,
+      rule: f.rule,
+      windowEnd: ctx.windowEnd,
+    });
+    await store.putBookmark(key, ctx.snapshot);
+  }
 }
 
 // ---------------------------------------------------------------------------

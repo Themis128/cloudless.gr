@@ -182,3 +182,66 @@ function formatRatio(value?: number): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
   return `${(value * 100).toFixed(2)}%`;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4 — anomaly DM renderer
+// ---------------------------------------------------------------------------
+
+import type { AnomalyFinding } from "./anomaly";
+
+/**
+ * Render a Block Kit anomaly alert. Designed to read well as a DM (no header
+ * channel emoji — Slack already labels DMs in the sidebar) but works in a
+ * channel target too.
+ *
+ * One section per finding so an operator can scroll through multiple alerts
+ * without losing context. Severity gets a colored circle so a glance from a
+ * phone notification conveys priority.
+ */
+export function renderAnomalyBlocks(opts: {
+  campaignSlug: string;
+  platform: string;
+  findings: AnomalyFinding[];
+}): NotificationBlock[] {
+  const { campaignSlug, platform, findings } = opts;
+  if (findings.length === 0) return [];
+
+  const headerCount = findings.length === 1 ? "1 anomaly" : `${findings.length} anomalies`;
+  const blocks: NotificationBlock[] = [
+    {
+      type: "header",
+      text: `🚨 ${headerCount} on ${campaignSlug} (${platform})`,
+    },
+  ];
+
+  for (const f of findings) {
+    const dot = f.severity === "critical" ? "🔴" : "🟡";
+    const baselineLine =
+      typeof f.detail.baseline === "number"
+        ? ` · baseline ${formatDetailValue(f.detail.metric, f.detail.baseline)}`
+        : "";
+    blocks.push({
+      type: "section",
+      text:
+        `${dot} *${f.rule.replace(/_/g, " ")}* — ${escapeMrkdwn(f.message)}\n` +
+        `_observed ${formatDetailValue(f.detail.metric, f.detail.observed)}` +
+        ` · threshold ${formatDetailValue(f.detail.metric, f.detail.threshold)}` +
+        `${baselineLine}_`,
+    });
+  }
+
+  blocks.push({
+    type: "context",
+    text: `cloudless.gr ad-analytics · ${new Date().toISOString()}`,
+  });
+
+  return blocks;
+}
+
+function formatDetailValue(metric: string, value: number): string {
+  if (metric === "ctr") return `${(value * 100).toFixed(2)}%`;
+  if (metric === "spendEur" || metric === "cpcEur" || metric === "cpaEur") {
+    return `€${value.toFixed(2)}`;
+  }
+  return String(value);
+}
