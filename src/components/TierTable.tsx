@@ -15,6 +15,9 @@ const COLOR_MUTED = "#4a5a5f";
 const FONT_FRAUNCES = '"Fraunces", Georgia, serif';
 const TRANSITION_FAST = "120ms ease";
 const CLS_INPUT = "cl-tiers__input";
+// Form field identifiers — used as name, autoComplete, and namedItem keys.
+const FIELD_NAME = "name";
+const FIELD_EMAIL = "email";
 const FORM_STATUS_IDLE = "idle" as const;
 const FORM_STATUS_SENDING = "sending" as const;
 const FORM_STATUS_SENT = "sent" as const;
@@ -53,8 +56,8 @@ export default function TierTable({ campaign, locale }: Props) {
 
     const form = e.currentTarget;
     const payload = {
-      name: (form.elements.namedItem("name") as HTMLInputElement).value,
-      email: (form.elements.namedItem("email") as HTMLInputElement).value,
+      name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
+      email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
       phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       service: `${campaign.slug} — ${selectedTier.name[locale]}`,
       message: `Tier: ${selectedTier.name[locale]}\nPrice: ${selectedTier.oneOff ?? selectedTier.monthly ?? ""}\nCampaign: ${campaign.slug}`,
@@ -98,6 +101,14 @@ export default function TierTable({ campaign, locale }: Props) {
     } catch {
       setFormStatus(FORM_STATUS_ERROR);
     }
+  }
+
+  // Avoids nested ternary operators (sonarjs/no-nested-ternary, S3358).
+  let submitLabel: string;
+  if (formStatus === FORM_STATUS_SENDING) {
+    submitLabel = locale === LOCALE_EL ? "Αποστολή..." : "Sending...";
+  } else {
+    submitLabel = locale === LOCALE_EL ? "Λάβε πρόταση →" : "Get my proposal →";
   }
 
   return (
@@ -164,19 +175,19 @@ export default function TierTable({ campaign, locale }: Props) {
               </p>
               <form onSubmit={handleSubmit} className="cl-tiers__form">
                 <input
-                  name="name"
+                  name={FIELD_NAME}
                   type="text"
                   required
                   placeholder={locale === LOCALE_EL ? "Ονοματεπώνυμο *" : "Full name *"}
-                  autoComplete="name"
+                  autoComplete={FIELD_NAME}
                   className={CLS_INPUT}
                 />
                 <input
-                  name="email"
+                  name={FIELD_EMAIL}
                   type="email"
                   required
                   placeholder="Email *"
-                  autoComplete="email"
+                  autoComplete={FIELD_EMAIL}
                   className={CLS_INPUT}
                 />
                 <input
@@ -198,13 +209,7 @@ export default function TierTable({ campaign, locale }: Props) {
                   disabled={formStatus === FORM_STATUS_SENDING}
                   className="cl-tiers__submit"
                 >
-                  {formStatus === FORM_STATUS_SENDING
-                    ? locale === LOCALE_EL
-                      ? "Αποστολή..."
-                      : "Sending..."
-                    : locale === LOCALE_EL
-                      ? "Λάβε πρόταση →"
-                      : "Get my proposal →"}
+                  {submitLabel}
                 </button>
               </form>
             </>
