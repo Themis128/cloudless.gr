@@ -7,7 +7,7 @@ import ProductIcon from "@/components/store/ProductIcon";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 export default function CartSlideOver() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems } =
+  const { items, isOpen, closeCart, removeItem, updateQuantity, clearCart, totalPrice, totalItems } =
     useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -36,6 +36,7 @@ export default function CartSlideOver() {
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (res.ok && data.url) {
+        clearCart();
         window.location.href = data.url;
         return;
       }
