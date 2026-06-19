@@ -18,8 +18,8 @@ When the Insight Tag is silent, **the JS bundle, not the ad creative, is
 almost always the problem**. This skill captures the diagnostic path
 verified on cloudless.gr in 2026-06.
 
-> Companion to `linkedin-campaigns` (which covers *building* a campaign).
-> This skill covers *diagnosing* why an existing one isn't tracking.
+> Companion to `linkedin-campaigns` (which covers _building_ a campaign).
+> This skill covers _diagnosing_ why an existing one isn't tracking.
 
 ## Quick run
 
@@ -30,6 +30,7 @@ bash scripts/linkedin-insight-doctor.sh
 ```
 
 The script:
+
 1. Reads SSM for `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` and `LINKEDIN_CAPI_ACCESS_TOKEN`.
 2. Reads the GitHub Actions secret presence via `gh secret list`.
 3. Fetches the live `/[locale]/campaigns/<slug>/` HTML and grepes the
@@ -65,17 +66,20 @@ even tries to load.
    repository secret:
    - Name: `NEXT_PUBLIC_LINKEDIN_PARTNER_ID`
    - Value: that numeric ID
-3. *(Same trip)* Generate a Conversions API access token via Campaign
+3. _(Same trip)_ Generate a Conversions API access token via Campaign
    Manager → Data → Signals Manager → Direct API → Generate access token.
    Scopes: `rw_conversions`, `r_ads`. Tokens do not expire.
 4. Set GitHub secret `LINKEDIN_CAPI_ACCESS_TOKEN` (server-only) with that
    token, and mirror it to SSM at `/cloudless/production/LINKEDIN_CAPI_ACCESS_TOKEN`
    so server-side code paths can read it via `getIntegrationsAsync()`.
 5. Trigger a fresh deploy:
+
    ```bash
    gh workflow run deploy-pi.yml --ref main
    ```
+
    Or via the MCP: `mcp__cloudless-infra__frontend_deploy_cloudless_gr`.
+
 6. Verify the new bundle contains the Partner ID literal (the doctor
    script does this automatically).
 
@@ -144,7 +148,7 @@ parameters that the live URL carries.
 After fixing, the live bundle should contain:
 
 ```js
-w._linkedin_partner_id = "12345678";   // your real ID
+w._linkedin_partner_id = "12345678"; // your real ID
 w._linkedin_data_partner_ids = w._linkedin_data_partner_ids ?? [];
 w._linkedin_data_partner_ids.push("12345678");
 ```

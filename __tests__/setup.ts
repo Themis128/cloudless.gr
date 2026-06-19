@@ -81,6 +81,7 @@ process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
 // ── Cognito (kept for legacy fallback path in proxy.ts) ──────────────────────
 process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
 process.env.COGNITO_CLIENT_ID = "test-client-id";
+process.env.COGNITO_CLIENT_SECRET = "test-client-secret";
 
 // ── next-auth ─────────────────────────────────────────────────────────────────
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";

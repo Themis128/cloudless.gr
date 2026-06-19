@@ -4,22 +4,45 @@ import { useState, useRef, type FormEvent, type MouseEvent } from "react";
 import type { Campaign, Locale, Tier } from "@/data/campaigns";
 import { getStoredAttribution } from "@/lib/lead-attribution";
 
+// Design tokens — extracted to satisfy sonarjs/no-duplicate-string (S1192).
+// Each value is used 3+ times across the JSX and <style jsx> block.
+const LOCALE_EL = "el";
+const COLOR_BRAND = "#0a7785";
+const COLOR_BRAND_DARK = "#064d57";
+const COLOR_INK = "#1a2528";
+const COLOR_SAND = "#f7f3ec";
+const COLOR_MUTED = "#4a5a5f";
+const FONT_FRAUNCES = '"Fraunces", Georgia, serif';
+const TRANSITION_FAST = "120ms ease";
+const CLS_INPUT = "cl-tiers__input";
+// Form field identifiers — used as name, autoComplete, and namedItem keys.
+const FIELD_NAME = "name";
+const FIELD_EMAIL = "email";
+const FORM_STATUS_IDLE = "idle" as const;
+const FORM_STATUS_SENDING = "sending" as const;
+const FORM_STATUS_SENT = "sent" as const;
+const FORM_STATUS_ERROR = "error" as const;
+
 type Props = {
   campaign: Campaign;
   locale: Locale;
 };
 
-type FormStatus = "idle" | "sending" | "sent" | "error";
+type FormStatus =
+  | typeof FORM_STATUS_IDLE
+  | typeof FORM_STATUS_SENDING
+  | typeof FORM_STATUS_SENT
+  | typeof FORM_STATUS_ERROR;
 
 export default function TierTable({ campaign, locale }: Props) {
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
-  const [formStatus, setFormStatus] = useState<FormStatus>("idle");
+  const [formStatus, setFormStatus] = useState<FormStatus>(FORM_STATUS_IDLE);
   const formRef = useRef<HTMLDivElement>(null);
 
   function handleCtaClick(e: MouseEvent<HTMLAnchorElement>, tier: Tier) {
     e.preventDefault();
     setSelectedTier(tier);
-    setFormStatus("idle");
+    setFormStatus(FORM_STATUS_IDLE);
     // Scroll to form after a tick (DOM needs to render)
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -29,12 +52,12 @@ export default function TierTable({ campaign, locale }: Props) {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!selectedTier) return;
-    setFormStatus("sending");
+    setFormStatus(FORM_STATUS_SENDING);
 
     const form = e.currentTarget;
     const payload = {
-      name: (form.elements.namedItem("name") as HTMLInputElement).value,
-      email: (form.elements.namedItem("email") as HTMLInputElement).value,
+      name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
+      email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
       phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       service: `${campaign.slug} — ${selectedTier.name[locale]}`,
       message: `Tier: ${selectedTier.name[locale]}\nPrice: ${selectedTier.oneOff ?? selectedTier.monthly ?? ""}\nCampaign: ${campaign.slug}`,
@@ -48,7 +71,7 @@ export default function TierTable({ campaign, locale }: Props) {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        setFormStatus("sent");
+        setFormStatus(FORM_STATUS_SENT);
         form.reset();
         // Fire conversion event → #ads-realtime Slack notification
         const attr = getStoredAttribution();
@@ -61,25 +84,35 @@ export default function TierTable({ campaign, locale }: Props) {
             orderId: `lead-${Date.now()}`,
             url: window.location.href,
             userAgent: navigator.userAgent,
-            utm: attr ? {
-              source: attr.utmSource,
-              medium: attr.utmMedium,
-              campaign: attr.utmCampaign,
-              content: attr.utmContent,
-              term: attr.utmTerm,
-            } : undefined,
+            utm: attr
+              ? {
+                  source: attr.utmSource,
+                  medium: attr.utmMedium,
+                  campaign: attr.utmCampaign,
+                  content: attr.utmContent,
+                  term: attr.utmTerm,
+                }
+              : undefined,
           }),
         }).catch(() => {});
       } else {
-        setFormStatus("error");
+        setFormStatus(FORM_STATUS_ERROR);
       }
     } catch {
-      setFormStatus("error");
+      setFormStatus(FORM_STATUS_ERROR);
     }
   }
 
+  // Avoids nested ternary operators (sonarjs/no-nested-ternary, S3358).
+  let submitLabel: string;
+  if (formStatus === FORM_STATUS_SENDING) {
+    submitLabel = locale === LOCALE_EL ? "Αποστολή..." : "Sending...";
+  } else {
+    submitLabel = locale === LOCALE_EL ? "Λάβε πρόταση →" : "Get my proposal →";
+  }
+
   return (
-    <section className="cl-tiers" aria-label={locale === "el" ? "Πακέτα" : "Tiers"}>
+    <section className="cl-tiers" aria-label={locale === LOCALE_EL ? "Πακέτα" : "Tiers"}>
       <div className="cl-tiers__grid">
         {campaign.tiers.map((t) => (
           <article key={t.id} className={`cl-tier ${t.featured ? "cl-tier--featured" : ""}`}>
@@ -111,16 +144,16 @@ export default function TierTable({ campaign, locale }: Props) {
       {/* Inline request form — appears when a tier is selected */}
       {selectedTier && (
         <div ref={formRef} className="cl-tiers__form-wrap">
-          {formStatus === "sent" ? (
+          {formStatus === FORM_STATUS_SENT ? (
             <div className="cl-tiers__success">
               <div className="cl-tiers__success-icon">✓</div>
               <h3>
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? "Ευχαριστούμε! Θα επικοινωνήσουμε εντός 24 ωρών."
                   : "Thank you! We'll be in touch within 24 hours."}
               </h3>
               <p>
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? `Επιλογή: ${selectedTier.name[locale]}`
                   : `Selected: ${selectedTier.name[locale]}`}
               </p>
@@ -128,7 +161,7 @@ export default function TierTable({ campaign, locale }: Props) {
           ) : (
             <>
               <h3 className="cl-tiers__form-title">
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? `Ξεκίνα με ${selectedTier.name[locale]}`
                   : `Get started with ${selectedTier.name[locale]}`}
                 {selectedTier.oneOff && (
@@ -136,45 +169,47 @@ export default function TierTable({ campaign, locale }: Props) {
                 )}
               </h3>
               <p className="cl-tiers__form-sub">
-                {locale === "el"
+                {locale === LOCALE_EL
                   ? "Συμπλήρωσε τα στοιχεία σου και θα σου στείλουμε πρόταση εντός 24 ωρών."
                   : "Fill in your details and we'll send you a tailored proposal within 24 hours."}
               </p>
               <form onSubmit={handleSubmit} className="cl-tiers__form">
                 <input
-                  name="name"
+                  name={FIELD_NAME}
                   type="text"
                   required
-                  placeholder={locale === "el" ? "Ονοματεπώνυμο *" : "Full name *"}
-                  autoComplete="name"
-                  className="cl-tiers__input"
+                  placeholder={locale === LOCALE_EL ? "Ονοματεπώνυμο *" : "Full name *"}
+                  autoComplete={FIELD_NAME}
+                  className={CLS_INPUT}
                 />
                 <input
-                  name="email"
+                  name={FIELD_EMAIL}
                   type="email"
                   required
                   placeholder="Email *"
-                  autoComplete="email"
-                  className="cl-tiers__input"
+                  autoComplete={FIELD_EMAIL}
+                  className={CLS_INPUT}
                 />
                 <input
                   name="phone"
                   type="tel"
-                  placeholder={locale === "el" ? "Τηλέφωνο" : "Phone (optional)"}
+                  placeholder={locale === LOCALE_EL ? "Τηλέφωνο" : "Phone (optional)"}
                   autoComplete="tel"
-                  className="cl-tiers__input"
+                  className={CLS_INPUT}
                 />
-                {formStatus === "error" && (
+                {formStatus === FORM_STATUS_ERROR && (
                   <p className="cl-tiers__error">
-                    {locale === "el"
+                    {locale === LOCALE_EL
                       ? "Κάτι πήγε στραβά. Δοκίμασε ξανά."
                       : "Something went wrong. Please try again."}
                   </p>
                 )}
-                <button type="submit" disabled={formStatus === "sending"} className="cl-tiers__submit">
-                  {formStatus === "sending"
-                    ? locale === "el" ? "Αποστολή..." : "Sending..."
-                    : locale === "el" ? "Λάβε πρόταση →" : "Get my proposal →"}
+                <button
+                  type="submit"
+                  disabled={formStatus === FORM_STATUS_SENDING}
+                  className="cl-tiers__submit"
+                >
+                  {submitLabel}
                 </button>
               </form>
             </>
@@ -185,7 +220,7 @@ export default function TierTable({ campaign, locale }: Props) {
       <style jsx>{`
         .cl-tiers {
           padding: 56px 24px;
-          background: #f7f3ec;
+          background: ${COLOR_SAND};
         }
         .cl-tiers__grid {
           max-width: 1100px;
@@ -209,7 +244,7 @@ export default function TierTable({ campaign, locale }: Props) {
           position: relative;
         }
         :global(.cl-tier--featured) {
-          border-color: #0a7785;
+          border-color: ${COLOR_BRAND};
           border-width: 2px;
           box-shadow: 0 18px 40px -22px rgba(10, 119, 133, 0.35);
         }
@@ -226,24 +261,24 @@ export default function TierTable({ campaign, locale }: Props) {
           border-radius: 999px;
         }
         :global(.cl-tier__name) {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-weight: 500;
           font-size: 22px;
-          color: #1a2528;
+          color: ${COLOR_INK};
           margin: 0 0 14px;
         }
         :global(.cl-tier__prices) {
           margin-bottom: 6px;
         }
         :global(.cl-tier__oneoff) {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-size: 32px;
-          color: #0a7785;
+          color: ${COLOR_BRAND};
           line-height: 1;
         }
         :global(.cl-tier__monthly) {
           font-size: 13px;
-          color: #4a5a5f;
+          color: ${COLOR_MUTED};
           margin-top: 4px;
         }
         :global(.cl-tier__savings) {
@@ -257,7 +292,7 @@ export default function TierTable({ campaign, locale }: Props) {
           list-style: none;
           padding: 0;
           margin: 12px 0 20px;
-          color: #1a2528;
+          color: ${COLOR_INK};
           font-size: 14px;
           line-height: 1.55;
           flex: 1;
@@ -274,37 +309,37 @@ export default function TierTable({ campaign, locale }: Props) {
           text-align: center;
           padding: 13px 18px;
           border-radius: 6px;
-          background: #0a7785;
-          color: #f7f3ec;
+          background: ${COLOR_BRAND};
+          color: ${COLOR_SAND};
           text-decoration: none;
           font-weight: 600;
           letter-spacing: 0.4px;
-          transition: background 120ms ease;
+          transition: background ${TRANSITION_FAST};
         }
         :global(.cl-tier__cta:hover) {
-          background: #064d57;
+          background: ${COLOR_BRAND_DARK};
         }
         :global(.cl-tier__cta--active) {
-          background: #064d57;
+          background: ${COLOR_BRAND_DARK};
           box-shadow: 0 0 0 3px rgba(10, 119, 133, 0.3);
         }
         :global(.cl-tier--featured .cl-tier__cta) {
-          background: #1a2528;
+          background: ${COLOR_INK};
         }
         .cl-tiers__form-wrap {
           max-width: 560px;
           margin: 40px auto 0;
           padding: 32px;
           background: #ffffff;
-          border: 2px solid #0a7785;
+          border: 2px solid ${COLOR_BRAND};
           border-radius: 12px;
           box-shadow: 0 12px 32px -12px rgba(10, 119, 133, 0.15);
         }
         .cl-tiers__form-title {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-size: 22px;
           font-weight: 500;
-          color: #1a2528;
+          color: ${COLOR_INK};
           margin: 0 0 6px;
           display: flex;
           align-items: baseline;
@@ -313,11 +348,11 @@ export default function TierTable({ campaign, locale }: Props) {
         }
         .cl-tiers__form-price {
           font-size: 18px;
-          color: #0a7785;
+          color: ${COLOR_BRAND};
         }
         .cl-tiers__form-sub {
           font-size: 14px;
-          color: #4a5a5f;
+          color: ${COLOR_MUTED};
           margin: 0 0 20px;
           line-height: 1.5;
         }
@@ -332,13 +367,13 @@ export default function TierTable({ campaign, locale }: Props) {
           border: 1px solid #d8d2c4;
           border-radius: 6px;
           font-size: 15px;
-          color: #1a2528;
+          color: ${COLOR_INK};
           background: #faf8f4;
-          transition: border-color 120ms ease;
+          transition: border-color ${TRANSITION_FAST};
           outline: none;
         }
         .cl-tiers__input:focus {
-          border-color: #0a7785;
+          border-color: ${COLOR_BRAND};
           box-shadow: 0 0 0 3px rgba(10, 119, 133, 0.08);
         }
         .cl-tiers__input::placeholder {
@@ -351,18 +386,18 @@ export default function TierTable({ campaign, locale }: Props) {
         }
         .cl-tiers__submit {
           padding: 14px 24px;
-          background: #0a7785;
-          color: #f7f3ec;
+          background: ${COLOR_BRAND};
+          color: ${COLOR_SAND};
           border: none;
           border-radius: 6px;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          transition: background 120ms ease;
+          transition: background ${TRANSITION_FAST};
           letter-spacing: 0.3px;
         }
         .cl-tiers__submit:hover {
-          background: #064d57;
+          background: ${COLOR_BRAND_DARK};
         }
         .cl-tiers__submit:disabled {
           opacity: 0.6;
@@ -374,19 +409,19 @@ export default function TierTable({ campaign, locale }: Props) {
         }
         .cl-tiers__success-icon {
           font-size: 36px;
-          color: #0a7785;
+          color: ${COLOR_BRAND};
           margin-bottom: 12px;
         }
         .cl-tiers__success h3 {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-size: 20px;
           font-weight: 500;
-          color: #1a2528;
+          color: ${COLOR_INK};
           margin: 0 0 8px;
         }
         .cl-tiers__success p {
           font-size: 14px;
-          color: #4a5a5f;
+          color: ${COLOR_MUTED};
           margin: 0;
         }
       `}</style>

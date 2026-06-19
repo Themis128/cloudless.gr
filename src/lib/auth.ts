@@ -12,8 +12,9 @@
  *   https://authjs.dev/guides/refresh-token-rotation
  */
 
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { type DefaultSession, type Account } from "next-auth";
 import Cognito from "next-auth/providers/cognito";
+import type { JWT } from "next-auth/jwt";
 import { getTokens, putTokens, deleteTokens } from "@/lib/session-token-store";
 
 const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
@@ -164,6 +165,77 @@ function readGroups(
 
 type NextAuthResult = ReturnType<typeof NextAuth>;
 
+// JWT callback helpers — extracted to keep the callback under the cognitive-
+// complexity threshold (sonarjs/cognitive-complexity, S3776).
+
+/** Handles the initial sign-in: persist tokens to DynamoDB and populate claims. */
+async function handleSignIn(
+  token: JWT,
+  account: Account,
+  profile: Record<string, unknown> | undefined
+): Promise<JWT> {
+  const userId = token.sub ?? "";
+  if (userId && account.id_token && account.refresh_token) {
+    await putTokens(userId, {
+      idToken: account.id_token as string,
+      refreshToken: account.refresh_token as string,
+    });
+    token.tokensPersisted = true;
+  }
+  token.expiresAt =
+    typeof account.expires_at === "number"
+      ? account.expires_at
+      : Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 0);
+
+  const accessPayload = account.access_token
+    ? decodeJwtPayload(account.access_token as string)
+    : {};
+  const idPayload = account.id_token ? decodeJwtPayload(account.id_token as string) : {};
+
+  token.groups = readGroups(idPayload, accessPayload, profile);
+  token.roles = [];
+  return token;
+}
+
+/** Attempts to refresh an expired session token using the stored refresh_token. */
+async function handleTokenRefresh(token: JWT, env: AuthEnv, now: number): Promise<JWT> {
+  const userId = token.sub ?? "";
+  if (!userId) {
+    token.error = REFRESH_TOKEN_ERROR;
+    return token;
+  }
+
+  let stored;
+  try {
+    stored = await getTokens(userId);
+  } catch {
+    token.error = REFRESH_TOKEN_ERROR;
+    return token;
+  }
+
+  if (!stored?.refreshToken) {
+    token.error = REFRESH_TOKEN_ERROR;
+    return token;
+  }
+
+  try {
+    const refreshed = await refreshAccessToken(stored.refreshToken, env);
+    // Persist updated tokens back to DynamoDB
+    await putTokens(userId, {
+      idToken: refreshed.id_token ?? stored.idToken,
+      refreshToken: refreshed.refresh_token ?? stored.refreshToken,
+    });
+    token.expiresAt = now + refreshed.expires_in;
+    const payload = decodeJwtPayload(refreshed.access_token);
+    token.groups = (payload[GROUPS_CLAIM] as string[] | undefined) ?? token.groups ?? [];
+    delete token.error;
+    return token;
+  } catch {
+    token.error = REFRESH_TOKEN_ERROR;
+    return token;
+  }
+}
+
 function buildNextAuth(env: AuthEnv): NextAuthResult {
   const { issuer, clientId, clientSecret, cognitoDomain, authUrl } = env;
   return NextAuth({
@@ -173,28 +245,7 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
         if (account) {
           // On initial sign-in, persist tokens to DynamoDB instead of the JWT
           // cookie. This keeps the cookie thin and avoids the 4KB/413 issue.
-          const userId = token.sub ?? "";
-          if (userId && account.id_token && account.refresh_token) {
-            await putTokens(userId, {
-              idToken: account.id_token as string,
-              refreshToken: account.refresh_token as string,
-            });
-            token.tokensPersisted = true;
-          }
-          token.expiresAt =
-            typeof account.expires_at === "number"
-              ? account.expires_at
-              : Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 0);
-
-          const accessPayload = account.access_token
-            ? decodeJwtPayload(account.access_token as string)
-            : {};
-          const idPayload = account.id_token ? decodeJwtPayload(account.id_token as string) : {};
-          const p = profile as Record<string, unknown> | undefined;
-
-          token.groups = readGroups(idPayload, accessPayload, p);
-          token.roles = [];
-          return token;
+          return handleSignIn(token, account, profile as Record<string, unknown> | undefined);
         }
 
         const now = Math.floor(Date.now() / 1000);
@@ -203,41 +254,7 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
         }
 
         // Token expired — refresh using tokens from DynamoDB
-        const userId = token.sub ?? "";
-        if (!userId) {
-          token.error = REFRESH_TOKEN_ERROR;
-          return token;
-        }
-
-        let stored;
-        try {
-          stored = await getTokens(userId);
-        } catch {
-          token.error = REFRESH_TOKEN_ERROR;
-          return token;
-        }
-
-        if (!stored?.refreshToken) {
-          token.error = REFRESH_TOKEN_ERROR;
-          return token;
-        }
-
-        try {
-          const refreshed = await refreshAccessToken(stored.refreshToken, env);
-          // Persist updated tokens back to DynamoDB
-          await putTokens(userId, {
-            idToken: refreshed.id_token ?? stored.idToken,
-            refreshToken: refreshed.refresh_token ?? stored.refreshToken,
-          });
-          token.expiresAt = now + refreshed.expires_in;
-          const payload = decodeJwtPayload(refreshed.access_token);
-          token.groups = (payload[GROUPS_CLAIM] as string[] | undefined) ?? token.groups ?? [];
-          delete token.error;
-          return token;
-        } catch {
-          token.error = REFRESH_TOKEN_ERROR;
-          return token;
-        }
+        return handleTokenRefresh(token, env, now);
       },
       async session({ session, token }) {
         // Fetch idToken from DynamoDB for downstream use (fetch-with-auth)
@@ -285,7 +302,15 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
       error(error: Error) {
         const tag = `${error?.name ?? ""} ${(error as { type?: string })?.type ?? ""}`;
         const configured = !!(issuer && clientId && clientSecret);
-        if (tag.includes("Configuration") && configured) return;
+        // Auth.js v5 can surface Configuration errors with the word in the
+        // message rather than the error name/type (e.g. when the error is a
+        // generic AuthError wrapper). Check both to avoid the CloudWatch
+        // SERVERLESS-APP_MAIN-Errors alarm firing on crawler/probe GETs.
+        const CONFIG_ERROR_KEYWORD = "Configuration";
+        const isConfigurationError =
+          tag.includes(CONFIG_ERROR_KEYWORD) ||
+          (error?.message ?? "").includes(CONFIG_ERROR_KEYWORD);
+        if (isConfigurationError && configured) return;
         console.error(`[auth][error] ${error?.message ?? error}`);
       },
     },
@@ -307,7 +332,7 @@ let memoizedConfigured = false;
 function getNextAuth(): NextAuthResult | null {
   if (memoizedConfigured) return memoizedResult;
   const env = resolveAuthEnv();
-  if (!env.authSecret || !env.issuer) {
+  if (!env.authSecret || !env.issuer || !env.clientId || !env.clientSecret) {
     // Don't memoize: values may still be hydrating on a cold start or dev-server
     // restart, so a later request should retry rather than be permanently locked
     // to a broken instance.  (next-auth throws "missing issuer" when issuer is
