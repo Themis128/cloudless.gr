@@ -61,7 +61,7 @@ describe("bundle optimization", () => {
     expect(globalEntry.timings).toBeDefined();
     expect(globalEntry.timings?.length).toBeGreaterThan(0);
 
-    const storeEntry = budget.find((b) => b.path === "/store");
+    const storeEntry = budget.find((b) => b.path === "/*store*");
     expect(storeEntry).toBeDefined();
     if (!storeEntry) throw new Error("storeEntry missing");
     expect(storeEntry.timings).toBeDefined();

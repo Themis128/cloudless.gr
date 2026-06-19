@@ -20,10 +20,35 @@ const serviceOptions = [
   "Not sure yet — let's discuss",
 ];
 
+const LABEL_CLASS = "mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400";
+const INPUT_CLASS =
+  "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
+const SELECT_CLASS =
+  "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
+const TEXTAREA_CLASS =
+  "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full resize-y rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
+const SIDEBAR_LABEL_CLASS = "text-xs text-slate-500";
+// Form field identifiers — each used as htmlFor, id, name, and in payload extraction.
+const FIELD_NAME = "name";
+const FIELD_EMAIL = "email";
+const FIELD_COMPANY = "company";
+const FIELD_SERVICE = "service";
+const FIELD_MESSAGE = "message";
+// Form status literals — extracted to satisfy sonarjs/no-duplicate-string (S1192).
+const FORM_STATUS_IDLE = "idle" as const;
+const FORM_STATUS_SENDING = "sending" as const;
+const FORM_STATUS_SENT = "sent" as const;
+const FORM_STATUS_ERROR = "error" as const;
+type FormStatus =
+  | typeof FORM_STATUS_IDLE
+  | typeof FORM_STATUS_SENDING
+  | typeof FORM_STATUS_SENT
+  | typeof FORM_STATUS_ERROR;
+
 export default function ContactFormSection() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<FormStatus>(FORM_STATUS_IDLE);
   const searchParams = useSearchParams();
 
   // Pre-fill message from checkout redirect context
@@ -49,15 +74,15 @@ export default function ContactFormSection() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setStatus("sending");
+    setStatus(FORM_STATUS_SENDING);
 
     const form = e.currentTarget;
     const payload = {
-      name: (form.elements.namedItem("name") as HTMLInputElement).value,
-      email: (form.elements.namedItem("email") as HTMLInputElement).value,
-      company: (form.elements.namedItem("company") as HTMLInputElement).value,
-      service: (form.elements.namedItem("service") as HTMLSelectElement).value,
-      message: (form.elements.namedItem("message") as HTMLTextAreaElement).value,
+      name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
+      email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
+      company: (form.elements.namedItem(FIELD_COMPANY) as HTMLInputElement).value,
+      service: (form.elements.namedItem(FIELD_SERVICE) as HTMLSelectElement).value,
+      message: (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value,
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,
     };
@@ -75,13 +100,13 @@ export default function ContactFormSection() {
         // Browser-side Lead event with the same eventId the server sent to CAPI.
         // No-ops if the pixel is not loaded.
         trackPixelEvent("Lead", { content_name: payload.service || "contact_form" }, data?.eventId);
-        setStatus("sent");
+        setStatus(FORM_STATUS_SENT);
         form.reset();
       } else {
-        setStatus("error");
+        setStatus(FORM_STATUS_ERROR);
       }
     } catch {
-      setStatus("error");
+      setStatus(FORM_STATUS_ERROR);
     }
   }
 
@@ -91,8 +116,8 @@ export default function ContactFormSection() {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-5">
           {/* Form */}
           <div className="lg:col-span-3">
-            {isPurchaseFlow && status !== "sent" && (
-              <div className="mb-6 rounded-xl border border-neon-cyan/30 bg-neon-cyan/5 p-4">
+            {isPurchaseFlow && status !== FORM_STATUS_SENT && (
+              <div className="border-neon-cyan/30 bg-neon-cyan/5 mb-6 rounded-xl border p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-neon-cyan mt-0.5 text-lg">&#9889;</span>
                   <div>
@@ -100,17 +125,18 @@ export default function ContactFormSection() {
                       {t("contact.purchaseIntent", "Almost there! Tell us about your project.")}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {tier && price
-                        ? `${tier} — ${price}`
-                        : products || ""}
+                      {tier && price ? `${tier} — ${price}` : products || ""}
                       {" — "}
-                      {t("contact.purchaseIntentSub", "Fill in your details and we'll send you a tailored proposal within 24 hours.")}
+                      {t(
+                        "contact.purchaseIntentSub",
+                        "Fill in your details and we'll send you a tailored proposal within 24 hours."
+                      )}
                     </p>
                   </div>
                 </div>
               </div>
             )}
-            {status === "sent" ? (
+            {status === FORM_STATUS_SENT ? (
               <ScrollReveal>
                 <div className="neon-border bg-void-light rounded-lg p-10 text-center">
                   <div className="text-neon-cyan mb-4 font-mono text-4xl">✓</div>
@@ -125,7 +151,7 @@ export default function ContactFormSection() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setStatus("idle")}
+                    onClick={() => setStatus(FORM_STATUS_IDLE)}
                     className="text-neon-cyan mt-6 font-mono text-sm font-semibold transition-colors hover:text-white"
                   >
                     {t("contact.sendAnother", "Send another message →")}
@@ -136,67 +162,55 @@ export default function ContactFormSection() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="name"
-                      className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                    >
+                    <label htmlFor={FIELD_NAME} className={LABEL_CLASS}>
                       {t("contact.name", "Name")} *
                     </label>
                     <input
-                      id="name"
-                      name="name"
+                      id={FIELD_NAME}
+                      name={FIELD_NAME}
                       type="text"
                       required
                       placeholder="John Doe"
-                      className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                      className={INPUT_CLASS}
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                    >
+                    <label htmlFor={FIELD_EMAIL} className={LABEL_CLASS}>
                       {t("contact.email", "Email")} *
                     </label>
                     <input
-                      id="email"
-                      name="email"
+                      id={FIELD_EMAIL}
+                      name={FIELD_EMAIL}
                       type="email"
                       required
                       placeholder="john@company.com"
-                      className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                      className={INPUT_CLASS}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="company"
-                    className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                  >
+                  <label htmlFor={FIELD_COMPANY} className={LABEL_CLASS}>
                     {t("contact.company", "Company")}
                   </label>
                   <input
-                    id="company"
-                    name="company"
+                    id={FIELD_COMPANY}
+                    name={FIELD_COMPANY}
                     type="text"
                     placeholder="Acme Inc."
-                    className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                    className={INPUT_CLASS}
                   />
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="service"
-                    className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                  >
+                  <label htmlFor={FIELD_SERVICE} className={LABEL_CLASS}>
                     {t("contact.serviceOfInterest", "SERVICE OF INTEREST")}
                   </label>
                   <select
-                    id="service"
-                    name="service"
+                    id={FIELD_SERVICE}
+                    name={FIELD_SERVICE}
                     defaultValue={defaultService}
-                    className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                    className={SELECT_CLASS}
                   >
                     <option value="">Select a service</option>
                     {serviceOptions.map((opt) => (
@@ -208,20 +222,17 @@ export default function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="message"
-                    className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                  >
+                  <label htmlFor={FIELD_MESSAGE} className={LABEL_CLASS}>
                     {t("contact.message", "Message")} *
                   </label>
                   <textarea
-                    id="message"
-                    name="message"
+                    id={FIELD_MESSAGE}
+                    name={FIELD_MESSAGE}
                     required
                     rows={5}
                     defaultValue={defaultMessage}
                     placeholder="What are you working on? What challenges are you facing?"
-                    className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full resize-y rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                    className={TEXTAREA_CLASS}
                   />
                 </div>
 
@@ -249,7 +260,7 @@ export default function ContactFormSection() {
                   </label>
                 </div>
 
-                {status === "error" && (
+                {status === FORM_STATUS_ERROR && (
                   <p role="alert" className="text-neon-magenta font-mono text-sm">
                     Something went wrong. Please try again or email us directly at{" "}
                     <a href="mailto:tbaltzakis@cloudless.gr" className="text-neon-cyan underline">
@@ -260,10 +271,10 @@ export default function ContactFormSection() {
 
                 <button
                   type="submit"
-                  disabled={status === "sending"}
+                  disabled={status === FORM_STATUS_SENDING}
                   className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 w-full rounded-lg border px-10 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)] disabled:opacity-40 sm:w-auto"
                 >
-                  {status === "sending"
+                  {status === FORM_STATUS_SENDING
                     ? t("contact.sending", "Sending...")
                     : t("contact.submit", "Send Message")}
                 </button>
@@ -298,7 +309,7 @@ export default function ContactFormSection() {
                 <h3 className="font-heading text-lg font-bold text-white">Direct Contact</h3>
                 <div className="mt-4 space-y-3 font-mono text-sm">
                   <p>
-                    <span className="text-xs text-slate-500">EMAIL:</span>{" "}
+                    <span className={SIDEBAR_LABEL_CLASS}>EMAIL:</span>{" "}
                     <a
                       href="mailto:tbaltzakis@cloudless.gr"
                       className="text-neon-cyan text-xs hover:underline"
@@ -307,11 +318,11 @@ export default function ContactFormSection() {
                     </a>
                   </p>
                   <p>
-                    <span className="text-xs text-slate-500">LOCATION:</span>{" "}
+                    <span className={SIDEBAR_LABEL_CLASS}>LOCATION:</span>{" "}
                     <span className="text-xs text-slate-400">Greece, EU</span>
                   </p>
                   <p>
-                    <span className="text-xs text-slate-500">RESPONSE:</span>{" "}
+                    <span className={SIDEBAR_LABEL_CLASS}>RESPONSE:</span>{" "}
                     <span className="text-xs text-slate-400">Within 24 hours</span>
                   </p>
                 </div>

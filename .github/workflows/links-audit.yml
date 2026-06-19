@@ -52,6 +52,7 @@ jobs:
             --exclude "^https?://www\.linkedin\.com"
             --exclude "^https://github\.com/cloudless-gr"
             --exclude "^https://github\.com/.*/settings"
+            --exclude "^https://www\.notion\.so/[0-9a-f]"
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"
