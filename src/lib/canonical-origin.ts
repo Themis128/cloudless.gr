@@ -48,7 +48,10 @@ export function canonicalOrigin(request: NextRequest): string {
 }
 
 function trimTrailingSlash(url: string): string {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
+  // Strip ALL trailing slashes so a misconfigured `NEXT_PUBLIC_SITE_URL`
+  // like `https://cloudless.gr///` (trailing-slash gauntlet from sloppy env
+  // copy-paste) still produces a canonical origin without trailing slashes.
+  return url.replace(/\/+$/, "");
 }
 
 /** True when a forwarded-host header points at a private/internal origin we

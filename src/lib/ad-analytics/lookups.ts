@@ -43,8 +43,8 @@ export const INDUSTRIES: Record<string, string> = {
   "3": "Computer Hardware",
   "5": "Computer Networking",
   "6": "Internet",
-  "118": "Information Services",
   "96": "Information Technology & Services",
+  "118": "Information Services",
   "121": "Telecommunications",
   "1810": "IT Services and IT Consulting",
   "1842": "Software Development",
@@ -52,52 +52,55 @@ export const INDUSTRIES: Record<string, string> = {
   "1594": "Online & Mail Order Retail",
 
   // Services
-  "104": "Management Consulting",
+  "9": "Law Practice",
+  "10": "Legal Services",
   "11": "Higher Education",
+  "12": "Education Management",
   "70": "Marketing & Advertising",
   "80": "Marketing Services",
   "82": "Market Research",
   "91": "Online Media",
-  "98": "Public Relations & Communications",
-  "30": "Food & Beverages",
-  "47": "Financial Services",
-  "41": "Banking",
-  "43": "Hospital & Health Care",
-  "48": "Insurance",
-  "49": "Information Services",
   "94": "Newspapers",
   "95": "Non-profit Organisation Management",
+  "98": "Public Relations & Communications",
+  "104": "Management Consulting",
+  "129": "Accounting",
+  "30": "Food & Beverages",
+
+  // Finance & insurance
+  "41": "Banking",
+  "42": "Insurance",
+  "43": "Investment Banking",
+  "45": "Investment Management",
+  "46": "Accounting Services",
+  "47": "Financial Services",
+
+  // Health
+  "13": "Mental Health Care",
+  "14": "Hospital & Health Care",
+  "15": "Pharmaceuticals",
+  "16": "Veterinary",
+  "17": "Medical Devices",
+  "125": "Medical Practice",
 
   // Retail (matches the "shop-online" ICP exactly)
-  "27": "Retail",
   "19": "Wholesale",
   "26": "Apparel & Fashion",
+  "27": "Retail",
+  "31": "Hospitality",
   "61": "Wine & Spirits",
   "111": "Restaurants",
-  "31": "Hospitality",
 
   // Manufacturing & industrial
   "55": "Manufacturing",
+  "75": "Mechanical or Industrial Engineering",
   "112": "Sporting Goods",
   "114": "Furniture",
-  "10": "Civil Engineering",
-  "75": "Mechanical or Industrial Engineering",
   "131": "Building Materials",
 
-  // Real estate & professional
+  // Real estate & government
   "44": "Real Estate",
-  "9": "Law Practice",
-  "10": "Legal Services",
-  "47": "Financial Services",
-  "129": "Accounting",
-  "12": "Education Management",
   "67": "Government Administration",
-
-  // Health
-  "13": "Pharmaceuticals",
-  "14": "Biotechnology",
-  "15": "Medical Devices",
-  "125": "Medical Practice",
 
   // Construction & energy
   "48": "Construction",
@@ -107,8 +110,8 @@ export const INDUSTRIES: Record<string, string> = {
 
   // Transport & logistics
   "87": "Logistics & Supply Chain",
-  "116": "Transportation & Trucking",
   "108": "Maritime",
+  "116": "Transportation & Trucking",
 
   // Media & creative
   "23": "Architecture & Planning",
