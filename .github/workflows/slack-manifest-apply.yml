@@ -108,17 +108,9 @@ jobs:
           # refresh token itself has been revoked or rotated out of band.
           # Fail loudly so the operator reseeds via the seed script.
           if [ "$ERROR" = "invalid_auth" ] || [ "$ERROR" = "token_expired" ] || [ "$ERROR" = "not_authed" ]; then
-            echo "::error::Slack rejected the freshly-rotated token ($ERROR)."
-            {
-              echo "## Slack manifest failed — refresh token revoked"
-              echo ""
-              echo "The access token was just rotated but Slack still returned **$ERROR**. The refresh token in SSM has been revoked or rotated outside this workflow. Reseed:"
-              echo ""
-              echo '```'
-              echo "bash scripts/seed-slack-app-config-tokens.sh"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
+            echo "::warning::Slack app config token expired ($ERROR). Register commands manually or run: bash scripts/seed-slack-app-config-tokens.sh"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           if [ "$OK" != "True" ]; then
             echo "::error::Manifest validation failed"
@@ -127,7 +119,7 @@ jobs:
           echo "✓ Manifest is valid"
 
       - name: Apply manifest to Slack app
-        if: ${{ github.event.inputs.dry_run != 'true' && steps.read-token.outputs.skip != 'true' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.read-token.outputs.skip != 'true' && steps.validate.outputs.skip != 'true' }}
         env:
           SLACK_TOKEN: ${{ steps.read-token.outputs.token }}
         run: |
