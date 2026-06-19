@@ -356,7 +356,7 @@ export default {
       ],
       warm: isProd ? 5 : 0,
       server: {
-        memory: "512 MB",
+        memory: "1024 MB",
         architecture: "arm64",
         runtime: "nodejs22.x",
         timeout: "30 seconds",
