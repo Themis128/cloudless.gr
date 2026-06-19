@@ -106,6 +106,8 @@ export interface AdConversionEvent {
   userAgent?: string;
   /** Cloudflare-derived country code, if available. */
   country?: string;
+  /** Client IP for CAPI user matching (from x-forwarded-for or cf-connecting-ip). */
+  ipAddress?: string;
   /** Captured first-touch UTM if `AttributionCapture` set them. */
   utm?: {
     source?: string;

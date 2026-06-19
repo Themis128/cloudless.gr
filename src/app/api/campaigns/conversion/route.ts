@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     url: body.url ?? undefined,
     userAgent: body.userAgent ?? undefined,
     country: request.headers.get("cf-ipcountry") ?? undefined,
+    ipAddress: request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined,
     utm: body.utm ?? undefined,
   });
 

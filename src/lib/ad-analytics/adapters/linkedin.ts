@@ -236,6 +236,7 @@ function buildUserIds(user?: UserMatch): Array<{ idType: string; idValue: string
   if (user.phoneSha256) ids.push({ idType: "SHA256_PHONE", idValue: user.phoneSha256 });
   if (user.liFatId)
     ids.push({ idType: "LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID", idValue: user.liFatId });
+  if (user.ipAddress) ids.push({ idType: "PLAINTEXT_IP_ADDRESS", idValue: user.ipAddress });
   return ids;
 }
 
