@@ -127,7 +127,8 @@ export async function getLinkedInInsights(
 
 export async function pauseLinkedInCampaign(campaignId: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await liiFetch(`/adCampaigns/${campaignId}`, {
+    const { adAccountId } = await getLinkedInConfig();
+    const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns/${campaignId}`, {
       method: "POST",
       headers: { "X-Restli-Method": "PARTIAL_UPDATE" },
       body: JSON.stringify({ patch: { $set: { status: "PAUSED" } } }),
@@ -142,7 +143,8 @@ export async function pauseLinkedInCampaign(campaignId: string): Promise<{ ok: b
 
 export async function resumeLinkedInCampaign(campaignId: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await liiFetch(`/adCampaigns/${campaignId}`, {
+    const { adAccountId } = await getLinkedInConfig();
+    const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns/${campaignId}`, {
       method: "POST",
       headers: { "X-Restli-Method": "PARTIAL_UPDATE" },
       body: JSON.stringify({ patch: { $set: { status: "ACTIVE" } } }),
@@ -160,7 +162,8 @@ export async function setLinkedInCampaignBudget(
   dailyBudgetEur: number
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await liiFetch(`/adCampaigns/${campaignId}`, {
+    const { adAccountId } = await getLinkedInConfig();
+    const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns/${campaignId}`, {
       method: "POST",
       headers: { "X-Restli-Method": "PARTIAL_UPDATE" },
       body: JSON.stringify({
@@ -187,7 +190,8 @@ export async function getLinkedInCampaignStatus(campaignId: string): Promise<{
   error?: string;
 }> {
   try {
-    const res = await liiFetch(`/adCampaigns/${campaignId}`);
+    const { adAccountId } = await getLinkedInConfig();
+    const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns/${campaignId}`);
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       return { ok: false, error: `${res.status}: ${text.slice(0, 200)}` };

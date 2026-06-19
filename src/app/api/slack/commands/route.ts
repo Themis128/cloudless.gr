@@ -924,19 +924,23 @@ function handleAds(payload: SlashCommandPayload): Response {
 
 async function runAdsStatus(campaignId: string, responseUrl: string, userId: string): Promise<void> {
   try {
-    const [info, insights] = await Promise.all([
+    const campaign = getLiveCampaigns().find((c) => c.adPlatforms?.some((p) => p.campaignIds.includes(campaignId)));
+    const today = new Date().toISOString().split("T")[0];
+    const startDate = campaign?.startsAt ?? today;
+
+    const [info, todayInsights, lifetimeInsights] = await Promise.all([
       getLinkedInCampaignStatus(campaignId),
-      (() => {
-        const today = new Date().toISOString().split("T")[0];
-        return getLinkedInInsights(today, today);
-      })(),
+      getLinkedInInsights(today, today),
+      getLinkedInInsights(startDate, today),
     ]);
     if (!info.ok) {
       await postToResponseUrl(responseUrl, { response_type: "ephemeral", replace_original: true, text: `:warning: ${info.error}` });
       return;
     }
     const statusIcon = info.status === "ACTIVE" ? ":large_green_circle:" : info.status === "PAUSED" ? ":double_vertical_bar:" : ":white_circle:";
-    const ctr = insights.impressions > 0 ? ((insights.clicks / insights.impressions) * 100).toFixed(2) + "%" : "—";
+    const todayCtr = todayInsights.impressions > 0 ? ((todayInsights.clicks / todayInsights.impressions) * 100).toFixed(2) + "%" : "—";
+    const lifetimeCtr = lifetimeInsights.impressions > 0 ? ((lifetimeInsights.clicks / lifetimeInsights.impressions) * 100).toFixed(2) + "%" : "—";
+    const lifetimeCpc = lifetimeInsights.clicks > 0 ? `€${(Number(lifetimeInsights.costInLocalCurrency) / lifetimeInsights.clicks).toFixed(2)}` : "—";
     await postToResponseUrl(responseUrl, {
       response_type: "ephemeral",
       replace_original: true,
@@ -954,11 +958,29 @@ async function runAdsStatus(campaignId: string, responseUrl: string, userId: str
         { type: "divider" },
         {
           type: "section",
+          text: { type: "mrkdwn", text: "*Today*" },
           fields: [
-            { type: "mrkdwn", text: `*Impressions (today)*\n${insights.impressions.toLocaleString()}` },
-            { type: "mrkdwn", text: `*Clicks*\n${insights.clicks}` },
-            { type: "mrkdwn", text: `*CTR*\n${ctr}` },
-            { type: "mrkdwn", text: `*Spend*\n€${Number(insights.costInLocalCurrency).toFixed(2)}` },
+            { type: "mrkdwn", text: `*Impressions*\n${todayInsights.impressions.toLocaleString()}` },
+            { type: "mrkdwn", text: `*Clicks*\n${todayInsights.clicks}` },
+            { type: "mrkdwn", text: `*CTR*\n${todayCtr}` },
+            { type: "mrkdwn", text: `*Spend*\n€${Number(todayInsights.costInLocalCurrency).toFixed(2)}` },
+          ],
+        },
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: `*Lifetime* (since ${startDate})` },
+          fields: [
+            { type: "mrkdwn", text: `*Impressions*\n${lifetimeInsights.impressions.toLocaleString()}` },
+            { type: "mrkdwn", text: `*Clicks*\n${lifetimeInsights.clicks}` },
+            { type: "mrkdwn", text: `*CTR*\n${lifetimeCtr}` },
+            { type: "mrkdwn", text: `*Spend*\n€${Number(lifetimeInsights.costInLocalCurrency).toFixed(2)}` },
+          ],
+        },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: `*CPC (lifetime)*\n${lifetimeCpc}` },
+            { type: "mrkdwn", text: `*Conversions*\n${lifetimeInsights.conversions}` },
           ],
         },
         { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
