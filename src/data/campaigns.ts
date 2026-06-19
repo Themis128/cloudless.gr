@@ -143,8 +143,8 @@ export const campaigns: Campaign[] = [
         // Campaign Manager → URL `…/accounts/<accountId>/…`. The Marketing
         // API expects this same numeric ID, not the URN — `LinkedInAdapter`
         // wraps it as `urn:li:sponsoredAccount:<id>` internally.
-        accountId: "511588554",
-        campaignIds: ["692134846"],
+        accountId: "512642510",
+        campaignIds: ["857622786"],
         insightTagConversionId: 26846068,
         capiConversionId: 26846116,
       },
