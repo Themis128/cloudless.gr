@@ -328,14 +328,20 @@ export default {
         {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
           // The us.* prefix is required for cross-region inference profiles.
+          //
+          // Model: Amazon Nova Micro (switched from Claude Haiku 4.5 on
+          // 2026-06-19). Haiku 4.5 needed a Bedrock Marketplace subscription
+          // that was never enabled on this account; Nova Micro is already
+          // active and is ~30x cheaper. See src/lib/bedrock-shared.ts for
+          // the matching DEFAULT_MODEL_ID — keep these in sync.
           actions: ["bedrock:InvokeModel", "bedrock:Converse"],
           resources: [
             // Foundation model — all US regions (cross-region inference routes through any of these)
-            "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
-            "arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
-            "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+            "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0",
+            "arn:aws:bedrock:us-east-2::foundation-model/amazon.nova-micro-v1:0",
+            "arn:aws:bedrock:us-west-2::foundation-model/amazon.nova-micro-v1:0",
             // Cross-region inference profile (us.* prefix routes to any US region)
-            "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0",
+            "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.amazon.nova-micro-v1:0",
           ],
         },
         {
