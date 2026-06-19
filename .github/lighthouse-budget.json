@@ -1,6 +1,6 @@
 [
   {
-    "path": "/store",
+    "path": "/*store*",
     "timings": [
       {
         "metric": "interactive",
