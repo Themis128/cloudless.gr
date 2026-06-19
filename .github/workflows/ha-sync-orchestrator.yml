@@ -239,6 +239,8 @@ jobs:
         # build-pi-image.yml only pushes to ECR; the actual kubectl rollout runs
         # in deploy-pi.yml. Wait for that too so the k3s E2E (which fires on our
         # success) always hits the fully-rolled-out image, not mid-rollout pods.
+        # If the Pi runner is offline (run stuck in queued), exit gracefully —
+        # AWS Lambda is the primary; Pi is standby.
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -248,6 +250,10 @@ jobs:
 
             const maxAttempts = 40; // 10 min at 15s intervals
             const delayMs = 15000;
+            // If the run stays queued (Pi runner offline) for this many
+            // consecutive checks, exit gracefully instead of timing out.
+            const maxQueuedAttempts = 12; // 3 min of consecutive "queued"
+            let consecutiveQueued = 0;
             function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -269,7 +275,17 @@ jobs:
               }
               const active = candidates.find((r) => r.status !== 'completed');
               if (active) {
-                core.info(`[${attempt}] waiting on deploy-pi rollout: ${active.html_url}`);
+                // Detect Pi runner offline: run stuck in "queued" (never starts)
+                if (active.status === 'queued') {
+                  consecutiveQueued++;
+                  if (consecutiveQueued >= maxQueuedAttempts) {
+                    core.warning(`deploy-pi.yml stuck in queued for ${consecutiveQueued} checks — Pi runner likely offline. AWS Lambda is primary; skipping.`);
+                    return;
+                  }
+                } else {
+                  consecutiveQueued = 0;
+                }
+                core.info(`[${attempt}] waiting on deploy-pi rollout (${active.status}): ${active.html_url}`);
                 await sleep(delayMs);
                 continue;
               }
