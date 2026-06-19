@@ -68,6 +68,7 @@ jobs:
         id: read-token
         env:
           AWS_DEFAULT_REGION: us-east-1
+          SLACK_APP_CONFIG_TOKEN_FALLBACK: ${{ secrets.SLACK_APP_CONFIG_TOKEN }}
         run: |
           set -uo pipefail
           TOKEN=$(aws ssm get-parameter \
@@ -76,18 +77,11 @@ jobs:
             --query Parameter.Value \
             --output text 2>/dev/null || true)
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
-            echo "::warning::No SLACK_APP_CONFIG_TOKEN in SSM. Run scripts/seed-slack-app-config-tokens.sh first."
-            {
-              echo "## Slack manifest skipped — no token in SSM"
-              echo ""
-              echo "Bootstrap the access + refresh token pair once via:"
-              echo ""
-              echo '```'
-              echo "bash scripts/seed-slack-app-config-tokens.sh"
-              echo '```'
-              echo ""
-              echo "From then on this workflow auto-rotates via Slack \`tooling.tokens.rotate\`."
-            } >> "$GITHUB_STEP_SUMMARY"
+            # Fall back to GitHub secret if SSM is empty
+            TOKEN="${SLACK_APP_CONFIG_TOKEN_FALLBACK:-}"
+          fi
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
+            echo "::warning::No SLACK_APP_CONFIG_TOKEN in SSM or secrets. Run scripts/seed-slack-app-config-tokens.sh first."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
