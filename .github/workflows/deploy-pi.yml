@@ -90,9 +90,13 @@ jobs:
         with:
           # Increase gRPC keepalive to prevent "no active session / context
           # deadline exceeded" during long Next.js builds on the Pi.
+          # The Next.js build can take 25+ min on arm64; set to 3600s (1h)
+          # to cover the full build + export phase.
           buildkitd-config-inline: |
             [grpc]
-              keepalive = 600
+              keepalive = 3600
+            [worker.oci]
+              max-parallelism = 2
 
       - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'

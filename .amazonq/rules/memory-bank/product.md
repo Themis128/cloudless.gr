@@ -13,7 +13,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 - Multi-locale site (en, el, fr, de) with cookie-based locale switching
 - Blog via Notion CMS, services listing, contact form (SES + Slack + HubSpot)
 - Newsletter signup with SES welcome email + Slack notification
-- E-commerce store with Stripe Checkout (server-side price resolution)
+- E-commerce store (checkout redirects to contact page with product/campaign context instead of Stripe Checkout)
 - PWA support (service worker, offline.html, web manifest)
 - SEO: sitemap, robots.txt, structured data (JSON-LD), OpenGraph images
 
@@ -53,7 +53,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 - HubSpot: CRM contacts, deals, pipelines, webhooks
 - Google Calendar: booking availability and slot reservation
 - Google Search Console: 10+ analytics functions
-- Stripe: checkout, webhooks, subscription management
+- Stripe: webhooks, subscription management (checkout disabled — redirects to contact page)
 - AWS SES v2: transactional email (contact, orders, newsletter, portal)
 - AWS SSM: all secrets and some mutable JSON state
 - Sentry: error tracking (client, server, edge)

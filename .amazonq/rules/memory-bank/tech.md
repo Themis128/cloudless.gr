@@ -43,7 +43,7 @@ All AWS SDKs are in `serverExternalPackages` in next.config.ts — bundled by No
 
 | Package | Version | Purpose |
 |---|---|---|
-| `stripe` | ^22.2.1 | Stripe Checkout + webhooks |
+| `stripe` | ^22.2.1 | Stripe webhooks + subscription management (checkout redirects to contact page) |
 | `jose` | ^6.2.3 | JWT validation (JWKS, Bearer tokens) |
 | `@sentry/nextjs` | ^10.58.0 | Error tracking (client/server/edge) |
 | `lenis` | ^1.3.23 | Smooth scroll |

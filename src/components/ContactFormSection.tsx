@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import SocialLinks from "@/components/SocialLinks";
@@ -23,6 +24,24 @@ export default function ContactFormSection() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const searchParams = useSearchParams();
+
+  // Pre-fill message from checkout redirect context
+  const topic = searchParams.get("topic");
+  const products = searchParams.get("products");
+  const campaign = searchParams.get("campaign");
+  const tier = searchParams.get("tier");
+  const price = searchParams.get("price");
+
+  let defaultMessage = "";
+  if (topic === "purchase") {
+    const parts: string[] = [];
+    if (products) parts.push(`Products: ${products}`);
+    if (campaign) parts.push(`Campaign: ${campaign}`);
+    if (tier) parts.push(`Tier: ${tier}`);
+    if (price) parts.push(`Price: ${price}`);
+    defaultMessage = `Hi, I'd like to discuss a purchase.\n\n${parts.join("\n")}`;
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -176,6 +195,7 @@ export default function ContactFormSection() {
                     name="message"
                     required
                     rows={5}
+                    defaultValue={defaultMessage}
                     placeholder="What are you working on? What challenges are you facing?"
                     className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full resize-y rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
                   />

@@ -165,6 +165,14 @@ jobs:
       - name: set up Buildx
         if: steps.existing.outputs.exists != 'true' || github.event_name == 'pull_request'
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        with:
+          # Increase gRPC keepalive to prevent "no active session / context
+          # deadline exceeded" during long Next.js builds on the Pi (~25 min).
+          buildkitd-config-inline: |
+            [grpc]
+              keepalive = 3600
+            [worker.oci]
+              max-parallelism = 2
 
       - name: compute tags
         id: tags
