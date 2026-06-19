@@ -21,19 +21,19 @@ is needed.
 
 ## File map
 
-| Piece                          | Path                                                                   | Role                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Campaign metadata              | `src/data/campaigns.ts`                                                | Slug, tiers, FAQ, hero/og images, conversion ID, locale copy          |
-| Campaign index                 | `src/app/[locale]/campaigns/page.tsx`                                  | EL/EN listing of all live campaigns                                   |
-| Single landing page            | `src/app/[locale]/campaigns/[slug]/page.tsx`                           | Hero + tier table + FAQ                                               |
-| Thanks page                    | `src/app/[locale]/campaigns/[slug]/thanks/page.tsx`                    | Confirmation copy + mounts ThanksConversion                           |
-| Browser conversion (lintrk)    | `src/app/[locale]/campaigns/[slug]/thanks/ThanksConversion.tsx`        | Fires `lintrk("track", { conversion_id })` exactly once               |
-| Server conversion (CAPI)       | `src/app/api/campaigns/conversion/route.ts`                            | Mirrors the event to LinkedIn `/rest/conversionEvents`                |
-| Insight Tag loader             | `src/components/LinkedInInsightTag.tsx`                                | Consent-gated, mounted by `src/app/[locale]/layout.tsx`               |
-| `lintrk()` helper              | `src/lib/linkedin-track.ts`                                            | Type-safe `trackLinkedInConversion(id)` call                          |
-| Hero block                     | `src/components/CampaignHero.tsx`                                      | Reusable headline + slots-remaining + proof image                     |
-| 3-tier pricing table           | `src/components/TierTable.tsx`                                         | Reusable tier grid + CTAs                                             |
-| Checkout adapter               | `src/app/api/checkout/route.ts` (GET branch)                           | Resolves campaign+tier → Stripe session OR stub redirect to thanks    |
+| Piece                       | Path                                                            | Role                                                               |
+| --------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Campaign metadata           | `src/data/campaigns.ts`                                         | Slug, tiers, FAQ, hero/og images, conversion ID, locale copy       |
+| Campaign index              | `src/app/[locale]/campaigns/page.tsx`                           | EL/EN listing of all live campaigns                                |
+| Single landing page         | `src/app/[locale]/campaigns/[slug]/page.tsx`                    | Hero + tier table + FAQ                                            |
+| Thanks page                 | `src/app/[locale]/campaigns/[slug]/thanks/page.tsx`             | Confirmation copy + mounts ThanksConversion                        |
+| Browser conversion (lintrk) | `src/app/[locale]/campaigns/[slug]/thanks/ThanksConversion.tsx` | Fires `lintrk("track", { conversion_id })` exactly once            |
+| Server conversion (CAPI)    | `src/app/api/campaigns/conversion/route.ts`                     | Mirrors the event to LinkedIn `/rest/conversionEvents`             |
+| Insight Tag loader          | `src/components/LinkedInInsightTag.tsx`                         | Consent-gated, mounted by `src/app/[locale]/layout.tsx`            |
+| `lintrk()` helper           | `src/lib/linkedin-track.ts`                                     | Type-safe `trackLinkedInConversion(id)` call                       |
+| Hero block                  | `src/components/CampaignHero.tsx`                               | Reusable headline + slots-remaining + proof image                  |
+| 3-tier pricing table        | `src/components/TierTable.tsx`                                  | Reusable tier grid + CTAs                                          |
+| Checkout adapter            | `src/app/api/checkout/route.ts` (GET branch)                    | Resolves campaign+tier → Stripe session OR stub redirect to thanks |
 
 ## Operating principles
 
@@ -81,10 +81,10 @@ No new React files are required — the dynamic `[slug]/page.tsx` and
 
 ## Required env
 
-| Variable                          | Where        | Purpose                                                       |
-| --------------------------------- | ------------ | ------------------------------------------------------------- |
-| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | client+build | LinkedIn Insight Tag partner ID (numeric)                     |
-| `LINKEDIN_CAPI_ACCESS_TOKEN`      | server only  | Bearer for `https://api.linkedin.com/rest/conversionEvents`   |
+| Variable                          | Where        | Purpose                                                     |
+| --------------------------------- | ------------ | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | client+build | LinkedIn Insight Tag partner ID (numeric)                   |
+| `LINKEDIN_CAPI_ACCESS_TOKEN`      | server only  | Bearer for `https://api.linkedin.com/rest/conversionEvents` |
 
 When `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` is empty the `<LinkedInInsightTag />`
 mount in `src/app/[locale]/layout.tsx` is skipped via a truthy check. When
@@ -95,7 +95,7 @@ the client-side fire still works end-to-end.
 
 - **CAPI version header.** The route pins `LinkedIn-Version: 202506`. Bump
   to the current month-year string when upgrading — see Microsoft Learn,
-  *LinkedIn Marketing API → versioning*.
+  _LinkedIn Marketing API → versioning_.
 - **`eventId` strategy.** Use the Stripe Checkout session ID
   (`cs_test_…` / `cs_live_…`). Stable, unique, idempotent if reloaded.
 - **`fit-call` is a valid tier.** The thanks-page copy branches on
@@ -140,9 +140,11 @@ Campaign Manager:
 
 1. **Run the doctor first.** Don't blame the ad creative or the audience
    until tracking is proven healthy.
+
    ```bash
    bash scripts/linkedin-insight-doctor.sh --slug <campaign-slug> --locale el
    ```
+
    Full reference: `skills/linkedin-insight-doctor/SKILL.md`.
 
 2. **Most common cause: `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` GitHub secret

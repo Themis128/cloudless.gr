@@ -26,6 +26,9 @@ import { resolvePivotLabel } from "../lookups";
 
 const LINKEDIN_API_ROOT = "https://api.linkedin.com/rest";
 const LINKEDIN_API_VERSION = "202605";
+const LINKEDIN_VERSION_HEADER = "LinkedIn-Version";
+const RESTLI_PROTOCOL_HEADER = "X-Restli-Protocol-Version";
+const RESTLI_PROTOCOL_VERSION = "2.0.0";
 
 interface ResolvedConfig {
   token: string;
@@ -190,8 +193,8 @@ export const linkedinAdapter: AdPlatformAdapter = {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${cfg.token}`,
-          "LinkedIn-Version": LINKEDIN_API_VERSION,
-          "X-Restli-Protocol-Version": "2.0.0",
+          [LINKEDIN_VERSION_HEADER]: LINKEDIN_API_VERSION,
+          [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
         },
         body: JSON.stringify(payload),
       });
@@ -293,8 +296,8 @@ async function fetchHeadlineMetrics(
     const res = await fetch(`${LINKEDIN_API_ROOT}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "LinkedIn-Version": LINKEDIN_API_VERSION,
-        "X-Restli-Protocol-Version": "2.0.0",
+        [LINKEDIN_VERSION_HEADER]: LINKEDIN_API_VERSION,
+        [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
       },
     });
     if (!res.ok) return empty;
@@ -334,8 +337,8 @@ async function fetchPivotBreakdown(
     const res = await fetch(`${LINKEDIN_API_ROOT}${path}`, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "LinkedIn-Version": LINKEDIN_API_VERSION,
-        "X-Restli-Protocol-Version": "2.0.0",
+        [LINKEDIN_VERSION_HEADER]: LINKEDIN_API_VERSION,
+        [RESTLI_PROTOCOL_HEADER]: RESTLI_PROTOCOL_VERSION,
       },
     });
     if (!res.ok) return [];

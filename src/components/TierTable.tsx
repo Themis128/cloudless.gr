@@ -4,6 +4,17 @@ import { useState, useRef, type FormEvent, type MouseEvent } from "react";
 import type { Campaign, Locale, Tier } from "@/data/campaigns";
 import { getStoredAttribution } from "@/lib/lead-attribution";
 
+// Design tokens — extracted to satisfy sonarjs/no-duplicate-string (S1192).
+// Each value is used 3+ times across the JSX and <style jsx> block.
+const COLOR_BRAND = "#0a7785";
+const COLOR_BRAND_DARK = "#064d57";
+const COLOR_INK = "#1a2528";
+const COLOR_SAND = "#f7f3ec";
+const COLOR_MUTED = "#4a5a5f";
+const FONT_FRAUNCES = '"Fraunces", Georgia, serif';
+const TRANSITION_FAST = "120ms ease";
+const CLS_INPUT = "cl-tiers__input";
+
 type Props = {
   campaign: Campaign;
   locale: Locale;
@@ -149,7 +160,7 @@ export default function TierTable({ campaign, locale }: Props) {
                   required
                   placeholder={locale === "el" ? "Ονοματεπώνυμο *" : "Full name *"}
                   autoComplete="name"
-                  className="cl-tiers__input"
+                  className={CLS_INPUT}
                 />
                 <input
                   name="email"
@@ -157,14 +168,14 @@ export default function TierTable({ campaign, locale }: Props) {
                   required
                   placeholder="Email *"
                   autoComplete="email"
-                  className="cl-tiers__input"
+                  className={CLS_INPUT}
                 />
                 <input
                   name="phone"
                   type="tel"
                   placeholder={locale === "el" ? "Τηλέφωνο" : "Phone (optional)"}
                   autoComplete="tel"
-                  className="cl-tiers__input"
+                  className={CLS_INPUT}
                 />
                 {formStatus === "error" && (
                   <p className="cl-tiers__error">
@@ -195,7 +206,7 @@ export default function TierTable({ campaign, locale }: Props) {
       <style jsx>{`
         .cl-tiers {
           padding: 56px 24px;
-          background: #f7f3ec;
+          background: ${COLOR_SAND};
         }
         .cl-tiers__grid {
           max-width: 1100px;
@@ -219,7 +230,7 @@ export default function TierTable({ campaign, locale }: Props) {
           position: relative;
         }
         :global(.cl-tier--featured) {
-          border-color: #0a7785;
+          border-color: ${COLOR_BRAND};
           border-width: 2px;
           box-shadow: 0 18px 40px -22px rgba(10, 119, 133, 0.35);
         }
@@ -236,24 +247,24 @@ export default function TierTable({ campaign, locale }: Props) {
           border-radius: 999px;
         }
         :global(.cl-tier__name) {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-weight: 500;
           font-size: 22px;
-          color: #1a2528;
+          color: ${COLOR_INK};
           margin: 0 0 14px;
         }
         :global(.cl-tier__prices) {
           margin-bottom: 6px;
         }
         :global(.cl-tier__oneoff) {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-size: 32px;
-          color: #0a7785;
+          color: ${COLOR_BRAND};
           line-height: 1;
         }
         :global(.cl-tier__monthly) {
           font-size: 13px;
-          color: #4a5a5f;
+          color: ${COLOR_MUTED};
           margin-top: 4px;
         }
         :global(.cl-tier__savings) {
@@ -267,7 +278,7 @@ export default function TierTable({ campaign, locale }: Props) {
           list-style: none;
           padding: 0;
           margin: 12px 0 20px;
-          color: #1a2528;
+          color: ${COLOR_INK};
           font-size: 14px;
           line-height: 1.55;
           flex: 1;
@@ -284,37 +295,37 @@ export default function TierTable({ campaign, locale }: Props) {
           text-align: center;
           padding: 13px 18px;
           border-radius: 6px;
-          background: #0a7785;
-          color: #f7f3ec;
+          background: ${COLOR_BRAND};
+          color: ${COLOR_SAND};
           text-decoration: none;
           font-weight: 600;
           letter-spacing: 0.4px;
-          transition: background 120ms ease;
+          transition: background ${TRANSITION_FAST};
         }
         :global(.cl-tier__cta:hover) {
-          background: #064d57;
+          background: ${COLOR_BRAND_DARK};
         }
         :global(.cl-tier__cta--active) {
-          background: #064d57;
+          background: ${COLOR_BRAND_DARK};
           box-shadow: 0 0 0 3px rgba(10, 119, 133, 0.3);
         }
         :global(.cl-tier--featured .cl-tier__cta) {
-          background: #1a2528;
+          background: ${COLOR_INK};
         }
         .cl-tiers__form-wrap {
           max-width: 560px;
           margin: 40px auto 0;
           padding: 32px;
           background: #ffffff;
-          border: 2px solid #0a7785;
+          border: 2px solid ${COLOR_BRAND};
           border-radius: 12px;
           box-shadow: 0 12px 32px -12px rgba(10, 119, 133, 0.15);
         }
         .cl-tiers__form-title {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-size: 22px;
           font-weight: 500;
-          color: #1a2528;
+          color: ${COLOR_INK};
           margin: 0 0 6px;
           display: flex;
           align-items: baseline;
@@ -323,11 +334,11 @@ export default function TierTable({ campaign, locale }: Props) {
         }
         .cl-tiers__form-price {
           font-size: 18px;
-          color: #0a7785;
+          color: ${COLOR_BRAND};
         }
         .cl-tiers__form-sub {
           font-size: 14px;
-          color: #4a5a5f;
+          color: ${COLOR_MUTED};
           margin: 0 0 20px;
           line-height: 1.5;
         }
@@ -342,13 +353,13 @@ export default function TierTable({ campaign, locale }: Props) {
           border: 1px solid #d8d2c4;
           border-radius: 6px;
           font-size: 15px;
-          color: #1a2528;
+          color: ${COLOR_INK};
           background: #faf8f4;
-          transition: border-color 120ms ease;
+          transition: border-color ${TRANSITION_FAST};
           outline: none;
         }
         .cl-tiers__input:focus {
-          border-color: #0a7785;
+          border-color: ${COLOR_BRAND};
           box-shadow: 0 0 0 3px rgba(10, 119, 133, 0.08);
         }
         .cl-tiers__input::placeholder {
@@ -361,18 +372,18 @@ export default function TierTable({ campaign, locale }: Props) {
         }
         .cl-tiers__submit {
           padding: 14px 24px;
-          background: #0a7785;
-          color: #f7f3ec;
+          background: ${COLOR_BRAND};
+          color: ${COLOR_SAND};
           border: none;
           border-radius: 6px;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;
-          transition: background 120ms ease;
+          transition: background ${TRANSITION_FAST};
           letter-spacing: 0.3px;
         }
         .cl-tiers__submit:hover {
-          background: #064d57;
+          background: ${COLOR_BRAND_DARK};
         }
         .cl-tiers__submit:disabled {
           opacity: 0.6;
@@ -384,19 +395,19 @@ export default function TierTable({ campaign, locale }: Props) {
         }
         .cl-tiers__success-icon {
           font-size: 36px;
-          color: #0a7785;
+          color: ${COLOR_BRAND};
           margin-bottom: 12px;
         }
         .cl-tiers__success h3 {
-          font-family: "Fraunces", Georgia, serif;
+          font-family: ${FONT_FRAUNCES};
           font-size: 20px;
           font-weight: 500;
-          color: #1a2528;
+          color: ${COLOR_INK};
           margin: 0 0 8px;
         }
         .cl-tiers__success p {
           font-size: 14px;
-          color: #4a5a5f;
+          color: ${COLOR_MUTED};
           margin: 0;
         }
       `}</style>

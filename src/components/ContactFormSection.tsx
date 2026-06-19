@@ -20,6 +20,10 @@ const serviceOptions = [
   "Not sure yet — let's discuss",
 ];
 
+const LABEL_CLASS = "mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400";
+const INPUT_CLASS =
+  "border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]";
+
 export default function ContactFormSection() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
@@ -137,10 +141,7 @@ export default function ContactFormSection() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
-                    <label
-                      htmlFor="name"
-                      className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                    >
+                    <label htmlFor="name" className={LABEL_CLASS}>
                       {t("contact.name", "Name")} *
                     </label>
                     <input
@@ -149,14 +150,11 @@ export default function ContactFormSection() {
                       type="text"
                       required
                       placeholder="John Doe"
-                      className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                      className={INPUT_CLASS}
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                    >
+                    <label htmlFor="email" className={LABEL_CLASS}>
                       {t("contact.email", "Email")} *
                     </label>
                     <input
@@ -165,16 +163,13 @@ export default function ContactFormSection() {
                       type="email"
                       required
                       placeholder="john@company.com"
-                      className="border-neon-cyan/20 bg-void-light focus:border-neon-cyan/60 w-full rounded-lg border px-4 py-3 font-mono text-sm text-white transition-all outline-none placeholder:text-slate-600 focus:shadow-[0_0_10px_rgba(0,255,245,0.1)]"
+                      className={INPUT_CLASS}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="company"
-                    className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                  >
+                  <label htmlFor="company" className={LABEL_CLASS}>
                     {t("contact.company", "Company")}
                   </label>
                   <input
@@ -187,10 +182,7 @@ export default function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="service"
-                    className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                  >
+                  <label htmlFor="service" className={LABEL_CLASS}>
                     {t("contact.serviceOfInterest", "SERVICE OF INTEREST")}
                   </label>
                   <select
@@ -209,10 +201,7 @@ export default function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="message"
-                    className="mb-2 block font-mono text-xs font-medium tracking-wider text-slate-400"
-                  >
+                  <label htmlFor="message" className={LABEL_CLASS}>
                     {t("contact.message", "Message")} *
                   </label>
                   <textarea
