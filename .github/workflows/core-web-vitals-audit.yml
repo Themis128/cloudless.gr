@@ -113,9 +113,13 @@ jobs:
             "| \(.url) | \((.perf * 100) | round) | \((.a11y * 100) | round) | \((.bp * 100) | round) | \((.seo * 100) | round) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
-          # Fail if any route's median falls below thresholds
-          FAILED=$(echo "$MEDIANS" | jq '[.[] | select(
-            .perf < 0.60 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
+          # Fail if any route's median falls below thresholds.
+          # The bare `https://cloudless.gr/` triggers a locale redirect (307 → /en)
+          # which penalizes Lighthouse perf by ~20-30 points. Skip perf check for
+          # that URL — `/en` already covers the actual page performance.
+          FAILED=$(echo "$MEDIANS" | jq --arg root "https://cloudless.gr/" '[.[] | select(
+            (if .url == $root then false else .perf < 0.60 end) or
+            .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
 
           if [ "$FAILED" -gt 0 ]; then
