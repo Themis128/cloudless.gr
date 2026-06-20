@@ -1,0 +1,65 @@
+# Evicted from omv on 2026-06-20 to make room for EspoCRM.
+# PVC `ha-config-pvc` was preserved — re-apply this manifest (or move it to
+# its own Raspberry Pi) to restore Home Assistant exactly as it ran here.
+#
+# Memory freed: ~354 MiB runtime (limits: 1536 MiB).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+  labels:
+    app: home-assistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: home-assistant
+  template:
+    metadata:
+      labels:
+        app: home-assistant
+    spec:
+      containers:
+        - name: home-assistant
+          image: ghcr.io/home-assistant/home-assistant:stable
+          env:
+            - name: TZ
+              value: Europe/Athens
+          ports:
+            - containerPort: 8123
+              name: http
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8123
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1500m
+              memory: 1536Mi
+          volumeMounts:
+            - mountPath: /config
+              name: config
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/hostname: omv
+      securityContext:
+        runAsNonRoot: false
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: ha-config-pvc
