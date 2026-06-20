@@ -352,6 +352,38 @@ export default {
           ],
         },
         {
+          // Datalake read grant — Lambda runs Athena queries from the admin
+          // /analytics/datalake dashboard (src/lib/athena.ts). Athena needs:
+          //   - athena:* on the workgroup to start + poll + read results
+          //   - glue:Get* on the catalog/database/tables to resolve table refs
+          //   - s3:GetObject + s3:ListBucket on lake/* + athena-results/* so
+          //     Athena can read the source data and write/read query results
+          // Locked-down to the cloudless-analytics-data bucket only.
+          actions: [
+            "athena:StartQueryExecution",
+            "athena:GetQueryExecution",
+            "athena:GetQueryResults",
+            "athena:GetWorkGroup",
+            "athena:StopQueryExecution",
+            "glue:GetDatabase",
+            "glue:GetDatabases",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:GetPartition",
+            "glue:GetPartitions",
+          ],
+          resources: ["*"],
+        },
+        {
+          actions: ["s3:GetObject", "s3:ListBucket", "s3:PutObject"],
+          resources: [
+            "arn:aws:s3:::cloudless-analytics-data",
+            "arn:aws:s3:::cloudless-analytics-data/athena-results/*",
+            "arn:aws:s3:::cloudless-analytics-data/lake/*",
+            "arn:aws:s3:::cloudless-analytics-data/events/*",
+          ],
+        },
+        {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
           // The us.* prefix is required for cross-region inference profiles.
           //
