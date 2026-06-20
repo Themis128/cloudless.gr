@@ -81,6 +81,55 @@ CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.hubspot_tickets (
 STORED AS PARQUET
 LOCATION 's3://cloudless-analytics-data/lake/hubspot-tickets/';
 
+-- ---- Sentry issues snapshot (Parquet, 14d count, full-refresh daily) ------
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.sentry_issues (
+  issue_id    string,
+  short_id    string,
+  title       string,
+  culprit     string,
+  level       string,
+  status      string,
+  count_14d   bigint,
+  user_count  int,
+  first_seen  string,
+  last_seen   string,
+  permalink   string
+)
+STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/sentry-issues/';
+
+-- ---- GSC search analytics (Parquet, 90d rolling window) -------------------
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.gsc_keywords (
+  query       string,
+  page        string,
+  clicks      int,
+  impressions int,
+  ctr         double,
+  position    double,
+  start_date  string,
+  end_date    string
+)
+STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/gsc-keywords/';
+
+-- ---- LinkedIn Ads daily insights (Parquet, 90d window) --------------------
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.linkedin_ads (
+  campaign_id                     string,
+  campaign_name                   string,
+  day                             string,
+  impressions                     bigint,
+  clicks                          int,
+  ctr                             double,
+  spend                           double,
+  currency                        string,
+  conversions                     int,
+  cost_per_click                  double,
+  cost_per_thousand_impressions   double,
+  account_id                      string
+)
+STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/linkedin-ads/';
+
 -- After creating the events table, run this once to load existing partitions
 -- (the analytics-etl.yml workflow runs this daily on cron):
 --   MSCK REPAIR TABLE cloudless_analytics.events;
@@ -160,6 +209,54 @@ FROM cloudless_analytics.hubspot_contacts c
 LEFT JOIN cloudless_analytics.clients cl ON LOWER(c.email) = LOWER(cl.email)
 WHERE c.email IS NOT NULL
 ORDER BY c.createdate DESC;
+
+-- ---- v_sentry_top_issues --------------------------------------------------
+-- Top 20 unresolved issues by 14-day event count. Drives the Errors card on
+-- the admin /analytics dashboard.
+CREATE OR REPLACE VIEW cloudless_analytics.v_sentry_top_issues AS
+SELECT
+  short_id,
+  title,
+  level,
+  status,
+  count_14d,
+  user_count,
+  last_seen,
+  permalink
+FROM cloudless_analytics.sentry_issues
+ORDER BY count_14d DESC
+LIMIT 20;
+
+-- ---- v_gsc_top_keywords ---------------------------------------------------
+-- Top 50 keywords by clicks over the rolling window. Position rounded to 1 dp.
+CREATE OR REPLACE VIEW cloudless_analytics.v_gsc_top_keywords AS
+SELECT
+  query,
+  SUM(clicks) AS clicks,
+  SUM(impressions) AS impressions,
+  CASE WHEN SUM(impressions) > 0 THEN SUM(clicks) * 1.0 / SUM(impressions) ELSE 0 END AS ctr,
+  ROUND(AVG(position), 1) AS avg_position
+FROM cloudless_analytics.gsc_keywords
+GROUP BY query
+ORDER BY clicks DESC
+LIMIT 50;
+
+-- ---- v_linkedin_ads_summary -----------------------------------------------
+-- Per-campaign rollup of the 90-day window with derived rate metrics.
+CREATE OR REPLACE VIEW cloudless_analytics.v_linkedin_ads_summary AS
+SELECT
+  campaign_id,
+  campaign_name,
+  SUM(impressions) AS impressions,
+  SUM(clicks) AS clicks,
+  CASE WHEN SUM(impressions) > 0 THEN SUM(clicks) * 1.0 / SUM(impressions) ELSE 0 END AS ctr,
+  SUM(spend) AS spend,
+  SUM(conversions) AS conversions,
+  CASE WHEN SUM(clicks) > 0 THEN SUM(spend) / SUM(clicks) ELSE 0 END AS cpc,
+  CASE WHEN SUM(conversions) > 0 THEN SUM(spend) / SUM(conversions) ELSE 0 END AS cost_per_conversion
+FROM cloudless_analytics.linkedin_ads
+GROUP BY campaign_id, campaign_name
+ORDER BY spend DESC;
 
 -- ===========================================================================
 -- Pre-existing views (kept for reference — defined elsewhere in the catalog)
