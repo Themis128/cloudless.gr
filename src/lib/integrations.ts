@@ -20,10 +20,7 @@ export interface IntegrationConfig {
   NOTION_DOCS_DB_ID?: string;
   NOTION_PROJECTS_DB_ID?: string;
   NOTION_TASKS_DB_ID?: string;
-  NOTION_ANALYTICS_DB_ID?: string;
   NOTION_CALENDAR_DB_ID?: string;
-  NOTION_REPORTS_DB_ID?: string;
-  NOTION_GSC_REPORTS_DB_ID?: string;
   NOTION_TESTIMONIALS_DB_ID?: string;
   NOTION_CASE_STUDIES_DB_ID?: string;
   NOTION_SERVICES_DB_ID?: string;
@@ -89,10 +86,7 @@ export function getIntegrations(): IntegrationConfig {
     NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID,
     NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID,
     NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID,
-    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID,
     NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID,
-    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID,
-    NOTION_GSC_REPORTS_DB_ID: process.env.NOTION_GSC_REPORTS_DB_ID,
     NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID,
     NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID,
     NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID,
@@ -189,12 +183,7 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
       NOTION_PROJECTS_DB_ID: envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
       NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
-      NOTION_ANALYTICS_DB_ID:
-        envCfg.NOTION_ANALYTICS_DB_ID || ssm.NOTION_ANALYTICS_DB_ID || undefined,
       NOTION_CALENDAR_DB_ID: envCfg.NOTION_CALENDAR_DB_ID || ssm.NOTION_CALENDAR_DB_ID || undefined,
-      NOTION_REPORTS_DB_ID: envCfg.NOTION_REPORTS_DB_ID || ssm.NOTION_REPORTS_DB_ID || undefined,
-      NOTION_GSC_REPORTS_DB_ID:
-        envCfg.NOTION_GSC_REPORTS_DB_ID || ssm.NOTION_GSC_REPORTS_DB_ID || undefined,
       NOTION_TESTIMONIALS_DB_ID:
         envCfg.NOTION_TESTIMONIALS_DB_ID || ssm.NOTION_TESTIMONIALS_DB_ID || undefined,
       NOTION_CASE_STUDIES_DB_ID:

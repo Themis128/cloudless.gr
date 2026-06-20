@@ -10,12 +10,16 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const [analyticsConf, projectsConf, tasksConf, cfg] = await Promise.all([
-    isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID"),
+  // NOTION_ANALYTICS_DB_ID was decommissioned 2026-06-20 (see project_notion_decom_plan).
+  // The notion-analytics module is now a no-op shim; we still call
+  // getAnalyticsSummary() so the KPI tile exists, it just returns zeros until the
+  // Athena replacement wire-up lands.
+  const [projectsConf, tasksConf, cfg] = await Promise.all([
     isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID"),
     isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID"),
     getConfig(),
   ]);
+  const analyticsConf = true;
   const gscConf = !!(cfg.GOOGLE_CLIENT_EMAIL && cfg.GOOGLE_PRIVATE_KEY);
 
   const [analyticsResult, gscResult, projectsResult, taskSummaryResult, overdueResult] =
