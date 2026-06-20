@@ -87,9 +87,9 @@ export async function POST(request: Request): Promise<Response> {
   const verified = await verifySlackRequest(request);
   if (!verified.ok) return unauthorizedSlack(verified.reason, request);
 
-  // Rate-limit by team (extracted after parse) — pre-parse check uses IP placeholder
-  const rateLimitKey = request.headers.get("x-forwarded-for") ?? "unknown";
-  if (!checkSlackRateLimit(rateLimitKey)) {
+  // Pre-parse IP-based rate limit — coarse guard before we touch the body.
+  const ipKey = `ip:${request.headers.get("x-forwarded-for") ?? "unknown"}`;
+  if (!checkSlackRateLimit(ipKey)) {
     return Response.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -106,6 +106,12 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   if (payload.type === "event_callback") {
+    // Post-parse per-team rate limit — Slack egress IPs are workspace-shared,
+    // so the IP key alone over-aggregates. Keying by team_id keeps a noisy
+    // team from starving every other workspace using the same egress pool.
+    if (!checkSlackRateLimit(`team:${payload.team_id || "anon"}`)) {
+      return Response.json({ error: "Too many requests" }, { status: 429 });
+    }
     // Deduplicate — Slack may retry the same event up to 3 times.
     if (isDuplicate(payload.event_id)) {
       return Response.json({ ok: true });

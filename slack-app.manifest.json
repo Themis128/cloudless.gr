@@ -47,8 +47,8 @@
       {
         "command": "/cloudless-analytics",
         "url": "https://cloudless.gr/api/slack/commands",
-        "description": "7-day and 30-day revenue & order summary",
-        "usage_hint": "(no arguments)",
+        "description": "Stripe revenue summary (default) or LinkedIn ad metrics (`ads <slug>`)",
+        "usage_hint": "[ads [<slug>|list|help]]",
         "should_escape": false
       },
       {

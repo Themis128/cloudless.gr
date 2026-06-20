@@ -16,19 +16,9 @@
 import { verifySlackRequest, unauthorizedSlack } from "@/lib/slack-verify";
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
-import { getSlackConfigAsync } from "@/lib/integrations";
+import { SlackClient } from "@/lib/slack-notify";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
-
-/**
- * Comma-separated list of Slack user IDs allowed to trigger workflow
- * dispatch from interaction buttons. Empty/unset = anyone in the workspace
- * who can see the button. Set to a single user ID (e.g. "U01ABCDEF") to
- * lock workflow re-runs down to one operator.
- */
-const SLACK_OPS_USERS: string[] = (process.env.SLACK_OPS_USERS ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+import { getSlackOpsUsers } from "@/lib/slack-ops-users";
 
 /**
  * Action IDs registered in this route that map to a workflow_dispatch
@@ -79,8 +69,10 @@ export async function POST(request: Request): Promise<Response> {
   const verified = await verifySlackRequest(request);
   if (!verified.ok) return unauthorizedSlack(verified.reason, request);
 
-  const rateLimitKey = request.headers.get("x-forwarded-for") ?? "unknown";
-  if (!checkSlackRateLimit(rateLimitKey)) {
+  // Pre-parse IP-based rate limit — coarse guard against scanner storms
+  // before we spend cycles parsing the form body.
+  const ipKey = `ip:${request.headers.get("x-forwarded-for") ?? "unknown"}`;
+  if (!checkSlackRateLimit(ipKey)) {
     return Response.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -96,6 +88,13 @@ export async function POST(request: Request): Promise<Response> {
     payload = JSON.parse(rawPayload) as SlackInteractionPayload;
   } catch {
     return Response.json({ error: "Invalid payload JSON" }, { status: 400 });
+  }
+
+  // Post-parse per-user rate limit — fairness vs. IP-aggregated traffic.
+  // Slack egress IPs are shared across the whole workspace; without this
+  // a single noisy user can exhaust the budget for everyone.
+  if (!checkSlackRateLimit(`user:${payload.user?.id ?? "anon"}`)) {
+    return Response.json({ error: "Too many requests" }, { status: 429 });
   }
 
   switch (payload.type) {
@@ -202,9 +201,6 @@ function priorityEmoji(priority: string): string {
 }
 
 async function postTicketAsync(payload: SlackInteractionPayload): Promise<void> {
-  const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
-  if (!token) return;
-
   const values = payload.view?.state.values ?? {};
   const email = slackEscape(values.ticket_email?.ticket_email_input?.value ?? "");
   const issueType =
@@ -215,55 +211,48 @@ async function postTicketAsync(payload: SlackInteractionPayload): Promise<void> 
   const emoji = priorityEmoji(priority);
   const userId = payload.user.id;
 
-  await fetch("https://slack.com/api/chat.postMessage", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      channel: "#contacts",
-      blocks: [
-        {
-          type: "header",
-          text: {
-            type: "plain_text",
-            text: `${emoji} New Support Ticket`,
-            emoji: true,
+  // Use SlackClient so the post inherits retry/backoff, rate-limit honoring,
+  // webhook fallback, and unfurl suppression — the raw chat.postMessage call
+  // this replaces had none of those.
+  const client = new SlackClient({ channel: "#contacts" });
+  await client.post({
+    text: `New support ticket: ${email} (${priority})`,
+    blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: `${emoji} New Support Ticket`,
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Email*\n${email}` },
+          { type: "mrkdwn", text: `*Issue Type*\n${issueType}` },
+          { type: "mrkdwn", text: `*Priority*\n${emoji} ${priority}` },
+          { type: "mrkdwn", text: `*Submitted by*\n<@${userId}>` },
+        ],
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `*Description*\n${description}` },
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Ticket submitted by <@${userId}> via Slack`,
           },
-        },
-        {
-          type: "section",
-          fields: [
-            { type: "mrkdwn", text: `*Email*\n${email}` },
-            { type: "mrkdwn", text: `*Issue Type*\n${issueType}` },
-            { type: "mrkdwn", text: `*Priority*\n${emoji} ${priority}` },
-            { type: "mrkdwn", text: `*Submitted by*\n<@${userId}>` },
-          ],
-        },
-        {
-          type: "section",
-          text: { type: "mrkdwn", text: `*Description*\n${description}` },
-        },
-        {
-          type: "context",
-          elements: [
-            {
-              type: "mrkdwn",
-              text: `Ticket submitted by <@${userId}> via Slack`,
-            },
-          ],
-        },
-      ],
-    }),
-    signal: AbortSignal.timeout(5_000),
+        ],
+      },
+    ],
   });
 }
 
 async function postDeployAsync(payload: SlackInteractionPayload): Promise<void> {
-  const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
-  if (!token) return;
-
   const values = payload.view?.state.values ?? {};
   const releaseNotes = values.deploy_notes?.deploy_notes_input?.value ?? null;
 
@@ -278,94 +267,74 @@ async function postDeployAsync(payload: SlackInteractionPayload): Promise<void> 
   }
   const userId = meta.user_id ?? payload.user.id;
 
-  // 1. Post "Deploy Started" to #deployments
-  await fetch("https://slack.com/api/chat.postMessage", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      channel: "#deployments",
-      blocks: [
-        {
-          type: "header",
-          text: {
-            type: "plain_text",
-            text: ":rocket: Deploy Started",
-            emoji: true,
-          },
-        },
-        ...(releaseNotes
-          ? [
-              {
-                type: "section",
-                text: {
-                  type: "mrkdwn",
-                  text: `*Release Notes*\n${slackEscape(releaseNotes)}`,
-                },
-              },
-            ]
-          : []),
-        {
-          type: "context",
-          elements: [
-            {
-              type: "mrkdwn",
-              text: `Triggered by <@${userId}>`,
-            },
-          ],
-        },
-      ],
-    }),
-    signal: AbortSignal.timeout(5_000),
-  });
-
-  // 2. Trigger GitHub Actions workflow dispatch
-  const githubToken = process.env.GITHUB_TOKEN;
-  if (!githubToken) {
-    await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        channel: "#deployments",
-        text: ":warning: GITHUB_TOKEN is not configured — workflow dispatch skipped.",
-      }),
-      signal: AbortSignal.timeout(5_000),
-    });
+  // Optional ops allowlist gates this destructive button — same semantics as
+  // workflow re-runs and newsletter sends. Empty list = open to workspace.
+  const opsUsers = await getSlackOpsUsers();
+  if (opsUsers.length > 0 && !opsUsers.includes(userId)) {
+    if (payload.response_url) {
+      await fetch(payload.response_url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          response_type: "ephemeral",
+          text:
+            ":no_entry: You're not on the ops allowlist for production deploys. " +
+            "Ask the admin to add your Slack user ID to `SLACK_OPS_USERS`.",
+        }),
+        signal: AbortSignal.timeout(5_000),
+      }).catch((err) => console.error("[Slack Interactions] deploy denial post failed:", err));
+    }
     return;
   }
 
-  const dispatchRes = await fetch(
-    "https://api.github.com/repos/Themis128/cloudless.gr/actions/workflows/build-pi-image.yml/dispatches",
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${githubToken}`,
-        "X-GitHub-Api-Version": "2022-11-28",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ref: "main" }),
-      signal: AbortSignal.timeout(10_000),
-    }
-  );
+  const deployments = new SlackClient({ channel: "#deployments" });
 
-  if (!dispatchRes.ok) {
-    await fetch("https://slack.com/api/chat.postMessage", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+  // 1. Post "Deploy Started" to #deployments
+  await deployments.post({
+    text: `Deploy started by <@${userId}>`,
+    blocks: [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: ":rocket: Deploy Started",
+          emoji: true,
+        },
       },
-      body: JSON.stringify({
-        channel: "#deployments",
-        text: `:x: Deploy workflow dispatch failed (${dispatchRes.status}). Check GitHub Actions.`,
-      }),
-      signal: AbortSignal.timeout(5_000),
+      ...(releaseNotes
+        ? [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `*Release Notes*\n${slackEscape(releaseNotes)}`,
+              },
+            },
+          ]
+        : []),
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `Triggered by <@${userId}>`,
+          },
+        ],
+      },
+    ],
+  });
+
+  // 2. Trigger GitHub Actions workflow dispatch via the shared helper that
+  //    resolves the token from SSM (process.env.GITHUB_TOKEN is unavailable
+  //    in the deployed Lambda). Workflow: deploy-pi.yml — the active main
+  //    deploy pipeline per CLAUDE.md. The previous build-pi-image.yml is
+  //    racy (immutable-tag collision) and is not what the operator wants
+  //    when they press "Deploy" in Slack.
+  const result = await dispatchWorkflow("deploy-pi.yml", "main");
+
+  if (!result.ok) {
+    await deployments.post({
+      text: `:x: Deploy workflow dispatch failed (HTTP ${result.status}). Check GitHub Actions.`,
     });
   }
 }
@@ -438,7 +407,11 @@ async function rerunWorkflowAsync(
   actionId: string
 ): Promise<void> {
   // Optional allowlist — when set, only listed Slack user IDs can dispatch.
-  if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(userId)) {
+  // Lazy-loaded from env then SSM so a runtime change to SLACK_OPS_USERS in
+  // SSM takes effect without a redeploy (in Lambda, env vars are frozen at
+  // cold start).
+  const opsUsers = await getSlackOpsUsers();
+  if (opsUsers.length > 0 && !opsUsers.includes(userId)) {
     await fetch(responseUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -448,7 +421,7 @@ async function rerunWorkflowAsync(
         text:
           ":no_entry: You're not on the ops allowlist for workflow dispatch. " +
           "Ask <@" +
-          (SLACK_OPS_USERS[0] ?? "the admin") +
+          (opsUsers[0] ?? "the admin") +
           "> to add your Slack user ID to `SLACK_OPS_USERS`.",
       }),
       signal: AbortSignal.timeout(5_000),
