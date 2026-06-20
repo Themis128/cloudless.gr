@@ -446,19 +446,19 @@
       "description": "Ciel dégagé. Zéro friction. Nous aidons les startups et PME avec l'architecture cloud, le développement serverless, l'analyse de données et le marketing digital propulsé par l'IA."
     },
     "services": {
-      "title": "Services — Cloudless",
+      "title": "Services",
       "description": "Architecture cloud, développement serverless, analyse de données et solutions marketing propulsées par l'IA pour startups et PME."
     },
     "contact": {
-      "title": "Contact — Cloudless",
+      "title": "Contact",
       "description": "Contactez-nous pour un audit gratuit de votre infrastructure cloud. Conseil expert en serverless, analytics et marketing IA."
     },
     "store": {
-      "title": "Boutique — Cloudless",
+      "title": "Boutique",
       "description": "Forfaits premium de cloud computing, serverless et marketing IA. Tarifs transparents, sans engagement."
     },
     "blog": {
-      "title": "Blog — Cloudless",
+      "title": "Blog",
       "description": "Perspectives sur le cloud computing, l'architecture serverless, l'analyse de données et le marketing IA pour les entreprises en croissance."
     }
   }

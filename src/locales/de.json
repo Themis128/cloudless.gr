@@ -446,19 +446,19 @@
       "description": "Klarer Himmel. Null Reibung. Wir helfen Startups und KMU mit Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestütztem digitalen Marketing."
     },
     "services": {
-      "title": "Dienstleistungen — Cloudless",
+      "title": "Dienstleistungen",
       "description": "Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestützte Marketinglösungen für Startups und KMU."
     },
     "contact": {
-      "title": "Kontakt — Cloudless",
+      "title": "Kontakt",
       "description": "Kontaktieren Sie uns für ein kostenloses Cloud-Infrastruktur-Audit. Expertenberatung zu Serverless, Analytics und KI-Marketing."
     },
     "store": {
-      "title": "Shop — Cloudless",
+      "title": "Shop",
       "description": "Premium Cloud Computing, Serverless und KI-Marketing-Servicepakete. Transparente Preise, keine Bindung."
     },
     "blog": {
-      "title": "Blog — Cloudless",
+      "title": "Blog",
       "description": "Einblicke in Cloud Computing, Serverless-Architektur, Datenanalyse und KI-gestütztes Marketing für wachsende Unternehmen."
     }
   }

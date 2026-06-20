@@ -446,19 +446,19 @@
       "description": "Καθαροί ουρανοί. Μηδενική τριβή. Βοηθάμε startups και ΜμΕ με cloud αρχιτεκτονική, serverless ανάπτυξη, ανάλυση δεδομένων και ψηφιακό marketing με τεχνητή νοημοσύνη."
     },
     "services": {
-      "title": "Υπηρεσίες — Cloudless",
+      "title": "Υπηρεσίες",
       "description": "Cloud αρχιτεκτονική, serverless ανάπτυξη, ανάλυση δεδομένων και λύσεις marketing με AI για startups και ΜμΕ."
     },
     "contact": {
-      "title": "Επικοινωνία — Cloudless",
+      "title": "Επικοινωνία",
       "description": "Επικοινωνήστε μαζί μας για δωρεάν αξιολόγηση cloud υποδομής. Εξειδικευμένη καθοδήγηση σε serverless, analytics και AI marketing."
     },
     "store": {
-      "title": "Κατάστημα — Cloudless",
+      "title": "Κατάστημα",
       "description": "Premium πακέτα υπηρεσιών cloud computing, serverless και AI marketing. Διαφανείς τιμές, χωρίς δέσμευση."
     },
     "blog": {
-      "title": "Blog — Cloudless",
+      "title": "Blog",
       "description": "Άρθρα για cloud computing, serverless αρχιτεκτονική, ανάλυση δεδομένων και AI marketing για αναπτυσσόμενες επιχειρήσεις."
     }
   }
