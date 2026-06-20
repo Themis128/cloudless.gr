@@ -1,0 +1,65 @@
+name: Bundle Size PR Comment
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "next.config.ts"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build and capture bundle stats
+        run: |
+          pnpm next build
+          # Extract route sizes from .next/routes-manifest and build output
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            const buildDir = '.next';
+            
+            // Parse build-manifest for JS bundle sizes
+            const manifest = JSON.parse(fs.readFileSync(path.join(buildDir, 'build-manifest.json'), 'utf8'));
+            const pages = Object.keys(manifest.pages);
+            
+            let report = '## Bundle Size Report\n\n';
+            report += '| Route | JS Chunks |\n|-------|----------|\n';
+            
+            for (const page of pages.sort()) {
+              const chunks = manifest.pages[page] || [];
+              const totalKB = chunks.reduce((sum, chunk) => {
+                const filePath = path.join(buildDir, chunk);
+                if (fs.existsSync(filePath)) {
+                  return sum + fs.statSync(filePath).size;
+                }
+                return sum;
+              }, 0);
+              report += '| ' + page + ' | ' + (totalKB / 1024).toFixed(1) + ' KB |\n';
+            }
+            
+            fs.writeFileSync('/tmp/bundle-report.md', report);
+          "
+
+      - name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: /tmp/bundle-report.md

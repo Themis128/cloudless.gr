@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 import { resolve } from "path";
 import createNextIntlPlugin from "next-intl/plugin";
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -141,4 +146,4 @@ if (configured.experimental && typeof configured.experimental === "object") {
   if (Object.keys(configured.experimental).length === 0) delete configured.experimental;
 }
 
-export default configured;
+export default withBundleAnalyzer(configured);

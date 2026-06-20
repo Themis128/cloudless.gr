@@ -6,7 +6,8 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac, randomBytes } from "crypto";
 import { recordNotification } from "@/lib/admin-notifications";
-import { sendActivationEmail } from "@/lib/email";
+import { sendActivationEmail, notifyTeam } from "@/lib/email";
+import { slackRegistrationNotify } from "@/lib/slack-notify";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 function makeClient(): CognitoIdentityProviderClient {
@@ -102,6 +103,12 @@ export async function POST(req: NextRequest) {
       route: "/api/auth/register",
       metadata: { fullName: fullName ?? null },
     });
+    // Notify team via Slack + SES
+    slackRegistrationNotify(email).catch(() => {});
+    notifyTeam(
+      "New User Registration",
+      `${email}${fullName ? ` (${fullName})` : ""} just signed up.`
+    ).catch(() => {});
     // Return token so the client can verify the OTP without a separate lookup.
     return NextResponse.json({ ok: true, token });
   } catch (err: unknown) {

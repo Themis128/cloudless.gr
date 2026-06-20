@@ -4,7 +4,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import TerminalBlock from "@/components/TerminalBlock";
 import JsonLd from "@/components/JsonLd";
 import { getServiceSchema, getBreadcrumbSchema, getFAQSchema } from "@/lib/structured-data";
-import { translate } from "@/lib/i18n";
+import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import StatCounter from "@/components/StatCounter";
 
@@ -19,29 +19,40 @@ import StatCounter from "@/components/StatCounter";
 const BASE_URL = "https://cloudless.gr";
 const canonical = `${BASE_URL}/services`;
 
-export const metadata: Metadata = {
-  title: "Cloud Consulting & Serverless Services in Greece",
-  description:
-    "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.",
-  alternates: {
-    canonical,
-    languages: {
-      en: `${BASE_URL}/en/services`,
-      el: `${BASE_URL}/el/services`,
-      de: `${BASE_URL}/de/services`,
-      fr: `${BASE_URL}/fr/services`,
-      "x-default": `${BASE_URL}/en/services`,
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+  const title = meta?.services?.title ?? "Cloud Consulting & Serverless Services in Greece";
+  const description = meta?.services?.description ?? "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.";
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+      languages: {
+        en: `${BASE_URL}/en/services`,
+        el: `${BASE_URL}/el/services`,
+        de: `${BASE_URL}/de/services`,
+        fr: `${BASE_URL}/fr/services`,
+        "x-default": `${BASE_URL}/en/services`,
+      },
     },
-  },
-  openGraph: {
-    type: "website",
-    title: "Cloud Consulting & Serverless Services in Greece",
-    description:
-      "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.",
-    url: canonical,
-    siteName: "Cloudless",
-  },
-};
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "Cloudless",
+    },
+  };
+}
 
 /* ── Arrow SVG ─────────────────────────────────────────────── */
 

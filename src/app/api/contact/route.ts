@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, company, service, message } = parsed;
+    const { name, email, company, service, message, phone } = parsed;
     const attribution = sanitizeAttribution(parsed.attribution);
 
     if (!name || !email || !message) {
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       <h2>New contact form submission</h2>
       <p><strong>Name:</strong> ${escapeHtml(name)}</p>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+      <p><strong>Phone:</strong> ${escapeHtml(phone || "—")}</p>
       <p><strong>Company:</strong> ${escapeHtml(company || "—")}</p>
       <p><strong>Service:</strong> ${escapeHtml(service || "—")}</p>
       <hr />
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
     const text = [
       `Name: ${name}`,
       `Email: ${email}`,
+      `Phone: ${phone || "—"}`,
       `Company: ${company || "—"}`,
       `Service: ${service || "—"}`,
       ``,
@@ -105,6 +107,7 @@ export async function POST(request: Request) {
       slackContactNotify({
         name,
         email,
+        phone,
         company,
         service,
         message,
@@ -132,6 +135,7 @@ export async function POST(request: Request) {
           firstname: nameParts[0] ?? "",
           lastname: nameParts.slice(1).join(" "),
           company: company || undefined,
+          phone: phone || undefined,
           service_interest: serviceSlug,
           message: String(message).slice(0, 500),
         });
@@ -159,6 +163,7 @@ export async function POST(request: Request) {
       saveSubmission({
         name,
         email,
+        phone,
         company,
         service,
         message,

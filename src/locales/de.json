@@ -439,5 +439,27 @@
     "by": "von",
     "result": "Ergebnis",
     "results": "Ergebnisse"
+  },
+  "meta": {
+    "home": {
+      "title": "Cloudless — Cloud Computing, Serverless & AI-Marketing",
+      "description": "Klarer Himmel. Null Reibung. Wir helfen Startups und KMU mit Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestütztem digitalen Marketing."
+    },
+    "services": {
+      "title": "Dienstleistungen — Cloudless",
+      "description": "Cloud-Architektur, Serverless-Entwicklung, Datenanalyse und KI-gestützte Marketinglösungen für Startups und KMU."
+    },
+    "contact": {
+      "title": "Kontakt — Cloudless",
+      "description": "Kontaktieren Sie uns für ein kostenloses Cloud-Infrastruktur-Audit. Expertenberatung zu Serverless, Analytics und KI-Marketing."
+    },
+    "store": {
+      "title": "Shop — Cloudless",
+      "description": "Premium Cloud Computing, Serverless und KI-Marketing-Servicepakete. Transparente Preise, keine Bindung."
+    },
+    "blog": {
+      "title": "Blog — Cloudless",
+      "description": "Einblicke in Cloud Computing, Serverless-Architektur, Datenanalyse und KI-gestütztes Marketing für wachsende Unternehmen."
+    }
   }
 }

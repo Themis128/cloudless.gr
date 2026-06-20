@@ -6,6 +6,8 @@ import { routing } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
 import { HubSpotScript } from "@/components/HubSpotScript";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
+import PlausibleAnalytics from "@/components/PlausibleAnalytics";
+import ClarityAnalytics from "@/components/ClarityAnalytics";
 import "./globals.css";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
@@ -161,6 +163,8 @@ export default async function RootLayout({
           </>
         ) : null}
         {children}
+        <PlausibleAnalytics />
+        <ClarityAnalytics />
       </body>
     </html>
   );

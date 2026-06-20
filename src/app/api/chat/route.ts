@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { escapeHtml } from "@/lib/escape-html";
 import { runBedrockChatLoop } from "@/lib/bedrock-chat";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { slackChatNotify } from "@/lib/slack-notify";
+import { notifyTeam } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -120,6 +122,18 @@ export async function POST(request: NextRequest) {
     messages = parseMessages(body);
   } catch {
     return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  // Notify on first message of a conversation (only 1 user message = new chat)
+  const userMessages = messages.filter((m) => m.role === "user");
+  if (userMessages.length === 1) {
+    const ip = getClientIp(request);
+    const msg = userMessages[0].content;
+    slackChatNotify({ message: msg, ip }).catch(() => {});
+    notifyTeam(
+      "New Chat Conversation",
+      `A visitor started a chat:\n\n"${msg.slice(0, 200)}"\n\nIP: ${ip}`
+    ).catch(() => {});
   }
 
   let finalText: string;

@@ -250,7 +250,7 @@ const bookingsClient = new SlackClient({ channel: "#bookings" });
 const ordersClient = new SlackClient({ channel: "#orders" });
 const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
-const contactsClient = new SlackClient({ channel: "#contacts" });
+const contactsClient = new SlackClient({ channel: "#notifications" });
 const subscribersClient = new SlackClient({ channel: "#subscribers" });
 
 /**
@@ -401,6 +401,7 @@ export async function slackDeployNotify(opts: {
 export async function slackContactNotify(data: {
   name: string;
   email: string;
+  phone?: string;
   company?: string;
   service?: string;
   message: string;
@@ -419,6 +420,7 @@ export async function slackContactNotify(data: {
   const detailLines = [
     `*Name:* ${safeName}`,
     `*Email:* ${safeEmail}`,
+    ...(data.phone ? [`*Phone:* ${slackEscape(data.phone)}`] : []),
     `*Company:* ${safeCompany}`,
     `*Service:* ${safeService}`,
   ];
@@ -536,4 +538,66 @@ function sleep(ms: number): Promise<void> {
  */
 function slackEscape(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+
+// ---------------------------------------------------------------------------
+// Customer Interaction Notifications (Phase: full coverage)
+// ---------------------------------------------------------------------------
+
+const interactionsClient = new SlackClient({ channel: "#notifications" });
+
+/** Notify when a user starts a chat conversation with the AI assistant. */
+export async function slackChatNotify(data: {
+  message: string;
+  ip?: string;
+}): Promise<boolean> {
+  const preview = data.message.length > 100 ? data.message.slice(0, 100) + "…" : data.message;
+  return interactionsClient.post({
+    text: `New chat: "${preview}"`,
+    blocks: [
+      headerBlock("💬 Chat Started"),
+      sectionBlock(`*Message:* ${slackEscape(preview)}${data.ip ? `\n*IP:* ${data.ip}` : ""}`),
+      contextBlock(slackTimestamp(), "cloudless.gr chat"),
+    ],
+    icon_url: BOT_ICON_URL,
+    username: BOT_USERNAME,
+  });
+}
+
+/** Notify when a support ticket is created via HubSpot. */
+export async function slackTicketNotify(data: {
+  subject: string;
+  email?: string;
+  priority: string;
+}): Promise<boolean> {
+  const lines = [
+    `*Subject:* ${slackEscape(data.subject)}`,
+    `*Priority:* ${data.priority}`,
+  ];
+  if (data.email) lines.push(`*Email:* ${slackEscape(data.email)}`);
+  return interactionsClient.post({
+    text: `New ticket: ${data.subject}`,
+    blocks: [
+      headerBlock("🎫 Support Ticket"),
+      sectionBlock(lines.join("\n")),
+      contextBlock(slackTimestamp(), "cloudless.gr hubspot"),
+    ],
+    icon_url: BOT_ICON_URL,
+    username: BOT_USERNAME,
+  });
+}
+
+/** Notify when a new user registers. */
+export async function slackRegistrationNotify(email: string): Promise<boolean> {
+  return interactionsClient.post({
+    text: `New registration: ${email}`,
+    blocks: [
+      headerBlock("👤 New Registration"),
+      sectionBlock(`*Email:* ${slackEscape(email)}`),
+      contextBlock(slackTimestamp(), "cloudless.gr auth"),
+    ],
+    icon_url: BOT_ICON_URL,
+    username: BOT_USERNAME,
+  });
 }

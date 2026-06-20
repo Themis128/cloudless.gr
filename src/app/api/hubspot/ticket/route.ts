@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { isHubSpotConfigured, createTicket, searchContacts } from "@/lib/hubspot";
 import { isValidEmail } from "@/lib/validation";
 import { mapIntegrationError } from "@/lib/api-errors";
+import { slackTicketNotify } from "@/lib/slack-notify";
+import { notifyTeam } from "@/lib/email";
 
 const VALID_PRIORITIES = new Set(["HIGH", "MEDIUM", "LOW"]);
 
@@ -85,6 +87,13 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
+
+    // Notify team via Slack + SES
+    slackTicketNotify({ subject, email, priority: normalizedPriority }).catch(() => {});
+    notifyTeam(
+      `Support Ticket: ${subject}`,
+      `Priority: ${normalizedPriority}\nEmail: ${email ?? "N/A"}\n\n${content.slice(0, 500)}`
+    ).catch(() => {});
 
     return NextResponse.json({
       success: true,

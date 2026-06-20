@@ -87,15 +87,18 @@
     "test:coverage:all": "pnpm coverage:clean && pnpm test:coverage:full && pnpm test:coverage:k3s && pnpm coverage:merge",
     "coverage:merge": "node scripts/coverage-merge.mjs",
     "test:unit:coverage": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1",
-    "test:unit:coverage:ci": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1 --reporter=default"
+    "test:unit:coverage:ci": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1 --reporter=default",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+    "@aws-lambda-powertools/logger": "^2.33.1",
     "@aws-sdk/client-bedrock-runtime": "^3.1068.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1068.0",
     "@aws-sdk/client-dynamodb": "^3.1068.0",
     "@aws-sdk/client-s3": "^3.1070.0",
     "@aws-sdk/client-sesv2": "^3.1068.0",
     "@aws-sdk/client-ssm": "^3.1068.0",
+    "@react-email/components": "^1.0.12",
     "@sentry/nextjs": "^10.58.0",
     "cmdk": "^1.1.1",
     "countup.js": "^2.10.0",
@@ -108,11 +111,13 @@
     "pdf-lib": "^1.17.1",
     "react": "19.2.7",
     "react-dom": "19.2.7",
+    "react-email": "^6.6.3",
     "stripe": "^22.2.1"
   },
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1068.0",
     "@axe-core/playwright": "^4.11.3",
+    "@next/bundle-analyzer": "^16.2.9",
     "@parcel/watcher": "^2.5.6",
     "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4.3.1",
