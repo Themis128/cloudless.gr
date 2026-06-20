@@ -32,7 +32,10 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install @aws-sdk/client-cognito-identity-provider @aws-sdk/client-ssm @aws-sdk/client-s3 @dsnp/parquetjs
+        # `npm ci` uses scripts/etl/package-lock.json so portals + clients
+        # ETLs run against pinned deps every day. Previous `npm install`
+        # would resolve latest of each AWS SDK on every run.
+        run: npm ci
         working-directory: scripts/etl
 
       - name: Sync portals to lake
