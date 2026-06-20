@@ -116,8 +116,63 @@ const campaignSchema = new ParquetSchema({
 });
 
 // ---------------------------------------------------------------------------
-// EspoCRM client — offset+maxSize pagination per v1 spec.
+// EspoCRM client — offset+maxSize pagination per v1 spec, with retry/backoff
+// for Cloudflare-tunnel flaps (the 2026-06-20 incident: all 5 entities 404'd
+// with empty body in 700ms — classic tunnel-origin-unreachable signature
+// while the same key works the next minute). Retries cover:
+//   - network errors (DNS, ECONNRESET)
+//   - 5xx (Cloudflare origin error)
+//   - 404 with empty body (tunnel returns 404 when it can't reach origin —
+//     a legitimate EspoCRM 404 always has a JSON body)
+//   - 429 (rate-limited; honour Retry-After when present)
 // ---------------------------------------------------------------------------
+
+const MAX_RETRIES = 4; // 4 attempts ~ ≤ 15s of backoff (1s/2s/4s/8s)
+
+function shouldRetry(status, bodyLen) {
+  if (status >= 500) return true;
+  if (status === 429) return true;
+  // Tunnel-flap signature: 404 + empty body. A real EspoCRM 404 returns a
+  // JSON error payload (`{"messageTranslation":...}`), never empty.
+  if (status === 404 && bodyLen === 0) return true;
+  return false;
+}
+
+async function fetchEspoWithRetry(url, init, label) {
+  let lastErr;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, init);
+      const body = await res.text();
+      if (res.ok) return JSON.parse(body);
+      if (shouldRetry(res.status, body.length) && attempt < MAX_RETRIES - 1) {
+        const retryAfter = Number(res.headers.get("retry-after"));
+        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 1000;
+        console.warn(
+          `↻ ${label} HTTP ${res.status} (body ${body.length}b) — retry ${attempt + 1}/${MAX_RETRIES - 1} in ${wait}ms`
+        );
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      throw new Error(`EspoCRM ${label} failed ${res.status}: ${body.slice(0, 200)}`);
+    } catch (err) {
+      lastErr = err;
+      // Network-level error: ENOTFOUND, ECONNRESET, fetch failed, etc. The
+      // string check is the only way to discriminate without a typed error.
+      const transient = /fetch failed|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|network/i.test(
+        String(err?.message ?? err)
+      );
+      if (transient && attempt < MAX_RETRIES - 1) {
+        const wait = 2 ** attempt * 1000;
+        console.warn(`↻ ${label} network error: ${err.message} — retry ${attempt + 1}/${MAX_RETRIES - 1} in ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr ?? new Error(`EspoCRM ${label} retries exhausted`);
+}
 
 async function espoListAll(entity, select) {
   const all = [];
@@ -129,11 +184,11 @@ async function espoListAll(entity, select) {
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("maxSize", String(PAGE_SIZE));
     if (select) url.searchParams.set("select", select.join(","));
-    const res = await fetch(url, { headers: { "X-Api-Key": KEY } });
-    if (!res.ok) {
-      throw new Error(`EspoCRM ${entity} list failed ${res.status}: ${await res.text()}`);
-    }
-    const data = await res.json();
+    const data = await fetchEspoWithRetry(
+      url,
+      { headers: { "X-Api-Key": KEY } },
+      `${entity} list (offset ${offset})`
+    );
     all.push(...(data.list ?? []));
     if ((data.list ?? []).length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
