@@ -243,8 +243,12 @@ export async function getTags(): Promise<string[]> {
 /**
  * Search blog posts by title or excerpt (client-side filter).
  * For full-text search, use the Notion Search API via notion-search.ts.
+ *
+ * Public API per `docs/NOTION-CMS.md`. The `export` keyword was lost in a
+ * refactor; restoring it both keeps the docs accurate and silences the
+ * `no-unused-vars` warning (exports aren't tracked as "unused").
  */
-async function searchPosts(query: string): Promise<NotionPost[]> {
+export async function searchPosts(query: string): Promise<NotionPost[]> {
   if (!query.trim()) return [];
   const posts = await getPosts();
   const q = query.toLowerCase();

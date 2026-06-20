@@ -70,6 +70,10 @@ export function themeForRoute(pathname: string): Theme {
  * Phase 3 once the route-aware logic actually has light routes to switch
  * between.
  */
-function dataThemeAttr(pathname: string): { "data-theme": Theme } {
+// Phase-3 convenience pair to `themeForRoute` above. Documented in the
+// surrounding comment as the wiring helper for `<html data-theme>`.
+// Exported so it can actually be imported from `app/layout.tsx` when
+// Phase 3 lands; without `export` it was a private dead-code warning.
+export function dataThemeAttr(pathname: string): { "data-theme": Theme } {
   return { "data-theme": themeForRoute(pathname) };
 }
