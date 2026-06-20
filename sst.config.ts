@@ -271,13 +271,22 @@ export default {
     // without creating a circular dependency between the client and the site.
     const siteBaseUrl = isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`;
     // Deduplicate: in production siteBaseUrl === "https://cloudless.gr".
+    // localhost:4000 is included so `pnpm dev` works against the prod
+    // Cognito client (we have one user pool / one app client; no separate
+    // local pool). Cognito allows http://localhost callbacks as an exception
+    // to the HTTPS-only rule. Removing this would re-introduce the
+    // "error=redirect_mismatch" we hit on 2026-06-20 when ExplicitAuthFlows
+    // was updated via SDK and silently nulled the callback list.
     const callbackUrls = [
       ...new Set([
         `${siteBaseUrl}/api/auth/callback/cognito`,
         "https://cloudless.gr/api/auth/callback/cognito",
+        "http://localhost:4000/api/auth/callback/cognito",
       ]),
     ];
-    const logoutUrls = [...new Set([`${siteBaseUrl}/`, "https://cloudless.gr/"])];
+    const logoutUrls = [
+      ...new Set([`${siteBaseUrl}/`, "https://cloudless.gr/", "http://localhost:4000/"]),
+    ];
 
     // Confidential app client — next-auth Cognito provider requires a secret.
     const userPoolClient = new aws.cognito.UserPoolClient("CloudlessAuthClient", {
