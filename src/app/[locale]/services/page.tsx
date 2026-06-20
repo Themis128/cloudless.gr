@@ -28,9 +28,13 @@ export async function generateMetadata({
   const { locale } = await params;
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
-  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+  const meta = (messages as Record<string, unknown>).meta as
+    | Record<string, Record<string, string>>
+    | undefined;
   const title = meta?.services?.title ?? "Cloud Consulting & Serverless Services in Greece";
-  const description = meta?.services?.description ?? "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.";
+  const description =
+    meta?.services?.description ??
+    "Cloud consulting, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs in Greece. No lock-in. Results in 14 days.";
 
   return {
     title,
@@ -427,7 +431,9 @@ export default async function ServicesPage() {
                               valueClassName={`font-mono text-xl font-bold ${colors.statValue}`}
                               showLabel={false}
                             />
-                            <div className="mt-1 font-mono text-xs text-slate-500">{stat.label}</div>
+                            <div className="mt-1 font-mono text-xs text-slate-500">
+                              {stat.label}
+                            </div>
                           </div>
                         ))}
                       </div>

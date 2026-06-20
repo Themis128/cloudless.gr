@@ -506,7 +506,7 @@ export async function slackOrderNotify(data: {
     `*Session:* \`${data.sessionId.slice(0, ORDER_SESSION_DISPLAY_LENGTH)}...\``,
   ];
   if (data.campaign || data.tier) {
-    const parts = [data.campaign, data.tier].filter(Boolean).map(s => slackEscape(s!));
+    const parts = [data.campaign, data.tier].filter(Boolean).map((s) => slackEscape(s!));
     lines.push(`*Campaign:* ${parts.join(" · ")}`);
   }
   if (data.attribution) {
@@ -540,7 +540,6 @@ function slackEscape(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
-
 // ---------------------------------------------------------------------------
 // Customer Interaction Notifications (Phase: full coverage)
 // ---------------------------------------------------------------------------
@@ -548,10 +547,7 @@ function slackEscape(text: string): string {
 const interactionsClient = new SlackClient({ channel: "#notifications" });
 
 /** Notify when a user starts a chat conversation with the AI assistant. */
-export async function slackChatNotify(data: {
-  message: string;
-  ip?: string;
-}): Promise<boolean> {
+export async function slackChatNotify(data: { message: string; ip?: string }): Promise<boolean> {
   const preview = data.message.length > 100 ? data.message.slice(0, 100) + "…" : data.message;
   return interactionsClient.post({
     text: `New chat: "${preview}"`,
@@ -571,10 +567,7 @@ export async function slackTicketNotify(data: {
   email?: string;
   priority: string;
 }): Promise<boolean> {
-  const lines = [
-    `*Subject:* ${slackEscape(data.subject)}`,
-    `*Priority:* ${data.priority}`,
-  ];
+  const lines = [`*Subject:* ${slackEscape(data.subject)}`, `*Priority:* ${data.priority}`];
   if (data.email) lines.push(`*Email:* ${slackEscape(data.email)}`);
   return interactionsClient.post({
     text: `New ticket: ${data.subject}`,

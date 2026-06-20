@@ -120,12 +120,13 @@ export async function getLinkedInInsights(
   }
 }
 
-
 // ---------------------------------------------------------------------------
 // Campaign control (pause / resume / budget)
 // ---------------------------------------------------------------------------
 
-export async function pauseLinkedInCampaign(campaignId: string): Promise<{ ok: boolean; error?: string }> {
+export async function pauseLinkedInCampaign(
+  campaignId: string
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const { adAccountId } = await getLinkedInConfig();
     const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns/${campaignId}`, {
@@ -141,7 +142,9 @@ export async function pauseLinkedInCampaign(campaignId: string): Promise<{ ok: b
   }
 }
 
-export async function resumeLinkedInCampaign(campaignId: string): Promise<{ ok: boolean; error?: string }> {
+export async function resumeLinkedInCampaign(
+  campaignId: string
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const { adAccountId } = await getLinkedInConfig();
     const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns/${campaignId}`, {
