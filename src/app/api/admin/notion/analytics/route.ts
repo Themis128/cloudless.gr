@@ -13,8 +13,12 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Analytics not configured" }, { status: 503 });
+  // NOTION_ANALYTICS_DB_ID was decommissioned 2026-06-20. The notion-analytics
+  // lib is a no-op shim; only require NOTION_API_KEY so other Notion-backed
+  // surfaces still gate correctly. This route returns empty data until the
+  // Athena replacement is wired.
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
+    return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
 
   const _rawDays = parseInt(request.nextUrl.searchParams.get("days") ?? "7", 10);
@@ -42,8 +46,12 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Analytics not configured" }, { status: 503 });
+  // NOTION_ANALYTICS_DB_ID was decommissioned 2026-06-20. The notion-analytics
+  // lib is a no-op shim; only require NOTION_API_KEY so other Notion-backed
+  // surfaces still gate correctly. This route returns empty data until the
+  // Athena replacement is wired.
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
+    return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
 
   const body = await request.json().catch(() => ({}));

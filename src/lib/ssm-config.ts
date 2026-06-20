@@ -49,10 +49,7 @@ interface AppConfig {
   NOTION_DOCS_DB_ID: string;
   NOTION_PROJECTS_DB_ID: string;
   NOTION_TASKS_DB_ID: string;
-  NOTION_ANALYTICS_DB_ID: string;
-  NOTION_GSC_REPORTS_DB_ID: string;
   NOTION_CALENDAR_DB_ID: string;
-  NOTION_REPORTS_DB_ID: string;
   NOTION_TESTIMONIALS_DB_ID: string;
   NOTION_CASE_STUDIES_DB_ID: string;
   NOTION_SERVICES_DB_ID: string;
@@ -204,10 +201,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     NOTION_DOCS_DB_ID: params.get("NOTION_DOCS_DB_ID") ?? "",
     NOTION_PROJECTS_DB_ID: params.get("NOTION_PROJECTS_DB_ID") ?? "",
     NOTION_TASKS_DB_ID: params.get("NOTION_TASKS_DB_ID") ?? "",
-    NOTION_ANALYTICS_DB_ID: params.get("NOTION_ANALYTICS_DB_ID") ?? "",
-    NOTION_GSC_REPORTS_DB_ID: params.get("NOTION_GSC_REPORTS_DB_ID") ?? "",
     NOTION_CALENDAR_DB_ID: params.get("NOTION_CALENDAR_DB_ID") ?? "",
-    NOTION_REPORTS_DB_ID: params.get("NOTION_REPORTS_DB_ID") ?? "",
     NOTION_TESTIMONIALS_DB_ID: params.get("NOTION_TESTIMONIALS_DB_ID") ?? "",
     NOTION_CASE_STUDIES_DB_ID: params.get("NOTION_CASE_STUDIES_DB_ID") ?? "",
     NOTION_SERVICES_DB_ID: params.get("NOTION_SERVICES_DB_ID") ?? "",
@@ -288,10 +282,7 @@ function buildConfigFromEnv(): AppConfig {
     NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID || "",
     NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID || "",
     NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID || "",
-    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID || "",
-    NOTION_GSC_REPORTS_DB_ID: process.env.NOTION_GSC_REPORTS_DB_ID || "",
     NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID || "",
-    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID || "",
     NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID || "",
     NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID || "",
     NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
