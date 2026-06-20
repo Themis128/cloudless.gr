@@ -16,9 +16,9 @@ import { useEffect } from "react";
  * only after 10s of stability — caps this at one reload per failure so a
  * genuinely missing chunk cannot trigger a reload loop.
  */
-export const CHUNK_RELOAD_FLAG = "cl-chunk-reload";
+const CHUNK_RELOAD_FLAG = "cl-chunk-reload";
 
-export const CHUNK_ERROR_PATTERN =
+const CHUNK_ERROR_PATTERN =
   /ChunkLoadError|Loading chunk [\w-]+ failed|error loading dynamically imported module|Failed to fetch dynamically imported module/i;
 
 export default function ChunkReloadGuard() {

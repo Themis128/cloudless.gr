@@ -244,7 +244,7 @@ export async function getTags(): Promise<string[]> {
  * Search blog posts by title or excerpt (client-side filter).
  * For full-text search, use the Notion Search API via notion-search.ts.
  */
-export async function searchPosts(query: string): Promise<NotionPost[]> {
+async function searchPosts(query: string): Promise<NotionPost[]> {
   if (!query.trim()) return [];
   const posts = await getPosts();
   const q = query.toLowerCase();

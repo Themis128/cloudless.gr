@@ -96,7 +96,7 @@ export async function getProductByIdAsync(id: string): Promise<StoreProduct | un
   return products.find((p) => p.id === id);
 }
 
-export async function getProductsByCategoryAsync(
+async function getProductsByCategoryAsync(
   category: ProductCategory
 ): Promise<StoreProduct[]> {
   const products = await getProducts();
