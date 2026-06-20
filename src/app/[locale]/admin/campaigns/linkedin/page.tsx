@@ -21,9 +21,15 @@ interface Insights {
   conversions: number;
 }
 
+interface CrmRollup {
+  slug: string;
+  leadCount: number;
+}
+
 export default function LinkedInPage() {
   const [campaigns, setCampaigns] = useState<LinkedInCampaign[]>([]);
   const [insights, setInsights] = useState<Insights | null>(null);
+  const [crmRollups, setCrmRollups] = useState<CrmRollup[]>([]);
   const [loading, setLoading] = useState(true);
   const [notConfigured, setNotConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +38,10 @@ export default function LinkedInPage() {
     setLoading(true);
     setError(null);
     try {
-      const [camRes, insRes] = await Promise.all([
+      const [camRes, insRes, crmRes] = await Promise.all([
         fetchWithAuth("/api/admin/campaigns/linkedin"),
         fetchWithAuth("/api/admin/campaigns/linkedin/insights"),
+        fetchWithAuth("/api/admin/campaigns/crm-leads"),
       ]);
       if (camRes.status === 503) {
         setNotConfigured(true);
@@ -43,6 +50,9 @@ export default function LinkedInPage() {
       if (!camRes.ok) throw new Error("Failed to load campaigns");
       setCampaigns((await camRes.json()).campaigns ?? []);
       if (insRes.ok) setInsights((await insRes.json()).insights ?? null);
+      // CRM rollup is best-effort — 503 (EspoCRM not configured) just hides
+      // the panel; we don't fail the whole page on it.
+      if (crmRes.ok) setCrmRollups((await crmRes.json()).rollups ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -132,6 +142,45 @@ export default function LinkedInPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Cloudless.gr campaign → EspoCRM leads rollup. Hidden if EspoCRM is
+          not configured (the /api/admin/campaigns/crm-leads route returned
+          503 → crmRollups stays empty). */}
+      {!loading && !error && crmRollups.length > 0 && (
+        <div className="mt-8">
+          <h2 className="mb-3 font-mono text-xs font-medium tracking-wider text-slate-400">
+            CLOUDLESS CAMPAIGNS — CRM LEADS
+          </h2>
+          <div className="overflow-hidden rounded-xl border border-slate-800">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-900/50">
+                  <th className="px-4 py-3 text-left font-mono text-xs text-slate-500">
+                    Campaign slug
+                  </th>
+                  <th className="px-4 py-3 text-right font-mono text-xs text-slate-500">
+                    Leads in EspoCRM
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {crmRollups.map((r) => (
+                  <tr key={r.slug} className="transition-colors hover:bg-slate-800/30">
+                    <td className="px-4 py-3 font-mono text-sm text-white">{r.slug}</td>
+                    <td className="px-4 py-3 text-right font-mono text-sm text-slate-300 tabular-nums">
+                      {r.leadCount.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 font-mono text-[10px] text-slate-600">
+            Counts EspoCRM Leads where description contains <code>Campaign: &lt;slug&gt;</code>.
+            Written by /api/campaigns/conversion on every Stripe-checkout completion.
+          </p>
         </div>
       )}
     </div>
