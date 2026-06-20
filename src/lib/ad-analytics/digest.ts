@@ -44,7 +44,8 @@ export function renderConversionBlocks(
   const url = event.url ? truncate(event.url, 200) : "";
 
   const headerLine = `🎯 New conversion · ${event.campaign}`;
-  const metaLine = `*Tier:* \`${tier}\`  ·  *Order:* \`${order}\`${flag ? `  ·  ${flag}` : ""}`;
+  const orderDisplay = buildOrderLink(order, event.customer?.email);
+  const metaLine = `*Tier:* \`${tier}\`  ·  *Order:* ${orderDisplay}${flag ? `  ·  ${flag}` : ""}`;
   const customerLine = formatCustomer(event.customer);
   const creativeLine = creative ? `*Creative:* ${creative}` : "";
   const pageLine = url ? `*Page:* <${url}|${truncate(url, 80)}>` : "";
@@ -116,6 +117,15 @@ function escapeMrkdwn(value: string): string {
 function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   return value.slice(0, Math.max(0, max - 1)) + "…";
+}
+
+function buildOrderLink(orderId: string, email?: string): string {
+  const portalId = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID;
+  if (portalId && email) {
+    const url = `https://app.hubspot.com/contacts/${portalId}/objects/0-1/views/all/list?query=${encodeURIComponent(email)}`;
+    return `<${url}|\`${orderId}\`>`;
+  }
+  return `\`${orderId}\``;
 }
 
 // ---------------------------------------------------------------------------
