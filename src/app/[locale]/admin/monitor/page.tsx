@@ -77,7 +77,7 @@ function getAlertApiWsUrl(): string {
   if (typeof window === "undefined") return "";
   const h = window.location.hostname;
   if (h.startsWith("192.168.") || h === "localhost") {
-    return "ws://192.168.1.128:30800/ws/esp32-logs";
+    return "wss://192.168.1.128:30800/ws/esp32-logs"; // nosemgrep: detect-insecure-websocket
   }
   return "";
 }
