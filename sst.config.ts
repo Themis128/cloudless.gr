@@ -47,6 +47,16 @@ function buildSiteEnvironment(
     ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
     ANALYTICS_CACHE_TABLE: analyticsCacheTableName,
     SESSION_TOKEN_STORE_TABLE: sessionTokenStoreTableName,
+    // Analytics datalake bucket — consumed by src/lib/analytics.ts,
+    // src/lib/admin-notifications.ts (LAKE_BUCKET), and
+    // src/lib/stripe-transactions.ts. Writes events/year=…/month=…/day=…/*.ndjson
+    // and lake/{clients,notifications,portals,transactions}/*. Before this
+    // env was set the libs defaulted to "cloudless-analytics-data" but the
+    // Lambda had no S3 IAM grant, so every PutObject was silently caught
+    // and dropped — the lake had 0 objects under events/ as of 2026-06-20
+    // (datalake audit). The matching `s3:PutObject` permission is granted
+    // below in the `permissions` array.
+    ANALYTICS_S3_BUCKET: "cloudless-analytics-data",
     // Cloudflare Workers AI — consumed by /api/admin/ai/generate. Passed from
     // the deploy workflow env; the route returns 503 when absent.
     ...(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
@@ -325,6 +335,22 @@ export default {
       ),
       link: [stripeTransactionsTable, userProfileTable, adminNotificationsTable, analyticsCacheTable, sessionTokenStoreTable],
       permissions: [
+        {
+          // Datalake write grant — Lambda writes NDJSON events to
+          // s3://cloudless-analytics-data/events/year=…/month=…/day=…/*.ndjson
+          // (src/lib/analytics.ts) plus lake/{notifications,transactions}/* from
+          // the matching libs. Scoped tight: PutObject ONLY, and ONLY on the
+          // two prefixes the app actually writes. No List, no Delete, no Get —
+          // those are reserved for Athena (different principal) and the ETL
+          // scripts (run from local laptop / CI via long-lived creds).
+          // Audited 2026-06-20: before this grant, the libs silently caught
+          // the AccessDenied and the lake had 0 objects under events/.
+          actions: ["s3:PutObject"],
+          resources: [
+            "arn:aws:s3:::cloudless-analytics-data/events/*",
+            "arn:aws:s3:::cloudless-analytics-data/lake/*",
+          ],
+        },
         {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
           // The us.* prefix is required for cross-region inference profiles.
