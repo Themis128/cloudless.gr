@@ -25,7 +25,11 @@ export default function EmailCampaignsPage() {
   const [automations, setAutomations] = useState<ACAutomation[]>([]);
   // /api/admin/email/campaigns deliberately returns 501 until the HubSpot
   // token gains the Marketing Emails "content" scope — surface that here.
-  const [campaignsNotice, setCampaignsNotice] = useState<string | null>(null);
+  const [campaignsNotice, setCampaignsNotice] = useState<{
+    text: string;
+    setupUrl?: string;
+    docsUrl?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,8 +53,18 @@ export default function EmailCampaignsPage() {
       }
       if (autoRes.ok) setAutomations((await autoRes.json()).automations ?? []);
       if (!campRes.ok) {
-        const body = (await campRes.json().catch(() => null)) as { error?: string } | null;
-        setCampaignsNotice(body?.error ?? `Campaigns unavailable (HTTP ${campRes.status})`);
+        const body = (await campRes.json().catch(() => null)) as {
+          error?: string;
+          instructions?: string;
+          setupUrl?: string;
+          docsUrl?: string;
+        } | null;
+        setCampaignsNotice({
+          text:
+            body?.instructions ?? body?.error ?? `Campaigns unavailable (HTTP ${campRes.status})`,
+          setupUrl: body?.setupUrl,
+          docsUrl: body?.docsUrl,
+        });
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -97,8 +111,36 @@ export default function EmailCampaignsPage() {
           {campaignsNotice && (
             <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-4">
               <p className="font-mono text-xs text-yellow-400">
-                <span className="font-bold">Campaign history unavailable:</span> {campaignsNotice}
+                <span className="font-bold">Campaign history unavailable:</span>{" "}
+                {campaignsNotice.text}
               </p>
+              {(campaignsNotice.setupUrl || campaignsNotice.docsUrl) && (
+                <p className="mt-2 font-mono text-xs text-yellow-300">
+                  {campaignsNotice.setupUrl && (
+                    <a
+                      href={campaignsNotice.setupUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-yellow-100"
+                    >
+                      Open HubSpot private-apps →
+                    </a>
+                  )}
+                  {campaignsNotice.setupUrl && campaignsNotice.docsUrl && (
+                    <span className="mx-2">·</span>
+                  )}
+                  {campaignsNotice.docsUrl && (
+                    <a
+                      href={campaignsNotice.docsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-yellow-100"
+                    >
+                      Marketing Emails API docs →
+                    </a>
+                  )}
+                </p>
+              )}
             </div>
           )}
 

@@ -17,8 +17,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
     }
     if (err instanceof PostizApiError) {
+      // Surface the upstream URL + a status-specific hint so the operator can
+      // act without leaving /admin/workspaces — the integrations dashboard
+      // ping for Postiz uses the same logic.
+      const hint =
+        err.status >= 500
+          ? "Postiz pod likely down or restarting. Check the k3s deployment in the postiz namespace."
+          : err.status === 401 || err.status === 403
+            ? "Postiz API key rejected. Regenerate from Postiz → Settings → Public API and update POSTIZ_API_KEY in SSM."
+            : "Postiz returned a non-2xx — see body above.";
       return NextResponse.json(
-        { error: "postiz_upstream", status: err.status, body: err.body },
+        {
+          error: "postiz_upstream",
+          status: err.status,
+          body: err.body,
+          troubleshootUrl: "https://postiz.cloudless.gr",
+          hint,
+        },
         { status: 502 }
       );
     }
