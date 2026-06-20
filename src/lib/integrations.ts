@@ -70,6 +70,10 @@ export interface IntegrationConfig {
   META_PAGE_ID?: string;
   // AI
   ANTHROPIC_API_KEY?: string;
+  // EspoCRM (HubSpot replacement, self-hosted on omv k3s)
+  ESPOCRM_BASE_URL?: string;
+  ESPOCRM_API_KEY?: string;
+  ESPOCRM_WEBHOOK_SECRET?: string;
 }
 
 let cached: IntegrationConfig | null = null;
@@ -131,6 +135,9 @@ export function getIntegrations(): IntegrationConfig {
     META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
     META_PAGE_ID: process.env.META_PAGE_ID,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL,
+    ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY,
+    ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET,
   };
 
   return cached;
@@ -243,6 +250,10 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       META_ACCESS_TOKEN: envCfg.META_ACCESS_TOKEN || ssm.META_ACCESS_TOKEN || undefined,
       META_PAGE_ID: envCfg.META_PAGE_ID || ssm.META_PAGE_ID || undefined,
       ANTHROPIC_API_KEY: envCfg.ANTHROPIC_API_KEY || ssm.ANTHROPIC_API_KEY || undefined,
+      ESPOCRM_BASE_URL: envCfg.ESPOCRM_BASE_URL || ssm.ESPOCRM_BASE_URL || undefined,
+      ESPOCRM_API_KEY: envCfg.ESPOCRM_API_KEY || ssm.ESPOCRM_API_KEY || undefined,
+      ESPOCRM_WEBHOOK_SECRET:
+        envCfg.ESPOCRM_WEBHOOK_SECRET || ssm.ESPOCRM_WEBHOOK_SECRET || undefined,
     };
   } catch (err) {
     console.warn("[Integrations] SSM fallback failed, using env-only config:", err);
