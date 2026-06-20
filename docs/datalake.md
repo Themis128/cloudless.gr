@@ -62,6 +62,7 @@ Delete, no Get. Athena and the ETL scripts use different principals.
 ### How this broke (and was fixed)
 
 Before the 2026-06-20 datalake audit:
+
 - The libs all defaulted to `cloudless-analytics-data` but `ANALYTICS_S3_BUCKET`
   was not set in the Lambda environment.
 - The Lambda had **no `s3:*` permission at all** for this bucket.

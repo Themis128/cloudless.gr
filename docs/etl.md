@@ -110,7 +110,7 @@ Plus Athena views — 6 pre-existing
 |---|---|---|
 | `npm install` in workflows (drift risk; lockfile ignored) | Medium | ✅ Switched both ETL workflows to `npm ci` (uses `scripts/etl/package-lock.json`) |
 | `stripe@18` hardcoded literal in workflow | Low | ✅ Now resolved from the lockfile (still 18.5.0 — defer major bump to Stripe 22 to a focused PR; API surface used is stable enough) |
-| Silent `.catch(() => [])` in `loadSSMJson` / `loadScores` / `loadPortals` masked AccessDenied vs ParameterNotFound vs JSON-parse | Medium | ✅ Now `console.warn(err.name || err.message)` so CloudWatch / Actions logs surface the real cause |
+| Silent `.catch(() => [])` in `loadSSMJson` / `loadScores` / `loadPortals` masked AccessDenied vs ParameterNotFound vs JSON-parse | Medium | ✅ Now `console.warn(err.name \|\| err.message)` so CloudWatch / Actions logs surface the real cause |
 | `ml-parquet/*` files consumed by `clients-to-lake.mjs` but **not produced by any workflow in this repo** | Documented | External — produced by a separate ML pipeline (latest file 2026-06-15, 5 days old). Out of audit scope. |
 
 ## What's still deferred
