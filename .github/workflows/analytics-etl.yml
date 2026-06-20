@@ -82,3 +82,14 @@ jobs:
               --query "ResultSet.Rows[1:]" --output json 2>/dev/null \
             | jq -r '.[] | "| \(.Data[0].VarCharValue) | \(.Data[1].VarCharValue) |"' || echo "_(no data yet)_"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": ":x: Analytics ETL (Athena partition repair) failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). New events/* partitions will not be queryable until this is fixed. See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
+            }'

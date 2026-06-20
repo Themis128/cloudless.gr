@@ -1,8 +1,8 @@
-name: ETL — Clients & Portals to Data Lake
+name: ETL — HubSpot to Data Lake
 
 on:
   schedule:
-    - cron: '0 4 * * *'  # daily 04:00 UTC (after Stripe ETL)
+    - cron: '15 3 * * *'  # daily 03:15 UTC (before Stripe ETL at 03:30)
   workflow_dispatch:
 
 permissions:
@@ -15,8 +15,8 @@ env:
   BUCKET: cloudless-analytics-data
 
 jobs:
-  clients-sync:
-    name: Sync Clients & Portals → S3 Parquet
+  hubspot-sync:
+    name: Sync HubSpot CRM → S3 Parquet
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,22 +32,15 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        # `npm ci` uses scripts/etl/package-lock.json so portals + clients
-        # ETLs run against pinned deps every day. Previous `npm install`
-        # would resolve latest of each AWS SDK on every run.
         run: npm ci
         working-directory: scripts/etl
 
-      - name: Sync portals to lake
-        run: node scripts/etl/portals-to-lake.mjs
+      - name: Run HubSpot ETL
+        id: etl
+        run: node scripts/etl/hubspot-to-lake.mjs
         env:
+          HUBSPOT_API_KEY: ${{ secrets.HUBSPOT_API_KEY }}
           ANALYTICS_BUCKET: ${{ env.BUCKET }}
-
-      - name: Sync clients to lake
-        run: node scripts/etl/clients-to-lake.mjs
-        env:
-          ANALYTICS_BUCKET: ${{ env.BUCKET }}
-          COGNITO_USER_POOL_ID: us-east-1_1Bq3Mpqer
 
       - name: Notify Slack on failure
         if: failure() && env.SLACK_WEBHOOK_URL != ''
@@ -57,5 +50,5 @@ jobs:
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d '{
-              "text": ":x: ETL — Clients & Portals to Data Lake failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
+              "text": ":x: ETL — HubSpot to Data Lake failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
             }'
