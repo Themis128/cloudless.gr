@@ -151,7 +151,7 @@ export const linkedinAdapter: AdPlatformAdapter = {
     eventId,
     happenedAt,
     user,
-    pageUrl,
+    pageUrl: _pageUrl,
   }: {
     accountId: string;
     conversionId: number;
