@@ -43,14 +43,17 @@ export async function POST(request: NextRequest) {
 
   // Redirect to contact page with product context
   const rawOrigin = request.headers.get("origin") ?? "https://cloudless.gr";
-  const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
+  const allowedHostnames = ["cloudless.gr", "www.cloudless.gr"];
   if (process.env.NODE_ENV === "development") {
-    try {
-      const parsed = new URL(rawOrigin);
-      if (parsed.hostname === "localhost") allowedOrigins.push(rawOrigin);
-    } catch { /* invalid origin — ignore */ }
+    allowedHostnames.push("localhost");
   }
-  const origin = allowedOrigins.includes(rawOrigin) ? rawOrigin : "https://cloudless.gr";
+  let origin: string;
+  try {
+    const parsed = new URL(rawOrigin);
+    origin = allowedHostnames.includes(parsed.hostname) ? rawOrigin : "https://cloudless.gr";
+  } catch {
+    origin = "https://cloudless.gr";
+  }
 
   const locale = pickLocale(request);
   const contactUrl = new URL(`/${locale}/contact`, origin);
