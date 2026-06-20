@@ -35,9 +35,7 @@ interface AppConfig {
   NEWSLETTER_SLACK_BOT_TOKEN: string;
   NEWSLETTER_SLACK_SIGNING_SECRET: string;
   NEWSLETTER_SLACK_CHANNEL_ID: string;
-  HUBSPOT_API_KEY: string;
-  HUBSPOT_CLIENT_SECRET: string;
-  /** EspoCRM (HubSpot replacement) — base URL of the self-hosted instance. */
+  /** EspoCRM (replaced HubSpot 2026-06-20) — base URL of the self-hosted instance. */
   ESPOCRM_BASE_URL: string;
   /** EspoCRM API key for the `cloudless-app` API user. */
   ESPOCRM_API_KEY: string;
@@ -196,8 +194,6 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     NEWSLETTER_SLACK_BOT_TOKEN: params.get("NEWSLETTER_SLACK_BOT_TOKEN") ?? "",
     NEWSLETTER_SLACK_SIGNING_SECRET: params.get("NEWSLETTER_SLACK_SIGNING_SECRET") ?? "",
     NEWSLETTER_SLACK_CHANNEL_ID: params.get("NEWSLETTER_SLACK_CHANNEL_ID") ?? "",
-    HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
-    HUBSPOT_CLIENT_SECRET: params.get("HUBSPOT_CLIENT_SECRET") ?? "",
     ESPOCRM_BASE_URL: params.get("ESPOCRM_BASE_URL") ?? "",
     ESPOCRM_API_KEY: params.get("ESPOCRM_API_KEY") ?? "",
     ESPOCRM_WEBHOOK_SECRET: params.get("ESPOCRM_WEBHOOK_SECRET") ?? "",
@@ -282,8 +278,6 @@ function buildConfigFromEnv(): AppConfig {
     NEWSLETTER_SLACK_BOT_TOKEN: process.env.NEWSLETTER_SLACK_BOT_TOKEN || "",
     NEWSLETTER_SLACK_SIGNING_SECRET: process.env.NEWSLETTER_SLACK_SIGNING_SECRET || "",
     NEWSLETTER_SLACK_CHANNEL_ID: process.env.NEWSLETTER_SLACK_CHANNEL_ID || "",
-    HUBSPOT_API_KEY: process.env.HUBSPOT_API_KEY || process.env.HUBSPOT_PRIVATE_APP_TOKEN || "",
-    HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET || "",
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL || "",
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY || "",
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET || "",

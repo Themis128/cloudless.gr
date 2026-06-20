@@ -77,7 +77,6 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/auth/register": { windowMs: 60_000, max: 3 },
   "/api/checkout": { windowMs: 60_000, max: 6 },
   "/api/calendar/book": { windowMs: 60_000, max: 3 },
-  "/api/hubspot/ticket": { windowMs: 60_000, max: 3 },
   "/api/crm/contact": { windowMs: 60_000, max: 3 },
   // LLM proxy — each call hits the Anthropic API and costs money. Tighter cap.
   "/api/chat": { windowMs: 60_000, max: 12 },
