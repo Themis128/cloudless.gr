@@ -86,7 +86,10 @@ async function pingNotion(token: string): Promise<PingResult> {
 
 async function pingPostiz(baseUrl: string, apiKey: string): Promise<PingResult> {
   try {
-    const url = `${baseUrl.replace(/\/$/, "")}/api/public/v1/groups`;
+    // Use `/integrations` (universally exposed) rather than `/groups`, which
+    // is only present in newer Postiz versions. /integrations being reachable
+    // and authorised is the right proof that the public API + token are good.
+    const url = `${baseUrl.replace(/\/$/, "")}/api/public/v1/integrations`;
     const res = await fetch(url, {
       headers: { Authorization: apiKey },
       signal: AbortSignal.timeout(5000),
@@ -99,6 +102,21 @@ async function pingPostiz(baseUrl: string, apiKey: string): Promise<PingResult> 
         message: `Upstream Postiz returned ${res.status} — pod/container may be down. Check the Postiz deployment.`,
       };
     if (!res.ok) return { status: "degraded", message: `API returned ${res.status}` };
+
+    // Bonus: probe the multi-tenant /groups endpoint and note if it's missing,
+    // so the operator knows their Postiz version pre-dates groups (the
+    // workspaces page free-text picker is the right fallback, not a bug).
+    const groupsRes = await fetch(`${baseUrl.replace(/\/$/, "")}/api/public/v1/groups`, {
+      headers: { Authorization: apiKey },
+      signal: AbortSignal.timeout(3000),
+    }).catch(() => null);
+    if (groupsRes && groupsRes.status === 404) {
+      return {
+        status: "configured",
+        message:
+          "Reachable. Note: this Postiz version doesn't expose `/groups`; the workspaces picker uses free-text input.",
+      };
+    }
     return { status: "configured" };
   } catch {
     return {
