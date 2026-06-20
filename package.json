@@ -115,7 +115,7 @@
     "stripe": "^22.2.2"
   },
   "devDependencies": {
-    "@aws-sdk/client-iam": "3.1068.0",
+    "@aws-sdk/client-iam": "3.1073.0",
     "@axe-core/playwright": "^4.11.3",
     "@next/bundle-analyzer": "^16.2.9",
     "@parcel/watcher": "^2.5.6",
