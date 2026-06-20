@@ -1,6 +1,6 @@
 import { notifyTeam, sendSubscriberWelcome } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import { setNewsletterStatus } from "@/lib/hubspot";
+import { setNewsletterStatus } from "@/lib/espocrm";
 import { removeFromSuppressionList } from "@/lib/ses-suppression";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";

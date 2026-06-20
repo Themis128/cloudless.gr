@@ -7,10 +7,10 @@
  */
 
 import { getSeoSnapshot, getTopKeywords } from "@/lib/gsc";
-import { listContacts, isHubSpotConfigured } from "@/lib/hubspot";
+import { listContacts, isHubSpotConfigured } from "@/lib/espocrm";
 import { getTopErrors, isSentryConfigured } from "@/lib/sentry";
 import { invalidateCache } from "@/lib/notion-cache";
-import { listNewsletterSubscribers } from "@/lib/hubspot";
+import { listNewsletterSubscribers } from "@/lib/espocrm";
 
 // ---------------------------------------------------------------------------
 // /cloudless-seo — GSC top keywords + snapshot

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { isConfiguredAsync } from "@/lib/integrations";
-import { listContacts } from "@/lib/hubspot";
+import { listContacts } from "@/lib/espocrm";
 import { readPendingClients, PLAN_LABELS } from "@/lib/pending-clients";
 import { mapIntegrationError } from "@/lib/api-errors";
 

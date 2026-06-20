@@ -1,7 +1,7 @@
 import { isValidEmail } from "@/lib/validation";
 import { notifyTeam, sendUnsubscribeConfirmation } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import { setNewsletterStatus } from "@/lib/hubspot";
+import { setNewsletterStatus } from "@/lib/espocrm";
 import { addToSuppressionList } from "@/lib/ses-suppression";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 

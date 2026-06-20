@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { isHubSpotConfigured, createNote, listNotes } from "@/lib/hubspot";
+import { isHubSpotConfigured, createNote, listNotes } from "@/lib/espocrm";
 import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

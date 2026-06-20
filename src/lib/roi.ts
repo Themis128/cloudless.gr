@@ -11,7 +11,7 @@ import { isLinkedInConfigured, getLinkedInInsights } from "@/lib/campaigns/linke
 import { isTikTokConfigured, getTikTokInsights } from "@/lib/campaigns/tiktok";
 import { isXConfigured, getXStats } from "@/lib/campaigns/x-ads";
 import { isMetaAdsConfigured, getMetaInsights } from "@/lib/campaigns/meta-ads";
-import { listContacts } from "@/lib/hubspot";
+import { listContacts } from "@/lib/espocrm";
 import { isConfiguredAsync } from "@/lib/integrations";
 import { getStripeAnalyticsSnapshot } from "@/lib/stripe-analytics-read";
 

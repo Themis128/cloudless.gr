@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { createReport, updateReport, type ReportSection } from "@/lib/reports";
-import { isHubSpotConfigured, getPipelineStats } from "@/lib/hubspot";
+import { isHubSpotConfigured, getPipelineStats } from "@/lib/espocrm";
 import {
   isActiveCampaignConfigured,
   getEmailStats,

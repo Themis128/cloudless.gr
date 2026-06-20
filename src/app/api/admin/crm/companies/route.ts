@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
-import { isHubSpotConfigured, listCompanies } from "@/lib/hubspot";
+import { isHubSpotConfigured, listCompanies } from "@/lib/espocrm";
 import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function GET(request: NextRequest) {
