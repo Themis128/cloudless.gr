@@ -23,11 +23,27 @@ Athena Glue catalog        ←  analytics-etl.yml (MSCK REPAIR) ← s3://…/eve
 | Workflow | Schedule (UTC) | Source | Sink | Idempotency |
 |---|---|---|---|---|
 | `analytics-etl.yml` | `0 2 * * *` (02:00) | Hive partitions on `events/` | Glue catalog | Yes — `MSCK REPAIR TABLE` |
+| `etl-hubspot-to-lake.yml` | `15 3 * * *` (03:15) | HubSpot v3 API (contacts + deals + tickets) | `lake/hubspot-{contacts,deals,tickets}/` | Full refresh — overwrites |
 | `etl-stripe-to-lake.yml` | `30 3 * * *` (03:30) | Stripe API (sessions/invoices/subs) | `lake/transactions/transactions.parquet` | Full refresh — overwrites |
+| `etl-compute-rfm-churn.yml` | `45 3 * * *` (03:45) | `lake/transactions/transactions.parquet` (Stripe ETL output) | `ml-parquet/scores_{rfm,churn}.parquet` | Full refresh — replaces external ML pipeline |
 | `etl-clients-to-lake.yml` | `0 4 * * *` (04:00) | Cognito + SSM + ml-parquet | `lake/clients/clients.parquet` + `lake/portals/portals.parquet` | Full refresh — overwrites |
 
-All three use OIDC (`AWS_DEPLOY_ROLE_ARN`) to assume the deploy role —
-no static AWS keys.
+All five use OIDC (`AWS_DEPLOY_ROLE_ARN`) to assume the deploy role —
+no static AWS keys. Every workflow posts to `SLACK_WEBHOOK_URL` on
+failure (`if: failure() && env.SLACK_WEBHOOK_URL != ''`).
+
+### Daily ordering (UTC)
+
+```
+02:00 analytics-etl          (registers new events partitions in Glue)
+03:15 etl-hubspot-to-lake    (CRM snapshot)
+03:30 etl-stripe-to-lake     (Stripe transactions snapshot)
+03:45 etl-compute-rfm-churn  (reads Stripe parquet, computes scores)
+04:00 etl-clients-to-lake    (joins Cognito + SSM + RFM scores)
+```
+
+The 15-min spacing isn't strict but it keeps clients-to-lake able to
+read the RFM scores written 15 min earlier (instead of yesterday's).
 
 ## Source scripts
 
@@ -35,15 +51,26 @@ no static AWS keys.
   into a transactions schema (id, email, type=checkout/invoice/sub,
   status, amount_cents, currency, product, plan, timestamps), writes
   parquet via `@dsnp/parquetjs`.
+- `scripts/etl/hubspot-to-lake.mjs` — pulls HubSpot v3 (contacts,
+  deals, tickets) with cursor pagination, writes 3 parquet files.
+  Drives the v_hubspot_funnel and v_lead_to_customer Athena views.
+- `scripts/etl/compute-rfm-churn.mjs` — reads
+  `lake/transactions/transactions.parquet`, computes RFM (Recency,
+  Frequency, Monetary) per email + simple recency-based churn risk,
+  writes `ml-parquet/scores_rfm.parquet` and
+  `ml-parquet/scores_churn.parquet`. Replaces the external ML pipeline
+  whose output was 5+ days stale at the 2026-06-20 audit. Composite
+  RFM score is weighted 30% R + 30% F + 40% M, mapped to a 0-100 scale.
+  Churn bands: low / medium / high / at_risk by days-since-last-purchase.
 - `scripts/etl/portals-to-lake.mjs` — reads `/cloudless/CLIENT_PORTALS_JSON`
   SSM, computes per-portal health score (blocked steps × 25 +
   changes_requested × 10 + open-payments-over-14-days × 20, floored at 0),
   writes parquet.
 - `scripts/etl/clients-to-lake.mjs` — lists Cognito users, joins
   `/cloudless/PENDING_CLIENTS_JSON` (plan info) +
-  `/cloudless/CLIENT_PORTALS_JSON` (portal token) + ML scores from
-  `ml-parquet/scores_rfm.parquet` + `ml-parquet/scores_churn.parquet`,
-  writes unified clients table.
+  `/cloudless/CLIENT_PORTALS_JSON` (portal token) + RFM/churn scores
+  produced by `compute-rfm-churn.mjs` (above) — internally generated
+  now instead of relying on an external pipeline.
 
 ## Output shape (Glue catalog)
 
@@ -51,13 +78,18 @@ no static AWS keys.
 |---|---|---|---|
 | `events` | `s3://cloudless-analytics-data/events/` | NDJSON, Hive-partitioned (year/month/day) | Per-request (Lambda) |
 | `transactions` | `s3://cloudless-analytics-data/lake/transactions/` | Parquet | Daily 03:30 UTC |
+| `hubspot_contacts` | `s3://cloudless-analytics-data/lake/hubspot-contacts/` | Parquet | Daily 03:15 UTC |
+| `hubspot_deals` | `s3://cloudless-analytics-data/lake/hubspot-deals/` | Parquet | Daily 03:15 UTC |
+| `hubspot_tickets` | `s3://cloudless-analytics-data/lake/hubspot-tickets/` | Parquet | Daily 03:15 UTC |
 | `clients` | `s3://cloudless-analytics-data/lake/clients/` | Parquet | Daily 04:00 UTC |
 | `portals` | `s3://cloudless-analytics-data/lake/portals/` | Parquet | Daily 04:00 UTC |
 | `notifications` | `s3://cloudless-analytics-data/lake/notifications/` | Parquet | Per-event (Lambda, via `admin-notifications.ts`) |
 
-Plus 6 Athena views (`v_client_health`, `v_daily_events`, `v_funnel`,
-`v_ltv_ranking`, `v_project_velocity`, `v_revenue_monthly`) that
-project across these tables for the dashboard layer.
+Plus Athena views — 6 pre-existing
+(`v_client_health`, `v_daily_events`, `v_funnel`, `v_ltv_ranking`,
+`v_project_velocity`, `v_revenue_monthly`) and 4 new from this audit
+(`v_acquisition_funnel`, `v_attribution_by_source`, `v_hubspot_funnel`,
+`v_lead_to_customer`) — defined in `docs/analytics-athena.sql`.
 
 ## Health snapshot (2026-06-20)
 
