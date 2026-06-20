@@ -1,0 +1,66 @@
+name: ETL — EspoCRM to Data Lake
+
+on:
+  schedule:
+    - cron: "20 * * * *" # hourly at :20 (offset from HubSpot 03:15 + Stripe 03:30)
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/etl/espocrm-to-lake.mjs"
+      - ".github/workflows/etl-espocrm-to-lake.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: us-east-1
+  BUCKET: cloudless-analytics-data
+
+jobs:
+  espocrm-sync:
+    name: Sync EspoCRM → S3 Parquet
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: scripts/etl
+
+      - name: Pull ESPOCRM_BASE_URL + ESPOCRM_API_KEY from SSM
+        id: ssm
+        run: |
+          BASE=$(aws ssm get-parameter --name /cloudless/production/ESPOCRM_BASE_URL --query 'Parameter.Value' --output text)
+          KEY=$(aws ssm get-parameter --name /cloudless/production/ESPOCRM_API_KEY --with-decryption --query 'Parameter.Value' --output text)
+          echo "::add-mask::$KEY"
+          {
+            echo "ESPOCRM_BASE_URL=$BASE"
+            echo "ESPOCRM_API_KEY=$KEY"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run EspoCRM ETL
+        run: node scripts/etl/espocrm-to-lake.mjs
+        env:
+          ESPOCRM_BASE_URL: ${{ steps.ssm.outputs.ESPOCRM_BASE_URL }}
+          ESPOCRM_API_KEY: ${{ steps.ssm.outputs.ESPOCRM_API_KEY }}
+          ANALYTICS_BUCKET: ${{ env.BUCKET }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl -sS -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\":\":red_circle: ETL espocrm-to-lake failed — <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|run>\"}" \
+            || true
