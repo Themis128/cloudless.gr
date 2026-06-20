@@ -370,6 +370,26 @@ async function main() {
     },
   ];
 
+  // Pre-flight: if the EspoCRM host isn't reachable at all (no DNS, tunnel
+  // not wired, etc), exit 0 instead of failing 5x and paging Slack. The CRM
+  // can be deployed before the Cloudflare tunnel is set up — this keeps the
+  // hourly cron quiet during that window.
+  try {
+    const probe = await fetch(`${BASE}/api/v1/App/user`, {
+      method: "HEAD",
+      headers: { "X-Api-Key": KEY },
+    });
+    // Any HTTP response (200, 401, 403) means the host is reachable — proceed.
+    // Only a network-level fetch error means "not yet wired".
+    void probe;
+  } catch (err) {
+    console.log(
+      `EspoCRM host ${BASE} unreachable (${err.message}). ` +
+        "Likely the Cloudflare tunnel + DNS aren't set up yet. Exit 0; will retry next hour."
+    );
+    process.exit(0);
+  }
+
   let okCount = 0;
   for (const t of tasks) {
     try {
