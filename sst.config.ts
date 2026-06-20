@@ -366,6 +366,14 @@ export default {
         architecture: "arm64",
         runtime: "nodejs22.x",
         timeout: "30 seconds",
+        // X-Ray active tracing — captures cold-start frequency + duration,
+        // p50/p95/p99 by route, and downstream call latency (Bedrock, DDB,
+        // SSM). Documented as Phase 2 in docs/SECURITY_ENHANCEMENTS_ROADMAP.md.
+        // The CloudWatch SERVERLESS-APP_MAIN-Errors alarm only counts errors;
+        // X-Ray segments are what actually explain them. AWS bills $5 / 1M
+        // traces — at our volume that's <$0.01/mo. Sampled 5% by default;
+        // bump if more detail is needed via aws xray put-sampling-rule.
+        tracing: "active",
       },
       transform: {
         // Force arm64 on SST-internal functions (warmer + revalidation).
