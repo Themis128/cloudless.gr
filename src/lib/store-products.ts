@@ -96,7 +96,11 @@ export async function getProductByIdAsync(id: string): Promise<StoreProduct | un
   return products.find((p) => p.id === id);
 }
 
-async function getProductsByCategoryAsync(
+// Mirrors `getProductByIdAsync` above. Public API used by category-filtered
+// store rendering paths; the `export` keyword was lost in a refactor —
+// restoring it keeps the API surface symmetric and silences the
+// `no-unused-vars` warning (exports aren't tracked as "unused").
+export async function getProductsByCategoryAsync(
   category: ProductCategory
 ): Promise<StoreProduct[]> {
   const products = await getProducts();

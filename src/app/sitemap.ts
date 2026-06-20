@@ -6,10 +6,18 @@ import { defaultProducts } from "@/lib/store-products";
 import { getCaseStudies, staticCaseStudies } from "@/lib/notion-case-studies";
 import { isConfiguredAsync } from "@/lib/integrations";
 
-// Render sitemap.xml on each request rather than baking it at build time so
-// Notion ? Sitemap Sync (notion-docs-sitemap.yml) doesn't need a redeploy
-// to take effect. Revalidate at most hourly to keep the CDN warm for crawlers.
-export const dynamic = "force-dynamic";
+// ISR-cache sitemap.xml so the Notion → Sitemap Sync workflow
+// (notion-docs-sitemap.yml) still takes effect without a redeploy, but
+// crawler requests don't pay the Notion fetch latency on every hit.
+//
+// Previously declared `dynamic = "force-dynamic"` alongside
+// `revalidate = 3600`, which is contradictory — `force-dynamic` opts
+// out of all caching and makes `revalidate` a no-op. Result: the
+// `/sitemap.xml` route did the full Notion + TSV walk on every crawler
+// hit and clocked ~1.75 s vs ~600 ms for `/api/health`. With
+// `force-dynamic` removed, Next.js emits `s-maxage=3600`, the CDN
+// caches the response, and only one request per hour pays the build
+// cost.
 export const revalidate = 3600;
 
 // ---------------------------------------------------------------------------
