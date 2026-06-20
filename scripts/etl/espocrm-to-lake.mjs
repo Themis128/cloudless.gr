@@ -127,7 +127,17 @@ const campaignSchema = new ParquetSchema({
 //   - 429 (rate-limited; honour Retry-After when present)
 // ---------------------------------------------------------------------------
 
-const MAX_RETRIES = 4; // 4 attempts ~ ≤ 15s of backoff (1s/2s/4s/8s)
+// 7 attempts with exponential backoff capped at 16s per step:
+//   1s, 2s, 4s, 8s, 16s, 16s, 16s ≈ 63s total per entity.
+// This covers the typical cloudflared systemd restart window (~30-60s).
+// The 2026-06-20 21:58 UTC ETL failure (PR #1038) hit a 40s sustained
+// tunnel outage — 4 attempts / 15s wasn't enough; 7 / 63s is.
+const MAX_RETRIES = 7;
+const MAX_BACKOFF_MS = 16_000;
+
+function backoffMs(attempt) {
+  return Math.min(2 ** attempt * 1000, MAX_BACKOFF_MS);
+}
 
 function shouldRetry(status, bodyLen) {
   if (status >= 500) return true;
@@ -147,7 +157,7 @@ async function fetchEspoWithRetry(url, init, label) {
       if (res.ok) return JSON.parse(body);
       if (shouldRetry(res.status, body.length) && attempt < MAX_RETRIES - 1) {
         const retryAfter = Number(res.headers.get("retry-after"));
-        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 1000;
+        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
         console.warn(
           `↻ ${label} HTTP ${res.status} (body ${body.length}b) — retry ${attempt + 1}/${MAX_RETRIES - 1} in ${wait}ms`
         );
@@ -163,7 +173,7 @@ async function fetchEspoWithRetry(url, init, label) {
         String(err?.message ?? err)
       );
       if (transient && attempt < MAX_RETRIES - 1) {
-        const wait = 2 ** attempt * 1000;
+        const wait = backoffMs(attempt);
         console.warn(`↻ ${label} network error: ${err.message} — retry ${attempt + 1}/${MAX_RETRIES - 1} in ${wait}ms`);
         await new Promise((r) => setTimeout(r, wait));
         continue;
