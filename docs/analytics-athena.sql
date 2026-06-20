@@ -259,6 +259,77 @@ GROUP BY campaign_id, campaign_name
 ORDER BY spend DESC;
 
 -- ===========================================================================
+-- EspoCRM tables (replaces HubSpot, fed by scripts/etl/espocrm-to-lake.mjs)
+-- ===========================================================================
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_contacts (
+  contact_id string, email string, first_name string, last_name string,
+  account_id string, account_name string, phone string, title string,
+  lead_source string, assigned_user_name string, do_not_call boolean,
+  created_at string, modified_at string
+) STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/espocrm-contacts/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_accounts (
+  account_id string, name string, website string, email string, phone string,
+  industry string, type string, billing_country string, billing_city string,
+  assigned_user_name string, created_at string
+) STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/espocrm-accounts/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_opportunities (
+  opportunity_id string, name string, account_id string, account_name string,
+  amount double, amount_currency string, stage string, probability int,
+  close_date string, lead_source string, assigned_user_name string,
+  created_at string, modified_at string
+) STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/espocrm-opportunities/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_cases (
+  case_id string, number int, name string, status string, priority string,
+  type string, account_id string, contact_id string, assigned_user_name string,
+  created_at string, modified_at string
+) STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/espocrm-cases/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_campaigns (
+  campaign_id string, name string, status string, type string,
+  start_date string, end_date string, budget double, budget_currency string,
+  sent_count int, opened_count int, clicked_count int,
+  assigned_user_name string, created_at string
+) STORED AS PARQUET
+LOCATION 's3://cloudless-analytics-data/lake/espocrm-campaigns/';
+
+-- ---- v_espocrm_pipeline: per-stage Opportunity rollup -----------------------
+CREATE OR REPLACE VIEW cloudless_analytics.v_espocrm_pipeline AS
+SELECT stage, COUNT(*) AS deal_count, SUM(amount) AS total_value,
+       AVG(amount) AS avg_deal_size, AVG(probability) AS avg_probability
+FROM cloudless_analytics.espocrm_opportunities
+WHERE opportunity_id <> '__placeholder__'
+GROUP BY stage
+ORDER BY total_value DESC NULLS LAST;
+
+-- ---- v_espocrm_lead_to_customer: Contact joined to first won Opportunity ---
+CREATE OR REPLACE VIEW cloudless_analytics.v_espocrm_lead_to_customer AS
+SELECT c.contact_id, c.email, c.first_name, c.last_name,
+       c.lead_source AS contact_source, c.created_at AS contact_created,
+       o.opportunity_id, o.amount AS won_amount, o.amount_currency,
+       o.close_date AS won_at
+FROM cloudless_analytics.espocrm_contacts c
+LEFT JOIN cloudless_analytics.espocrm_opportunities o
+  ON c.account_id = o.account_id AND o.stage = 'Closed Won'
+WHERE c.contact_id <> '__placeholder__';
+
+-- ---- v_espocrm_campaign_summary: per-campaign open/click rates --------------
+CREATE OR REPLACE VIEW cloudless_analytics.v_espocrm_campaign_summary AS
+SELECT campaign_id, name, status, type, sent_count, opened_count, clicked_count,
+       CASE WHEN sent_count > 0 THEN opened_count * 1.0 / sent_count ELSE 0 END AS open_rate,
+       CASE WHEN opened_count > 0 THEN clicked_count * 1.0 / opened_count ELSE 0 END AS click_through_rate
+FROM cloudless_analytics.espocrm_campaigns
+WHERE campaign_id <> '__placeholder__'
+ORDER BY sent_count DESC;
+
+-- ===========================================================================
 -- Pre-existing views (kept for reference — defined elsewhere in the catalog)
 -- ===========================================================================
 -- v_client_health, v_daily_events, v_funnel, v_ltv_ranking,

@@ -160,6 +160,48 @@ node to put them on. `omv-ha` is a Pi 4 with 1 GB RAM — neither fits there.
 HubSpot SSM key stays in place during cutover so anything still pointing
 at it keeps working.
 
+## Inbound Email → Cases (operator setup, ~10 min)
+
+EspoCRM can convert incoming emails on `support@cloudless.gr` into Case
+records automatically. Free, no extension needed — built into the core.
+
+1. **Get IMAP creds** for `support@cloudless.gr` (whatever provider hosts
+   the mailbox — Google Workspace, Zoho, mail.cloudless.gr, etc).
+2. EspoCRM UI → **Administration → Inbound Emails → Create**:
+   - Name: `Support inbox`
+   - From Name: `Cloudless Support`
+   - Status: `Active`
+   - Use IMAP: ✓ (host, port 993, SSL)
+   - Username / Password: as provided
+   - Monitored folders: `INBOX`
+   - **Create Case: ✓** (the magic flag — every new IMAP message becomes a Case)
+   - Case Distribution: Round-Robin (or pick an owner manually)
+3. Test by emailing `support@cloudless.gr` — within ~5 min the message
+   appears as a Case under Admin → Cases. The EspoCRM webhook for
+   `Case.create` is already registered, so a Slack notification fires to
+   `#notifications` automatically.
+4. (Optional) Set up the matching SMTP **Outbound Email** so replies sent
+   from the Case detail view land in the customer's inbox under the right
+   threading. Same Admin → Outbound Emails settings.
+
+## ETL: EspoCRM → Data Lake (already wired by PR 5)
+
+`scripts/etl/espocrm-to-lake.mjs` runs hourly via
+`.github/workflows/etl-espocrm-to-lake.yml`, pulling Contact / Account /
+Opportunity / Case / Campaign into S3 Parquet files. Athena tables +
+three views (`v_espocrm_pipeline`, `v_espocrm_lead_to_customer`,
+`v_espocrm_campaign_summary`) are defined in
+[`docs/analytics-athena.sql`](../../docs/analytics-athena.sql).
+
+One-time bootstrap — run each `CREATE EXTERNAL TABLE` block once in the
+Athena `primary` workgroup before the first ETL run:
+
+```sql
+-- in Athena: copy from docs/analytics-athena.sql, "EspoCRM tables" section
+-- then verify:
+SELECT COUNT(*) FROM cloudless_analytics.espocrm_contacts;
+```
+
 ## Backups (set up after first month of production data)
 
 ```bash
