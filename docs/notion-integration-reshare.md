@@ -56,8 +56,8 @@ through the workspace owner's UI. Re-sharing is an operator action.
 
 ## Why we don't migrate off Notion
 
-Considered and rejected on **2026-06-21** (memory:
-[research_appflowy_migration](#)). AppFlowy Cloud is a viable
+Considered and rejected on **2026-06-21** (memory note:
+`project_appflowy_rejected`). AppFlowy Cloud is a viable
 Notion-alternative on arm64 k3s, but the migration is a 7-pod deploy + a
 fresh `src/lib/appflowy.ts` client + bidirectional content sync — multi-day
 effort, multi-PR, multi-risk, for a problem this runbook fixes in 3
