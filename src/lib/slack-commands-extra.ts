@@ -24,15 +24,26 @@ export async function buildSeoBlocks(userId: string): Promise<unknown[]> {
     ]);
 
     if (!snapshot) {
-      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: GSC not configured or no data available." } }];
+      return [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: ":warning: GSC not configured or no data available." },
+        },
+      ];
     }
 
     const keywordRows = keywords
-      .map((k, i) => `${i + 1}. \`${k.keyword}\` — pos *${k.position.toFixed(1)}* · ${k.clicks} clicks · ${k.impressions} impr`)
+      .map(
+        (k, i) =>
+          `${i + 1}. \`${k.keyword}\` — pos *${k.position.toFixed(1)}* · ${k.clicks} clicks · ${k.impressions} impr`
+      )
       .join("\n");
 
     return [
-      { type: "header", text: { type: "plain_text", text: ":mag: SEO — Google Search Console", emoji: true } },
+      {
+        type: "header",
+        text: { type: "plain_text", text: ":mag: SEO — Google Search Console", emoji: true },
+      },
       {
         type: "section",
         fields: [
@@ -47,7 +58,15 @@ export async function buildSeoBlocks(userId: string): Promise<unknown[]> {
       { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
     ];
   } catch (err) {
-    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: SEO data unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+    return [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:warning: SEO data unavailable: \`${(err as Error).message?.slice(0, 100)}\``,
+        },
+      },
+    ];
   }
 }
 
@@ -58,13 +77,24 @@ export async function buildSeoBlocks(userId: string): Promise<unknown[]> {
 export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
   try {
     if (!(await isHubSpotConfigured())) {
-      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: HubSpot not configured (HUBSPOT_API_KEY missing)." } }];
+      return [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: ":warning: HubSpot not configured (HUBSPOT_API_KEY missing).",
+          },
+        },
+      ];
     }
     const contacts = await listContacts(10);
-    const results = (contacts as Array<{ properties?: Record<string, string> }>);
+    const results = contacts as Array<{ properties?: Record<string, string> }>;
     if (!results.length) {
       return [
-        { type: "header", text: { type: "plain_text", text: ":busts_in_silhouette: Leads", emoji: true } },
+        {
+          type: "header",
+          text: { type: "plain_text", text: ":busts_in_silhouette: Leads", emoji: true },
+        },
         { type: "section", text: { type: "mrkdwn", text: "No contacts found in HubSpot." } },
       ];
     }
@@ -72,16 +102,36 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
       const p = c.properties ?? {};
       const name = [p.firstname, p.lastname].filter(Boolean).join(" ") || "—";
       const email = p.email || "—";
-      const created = p.createdate ? `<!date^${Math.floor(new Date(p.createdate).getTime() / 1000)}^{date_short}|${p.createdate}>` : "";
+      const created = p.createdate
+        ? `<!date^${Math.floor(new Date(p.createdate).getTime() / 1000)}^{date_short}|${p.createdate}>`
+        : "";
       return `• *${name}* — ${email} ${created}`;
     });
     return [
-      { type: "header", text: { type: "plain_text", text: ":busts_in_silhouette: Recent Leads (HubSpot)", emoji: true } },
-      { type: "section", text: { type: "mrkdwn", text: `*${results.length}* contacts\n\n${rows.join("\n")}` } },
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: ":busts_in_silhouette: Recent Leads (HubSpot)",
+          emoji: true,
+        },
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `*${results.length}* contacts\n\n${rows.join("\n")}` },
+      },
       { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
     ];
   } catch (err) {
-    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: Leads unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+    return [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:warning: Leads unavailable: \`${(err as Error).message?.slice(0, 100)}\``,
+        },
+      },
+    ];
   }
 }
 
@@ -92,36 +142,72 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
 export async function buildErrorsBlocks(userId: string): Promise<unknown[]> {
   try {
     if (!(await isSentryConfigured())) {
-      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: Sentry not configured (SENTRY_AUTH_TOKEN missing)." } }];
+      return [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: ":warning: Sentry not configured (SENTRY_AUTH_TOKEN missing).",
+          },
+        },
+      ];
     }
     const issues = await getTopErrors(5);
     if (!issues.length) {
       return [
-        { type: "header", text: { type: "plain_text", text: ":white_check_mark: No Unresolved Errors", emoji: true } },
-        { type: "section", text: { type: "mrkdwn", text: "All clear! No unresolved Sentry issues." } },
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: ":white_check_mark: No Unresolved Errors",
+            emoji: true,
+          },
+        },
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: "All clear! No unresolved Sentry issues." },
+        },
       ];
     }
     const rows = issues.map((issue, i) => {
-      const level = issue.level === "error" ? ":red_circle:" : issue.level === "warning" ? ":large_orange_circle:" : ":white_circle:";
+      const level =
+        issue.level === "error"
+          ? ":red_circle:"
+          : issue.level === "warning"
+            ? ":large_orange_circle:"
+            : ":white_circle:";
       return `${i + 1}. ${level} *${issue.title?.slice(0, 60)}*\n    ${issue.count ?? "?"} events · last seen ${issue.lastSeen ? `<!date^${Math.floor(new Date(issue.lastSeen).getTime() / 1000)}^{date_short_pretty} {time}|${issue.lastSeen}>` : "?"}`;
     });
     return [
-      { type: "header", text: { type: "plain_text", text: ":rotating_light: Top Unresolved Errors", emoji: true } },
+      {
+        type: "header",
+        text: { type: "plain_text", text: ":rotating_light: Top Unresolved Errors", emoji: true },
+      },
       { type: "section", text: { type: "mrkdwn", text: rows.join("\n\n") } },
       {
         type: "actions",
-        elements: [{
-          type: "button",
-          text: { type: "plain_text", text: "Open Sentry", emoji: true },
-          url: "https://sentry.io/issues/",
-          action_id: "open_sentry",
-          style: "primary",
-        }],
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Open Sentry", emoji: true },
+            url: "https://sentry.io/issues/",
+            action_id: "open_sentry",
+            style: "primary",
+          },
+        ],
       },
       { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
     ];
   } catch (err) {
-    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: Errors unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+    return [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:warning: Errors unavailable: \`${(err as Error).message?.slice(0, 100)}\``,
+        },
+      },
+    ];
   }
 }
 
@@ -172,7 +258,9 @@ export async function buildUptimeBlocks(userId: string): Promise<unknown[]> {
 export async function buildSubscribersBlocks(userId: string): Promise<unknown[]> {
   try {
     if (!(await isHubSpotConfigured())) {
-      return [{ type: "section", text: { type: "mrkdwn", text: ":warning: HubSpot not configured." } }];
+      return [
+        { type: "section", text: { type: "mrkdwn", text: ":warning: HubSpot not configured." } },
+      ];
     }
     const subs = await listNewsletterSubscribers();
     const total = subs.length;
@@ -180,17 +268,37 @@ export async function buildSubscribersBlocks(userId: string): Promise<unknown[]>
     const rows = recent.map((s) => {
       const p = (s as { properties?: Record<string, string> }).properties ?? {};
       const email = p.email || "—";
-      const date = p.createdate ? `<!date^${Math.floor(new Date(p.createdate).getTime() / 1000)}^{date_short}|>` : "";
+      const date = p.createdate
+        ? `<!date^${Math.floor(new Date(p.createdate).getTime() / 1000)}^{date_short}|>`
+        : "";
       return `• ${email} ${date}`;
     });
     return [
-      { type: "header", text: { type: "plain_text", text: ":envelope: Newsletter Subscribers", emoji: true } },
+      {
+        type: "header",
+        text: { type: "plain_text", text: ":envelope: Newsletter Subscribers", emoji: true },
+      },
       { type: "section", text: { type: "mrkdwn", text: `*Total subscribers:* ${total}` } },
-      ...(rows.length ? [{ type: "section", text: { type: "mrkdwn", text: `*Recent signups:*\n${rows.join("\n")}` } }] : []),
+      ...(rows.length
+        ? [
+            {
+              type: "section",
+              text: { type: "mrkdwn", text: `*Recent signups:*\n${rows.join("\n")}` },
+            },
+          ]
+        : []),
       { type: "context", elements: [{ type: "mrkdwn", text: `Requested by <@${userId}>` }] },
     ];
   } catch (err) {
-    return [{ type: "section", text: { type: "mrkdwn", text: `:warning: Subscribers unavailable: \`${(err as Error).message?.slice(0, 100)}\`` } }];
+    return [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `:warning: Subscribers unavailable: \`${(err as Error).message?.slice(0, 100)}\``,
+        },
+      },
+    ];
   }
 }
 
@@ -202,7 +310,13 @@ export async function buildCacheFlushBlocks(userId: string, prefix?: string): Pr
   const cleared = invalidateCache(prefix || undefined);
   return [
     { type: "header", text: { type: "plain_text", text: ":broom: Cache Flushed", emoji: true } },
-    { type: "section", text: { type: "mrkdwn", text: `Cleared *${cleared}* cached entries${prefix ? ` matching \`${prefix}\`` : ""}.` } },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `Cleared *${cleared}* cached entries${prefix ? ` matching \`${prefix}\`` : ""}.`,
+      },
+    },
     { type: "context", elements: [{ type: "mrkdwn", text: `Flushed by <@${userId}>` }] },
   ];
 }

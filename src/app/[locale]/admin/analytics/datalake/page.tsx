@@ -38,7 +38,11 @@ interface DatalakeResponse {
 
 const SECTION_META: Record<
   string,
-  { title: string; subtitle: string; columns: { key: string; label: string; format?: "int" | "money" | "pct" | "decimal" }[] }
+  {
+    title: string;
+    subtitle: string;
+    columns: { key: string; label: string; format?: "int" | "money" | "pct" | "decimal" }[];
+  }
 > = {
   acquisition_funnel: {
     title: "Acquisition funnel — last 30 days",
@@ -65,7 +69,8 @@ const SECTION_META: Record<
   },
   top_keywords: {
     title: "GSC top keywords",
-    subtitle: "Top 25 by clicks over the rolling 90-day GSC window. Sourced from v_gsc_top_keywords.",
+    subtitle:
+      "Top 25 by clicks over the rolling 90-day GSC window. Sourced from v_gsc_top_keywords.",
     columns: [
       { key: "query", label: "Query" },
       { key: "clicks", label: "Clicks", format: "int" },
@@ -102,7 +107,8 @@ const SECTION_META: Record<
   },
   hubspot_funnel: {
     title: "HubSpot lifecycle funnel",
-    subtitle: "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_hubspot_funnel.",
+    subtitle:
+      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_hubspot_funnel.",
     columns: [
       { key: "lifecycle_stage", label: "Stage" },
       { key: "lead_source", label: "Source" },
@@ -159,16 +165,32 @@ export default function DatalakeDashboardPage() {
 
   const generatedAt = data ? new Date(data.generated_at).toLocaleString() : "—";
 
+  // All chrome below uses design-system v2 CSS variables
+  // (--surface-raised, --border-subtle, --ink-primary, --ink-muted, --accent,
+  // --danger, --warning, --shadow-sm) defined in src/app/theme-v2.css. /admin
+  // always renders with data-theme="dark" via ThemeProvider; the same tokens
+  // flip cleanly when /admin ever moves to a light variant.
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      style={{
+        color: "var(--ink-primary)",
+      }}
+    >
       {/* Header */}
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
+      <header
+        className="flex flex-wrap items-end justify-between gap-3 pb-4"
+        style={{ borderBottom: "1px solid var(--border-subtle)" }}
+      >
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Datalake dashboard</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm" style={{ color: "var(--ink-muted)" }}>
             All Athena views in one place. Generated at {generatedAt}.
             {data?.cache === "respected" && (
-              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">
+              <span
+                className="ml-2 rounded-full px-2 py-0.5 text-xs"
+                style={{ background: "var(--surface-subtle)" }}
+              >
                 cached (60s)
               </span>
             )}
@@ -178,14 +200,23 @@ export default function DatalakeDashboardPage() {
           <button
             onClick={() => load(false)}
             disabled={loading}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            className="rounded-md px-3 py-1.5 text-sm disabled:opacity-50"
+            style={{
+              border: "1px solid var(--border-strong)",
+              background: "var(--surface-raised)",
+              color: "var(--ink-primary)",
+            }}
           >
             Reload
           </button>
           <button
             onClick={() => load(true)}
             disabled={loading}
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+            className="rounded-md px-3 py-1.5 text-sm disabled:opacity-50"
+            style={{
+              background: "var(--accent)",
+              color: "var(--accent-on)",
+            }}
           >
             Force refresh (skip cache)
           </button>
@@ -193,13 +224,22 @@ export default function DatalakeDashboardPage() {
       </header>
 
       {err && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+        <div
+          className="rounded-md p-4 text-sm"
+          style={{
+            border: "1px solid var(--danger)",
+            background: "rgb(192 57 43 / 0.08)",
+            color: "var(--danger)",
+          }}
+        >
           <strong>Failed to load:</strong> {err}
         </div>
       )}
 
       {loading && !data && (
-        <div className="text-sm text-slate-500">Querying Athena (first load may take 3-8s)…</div>
+        <div className="text-sm" style={{ color: "var(--ink-muted)" }}>
+          Querying Athena (first load may take 3-8s)…
+        </div>
       )}
 
       {/* Sections */}
@@ -212,30 +252,58 @@ export default function DatalakeDashboardPage() {
         return (
           <section
             key={s.section}
-            className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            className="rounded-lg"
+            style={{
+              border: "1px solid var(--border-subtle)",
+              background: "var(--surface-raised)",
+              boxShadow: "var(--shadow-sm)",
+            }}
           >
-            <header className="flex items-end justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+            <header
+              className="flex items-end justify-between gap-3 px-5 py-4"
+              style={{ borderBottom: "1px solid var(--border-subtle)" }}
+            >
               <div>
                 <h2 className="text-base font-semibold">{meta.title}</h2>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{meta.subtitle}</p>
+                <p className="mt-0.5 text-xs" style={{ color: "var(--ink-muted)" }}>
+                  {meta.subtitle}
+                </p>
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs" style={{ color: "var(--ink-muted)" }}>
                 {s.error ? "error" : `${s.rowCount ?? 0} rows`}
                 {s.fromCache && !s.error && (
-                  <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 dark:bg-slate-800">cached</span>
+                  <span
+                    className="ml-2 rounded px-1.5 py-0.5"
+                    style={{ background: "var(--surface-subtle)" }}
+                  >
+                    cached
+                  </span>
                 )}
               </div>
             </header>
             <div className="p-2">
               {s.error ? (
-                <div className="rounded bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                <div
+                  className="rounded p-3 text-xs"
+                  style={{
+                    background: "rgb(181 110 0 / 0.08)",
+                    color: "var(--warning)",
+                  }}
+                >
                   <strong>Athena query failed.</strong> Often means the underlying ETL has not run
-                  yet, or the view/table has not been CREATEd. Detail: <code className="break-all">{s.error}</code>
+                  yet, or the view/table has not been CREATEd. Detail:{" "}
+                  <code className="break-all">{s.error}</code>
                 </div>
               ) : s.rows && s.rows.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800">
+                    <thead
+                      className="text-left text-xs tracking-wide uppercase"
+                      style={{
+                        borderBottom: "1px solid var(--border-subtle)",
+                        color: "var(--ink-muted)",
+                      }}
+                    >
                       <tr>
                         {meta.columns.map((c) => (
                           <th key={c.key} className="px-3 py-2 font-medium">
@@ -248,7 +316,8 @@ export default function DatalakeDashboardPage() {
                       {s.rows.map((row, i) => (
                         <tr
                           key={i}
-                          className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                          className="last:border-0"
+                          style={{ borderBottom: "1px solid var(--border-subtle)" }}
                         >
                           {meta.columns.map((c) => (
                             <td key={c.key} className="px-3 py-2 tabular-nums">
@@ -261,7 +330,9 @@ export default function DatalakeDashboardPage() {
                   </table>
                 </div>
               ) : (
-                <div className="p-4 text-sm text-slate-500">No data yet.</div>
+                <div className="p-4 text-sm" style={{ color: "var(--ink-muted)" }}>
+                  No data yet.
+                </div>
               )}
             </div>
           </section>

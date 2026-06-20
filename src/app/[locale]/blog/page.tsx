@@ -21,10 +21,14 @@ export async function generateMetadata({
   const { locale } = await params;
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
-  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+  const meta = (messages as Record<string, unknown>).meta as
+    | Record<string, Record<string, string>>
+    | undefined;
   return {
     title: meta?.blog?.title ?? "Blog",
-    description: meta?.blog?.description ?? "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.",
+    description:
+      meta?.blog?.description ??
+      "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.",
     alternates: {
       canonical: "https://cloudless.gr/blog",
     },
