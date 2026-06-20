@@ -1,23 +1,36 @@
-# EspoCRM — self-hosted CRM (replacing HubSpot)
+# EspoCRM — self-hosted CRM (HubSpot replacement)
 
-EspoCRM is the open-source CRM (SugarCRM lineage, same family as SuiteCRM)
-that replaces HubSpot for `cloudless.gr`. Deployed on the k3s cluster on
-`omv-main`, exposed via Cloudflare Tunnel at `https://espocrm.cloudless.gr`.
+EspoCRM (SugarCRM lineage, same family as SuiteCRM) replaces HubSpot for
+`cloudless.gr`. Deployed on the k3s cluster on `omv`, exposed via Cloudflare
+Tunnel at `https://espocrm.cloudless.gr`.
 
-## Why EspoCRM and not SuiteCRM
+**Status (2026-06-20):** ✅ DEPLOYED + LIVE on omv. Both pods 1/1 Running, HTTP 200
+from inside the cluster. Pending operator action: Cloudflare tunnel ingress +
+DNS CNAME + initial admin UI login + API key issuance into SSM. See
+"Operator next steps" below.
 
-This was the original ask. Three blockers killed SuiteCRM on this stack:
+## Why EspoCRM and not SuiteCRM (the original ask)
+
+Three blockers killed SuiteCRM on this stack:
 
 | Blocker | Detail |
 |---|---|
-| arm64 image | The official Bitnami SuiteCRM image is amd64-only ([bitnami/charts#7305](https://github.com/bitnami/charts/issues/7305)); won't run on Pi 5. |
-| Image licensing | Bitnami moved SuiteCRM into its **commercial Secure Images** catalogue in 2024 — no longer free on Docker Hub. |
-| Helm chart status | The official `helm/charts` SuiteCRM chart is **deprecated**. |
+| arm64 image | Bitnami SuiteCRM image is amd64-only ([bitnami/charts#7305](https://github.com/bitnami/charts/issues/7305)); won't run on Pi 5. |
+| Licensing | Bitnami moved SuiteCRM into commercial Secure Images in 2024. |
+| Helm chart | Official `helm/charts` SuiteCRM chart is deprecated. |
 
 EspoCRM publishes [official multi-arch `espocrm/espocrm`](https://hub.docker.com/r/espocrm/espocrm)
-(amd64 + arm64), idles at ~380 MB, and has a community Helm chart at
-[twenty20/twenty20-helm-charts](https://artifacthub.io/packages/helm/twenty20-helm-charts/espocrm)
-that supports Traefik IngressRoute (which k3s ships by default).
+(amd64 + arm64), idles at ~300 MiB, has a clean v8 JSON-API.
+
+## Why raw manifests and not Helm
+
+We initially tried the [twenty20/espocrm](https://artifacthub.io/packages/helm/twenty20-helm-charts/espocrm)
+Helm chart but it does NOT bundle a database (operator must install MariaDB
+separately anyway), and the `cloudpirates/espocrm` chart uses the Bitnami
+MariaDB sub-chart which is amd64-only. Raw manifests match the existing
+[`infrastructure/postiz/k8s/postiz.yaml`](../postiz/k8s/postiz.yaml) pattern
+exactly, work cleanly on arm64, and pin both pods to `omv` so the local-path
+PVCs stay on the dedicated 120 GB SSD.
 
 ## Architecture
 
@@ -28,95 +41,105 @@ that supports Traefik IngressRoute (which k3s ships by default).
        Cloudflare (TLS termination)
                      │
                      ▼
-       cloudflared tunnel on omv-main
-       (existing tunnel e977a490-58c5-4fdb-9155-86832e3e636a)
+       cloudflared tunnel on omv
+       (existing tunnel e977a490-58c5-4fdb-9155-86832e3e636a,
+        same one used by postiz.cloudless.gr + logs.cloudless.gr)
                      │
                      ▼
        http://192.168.1.128:30700  (NodePort, k3s)
                      │
                      ▼
-       Service: espocrm-nginx (ClusterIP, port 80)
+       Service: espocrm (port 80, ClusterIP via the NodePort proxy)
                      │
-          ┌──────────┴──────────┐
-          ▼                     ▼
-       espocrm pod          mariadb pod
-       (PHP-FPM + nginx)    (chart sub-chart)
-          │                     │
-          ▼                     ▼
-       PVC 4Gi              PVC 4Gi
-       /var/www/html        /bitnami/mariadb
+                     ▼
+       Pod: espocrm (Apache + PHP-FPM bundled in espocrm/espocrm:9)
+            ↕  TCP 3306
+       Service: espocrm-mariadb (ClusterIP only — never exposed)
+                     │
+                     ▼
+       Pod: espocrm-mariadb (mariadb:11)
+
+       Storage (both PVCs, local-path StorageClass):
+         espocrm-app-data       4 Gi  → sda1 (120 GB SSD)
+         espocrm-mariadb-data   4 Gi  → sda1 (120 GB SSD)
 ```
 
-## Install (operator action — runs from omv-main)
+## Live deploy state (verified 2026-06-20)
 
-1. **Generate secrets** — do NOT commit the values:
+| Pod | Status | Image | RAM live |
+|---|---|---|---|
+| `espocrm-d9fb465d4-*` | 1/1 Running | `espocrm/espocrm:9` (sha256:213e6b62…) | ~200 MiB |
+| `espocrm-mariadb-ccf4d6f78-*` | 1/1 Running | `mariadb:11` | ~100 MiB |
+
+| PVC | Capacity | Bound | Storage |
+|---|---|---|---|
+| `espocrm-app-data` | 4 Gi | pvc-8ae109a5-… | local-path → sda1 |
+| `espocrm-mariadb-data` | 4 Gi | pvc-59f6bacb-… | local-path → sda1 |
+
+Memory cost on omv: net +304 MiB after the HA + Metabase eviction (see below).
+
+## Memory we freed to make room
+
+Total budget on omv (Pi 5 8 GB) was 97% before this work — adding EspoCRM
+required eviction. The deployments saved to
+`evicted-deployments/` were removed; their PVCs were preserved so they can be
+re-applied later (likely on a third Pi):
+
+| Deployment | RAM freed | PVC preserved |
+|---|---|---|
+| `home-assistant/home-assistant` | ~354 MiB | `ha-config-pvc` |
+| `analytics/metabase`            | ~808 MiB | `metabase-data`, `duckdb-data` |
+| **total** | **~1.16 GiB** | |
+
+`evicted-deployments/*.yaml` re-applies each one verbatim once you have a
+node to put them on. `omv-ha` is a Pi 4 with 1 GB RAM — neither fits there.
+
+## Install (already done — kept for re-deploy)
+
+1. **Create namespace + secret** (the actual install used fresh random hex strings
+   generated locally; the values are NOT committed):
 
    ```bash
    kubectl create namespace espocrm
-
-   # MariaDB root + user passwords (chart sub-chart consumes these)
-   kubectl -n espocrm create secret generic espocrm-mariadb \
+   kubectl -n espocrm create secret generic espocrm-secrets \
      --from-literal=mariadb-root-password="$(openssl rand -hex 24)" \
      --from-literal=mariadb-password="$(openssl rand -hex 24)" \
-     --from-literal=mariadb-replication-password="$(openssl rand -hex 24)"
-
-   # EspoCRM admin bootstrap (used on first boot only)
-   kubectl -n espocrm create secret generic espocrm-admin \
-     --from-literal=username=admin \
-     --from-literal=password="$(openssl rand -hex 20)"
+     --from-literal=admin-username="admin" \
+     --from-literal=admin-password="$(openssl rand -hex 16)"
    ```
 
-   Stash the admin password in 1Password — you'll use it for the first UI login.
-
-2. **Add the Helm repo and install**:
+2. **Apply manifests**:
 
    ```bash
-   bash infrastructure/espocrm/install.sh
+   kubectl apply -f infrastructure/espocrm/k8s/espocrm.yaml
    ```
 
-   Or manually:
-
-   ```bash
-   helm repo add twenty20 https://twenty20-contrib.github.io/twenty20-helm-charts
-   helm repo update
-   helm upgrade --install espocrm twenty20/espocrm \
-     --namespace espocrm \
-     --create-namespace \
-     --values infrastructure/espocrm/values.yaml \
-     --wait --timeout 10m
-   ```
-
-3. **Verify pods**:
+3. **Verify**:
 
    ```bash
    kubectl -n espocrm get pods
-   # Expected:
-   #   espocrm-<hash>           1/1 Running
-   #   espocrm-mariadb-0        1/1 Running
+   kubectl -n espocrm exec deploy/espocrm -- curl -sI http://localhost/ | head -1
    ```
 
-4. **Wire Cloudflare Tunnel** — paste the ingress fragment from
-   `cloudflare-tunnel.yaml` into `/etc/cloudflared/config.yml` on omv-main
-   (before the catch-all rule), then:
+## Operator next steps (~10 min)
 
-   ```bash
-   sudo systemctl reload cloudflared
-   ```
+1. **Cloudflare tunnel** — append the ingress fragment from
+   `cloudflare-tunnel.yaml` to `/etc/cloudflared/config.yml` on omv (BEFORE
+   the catch-all), then `sudo systemctl reload cloudflared`.
 
-5. **Add the DNS CNAME** in Cloudflare:
+2. **DNS** — in Cloudflare zone `cloudless.gr`:
 
    ```
    espocrm.cloudless.gr   CNAME   e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
    ```
 
-6. **First-boot UI**: `https://espocrm.cloudless.gr/install` walks through the
-   one-time installer. Use the admin credentials from step 1. After install,
-   `/install` returns 404 and the regular `/` login is live.
+3. **First UI login** — visit `https://espocrm.cloudless.gr` with the admin
+   credentials from the Secret. The `ESPOCRM_ADMIN_*` env vars seed them on
+   first boot; rotate immediately via the UI (User → Settings → Change Password).
 
-7. **Generate an API key for the Next.js app**:
-
-   Admin → Administration → API Users → Create User → check "API User",
-   pick the auth method "Hmac" or "Api Key", copy the key. Store in SSM:
+4. **API key for the Next.js app** — Administration → API Users → Create
+   user "cloudless-app" with `API User=true`, auth method `Api Key`. Copy
+   the key, store in SSM:
 
    ```bash
    aws ssm put-parameter --name /cloudless/production/ESPOCRM_BASE_URL \
@@ -125,45 +148,24 @@ that supports Traefik IngressRoute (which k3s ships by default).
      --type SecureString --overwrite --value "<copied-key>"
    ```
 
-   The Lambda will pick these up within the 5-minute SSM cache TTL — no redeploy.
+   The Lambda picks these up within the 5-minute SSM cache TTL.
 
-## App-side migration
+## Next PRs in the migration
 
-`src/lib/espocrm.ts` (PR 2) will export the same 21-function surface as the
-current `src/lib/hubspot.ts` so the 10 API routes + 9 admin pages can flip
-import paths with no behavioral change. Each function maps to EspoCRM v8 JSON
-API: `Contact`, `Account`, `Opportunity`, `Case`, `Campaign` modules.
+- **PR 3**: `src/lib/espocrm.ts` mirroring the 21 exported functions of
+  `src/lib/hubspot.ts` (drop-in by export name).
+- **PR 4**: Flip imports in the 10 admin API routes + 9 admin pages
+  (51 files reference HubSpot today).
 
-See `docs/HUBSPOT.md` for the function-by-function migration map.
+HubSpot SSM key stays in place during cutover so anything still pointing
+at it keeps working.
 
-## Backups
-
-EspoCRM data lives in two PVCs:
-
-- `espocrm-data` (4 Gi) — uploaded files, custom layouts
-- `espocrm-mariadb-data` (4 Gi) — all CRM records
-
-The daily Pi cleanup script (`/usr/local/sbin/cloudless-cleanup.sh`) already
-includes general PVC accounting; add a weekly `mysqldump` cron after the
-first month of production use:
+## Backups (set up after first month of production data)
 
 ```bash
-kubectl -n espocrm exec espocrm-mariadb-0 -- \
+kubectl -n espocrm exec espocrm-mariadb-<hash> -- \
   mariadb-dump -uespocrm -p"$DB_PASS" espocrm | \
   gzip > /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/espocrm-$(date +%F).sql.gz
 ```
 
-## Resource sizing (Pi 5, omv-main)
-
-| Pod | Requests | Limits |
-|---|---|---|
-| espocrm | 256 Mi RAM, 100 m CPU | 768 Mi RAM, 1 CPU |
-| espocrm-mariadb | 256 Mi RAM, 100 m CPU | 512 Mi RAM, 500 m CPU |
-| **total** | **512 Mi / 200 m** | **1.28 Gi / 1.5 CPU** |
-
-omv-main has 8 Gi RAM and 4 cores. After the existing Next.js + Postiz +
-Postgres + Redis + Prometheus stack, this leaves ~1.5 Gi RAM and 1 CPU of
-headroom — comfortable.
-
-If memory pressure hits, the first knob to turn down is `mariadb.primary.persistence.size` and the
-`innodb_buffer_pool_size` in `mariadb.primary.configuration` (chart values).
+The 1 TB sdb1 has room; do NOT back up to sda1 (would compete with k3s data).

@@ -24,11 +24,11 @@ card. After the 2026-06-13 disk-pressure incident (sdb1 hit 89% from a 624GB
 Windows backup, k3s started evicting/restarting pods), the storage roles
 are now strictly separated:
 
-| Device      | Hardware                                           | Size  | Mount                                               | Role                                                                                       |
-| ----------- | -------------------------------------------------- | ----- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `mmcblk0p2` | SD card (SR64G)                                    | 59GB  | `/`                                                 | OS root only                                                                               |
-| `/dev/sda1` | SanDisk SDSSDP128G via ICY_BOX IB-AC603b-U3 (USB3) | 120GB | bind to `/var/lib/rancher/k3s` + `/var/lib/kubelet` | **Dedicated k3s data**: containerd images, etcd, kubelet state, local-path-provisioner PVs |
-| `/dev/sdb1` | Samsung SSD 860 EVO 1TB via ASMedia ASM1153 (USB3) | 916GB | `/srv/dev-disk-by-uuid-fa6231ab-…`                  | **User data only**: Windows backups, photos, media. K3s does NOT live here anymore.        |
+| Device      | Hardware                                           | Size  | UUID / Mount                                                                                                       | Role                                                                                       |
+| ----------- | -------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `mmcblk0p2` | SD card (SR64G)                                    | 58GB  | `/`                                                                                                                | OS root only                                                                               |
+| `/dev/sda1` | SanDisk SDSSDP128G via ICY_BOX IB-AC603b-U3 (USB3) | 119GB | `a9a5a108-8095-4b7b-8011-716889995cd7` → `/srv/dev-disk-by-uuid-a9a5a108-…` (and bind to `/var/lib/rancher/k3s`)  | **Dedicated k3s data**: containerd images, etcd, kubelet state, all local-path PVs. Local-path-provisioner `nodePath` = `/srv/dev-disk-by-uuid-a9a5a108-…/k3s/storage` (verified 2026-06-20). |
+| `/dev/sdb1` | Samsung SSD 860 EVO 1TB via ASMedia ASM1153 (USB3) | 916GB | `fa6231ab-eae7-40ea-a4b6-400f767a89d7` → `/srv/dev-disk-by-uuid-fa6231ab-…`                                       | **User data only**: Windows backups, photos, media. K3s does NOT live here.                |
 
 **Why this matters for any future debugging:**
 
@@ -229,14 +229,21 @@ PR #1024. Rather than upgrade HubSpot, the CRM is being moved to **self-hosted
 EspoCRM** (SugarCRM lineage, same data model family as SuiteCRM but with proper
 arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only).
 
-- **Infra** (PR landed this turn): `infrastructure/espocrm/` — Helm values for
-  the [twenty20/espocrm](https://artifacthub.io/packages/helm/twenty20-helm-charts/espocrm)
-  chart, `install.sh` wrapper, Cloudflare tunnel ingress fragment for
-  `espocrm.cloudless.gr`. Pinned to omv-main (nodeSelector) so PVCs land on
-  the dedicated 120 Gi k3s SSD.
-- **Status**: foundation only — operator action pending (`bash infrastructure/espocrm/install.sh`
-  on omv-main, then the `/install` wizard, then API key into SSM at
-  `/cloudless/production/ESPOCRM_API_KEY`).
+- **Infra (LIVE on omv 2026-06-20):** `infrastructure/espocrm/k8s/espocrm.yaml`
+  — raw k8s manifests (mariadb:11 + espocrm/espocrm:9, both pinned to `omv`,
+  both PVCs `local-path` → sda1 120 GB SSD). Helm path was abandoned: the
+  twenty20 chart bundles no DB, and cloudpirates' MariaDB sub-chart is
+  amd64-only. Raw manifests match the existing `infrastructure/postiz/`
+  pattern. Cloudflare tunnel fragment for `espocrm.cloudless.gr` in
+  `cloudflare-tunnel.yaml`.
+- **Memory freed:** Home Assistant + Metabase were evicted from omv to make
+  room (omv was at 97% RAM). Their deployment manifests are preserved at
+  `infrastructure/espocrm/evicted-deployments/{home-assistant,metabase}.yaml`
+  for redeploy on a third Pi (omv-ha is Pi 4 1 GB — neither fits there).
+  PVCs (`ha-config-pvc`, `metabase-data`, `duckdb-data`) were NOT deleted.
+- **Status**: pods 1/1 Running, HTTP 200 from inside the cluster. Pending:
+  Cloudflare tunnel append + DNS CNAME + first UI login + API key into SSM
+  (`/cloudless/production/ESPOCRM_BASE_URL` + `ESPOCRM_API_KEY`).
 - **Next PRs**: `src/lib/espocrm.ts` (mirrors the 21 exported functions of
   `src/lib/hubspot.ts`), then migrate the 10 admin API routes + 9 admin pages
   (51 files reference HubSpot today). HubSpot SSM key stays during the cutover
