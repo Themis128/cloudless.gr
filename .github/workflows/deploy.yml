@@ -39,7 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      NEXT_PUBLIC_HUBSPOT_PORTAL_ID: ${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
       # NEXT_PUBLIC_* vars must be in the workflow env (not just the deploy step)
       # so they're visible during `next build` invoked by `sst deploy`. Next.js
       # inlines NEXT_PUBLIC_* into the client bundle at build time — not runtime.

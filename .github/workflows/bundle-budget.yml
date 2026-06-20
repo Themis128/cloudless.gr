@@ -28,7 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      NEXT_PUBLIC_HUBSPOT_PORTAL_ID: ${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
       # Budget history:
       #   1700KB → 1800KB (Phase 6.3): calm-cloud rebrand (theme-v2.css + alpha override list)
       #   1800KB → 1900KB (portal feature): customer portal flow added /portal/waiting,

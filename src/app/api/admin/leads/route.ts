@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const hubspotConfigured = await isConfiguredAsync("HUBSPOT_API_KEY");
+  const hubspotConfigured = await isConfiguredAsync("ESPOCRM_API_KEY");
 
   try {
     const { searchParams } = new URL(request.url);

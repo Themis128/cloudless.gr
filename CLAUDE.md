@@ -260,8 +260,17 @@ arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only
 - **Next PRs**: PR 4 flips imports in the 10 admin API routes + 9 admin
   pages from `@/lib/hubspot` → `@/lib/espocrm` (51 files reference HubSpot
   today). PR 5: `scripts/etl/espocrm-to-lake.mjs` + Athena views.
-  HubSpot SSM key stays in place during cutover so anything still pointing
-  at it keeps working.
+  HubSpot was fully decommissioned on 2026-06-20 (PR A in this thread):
+  `src/lib/hubspot.ts`, `src/components/HubSpotScript.tsx`,
+  `src/app/[locale]/admin/hubspot/`, `src/app/api/hubspot/`,
+  `src/app/api/webhooks/hubspot/`, `scripts/etl/hubspot-to-lake.mjs` +
+  workflow, `scripts/weekly-subscriber-report.ts` + workflow + test, and
+  all `__tests__/*hubspot*` files are deleted. `NEXT_PUBLIC_HUBSPOT_PORTAL_ID`
+  build-arg is removed from all 6 workflows. `HUBSPOT_API_KEY` /
+  `HUBSPOT_CLIENT_SECRET` removed from `lib/integrations.ts` and
+  `lib/ssm-config.ts`. SSM keys at `/cloudless/production/HUBSPOT_*` should
+  be deleted by the operator (script-side change is in this PR; AWS-side
+  is a manual step — `aws ssm delete-parameters --names ...`).
 
 See `infrastructure/espocrm/README.md` for the full deploy + verify runbook.
 

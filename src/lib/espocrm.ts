@@ -1,13 +1,8 @@
 /**
- * EspoCRM client — drop-in replacement for src/lib/hubspot.ts.
+ * EspoCRM client. Replaced the deleted src/lib/hubspot.ts on 2026-06-20
+ * (HubSpot fully decommissioned). All call-site imports use this module.
  *
- * Every function exported here mirrors a function in lib/hubspot.ts so callers
- * can flip imports without changing call sites:
- *
- *   - import { upsertContact, createTicket, listDeals } from "@/lib/hubspot";
- *   + import { upsertContact, createTicket, listDeals } from "@/lib/espocrm";
- *
- * EspoCRM module mapping vs HubSpot:
+ * EspoCRM module mapping vs the historical HubSpot equivalents:
  *   HubSpot           EspoCRM
  *   -------           -------
  *   contact           Contact

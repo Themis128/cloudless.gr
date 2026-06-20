@@ -27,7 +27,7 @@ interface HubSpotContactRecord {
 }
 
 async function countNewLeads(sinceIso: string): Promise<number | null> {
-  if (!(await isConfiguredAsync("HUBSPOT_API_KEY"))) return null;
+  if (!(await isConfiguredAsync("ESPOCRM_API_KEY"))) return null;
   try {
     const contacts = (await listContacts(100)) as HubSpotContactRecord[];
     return contacts.filter((c) => {
