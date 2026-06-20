@@ -129,7 +129,7 @@ async function extractJsonFromZip(buf: Buffer, name: string): Promise<string | n
     }
   }
   if (eocd < 0) return null;
-  const cdSize = buf.readUInt32LE(eocd + 12);
+  const _cdSize = buf.readUInt32LE(eocd + 12);
   const cdOffset = buf.readUInt32LE(eocd + 16);
   const cdEntries = buf.readUInt16LE(eocd + 10);
 
@@ -167,5 +167,4 @@ async function extractJsonFromZip(buf: Buffer, name: string): Promise<string | n
     return null;
   }
   return null;
-  void cdSize;
 }
