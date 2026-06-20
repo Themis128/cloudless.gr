@@ -12,16 +12,46 @@
  */
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
-const TOKEN = process.env.LINKEDIN_ACCESS_TOKEN;
 const ACCOUNT = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
+const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
 
+/**
+ * Resolve the LinkedIn access token. SSM-first because that's where the
+ * operator rotates it (when the LinkedIn 60-day token expires, the new
+ * value lands in /cloudless/production/LINKEDIN_ACCESS_TOKEN). The GH
+ * secret with the same name is the env-var fallback for local runs;
+ * relying on it in CI caused a REVOKED_ACCESS_TOKEN failure on
+ * 2026-06-20 because the GH secret was 9 days older than the SSM value.
+ */
+async function resolveToken() {
+  if (process.env.LINKEDIN_ACCESS_TOKEN_FORCE_ENV === "1" && process.env.LINKEDIN_ACCESS_TOKEN) {
+    return process.env.LINKEDIN_ACCESS_TOKEN;
+  }
+  try {
+    const ssm = new SSMClient({ region: REGION });
+    const res = await ssm.send(
+      new GetParameterCommand({
+        Name: `${SSM_PREFIX}/LINKEDIN_ACCESS_TOKEN`,
+        WithDecryption: true,
+      })
+    );
+    const v = res.Parameter?.Value;
+    if (v) return v;
+  } catch (err) {
+    console.warn("[etl/linkedin] SSM lookup failed, falling back to env:", err?.name || err?.message);
+  }
+  return process.env.LINKEDIN_ACCESS_TOKEN;
+}
+
+const TOKEN = await resolveToken();
 if (!TOKEN) {
-  console.error("LINKEDIN_ACCESS_TOKEN not set");
+  console.error("LINKEDIN_ACCESS_TOKEN not available (tried SSM + env)");
   process.exit(1);
 }
 
