@@ -150,33 +150,21 @@ jobs:
           echo "$ROWS" >> "$GITHUB_STEP_SUMMARY"
           echo "$ROWS"
 
-          # ── Tiered thresholds ──
-          # "Rich" pages render heavier content (animations, carousels, stats,
-          # service cards) and have observed CI variance of ~10 perf points run
-          # to run on identical infra. They get a 60 floor — a true regression
-          # below 60 still fails, but normal CI flake stops blocking PRs.
-          # Currently:
-          #   - https://cloudless.gr/         (hero animation + carousel + GSC)
-          #   - https://cloudless.gr/<locale> (same home content, just localised
-          #                                    — /en, /el, etc.)
-          #   - https://cloudless.gr/en/services (service cards + animations)
-          # Other routes stay on the stricter 65 bar.
-          # TODO(perf): once /services and the home route land a CLS/LCP
-          # optimisation pass and consistently median ≥ 0.70, drop them back
-          # to PAGE_PERF_MIN.
-          ROOT_PERF_MIN=0.60
+          # ── Score thresholds ──
+          # All pages use the same 0.65 performance floor. The home route,
+          # locale roots, and /services previously had a 0.60 floor due to
+          # CI variance from heavy content (animations, carousels, GSC).
+          # After consistent CLS/LCP optimisation passes, all routes now
+          # median well above 0.70, so the tiered threshold is removed.
           PAGE_PERF_MIN=0.65
           A11Y_MIN=0.90
           BP_MIN=0.90
           SEO_MIN=0.90
-
-          FAILED=$(echo "$MEDIANS" | jq -r --argjson root "$ROOT_PERF_MIN" --argjson page "$PAGE_PERF_MIN" \
+          
+          FAILED=$(echo "$MEDIANS" | jq -r --argjson page "$PAGE_PERF_MIN" \
             --argjson a11y "$A11Y_MIN" --argjson bp "$BP_MIN" --argjson seo "$SEO_MIN" '
             [.[] | . as $row |
-              (($row.url | test("^https?://[^/]+/?$"))
-                or ($row.url | test("^https?://[^/]+/[a-z]{2}/?$"))
-                or ($row.url | test("^https?://[^/]+/services/?$"))) as $is_rich |
-              ($row.perf < (if $is_rich then $root else $page end))
+              ($row.perf < $page)
                 or ($row.a11y < $a11y)
                 or ($row.bp < $bp)
                 or ($row.seo < $seo)
@@ -189,13 +177,13 @@ jobs:
           if [ "${FAILED_COUNT:-0}" -gt 0 ]; then
             {
               echo ""
-              echo "❌ **$FAILED_COUNT route(s) fell below tiered score thresholds.**"
+              echo "❌ **$FAILED_COUNT route(s) fell below score thresholds.**"
               echo ""
               echo '```'
               echo "$FAILED"
               echo '```'
               echo ""
-              echo "Thresholds: rich pages (/, /<locale>, /services) Perf ≥ 60, other Perf ≥ 65, A11y/BP/SEO ≥ 90 (median of 5 runs)."
+              echo "Thresholds: Perf ≥ 65, A11y/BP/SEO ≥ 90 (median of 5 runs)."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "$FAILED"
             if [ "$STRICT" = "true" ] || [ "$GITHUB_EVENT_NAME" != "schedule" ]; then
@@ -212,7 +200,7 @@ jobs:
           else
             {
               echo ""
-              echo "✅ All routes passed Lighthouse tiered thresholds (median of 5 runs)."
+              echo "✅ All routes passed Lighthouse score thresholds (median of 5 runs)."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
