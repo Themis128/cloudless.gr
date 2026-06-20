@@ -27,6 +27,7 @@ const SUBMITTED_AT_PROP = "Submitted At";
 export interface ContactSubmission {
   name: string;
   email: string;
+  phone?: string;
   company?: string;
   service?: string;
   message: string;
@@ -67,6 +68,9 @@ export async function saveSubmission(data: ContactSubmission): Promise<string | 
           },
           Email: {
             email: data.email,
+          },
+          Phone: {
+            phone_number: data.phone || null,
           },
           Company: {
             rich_text: [{ text: { content: (data.company ?? "").slice(0, 200) } }],

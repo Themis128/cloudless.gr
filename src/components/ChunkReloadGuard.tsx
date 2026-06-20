@@ -18,7 +18,7 @@ import { useEffect } from "react";
  */
 const CHUNK_RELOAD_FLAG = "cl-chunk-reload";
 
-const CHUNK_ERROR_PATTERN =
+export const CHUNK_ERROR_PATTERN =
   /ChunkLoadError|Loading chunk [\w-]+ failed|error loading dynamically imported module|Failed to fetch dynamically imported module/i;
 
 export default function ChunkReloadGuard() {

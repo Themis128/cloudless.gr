@@ -38,7 +38,12 @@
   "hero": {
     "badge": "v2.0 — Now Accepting Clients",
     "titleStatic": "Clear skies.",
-    "typingTexts": ["Zero friction.", "Full control.", "Pure speed.", "Real results."],
+    "typingTexts": [
+      "Zero friction.",
+      "Full control.",
+      "Pure speed.",
+      "Real results."
+    ],
     "subtitle": "Enterprise cloud? You can't afford it. DIY infrastructure? You shouldn't. We're the third way — serverless, data-driven growth, and scaling that actually fits a 2–20-person team.",
     "subtitleHighlight": "Finally.",
     "ctaPrimary": "Get a Free Audit",
@@ -434,5 +439,27 @@
     "by": "by",
     "result": "result",
     "results": "results"
+  },
+  "meta": {
+    "home": {
+      "title": "Cloudless — Cloud Computing, Serverless & AI Marketing",
+      "description": "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing."
+    },
+    "services": {
+      "title": "Services — Cloudless",
+      "description": "Cloud architecture, serverless development, data analytics, and AI-powered marketing solutions for startups and SMBs."
+    },
+    "contact": {
+      "title": "Contact — Cloudless",
+      "description": "Get in touch for a free cloud infrastructure audit. Expert guidance on serverless, analytics, and AI marketing."
+    },
+    "store": {
+      "title": "Store — Cloudless",
+      "description": "Premium cloud computing, serverless, and AI marketing service packages. Transparent pricing, no lock-in."
+    },
+    "blog": {
+      "title": "Blog — Cloudless",
+      "description": "Insights on cloud computing, serverless architecture, data analytics, and AI-powered marketing for growing businesses."
+    }
   }
 }

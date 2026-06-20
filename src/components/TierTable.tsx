@@ -193,7 +193,8 @@ export default function TierTable({ campaign, locale }: Props) {
                 <input
                   name="phone"
                   type="tel"
-                  placeholder={locale === LOCALE_EL ? "Τηλέφωνο" : "Phone (optional)"}
+                  required
+                  placeholder={locale === LOCALE_EL ? "Τηλέφωνο *" : "Phone *"}
                   autoComplete="tel"
                   className={CLS_INPUT}
                 />

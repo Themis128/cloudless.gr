@@ -38,7 +38,12 @@
   "hero": {
     "badge": "v2.0 — Nouveaux clients acceptés",
     "titleStatic": "Ciel dégagé.",
-    "typingTexts": ["Zéro friction.", "Contrôle total.", "Vitesse pure.", "Résultats concrets."],
+    "typingTexts": [
+      "Zéro friction.",
+      "Contrôle total.",
+      "Vitesse pure.",
+      "Résultats concrets."
+    ],
     "subtitle": "Le cloud enterprise ? Trop cher. L'infrastructure DIY ? Trop risqué. Nous sommes la troisième voie — serverless, croissance data-driven, et mise à l'échelle adaptée aux équipes de 2 à 20 personnes.",
     "subtitleHighlight": "Enfin.",
     "ctaPrimary": "Audit Gratuit",
@@ -434,5 +439,27 @@
     "by": "par",
     "result": "résultat",
     "results": "résultats"
+  },
+  "meta": {
+    "home": {
+      "title": "Cloudless — Cloud Computing, Serverless & Marketing IA",
+      "description": "Ciel dégagé. Zéro friction. Nous aidons les startups et PME avec l'architecture cloud, le développement serverless, l'analyse de données et le marketing digital propulsé par l'IA."
+    },
+    "services": {
+      "title": "Services — Cloudless",
+      "description": "Architecture cloud, développement serverless, analyse de données et solutions marketing propulsées par l'IA pour startups et PME."
+    },
+    "contact": {
+      "title": "Contact — Cloudless",
+      "description": "Contactez-nous pour un audit gratuit de votre infrastructure cloud. Conseil expert en serverless, analytics et marketing IA."
+    },
+    "store": {
+      "title": "Boutique — Cloudless",
+      "description": "Forfaits premium de cloud computing, serverless et marketing IA. Tarifs transparents, sans engagement."
+    },
+    "blog": {
+      "title": "Blog — Cloudless",
+      "description": "Perspectives sur le cloud computing, l'architecture serverless, l'analyse de données et le marketing IA pour les entreprises en croissance."
+    }
   }
 }

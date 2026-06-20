@@ -4,12 +4,23 @@ import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import ContactFormSection from "@/components/ContactFormSection";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { translate } from "@/lib/i18n";
+import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
-export const metadata: Metadata = {
-  title: "Contact Us",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+  return {
+    title: meta?.contact?.title ?? "Contact Us",
+    description: meta?.contact?.description,
+  };
+}
 
 export default async function ContactPage() {
   const locale = await getServerLocale();

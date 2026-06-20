@@ -8,19 +8,28 @@ import { isConfiguredAsync } from "@/lib/integrations";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
-import { translate } from "@/lib/i18n";
+import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
-export const metadata: Metadata = {
-  title: "Blog",
-  description:
-    "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.",
-  alternates: {
-    canonical: "https://cloudless.gr/blog",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+  return {
+    title: meta?.blog?.title ?? "Blog",
+    description: meta?.blog?.description ?? "Insights on cloud computing, serverless architecture, data analytics, and AI marketing for startups and SMBs.",
+    alternates: {
+      canonical: "https://cloudless.gr/blog",
+    },
+  };
+}
 
 const categoryColors: Record<string, string> = {
   Cloud: "bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20",

@@ -3,17 +3,27 @@ import StoreGrid from "@/components/store/StoreGrid";
 import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";
+import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 
 // Lighthouse Win — let Next.js statically generate the shell + ISR-refresh
 // every hour. The product grid is client-side (StoreGrid uses defaultProducts),
 // so SSG works; this removes a Lambda cold-start from every visit.
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "Store",
-  description:
-    "Cloud migration playbooks, serverless courses, analytics templates, dev merch, and expert service packages from Cloudless.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+  return {
+    title: meta?.store?.title ?? "Store",
+    description: meta?.store?.description ?? "Cloud migration playbooks, serverless courses, analytics templates, dev merch, and expert service packages from Cloudless.",
+  };
+}
 
 const storeFAQs = [
   {

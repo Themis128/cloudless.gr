@@ -11,6 +11,7 @@ interface HubSpotContact {
   firstname?: string;
   lastname?: string;
   company?: string;
+  phone?: string;
   service_interest?: string;
   message?: string;
   lead_source?: string;
@@ -83,6 +84,7 @@ export async function upsertContact(contact: HubSpotContact): Promise<string | n
           company: contact.company ?? "",
           hs_lead_status: "NEW",
           lifecyclestage: "lead",
+          ...(contact.phone && { phone: contact.phone }),
           ...(contact.service_interest && {
             service_interest: contact.service_interest,
           }),

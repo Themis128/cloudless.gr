@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import ScrollReveal from "@/components/ScrollReveal";
 import TypingText from "@/components/TypingText";
 import JsonLd from "@/components/JsonLd";
+import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 
 // CloudCockpit is a ~10 KB-gzipped client widget rendered only inside
 // the hero's right column on lg screens. Splitting it into its own
@@ -47,11 +48,16 @@ export async function generateMetadata({
   };
   const canonical = localePaths[locale] ?? `https://cloudless.gr/${locale}`;
 
+  const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
+  const messages = getMessages(safeLocale);
+  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+
   return {
     title: {
-      absolute: "Cloudless — Cloud Computing, Serverless & AI Marketing",
+      absolute: meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing",
     },
     description:
+      meta?.home?.description ??
       "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
     alternates: {
       canonical,
