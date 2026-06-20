@@ -95,6 +95,12 @@ calendar is planned in the roadmap (Phase 2, item 5) but not yet implemented.
 ## Troubleshooting
 
 - **503 from /api/admin/postiz** — SSM params missing or cache stale (wait ≤5 min).
+- **404 on `/api/public/v1/groups` or `/integrations/is-connected`** — this Postiz
+  build pre-dates the multi-tenant rewrite. Both endpoints are now caught in
+  `src/lib/postiz.ts`: `listGroups()` returns `[]` and `isApiKeyValid()` returns
+  `{ connected: false }` instead of throwing. `/admin/workspaces` falls back to
+  its free-text picker; `/admin/integrations` shows a "configured (groups
+  unavailable)" note. Verified against `postiz.cloudless.gr` 2026-06-20.
 - **409 on publish** — the item's platform has no connected channel in Postiz.
 - **502 on publish** — Postiz rejected the post; check the Postiz container logs:
   `kubectl -n postiz logs deploy/postiz --tail=100`.
