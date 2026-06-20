@@ -19,6 +19,7 @@ type Cfg = Awaited<ReturnType<typeof getConfig>>;
 
 async function pingHubSpot(token: string): Promise<PingResult> {
   try {
+    // Core CRM probe: validates the token itself.
     const res = await fetch("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000),
@@ -26,6 +27,22 @@ async function pingHubSpot(token: string): Promise<PingResult> {
     if (res.status === 401 || res.status === 403)
       return { status: "degraded", message: `Token rejected (${res.status}).` };
     if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
+
+    // Secondary probe: marketing-emails scope. The same token may be valid for
+    // CRM but missing the `content` scope, which causes /admin/email/campaigns
+    // to 501. Surface that here so the integrations page tells the operator
+    // exactly which scope to add instead of leaving them to dig.
+    const me = await fetch("https://api.hubapi.com/marketing/v3/emails?limit=1", {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (me.status === 403) {
+      return {
+        status: "degraded",
+        message:
+          "CRM scopes OK but `content` scope is missing — Marketing Emails API blocked. Re-issue the private-app token with `content` and update HUBSPOT_API_KEY in SSM.",
+      };
+    }
     return { status: "configured" };
   } catch {
     return { status: "error", message: "Connection failed." };
@@ -64,6 +81,30 @@ async function pingNotion(token: string): Promise<PingResult> {
     return { status: "configured" };
   } catch {
     return { status: "error", message: "Connection failed." };
+  }
+}
+
+async function pingPostiz(baseUrl: string, apiKey: string): Promise<PingResult> {
+  try {
+    const url = `${baseUrl.replace(/\/$/, "")}/api/public/v1/groups`;
+    const res = await fetch(url, {
+      headers: { Authorization: apiKey },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.status === 401 || res.status === 403)
+      return { status: "degraded", message: `API key rejected (${res.status}).` };
+    if (res.status >= 500)
+      return {
+        status: "error",
+        message: `Upstream Postiz returned ${res.status} — pod/container may be down. Check the Postiz deployment.`,
+      };
+    if (!res.ok) return { status: "degraded", message: `API returned ${res.status}` };
+    return { status: "configured" };
+  } catch {
+    return {
+      status: "error",
+      message: "Connection failed — Postiz host unreachable from the app (DNS/network/pod down).",
+    };
   }
 }
 
@@ -237,13 +278,17 @@ function buildStaticReports(cfg: Cfg): IntegrationReport[] {
 }
 
 async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
-  const [stripeResult, hubspotResult, slackResult, notionResult, acResult] = await Promise.all([
-    cfg.STRIPE_SECRET_KEY ? pingStripe(cfg.STRIPE_SECRET_KEY) : Promise.resolve(NOT_CONFIGURED),
-    cfg.HUBSPOT_API_KEY ? pingHubSpot(cfg.HUBSPOT_API_KEY) : Promise.resolve(NOT_CONFIGURED),
-    cfg.SLACK_BOT_TOKEN ? pingSlack(cfg.SLACK_BOT_TOKEN) : Promise.resolve(NOT_CONFIGURED),
-    cfg.NOTION_API_KEY ? pingNotion(cfg.NOTION_API_KEY) : Promise.resolve(NOT_CONFIGURED),
-    verifyActiveCampaignToken(),
-  ]);
+  const [stripeResult, hubspotResult, slackResult, notionResult, acResult, postizResult] =
+    await Promise.all([
+      cfg.STRIPE_SECRET_KEY ? pingStripe(cfg.STRIPE_SECRET_KEY) : Promise.resolve(NOT_CONFIGURED),
+      cfg.HUBSPOT_API_KEY ? pingHubSpot(cfg.HUBSPOT_API_KEY) : Promise.resolve(NOT_CONFIGURED),
+      cfg.SLACK_BOT_TOKEN ? pingSlack(cfg.SLACK_BOT_TOKEN) : Promise.resolve(NOT_CONFIGURED),
+      cfg.NOTION_API_KEY ? pingNotion(cfg.NOTION_API_KEY) : Promise.resolve(NOT_CONFIGURED),
+      verifyActiveCampaignToken(),
+      cfg.POSTIZ_API_URL && cfg.POSTIZ_API_KEY
+        ? pingPostiz(cfg.POSTIZ_API_URL, cfg.POSTIZ_API_KEY)
+        : Promise.resolve(NOT_CONFIGURED),
+    ]);
 
   const acStatusMap: Record<string, IntegrationStatus> = {
     valid: "configured",
@@ -295,6 +340,13 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
       status: acStatusMap[acResult.status] ?? "error",
       message: acMessage,
       setupUrl: "https://www.activecampaign.com",
+    },
+    {
+      id: "postiz",
+      name: "Postiz (social publishing)",
+      category: "social_ads",
+      ...postizResult,
+      setupUrl: cfg.POSTIZ_API_URL || "https://postiz.cloudless.gr",
     },
   ];
 }
