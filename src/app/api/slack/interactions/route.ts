@@ -334,7 +334,7 @@ async function postDeployAsync(payload: SlackInteractionPayload): Promise<void> 
 
   if (!result.ok) {
     await deployments.post({
-      text: `:x: Deploy workflow dispatch failed (HTTP ${result.status}). Check GitHub Actions.`,
+      text: `:x: Deploy workflow dispatch failed (HTTP ${result.status}): ${result.error}`,
     });
   }
 }
