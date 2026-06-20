@@ -114,6 +114,18 @@ The private app token needs these scopes:
 | `crm.objects.contacts.read` | `listContacts()`, `searchContacts()` |
 | `crm.objects.contacts.write` | `upsertContact()` |
 | `crm.objects.tickets.write` | `createTicket()` |
+| `content` | `/api/admin/email/campaigns` (Marketing Emails list). Without it the route returns a structured 501 with `setupUrl`/`docsUrl`, and the `/admin/integrations` dashboard flags HubSpot as "degraded — content scope missing". |
+
+When you add or remove a scope, the private-app token is invalidated and a new one is issued. Update SSM in place; no redeploy needed:
+
+```bash
+aws ssm put-parameter \
+  --name /cloudless/production/HUBSPOT_API_KEY \
+  --type SecureString --overwrite \
+  --value <new-token>
+```
+
+The Lambda picks up the new value within the 5-minute SSM cache TTL.
 
 ---
 
