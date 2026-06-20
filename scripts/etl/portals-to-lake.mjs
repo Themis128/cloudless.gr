@@ -41,7 +41,14 @@ async function loadPortals() {
   try {
     const res = await ssm.send(new GetParameterCommand({ Name: "/cloudless/CLIENT_PORTALS_JSON" }));
     return JSON.parse(res.Parameter?.Value || "[]");
-  } catch {
+  } catch (err) {
+    // Log but degrade gracefully — fresh env may not have any portals
+    // configured yet. Previous silent catch masked AccessDenied vs
+    // ParameterNotFound vs JSON parse equally.
+    console.warn(
+      "[etl/portals] SSM /cloudless/CLIENT_PORTALS_JSON unavailable:",
+      err?.name || err?.message || "unknown"
+    );
     return [];
   }
 }

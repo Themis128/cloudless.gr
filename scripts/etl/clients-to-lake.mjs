@@ -79,14 +79,22 @@ async function loadSSMJson(key) {
   try {
     const res = await ssm.send(new GetParameterCommand({ Name: key }));
     return JSON.parse(res.Parameter?.Value || "[]");
-  } catch { return []; }
+  } catch (err) {
+    // Log but don't fail — a missing SSM param is a degraded state
+    // (e.g. brand-new env without portals yet), not a fatal one.
+    // Previously this swallowed errors silently which masked
+    // AccessDenied + ParameterNotFound + JSON parse errors equally.
+    console.warn(`[etl/clients] SSM ${key} unavailable:`, err?.name || err?.message || "unknown");
+    return [];
+  }
 }
 
 async function loadScores(key) {
+  let dir;
   try {
     const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
     const buf = Buffer.from(await res.Body.transformToByteArray());
-    const dir = mkdtempSync(join(tmpdir(), "scores-"));
+    dir = mkdtempSync(join(tmpdir(), "scores-"));
     const tmp = join(dir, "data.parquet");
     writeFileSync(tmp, buf);
     const reader = await ParquetReader.openFile(tmp);
@@ -95,9 +103,17 @@ async function loadScores(key) {
     let row;
     while ((row = await cursor.next())) rows.push(row);
     await reader.close();
-    rmSync(dir, { recursive: true, force: true });
     return rows;
-  } catch { return []; }
+  } catch (err) {
+    // ML scores files (scores_rfm.parquet, scores_churn.parquet) are produced
+    // by a separate ML pipeline. They may be missing on a fresh env, in which
+    // case the clients table just lands without rfm/churn columns populated.
+    // Log + continue rather than fail the whole ETL.
+    console.warn(`[etl/clients] scores ${key} unavailable:`, err?.name || err?.message || "unknown");
+    return [];
+  } finally {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 async function main() {
