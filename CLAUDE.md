@@ -244,10 +244,24 @@ arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only
 - **Status**: pods 1/1 Running, HTTP 200 from inside the cluster. Pending:
   Cloudflare tunnel append + DNS CNAME + first UI login + API key into SSM
   (`/cloudless/production/ESPOCRM_BASE_URL` + `ESPOCRM_API_KEY`).
-- **Next PRs**: `src/lib/espocrm.ts` (mirrors the 21 exported functions of
-  `src/lib/hubspot.ts`), then migrate the 10 admin API routes + 9 admin pages
-  (51 files reference HubSpot today). HubSpot SSM key stays during the cutover
-  so anything still pointing at it keeps working.
+- **Live now**: API user `cloudless-app` (role `Cloudless App Full Access`,
+  ID `6a36ef141808ed737`); `Export Import` extension v2.9.0 installed via
+  `php command.php extension --file=...`. SSM keys live at
+  `/cloudless/production/ESPOCRM_BASE_URL`, `ESPOCRM_API_KEY`,
+  `ESPOCRM_WEBHOOK_SECRET`.
+- **`src/lib/espocrm.ts` SHIPPED** — drop-in mirror of the 21 hubspot.ts
+  exports (`upsertContact`, `createTicket`, `listDeals`, `createDeal`,
+  `getDealsByStage`, `getPipelineStats`, etc). Module mapping: Contact↔contact,
+  Account↔company, Opportunity↔deal, Case↔ticket. Auth via `X-Api-Key`.
+- **Slack sync LIVE** — `/api/webhooks/espocrm` route forwards Contact/Lead
+  create, Opportunity create + stage-change, and Case create + status-change
+  to Slack via `SlackClient` (per `feedback_slack_use_slackclient`). Six
+  Webhook entities registered in EspoCRM (one per event), all `isActive=true`.
+- **Next PRs**: PR 4 flips imports in the 10 admin API routes + 9 admin
+  pages from `@/lib/hubspot` → `@/lib/espocrm` (51 files reference HubSpot
+  today). PR 5: `scripts/etl/espocrm-to-lake.mjs` + Athena views.
+  HubSpot SSM key stays in place during cutover so anything still pointing
+  at it keeps working.
 
 See `infrastructure/espocrm/README.md` for the full deploy + verify runbook.
 
