@@ -1,0 +1,91 @@
+# EspoCRM Helm values — tuned for omv-main (Pi 5, arm64, 8 Gi total).
+#
+# Chart: twenty20/espocrm
+# Repo:  https://twenty20-contrib.github.io/twenty20-helm-charts
+# Hub:   https://artifacthub.io/packages/helm/twenty20-helm-charts/espocrm
+#
+# The chart bundles MariaDB (Bitnami sub-chart) + an nginx reverse proxy in
+# front of php-fpm. Secrets are read from the pre-created Kubernetes secrets
+# named `espocrm-mariadb` and `espocrm-admin` (see README step 1).
+
+image:
+  repository: espocrm/espocrm
+  tag: "9.1"              # pinned — bump after smoke-testing each major
+  pullPolicy: IfNotPresent
+
+# Reverse proxy in front of php-fpm. Exposed via NodePort so the
+# cloudflared sidecar on omv-main can reach it at 192.168.1.128:30700.
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30700
+
+# We don't use the chart's Ingress controller path — Cloudflare Tunnel is
+# the public entry point. See cloudflare-tunnel.yaml.
+ingress:
+  enabled: false
+
+# EspoCRM app container.
+espocrm:
+  config:
+    siteUrl: "https://espocrm.cloudless.gr"
+    isInstalled: false      # flip to true after the /install wizard finishes
+    cleanupCron: true       # built-in nightly cleanup of soft-deleted records
+    defaultLanguage: "en_US"
+    timezone: "Europe/Athens"
+  adminCredentialsSecret: espocrm-admin   # keys: username, password
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 1000m, memory: 768Mi }
+  persistence:
+    enabled: true
+    size: 4Gi
+    storageClass: local-path   # k3s default; PVs land on /var/lib/rancher/k3s/storage on the dedicated 120 Gi SSD
+
+mariadb:
+  enabled: true
+  architecture: standalone
+  auth:
+    database: espocrm
+    username: espocrm
+    existingSecret: espocrm-mariadb        # mariadb-root-password, mariadb-password, mariadb-replication-password
+  primary:
+    persistence:
+      enabled: true
+      size: 4Gi
+      storageClass: local-path
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+    # Keep the buffer pool modest — the Pi has the headroom but we share it
+    # with Postiz/Postgres/Redis/Prometheus on the same node.
+    configuration: |-
+      [mysqld]
+      default_authentication_plugin=mysql_native_password
+      character-set-server=UTF8MB4
+      collation-server=utf8mb4_unicode_ci
+      innodb_buffer_pool_size=128M
+      max_connections=50
+      [client]
+      default-character-set=UTF8MB4
+  metrics:
+    enabled: false           # turn on if/when Prometheus has the headroom
+
+# Optional cron pod for scheduled jobs (campaigns, workflow rules).
+cron:
+  enabled: true
+  resources:
+    requests: { cpu: 50m, memory: 96Mi }
+    limits:   { cpu: 250m, memory: 192Mi }
+
+# Node selection — pin to omv-main so PVCs (local-path) stay rescheduled
+# correctly. omv-ha doesn't have the dedicated k3s SSD so EspoCRM would
+# fight the Windows-backup share for disk space if it landed there.
+nodeSelector:
+  kubernetes.io/hostname: omv-main
+
+# Pod-level security defaults (defense in depth — the PHP app itself is
+# behind nginx + Cloudflare, but no reason to run as root in-cluster).
+podSecurityContext:
+  fsGroup: 1001
+  runAsUser: 1001

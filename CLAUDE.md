@@ -221,6 +221,29 @@ Env: `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` (client, build-time) and
 unset the corresponding fire becomes a no-op — the route stays wired so the
 rest of the flow still works.
 
+## CRM migration: HubSpot → EspoCRM (in progress 2026-06-20)
+
+HubSpot's `content` scope is locked behind a paid Marketing Hub plan we don't
+have, breaking `/api/admin/email/campaigns` (501) — see the live probe in
+PR #1024. Rather than upgrade HubSpot, the CRM is being moved to **self-hosted
+EspoCRM** (SugarCRM lineage, same data model family as SuiteCRM but with proper
+arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only).
+
+- **Infra** (PR landed this turn): `infrastructure/espocrm/` — Helm values for
+  the [twenty20/espocrm](https://artifacthub.io/packages/helm/twenty20-helm-charts/espocrm)
+  chart, `install.sh` wrapper, Cloudflare tunnel ingress fragment for
+  `espocrm.cloudless.gr`. Pinned to omv-main (nodeSelector) so PVCs land on
+  the dedicated 120 Gi k3s SSD.
+- **Status**: foundation only — operator action pending (`bash infrastructure/espocrm/install.sh`
+  on omv-main, then the `/install` wizard, then API key into SSM at
+  `/cloudless/production/ESPOCRM_API_KEY`).
+- **Next PRs**: `src/lib/espocrm.ts` (mirrors the 21 exported functions of
+  `src/lib/hubspot.ts`), then migrate the 10 admin API routes + 9 admin pages
+  (51 files reference HubSpot today). HubSpot SSM key stays during the cutover
+  so anything still pointing at it keeps working.
+
+See `infrastructure/espocrm/README.md` for the full deploy + verify runbook.
+
 ## Authentication
 
 Auth is **Cognito**, full-stop (PR #677, 2026-06-08). There is no Keycloak, no
