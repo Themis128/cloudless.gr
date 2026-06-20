@@ -466,20 +466,45 @@ export function updatePostReleaseId(
   );
 }
 
-/** A customer group — the API counterpart of the multi-tenancy UI. */
+/** A customer group — the API counterpart of the multi-tenancy UI.
+ *
+ *  Note (verified 2026-06-20 against postiz.cloudless.gr): the `/groups`
+ *  endpoint is NOT exposed by every Postiz version. The deployed image
+ *  responds with HTTP 404 `{"message":"Cannot GET /public/v1/groups"}`
+ *  for installations that pre-date the multi-tenant rewrite. We return
+ *  an empty list in that case so the workspaces UI falls back to its
+ *  free-text picker instead of throwing a 502 the operator can't fix.
+ *  Other upstream errors (5xx, 401/403) still bubble as PostizApiError. */
 export interface PostizGroup {
   id: string;
   name: string;
 }
-export function listGroups(): Promise<PostizGroup[]> {
-  return callThrowing<PostizGroup[]>("/groups");
+export async function listGroups(): Promise<PostizGroup[]> {
+  try {
+    return await callThrowing<PostizGroup[]>("/groups");
+  } catch (err) {
+    if (err instanceof PostizApiError && err.status === 404) {
+      return [];
+    }
+    throw err;
+  }
 }
 
-/** Probe whether the configured Postiz API key is currently valid. Returns
- *  the upstream JSON (typically `{connected: true}`) on success and throws
- *  PostizApiError on 401/403/etc. */
-export function isApiKeyValid(): Promise<{ connected: boolean }> {
-  return callThrowing<{ connected: boolean }>("/integrations/is-connected");
+/** Probe whether the configured Postiz API key is currently valid.
+ *
+ *  Same version caveat as `listGroups`: `/integrations/is-connected`
+ *  doesn't exist on every Postiz build. Treat a 404 as "endpoint
+ *  unavailable, can't probe" (we surface that as connected=false
+ *  rather than throwing, so the integrations dashboard stays useful). */
+export async function isApiKeyValid(): Promise<{ connected: boolean }> {
+  try {
+    return await callThrowing<{ connected: boolean }>("/integrations/is-connected");
+  } catch (err) {
+    if (err instanceof PostizApiError && err.status === 404) {
+      return { connected: false };
+    }
+    throw err;
+  }
 }
 
 /** Delete a connected channel by integration id. Any scheduled posts on the
