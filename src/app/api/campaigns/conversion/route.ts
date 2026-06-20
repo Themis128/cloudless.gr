@@ -24,6 +24,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dispatchConversion } from "@/lib/ad-analytics/runtime";
 import { getStripe } from "@/lib/stripe";
+import { createLead } from "@/lib/espocrm";
 
 type Body = {
   campaign?: string;
@@ -72,6 +73,29 @@ export async function POST(request: NextRequest) {
     } catch {
       // Non-critical — Slack still fires without customer info
     }
+  }
+
+  // Fire-and-forget: mirror the conversion into EspoCRM as a Lead so it
+  // appears in /admin/campaigns/linkedin alongside the Insight-Tag count.
+  // The `Lead.create` webhook → SlackClient → `#leads` channel is already
+  // wired (PR #1030). We never block the conversion response on this —
+  // CRM hiccups must not slow down the user's success path.
+  if (customer?.email) {
+    const [firstName, ...rest] = (customer.name ?? "").trim().split(/\s+/);
+    void createLead({
+      emailAddress: customer.email,
+      firstName: firstName || undefined,
+      lastName: rest.length ? rest.join(" ") : undefined,
+      phoneNumber: customer.phone ?? undefined,
+      campaignSlug: body.campaign,
+      tier: body.tier,
+      orderId: body.orderId,
+      source: "Web Site",
+      utmSource: body.utm?.source,
+      utmMedium: body.utm?.medium,
+      utmCampaign: body.utm?.campaign,
+      utmContent: body.utm?.content,
+    });
   }
 
   const outcome = await dispatchConversion({

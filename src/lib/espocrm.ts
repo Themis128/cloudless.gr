@@ -408,6 +408,105 @@ export async function isEspoCRMConfigured(): Promise<boolean> {
   }
 }
 
+/* ─── Lead automation (campaign-driven funnel ingress) ──────────────────── */
+
+export interface LeadData {
+  emailAddress: string;
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  /** Campaign slug (e.g., "shop-online") — stored in description for
+   *  campaign-attributed Lead aggregation in `countLeadsForCampaign`. */
+  campaignSlug?: string;
+  /** Tier id selected on the landing page (e.g., "essential"). */
+  tier?: string | null;
+  /** Stripe checkout session ID, calendar booking id, etc — provides
+   *  idempotency when this lead is later associated with an Opportunity. */
+  orderId?: string | null;
+  /** EspoCRM Lead.source enum value (Web Site / Email / Cold Call / Other / etc). */
+  source?: string;
+  /** UTM source (e.g., "linkedin") — appended to description for reporting. */
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+}
+
+/**
+ * Create an EspoCRM Lead. Lead is the right shape for unqualified inbound —
+ * e.g., a LinkedIn ad click that converted on the landing page. Once
+ * qualified, the operator converts the Lead to a Contact + Opportunity via
+ * the EspoCRM UI (or another lib helper).
+ *
+ * Fires the `Lead.create` webhook → SlackClient → `#leads` channel
+ * automatically (PR #1030).
+ *
+ * Returns the new Lead id, or null on failure. Never throws — safe to call
+ * fire-and-forget from a request handler.
+ */
+export async function createLead(data: LeadData): Promise<string | null> {
+  try {
+    const descLines = [
+      data.campaignSlug && `Campaign: ${data.campaignSlug}`,
+      data.tier && `Tier: ${data.tier}`,
+      data.orderId && `Order: ${data.orderId}`,
+      data.utmSource && `utm_source: ${data.utmSource}`,
+      data.utmMedium && `utm_medium: ${data.utmMedium}`,
+      data.utmCampaign && `utm_campaign: ${data.utmCampaign}`,
+      data.utmContent && `utm_content: ${data.utmContent}`,
+    ].filter(Boolean);
+    const payload: Record<string, unknown> = {
+      emailAddress: data.emailAddress,
+      firstName: data.firstName ?? "",
+      lastName: data.lastName ?? data.emailAddress.split("@")[0],
+      phoneNumber: data.phoneNumber ?? undefined,
+      source: data.source ?? "Web Site",
+      status: "New",
+      description: descLines.length ? descLines.join("\n") : undefined,
+    };
+    const res = await espoFetch("/Lead", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error("[EspoCRM] createLead failed:", res.status);
+      return null;
+    }
+    const created = (await res.json()) as { id: string };
+    return created.id;
+  } catch (err) {
+    console.error("[EspoCRM] createLead error:", err);
+    return null;
+  }
+}
+
+/**
+ * Count Leads attributed to a given cloudless.gr campaign slug. Cheap
+ * `like '%Campaign: <slug>%'` scan on Lead.description — fine for our volume
+ * (tens to low hundreds of leads per campaign). If counts grow into the
+ * thousands, promote campaign to a dedicated `cCampaignSlug` custom field
+ * on Lead and index it.
+ */
+export async function countLeadsForCampaign(campaignSlug: string): Promise<number> {
+  try {
+    const res = await espoFetch(
+      `/Lead?` +
+        new URLSearchParams({
+          "where[0][type]": "contains",
+          "where[0][attribute]": "description",
+          "where[0][value]": `Campaign: ${campaignSlug}`,
+          maxSize: "1",
+          select: "id",
+        }).toString()
+    );
+    if (!res.ok) return 0;
+    const data = (await res.json()) as { total: number };
+    return data.total ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 /* ─── Opportunity automation (HubSpot "deal" equivalents) ────────────────── */
 
 export type DealSource = "stripe_checkout" | "calendar_booking" | "contact_form";
