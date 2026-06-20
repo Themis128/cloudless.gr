@@ -9,7 +9,7 @@ import {
   createDeal,
   associateDealWithContact,
   createContactNote,
-} from "@/lib/hubspot";
+} from "@/lib/espocrm";
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";

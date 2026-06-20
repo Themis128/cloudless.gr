@@ -9,7 +9,7 @@ import {
   createDeal,
   associateDealWithContact,
   createContactNote,
-} from "@/lib/hubspot";
+} from "@/lib/espocrm";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
 

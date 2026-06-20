@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isHubSpotConfigured, createTicket, searchContacts } from "@/lib/hubspot";
+import { isHubSpotConfigured, createTicket, searchContacts } from "@/lib/espocrm";
 import { isValidEmail } from "@/lib/validation";
 import { mapIntegrationError } from "@/lib/api-errors";
 import { slackTicketNotify } from "@/lib/slack-notify";

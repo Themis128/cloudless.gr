@@ -18,7 +18,7 @@ import {
 import { checkSlackRateLimit } from "@/lib/slack-rate-limit";
 import { getNewsletterSlackConfigAsync } from "@/lib/newsletter-slack-config";
 import { listEditorialPosts, type NotionBlogDraft } from "@/lib/notion-blog-admin";
-import { listNewsletterSubscribers as listSubscribers } from "@/lib/hubspot";
+import { listNewsletterSubscribers as listSubscribers } from "@/lib/espocrm";
 
 // ---------------------------------------------------------------------------
 // Event deduplication (Slack retries up to 3x within ~5min on no-200)

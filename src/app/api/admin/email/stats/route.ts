@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { isHubSpotConfigured, listNewsletterSubscribers } from "@/lib/hubspot";
+import { isHubSpotConfigured, listNewsletterSubscribers } from "@/lib/espocrm";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);

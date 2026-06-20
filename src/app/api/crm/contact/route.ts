@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isHubSpotConfigured, upsertContact } from "@/lib/hubspot";
+import { isHubSpotConfigured, upsertContact } from "@/lib/espocrm";
 import { isValidEmail } from "@/lib/validation";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
