@@ -7,6 +7,7 @@ import { getServiceSchema, getBreadcrumbSchema, getFAQSchema } from "@/lib/struc
 import { translate, getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import StatCounter from "@/components/StatCounter";
+import DeferredRender from "@/components/DeferredRender";
 
 // All service content comes from the static `services-data` module — there is
 // no per-request data on this page. Removing `force-dynamic` and the explicit
@@ -382,29 +383,55 @@ export default async function ServicesPage() {
                     </div>
                   </div>
 
-                  {/* Visual column — terminal + stats grid */}
+                  {/* Visual column — terminal + stats grid.
+                      Both inner blocks are decorative below-the-fold widgets:
+                      TerminalBlock is an ASCII-line animation, StatCounter is
+                      an IntersectionObserver-driven count-up. Deferring their
+                      hydration past LCP is Lighthouse plan Win #4. The
+                      DeferredRender skeleton roughly matches the eventual
+                      height so CLS stays minimal. */}
                   <div className={`space-y-4 ${isReversed ? "lg:order-1" : ""}`}>
-                    <TerminalBlock
-                      lines={service.terminal}
-                      title={`cloudless-cli — ${service.tag.toLowerCase()}`}
-                    />
-
-                    <div className="grid grid-cols-2 gap-3">
-                      {service.stats.map((stat) => (
+                    <DeferredRender
+                      fallback={
                         <div
-                          key={stat.label}
-                          className={`rounded-lg border p-4 ${colors.stat} text-center`}
-                        >
-                          <StatCounter
-                            value={stat.value}
-                            label={stat.label}
-                            valueClassName={`font-mono text-xl font-bold ${colors.statValue}`}
-                            showLabel={false}
-                          />
-                          <div className="mt-1 font-mono text-xs text-slate-500">{stat.label}</div>
-                        </div>
-                      ))}
-                    </div>
+                          aria-hidden="true"
+                          className="bg-void-light/30 h-48 w-full rounded-lg"
+                          data-deferred="terminal"
+                        />
+                      }
+                    >
+                      <TerminalBlock
+                        lines={service.terminal}
+                        title={`cloudless-cli — ${service.tag.toLowerCase()}`}
+                      />
+                    </DeferredRender>
+
+                    <DeferredRender
+                      fallback={
+                        <div
+                          aria-hidden="true"
+                          className="bg-void-light/30 grid h-24 w-full grid-cols-2 gap-3 rounded"
+                          data-deferred="stats"
+                        />
+                      }
+                    >
+                      <div className="grid grid-cols-2 gap-3">
+                        {service.stats.map((stat) => (
+                          <div
+                            key={stat.label}
+                            className={`rounded-lg border p-4 ${colors.stat} text-center`}
+                          >
+                            <StatCounter
+                              value={stat.value}
+                              label={stat.label}
+                              valueClassName={`font-mono text-xl font-bold ${colors.statValue}`}
+                              showLabel={false}
+                            />
+                            <div className="mt-1 font-mono text-xs text-slate-500">{stat.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </DeferredRender>
                   </div>
                 </div>
               </ScrollReveal>
@@ -634,9 +661,20 @@ export default async function ServicesPage() {
               </Link>
             </div>
 
-            {/* Desktop: terminal */}
+            {/* Desktop: terminal — deferred past LCP (decorative below-the-fold).
+                See DeferredRender note above and Lighthouse plan Win #4. */}
             <div className="hidden lg:block">
-              <TerminalBlock lines={bundleTerminal} title="cloudless-cli — bundle" />
+              <DeferredRender
+                fallback={
+                  <div
+                    aria-hidden="true"
+                    className="bg-void-light/30 h-64 w-full rounded-lg"
+                    data-deferred="bundle-terminal"
+                  />
+                }
+              >
+                <TerminalBlock lines={bundleTerminal} title="cloudless-cli — bundle" />
+              </DeferredRender>
             </div>
 
             {/* Mobile: 6-service badge grid */}
