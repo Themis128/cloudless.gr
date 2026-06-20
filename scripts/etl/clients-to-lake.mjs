@@ -13,7 +13,9 @@ import { CognitoIdentityProviderClient, ListUsersCommand } from "@aws-sdk/client
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetReader, ParquetSchema } from "@dsnp/parquetjs";
-import { readFileSync, unlinkSync, writeFileSync } from "fs";
+import { readFileSync, unlinkSync, writeFileSync, mkdtempSync, rmSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
@@ -84,7 +86,8 @@ async function loadScores(key) {
   try {
     const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
     const buf = Buffer.from(await res.Body.transformToByteArray());
-    const tmp = `/tmp/_scores_${crypto.randomUUID()}.parquet`;
+    const dir = mkdtempSync(join(tmpdir(), "scores-"));
+    const tmp = join(dir, "data.parquet");
     writeFileSync(tmp, buf);
     const reader = await ParquetReader.openFile(tmp);
     const cursor = reader.getCursor();
@@ -92,7 +95,7 @@ async function loadScores(key) {
     let row;
     while ((row = await cursor.next())) rows.push(row);
     await reader.close();
-    unlinkSync(tmp);
+    rmSync(dir, { recursive: true, force: true });
     return rows;
   } catch { return []; }
 }
