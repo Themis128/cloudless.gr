@@ -50,16 +50,7 @@ import {
   buildCacheFlushBlocks,
 } from "@/lib/slack-commands-extra";
 
-/**
- * Slack user-ID allowlist for slash-command-driven workflow dispatch.
- * Mirrors SLACK_OPS_USERS in interactions/route.ts. Empty/unset = anyone
- * in the workspace can use /cloudless-draft. Set to a single user ID to
- * lock it down to one operator.
- */
-const SLACK_OPS_USERS: string[] = (process.env.SLACK_OPS_USERS ?? "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+import { getSlackOpsUsers } from "@/lib/slack-ops-users";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -83,8 +74,9 @@ export async function POST(request: Request): Promise<Response> {
   const verified = await verifySlackRequest(request);
   if (!verified.ok) return unauthorizedSlack(verified.reason, request);
 
-  const rateLimitKey = request.headers.get("x-forwarded-for") ?? "unknown";
-  if (!checkSlackRateLimit(rateLimitKey)) {
+  // Pre-parse IP-based rate limit — coarse guard against scanner storms.
+  const ipKey = `ip:${request.headers.get("x-forwarded-for") ?? "unknown"}`;
+  if (!checkSlackRateLimit(ipKey)) {
     return Response.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -98,6 +90,12 @@ export async function POST(request: Request): Promise<Response> {
     response_url: params.get("response_url") ?? "",
     trigger_id: params.get("trigger_id") ?? "",
   };
+
+  // Post-parse per-user rate limit — fairness on top of IP aggregation, since
+  // every Slack request hits us from the same egress pool.
+  if (!checkSlackRateLimit(`user:${payload.user_id || "anon"}`)) {
+    return Response.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   switch (payload.command) {
     case "/cloudless-status":
@@ -1112,7 +1110,8 @@ async function handleDraftRerun(payload: SlashCommandPayload): Promise<Response>
     });
   }
 
-  if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(payload.user_id)) {
+  const opsUsers = await getSlackOpsUsers();
+  if (opsUsers.length > 0 && !opsUsers.includes(payload.user_id)) {
     return slackResponse({
       response_type: "ephemeral",
       text:
@@ -1227,7 +1226,8 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
       });
     }
 
-    if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(payload.user_id)) {
+    const unpubOpsUsers = await getSlackOpsUsers();
+    if (unpubOpsUsers.length > 0 && !unpubOpsUsers.includes(payload.user_id)) {
       return slackResponse({
         response_type: "ephemeral",
         text: ":no_entry: You're not on the ops allowlist. Ask the admin to add your user ID to `SLACK_OPS_USERS`.",
@@ -1283,7 +1283,8 @@ async function handleNewsletter(payload: SlashCommandPayload): Promise<Response>
       });
     }
 
-    if (SLACK_OPS_USERS.length > 0 && !SLACK_OPS_USERS.includes(payload.user_id)) {
+    const sendOpsUsers = await getSlackOpsUsers();
+    if (sendOpsUsers.length > 0 && !sendOpsUsers.includes(payload.user_id)) {
       return slackResponse({
         response_type: "ephemeral",
         text:
