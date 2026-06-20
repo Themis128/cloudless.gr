@@ -25,7 +25,7 @@ import {
   type NotionBlogDraft,
 } from "@/lib/notion-blog-admin";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
-import { listNewsletterSubscribers as listSubscribers } from "@/lib/hubspot";
+import { listNewsletterSubscribers as listSubscribers } from "@/lib/espocrm";
 import { getNewsletterSlackConfigAsync } from "@/lib/newsletter-slack-config";
 
 interface SlashPayload {

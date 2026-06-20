@@ -5,7 +5,7 @@ import { sendOrderConfirmation, sendPaymentFailureNotice, notifyTeam } from "@/l
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
-import { upsertContact, createDeal, associateDealWithContact } from "@/lib/hubspot";
+import { upsertContact, createDeal, associateDealWithContact } from "@/lib/espocrm";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
 import {

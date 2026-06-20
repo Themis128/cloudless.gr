@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { isHubSpotConfigured } from "@/lib/hubspot";
+import { isHubSpotConfigured } from "@/lib/espocrm";
 import { getConfig } from "@/lib/ssm-config";
 
 const HUBSPOT_API = "https://api.hubapi.com";

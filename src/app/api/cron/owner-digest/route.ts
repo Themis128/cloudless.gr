@@ -4,7 +4,7 @@ import { SlackClient } from "@/lib/slack-notify";
 import { readPortals } from "@/lib/client-portals";
 import { scoreClientHealth } from "@/lib/client-health";
 import { getCalendarItems } from "@/lib/content-calendar";
-import { listContacts } from "@/lib/hubspot";
+import { listContacts } from "@/lib/espocrm";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 /**

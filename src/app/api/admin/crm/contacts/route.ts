@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
 import { isConfiguredAsync } from "@/lib/integrations";
-import { listContacts } from "@/lib/hubspot";
+import { listContacts } from "@/lib/espocrm";
 import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function GET(request: NextRequest) {

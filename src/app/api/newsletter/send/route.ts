@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { sendEmail } from "@/lib/email";
-import { listNewsletterSubscribers } from "@/lib/hubspot";
+import { listNewsletterSubscribers } from "@/lib/espocrm";
 import { getConfig } from "@/lib/ssm-config";
 
 /** Constant-time secret compare — avoids leaking the token via response timing. */

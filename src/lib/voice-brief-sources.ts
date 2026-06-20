@@ -7,7 +7,7 @@
  * the agent loop and can be unit-tested independently.
  */
 import { getSeoSnapshot } from "@/lib/gsc";
-import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/hubspot";
+import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/espocrm";
 import { getStripe } from "@/lib/stripe";
 
 export interface SeoMetrics {

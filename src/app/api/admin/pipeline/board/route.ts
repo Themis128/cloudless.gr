@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { mapIntegrationError } from "@/lib/api-errors";
-import { isHubSpotConfigured, getDealsByStage, getPipelines } from "@/lib/hubspot";
+import { isHubSpotConfigured, getDealsByStage, getPipelines } from "@/lib/espocrm";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
