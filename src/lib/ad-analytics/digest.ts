@@ -122,9 +122,11 @@ function truncate(value: string, max: number): string {
 }
 
 function buildOrderLink(orderId: string, email?: string): string {
-  const portalId = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID;
-  if (portalId && email) {
-    const url = `https://app.hubspot.com/contacts/${portalId}/objects/0-1/views/all/list?query=${encodeURIComponent(email)}`;
+  // Deep-link to EspoCRM Contact view when we know the customer's email.
+  // EspoCRM's web search uses a path-based filter, not a query string.
+  const base = process.env.NEXT_PUBLIC_ESPOCRM_BASE_URL || "https://espocrm.cloudless.gr";
+  if (email) {
+    const url = `${base.replace(/\/$/, "")}/#Contact/list/&search=${encodeURIComponent(email)}`;
     return `<${url}|\`${orderId}\`>`;
   }
   return `\`${orderId}\``;

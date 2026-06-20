@@ -14,8 +14,6 @@ export interface IntegrationConfig {
   SLACK_WEBHOOK_URL?: string;
   SLACK_BOT_TOKEN?: string;
   SLACK_SIGNING_SECRET?: string;
-  HUBSPOT_API_KEY?: string;
-  HUBSPOT_CLIENT_SECRET?: string;
   NOTION_API_KEY?: string;
   NOTION_BLOG_DB_ID?: string;
   NOTION_SUBMISSIONS_DB_ID?: string;
@@ -85,8 +83,6 @@ export function getIntegrations(): IntegrationConfig {
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET,
-    HUBSPOT_API_KEY: process.env.HUBSPOT_API_KEY,
-    HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET,
     NOTION_API_KEY: process.env.NOTION_API_KEY,
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
     NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID,
@@ -168,7 +164,6 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
   // If all critical keys are already present in env, skip SSM round-trip
   const criticalKeys: (keyof IntegrationConfig)[] = [
     "NOTION_API_KEY",
-    "HUBSPOT_API_KEY",
     "STRIPE_SECRET_KEY",
     "SENTRY_AUTH_TOKEN",
   ];
@@ -187,8 +182,6 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       SLACK_WEBHOOK_URL: envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
       SLACK_BOT_TOKEN: envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
       SLACK_SIGNING_SECRET: envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
-      HUBSPOT_API_KEY: envCfg.HUBSPOT_API_KEY || ssm.HUBSPOT_API_KEY || undefined,
-      HUBSPOT_CLIENT_SECRET: envCfg.HUBSPOT_CLIENT_SECRET || ssm.HUBSPOT_CLIENT_SECRET || undefined,
       NOTION_API_KEY: envCfg.NOTION_API_KEY || ssm.NOTION_API_KEY || undefined,
       NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
       NOTION_SUBMISSIONS_DB_ID:

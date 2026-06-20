@@ -4,7 +4,6 @@ import Script from "next/script";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { themeForRoute } from "@/components/ThemeProvider";
-import { HubSpotScript } from "@/components/HubSpotScript";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import ClarityAnalytics from "@/components/ClarityAnalytics";
@@ -126,7 +125,6 @@ export default async function RootLayout({
           Skip to content
         </a>
         <ChunkReloadGuard />
-        <HubSpotScript nonce={nonce} />
         {GA_ID ? (
           <>
             {/* Consent Mode v2 — default to denied before user responds to banner.
