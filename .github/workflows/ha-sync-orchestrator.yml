@@ -13,6 +13,7 @@ on:
 permissions:
   actions: write
   contents: read
+  id-token: write    # for OIDC → AWS, used by the ECR-presence escape hatch
 
 concurrency:
   group: ha-sync-${{ github.event.workflow_run.id }}
@@ -35,8 +36,37 @@ jobs:
           echo "branch=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
           echo "url=${{ github.event.workflow_run.html_url }}" >> "$GITHUB_OUTPUT"
 
+      # Escape hatch — check ECR for the image first.
+      # build-pi-image.yml and deploy-pi.yml race on the same SHA tag
+      # (immutable-tag) and both push successfully but the "loser" exits
+      # gracefully and shows as `cancelled` to GitHub Actions. The wait
+      # step downstream would then thrash on a re-dispatch loop. If the
+      # image IS in ECR for this SHA, the build effectively succeeded
+      # regardless of what the GitHub run shows — short-circuit here.
+      - name: configure AWS for ECR check
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: short-circuit if image already in ECR
+        id: ecr
+        run: |
+          SHA='${{ steps.meta.outputs.sha }}'
+          if aws ecr describe-images \
+              --repository-name cloudless-pi-app \
+              --image-ids imageTag="${SHA}" \
+              --region us-east-1 >/dev/null 2>&1; then
+            echo "image_in_ecr=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Image cloudless-pi-app:${SHA} already in ECR — skipping pi-build wait" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "image_in_ecr=false" >> "$GITHUB_OUTPUT"
+            echo "Image cloudless-pi-app:${SHA} not yet in ECR — entering normal wait flow" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: inspect existing pi build runs for deploy SHA
         id: check
+        if: steps.ecr.outputs.image_in_ecr != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -77,7 +107,7 @@ jobs:
 
       - name: dispatch pi image build for deploy SHA
         id: dispatch
-        if: steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
+        if: steps.ecr.outputs.image_in_ecr != 'true' && steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -129,7 +159,7 @@ jobs:
             }
 
       - name: wait for pi build completion
-        if: steps.check.outputs.exists != 'true'
+        if: steps.ecr.outputs.image_in_ecr != 'true' && steps.check.outputs.exists != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -241,6 +271,10 @@ jobs:
         # success) always hits the fully-rolled-out image, not mid-rollout pods.
         # If the Pi runner is offline (run stuck in queued), exit gracefully —
         # AWS Lambda is the primary; Pi is standby.
+        # When the image was already in ECR (immutable-tag race), deploy-pi
+        # has its own race-survival path (see CLAUDE.md) and will have rolled
+        # out separately — skip this wait.
+        if: steps.ecr.outputs.image_in_ecr != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
