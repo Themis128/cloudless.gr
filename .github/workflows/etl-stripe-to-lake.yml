@@ -32,7 +32,10 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install stripe@18 @dsnp/parquetjs
+        # `npm ci` uses scripts/etl/package-lock.json so the ETL container
+        # gets the exact same deps every run. Previous `npm install stripe@18`
+        # ignored the lockfile and pinned 4 majors behind main app's stripe.
+        run: npm ci
         working-directory: scripts/etl
 
       - name: Run Stripe ETL
