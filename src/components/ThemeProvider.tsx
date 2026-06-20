@@ -70,6 +70,6 @@ export function themeForRoute(pathname: string): Theme {
  * Phase 3 once the route-aware logic actually has light routes to switch
  * between.
  */
-export function dataThemeAttr(pathname: string): { "data-theme": Theme } {
+function dataThemeAttr(pathname: string): { "data-theme": Theme } {
   return { "data-theme": themeForRoute(pathname) };
 }
