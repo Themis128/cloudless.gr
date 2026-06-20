@@ -1,4 +1,3 @@
-import { getIntegrationsAsync } from "@/lib/integrations";
 import {
   notionListReports,
   notionGetReport,
@@ -33,9 +32,14 @@ export interface GenerateReportInput {
 // In-memory fallback store (used when Notion is not configured)
 let store: Report[] = [];
 
+// NOTION_REPORTS_DB_ID was decommissioned 2026-06-20 (see
+// project_notion_decom_plan). The notionListReports/notionGetReport helpers
+// are now no-op stubs that always return null, so notionEnabled() never
+// short-circuits to the Notion path — every read/write hits the in-memory
+// store until the Athena replacement lands. Keeping the function so the
+// later wire-up only needs to flip this return value.
 async function notionEnabled(): Promise<boolean> {
-  const cfg = await getIntegrationsAsync();
-  return !!(cfg.NOTION_API_KEY && cfg.NOTION_REPORTS_DB_ID);
+  return false;
 }
 
 export async function listReports(): Promise<Report[]> {
