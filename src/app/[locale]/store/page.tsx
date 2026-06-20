@@ -18,10 +18,14 @@ export async function generateMetadata({
   const { locale } = await params;
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
-  const meta = (messages as Record<string, unknown>).meta as Record<string, Record<string, string>> | undefined;
+  const meta = (messages as Record<string, unknown>).meta as
+    | Record<string, Record<string, string>>
+    | undefined;
   return {
     title: meta?.store?.title ?? "Store",
-    description: meta?.store?.description ?? "Cloud migration playbooks, serverless courses, analytics templates, dev merch, and expert service packages from Cloudless.",
+    description:
+      meta?.store?.description ??
+      "Cloud migration playbooks, serverless courses, analytics templates, dev merch, and expert service packages from Cloudless.",
   };
 }
 

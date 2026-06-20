@@ -35,7 +35,7 @@ const FLAG_BY_COUNTRY: Record<string, string> = {
  */
 export function renderConversionBlocks(
   event: AdConversionEvent,
-  capiResults?: Array<{ platform: string; accepted: boolean; status: number; message?: string }>,
+  capiResults?: Array<{ platform: string; accepted: boolean; status: number; message?: string }>
 ): NotificationBlock[] {
   const tier = event.tier ?? "—";
   const order = event.orderId ? truncate(event.orderId, 30) : "—";
@@ -83,13 +83,15 @@ function formatCustomer(customer?: { name?: string; email?: string; phone?: stri
 }
 
 function formatCapiStatus(
-  results?: Array<{ platform: string; accepted: boolean; status: number; message?: string }>,
+  results?: Array<{ platform: string; accepted: boolean; status: number; message?: string }>
 ): string {
   if (!results || results.length === 0) return "*CAPI:* ⏭️ skipped (no platform wired)";
   return results
     .map((r) => {
       const icon = r.accepted ? "✅" : "❌";
-      const detail = r.accepted ? `${r.status}` : `${r.status}${r.message ? ` — ${truncate(r.message, 60)}` : ""}`;
+      const detail = r.accepted
+        ? `${r.status}`
+        : `${r.status}${r.message ? ` — ${truncate(r.message, 60)}` : ""}`;
       return `*CAPI ${r.platform}:* ${icon} ${detail}`;
     })
     .join("\n");

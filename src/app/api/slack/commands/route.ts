@@ -130,27 +130,47 @@ export async function POST(request: Request): Promise<Response> {
 
     case "/cloudless-seo":
       void runAsyncCommand(payload, buildSeoBlocks);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching SEO data..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Fetching SEO data...",
+      });
 
     case "/cloudless-leads":
       void runAsyncCommand(payload, buildLeadsBlocks);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching leads..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Fetching leads...",
+      });
 
     case "/cloudless-errors":
       void runAsyncCommand(payload, buildErrorsBlocks);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching errors..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Fetching errors...",
+      });
 
     case "/cloudless-uptime":
       void runAsyncCommand(payload, buildUptimeBlocks);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Pinging endpoints..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Pinging endpoints...",
+      });
 
     case "/cloudless-subscribers":
       void runAsyncCommand(payload, buildSubscribersBlocks);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching subscribers..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Fetching subscribers...",
+      });
 
     case "/cloudless-cache":
-      void runAsyncCommand(payload, (userId) => buildCacheFlushBlocks(userId, payload.text.trim() || undefined));
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Flushing cache..." });
+      void runAsyncCommand(payload, (userId) =>
+        buildCacheFlushBlocks(userId, payload.text.trim() || undefined)
+      );
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Flushing cache...",
+      });
 
     default:
       return slackResponse({
@@ -923,7 +943,9 @@ function handleAds(payload: SlashCommandPayload): Response {
   const sub = (argv[0] ?? "help").toLowerCase();
 
   // Use the campaign ID from the wired campaign data
-  const campaign = getLiveCampaigns().find((c) => c.adPlatforms?.some((p) => p.platform === "linkedin"));
+  const campaign = getLiveCampaigns().find((c) =>
+    c.adPlatforms?.some((p) => p.platform === "linkedin")
+  );
   const campaignId = campaign?.adPlatforms?.find((p) => p.platform === "linkedin")?.campaignIds[0];
 
   if (!campaignId && sub !== "help") {
@@ -936,23 +958,38 @@ function handleAds(payload: SlashCommandPayload): Response {
   switch (sub) {
     case "status":
       void runAdsStatus(campaignId!, payload.response_url, payload.user_id);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Fetching campaign status..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Fetching campaign status...",
+      });
 
     case "pause":
       void runAdsPause(campaignId!, payload.response_url, payload.user_id);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Pausing campaign..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Pausing campaign...",
+      });
 
     case "resume":
       void runAdsResume(campaignId!, payload.response_url, payload.user_id);
-      return slackResponse({ response_type: "ephemeral", text: ":hourglass_flowing_sand: Resuming campaign..." });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: ":hourglass_flowing_sand: Resuming campaign...",
+      });
 
     case "budget": {
       const amount = parseFloat(argv[1] ?? "");
       if (!amount || amount <= 0) {
-        return slackResponse({ response_type: "ephemeral", text: ":warning: Usage: `/cloudless-ads budget 20` (daily EUR amount)" });
+        return slackResponse({
+          response_type: "ephemeral",
+          text: ":warning: Usage: `/cloudless-ads budget 20` (daily EUR amount)",
+        });
       }
       void runAdsBudget(campaignId!, amount, payload.response_url, payload.user_id);
-      return slackResponse({ response_type: "ephemeral", text: `:hourglass_flowing_sand: Setting daily budget to €${amount}...` });
+      return slackResponse({
+        response_type: "ephemeral",
+        text: `:hourglass_flowing_sand: Setting daily budget to €${amount}...`,
+      });
     }
 
     default:
@@ -979,9 +1016,15 @@ function handleAds(payload: SlashCommandPayload): Response {
   }
 }
 
-async function runAdsStatus(campaignId: string, responseUrl: string, userId: string): Promise<void> {
+async function runAdsStatus(
+  campaignId: string,
+  responseUrl: string,
+  userId: string
+): Promise<void> {
   try {
-    const campaign = getLiveCampaigns().find((c) => c.adPlatforms?.some((p) => p.campaignIds.includes(campaignId)));
+    const campaign = getLiveCampaigns().find((c) =>
+      c.adPlatforms?.some((p) => p.campaignIds.includes(campaignId))
+    );
     const today = new Date().toISOString().split("T")[0];
     const startDate = campaign?.startsAt ?? today;
 
@@ -991,18 +1034,43 @@ async function runAdsStatus(campaignId: string, responseUrl: string, userId: str
       getLinkedInInsights(startDate, today),
     ]);
     if (!info.ok) {
-      await postToResponseUrl(responseUrl, { response_type: "ephemeral", replace_original: true, text: `:warning: ${info.error}` });
+      await postToResponseUrl(responseUrl, {
+        response_type: "ephemeral",
+        replace_original: true,
+        text: `:warning: ${info.error}`,
+      });
       return;
     }
-    const statusIcon = info.status === "ACTIVE" ? ":large_green_circle:" : info.status === "PAUSED" ? ":double_vertical_bar:" : ":white_circle:";
-    const todayCtr = todayInsights.impressions > 0 ? ((todayInsights.clicks / todayInsights.impressions) * 100).toFixed(2) + "%" : "—";
-    const lifetimeCtr = lifetimeInsights.impressions > 0 ? ((lifetimeInsights.clicks / lifetimeInsights.impressions) * 100).toFixed(2) + "%" : "—";
-    const lifetimeCpc = lifetimeInsights.clicks > 0 ? `€${(Number(lifetimeInsights.costInLocalCurrency) / lifetimeInsights.clicks).toFixed(2)}` : "—";
+    const statusIcon =
+      info.status === "ACTIVE"
+        ? ":large_green_circle:"
+        : info.status === "PAUSED"
+          ? ":double_vertical_bar:"
+          : ":white_circle:";
+    const todayCtr =
+      todayInsights.impressions > 0
+        ? ((todayInsights.clicks / todayInsights.impressions) * 100).toFixed(2) + "%"
+        : "—";
+    const lifetimeCtr =
+      lifetimeInsights.impressions > 0
+        ? ((lifetimeInsights.clicks / lifetimeInsights.impressions) * 100).toFixed(2) + "%"
+        : "—";
+    const lifetimeCpc =
+      lifetimeInsights.clicks > 0
+        ? `€${(Number(lifetimeInsights.costInLocalCurrency) / lifetimeInsights.clicks).toFixed(2)}`
+        : "—";
     await postToResponseUrl(responseUrl, {
       response_type: "ephemeral",
       replace_original: true,
       blocks: [
-        { type: "header", text: { type: "plain_text", text: ":chart_with_upwards_trend: LinkedIn Campaign Status", emoji: true } },
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: ":chart_with_upwards_trend: LinkedIn Campaign Status",
+            emoji: true,
+          },
+        },
         {
           type: "section",
           fields: [
@@ -1017,20 +1085,32 @@ async function runAdsStatus(campaignId: string, responseUrl: string, userId: str
           type: "section",
           text: { type: "mrkdwn", text: "*Today*" },
           fields: [
-            { type: "mrkdwn", text: `*Impressions*\n${todayInsights.impressions.toLocaleString()}` },
+            {
+              type: "mrkdwn",
+              text: `*Impressions*\n${todayInsights.impressions.toLocaleString()}`,
+            },
             { type: "mrkdwn", text: `*Clicks*\n${todayInsights.clicks}` },
             { type: "mrkdwn", text: `*CTR*\n${todayCtr}` },
-            { type: "mrkdwn", text: `*Spend*\n€${Number(todayInsights.costInLocalCurrency).toFixed(2)}` },
+            {
+              type: "mrkdwn",
+              text: `*Spend*\n€${Number(todayInsights.costInLocalCurrency).toFixed(2)}`,
+            },
           ],
         },
         {
           type: "section",
           text: { type: "mrkdwn", text: `*Lifetime* (since ${startDate})` },
           fields: [
-            { type: "mrkdwn", text: `*Impressions*\n${lifetimeInsights.impressions.toLocaleString()}` },
+            {
+              type: "mrkdwn",
+              text: `*Impressions*\n${lifetimeInsights.impressions.toLocaleString()}`,
+            },
             { type: "mrkdwn", text: `*Clicks*\n${lifetimeInsights.clicks}` },
             { type: "mrkdwn", text: `*CTR*\n${lifetimeCtr}` },
-            { type: "mrkdwn", text: `*Spend*\n€${Number(lifetimeInsights.costInLocalCurrency).toFixed(2)}` },
+            {
+              type: "mrkdwn",
+              text: `*Spend*\n€${Number(lifetimeInsights.costInLocalCurrency).toFixed(2)}`,
+            },
           ],
         },
         {
@@ -1044,7 +1124,11 @@ async function runAdsStatus(campaignId: string, responseUrl: string, userId: str
       ],
     });
   } catch (err) {
-    await postToResponseUrl(responseUrl, { response_type: "ephemeral", replace_original: true, text: `:warning: ${(err as Error).message}` });
+    await postToResponseUrl(responseUrl, {
+      response_type: "ephemeral",
+      replace_original: true,
+      text: `:warning: ${(err as Error).message}`,
+    });
   }
 }
 
@@ -1059,7 +1143,11 @@ async function runAdsPause(campaignId: string, responseUrl: string, userId: stri
   });
 }
 
-async function runAdsResume(campaignId: string, responseUrl: string, userId: string): Promise<void> {
+async function runAdsResume(
+  campaignId: string,
+  responseUrl: string,
+  userId: string
+): Promise<void> {
   const result = await resumeLinkedInCampaign(campaignId);
   await postToResponseUrl(responseUrl, {
     response_type: "in_channel",
@@ -1070,7 +1158,12 @@ async function runAdsResume(campaignId: string, responseUrl: string, userId: str
   });
 }
 
-async function runAdsBudget(campaignId: string, amount: number, responseUrl: string, userId: string): Promise<void> {
+async function runAdsBudget(
+  campaignId: string,
+  amount: number,
+  responseUrl: string,
+  userId: string
+): Promise<void> {
   const result = await setLinkedInCampaignBudget(campaignId, amount);
   await postToResponseUrl(responseUrl, {
     response_type: "in_channel",

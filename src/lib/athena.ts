@@ -67,9 +67,7 @@ export async function runAthenaQuery(
 
   for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
     await sleep(POLL_INTERVAL_MS);
-    const state = await client.send(
-      new GetQueryExecutionCommand({ QueryExecutionId: id })
-    );
+    const state = await client.send(new GetQueryExecutionCommand({ QueryExecutionId: id }));
     const s = state.QueryExecution?.Status?.State;
     if (s === "SUCCEEDED") break;
     if (s === "FAILED" || s === "CANCELLED") {
@@ -77,7 +75,9 @@ export async function runAthenaQuery(
       throw new Error(`Athena query ${s}: ${reason}`);
     }
     if (i === MAX_POLL_ATTEMPTS - 1) {
-      throw new Error(`Athena query timeout after ${(MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) / 1000}s`);
+      throw new Error(
+        `Athena query timeout after ${(MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) / 1000}s`
+      );
     }
   }
 
