@@ -41,11 +41,19 @@
 #include <HTTPClient.h>
 
 // ── User configuration ────────────────────────────────────────────────────────
+// Secrets (wifi password, MQTT password) live in a sibling secrets.h file
+// that is .gitignored. Copy secrets.h.template → secrets.h, fill in, then
+// build. The header is required — `#include "secrets.h"` is mandatory.
+#include "secrets.h"
+
 #define WIFI_SSID           "COSMOTE1"
-#define WIFI_PASS           "YOUR_WIFI_PASSWORD"   // replace before flash
+// WIFI_PASS comes from secrets.h
 
 #define MQTT_HOST           "192.168.1.128"
 #define MQTT_PORT           31883
+// Mosquitto broker is auth-only since 2026-06-21 (Phase 3 cutover).
+// MQTT_USERNAME / MQTT_PASSWORD live in secrets.h.
+// To match the cluster: tbaltzakis / <unified admin password>.
 #define ALERT_API_HOST      "192.168.1.128"
 #define ALERT_API_PORT      30800
 
@@ -304,6 +312,11 @@ void setup() {
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onMessage(onMqttMessage);
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
+  // Mosquitto is auth-only since the Phase 3 cutover on 2026-06-21 —
+  // setCredentials() must be called or the broker returns CONNACK 5.
+  // Per docs/2.-API-reference.md in marvinroger/async-mqtt-client, this
+  // sets the username/password used during MQTT CONNECT. Default = none.
+  mqttClient.setCredentials(MQTT_USERNAME, MQTT_PASSWORD);
   mqttClient.setClientId("homelab-alert-led");
   // LWT: broker publishes "offline" to homelab/esp32/lwt on ungraceful disconnect
   mqttClient.setWill("homelab/esp32/lwt", 1, true, "offline");
