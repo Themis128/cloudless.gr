@@ -1,0 +1,92 @@
+{
+  "name": "Newsletter nurture (cloudless.gr starter)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "newsletter-nurture",
+        "options": {}
+      },
+      "name": "Webhook (newsletter-nurture)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "newsletter-nurture"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "email",  "value": "={{ $json.payload.email || '' }}" },
+            { "name": "source", "value": "={{ $json.payload.source || 'signup_form' }}" }
+          ]
+        }
+      },
+      "name": "Extract email + source",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.ESPOCRM_BASE_URL || 'https://espocrm.cloudless.gr' }}/api/v1/Contact/action/massUpdate",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Api-Key", "value": "={{ $env.ESPOCRM_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ where: [{ type: 'equals', attribute: 'emailAddress', value: $json.email }], attributes: { teamsIds: ['newsletter'], description: `newsletter_signup_${$json.source}` } }) }}",
+        "options": { "timeout": 8000 }
+      },
+      "name": "EspoCRM tag contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "days"
+      },
+      "name": "Wait 2 days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL || 'https://cloudless.gr' }}/api/newsletter/send",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-newsletter-secret", "value": "={{ $env.NEWSLETTER_SEND_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ singleRecipient: $('Extract email + source').item.json.email, subject: 'Welcome to Cloudless — the deeper dive', html: '<h1>Welcome!</h1><p>We sent you the highlights two days ago. Here are the deeper dives.</p>', text: 'Welcome! Here are the deeper dives.' }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "name": "Send day-2 nurture email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook (newsletter-nurture)": { "main": [[{ "node": "Extract email + source", "type": "main", "index": 0 }]] },
+    "Extract email + source": { "main": [[{ "node": "EspoCRM tag contact", "type": "main", "index": 0 }]] },
+    "EspoCRM tag contact": { "main": [[{ "node": "Wait 2 days", "type": "main", "index": 0 }]] },
+    "Wait 2 days": { "main": [[{ "node": "Send day-2 nurture email", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "cloudless" }]
+}

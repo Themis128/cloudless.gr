@@ -133,6 +133,57 @@ export async function listRecentExecutions(limit = 100): Promise<N8nExecution[]>
   }
 }
 
+/**
+ * Trigger a workflow by ID via its webhook URL.
+ *
+ * Two paths the operator's n8n setup typically exposes:
+ *   1. Webhook node attached to the workflow → URL is
+ *      `<base>/webhook/<workflow-or-node-path>`. We try this first as it
+ *      mirrors the documented public webhook pattern.
+ *   2. Public-API execute → `<base>/api/v1/workflows/<id>/execute`. Requires
+ *      the workflow to be active. Used as fallback when the webhook URL
+ *      isn't reachable.
+ *
+ * The webhook flow is the more reliable pattern (active + inactive workflows
+ * work, no auth complication), so we attempt it first then fall back.
+ */
+export async function triggerWorkflowByWebhookPath(
+  workflowOrWebhookPath: string,
+  payload: unknown
+): Promise<{ webhook?: unknown; execution?: unknown }> {
+  const cfg = await getN8nConfig();
+
+  // Path 1 — webhook URL. n8n exposes both `/webhook/<id>` (production) and
+  // `/webhook-test/<id>` (during workflow design); production is the safe
+  // default for the trigger receiver.
+  const webhookUrl = `${cfg.baseUrl}/webhook/${encodeURIComponent(workflowOrWebhookPath)}`;
+  try {
+    const r = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (r.ok) return { webhook: await r.json().catch(() => ({})) };
+    // 404 here means the workflow doesn't have a Webhook node at this path;
+    // fall through to Path 2 instead of treating as failure.
+    if (r.status !== 404) {
+      throw new N8nApiError(r.status, await r.text().catch(() => ""));
+    }
+  } catch (err) {
+    // Network / timeout — let Path 2 try (so a broker hiccup doesn't break
+    // the whole flow if execute happens to work).
+    if (err instanceof N8nApiError) throw err;
+  }
+
+  // Path 2 — public-API execute. Requires the workflow to be `active: true`.
+  const exec = await callThrowing<{ data: unknown }>(
+    `/workflows/${encodeURIComponent(workflowOrWebhookPath)}/execute`,
+    { method: "POST", body: JSON.stringify({ workflowData: payload }) }
+  );
+  return { execution: exec };
+}
+
 export async function getN8nSummary(): Promise<{
   configured: boolean;
   healthy: boolean;
