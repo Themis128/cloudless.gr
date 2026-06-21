@@ -81,13 +81,21 @@ for ns in "${NAMESPACES[@]}"; do
 
   echo "  ✓ $ns/smtp-credentials applied"
 
-  # Rolling-restart any Deployment that references the Secret. The
-  # Deployment manifests in this PR all carry env vars sourcing from this
-  # Secret with optional:true, so a restart is the way to pick up new values.
+  # IMPORTANT — DELETE the pod, don't `rollout restart`.
+  # secretKeyRef.optional=true env vars are resolved ONCE at pod-start; if
+  # the Secret didn't exist when kubelet pulled them, kubelet silently
+  # OMITS the env var. `kubectl rollout restart` is often a no-op (no
+  # spec change), so the new ReplicaSet's pod inherits the same missing
+  # env. Deleting the pod forces a fresh kubelet env resolution AFTER
+  # the Secret is in place. (Bug surfaced 2026-06-21.)
   for dep in $(kubectl -n "$ns" get deploy -o name 2>/dev/null); do
     if kubectl -n "$ns" get "$dep" -o yaml | grep -q "secretKeyRef.*smtp-credentials" 2>/dev/null; then
-      kubectl -n "$ns" rollout restart "$dep" >/dev/null
-      echo "    ↻ restarted $dep"
+      dep_name="${dep#deployment.apps/}"
+      for pod in $(kubectl -n "$ns" get pod -l "app=$dep_name" -o name 2>/dev/null; \
+                   kubectl -n "$ns" get pod -l "app.kubernetes.io/name=$dep_name" -o name 2>/dev/null); do
+        kubectl -n "$ns" delete "$pod" --wait=false >/dev/null
+        echo "    ↻ deleted $pod (forces fresh env resolution)"
+      done
     fi
   done
 done
