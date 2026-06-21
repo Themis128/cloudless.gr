@@ -1,0 +1,84 @@
+# R10 — n8n SQLite daily backup to S3
+#
+# n8n's default storage is a single SQLite file at /home/node/.n8n/database.sqlite.
+# We mount the n8n PVC read-only into the backup pod (via subPath if needed),
+# tar+gzip the .sqlite file (+ associated -wal/-shm if present), upload to S3.
+#
+# This pattern works because SQLite supports concurrent readers; the .sqlite-wal file
+# is part of the consistent snapshot when read with the main file.
+#
+# NOTE: if you migrate n8n to postgres later (recommended for >1 user-volume), replace
+# this with the pg_dump pattern from cronjob-postiz.yaml.
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-backup-n8n
+  namespace: n8n
+  labels:
+    app.kubernetes.io/name: pvc-backup
+    backup.cloudless.gr/target: n8n-sqlite
+spec:
+  schedule: "15 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 7
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 1800
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: alpine:3.20
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-aws
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-aws
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: AWS_DEFAULT_REGION
+                  value: "us-east-1"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  apk add --no-cache aws-cli sqlite tar gzip >/dev/null
+                  DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+                  KEY="pvc-backups/n8n/daily/${DATE}.sqlite.gz"
+                  echo "→ snapshotting n8n sqlite → s3://cloudless-analytics-data/${KEY}"
+                  # Use sqlite3 .backup for a consistent snapshot — safer than tar of live file.
+                  sqlite3 /n8n-data/database.sqlite ".backup /tmp/snap.sqlite"
+                  gzip -9 /tmp/snap.sqlite
+                  aws s3 cp /tmp/snap.sqlite.gz "s3://cloudless-analytics-data/${KEY}"
+                  SIZE=$(aws s3api head-object --bucket cloudless-analytics-data --key "${KEY}" --query ContentLength --output text)
+                  echo "✅ uploaded ${SIZE} bytes"
+                  if [ "${SIZE}" -lt 10000 ]; then
+                    echo "❌ backup suspiciously small (<10KB) — failing job for retry"
+                    exit 1
+                  fi
+              volumeMounts:
+                - name: n8n-data
+                  mountPath: /n8n-data
+                  readOnly: true
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "300m"
+          volumes:
+            - name: n8n-data
+              persistentVolumeClaim:
+                # n8n's PVC. Confirm with: kubectl -n n8n get pvc
+                claimName: n8n-data
+                readOnly: true

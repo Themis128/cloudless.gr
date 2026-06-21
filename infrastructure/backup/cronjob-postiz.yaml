@@ -1,0 +1,76 @@
+# R10 — Postiz postgres daily backup to S3 (same pattern as AppFlowy)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-backup-postiz
+  namespace: postiz
+  labels:
+    app.kubernetes.io/name: pvc-backup
+    backup.cloudless.gr/target: postiz-postgres
+spec:
+  schedule: "0 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 7
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 1800
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16-alpine
+              env:
+                - name: PGHOST
+                  value: "postiz-postgres"
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  value: "postiz"             # verified against live pod env
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postiz-secrets
+                      key: POSTGRES_PASSWORD
+                - name: PGDATABASE
+                  value: "postiz"
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-aws
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-aws
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: AWS_DEFAULT_REGION
+                  value: "us-east-1"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  apk add --no-cache aws-cli >/dev/null
+                  DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+                  KEY="pvc-backups/postiz/daily/${DATE}.sql.custom"
+                  echo "→ dumping postiz postgres → s3://cloudless-analytics-data/${KEY}"
+                  pg_dump --format=custom --no-owner --no-privileges \
+                    | aws s3 cp - "s3://cloudless-analytics-data/${KEY}" \
+                        --content-type application/octet-stream
+                  SIZE=$(aws s3api head-object --bucket cloudless-analytics-data --key "${KEY}" --query ContentLength --output text)
+                  echo "✅ uploaded ${SIZE} bytes"
+                  if [ "${SIZE}" -lt 10000 ]; then
+                    echo "❌ backup suspiciously small (<10KB) — failing job for retry"
+                    exit 1
+                  fi
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"
