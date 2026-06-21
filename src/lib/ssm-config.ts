@@ -60,6 +60,17 @@ interface AppConfig {
   MQTT_BROKER_PORT: string;
   MQTT_USERNAME: string;
   MQTT_PASSWORD: string;
+  /** Uptime Kuma — base URL of the deployed instance (default
+   *  https://kuma.cloudless.gr) and the public status-page slug to summarise
+   *  on /admin/cluster. Both optional — empty values gracefully degrade the
+   *  panel to a "configure me" placeholder. */
+  KUMA_BASE_URL: string;
+  KUMA_STATUS_PAGE_SLUG: string;
+  /** Grafana — base URL for the deep-link cards on /admin/cluster. Defaults
+   *  to https://grafana.cloudless.gr; left empty when grafana isn't tunnel-
+   *  exposed yet (per project_blackbox_in_cluster_probes) — the card then
+   *  links to the internal Service URL with a "VPN-only" badge. */
+  GRAFANA_BASE_URL: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -223,6 +234,9 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     MQTT_BROKER_PORT: params.get("MQTT_BROKER_PORT") ?? "",
     MQTT_USERNAME: params.get("MQTT_USERNAME") ?? "",
     MQTT_PASSWORD: params.get("MQTT_PASSWORD") ?? "",
+    KUMA_BASE_URL: params.get("KUMA_BASE_URL") ?? "",
+    KUMA_STATUS_PAGE_SLUG: params.get("KUMA_STATUS_PAGE_SLUG") ?? "",
+    GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
@@ -314,6 +328,9 @@ function buildConfigFromEnv(): AppConfig {
     MQTT_BROKER_PORT: process.env.MQTT_BROKER_PORT || "",
     MQTT_USERNAME: process.env.MQTT_USERNAME || "",
     MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
+    KUMA_BASE_URL: process.env.KUMA_BASE_URL || "",
+    KUMA_STATUS_PAGE_SLUG: process.env.KUMA_STATUS_PAGE_SLUG || "",
+    GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
