@@ -160,6 +160,7 @@ const NAV_GROUPS: NavGroup[] = [
     accent: "text-yellow-400",
     cards: [
       card("Integrations", "Live status of every connected service", "🔌", "/admin/integrations"),
+      card("AWS Cost", "Per-service spend (Athena view, R9 ETL)", "💸", "/admin/cost"),
       card("Errors", "Unresolved Sentry issues", "⚠️", "/admin/errors", (s) =>
         s.errors === null ? null : `${s.errors} unresolved`
       ),
