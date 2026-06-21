@@ -3,6 +3,13 @@
 # Used by Alert API v3.0 to publish homelab/alerts/status (retained, QoS 1)
 # and homelab/alerts/events (QoS 0) topics.
 # Display ESP32 (homelab_alert_led.ino) subscribes via NodePort 31883.
+#
+# AUTH (2026-06-21): credentials live in the `mosquitto-passwords` Secret
+# (managed separately — see skills/mqtt-auth-rollout/SKILL.md to rotate).
+# The config below is DUAL-MODE — accepts both anonymous and authenticated
+# clients during the rollout. Operator flips `allow_anonymous` to `false`
+# once every client (alert-api Deployment, Display ESP32 firmware) has
+# been updated with creds. The flip is a one-line edit + pod restart.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -12,14 +19,19 @@ metadata:
 data:
   mosquitto.conf: |
     listener 1883
+    # DUAL-MODE TRANSITION. Authenticated clients use a username/password
+    # from /mosquitto/secret/passwords (loaded via the mosquitto-passwords
+    # Secret). Anonymous publishes still work for backward compatibility.
+    # Final cutover: set `allow_anonymous false` and `kubectl rollout
+    # restart deploy/mosquitto -n monitoring` AFTER all clients have creds.
     allow_anonymous true
+    password_file /mosquitto/secret/passwords
     persistence true
     persistence_location /mosquitto/data/
     log_dest stdout
     log_type error
     log_type warning
     log_type notice
-    log_type information
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -39,6 +51,8 @@ spec:
         app: mosquitto
     spec:
       automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: omv
       containers:
         - name: mosquitto
           image: eclipse-mosquitto:2.0
@@ -51,6 +65,9 @@ spec:
               subPath: mosquitto.conf
             - name: data
               mountPath: /mosquitto/data
+            - name: secret
+              mountPath: /mosquitto/secret
+              readOnly: true
           resources:
             requests:
               cpu: 10m
@@ -66,6 +83,14 @@ spec:
             name: mosquitto-config
         - name: data
           emptyDir: {}
+        - name: secret
+          # defaultMode 0644 (420 decimal) — mosquitto runs as uid 1883
+          # but reads /mosquitto/secret/passwords; 0600 made it root-only
+          # and the broker crashlooped with "Error opening password file"
+          # (2026-06-21).
+          secret:
+            secretName: mosquitto-passwords
+            defaultMode: 420
 ---
 apiVersion: v1
 kind: Service
