@@ -40,12 +40,26 @@ export async function getSlackOpsUsers(): Promise<string[]> {
 
   // SSM fallback — keeps the Lambda working when the operator forgot to set
   // SLACK_OPS_USERS as an env var but added it to SSM the normal way.
+  //
+  // Falls back to the historical singular key `SLACK_OPS_USER_ID` (single
+  // user ID, no commas) when the plural `SLACK_OPS_USERS` is missing. That
+  // singular key has been the operator's canonical entry since the
+  // single-admin era — keeping the fallback means existing deployments
+  // start fanning out to Slack the moment this code lands, with no SSM
+  // rename required. Discovered 2026-06-21 during R8 e2e verify when
+  // `/api/webhooks/admin-alert` returned `slack.ok: false, error: "no ops
+  // users configured"`.
   try {
     const { getConfig } = await import("@/lib/ssm-config");
     const cfg = (await getConfig()) as unknown as Record<string, string>;
-    const ssmList = parse(cfg.SLACK_OPS_USERS);
-    cached = { value: ssmList, at: Date.now() };
-    return ssmList;
+    const pluralList = parse(cfg.SLACK_OPS_USERS);
+    if (pluralList.length > 0) {
+      cached = { value: pluralList, at: Date.now() };
+      return pluralList;
+    }
+    const singularList = parse(cfg.SLACK_OPS_USER_ID);
+    cached = { value: singularList, at: Date.now() };
+    return singularList;
   } catch (err) {
     console.warn("[slack-ops-users] SSM lookup failed:", err);
     cached = { value: [], at: Date.now() };

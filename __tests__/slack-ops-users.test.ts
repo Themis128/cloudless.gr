@@ -71,6 +71,21 @@ describe("slack-ops-users", () => {
       expect(list).toEqual([]);
     });
 
+    it("falls back to SLACK_OPS_USER_ID (singular) when SLACK_OPS_USERS is empty", async () => {
+      getConfigMock.mockResolvedValue({ SLACK_OPS_USERS: "", SLACK_OPS_USER_ID: "U09AF5VU7LY" });
+      const list = await getSlackOpsUsers();
+      expect(list).toEqual(["U09AF5VU7LY"]);
+    });
+
+    it("prefers SLACK_OPS_USERS (plural) over SLACK_OPS_USER_ID when both set", async () => {
+      getConfigMock.mockResolvedValue({
+        SLACK_OPS_USERS: "U01NEW,U02NEW",
+        SLACK_OPS_USER_ID: "U99OLD",
+      });
+      const list = await getSlackOpsUsers();
+      expect(list).toEqual(["U01NEW", "U02NEW"]);
+    });
+
     it("returns [] and warns when SSM lookup throws", async () => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
       getConfigMock.mockRejectedValue(new Error("ssm down"));
