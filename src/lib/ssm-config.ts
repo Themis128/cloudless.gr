@@ -49,10 +49,6 @@ interface AppConfig {
   N8N_API_URL: string;
   /** n8n public API key (X-N8N-API-KEY). */
   N8N_API_KEY: string;
-  /** Postiz base URL. */
-  POSTIZ_API_URL: string;
-  /** Postiz organization API key (Settings → Public API). */
-  POSTIZ_API_KEY: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -210,8 +206,6 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
     N8N_API_URL: params.get("N8N_API_URL") ?? "",
     N8N_API_KEY: params.get("N8N_API_KEY") ?? "",
-    POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
-    POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
@@ -297,8 +291,6 @@ function buildConfigFromEnv(): AppConfig {
     APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
     N8N_API_URL: process.env.N8N_API_URL || "",
     N8N_API_KEY: process.env.N8N_API_KEY || "",
-    POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
-    POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
