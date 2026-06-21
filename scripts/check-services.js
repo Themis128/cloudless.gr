@@ -99,13 +99,6 @@ async function checkCognito() {
   await client.send(new ListUserPoolsCommand({ MaxResults: 1 }));
 }
 
-  if (!issuer) {
-    return;
-  }
-  const res = await fetch(`${issuer}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(5000) });
-  if (!res.ok) throw new Error(`OIDC discovery returned HTTP ${res.status}`);
-}
-
 async function checkSES() {
   const { SESClient, GetSendQuotaCommand } = require('@aws-sdk/client-ses');
   const region = process.env.AWS_SES_REGION || process.env.AWS_REGION || 'us-east-1';

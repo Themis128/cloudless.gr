@@ -184,7 +184,7 @@ async function analyzeStaleGates(matches, recentCommits) {
   if (matches.length === 0) return null;
 
   const matchList = matches
-    .map(({ file, lineNum, content }) => {
+    .map(({ file, lineNum }) => {
       const ctx = getContext(file, lineNum);
       return `### ${file}:${lineNum}\n\`\`\`\n${ctx}\n\`\`\``;
     })

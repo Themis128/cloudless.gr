@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import MCR from "monocart-coverage-reports";
 
 const ROOT = "/home/tbaltzakis/code/cloudless.gr";
@@ -32,7 +31,7 @@ for (const f of files) {
     } else {
       empty++;
     }
-  } catch (e) { bad++; }
+  } catch (_) { bad++; }
 }
 console.log(`Added: ${ok}, empty: ${empty}, bad: ${bad}`);
 await mcr.generate();

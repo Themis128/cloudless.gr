@@ -160,7 +160,7 @@ server.tool(
       copyFileSync(ENV_LOCAL, backupPath);
 
       // Update credentials
-      let updated = envContent
+      const updated = envContent
         .split("\n")
         .map((line) => {
           if (line.startsWith("NEXT_PUBLIC_COGNITO_CLIENT_ID=")) {

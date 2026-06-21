@@ -278,7 +278,6 @@ const summary = {
   results,
 };
 
-// eslint-disable-next-line no-control-regex
 const CTRL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const MAX_CELL = 300;
 const sanitizeCell = (v) => String(v).replace(CTRL_RE, "").slice(0, MAX_CELL);

@@ -30,7 +30,7 @@ for (const f of files) {
     } else {
       empty++;
     }
-  } catch (e) {
+  } catch (_) {
     bad++;
   }
 }
