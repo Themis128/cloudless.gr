@@ -92,6 +92,12 @@ interface AppConfig {
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
+  /** Optional shared secret for `/api/webhooks/admin-alert` (R8). Falls back
+   *  to NOTION_WEBHOOK_SECRET when unset so existing callers keep working. */
+  ADMIN_ALERT_SECRET: string;
+  /** Sentry internal-integration Client Secret used to HMAC-verify webhooks
+   *  at `/api/webhooks/sentry`. R8 — required for the Sentry receiver. */
+  SENTRY_WEBHOOK_SECRET: string;
   // Notion database IDs
   NOTION_SUBMISSIONS_DB_ID: string;
   NOTION_DOCS_DB_ID: string;
@@ -265,6 +271,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
+    ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
+    SENTRY_WEBHOOK_SECRET: params.get("SENTRY_WEBHOOK_SECRET") ?? "",
     NOTION_SUBMISSIONS_DB_ID: params.get("NOTION_SUBMISSIONS_DB_ID") ?? "",
     NOTION_DOCS_DB_ID: params.get("NOTION_DOCS_DB_ID") ?? "",
     NOTION_PROJECTS_DB_ID: params.get("NOTION_PROJECTS_DB_ID") ?? "",
@@ -366,6 +374,8 @@ function buildConfigFromEnv(): AppConfig {
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
+    ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",
+    SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
     NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID || "",
     NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID || "",
     NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID || "",
