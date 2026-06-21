@@ -14,8 +14,25 @@ description: |
 
 cloudless.gr exposes every internal service (Postiz, EspoCRM, AppFlowy,
 Logs, the main site, Grafana, Manage) through **one shared cloudflared
-tunnel** on omv. There is no per-service tunnel — adding a new public
+tunnel**. There is no per-service tunnel — adding a new public
 hostname is "append-and-reload, never re-architect".
+
+## CRITICAL: cloudflared runs on BOTH Pis (HA pattern)
+
+There are **two** cloudflared daemons connected to the same tunnel UUID
+— one on omv, one on omv-ha. Cloudflare's edge round-robins requests
+between them. Both nodes MUST hold an identical `/etc/cloudflared/config.yml`
+or you get ~50% 404s on any hostname missing from one node's config (the
+2026-06-21 incident that drove this skill rewrite — espocrm + appflowy
+were added to omv's config but not omv-ha's, so Sofia PoP requests
+returned 404 about half the time while my US-based web-fetch tool
+saw 200).
+
+**Rule:** any edit to `/etc/cloudflared/config.yml` on omv MUST be
+mirrored to omv-ha and BOTH services restarted. The "Add a new public
+route" runbook below now does this automatically. There is also a
+6-hourly drift watchdog CronJob at `monitoring/cloudflared-config-drift.yaml`
+that Slack-alerts if the hostname counts diverge.
 
 ## Identity facts (memorise these)
 
@@ -85,7 +102,12 @@ that's what these runbooks use.
 For service `<svc>` listening on NodePort `30NNN` on omv at LAN IP
 `192.168.1.128`, exposed as `<sub>.cloudless.gr`:
 
-### Step 1 — append cloudflared ingress (in-cluster)
+### Step 1 — append cloudflared ingress on **BOTH** nodes
+
+You must run this twice — once for each node in the `nodeSelector` —
+or write a single pod that fans out via SSH. The cleanest pattern is
+two pods with `kubernetes.io/hostname: omv` and `omv-ha`, or use the
+ConfigMap-fan-out pattern below (see "Sync omv-ha to match omv").
 
 ```yaml
 ---
@@ -197,6 +219,76 @@ DNS-via-Cloudflare is near-instant (proxied records always resolve to
 Cloudflare IPs immediately); the 20s buffer is for cloudflared to register
 the new origin route. If you still get 502/530 after that, see "Troubleshooting"
 below.
+
+## Sync omv-ha to match omv (the canonical pattern)
+
+When you've edited omv's config and need to mirror it to omv-ha, use a
+ConfigMap-staged sync pod. Reads omv-ha's current `/etc/cloudflared/config.yml`
+via hostPath, writes the canonical content (also passed in via ConfigMap),
+and `systemctl restart cloudflared`. Tunnel credentials file
+(`/etc/cloudflared/<UUID>.json`) is checked first — both nodes must
+already have the same one (it's tunnel-scoped, not node-scoped).
+
+The Phase-1 sync executed during the 2026-06-21 incident is the canonical
+template:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: cf-canonical-config, namespace: monitoring }
+data:
+  config.yml: |
+    tunnel: e977a490-58c5-4fdb-9155-86832e3e636a
+    credentials-file: /etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json
+    no-autoupdate: true
+    ingress:
+    - hostname: cloudless.gr
+      service: https://localhost:18443
+      originRequest: { noTLSVerify: true, connectTimeout: 30s }
+    # ... rest of the canonical ingress here ...
+    - service: http_status:404
+---
+apiVersion: v1
+kind: Pod
+metadata: { name: cf-sync-ha, namespace: monitoring }
+spec:
+  nodeSelector: { kubernetes.io/hostname: omv-ha }
+  hostPID: true
+  hostNetwork: true
+  restartPolicy: Never
+  volumes:
+    - { name: cfg, configMap: { name: cf-canonical-config } }
+    - { name: hostcreds, hostPath: { path: /etc/cloudflared } }
+  containers:
+    - name: sync
+      image: alpine:3
+      securityContext: { privileged: true }
+      volumeMounts:
+        - { name: cfg, mountPath: /staging }
+        - { name: hostcreds, mountPath: /host-creds }
+      command:
+        - sh
+        - -c
+        - |
+          apk add --no-cache util-linux >/dev/null 2>&1
+          [ -f /host-creds/e977a490-58c5-4fdb-9155-86832e3e636a.json ] || { echo "missing tunnel creds"; exit 1; }
+          cp /host-creds/config.yml /host-creds/config.yml.bak.sync-$(date +%s)
+          cp /staging/config.yml /host-creds/config.yml
+          nsenter --target 1 --mount --uts --ipc --net --pid -- systemctl restart cloudflared
+          sleep 5
+          nsenter --target 1 --mount --uts --ipc --net --pid -- systemctl is-active cloudflared
+```
+
+After restart, verify with 5 round-trip curls (Cloudflare round-robins
+between connectors, so a single 200 isn't conclusive):
+
+```bash
+for i in 1 2 3 4 5; do
+  curl -4 -sI -o /dev/null -w '%{http_code}\n' https://<host>/<healthcheck>
+done
+# expect: 200 five times in a row, no 404s mixed in
+```
 
 ## Remove a public route
 
