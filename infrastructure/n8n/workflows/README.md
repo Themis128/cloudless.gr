@@ -33,19 +33,11 @@ two app-side automations wired in PR R2:
    kubectl -n cloudless rollout restart deploy/cloudless
    ```
 
-8. **For `lead-enrich` only**: add Apollo credentials so the Apollo enrich HTTP
-   node finds a usable key. The workflow JSON reads `$env.APOLLO_API_KEY` (set in
-   n8n → Settings → Variables, OR via SSM if the operator wires `APOLLO_API_KEY`
-   into the n8n pod env):
-   ```bash
-   aws ssm put-parameter \
-     --name /cloudless/production/APOLLO_API_KEY \
-     --type SecureString --value 'paste-real-key-from-apollo.io/settings/credits' --overwrite
-   ```
-   The workflow's `continueOnFail: true` on the Apollo node means it degrades
-   gracefully — round-robin owner assignment + Slack DM still fire even if the
-   enrich step errors. Free Apollo plan = 50 credits/month is fine for low
-   lead volume.
+_(Apollo enrich was previously documented here but was dropped 2026-06-21 — data
+coverage is thin for Greek SMBs + lead volume is too low to justify the cost.
+The `lead-enrich` workflow now goes Webhook → Extract → Round-robin → EspoCRM
+PUT → Slack DM. Re-add an HTTP-Request node before "Round-robin" if/when you
+want enrichment back.)_
 
 ## Verify
 
