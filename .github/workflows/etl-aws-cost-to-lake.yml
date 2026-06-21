@@ -21,38 +21,45 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: us-east-1
+  BUCKET: cloudless-analytics-data
+
 jobs:
   etl:
     name: AWS Cost Explorer → S3
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
-    env:
-      AWS_REGION: us-east-1
-      ANALYTICS_BUCKET: cloudless-analytics-data
-      AWS_COST_LOOKBACK_DAYS: "60"
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-        with:
-          version: 10
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with:
-          node-version: "22"
-          cache: pnpm
-          cache-dependency-path: scripts/etl/pnpm-lock.yaml
-
-      - name: Install ETL deps
-        working-directory: scripts/etl
-        run: pnpm install --frozen-lockfile
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Run ETL
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
         working-directory: scripts/etl
-        run: node aws-cost-to-lake.mjs
+
+      - name: Run AWS Cost ETL
+        run: node scripts/etl/aws-cost-to-lake.mjs
+        env:
+          ANALYTICS_BUCKET: ${{ env.BUCKET }}
+          AWS_COST_LOOKBACK_DAYS: "60"
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": ":x: ETL — AWS Cost → Lake failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
+            }'
