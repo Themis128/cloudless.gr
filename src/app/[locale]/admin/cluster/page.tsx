@@ -49,12 +49,45 @@ function statusFor(w: Watchdog): { label: string; klass: string } {
   return { label: "PENDING", klass: "border-slate-700 text-slate-500" };
 }
 
+interface MqttStatus {
+  severity: "ok" | "info" | "warning" | "error" | "high" | "critical";
+  count: number;
+  ts?: number;
+  timestamp?: number;
+  src?: string;
+}
+
+function mqttChip(s: MqttStatus | null): { label: string; klass: string; dot: string } {
+  if (!s) return { label: "—", klass: "border-slate-700 text-slate-500", dot: "bg-slate-600" };
+  const sev = s.severity;
+  if (sev === "ok" || sev === "info") {
+    return {
+      label: `OK (${s.count})`,
+      klass: "border-neon-green/30 text-neon-green",
+      dot: "bg-neon-green",
+    };
+  }
+  if (sev === "warning") {
+    return {
+      label: `WARN (${s.count})`,
+      klass: "border-yellow-500/30 text-yellow-400",
+      dot: "bg-yellow-400",
+    };
+  }
+  return {
+    label: `${sev.toUpperCase()} (${s.count})`,
+    klass: "border-red-500/30 text-red-400",
+    dot: "bg-red-400",
+  };
+}
+
 export default function ClusterStatusPage() {
   const [watchdogs, setWatchdogs] = useState<Watchdog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [outsideCluster, setOutsideCluster] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+  const [mqttStatus, setMqttStatus] = useState<MqttStatus | null>(null);
 
   async function load() {
     setLoading(true);
@@ -73,6 +106,19 @@ export default function ClusterStatusPage() {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
+    }
+
+    // MQTT live chip — fails silently so a broker hiccup doesn't break
+    // the main table. Reads the retained `homelab/alerts/status` payload
+    // from Mosquitto via the alert-api publisher (PR R3, 2026-06-21).
+    try {
+      const mres = await fetchWithAuth("/api/admin/cluster/mqtt-status");
+      if (mres.ok) {
+        const j = await mres.json();
+        setMqttStatus(j.status ?? null);
+      }
+    } catch {
+      /* silent — chip degrades to — */
     }
   }
 
@@ -98,6 +144,28 @@ export default function ClusterStatusPage() {
           In-cluster CronJobs that replaced the failing remote Claude Code on the Web routines (PR
           #1048). Posts to Slack <code className="text-slate-400">C09AF5W3X16</code> on any warning.
         </p>
+        {/* MQTT live chip — retained `homelab/alerts/status` payload from
+            Mosquitto. "—" if broker unreachable / no retained message yet. */}
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/40 px-3 py-1.5">
+          <span
+            className={`h-2 w-2 rounded-full ${mqttChip(mqttStatus).dot} ${
+              mqttStatus && (mqttStatus.severity === "ok" || mqttStatus.severity === "info")
+                ? ""
+                : "animate-pulse"
+            }`}
+          />
+          <span className="font-mono text-[10px] text-slate-400">MQTT</span>
+          <span
+            className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${mqttChip(mqttStatus).klass}`}
+          >
+            {mqttChip(mqttStatus).label}
+          </span>
+          {mqttStatus?.ts && (
+            <span className="font-mono text-[10px] text-slate-600">
+              {fmtRelative(new Date(mqttStatus.ts * 1000).toISOString())}
+            </span>
+          )}
+        </div>
       </div>
 
       {outsideCluster && (
