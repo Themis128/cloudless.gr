@@ -31,6 +31,13 @@ interface AppConfig {
   SLACK_SIGNING_SECRET: string;
   /** Default channel (ID or #name) for bot posts without an explicit channel. */
   SLACK_DEFAULT_CHANNEL: string;
+  /** Comma-separated list of Slack user IDs that receive admin alerts via
+   *  `notifyAdmin()`. New plural key (preferred). */
+  SLACK_OPS_USERS: string;
+  /** Historical singular Slack user ID — fallback when SLACK_OPS_USERS is
+   *  empty. Predates multi-admin support; some deployments only have this
+   *  key set (operator was solo). Kept to avoid forcing an SSM rename. */
+  SLACK_OPS_USER_ID: string;
   // Dedicated Newsletter Slack app (separate from main Cloudless app)
   NEWSLETTER_SLACK_BOT_TOKEN: string;
   NEWSLETTER_SLACK_SIGNING_SECRET: string;
@@ -242,6 +249,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
     SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
     SLACK_DEFAULT_CHANNEL: params.get("SLACK_DEFAULT_CHANNEL") ?? "",
+    SLACK_OPS_USERS: params.get("SLACK_OPS_USERS") ?? "",
+    SLACK_OPS_USER_ID: params.get("SLACK_OPS_USER_ID") ?? "",
     NEWSLETTER_SLACK_BOT_TOKEN: params.get("NEWSLETTER_SLACK_BOT_TOKEN") ?? "",
     NEWSLETTER_SLACK_SIGNING_SECRET: params.get("NEWSLETTER_SLACK_SIGNING_SECRET") ?? "",
     NEWSLETTER_SLACK_CHANNEL_ID: params.get("NEWSLETTER_SLACK_CHANNEL_ID") ?? "",
@@ -345,6 +354,8 @@ function buildConfigFromEnv(): AppConfig {
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
     SLACK_DEFAULT_CHANNEL: process.env.SLACK_DEFAULT_CHANNEL || "",
+    SLACK_OPS_USERS: process.env.SLACK_OPS_USERS || "",
+    SLACK_OPS_USER_ID: process.env.SLACK_OPS_USER_ID || "",
     NEWSLETTER_SLACK_BOT_TOKEN: process.env.NEWSLETTER_SLACK_BOT_TOKEN || "",
     NEWSLETTER_SLACK_SIGNING_SECRET: process.env.NEWSLETTER_SLACK_SIGNING_SECRET || "",
     NEWSLETTER_SLACK_CHANNEL_ID: process.env.NEWSLETTER_SLACK_CHANNEL_ID || "",
