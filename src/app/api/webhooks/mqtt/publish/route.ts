@@ -22,9 +22,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isMqttConfigured, publishAlertStatus } from "@/lib/mqtt";
 import { getConfig } from "@/lib/ssm-config";
+import { notifyAdmin, type AdminAlertSeverity } from "@/lib/admin-alerts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+/** Sevs that wake the operator — `notifyAdmin()` fan-out fires for these only. */
+const ALERTABLE_SEVERITIES: readonly AdminAlertSeverity[] = ["high", "critical"] as const;
 
 async function verifySecret(req: NextRequest): Promise<boolean> {
   const cfg = await getConfig();
@@ -70,5 +74,24 @@ export async function POST(req: NextRequest) {
       { status: 502 }
     );
   }
+
+  // R8: when the published payload is a high/critical alert on the canonical
+  // status topic, also fan it out to Slack + ntfy. Non-blocking: a failure here
+  // doesn't change the publish response (MQTT was already accepted).
+  const payload = body.payload as { severity?: AdminAlertSeverity; src?: string } | undefined;
+  if (
+    body.topic === "homelab/alerts/status" &&
+    payload?.severity &&
+    ALERTABLE_SEVERITIES.includes(payload.severity)
+  ) {
+    void notifyAdmin({
+      severity: payload.severity,
+      title: `[${payload.src ?? "mqtt"}] alert ${payload.severity}`,
+      message: `Topic: ${body.topic}\nPayload: ${JSON.stringify(payload).slice(0, 500)}`,
+    }).catch(() => {
+      /* swallowed — notifyAdmin already logs/handles its own errors */
+    });
+  }
+
   return NextResponse.json({ ok: true, topic: body.topic });
 }
