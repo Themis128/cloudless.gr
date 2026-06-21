@@ -36,15 +36,19 @@ function psqlRows(sql) {
   const pod = execSync(podCmd, { encoding: "utf8" }).trim();
   if (!pod) throw new Error("no postgres pod found in appflowy namespace");
 
-  // Use psql JSON output (PG 14+ supports `json_agg` over the result set).
-  const wrappedSql = `COPY (SELECT json_agg(t) FROM (${sql.replace(/;\s*$/, "")}) t) TO STDOUT`;
+  // Plain SELECT with json_agg + -tAq returns the JSON value raw — no COPY
+  // text-format escaping of embedded newlines/quotes (which broke JSON.parse
+  // when COPY emitted `\n` literally between rows in the array). Cast to text
+  // so psql treats it as a single value and doesn't apply json-type pretty
+  // printing.
+  const wrappedSql = `SELECT coalesce(json_agg(t)::text, '[]') FROM (${sql.replace(/;\s*$/, "")}) t`;
   const escaped = wrappedSql.replace(/'/g, "'\\''");
   const out = execSync(
-    `kubectl -n appflowy exec ${pod} -- bash -c "PGPASSWORD=\\$POSTGRES_PASSWORD psql -h 127.0.0.1 -U postgres -d postgres -tA -c '${escaped}'"`,
+    `kubectl -n appflowy exec ${pod} -- bash -c "PGPASSWORD=\\$POSTGRES_PASSWORD psql -h 127.0.0.1 -U postgres -d postgres -tAq -c '${escaped}'"`,
     { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }
   );
   const trimmed = out.trim();
-  if (!trimmed || trimmed === "\\N") return [];
+  if (!trimmed || trimmed === "\\N" || trimmed === "[]") return [];
   return JSON.parse(trimmed);
 }
 
