@@ -7,7 +7,7 @@ two app-side automations wired in PR R2:
 
 | File | Triggered by | Does |
 | ---- | ------------ | ---- |
-| `lead-enrich.json` | EspoCRM `Lead.create` → `POST /api/webhooks/n8n/trigger` (name=`lead-enrich`) | Enriches the lead via Apollo (if `APOLLO_API_KEY` set in n8n), assigns owner via round-robin from a hardcoded list, and Slack-DMs the assignee. Falls through gracefully if Apollo isn't configured. |
+| `lead-enrich.json` | EspoCRM `Lead.create` → `POST /api/webhooks/n8n/trigger` (name=`lead-enrich`) | Assigns owner via round-robin from a hardcoded list, PUTs the assignment back to EspoCRM, and Slack-DMs the assignee. (Apollo enrich was dropped 2026-06-21 — see the note below if you want it back.) |
 | `newsletter-nurture.json` | `/api/subscribe` → `POST /api/webhooks/n8n/trigger` (name=`newsletter-nurture`) | Tags the new EspoCRM contact with `newsletter_signup_<source>`, adds them to the `Newsletter Nurture` sequence in EspoCRM. |
 
 ## Operator bootstrap (one-time per workflow)
