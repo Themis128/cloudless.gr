@@ -44,6 +44,15 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      # Cache Next.js build output between runs. Mirrors deploy.yml.
+      - name: Restore Next.js build cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: node scripts/audit/check-bundle-budget.mjs
