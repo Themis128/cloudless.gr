@@ -47,9 +47,9 @@ operator polish or unlock follow-on automation.
 ## Phase 1 — Week 1 (highest value/effort, Claude can ship)
 
 - [x] ~~🤖 🟣 **R10** PVC daily Restic backup to S3 — `infrastructure/backup/cronjob.yaml` sweeps all 8 PVCs to `s3://cloudless-analytics-data/pvc-backups/`, retain 7d + 4w. Closes the #1 SPOF in one PR. **EFFORT: M / RISK: LOW**~~ ✅ **SHIPPED 2026-06-21** — 4 CronJobs live (appflowy 03:30, espocrm 03:45, postiz 04:00, n8n 04:15 UTC). S3 lifecycle = 7d standard → GLACIER → expire 30d. EspoCRM test job verified end-to-end (32945-byte dump landed at `pvc-backups/espocrm/daily/`). MinIO blobs + Grafana plugins + Kuma SQLite are R10b/c follow-ups (see `infrastructure/backup/README.md` "Not yet covered" section).
-- [~] 🤖 🟣 **R11** TLS cert parity probe — daily workflow asserts both ACM (AWS) + Let's Encrypt (Pi) certs valid + >14d to expiry. Fires `notifyAdmin()` on failure. **EFFORT: S / RISK: LOW** — NEXT, starting now
-- [ ] 🤖 🟣 **R11** TLS cert parity probe — daily workflow asserts both ACM (AWS) + Let's Encrypt (Pi) certs valid + >14d to expiry. Fires `notifyAdmin()` on failure. **EFFORT: S / RISK: LOW**
-- [ ] 🤖 🔵 **R12** `/admin/cost` panel rendering Athena directly via `src/lib/athena.ts` + Chart.js. Bypasses Grafana SCP block. **EFFORT: S / RISK: LOW**
+- [x] ~~🤖 🟣 **R11** TLS cert parity probe~~ ✅ **SHIPPED 2026-06-21 (PR #1096)** — daily 07:00 UTC `.github/workflows/tls-cert-parity-probe.yml`. Both push + workflow_dispatch runs green in 7-9s. ACM + Let's Encrypt both valid + >14d to expiry. notifyAdmin() fires on cert expiry/SAN-mismatch/unreachable.
+- [~] 🤖 🔵 **R12** `/admin/cost` panel rendering Athena directly via `src/lib/athena.ts` + Chart.js — IN PROGRESS, fulfills the admin-must-track-backend rule for R9. **EFFORT: S / RISK: LOW**
+- [ ] 🤖 🟣 **R25** (NEW) Self-hosted admin auto-login bridge — `src/lib/selfhosted-autologin.ts` helper + per-app pre-auth tokens; every `/admin/cluster` tile becomes one-click ingress. Per `feedback_selfhosted_admin_autologin`. Per-app PRs (EspoCRM + AppFlowy first). **EFFORT: L (one PR per app) / RISK: MED**
 - [ ] 🤖 🔵 **R14** Sentry env tagging: `SENTRY_ENVIRONMENT=pi-standby` on Pi build, `prod` on Lambda. **EFFORT: XS / RISK: LOW**
 
 ---
