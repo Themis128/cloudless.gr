@@ -39,8 +39,29 @@ operator laptop.
      FROM   cloudless_analytics.aws_cost_daily
      WHERE  cost_date IS NOT NULL;
    ```
-4. **Grafana Athena data source** — Grafana → Connections → Data sources →
-   Athena, with UID `athena`. The dashboard JSON references that UID.
+4. **Grafana Athena data source plugin + connection.** Verified 2026-06-21:
+   the cluster Grafana (`kube-prom-grafana` pod) has CloudWatch / Loki /
+   Prometheus / Alertmanager datasources, but **no Athena plugin installed**.
+   To install:
+
+   ```bash
+   kubectl -n monitoring exec -it deploy/kube-prom-grafana -c grafana -- \
+     grafana cli plugins install grafana-athena-datasource
+   kubectl -n monitoring rollout restart deploy/kube-prom-grafana
+   ```
+
+   Then in Grafana UI → Connections → Data sources → **Add data source** →
+   **Amazon Athena** → set UID `athena` (the dashboard JSON references that
+   exact UID), `default region us-east-1`, auth type `AWS SDK Default`,
+   workgroup `primary`, database `cloudless_analytics`, output location
+   `s3://cloudless-analytics-data/athena-results/`. The Grafana pod's
+   service account needs Athena + S3 read on that bucket — same IAM the
+   ETL role uses.
+
+   Until that plugin is installed + connected, the dashboard provisions
+   successfully but renders empty panels (panel queries 503 against the
+   missing `athena` UID). The ETL itself is unaffected — data still lands
+   in S3 + the Athena view returns rows.
 5. **Provision the dashboard** — from anywhere with AWS CLI + the
    `GRAFANA_API_TOKEN` SSM key readable:
    ```bash
