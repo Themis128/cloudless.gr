@@ -74,11 +74,12 @@ jobs:
           APP: ${{ matrix.app }}
           URL: ${{ matrix.url }}
           EXPECT: ${{ matrix.expect_codes }}
+          SECRET_NAME: ${{ matrix.secret_var }}
           HC_URL: ${{ secrets[matrix.secret_var] }}
         run: |
           set -e
           if [ -z "$HC_URL" ]; then
-            echo "::warning::${matrix.secret_var} not set — skipping ${APP} ping. Add it as a repo secret."
+            echo "::warning::Repo secret $SECRET_NAME not set — skipping $APP ping. Create the check at healthchecks.io and add its URL as a repo secret."
             exit 0
           fi
           CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || echo 000)
