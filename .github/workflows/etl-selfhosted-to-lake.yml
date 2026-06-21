@@ -69,7 +69,25 @@ jobs:
           export_param POSTIZ_API_URL
           export_param POSTIZ_API_KEY
 
-      - name: AppFlowy → S3
+      # AppFlowy ETL is postgres-direct (REST /admin/* returned 0 rows on
+      # the AC version we run). Needs tailscale + kubectl to reach the
+      # in-cluster postgres pod. Pattern matches cluster-doctor.yml.
+      - name: Tailscale (for AppFlowy postgres exec)
+        if: contains(github.event.inputs.apps || 'appflowy,n8n,postiz', 'appflowy')
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          version: latest
+
+      - name: Set up kubectl with cluster KUBECONFIG
+        if: contains(github.event.inputs.apps || 'appflowy,n8n,postiz', 'appflowy')
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl version --client --output=yaml | head -5
+
+      - name: AppFlowy → S3 (postgres-direct via kubectl exec)
         if: contains(github.event.inputs.apps || 'appflowy,n8n,postiz', 'appflowy')
         run: node scripts/etl/appflowy-to-lake.mjs
         continue-on-error: true
