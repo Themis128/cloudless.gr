@@ -107,6 +107,12 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: cognito-issuer
+        # R14: tag Pi-served Sentry events so they're distinguishable from
+        # AWS Lambda's "production" environment. Operator can filter by env
+        # in the Sentry dashboard to see which surface produced an error
+        # during failover, instead of both showing as "production".
+        - name: SENTRY_ENVIRONMENT
+          value: "pi-standby"
 
         # Resource Requests & Limits
         # Problem: Underpowered pods cause slow TTFB and TBT
