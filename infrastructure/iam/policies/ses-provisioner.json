@@ -1,0 +1,39 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageOneSesSmtpUser",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser",
+        "iam:CreateUser",
+        "iam:PutUserPolicy",
+        "iam:ListAccessKeys",
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey"
+      ],
+      "Resource": "arn:aws:iam::*:user/cloudless-ses-smtp"
+    },
+    {
+      "Sid": "WriteSesSmtpParams",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameter", "ssm:PutParameter"],
+      "Resource": [
+        "arn:aws:ssm:*:*:parameter/cloudless/production/SES_SMTP_USER",
+        "arn:aws:ssm:*:*:parameter/cloudless/production/SES_SMTP_PASSWORD",
+        "arn:aws:ssm:*:*:parameter/cloudless/production/SES_FROM_EMAIL"
+      ]
+    },
+    {
+      "Sid": "DecryptSecureStringParam",
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt"],
+      "Resource": "*",
+      "Condition": {
+        "StringLike": {
+          "kms:EncryptionContext:PARAMETER_ARN": "arn:aws:ssm:*:*:parameter/cloudless/production/SES_SMTP_PASSWORD"
+        }
+      }
+    }
+  ]
+}
