@@ -96,16 +96,15 @@ export default function ClusterStatusPage() {
         <h1 className="font-heading text-2xl font-bold text-white">Monitoring watchdogs</h1>
         <p className="mt-2 font-mono text-xs text-slate-500">
           In-cluster CronJobs that replaced the failing remote Claude Code on the Web routines (PR
-          #1048). Posts to Slack <code className="text-slate-400">C09AF5W3X16</code> on any
-          warning.
+          #1048). Posts to Slack <code className="text-slate-400">C09AF5W3X16</code> on any warning.
         </p>
       </div>
 
       {outsideCluster && (
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            This page only renders inside the cluster pod. Local dev / preview deploys see
-            this banner instead of live data.
+            This page only renders inside the cluster pod. Local dev / preview deploys see this
+            banner instead of live data.
           </p>
         </div>
       )}

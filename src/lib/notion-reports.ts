@@ -30,10 +30,7 @@ export async function notionCreateReport(_report: Report): Promise<string | null
   return null;
 }
 
-export async function notionUpdateReport(
-  _id: string,
-  _updates: Partial<Report>
-): Promise<boolean> {
+export async function notionUpdateReport(_id: string, _updates: Partial<Report>): Promise<boolean> {
   return false;
 }
 

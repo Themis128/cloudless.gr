@@ -135,8 +135,7 @@ export async function getRecentEvents(
   limit = 50
 ): Promise<AnalyticsEvent[]> {
   const typeFilter = typeof filterOrLimit === "string" ? filterOrLimit : null;
-  const cap =
-    typeof filterOrLimit === "number" ? filterOrLimit : Math.max(1, Math.min(limit, 500));
+  const cap = typeof filterOrLimit === "number" ? filterOrLimit : Math.max(1, Math.min(limit, 500));
   const where = typeFilter ? `WHERE event = '${typeFilter.replace(/'/g, "''")}' ` : "";
   const sql =
     `SELECT \`timestamp\`, event, page, source, country, properties ` +
