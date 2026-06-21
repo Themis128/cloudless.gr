@@ -1,0 +1,485 @@
+# AppFlowy Cloud self-host stack — Phase 1 deploy (PR #1051).
+# Replaces Notion as the operator-facing CMS for cloudless.gr.
+#
+# Topology:
+#  - 9 pods on omv (Pi 5, 16K page kernel):
+#       postgres (pgvector/pgvector:pg16) + redis + minio + gotrue
+#     + appflowy-cloud + appflowy-web + admin-frontend + nginx
+#  - 1 pod on omv-ha (Pi 4, 4K page kernel) because the worker image's
+#       jemalloc is built for 4K pages and fails on Pi 5 with
+#       "<jemalloc>: Unsupported system page size":
+#       appflowy-worker
+#  - Cloudflare tunnel: appflowy.cloudless.gr → 192.168.1.128:30810
+#       (NodePort on omv, path-routed by the in-cluster nginx).
+#       See infrastructure/appflowy/cloudflare-tunnel.yaml.
+#
+# Storage: postgres + minio PVCs on local-path (sda1 120GB SSD).
+# Memory budget: ~700 MiB across all pods (postiz-litellm eviction frees
+# ~990 MiB; see infrastructure/appflowy/evicted-deployments/postiz-litellm.yaml).
+#
+# Secrets are NOT in this manifest. The k8s Secret `appflowy-secrets` was
+# applied separately with strings generated at deploy time:
+#   POSTGRES_PASSWORD       (hex32)
+#   GOTRUE_JWT_SECRET       (hex64)
+#   GOTRUE_ADMIN_EMAIL      baltzakis.themis@gmail.com
+#   GOTRUE_ADMIN_PASSWORD   (urlsafe18 — given to operator out-of-band)
+#   APPFLOWY_S3_ACCESS_KEY  minioadmin (in-cluster MinIO defaults)
+#   APPFLOWY_S3_SECRET_KEY  minioadmin
+#
+# Env-var ordering rule: `$(POSTGRES_PASSWORD)` substitution in DATABASE_URL
+# values requires POSTGRES_PASSWORD to come FIRST in the env list. Same for
+# every other reference. K8s does string substitution top-down; an undefined
+# var expands to empty string and Postgres rejects the connection.
+#
+# Path routing (in-cluster nginx ConfigMap mirrors the official compose
+# nginx/nginx.conf, adapted for k8s DNS):
+#   /                  → appflowy-web         (Notion-like UI)
+#   /gotrue/*          → gotrue:9999          (auth + JWT)
+#   /api/*             → appflowy-cloud:8000  (REST/WebSocket API)
+#   /ws*               → appflowy-cloud:8000  (collab WebSocket)
+#   /minio/*           → minio:9001           (MinIO console)
+#   /minio-api/*       → minio:9000           (S3 presigned URLs)
+#   /console           → admin-frontend:3000  (workspace admin)
+#
+# See docs/appflowy-deploy.md for the operator runbook.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: appflowy
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: appflowy-postgres, namespace: appflowy }
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources: { requests: { storage: 20Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: appflowy-minio, namespace: appflowy }
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources: { requests: { storage: 10Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: postgres, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          env:
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_DB,   value: postgres }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
+          ports: [{ containerPort: 5432 }]
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+          resources:
+            requests: { cpu: 50m, memory: 200Mi }
+            limits:   { cpu: 500m, memory: 400Mi }
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: appflowy-postgres } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: appflowy }
+spec:
+  selector: { app: postgres }
+  ports: [{ port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: redis, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis } }
+  template:
+    metadata: { labels: { app: redis } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports: [{ containerPort: 6379 }]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 100m, memory: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: redis, namespace: appflowy }
+spec:
+  selector: { app: redis }
+  ports: [{ port: 6379, targetPort: 6379 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: minio, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: minio } }
+  template:
+    metadata: { labels: { app: minio } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args: ["server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_ACCESS_KEY } }
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_SECRET_KEY } }
+          ports:
+            - { containerPort: 9000 }
+            - { containerPort: 9001 }
+          volumeMounts: [{ name: data, mountPath: /data }]
+          resources:
+            requests: { cpu: 25m, memory: 80Mi }
+            limits:   { cpu: 300m, memory: 200Mi }
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: appflowy-minio } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: minio, namespace: appflowy }
+spec:
+  selector: { app: minio }
+  ports:
+    - { name: api,     port: 9000, targetPort: 9000 }
+    - { name: console, port: 9001, targetPort: 9001 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: gotrue, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: gotrue } }
+  template:
+    metadata: { labels: { app: gotrue } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: gotrue
+          image: appflowyinc/gotrue:latest
+          env:
+            # POSTGRES_PASSWORD MUST come first — DATABASE_URL below uses $() expansion.
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
+            - name: GOTRUE_JWT_SECRET
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_JWT_SECRET } }
+            - name: GOTRUE_ADMIN_EMAIL
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_ADMIN_EMAIL } }
+            - name: GOTRUE_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_ADMIN_PASSWORD } }
+            - { name: DATABASE_URL, value: "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/postgres?search_path=auth" }
+            - { name: GOTRUE_SITE_URL, value: "appflowy-flutter://" }
+            - { name: GOTRUE_URI_ALLOW_LIST, value: "**" }
+            - { name: GOTRUE_DISABLE_SIGNUP, value: "true" }
+            - { name: GOTRUE_JWT_ADMIN_GROUP_NAME, value: "supabase_admin" }
+            - { name: GOTRUE_JWT_EXP, value: "604800" }
+            - { name: GOTRUE_DB_DRIVER, value: "postgres" }
+            - { name: API_EXTERNAL_URL, value: "https://appflowy.cloudless.gr/gotrue" }
+            - { name: PORT, value: "9999" }
+            - { name: GOTRUE_MAILER_AUTOCONFIRM, value: "true" }
+            - { name: GOTRUE_SMTP_MAX_FREQUENCY, value: "1ns" }
+            - { name: GOTRUE_RATE_LIMIT_EMAIL_SENT, value: "100" }
+            - { name: GOTRUE_EXTERNAL_GOOGLE_ENABLED, value: "false" }
+            - { name: GOTRUE_EXTERNAL_GITHUB_ENABLED, value: "false" }
+            - { name: GOTRUE_EXTERNAL_DISCORD_ENABLED, value: "false" }
+            - { name: GOTRUE_SAML_ENABLED, value: "false" }
+            - { name: GOTRUE_MAILER_URLPATHS_CONFIRMATION, value: "/gotrue/verify" }
+            - { name: GOTRUE_MAILER_URLPATHS_INVITE, value: "/gotrue/verify" }
+            - { name: GOTRUE_MAILER_URLPATHS_RECOVERY, value: "/gotrue/verify" }
+            - { name: GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE, value: "/gotrue/verify" }
+          ports: [{ containerPort: 9999 }]
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits:   { cpu: 200m, memory: 96Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: gotrue, namespace: appflowy }
+spec:
+  selector: { app: gotrue }
+  ports: [{ port: 9999, targetPort: 9999 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: appflowy-cloud, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: appflowy-cloud } }
+  template:
+    metadata: { labels: { app: appflowy-cloud } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: appflowy-cloud
+          image: appflowyinc/appflowy_cloud:latest
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
+            - name: APPFLOWY_GOTRUE_JWT_SECRET
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: GOTRUE_JWT_SECRET } }
+            - name: APPFLOWY_S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_ACCESS_KEY } }
+            - name: APPFLOWY_S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_SECRET_KEY } }
+            - { name: APPFLOWY_DATABASE_URL, value: "postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/postgres" }
+            - { name: RUST_LOG, value: "info" }
+            - { name: APPFLOWY_ENVIRONMENT, value: "production" }
+            - { name: APPFLOWY_REDIS_URI, value: "redis://redis:6379" }
+            - { name: APPFLOWY_GOTRUE_BASE_URL, value: "http://gotrue:9999" }
+            - { name: APPFLOWY_S3_CREATE_BUCKET, value: "true" }
+            - { name: APPFLOWY_S3_USE_MINIO, value: "true" }
+            - { name: APPFLOWY_S3_MINIO_URL, value: "http://minio:9000" }
+            - { name: APPFLOWY_S3_BUCKET, value: "appflowy" }
+            - { name: APPFLOWY_S3_REGION, value: "us-east-1" }
+            - { name: APPFLOWY_S3_PRESIGNED_URL_ENDPOINT, value: "https://appflowy.cloudless.gr/minio-api" }
+            - { name: APPFLOWY_BASE_URL, value: "https://appflowy.cloudless.gr" }
+            - { name: APPFLOWY_WEB_URL, value: "https://appflowy.cloudless.gr" }
+            - { name: AI_ENABLED, value: "false" }
+            - { name: APPFLOWY_ACCESS_CONTROL, value: "true" }
+            - { name: APPFLOWY_DATABASE_MAX_CONNECTIONS, value: "20" }
+          ports: [{ containerPort: 8000 }]
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 320Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: appflowy-cloud, namespace: appflowy }
+spec:
+  selector: { app: appflowy-cloud }
+  ports: [{ port: 8000, targetPort: 8000 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: appflowy-worker, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: appflowy-worker } }
+  template:
+    metadata: { labels: { app: appflowy-worker } }
+    spec:
+      # Pinned to omv-ha (Pi 4, 4K page kernel) — the worker image's
+      # jemalloc was built for 4K pages and panics with "Unsupported
+      # system page size" on omv (Pi 5, 16K kernel `2712`).
+      nodeSelector: { kubernetes.io/hostname: omv-ha }
+      containers:
+        - name: appflowy-worker
+          image: appflowyinc/appflowy_worker:latest
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
+            - name: APPFLOWY_S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_ACCESS_KEY } }
+            - name: APPFLOWY_S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: appflowy-secrets, key: APPFLOWY_S3_SECRET_KEY } }
+            - { name: APPFLOWY_WORKER_DATABASE_URL, value: "postgres://postgres:$(POSTGRES_PASSWORD)@postgres.appflowy.svc.cluster.local:5432/postgres" }
+            - { name: APPFLOWY_WORKER_DATABASE_NAME, value: "postgres" }
+            - { name: RUST_LOG, value: "info" }
+            - { name: APPFLOWY_WORKER_REDIS_URL, value: "redis://redis.appflowy.svc.cluster.local:6379" }
+            - { name: APPFLOWY_WORKER_ENVIRONMENT, value: "production" }
+            - { name: APPFLOWY_WORKER_IMPORT_TICK_INTERVAL, value: "30" }
+            - { name: APPFLOWY_S3_USE_MINIO, value: "true" }
+            - { name: APPFLOWY_S3_MINIO_URL, value: "http://minio.appflowy.svc.cluster.local:9000" }
+            - { name: APPFLOWY_S3_BUCKET, value: "appflowy" }
+            - { name: APPFLOWY_S3_REGION, value: "us-east-1" }
+          resources:
+            requests: { cpu: 25m, memory: 80Mi }
+            limits:   { cpu: 300m, memory: 200Mi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: appflowy-web, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: appflowy-web } }
+  template:
+    metadata: { labels: { app: appflowy-web } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: appflowy-web
+          image: appflowyinc/appflowy_web:latest
+          env:
+            - { name: APPFLOWY_BASE_URL,        value: "https://appflowy.cloudless.gr" }
+            - { name: APPFLOWY_GOTRUE_BASE_URL, value: "https://appflowy.cloudless.gr/gotrue" }
+            - { name: APPFLOWY_WS_BASE_URL,     value: "wss://appflowy.cloudless.gr/ws/v2" }
+          ports: [{ containerPort: 80 }]
+          resources:
+            requests: { cpu: 10m, memory: 48Mi }
+            limits:   { cpu: 200m, memory: 96Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: appflowy-web, namespace: appflowy }
+spec:
+  selector: { app: appflowy-web }
+  ports: [{ port: 80, targetPort: 80 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: admin-frontend, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: admin-frontend } }
+  template:
+    metadata: { labels: { app: admin-frontend } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: admin-frontend
+          image: appflowyinc/admin_frontend:latest
+          env:
+            - { name: APPFLOWY_GOTRUE_BASE_URL, value: "http://gotrue:9999" }
+            - { name: APPFLOWY_BASE_URL,        value: "http://appflowy-cloud:8000" }
+          ports: [{ containerPort: 3000 }]
+          resources:
+            requests: { cpu: 10m, memory: 48Mi }
+            limits:   { cpu: 200m, memory: 96Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-frontend
+  namespace: appflowy
+spec:
+  selector: { app: admin-frontend }
+  ports:
+    - { name: http, port: 3000, targetPort: 3000 }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+  namespace: appflowy
+data:
+  nginx.conf: |
+    events { worker_connections 1024; }
+    http {
+      resolver kube-dns.kube-system.svc.cluster.local valid=10s;
+      map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+      server {
+        listen 80;
+        client_max_body_size 256M;
+        underscores_in_headers on;
+        set $appflowy_cloud_backend  "http://appflowy-cloud.appflowy.svc.cluster.local:8000";
+        set $gotrue_backend          "http://gotrue.appflowy.svc.cluster.local:9999";
+        set $admin_frontend_backend  "http://admin-frontend.appflowy.svc.cluster.local:3000";
+        set $appflowy_web_backend    "http://appflowy-web.appflowy.svc.cluster.local:80";
+        set $minio_backend           "http://minio.appflowy.svc.cluster.local:9001";
+        set $minio_api_backend       "http://minio.appflowy.svc.cluster.local:9000";
+        set $minio_internal_host     "minio.appflowy.svc.cluster.local:9000";
+        location /gotrue/ {
+          proxy_pass $gotrue_backend; rewrite ^/gotrue(/.*)$ $1 break;
+          proxy_set_header Host $http_host; proxy_pass_request_headers on;
+        }
+        location /ws {
+          proxy_pass $appflowy_cloud_backend; proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "Upgrade";
+          proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme; proxy_read_timeout 86400s;
+        }
+        location /api {
+          proxy_pass $appflowy_cloud_backend;
+          proxy_set_header X-Request-Id $request_id; proxy_set_header Host $http_host;
+          location /api/chat {
+            proxy_pass $appflowy_cloud_backend; proxy_http_version 1.1;
+            proxy_set_header Connection ""; chunked_transfer_encoding on;
+            proxy_buffering off; proxy_cache off; proxy_read_timeout 600s;
+          }
+          location /api/import {
+            proxy_pass $appflowy_cloud_backend;
+            proxy_set_header X-Request-Id $request_id; proxy_set_header Host $http_host;
+            proxy_read_timeout 600s; proxy_request_buffering off;
+            proxy_buffering off; client_max_body_size 2G;
+          }
+        }
+        location /minio/ {
+          proxy_pass $minio_backend; rewrite ^/minio/(.*) /$1 break;
+          proxy_set_header Host $http_host; proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade"; chunked_transfer_encoding off;
+        }
+        location /minio-api/ {
+          proxy_pass $minio_api_backend; proxy_set_header Host $minio_internal_host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          rewrite ^/minio-api/(.*) /$1 break;
+          proxy_read_timeout 600s; proxy_request_buffering off;
+          proxy_http_version 1.1; proxy_set_header Connection "";
+          chunked_transfer_encoding off; client_max_body_size 0;
+        }
+        location /console {
+          proxy_pass $admin_frontend_backend;
+          proxy_set_header X-Forwarded-Host $http_host; proxy_set_header Host $http_host;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Scheme $scheme;
+          proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection 'upgrade'; proxy_cache_bypass $http_upgrade;
+        }
+        location / {
+          proxy_pass $appflowy_web_backend;
+          proxy_set_header X-Scheme $scheme; proxy_set_header Host $host;
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: nginx, namespace: appflowy }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: nginx } }
+  template:
+    metadata: { labels: { app: nginx } }
+    spec:
+      nodeSelector: { kubernetes.io/hostname: omv }
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports: [{ containerPort: 80 }]
+          volumeMounts:
+            - { name: conf, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 200m, memory: 64Mi }
+      volumes:
+        - { name: conf, configMap: { name: nginx-conf } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: nginx, namespace: appflowy }
+spec:
+  selector: { app: nginx }
+  ports: [{ port: 80, targetPort: 80 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nodeport
+  namespace: appflowy
+spec:
+  type: NodePort
+  selector: { app: nginx }
+  ports:
+    - { name: http, port: 80, targetPort: 80, nodePort: 30810 }
