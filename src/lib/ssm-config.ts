@@ -49,6 +49,17 @@ interface AppConfig {
   N8N_API_URL: string;
   /** n8n public API key (X-N8N-API-KEY). */
   N8N_API_KEY: string;
+  /** Workflow ID for the EspoCRM-Lead-created → enrich + assign flow.
+   *  Optional — left empty when the operator hasn't created the workflow yet;
+   *  the espocrm webhook receiver skips the n8n call gracefully. */
+  N8N_WORKFLOW_LEAD_ENRICH_ID: string;
+  /** Workflow ID for the newsletter-signup → tag + nurture flow. Optional. */
+  N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: string;
+  /** Mosquitto MQTT broker connection (see skills/mqtt-auth-rollout). */
+  MQTT_BROKER_HOST: string;
+  MQTT_BROKER_PORT: string;
+  MQTT_USERNAME: string;
+  MQTT_PASSWORD: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -206,6 +217,12 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
     N8N_API_URL: params.get("N8N_API_URL") ?? "",
     N8N_API_KEY: params.get("N8N_API_KEY") ?? "",
+    N8N_WORKFLOW_LEAD_ENRICH_ID: params.get("N8N_WORKFLOW_LEAD_ENRICH_ID") ?? "",
+    N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: params.get("N8N_WORKFLOW_NEWSLETTER_NURTURE_ID") ?? "",
+    MQTT_BROKER_HOST: params.get("MQTT_BROKER_HOST") ?? "",
+    MQTT_BROKER_PORT: params.get("MQTT_BROKER_PORT") ?? "",
+    MQTT_USERNAME: params.get("MQTT_USERNAME") ?? "",
+    MQTT_PASSWORD: params.get("MQTT_PASSWORD") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
@@ -291,6 +308,12 @@ function buildConfigFromEnv(): AppConfig {
     APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
     N8N_API_URL: process.env.N8N_API_URL || "",
     N8N_API_KEY: process.env.N8N_API_KEY || "",
+    N8N_WORKFLOW_LEAD_ENRICH_ID: process.env.N8N_WORKFLOW_LEAD_ENRICH_ID || "",
+    N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: process.env.N8N_WORKFLOW_NEWSLETTER_NURTURE_ID || "",
+    MQTT_BROKER_HOST: process.env.MQTT_BROKER_HOST || "",
+    MQTT_BROKER_PORT: process.env.MQTT_BROKER_PORT || "",
+    MQTT_USERNAME: process.env.MQTT_USERNAME || "",
+    MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",

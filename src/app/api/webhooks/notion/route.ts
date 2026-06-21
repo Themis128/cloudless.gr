@@ -73,7 +73,7 @@ async function verifySecret(request: NextRequest): Promise<boolean> {
 // ───────────────────────────── Handlers ──────────────────────────────
 
 async function handlePageUpdated(payload: WebhookPayload) {
-  const { database, slug } = payload;
+  const { database, slug, page_id, data } = payload;
 
   switch (database) {
     case "blog":
@@ -82,6 +82,32 @@ async function handlePageUpdated(payload: WebhookPayload) {
       if (slug) revalidatePath(`/blog/${slug}`);
       revalidatePath("/api/blog/posts");
       if (slug) revalidatePath(`/api/blog/${slug}`);
+      // R1 auto-post: when the blog row's Status flips to Published, fan out
+      // to connected social channels via Postiz. Opt-in via env
+      // AUTO_POST_BLOG_TO_SOCIAL=1 (off by default — operator vets copy).
+      // Idempotency lives inside scheduleBlogShare via a `blog-<pageId>` tag
+      // check against listPosts, so a Status touch can't double-post.
+      if (data?.status === "Published" && page_id) {
+        const { scheduleBlogShare } = await import("@/lib/postiz-blog");
+        const baseUrl = process.env.SITE_URL ?? "https://cloudless.gr";
+        const url = slug ? `${baseUrl}/blog/${slug}` : baseUrl;
+        scheduleBlogShare({
+          pageId: page_id,
+          title: (data.title as string) ?? "",
+          excerpt: (data.excerpt as string) ?? "",
+          url,
+        })
+          .then((r) => {
+            if (r.skipped) {
+              console.warn(`[notion webhook → postiz] skipped: ${r.skipped}`);
+            } else if (r.ok) {
+              console.warn(`[notion webhook → postiz] posted ${r.postIds.length} channel(s)`);
+            } else {
+              console.error(`[notion webhook → postiz] failed: ${r.error}`);
+            }
+          })
+          .catch((err) => console.error("[notion webhook → postiz] threw:", err));
+      }
       break;
     case "docs":
       invalidateCache("docs");
