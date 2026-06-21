@@ -1,0 +1,58 @@
+name: ETL — AWS Cost Explorer → S3 Lake
+
+# Daily snapshot of per-service AWS spend. Drives the cluster cost dashboard
+# (Athena `v_aws_cost_by_service` + Grafana `AWS Cost` dashboard).
+#
+# Operator pre-reqs (one-time, see scripts/etl/aws-cost-to-lake.mjs JSDoc):
+#   1. Enable Cost Explorer in the Billing console.
+#   2. Add `ce:GetCostAndUsage` to the AWS_DEPLOY_ROLE_ARN role.
+
+on:
+  schedule:
+    - cron: "30 6 * * *" # 06:30 UTC daily (≈ 09:30 EEST)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/etl-aws-cost-to-lake.yml"
+      - "scripts/etl/aws-cost-to-lake.mjs"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  etl:
+    name: AWS Cost Explorer → S3
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 5
+    env:
+      AWS_REGION: us-east-1
+      ANALYTICS_BUCKET: cloudless-analytics-data
+      AWS_COST_LOOKBACK_DAYS: "60"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          version: 10
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: scripts/etl/pnpm-lock.yaml
+
+      - name: Install ETL deps
+        working-directory: scripts/etl
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run ETL
+        working-directory: scripts/etl
+        run: node aws-cost-to-lake.mjs

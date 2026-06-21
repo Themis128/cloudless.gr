@@ -1,0 +1,93 @@
+{
+  "title": "AWS Cost — Daily per-service spend",
+  "uid": "aws-cost",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["cost", "cloudless", "athena"],
+  "timezone": "browser",
+  "refresh": "1h",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total spend (30d)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT round(sum(amount_usd), 2) AS total_usd FROM cloudless_analytics.v_aws_cost_by_service WHERE cost_date >= date_format(current_date - interval '30' day, '%Y-%m-%d')",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 200 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Yesterday's spend",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT round(sum(amount_usd), 2) AS yday_usd FROM cloudless_analytics.v_aws_cost_by_service WHERE cost_date = date_format(current_date - interval '1' day, '%Y-%m-%d')",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Daily spend by service",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 10 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT date_parse(cost_date, '%Y-%m-%d') AS time, service AS metric, sum(amount_usd) AS value FROM cloudless_analytics.v_aws_cost_by_service WHERE cost_date >= date_format(current_date - interval '30' day, '%Y-%m-%d') GROUP BY 1, 2 ORDER BY 1",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } } } }
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Top services (30d)",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 10 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT service, round(sum(amount_usd), 2) AS total_usd FROM cloudless_analytics.v_aws_cost_by_service WHERE cost_date >= date_format(current_date - interval '30' day, '%Y-%m-%d') GROUP BY service ORDER BY total_usd DESC LIMIT 15",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "orientation": "horizontal", "displayMode": "lcd" }
+    }
+  ]
+}
