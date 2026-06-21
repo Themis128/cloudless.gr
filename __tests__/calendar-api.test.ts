@@ -57,12 +57,11 @@ describe("GET /api/calendar/availability", () => {
   });
 
   it("returns 503 when Google Calendar is not configured", async () => {
-    process.env.GOOGLE_CLIENT_EMAIL = ""; process.env.GOOGLE_PRIVATE_KEY = "";
+    process.env.GOOGLE_CLIENT_EMAIL = "";
+    process.env.GOOGLE_PRIVATE_KEY = "";
     resetIntegrationCache();
     const { GET } = await import("@/app/api/calendar/availability/route");
-    const res = await GET(
-      new Request(AVAILABILITY_URL),
-    );
+    const res = await GET(new Request(AVAILABILITY_URL));
     expect(res.status).toBe(503);
     const data = await res.json();
     expect(data).toHaveProperty("error");
@@ -70,9 +69,7 @@ describe("GET /api/calendar/availability", () => {
 
   it("returns slots array when configured", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
-    const res = await GET(
-      new Request(AVAILABILITY_URL),
-    );
+    const res = await GET(new Request(AVAILABILITY_URL));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.slots)).toBe(true);
@@ -80,9 +77,7 @@ describe("GET /api/calendar/availability", () => {
 
   it("slot objects have start and end fields", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
-    const res = await GET(
-      new Request(AVAILABILITY_URL),
-    );
+    const res = await GET(new Request(AVAILABILITY_URL));
     const data = await res.json();
     const slot = data.slots[0];
     expect(typeof slot.start).toBe("string");
@@ -91,26 +86,20 @@ describe("GET /api/calendar/availability", () => {
 
   it("respects days query param (capped at 30)", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
-    await GET(
-      new Request("http://localhost/api/calendar/availability?days=60"),
-    );
+    await GET(new Request("http://localhost/api/calendar/availability?days=60"));
     expect(mockGetAvailableSlots).toHaveBeenCalledWith(30);
   });
 
   it("defaults to 7 days when no param provided", async () => {
     const { GET } = await import("@/app/api/calendar/availability/route");
-    await GET(
-      new Request(AVAILABILITY_URL),
-    );
+    await GET(new Request(AVAILABILITY_URL));
     expect(mockGetAvailableSlots).toHaveBeenCalledWith(7);
   });
 
   it("returns 500 when getAvailableSlots throws", async () => {
     mockGetAvailableSlots.mockRejectedValue(new Error("Google API error"));
     const { GET } = await import("@/app/api/calendar/availability/route");
-    const res = await GET(
-      new Request(AVAILABILITY_URL),
-    );
+    const res = await GET(new Request(AVAILABILITY_URL));
     expect(res.status).toBe(500);
   });
 });
@@ -136,9 +125,7 @@ describe("POST /api/calendar/book", () => {
     resetIntegrationCache();
 
     const { bookConsultation } = vi.mocked(
-      await vi.importMock<typeof import("@/lib/google-calendar")>(
-        "@/lib/google-calendar",
-      ),
+      await vi.importMock<typeof import("@/lib/google-calendar")>("@/lib/google-calendar")
     );
     (bookConsultation as ReturnType<typeof vi.fn>).mockResolvedValue({
       eventId: "evt_abc123",
@@ -147,7 +134,8 @@ describe("POST /api/calendar/book", () => {
   });
 
   it("returns 503 when Google Calendar is not configured", async () => {
-    process.env.GOOGLE_CLIENT_EMAIL = ""; process.env.GOOGLE_PRIVATE_KEY = "";
+    process.env.GOOGLE_CLIENT_EMAIL = "";
+    process.env.GOOGLE_PRIVATE_KEY = "";
     resetIntegrationCache();
     const { POST } = await import("@/app/api/calendar/book/route");
     const res = await POST(
@@ -156,7 +144,7 @@ describe("POST /api/calendar/book", () => {
         email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
-      }),
+      })
     );
     expect(res.status).toBe(503);
   });
@@ -177,7 +165,7 @@ describe("POST /api/calendar/book", () => {
         email: "not-an-email",
         start: futureStart,
         end: futureEnd,
-      }),
+      })
     );
     expect(res.status).toBe(400);
     const data = await res.json();
@@ -192,7 +180,7 @@ describe("POST /api/calendar/book", () => {
         email: TEST_USER_EMAIL,
         start: "2020-01-01T10:00:00Z",
         end: "2020-01-01T10:30:00Z",
-      }),
+      })
     );
     expect(res.status).toBe(400);
     const data = await res.json();
@@ -208,7 +196,7 @@ describe("POST /api/calendar/book", () => {
         start: futureStart,
         end: futureEnd,
         notes: "Looking forward to the call",
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -225,7 +213,7 @@ describe("POST /api/calendar/book", () => {
         email: "notify@example.com",
         start: futureStart,
         end: futureEnd,
-      }),
+      })
     );
     // Give the fire-and-forget promise a tick to resolve
     await new Promise((r) => setTimeout(r, 0));
@@ -241,9 +229,7 @@ describe("POST /api/calendar/book", () => {
 
   it("returns 500 when bookConsultation returns null", async () => {
     const { bookConsultation } = vi.mocked(
-      await vi.importMock<typeof import("@/lib/google-calendar")>(
-        "@/lib/google-calendar",
-      ),
+      await vi.importMock<typeof import("@/lib/google-calendar")>("@/lib/google-calendar")
     );
     (bookConsultation as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
@@ -254,7 +240,7 @@ describe("POST /api/calendar/book", () => {
         email: TEST_USER_EMAIL,
         start: futureStart,
         end: futureEnd,
-      }),
+      })
     );
     expect(res.status).toBe(500);
   });

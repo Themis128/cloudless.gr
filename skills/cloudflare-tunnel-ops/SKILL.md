@@ -306,6 +306,7 @@ nsenter --target 1 --mount --uts --ipc --net --pid -- \
 ```
 
 Known state at time of writing (2026-06-21):
+
 - `cloudless.gr` → localhost:18443 (main site)
 - `manage.cloudless.gr` → localhost:18443
 - `pi-origin.cloudless.gr` → localhost:18443
@@ -317,6 +318,7 @@ Known state at time of writing (2026-06-21):
 ## Rotate the Cloudflare API token
 
 The active token lives at:
+
 - k8s: `kubectl -n cloudless get secret cloudless-cloudflare -o yaml`
 - SSM: `/cloudless/production/CLOUDFLARE_API_TOKEN` (per CLAUDE.md)
 

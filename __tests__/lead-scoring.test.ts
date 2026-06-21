@@ -107,8 +107,7 @@ describe("scoreLead", () => {
       email: "cto@bigcorp.com",
       service: "Full-Stack Growth Engine (Bundle)",
       company: "BigCorp",
-      message:
-        "budget timeline migrate quote ".repeat(20),
+      message: "budget timeline migrate quote ".repeat(20),
       attribution: { utmSource: "x", utmMedium: "cpc", utmCampaign: "max" },
     });
     expect(result.score).toBeLessThanOrEqual(100);

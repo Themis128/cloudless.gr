@@ -35,6 +35,7 @@ stays pinned to omv-ha for the 16K/4K-page jemalloc fix
 ## PVCs (22 total, all Bound)
 
 Largest allocations:
+
 - `appflowy/appflowy-postgres` 20 Gi
 - `monitoring/prometheus-monitoring-prometheus-db-...` 20 Gi
 - `analytics/duckdb-data` 10 Gi

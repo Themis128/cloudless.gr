@@ -329,7 +329,6 @@ vi.mock("@/lib/sentry", () => ({
 // /api/admin/users
 // ---------------------------------------------------------------------------
 
-
 describe("GET /api/admin/orders", () => {
   beforeEach(() => {
     vi.clearAllMocks();

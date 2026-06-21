@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  shaEquivalent,
-  evaluateDrift,
-  GRACE_WINDOW_MS,
-  type DriftSnapshot,
-} from "@/lib/sha-drift";
+import { shaEquivalent, evaluateDrift, GRACE_WINDOW_MS, type DriftSnapshot } from "@/lib/sha-drift";
 
 describe("sha-drift", () => {
   describe("shaEquivalent", () => {
@@ -46,9 +41,7 @@ describe("sha-drift", () => {
     const PI_SHORT = SHA.slice(0, 12);
     const OTHER = "ffffffffffffffffffffffffffffffffffffffff";
 
-    const snapshotBase = (
-      overrides: Partial<DriftSnapshot> = {},
-    ): DriftSnapshot => ({
+    const snapshotBase = (overrides: Partial<DriftSnapshot> = {}): DriftSnapshot => ({
       cloudExpected: SHA,
       piExpected: PI_SHORT,
       cloud: SHA,
@@ -62,13 +55,13 @@ describe("sha-drift", () => {
       const r = evaluateDrift(snapshotBase());
       expect(r.drifted).toBe(false);
       expect(r.surfaces).toHaveLength(2);
-      expect(r.surfaces.every(s => s.matches)).toBe(true);
+      expect(r.surfaces.every((s) => s.matches)).toBe(true);
     });
 
     it("reports drifted=true when cloud SHA differs and no grace window", () => {
       const r = evaluateDrift(snapshotBase({ cloud: OTHER }));
       expect(r.drifted).toBe(true);
-      const cloud = r.surfaces.find(s => s.name === "cloud");
+      const cloud = r.surfaces.find((s) => s.name === "cloud");
       expect(cloud?.matches).toBe(false);
       expect(cloud?.reason).toMatch(/SHA differs/);
     });
@@ -76,27 +69,27 @@ describe("sha-drift", () => {
     it("reports drifted=true when pi SHA differs and no grace window", () => {
       const r = evaluateDrift(snapshotBase({ pi: OTHER }));
       expect(r.drifted).toBe(true);
-      const pi = r.surfaces.find(s => s.name === "pi");
+      const pi = r.surfaces.find((s) => s.name === "pi");
       expect(pi?.matches).toBe(false);
     });
 
     it("flags an unreachable surface with the explicit reason", () => {
       const r = evaluateDrift(snapshotBase({ pi: null }));
-      const pi = r.surfaces.find(s => s.name === "pi");
+      const pi = r.surfaces.find((s) => s.name === "pi");
       expect(pi?.matches).toBe(false);
       expect(pi?.reason).toMatch(/unreachable/);
     });
 
     it("flags a static-fallback APP_VERSION explicitly", () => {
       const r = evaluateDrift(snapshotBase({ cloud: "0.1.0" }));
-      const cloud = r.surfaces.find(s => s.name === "cloud");
+      const cloud = r.surfaces.find((s) => s.name === "cloud");
       expect(cloud?.matches).toBe(false);
       expect(cloud?.reason).toMatch(/APP_VERSION/);
     });
 
     it("also flags 'dev' as a static-fallback APP_VERSION", () => {
       const r = evaluateDrift(snapshotBase({ pi: "dev" }));
-      const pi = r.surfaces.find(s => s.name === "pi");
+      const pi = r.surfaces.find((s) => s.name === "pi");
       expect(pi?.matches).toBe(false);
       expect(pi?.reason).toMatch(/APP_VERSION/);
     });
@@ -109,13 +102,13 @@ describe("sha-drift", () => {
           cloud: OTHER,
           cloudSsmModifiedAt: justNow,
         }),
-        now,
+        now
       );
       expect(r.withinGrace).toBe(true);
       expect(r.drifted).toBe(false);
       // A mismatched surface is still reported even when grace suppresses
       // the overall alert.
-      expect(r.surfaces.find(s => s.name === "cloud")?.matches).toBe(false);
+      expect(r.surfaces.find((s) => s.name === "cloud")?.matches).toBe(false);
     });
 
     it("releases the grace window once GRACE_WINDOW_MS has elapsed", () => {
@@ -126,7 +119,7 @@ describe("sha-drift", () => {
           cloud: OTHER,
           cloudSsmModifiedAt: longAgo,
         }),
-        now,
+        now
       );
       expect(r.withinGrace).toBe(false);
       expect(r.drifted).toBe(true);
@@ -142,7 +135,7 @@ describe("sha-drift", () => {
           cloudSsmModifiedAt: old,
           piSsmModifiedAt: fresh,
         }),
-        now,
+        now
       );
       expect(r.withinGrace).toBe(true);
       expect(r.drifted).toBe(false);

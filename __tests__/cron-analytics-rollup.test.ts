@@ -97,9 +97,7 @@ describe("GET /api/cron/analytics-rollup", () => {
     await GET(makeRequest(CRON_SECRET));
 
     const payload = mockSlackPost.mock.calls[0][0];
-    const section = payload.blocks.find(
-      (b: { type: string }) => b.type === "section",
-    );
+    const section = payload.blocks.find((b: { type: string }) => b.type === "section");
     expect(section.text.text).toContain("Errors:");
     expect(section.text.text).toContain("3");
   });
@@ -109,9 +107,7 @@ describe("GET /api/cron/analytics-rollup", () => {
     await GET(makeRequest(CRON_SECRET));
 
     const payload = mockSlackPost.mock.calls[0][0];
-    const section = payload.blocks.find(
-      (b: { type: string }) => b.type === "section",
-    );
+    const section = payload.blocks.find((b: { type: string }) => b.type === "section");
     expect(section.text.text).not.toContain("Errors:");
   });
 

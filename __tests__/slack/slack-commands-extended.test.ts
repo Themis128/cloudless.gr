@@ -18,7 +18,7 @@ const mockVerify = vi.fn();
 vi.mock("@/lib/slack-verify", () => ({
   verifySlackRequest: (...args: unknown[]) => mockVerify(...args),
   unauthorizedSlack: vi.fn((_reason: string) =>
-    Response.json({ error: "Unauthorized" }, { status: 401 }),
+    Response.json({ error: "Unauthorized" }, { status: 401 })
   ),
 }));
 
@@ -32,8 +32,8 @@ vi.stubGlobal("fetch", mockFetch);
 const mockListOrders = vi.fn();
 vi.mock("@/lib/stripe", () => ({
   listRecentCheckoutSessions: (...args: unknown[]) => mockListOrders(...args),
-  formatPrice: vi.fn((amount: number, currency: string) =>
-    `€${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`,
+  formatPrice: vi.fn(
+    (amount: number, currency: string) => `€${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`
   ),
 }));
 
@@ -85,9 +85,7 @@ function baseFields(command: string, extra: Record<string, string> = {}) {
 }
 
 function makeOrdersFixture(count: number, daysAgo = 0) {
-  const created = new Date(
-    Date.now() - daysAgo * 24 * 60 * 60 * 1000,
-  ).toISOString();
+  const created = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
   return Array.from({ length: count }, (_, i) => ({
     id: `cs_test_${i}`,
     email: `customer${i}@example.com`,
@@ -110,9 +108,7 @@ describe("/cloudless-ticket", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // views.open returns ok
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), { status: 200 }),
-    );
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const mod = await import("@/app/api/slack/commands/route");
     POST = mod.POST;
   });
@@ -135,7 +131,7 @@ describe("/cloudless-ticket", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://slack.com/api/views.open",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({ method: "POST" })
     );
 
     const callBody = JSON.parse(mockFetch.mock.calls[0][1].body as string) as {
@@ -155,9 +151,7 @@ describe("/cloudless-ticket", () => {
     const callBody = JSON.parse(mockFetch.mock.calls[0][1].body as string) as {
       view: { blocks: Array<{ block_id?: string }> };
     };
-    const blockIds = callBody.view.blocks
-      .map((b) => b.block_id)
-      .filter(Boolean);
+    const blockIds = callBody.view.blocks.map((b) => b.block_id).filter(Boolean);
     expect(blockIds).toContain("ticket_email");
     expect(blockIds).toContain("ticket_issue_type");
     expect(blockIds).toContain("ticket_priority");
@@ -189,7 +183,7 @@ describe("/cloudless-analytics", () => {
 
     const response = await POST(makeCommandRequest(fields));
     expect(response.status).toBe(200);
-    const data = await response.json() as { response_type: string };
+    const data = (await response.json()) as { response_type: string };
     expect(data.response_type).toBe("ephemeral");
   });
 
@@ -203,7 +197,7 @@ describe("/cloudless-analytics", () => {
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
-    const data = await response.json() as { blocks: unknown[] };
+    const data = (await response.json()) as { blocks: unknown[] };
     const blockStr = JSON.stringify(data.blocks);
 
     // Should contain revenue / order indicators
@@ -217,7 +211,7 @@ describe("/cloudless-analytics", () => {
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
-    const data = await response.json() as { blocks?: unknown[]; text?: string };
+    const data = (await response.json()) as { blocks?: unknown[]; text?: string };
     const bodyStr = JSON.stringify(data);
 
     expect(bodyStr).toMatch(/no orders|no paid orders|no order data|0/i);
@@ -233,7 +227,7 @@ describe("/cloudless-analytics", () => {
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
-    const data = await response.json() as { blocks: unknown[] };
+    const data = (await response.json()) as { blocks: unknown[] };
     const blockStr = JSON.stringify(data.blocks);
 
     expect(blockStr).toContain("dashboard.stripe.com");
@@ -247,7 +241,7 @@ describe("/cloudless-analytics", () => {
 
     const response = await POST(makeCommandRequest(fields));
     expect(response.status).toBe(200);
-    const data = await response.json() as { response_type: string; text?: string };
+    const data = (await response.json()) as { response_type: string; text?: string };
     expect(data.response_type).toBe("ephemeral");
     // Should return an error message rather than crashing
     expect(JSON.stringify(data)).toMatch(/error|unavailable|failed/i);
@@ -263,9 +257,7 @@ describe("/cloudless-deploy", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), { status: 200 }),
-    );
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const mod = await import("@/app/api/slack/commands/route");
     POST = mod.POST;
   });
@@ -344,7 +336,7 @@ describe("/cloudless-help", () => {
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
-    const data = await response.json() as { text?: string; blocks?: unknown[] };
+    const data = (await response.json()) as { text?: string; blocks?: unknown[] };
     const bodyStr = JSON.stringify(data);
 
     expect(bodyStr).toContain("/cloudless-status");

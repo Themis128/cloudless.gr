@@ -14,10 +14,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const LIB = readFileSync(resolve(__dirname, "../src/lib/sha-drift.ts"), "utf-8");
-const SCRIPT = readFileSync(
-  resolve(__dirname, "../scripts/detect-sha-drift.mts"),
-  "utf-8",
-);
+const SCRIPT = readFileSync(resolve(__dirname, "../scripts/detect-sha-drift.mts"), "utf-8");
 
 /** Strip leading `export ` so the two declarations compare equal. */
 function stripExport(s: string): string {

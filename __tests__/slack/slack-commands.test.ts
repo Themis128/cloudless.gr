@@ -9,7 +9,7 @@ const mockVerify = vi.fn();
 vi.mock("@/lib/slack-verify", () => ({
   verifySlackRequest: (...args: unknown[]) => mockVerify(...args),
   unauthorizedSlack: vi.fn((_reason: string) =>
-    Response.json({ error: "Unauthorized" }, { status: 401 }),
+    Response.json({ error: "Unauthorized" }, { status: 401 })
   ),
 }));
 
@@ -29,7 +29,9 @@ vi.mock("@/lib/stripe", () => ({
     ],
     hasMore: false,
   })),
-  formatPrice: vi.fn((amount: number, currency: string) => `€${(amount / 100).toFixed(2)} ${currency}`),
+  formatPrice: vi.fn(
+    (amount: number, currency: string) => `€${(amount / 100).toFixed(2)} ${currency}`
+  ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -79,7 +81,7 @@ describe("POST /api/slack/commands", () => {
   it("returns 401 when signature verification fails", async () => {
     verifyFail();
     const response = await POST(
-      makeCommandRequest({ command: "/cloudless-status", user_id: "U123", user_name: "themis" }),
+      makeCommandRequest({ command: "/cloudless-status", user_id: "U123", user_name: "themis" })
     );
     expect(response.status).toBe(401);
   });
@@ -87,7 +89,15 @@ describe("POST /api/slack/commands", () => {
   // --- /cloudless-status ---
 
   it("/cloudless-status returns in_channel response with status fields", async () => {
-    const fields = { command: "/cloudless-status", user_id: "U123", user_name: "themis", text: "", channel_id: "C1", response_url: "", trigger_id: "t1" };
+    const fields = {
+      command: "/cloudless-status",
+      user_id: "U123",
+      user_name: "themis",
+      text: "",
+      channel_id: "C1",
+      response_url: "",
+      trigger_id: "t1",
+    };
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
@@ -101,7 +111,15 @@ describe("POST /api/slack/commands", () => {
   });
 
   it("/cloudless-status header block contains 'Status'", async () => {
-    const fields = { command: "/cloudless-status", user_id: "U123", user_name: "themis", text: "", channel_id: "C1", response_url: "", trigger_id: "t1" };
+    const fields = {
+      command: "/cloudless-status",
+      user_id: "U123",
+      user_name: "themis",
+      text: "",
+      channel_id: "C1",
+      response_url: "",
+      trigger_id: "t1",
+    };
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
@@ -113,7 +131,15 @@ describe("POST /api/slack/commands", () => {
   });
 
   it("/cloudless-status includes version and uptime fields", async () => {
-    const fields = { command: "/cloudless-status", user_id: "U123", user_name: "themis", text: "", channel_id: "C1", response_url: "", trigger_id: "t1" };
+    const fields = {
+      command: "/cloudless-status",
+      user_id: "U123",
+      user_name: "themis",
+      text: "",
+      channel_id: "C1",
+      response_url: "",
+      trigger_id: "t1",
+    };
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
@@ -126,7 +152,15 @@ describe("POST /api/slack/commands", () => {
   // --- /cloudless-orders ---
 
   it("/cloudless-orders returns ephemeral response with action buttons", async () => {
-    const fields = { command: "/cloudless-orders", user_id: "U456", user_name: "themis", text: "", channel_id: "C2", response_url: "", trigger_id: "t2" };
+    const fields = {
+      command: "/cloudless-orders",
+      user_id: "U456",
+      user_name: "themis",
+      text: "",
+      channel_id: "C2",
+      response_url: "",
+      trigger_id: "t2",
+    };
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
@@ -138,7 +172,15 @@ describe("POST /api/slack/commands", () => {
   });
 
   it("/cloudless-orders includes Stripe Dashboard button", async () => {
-    const fields = { command: "/cloudless-orders", user_id: "U456", user_name: "themis", text: "", channel_id: "C2", response_url: "", trigger_id: "t2" };
+    const fields = {
+      command: "/cloudless-orders",
+      user_id: "U456",
+      user_name: "themis",
+      text: "",
+      channel_id: "C2",
+      response_url: "",
+      trigger_id: "t2",
+    };
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
@@ -149,7 +191,15 @@ describe("POST /api/slack/commands", () => {
   });
 
   it("/cloudless-orders context block shows the requesting user", async () => {
-    const fields = { command: "/cloudless-orders", user_id: "U789", user_name: "themis", text: "", channel_id: "C2", response_url: "", trigger_id: "t2" };
+    const fields = {
+      command: "/cloudless-orders",
+      user_id: "U789",
+      user_name: "themis",
+      text: "",
+      channel_id: "C2",
+      response_url: "",
+      trigger_id: "t2",
+    };
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));
@@ -161,7 +211,15 @@ describe("POST /api/slack/commands", () => {
   // --- Unknown command ---
 
   it("returns 200 with an error message for unknown commands", async () => {
-    const fields = { command: "/unknown-command", user_id: "U123", user_name: "themis", text: "", channel_id: "C1", response_url: "", trigger_id: "t1" };
+    const fields = {
+      command: "/unknown-command",
+      user_id: "U123",
+      user_name: "themis",
+      text: "",
+      channel_id: "C1",
+      response_url: "",
+      trigger_id: "t1",
+    };
     verifyOk(formBody(fields));
 
     const response = await POST(makeCommandRequest(fields));

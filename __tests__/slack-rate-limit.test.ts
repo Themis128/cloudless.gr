@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import {
-  checkSlackRateLimit,
-  resetRateLimiter,
-} from "@/lib/slack-rate-limit";
+import { checkSlackRateLimit, resetRateLimiter } from "@/lib/slack-rate-limit";
 
 describe("slack-rate-limit", () => {
   beforeEach(() => {

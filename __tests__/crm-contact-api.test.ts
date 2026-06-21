@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const isHubSpotConfiguredMock = vi.fn();
 const upsertContactMock = vi.fn();
 
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   isHubSpotConfigured: isHubSpotConfiguredMock,
   upsertContact: upsertContactMock,
 }));

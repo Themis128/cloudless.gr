@@ -92,9 +92,9 @@ describe("getSeoSnapshot", () => {
       "fetch",
       vi
         .fn()
-        .mockResolvedValueOnce(tokenResponse())          // getAccessToken
-        .mockResolvedValueOnce(gscOkResponse([TOTALS_ROW]))      // totals
-        .mockResolvedValueOnce(gscOkResponse([kwRow("cloudless"), kwRow("sst")])), // keywords
+        .mockResolvedValueOnce(tokenResponse()) // getAccessToken
+        .mockResolvedValueOnce(gscOkResponse([TOTALS_ROW])) // totals
+        .mockResolvedValueOnce(gscOkResponse([kwRow("cloudless"), kwRow("sst")])) // keywords
     );
 
     const { getSeoSnapshot } = await import("@/lib/gsc");
@@ -103,18 +103,15 @@ describe("getSeoSnapshot", () => {
     expect(snap).not.toBeNull();
     expect(snap!.clicks).toBe(842);
     expect(snap!.impressions).toBe(18_500);
-    expect(snap!.ctr).toBe(4.55);          // percentage: 0.0455 × 100
+    expect(snap!.ctr).toBe(4.55); // percentage: 0.0455 × 100
     expect(snap!.avgPosition).toBe(12.7);
-    expect(snap!.organicKeywords).toBe(2);  // length of keyword rows
+    expect(snap!.organicKeywords).toBe(2); // length of keyword rows
   });
 
   it("returns null when GSC totals call fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse(403)),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse(403))
     );
 
     const { getSeoSnapshot } = await import("@/lib/gsc");
@@ -123,8 +120,9 @@ describe("getSeoSnapshot", () => {
   });
 
   it("returns null when credentials are missing", async () => {
-    process.env.GOOGLE_CLIENT_EMAIL = ""; process.env.GOOGLE_PRIVATE_KEY = "";
-    vi.stubGlobal("fetch", vi.fn());  // should not be called
+    process.env.GOOGLE_CLIENT_EMAIL = "";
+    process.env.GOOGLE_PRIVATE_KEY = "";
+    vi.stubGlobal("fetch", vi.fn()); // should not be called
 
     const { getSeoSnapshot } = await import("@/lib/gsc");
     const snap = await getSeoSnapshot();
@@ -137,8 +135,8 @@ describe("getSeoSnapshot", () => {
       vi
         .fn()
         .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscOkResponse([]))   // no totals row
-        .mockResolvedValueOnce(gscOkResponse([])),  // no keyword rows
+        .mockResolvedValueOnce(gscOkResponse([])) // no totals row
+        .mockResolvedValueOnce(gscOkResponse([])) // no keyword rows
     );
 
     const { getSeoSnapshot } = await import("@/lib/gsc");
@@ -164,12 +162,7 @@ describe("getTopKeywords", () => {
       vi
         .fn()
         .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(
-          gscOkResponse([
-            kwRow("serverless nextjs"),
-            kwRow("cloudless.gr"),
-          ]),
-        ),
+        .mockResolvedValueOnce(gscOkResponse([kwRow("serverless nextjs"), kwRow("cloudless.gr")]))
     );
 
     const { getTopKeywords } = await import("@/lib/gsc");
@@ -180,7 +173,7 @@ describe("getTopKeywords", () => {
       keyword: "serverless nextjs",
       clicks: 120,
       impressions: 3000,
-      ctr: 4,    // 0.04 × 100
+      ctr: 4, // 0.04 × 100
       position: 9.2,
     });
   });
@@ -188,10 +181,7 @@ describe("getTopKeywords", () => {
   it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getTopKeywords } = await import("@/lib/gsc");
@@ -200,10 +190,7 @@ describe("getTopKeywords", () => {
   });
 
   it("returns [] when fetch throws", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("Network error")),
-    );
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
 
     const { getTopKeywords } = await import("@/lib/gsc");
     const kws = await getTopKeywords();
@@ -225,12 +212,7 @@ describe("getPerformanceHistory", () => {
       vi
         .fn()
         .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(
-          gscOkResponse([
-            dateRow("2025-01-01"),
-            dateRow("2025-01-02"),
-          ]),
-        ),
+        .mockResolvedValueOnce(gscOkResponse([dateRow("2025-01-01"), dateRow("2025-01-02")]))
     );
 
     const { getPerformanceHistory } = await import("@/lib/gsc");
@@ -241,7 +223,7 @@ describe("getPerformanceHistory", () => {
       date: "2025-01-01",
       clicks: 30,
       impressions: 600,
-      ctr: 5,       // 0.05 × 100
+      ctr: 5, // 0.05 × 100
       avgPosition: 11,
     });
   });
@@ -249,10 +231,7 @@ describe("getPerformanceHistory", () => {
   it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getPerformanceHistory } = await import("@/lib/gsc");
@@ -290,8 +269,8 @@ describe("getTopPages", () => {
         .fn()
         .mockResolvedValueOnce(tokenResponse())
         .mockResolvedValueOnce(
-          gscOkResponse([pageRow("https://cloudless.gr/"), pageRow("https://cloudless.gr/blog")]),
-        ),
+          gscOkResponse([pageRow("https://cloudless.gr/"), pageRow("https://cloudless.gr/blog")])
+        )
     );
 
     const { getTopPages } = await import("@/lib/gsc");
@@ -310,10 +289,7 @@ describe("getTopPages", () => {
   it("returns [] on API error", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getTopPages } = await import("@/lib/gsc");
@@ -335,8 +311,8 @@ describe("getWebAnalytics", () => {
       vi
         .fn()
         .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscOkResponse([TOTALS_ROW]))          // totals
-        .mockResolvedValueOnce(gscOkResponse([pageRow("https://cloudless.gr/")])), // pages
+        .mockResolvedValueOnce(gscOkResponse([TOTALS_ROW])) // totals
+        .mockResolvedValueOnce(gscOkResponse([pageRow("https://cloudless.gr/")])) // pages
     );
 
     const { getWebAnalytics } = await import("@/lib/gsc");
@@ -352,10 +328,7 @@ describe("getWebAnalytics", () => {
   });
 
   it("returns null when fetch throws", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("Network timeout")),
-    );
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network timeout")));
 
     const { getWebAnalytics } = await import("@/lib/gsc");
     expect(await getWebAnalytics()).toBeNull();
@@ -368,7 +341,7 @@ describe("getWebAnalytics", () => {
         .fn()
         .mockResolvedValueOnce(tokenResponse())
         .mockResolvedValueOnce(gscOkResponse([]))
-        .mockResolvedValueOnce(gscOkResponse([])),
+        .mockResolvedValueOnce(gscOkResponse([]))
     );
 
     const { getWebAnalytics } = await import("@/lib/gsc");
@@ -400,8 +373,8 @@ describe("getCtrOpportunities", () => {
             { keys: ["rank 2 keyword"], clicks: 200, impressions: 5000, ctr: 0.04, position: 2 },
             { keys: ["high ctr keyword"], clicks: 80, impressions: 1000, ctr: 0.08, position: 10 },
             { keys: ["low impressions"], clicks: 1, impressions: 5, ctr: 0.02, position: 9 },
-          ]),
-        ),
+          ])
+        )
     );
 
     const { getCtrOpportunities } = await import("@/lib/gsc");
@@ -416,10 +389,7 @@ describe("getCtrOpportunities", () => {
   it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getCtrOpportunities } = await import("@/lib/gsc");
@@ -437,10 +407,7 @@ describe("getCtrOpportunities", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscOkResponse(rows)),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscOkResponse(rows))
     );
 
     const { getCtrOpportunities } = await import("@/lib/gsc");
@@ -467,8 +434,8 @@ describe("getDeviceBreakdown", () => {
           gscOkResponse([
             { keys: ["DESKTOP"], clicks: 400, impressions: 8000, ctr: 0.05, position: 10 },
             { keys: ["MOBILE"], clicks: 300, impressions: 7000, ctr: 0.043, position: 12 },
-          ]),
-        ),
+          ])
+        )
     );
 
     const { getDeviceBreakdown } = await import("@/lib/gsc");
@@ -487,10 +454,7 @@ describe("getDeviceBreakdown", () => {
   it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getDeviceBreakdown } = await import("@/lib/gsc");
@@ -514,9 +478,15 @@ describe("getProductPageMetrics", () => {
         .mockResolvedValueOnce(tokenResponse())
         .mockResolvedValueOnce(
           gscOkResponse([
-            { keys: ["https://cloudless.gr/store/pro-plan"], clicks: 50, impressions: 1200, ctr: 0.042, position: 8.5 },
-          ]),
-        ),
+            {
+              keys: ["https://cloudless.gr/store/pro-plan"],
+              clicks: 50,
+              impressions: 1200,
+              ctr: 0.042,
+              position: 8.5,
+            },
+          ])
+        )
     );
 
     const { getProductPageMetrics } = await import("@/lib/gsc");
@@ -534,10 +504,7 @@ describe("getProductPageMetrics", () => {
   it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getProductPageMetrics } = await import("@/lib/gsc");
@@ -568,8 +535,8 @@ describe("getQueryPageMapping", () => {
               ctr: 0.04,
               position: 7.2,
             },
-          ]),
-        ),
+          ])
+        )
     );
 
     const { getQueryPageMapping } = await import("@/lib/gsc");
@@ -586,10 +553,7 @@ describe("getQueryPageMapping", () => {
   it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getQueryPageMapping } = await import("@/lib/gsc");
@@ -614,11 +578,23 @@ describe("getSearchIntentBreakdown", () => {
         .mockResolvedValueOnce(
           gscOkResponse([
             { keys: ["cloudless gr"], clicks: 100, impressions: 2000, ctr: 0.05, position: 3 },
-            { keys: ["buy serverless hosting"], clicks: 20, impressions: 400, ctr: 0.05, position: 8 },
-            { keys: ["how to deploy nextjs"], clicks: 30, impressions: 600, ctr: 0.05, position: 6 },
+            {
+              keys: ["buy serverless hosting"],
+              clicks: 20,
+              impressions: 400,
+              ctr: 0.05,
+              position: 8,
+            },
+            {
+              keys: ["how to deploy nextjs"],
+              clicks: 30,
+              impressions: 600,
+              ctr: 0.05,
+              position: 6,
+            },
             { keys: ["some other term"], clicks: 10, impressions: 200, ctr: 0.05, position: 12 },
-          ]),
-        ),
+          ])
+        )
     );
 
     const { getSearchIntentBreakdown } = await import("@/lib/gsc");
@@ -637,10 +613,7 @@ describe("getSearchIntentBreakdown", () => {
   it("returns empty buckets when GSC call fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getSearchIntentBreakdown } = await import("@/lib/gsc");
@@ -671,8 +644,8 @@ describe("getTrafficByCountry", () => {
           gscOkResponse([
             { keys: ["grc"], clicks: 450, impressions: 9000, ctr: 0.05, position: 8 },
             { keys: ["usa"], clicks: 200, impressions: 5000, ctr: 0.04, position: 11 },
-          ]),
-        ),
+          ])
+        )
     );
 
     const { getTrafficByCountry } = await import("@/lib/gsc");
@@ -691,10 +664,7 @@ describe("getTrafficByCountry", () => {
   it(GSC_RETURNS_EMPTY_ON_FAIL, async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(tokenResponse())
-        .mockResolvedValueOnce(gscErrorResponse()),
+      vi.fn().mockResolvedValueOnce(tokenResponse()).mockResolvedValueOnce(gscErrorResponse())
     );
 
     const { getTrafficByCountry } = await import("@/lib/gsc");

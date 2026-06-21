@@ -15,9 +15,9 @@ let fetchSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   delete process.env.LINKEDIN_CAPI_ACCESS_TOKEN;
-  fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(JSON.stringify({ ok: true }), { status: 200 })
-  );
+  fetchSpy = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 });
 
 afterEach(() => {
@@ -49,9 +49,7 @@ describe("linkedinAdapter.pushConversion", () => {
   });
 
   it("returns { accepted: false, status: 403 } on the source-bound CAPI rejection", async () => {
-    fetchSpy.mockResolvedValueOnce(
-      new Response("conversion-source-mismatch", { status: 403 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response("conversion-source-mismatch", { status: 403 }));
     const { linkedinAdapter } = await import("@/lib/ad-analytics/adapters/linkedin");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

@@ -3,7 +3,7 @@ import { renderAnalyticsReportPdf } from "@/lib/analytics-report-pdf";
 import type { AnalyticsOrchestrationResult } from "@/lib/analytics-agent-orchestrator";
 
 function buildResult(
-  overrides: Partial<AnalyticsOrchestrationResult> = {},
+  overrides: Partial<AnalyticsOrchestrationResult> = {}
 ): AnalyticsOrchestrationResult {
   return {
     workflow: [

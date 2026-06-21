@@ -45,7 +45,7 @@ function renderAuth() {
   return render(
     <AuthProvider>
       <AuthStatus />
-    </AuthProvider>,
+    </AuthProvider>
   );
 }
 
@@ -53,31 +53,30 @@ function renderAuthAdmin() {
   return render(
     <AuthProvider>
       <AdminStatus />
-    </AuthProvider>,
+    </AuthProvider>
   );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function jwtSegment(obj: unknown): string {
-  return btoa(JSON.stringify(obj))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
+  return btoa(JSON.stringify(obj)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
-function makeSessionResponse(user: {
-  id?: string;
-  email?: string;
-  name?: string;
-  groups?: string[];
-  roles?: string[];
-} | null) {
+function makeSessionResponse(
+  user: {
+    id?: string;
+    email?: string;
+    name?: string;
+    groups?: string[];
+    roles?: string[];
+  } | null
+) {
   return Promise.resolve(
     new Response(JSON.stringify(user ? { user } : null), {
       status: 200,
       headers: { "Content-Type": "application/json" },
-    }),
+    })
   );
 }
 
@@ -220,9 +219,7 @@ describe("AuthProvider — error handling", () => {
   });
 
   it("renders signed-out when /api/auth/session returns non-ok", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("", { status: 500 }),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 500 }));
 
     await act(async () => {
       renderAuth();
@@ -234,23 +231,19 @@ describe("AuthProvider — error handling", () => {
 
 describe("AuthContext — JWT decode utility (contract tests)", () => {
   it("getCurrentUser mock resolves with the expected shape", async () => {
-    const mockGetCurrentUser = vi
-      .fn()
-      .mockResolvedValue({
-        username: "themis@cloudless.gr",
-        signInDetails: { loginId: "themis@cloudless.gr" },
-      });
+    const mockGetCurrentUser = vi.fn().mockResolvedValue({
+      username: "themis@cloudless.gr",
+      signInDetails: { loginId: "themis@cloudless.gr" },
+    });
     const result = await mockGetCurrentUser();
     expect(result.username).toBe("themis@cloudless.gr");
     expect(result.signInDetails.loginId).toBe("themis@cloudless.gr");
   });
 
   it("groups claim in idToken is extracted correctly by decode logic", () => {
-    const idTokenStr = [
-      jwtSegment({}),
-      jwtSegment({ groups: ["admin"], sub: "abc" }),
-      "sig",
-    ].join(".");
+    const idTokenStr = [jwtSegment({}), jwtSegment({ groups: ["admin"], sub: "abc" }), "sig"].join(
+      "."
+    );
 
     const base64Url = idTokenStr.split(".")[1];
     const base64 = base64Url.replaceAll("-", "+").replaceAll("/", "_");
@@ -259,8 +252,8 @@ describe("AuthContext — JWT decode utility (contract tests)", () => {
         atob(base64)
           .split("")
           .map((c) => "%" + ("00" + c.codePointAt(0)!.toString(16)).slice(-2))
-          .join(""),
-      ),
+          .join("")
+      )
     ) as Record<string, unknown>;
 
     const groups = (payload["groups"] as string[]) ?? [];
@@ -276,8 +269,8 @@ describe("AuthContext — JWT decode utility (contract tests)", () => {
         atob(base64)
           .split("")
           .map((c) => "%" + ("00" + c.codePointAt(0)!.toString(16)).slice(-2))
-          .join(""),
-      ),
+          .join("")
+      )
     ) as Record<string, unknown>;
 
     const groups = (payload["groups"] as string[] | undefined) ?? [];

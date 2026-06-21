@@ -57,7 +57,7 @@ describe("notion-calendar.ts", () => {
       expect(items![0].status).toBe("draft");
       expect(mockNotionFetch).toHaveBeenCalledWith(
         `/databases/calendar-db-123/query`,
-        expect.objectContaining({ method: "POST" }),
+        expect.objectContaining({ method: "POST" })
       );
     });
 
@@ -67,9 +67,7 @@ describe("notion-calendar.ts", () => {
       resetIntegrationCacheAsync();
 
       const { notionGetCalendarItems } = await import("@/lib/notion-calendar");
-      await expect(notionGetCalendarItems()).rejects.toBeInstanceOf(
-        IntegrationNotConfiguredError,
-      );
+      await expect(notionGetCalendarItems()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -79,9 +77,7 @@ describe("notion-calendar.ts", () => {
       resetIntegrationCacheAsync();
 
       const { notionGetCalendarItems } = await import("@/lib/notion-calendar");
-      await expect(notionGetCalendarItems()).rejects.toBeInstanceOf(
-        IntegrationNotConfiguredError,
-      );
+      await expect(notionGetCalendarItems()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 
@@ -176,7 +172,7 @@ describe("notion-calendar.ts", () => {
       expect(pageId).toBe("new-notion-page");
       expect(mockNotionFetch).toHaveBeenCalledWith(
         "/pages",
-        expect.objectContaining({ method: "POST" }),
+        expect.objectContaining({ method: "POST" })
       );
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
@@ -241,7 +237,7 @@ describe("notion-calendar.ts", () => {
           platform: "x",
           date: "2026-06-01",
           status: "draft",
-        }),
+        })
       ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
@@ -262,7 +258,7 @@ describe("notion-calendar.ts", () => {
           platform: "x",
           date: "2026-06-01",
           status: "draft",
-        }),
+        })
       ).rejects.toThrow("fail");
     });
   });
@@ -291,7 +287,10 @@ describe("notion-calendar.ts", () => {
       expect(mockNotionFetch).toHaveBeenCalledTimes(2);
       // First call: search
       const searchBody = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
-      expect(searchBody.filter).toEqual({ property: "CalID", rich_text: { equals: "cal_1234_abc" } });
+      expect(searchBody.filter).toEqual({
+        property: "CalID",
+        rich_text: { equals: "cal_1234_abc" },
+      });
       // Second call: patch
       expect(mockNotionFetch.mock.calls[1][0]).toBe("/pages/page-to-patch");
       const patchBody = JSON.parse(mockNotionFetch.mock.calls[1][1].body);
@@ -329,7 +328,7 @@ describe("notion-calendar.ts", () => {
           platform: "x",
           date: "2026-06-01",
           status: "draft",
-        }),
+        })
       ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
@@ -369,9 +368,9 @@ describe("notion-calendar.ts", () => {
       resetIntegrationCacheAsync();
 
       const { notionDeleteCalendarItem } = await import("@/lib/notion-calendar");
-      await expect(
-        notionDeleteCalendarItem("cal_1"),
-      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(notionDeleteCalendarItem("cal_1")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
 

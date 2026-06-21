@@ -11,7 +11,7 @@ const { mockRequireAdmin, mockIsConfiguredAsync, mockListContacts, mockReadPendi
 
 vi.mock("@/lib/api-auth", () => ({ requireAdmin: mockRequireAdmin }));
 vi.mock("@/lib/integrations", () => ({ isConfiguredAsync: mockIsConfiguredAsync }));
-vi.mock("@/lib/hubspot", () => ({ listContacts: mockListContacts }));
+vi.mock("@/lib/espocrm", () => ({ listContacts: mockListContacts }));
 vi.mock("@/lib/pending-clients", () => ({
   readPendingClients: mockReadPendingClients,
   PLAN_LABELS: { bundle: "Full-Stack Growth Engine (Bundle)" },

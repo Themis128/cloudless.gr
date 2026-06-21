@@ -105,9 +105,7 @@ describe("notion-esp32", () => {
 
   describe("appendEsp32TelemetryToNotion (no-op when unconfigured)", () => {
     it("returns null when telemetryDbId is missing", async () => {
-      const { appendEsp32TelemetryToNotion } = await import(
-        "@/lib/notion-esp32"
-      );
+      const { appendEsp32TelemetryToNotion } = await import("@/lib/notion-esp32");
       const result = await appendEsp32TelemetryToNotion({
         code: "ESP32_LOW_RAM",
         host: "esp32-1",

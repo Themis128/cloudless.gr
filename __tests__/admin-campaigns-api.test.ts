@@ -5,10 +5,16 @@ import { NextRequest } from "next/server";
 // Hoist mocks
 // ---------------------------------------------------------------------------
 const {
-  googleConfiguredMock, googleCampaignsMock, googleMetricsMock,
-  linkedinConfiguredMock, linkedinCampaignsMock, linkedinMetricsMock,
-  tiktokConfiguredMock, tiktokCampaignsMock,
-  xConfiguredMock, xCampaignsMock,
+  googleConfiguredMock,
+  googleCampaignsMock,
+  googleMetricsMock,
+  linkedinConfiguredMock,
+  linkedinCampaignsMock,
+  linkedinMetricsMock,
+  tiktokConfiguredMock,
+  tiktokCampaignsMock,
+  xConfiguredMock,
+  xCampaignsMock,
 } = vi.hoisted(() => ({
   googleConfiguredMock: vi.fn(),
   googleCampaignsMock: vi.fn(),
@@ -65,7 +71,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "test-client-id",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -169,9 +175,7 @@ describe("GET /api/admin/campaigns/linkedin", () => {
 
   it("returns campaigns", async () => {
     linkedinConfiguredMock.mockResolvedValueOnce(true);
-    linkedinCampaignsMock.mockResolvedValueOnce([
-      { id: "lc1", name: "SaaS Decision Makers" },
-    ]);
+    linkedinCampaignsMock.mockResolvedValueOnce([{ id: "lc1", name: "SaaS Decision Makers" }]);
     const { GET } = await import("@/app/api/admin/campaigns/linkedin/route");
     const res = await GET(adminReq("http://localhost/api/admin/campaigns/linkedin"));
     const data = await res.json();

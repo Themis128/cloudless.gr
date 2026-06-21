@@ -81,9 +81,7 @@ describe("meta-capi", () => {
 
       const fetchMock = vi
         .spyOn(globalThis, "fetch")
-        .mockResolvedValue(
-          new Response(JSON.stringify({ events_received: 1 }), { status: 200 }),
-        );
+        .mockResolvedValue(new Response(JSON.stringify({ events_received: 1 }), { status: 200 }));
 
       await sendCapiEvent("Lead", {
         eventId: "evt-1",
@@ -118,8 +116,8 @@ describe("meta-capi", () => {
           JSON.stringify({
             error: { message: "Invalid access_token=EAAB_secret_token" },
           }),
-          { status: 400 },
-        ),
+          { status: 400 }
+        )
       );
 
       const result = await sendCapiEvent("Lead", { eventId: "evt-err" });
@@ -146,7 +144,7 @@ describe("meta-capi", () => {
               err.name = "AbortError";
               reject(err);
             });
-          }),
+          })
       );
 
       vi.useFakeTimers();

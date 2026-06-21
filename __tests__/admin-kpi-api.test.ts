@@ -30,11 +30,8 @@ vi.mock("jose", async () => {
     jwtVerify: async (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length !== 3) throw new Error("Invalid JWT");
-      const payload = JSON.parse(
-        Buffer.from(parts[1], "base64").toString("utf-8"),
-      );
-      if (payload.exp && Date.now() >= payload.exp * 1000)
-        throw new Error("expired");
+      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+      if (payload.exp && Date.now() >= payload.exp * 1000) throw new Error("expired");
       return { payload, protectedHeader: { alg: "RS256" } };
     },
   };
@@ -67,7 +64,7 @@ function makeToken(groups: string[]): string {
   const payload = {
     sub: "user-sub",
     email: "user@test.com",
-    "groups": groups,
+    groups: groups,
     aud: "test-client",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -217,18 +214,11 @@ describe("GET /api/admin/kpi", () => {
     expect(data.tasks.overdueCount).toBe(2);
   });
 
-  it("returns null analytics when Notion analytics is not configured", async () => {
-    mockIsConfiguredAsync.mockImplementation(
-      async (...keys: string[]) => !keys.includes("NOTION_ANALYTICS_DB_ID"),
-    );
-
-    const { GET } = await import("@/app/api/admin/kpi/route");
-    const res = await GET(adminReq(BASE));
-    const data = await res.json();
-
-    expect(data.analytics).toBeNull();
-    expect(mockGetAnalyticsSummary).not.toHaveBeenCalled();
-  });
+  // Test "returns null analytics when Notion analytics is not configured" was removed
+  // 2026-06-21: src/app/api/admin/kpi/route.ts now hard-codes analyticsConf = true
+  // because notion-analytics.ts is an Athena-backed no-op shim that always returns
+  // empty data instead of throwing. The configured/not-configured branch no longer
+  // exists in the route, so the test premise is invalid.
 
   it("returns null gsc when Google credentials are absent", async () => {
     mockGetConfig.mockResolvedValue({
@@ -246,7 +236,7 @@ describe("GET /api/admin/kpi", () => {
 
   it("returns empty projects when Notion projects not configured", async () => {
     mockIsConfiguredAsync.mockImplementation(
-      async (...keys: string[]) => !keys.includes("NOTION_PROJECTS_DB_ID"),
+      async (...keys: string[]) => !keys.includes("NOTION_PROJECTS_DB_ID")
     );
 
     const { GET } = await import("@/app/api/admin/kpi/route");
@@ -260,7 +250,7 @@ describe("GET /api/admin/kpi", () => {
 
   it("returns zeroed tasks when Notion tasks not configured", async () => {
     mockIsConfiguredAsync.mockImplementation(
-      async (...keys: string[]) => !keys.includes("NOTION_TASKS_DB_ID"),
+      async (...keys: string[]) => !keys.includes("NOTION_TASKS_DB_ID")
     );
 
     const { GET } = await import("@/app/api/admin/kpi/route");

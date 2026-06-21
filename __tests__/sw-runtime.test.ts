@@ -97,7 +97,7 @@ describe("service worker runtime", () => {
     expect(handler).toBeTruthy();
 
     const event = createFetchEvent(
-      new Request("http://localhost:4000/api/ping", { method: "POST" }),
+      new Request("http://localhost:4000/api/ping", { method: "POST" })
     );
     handler?.(event as unknown as FetchEvent);
 

@@ -63,7 +63,8 @@ beforeEach(() => {
   oscillators.length = 0;
   gains.length = 0;
   vi.useFakeTimers();
-  (globalThis as unknown as { AudioContext: typeof FakeAudioContext }).AudioContext = FakeAudioContext;
+  (globalThis as unknown as { AudioContext: typeof FakeAudioContext }).AudioContext =
+    FakeAudioContext;
   (window as unknown as { AudioContext: typeof FakeAudioContext }).AudioContext = FakeAudioContext;
 });
 

@@ -14,7 +14,17 @@ vi.mock("@/lib/anthropic", () => ({
 
 // Mock tool implementations (keeps tests fast and network-free)
 vi.mock("@/lib/admin-assistant-tools", () => ({
-  ASSISTANT_TOOLS: [{ name: "search_notion", description: "search", input_schema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } }],
+  ASSISTANT_TOOLS: [
+    {
+      name: "search_notion",
+      description: "search",
+      input_schema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
+      },
+    },
+  ],
   runAssistantTool: vi.fn(),
 }));
 
@@ -34,16 +44,20 @@ function makeReq(body: unknown) {
 describe("POST /api/admin/ai/assistant", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(requireAdmin).mockResolvedValue({ ok: true, user: { email: "admin@test.com" } } as never);
+    vi.mocked(requireAdmin).mockResolvedValue({
+      ok: true,
+      user: { email: "admin@test.com" },
+    } as never);
     vi.mocked(isAnthropicConfigured).mockResolvedValue(true);
     vi.mocked(getAnthropicApiKey).mockResolvedValue("sk-ant-test");
   });
 
   it("returns 401 when not admin", async () => {
     const { NextResponse } = await import("next/server");
-    vi.mocked(requireAdmin).mockResolvedValue(
-      { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as never
-    );
+    vi.mocked(requireAdmin).mockResolvedValue({
+      ok: false,
+      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    } as never);
     const res = await POST(makeReq({ messages: [{ role: "user", content: "hi" }] }));
     expect(res.status).toBe(401);
   });
@@ -110,7 +124,9 @@ describe("POST /api/admin/ai/assistant", () => {
   });
 
   it("returns 502 on Anthropic API error", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({ ok: false, status: 500, text: async () => "error" });
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "error" });
     const res = await POST(makeReq({ messages: [{ role: "user", content: "hi" }] }));
     expect(res.status).toBe(502);
   });

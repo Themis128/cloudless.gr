@@ -75,9 +75,7 @@ describe("runScheduledPoll", () => {
             // Only an event-level channel — no digest target. The poll must
             // skip this campaign entirely instead of spamming a digest
             // message to the realtime channel.
-            notifyChannels: [
-              { channel: "slack", target: "#ads-realtime", level: "event" },
-            ],
+            notifyChannels: [{ channel: "slack", target: "#ads-realtime", level: "event" }],
           },
         ],
       };

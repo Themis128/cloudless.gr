@@ -22,7 +22,7 @@ describe("fetch-with-auth.ts", () => {
   it("calls fetch without Authorization when no session", async () => {
     mockGetSession.mockResolvedValueOnce(null);
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response("{}", { status: 200 }),
+      new globalThis.Response("{}", { status: 200 })
     );
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
@@ -32,14 +32,14 @@ describe("fetch-with-auth.ts", () => {
       "/api/test",
       expect.objectContaining({
         headers: expect.not.objectContaining({ Authorization: expect.anything() }),
-      }),
+      })
     );
   });
 
   it("calls fetch with Authorization header when session has idToken", async () => {
     mockGetSession.mockResolvedValueOnce({ idToken: "test-token-abc" });
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response(JSON.stringify({ ok: true }), { status: 200 }),
+      new globalThis.Response(JSON.stringify({ ok: true }), { status: 200 })
     );
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
@@ -49,7 +49,7 @@ describe("fetch-with-auth.ts", () => {
       "/api/admin/data",
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: "Bearer test-token-abc" }),
-      }),
+      })
     );
     expect(res.status).toBe(200);
   });
@@ -57,7 +57,7 @@ describe("fetch-with-auth.ts", () => {
   it("merges existing headers with the Authorization header", async () => {
     mockGetSession.mockResolvedValueOnce({ idToken: "tok" });
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response("{}", { status: 200 }),
+      new globalThis.Response("{}", { status: 200 })
     );
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
@@ -74,14 +74,14 @@ describe("fetch-with-auth.ts", () => {
           "Content-Type": "application/json",
           Authorization: "Bearer tok",
         }),
-      }),
+      })
     );
   });
 
   it("still calls fetch when getSession returns session without idToken", async () => {
     mockGetSession.mockResolvedValueOnce({ user: { email: "a@b.com" } });
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response("{}", { status: 200 }),
+      new globalThis.Response("{}", { status: 200 })
     );
 
     const { fetchWithAuth } = await import("@/lib/fetch-with-auth");

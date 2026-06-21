@@ -60,7 +60,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "test-client-id",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -79,7 +79,10 @@ function unauthReq(url: string): NextRequest {
   return new NextRequest(url);
 }
 
-const gscConfigured = { GOOGLE_CLIENT_EMAIL: "svc@test.iam.gserviceaccount.com", GOOGLE_PRIVATE_KEY: "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----" };
+const gscConfigured = {
+  GOOGLE_CLIENT_EMAIL: "svc@test.iam.gserviceaccount.com",
+  GOOGLE_PRIVATE_KEY: "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----",
+};
 const gscUnconfigured = {};
 
 // ---------------------------------------------------------------------------
@@ -106,7 +109,12 @@ describe("GET /api/admin/analytics/web", () => {
 
   it("returns analytics data", async () => {
     getConfigMock.mockResolvedValue(gscConfigured);
-    gscMocks.getWebAnalytics.mockResolvedValue({ clicks: 500, impressions: 10000, ctr: 0.05, position: 12.3 });
+    gscMocks.getWebAnalytics.mockResolvedValue({
+      clicks: 500,
+      impressions: 10000,
+      ctr: 0.05,
+      position: 12.3,
+    });
     const { GET } = await import("@/app/api/admin/analytics/web/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/web"));
     const data = await res.json();
@@ -138,7 +146,9 @@ describe("GET /api/admin/analytics/seo", () => {
   it("returns snapshot and keywords", async () => {
     getConfigMock.mockResolvedValue(gscConfigured);
     gscMocks.getSeoSnapshot.mockResolvedValue({ totalClicks: 1200, avgPosition: 8.4 });
-    gscMocks.getTopKeywords.mockResolvedValue([{ query: "cloudless ai", clicks: 80, position: 3.1 }]);
+    gscMocks.getTopKeywords.mockResolvedValue([
+      { query: "cloudless ai", clicks: 80, position: 3.1 },
+    ]);
     const { GET } = await import("@/app/api/admin/analytics/seo/route");
     const res = await GET(adminReq("http://localhost/api/admin/analytics/seo"));
     const data = await res.json();
@@ -338,7 +348,9 @@ describe("GET /api/admin/analytics/products", () => {
       { page: "/en/store/ai-seo-bundle", clicks: 50, impressions: 800 },
     ]);
     const { GET } = await import("@/app/api/admin/analytics/products/route");
-    const res = await GET(adminReq("http://localhost/api/admin/analytics/products?pattern=/store/"));
+    const res = await GET(
+      adminReq("http://localhost/api/admin/analytics/products?pattern=/store/")
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.products).toHaveLength(1);

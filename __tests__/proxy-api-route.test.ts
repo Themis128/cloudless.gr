@@ -12,7 +12,7 @@ import { proxy } from "@/proxy";
 
 function makeApiRequest(
   path: string,
-  init: { method?: string; origin?: string; xForwardedFor?: string } = {},
+  init: { method?: string; origin?: string; xForwardedFor?: string } = {}
 ): NextRequest {
   const headers: Record<string, string> = {};
   if (init.origin) headers.origin = init.origin;
@@ -35,32 +35,26 @@ describe("proxy /api/* route handling", () => {
   });
 
   it("attaches CORS headers when request origin is cloudless.gr", async () => {
-    const res = await proxy(
-      makeApiRequest("/api/health", { origin: "https://cloudless.gr" }),
-    );
+    const res = await proxy(makeApiRequest("/api/health", { origin: "https://cloudless.gr" }));
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://cloudless.gr");
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("OPTIONS");
     expect(res.headers.get("Access-Control-Allow-Headers")).toContain("stripe-signature");
   });
 
   it("does NOT attach CORS headers for an unknown origin", async () => {
-    const res = await proxy(
-      makeApiRequest("/api/health", { origin: "https://evil.example.com" }),
-    );
+    const res = await proxy(makeApiRequest("/api/health", { origin: "https://evil.example.com" }));
     expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
   it("returns 204 for an OPTIONS preflight on an allowed origin", async () => {
     const res = await proxy(
-      makeApiRequest("/api/health", { method: "OPTIONS", origin: "https://cloudless.gr" }),
+      makeApiRequest("/api/health", { method: "OPTIONS", origin: "https://cloudless.gr" })
     );
     expect(res.status).toBe(204);
   });
 
   it("sets rate-limit headers on rate-limited routes", async () => {
-    const res = await proxy(
-      makeApiRequest("/api/admin/users", { method: "POST" }),
-    );
+    const res = await proxy(makeApiRequest("/api/admin/users", { method: "POST" }));
     expect(res.headers.get("X-RateLimit-Limit")).not.toBeNull();
   });
 });

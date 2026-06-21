@@ -36,10 +36,10 @@ describe("ssm-config.ts", () => {
     expect(cfg.GOOGLE_PRIVATE_KEY).not.toContain("\\n");
   });
 
-  it("NOTION_CALENDAR_DB_ID and NOTION_REPORTS_DB_ID are string properties", async () => {
+  it("NOTION_CALENDAR_DB_ID is a string property", async () => {
     const cfg = await getConfig();
     expect(typeof cfg.NOTION_CALENDAR_DB_ID).toBe("string");
-    expect(typeof cfg.NOTION_REPORTS_DB_ID).toBe("string");
+    // NOTION_REPORTS_DB_ID was removed from AppConfig in PR #1044 (Notion DB decom).
   });
 
   it("resetSsmCache() does not throw", () => {

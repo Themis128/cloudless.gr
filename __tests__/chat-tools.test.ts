@@ -12,17 +12,12 @@ vi.mock("@/lib/google-calendar", () => ({
   getAvailableSlots: mockGetAvailableSlots,
 }));
 vi.mock("@/lib/integrations", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/lib/integrations")>();
+  const actual = await importOriginal<typeof import("@/lib/integrations")>();
   return {
     ...actual,
-    isConfigured: vi.fn(
-      (...keys: string[]) =>
-        keys.every((k) => Boolean(process.env[k])),
-    ),
-    isConfiguredAsync: vi.fn(
-      async (...keys: string[]) =>
-        keys.every((k) => Boolean(process.env[k])),
+    isConfigured: vi.fn((...keys: string[]) => keys.every((k) => Boolean(process.env[k]))),
+    isConfiguredAsync: vi.fn(async (...keys: string[]) =>
+      keys.every((k) => Boolean(process.env[k]))
     ),
   };
 });

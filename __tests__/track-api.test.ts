@@ -23,7 +23,10 @@ function makeRequest(body: unknown) {
 }
 
 describe("POST /api/track", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 202 for valid page_view event", async () => {
     const { POST } = await import("@/app/api/track/route");
@@ -70,7 +73,15 @@ describe("POST /api/track", () => {
 
   it("fires-and-forgets — does not wait for trackEvent to resolve", async () => {
     let resolved = false;
-    mockTrackEvent.mockImplementation(() => new Promise(r => setTimeout(() => { resolved = true; r(undefined); }, 100)));
+    mockTrackEvent.mockImplementation(
+      () =>
+        new Promise((r) =>
+          setTimeout(() => {
+            resolved = true;
+            r(undefined);
+          }, 100)
+        )
+    );
     const { POST } = await import("@/app/api/track/route");
     await POST(makeRequest({ type: "page_view", page: "/" }));
     expect(resolved).toBe(false);
@@ -78,7 +89,10 @@ describe("POST /api/track", () => {
 
   it("returns 429 when rate limited", async () => {
     vi.doMock("@/lib/rate-limit", () => ({
-      rateLimit: () => ({ ok: false, response: new Response(JSON.stringify({ error: "rate limited" }), { status: 429 }) }),
+      rateLimit: () => ({
+        ok: false,
+        response: new Response(JSON.stringify({ error: "rate limited" }), { status: 429 }),
+      }),
       getClientIp: () => "1.2.3.4",
     }));
     const { POST } = await import("@/app/api/track/route");

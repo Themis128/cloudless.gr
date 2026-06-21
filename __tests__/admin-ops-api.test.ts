@@ -24,7 +24,10 @@ function adminFail() {
 // ── /api/admin/ops/monitor ────────────────────────────────────────────────────
 
 describe("GET /api/admin/ops/monitor", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -36,7 +39,9 @@ describe("GET /api/admin/ops/monitor", () => {
   it("returns 503 with offline:true when Pi LAN is unreachable", async () => {
     adminOk();
     const { GET } = await import("@/app/api/admin/ops/monitor/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/ops/monitor?resource=status"));
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/ops/monitor?resource=status")
+    );
     const data = await res.json();
     expect(data.offline).toBe(true);
   });
@@ -45,7 +50,9 @@ describe("GET /api/admin/ops/monitor", () => {
     adminOk();
     process.env.ALERT_API_URL = "https://external-api.example.com";
     const { GET } = await import("@/app/api/admin/ops/monitor/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/ops/monitor?resource=unknown"));
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/ops/monitor?resource=unknown")
+    );
     expect(res.status).toBe(400);
     delete process.env.ALERT_API_URL;
   });
@@ -61,12 +68,22 @@ vi.mock("@/lib/sentry", () => ({
 }));
 
 describe("PUT /api/admin/ops/errors/[id]", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: "{}", headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
+    const res = await PUT(
+      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
+        method: "PUT",
+        body: "{}",
+        headers: { "Content-Type": "application/json" },
+      }),
+      { params: Promise.resolve({ id: "abc" }) }
+    );
     expect(res.status).toBe(401);
   });
 
@@ -74,7 +91,14 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
     adminOk();
     mockIsSentryConfigured.mockResolvedValue(false);
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: JSON.stringify({ status: "resolved" }), headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
+    const res = await PUT(
+      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
+        method: "PUT",
+        body: JSON.stringify({ status: "resolved" }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      { params: Promise.resolve({ id: "abc" }) }
+    );
     expect(res.status).toBe(503);
   });
 
@@ -82,7 +106,14 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
     adminOk();
     mockIsSentryConfigured.mockResolvedValue(true);
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: JSON.stringify({ status: "deleted" }), headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
+    const res = await PUT(
+      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
+        method: "PUT",
+        body: JSON.stringify({ status: "deleted" }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      { params: Promise.resolve({ id: "abc" }) }
+    );
     expect(res.status).toBe(400);
   });
 
@@ -91,7 +122,14 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
     mockIsSentryConfigured.mockResolvedValue(true);
     mockUpdateIssueStatus.mockResolvedValue({ id: "abc", status: "resolved" });
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: JSON.stringify({ status: "resolved" }), headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
+    const res = await PUT(
+      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
+        method: "PUT",
+        body: JSON.stringify({ status: "resolved" }),
+        headers: { "Content-Type": "application/json" },
+      }),
+      { params: Promise.resolve({ id: "abc" }) }
+    );
     expect(res.status).toBe(200);
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith("abc", "resolved");
   });
@@ -114,7 +152,10 @@ vi.mock("@/lib/api-errors", () => ({
 }));
 
 describe("GET /api/admin/notion/search", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -143,7 +184,9 @@ describe("GET /api/admin/notion/search", () => {
     adminOk();
     mockGetDatabaseSchema.mockResolvedValue({ properties: {} });
     const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=schema&database_id=db-123"));
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/notion/search?type=schema&database_id=db-123")
+    );
     const data = await res.json();
     expect(data.schema).toBeDefined();
   });
@@ -152,7 +195,9 @@ describe("GET /api/admin/notion/search", () => {
     adminOk();
     mockSearchDatabases.mockResolvedValue([]);
     const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=database&q=test"));
+    const res = await GET(
+      new NextRequest("http://localhost/api/admin/notion/search?type=database&q=test")
+    );
     expect(res.status).toBe(200);
   });
 
@@ -169,14 +214,17 @@ describe("GET /api/admin/notion/search", () => {
 
 const mockIsHubSpotConfigured = vi.fn();
 const mockListTickets = vi.fn();
-vi.mock("@/lib/hubspot", async (orig) => ({
-  ...(await orig<typeof import("@/lib/hubspot")>()),
+vi.mock("@/lib/espocrm", async (orig) => ({
+  ...(await orig<typeof import("@/lib/espocrm")>()),
   isHubSpotConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
   listTickets: (...a: unknown[]) => mockListTickets(...a),
 }));
 
 describe("GET /api/admin/crm/tickets", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();

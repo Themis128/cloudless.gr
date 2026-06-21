@@ -65,8 +65,8 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
     pickToolUseBlocksMock.mockImplementation((content: unknown[]) =>
       content.filter(
         (b): b is { toolUse: { toolUseId: string; name: string; input: unknown } } =>
-          typeof b === "object" && b !== null && "toolUse" in b,
-      ),
+          typeof b === "object" && b !== null && "toolUse" in b
+      )
     );
     joinAssistantTextMock.mockReturnValue("");
   });
@@ -92,7 +92,7 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
 
     const r = await runVoiceBriefAgent();
     expect(r.text).toBe("Steady week.");
-    const stripe = r.sources.find(s => s.name === "get_stripe_revenue");
+    const stripe = r.sources.find((s) => s.name === "get_stripe_revenue");
     expect(stripe?.status).toBe("ok");
     expect(stripe?.detail).toMatch(/7 paid orders.*1234/);
   });
@@ -104,7 +104,7 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
       .mockResolvedValueOnce([emitBlock("Brief.")]);
 
     const r = await runVoiceBriefAgent();
-    const seo = r.sources.find(s => s.name === "get_seo_metrics");
+    const seo = r.sources.find((s) => s.name === "get_seo_metrics");
     expect(seo?.status).toBe("skipped");
     expect(seo?.detail).toMatch(/no data/i);
   });
@@ -116,7 +116,7 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
       .mockResolvedValueOnce([emitBlock("Brief.")]);
 
     const r = await runVoiceBriefAgent();
-    const pipe = r.sources.find(s => s.name === "get_pipeline_stats");
+    const pipe = r.sources.find((s) => s.name === "get_pipeline_stats");
     expect(pipe?.status).toBe("failed");
     expect(pipe?.detail).toMatch(/failed after retries/i);
     // Verify retry happened — initial + TOOL_MAX_RETRIES = 3 attempts.
@@ -163,11 +163,8 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
 
     const r = await runVoiceBriefAgent();
     expect(r.text).toBe("Both tools fired.");
-    expect(r.sources.map(s => s.name).sort()).toEqual([
-      "get_pipeline_stats",
-      "get_seo_metrics",
-    ]);
-    expect(r.sources.every(s => s.status === "ok")).toBe(true);
+    expect(r.sources.map((s) => s.name).sort()).toEqual(["get_pipeline_stats", "get_seo_metrics"]);
+    expect(r.sources.every((s) => s.status === "ok")).toBe(true);
   });
 
   it("handles an unknown tool name as a failed outcome", async () => {
@@ -175,7 +172,7 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
       .mockResolvedValueOnce([dataBlock("get_telemetry")])
       .mockResolvedValueOnce([emitBlock("Brief.")]);
     const r = await runVoiceBriefAgent();
-    const unknown = r.sources.find(s => s.name === "get_telemetry");
+    const unknown = r.sources.find((s) => s.name === "get_telemetry");
     // "Unknown tool: ..." doesn't include the keywords; falls into the
     // default "ok" bucket. We just assert the outcome was recorded.
     expect(unknown).toBeDefined();

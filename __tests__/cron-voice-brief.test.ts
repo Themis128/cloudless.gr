@@ -69,8 +69,7 @@ vi.mock("@/lib/ssm-config", () => ({
 
 vi.mock("@/lib/cron-auth", () => ({
   isCronAuthorized: (...args: unknown[]) => mockIsCronAuthorized(...args),
-  cronUnauthorized: () =>
-    new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
+  cronUnauthorized: () => new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
 }));
 
 vi.mock("@aws-sdk/client-ssm", () => {
@@ -142,9 +141,7 @@ describe("GET /api/cron/voice-brief", () => {
       // The `mode` field was removed when the legacy path was deleted.
       // Lock the contract: response keys are exactly text + sources + generatedAt.
       expect(body).not.toHaveProperty("mode");
-      expect(Object.keys(body).sort()).toEqual(
-        ["generatedAt", "sources", "text"].sort(),
-      );
+      expect(Object.keys(body).sort()).toEqual(["generatedAt", "sources", "text"].sort());
 
       expect(mockRunAgent).toHaveBeenCalledOnce();
       expect(mockSlackPost).toHaveBeenCalledOnce();
@@ -168,9 +165,7 @@ describe("GET /api/cron/voice-brief", () => {
       });
 
       const { GET } = await import(VOICE_BRIEF_ROUTE);
-      const res = await GET(
-        authedRequest("http://localhost/api/cron/voice-brief?legacy=true"),
-      );
+      const res = await GET(authedRequest("http://localhost/api/cron/voice-brief?legacy=true"));
       const body = await res.json();
 
       expect(res.status).toBe(200);
@@ -209,5 +204,4 @@ describe("GET /api/cron/voice-brief", () => {
       expect(res.status).toBe(200);
     });
   });
-
 });

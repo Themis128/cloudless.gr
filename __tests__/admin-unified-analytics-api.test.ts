@@ -31,21 +31,29 @@ vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
 
 vi.mock("@/lib/gsc", () => ({
   getSeoSnapshot: vi.fn().mockResolvedValue({
-    clicks: 400, impressions: 8000, ctr: 0.05, avgPosition: 12,
+    clicks: 400,
+    impressions: 8000,
+    ctr: 0.05,
+    avgPosition: 12,
   }),
 }));
 
 vi.mock("@/lib/hubspot", () => ({
   isHubSpotConfigured: mockIsHubSpot,
   getPipelineStats: vi.fn().mockResolvedValue({
-    totalDeals: 5, totalValue: 150000, stages: {},
+    totalDeals: 5,
+    totalValue: 150000,
+    stages: {},
   }),
 }));
 
 vi.mock("@/lib/activecampaign", () => ({
   isActiveCampaignConfigured: mockIsAC,
   getEmailStats: vi.fn().mockResolvedValue({
-    totalContacts: 200, totalCampaigns: 3, openRate: 0.25, clickRate: 0.1,
+    totalContacts: 200,
+    totalCampaigns: 3,
+    openRate: 0.25,
+    clickRate: 0.1,
   }),
 }));
 
@@ -71,7 +79,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
     email: "admin@test.com",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "test-client",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -85,7 +93,7 @@ function makeAdminToken(): string {
 function makeUserToken(): string {
   const payload = {
     sub: "user-sub",
-    "groups": [],
+    groups: [],
     aud: "test-client",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -108,7 +116,8 @@ const BASE_CFG = {
   STRIPE_SECRET_KEY: "sk_test_x",
   GOOGLE_CLIENT_EMAIL: "svc@test.iam",
   GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----",
-  NOTION_API_KEY: "", NOTION_PROJECTS_DB_ID: "",
+  NOTION_API_KEY: "",
+  NOTION_PROJECTS_DB_ID: "",
 };
 
 // ---------------------------------------------------------------------------
@@ -147,7 +156,11 @@ describe("GET /api/admin/analytics/unified", () => {
   });
 
   it("returns null seo when GSC not configured", async () => {
-    mockGetConfig.mockResolvedValue({ ...BASE_CFG, GOOGLE_CLIENT_EMAIL: "", GOOGLE_PRIVATE_KEY: "" });
+    mockGetConfig.mockResolvedValue({
+      ...BASE_CFG,
+      GOOGLE_CLIENT_EMAIL: "",
+      GOOGLE_PRIVATE_KEY: "",
+    });
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));
     expect(res.status).toBe(200);

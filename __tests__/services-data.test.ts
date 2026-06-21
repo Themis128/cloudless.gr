@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  getServices,
-  getServicesFaqs,
-  bundleTerminal,
-  colorMap,
-} from "@/lib/services-data";
+import { getServices, getServicesFaqs, bundleTerminal, colorMap } from "@/lib/services-data";
 
 // Pass-through translator — services-data takes a (key, fallback) function
 // so it can be locale-aware without importing next-intl.
@@ -15,14 +10,7 @@ describe("services-data", () => {
     it("returns 6 services in stable order", () => {
       const services = getServices(tPass);
       expect(services).toHaveLength(6);
-      expect(services.map(s => s.num)).toEqual([
-        "01",
-        "02",
-        "03",
-        "04",
-        "05",
-        "06",
-      ]);
+      expect(services.map((s) => s.num)).toEqual(["01", "02", "03", "04", "05", "06"]);
     });
 
     it("every service exposes the contract the page renders against", () => {
@@ -59,7 +47,7 @@ describe("services-data", () => {
 
     it("planKeys are unique across services", () => {
       const services = getServices(tPass);
-      const keys = services.map(s => s.planKey);
+      const keys = services.map((s) => s.planKey);
       expect(new Set(keys).size).toBe(keys.length);
     });
 
@@ -118,9 +106,7 @@ describe("services-data", () => {
       for (const theme of Object.values(colorMap)) {
         for (const slot of requiredSlots) {
           expect(theme).toHaveProperty(slot);
-          expect(typeof (theme as Record<string, string>)[slot]).toBe(
-            "string",
-          );
+          expect(typeof (theme as Record<string, string>)[slot]).toBe("string");
         }
       }
     });

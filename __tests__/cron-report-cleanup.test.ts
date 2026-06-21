@@ -28,11 +28,7 @@ function makeRequest(secret?: string) {
   });
 }
 
-function makeReport(
-  status: "generating" | "ready" | "error",
-  ageMs: number,
-  id = "report_1",
-) {
+function makeReport(status: "generating" | "ready" | "error", ageMs: number, id = "report_1") {
   return {
     id,
     clientName: "Acme Corp",

@@ -21,7 +21,7 @@ describe("scrubEvent", () => {
           },
         },
       }),
-      HINT,
+      HINT
     );
     expect(out?.request?.headers).toMatchObject({
       Authorization: "[REDACTED]",
@@ -36,7 +36,7 @@ describe("scrubEvent", () => {
       event({
         request: { url: "https://api.example/?token=abcd1234efgh&id=1" },
       }),
-      HINT,
+      HINT
     );
     expect(out?.request?.url).toBe("https://api.example/?token=[REDACTED]&id=1");
   });
@@ -52,7 +52,7 @@ describe("scrubEvent", () => {
           },
         },
       }),
-      HINT,
+      HINT
     );
     const d = out?.request?.data as Record<string, unknown>;
     expect(d.email).toBe("u@example.com");
@@ -64,7 +64,7 @@ describe("scrubEvent", () => {
   it("always redacts cookies on the request object", () => {
     const out = scrubEvent(
       event({ request: { cookies: { session: "abc", theme: "dark" } } }),
-      HINT,
+      HINT
     );
     expect(out?.request?.cookies).toEqual({
       session: "[REDACTED]",
@@ -87,7 +87,7 @@ describe("scrubEvent", () => {
           benign: "hello world",
         },
       }),
-      HINT,
+      HINT
     );
     const e = out?.extra as Record<string, unknown>;
     expect(e.aws).toBe("[REDACTED]");

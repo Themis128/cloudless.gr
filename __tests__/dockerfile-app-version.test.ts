@@ -24,9 +24,7 @@ describe("Dockerfile multi-stage APP_VERSION wiring", () => {
   // Find the runner stage: everything from `FROM ... AS runner` to EOF
   // (or to the next `FROM`, but runner is the last stage in this Dockerfile).
   const runnerStart = dockerfile.indexOf("FROM");
-  const runnerStageMatch = dockerfile.match(
-    /FROM[^\n]+AS runner[\s\S]*$/,
-  );
+  const runnerStageMatch = dockerfile.match(/FROM[^\n]+AS runner[\s\S]*$/);
 
   it("has a runner stage", () => {
     expect(runnerStart).toBeGreaterThanOrEqual(0);
@@ -38,7 +36,7 @@ describe("Dockerfile multi-stage APP_VERSION wiring", () => {
   it("re-declares ARG APP_VERSION in the runner stage", () => {
     expect(
       runner,
-      "runner stage MUST re-declare ARG APP_VERSION — multi-stage builds don't inherit ARGs across FROM",
+      "runner stage MUST re-declare ARG APP_VERSION — multi-stage builds don't inherit ARGs across FROM"
     ).toMatch(/ARG\s+APP_VERSION/);
   });
 
@@ -47,7 +45,7 @@ describe("Dockerfile multi-stage APP_VERSION wiring", () => {
     // that includes APP_VERSION=...
     expect(
       runner,
-      "runner stage MUST set ENV APP_VERSION=${APP_VERSION} so process.env.APP_VERSION is populated at runtime",
+      "runner stage MUST set ENV APP_VERSION=${APP_VERSION} so process.env.APP_VERSION is populated at runtime"
     ).toMatch(/APP_VERSION=\$\{APP_VERSION\}|APP_VERSION=\$APP_VERSION/);
   });
 });
@@ -63,11 +61,8 @@ describe("build-pi-image workflow APP_VERSION wiring", () => {
     //   3. APP_VERSION=${{ steps.sha.outputs.full }}   ← PR #294 fix for
     //      Issue #293; ensures the embedded version matches the ACTUAL
     //      checked-out HEAD instead of the workflow's GITHUB_SHA.
-    expect(
-      yml,
-      "build-pi-image workflow MUST pass APP_VERSION as a build-arg",
-    ).toMatch(
-      /APP_VERSION=\$\{\{\s*github\.event\.inputs\.target_sha\s*\|\|\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*steps\.sha\.outputs\.full\s*\}\}/,
+    expect(yml, "build-pi-image workflow MUST pass APP_VERSION as a build-arg").toMatch(
+      /APP_VERSION=\$\{\{\s*github\.event\.inputs\.target_sha\s*\|\|\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*steps\.sha\.outputs\.full\s*\}\}/
     );
   });
 });

@@ -11,8 +11,7 @@ vi.mock("@/lib/notion-search", () => ({
 }));
 
 vi.mock("@/lib/stripe", () => ({
-  listRecentCheckoutSessions: (...args: unknown[]) =>
-    listRecentCheckoutSessionsMock(...args),
+  listRecentCheckoutSessions: (...args: unknown[]) => listRecentCheckoutSessionsMock(...args),
 }));
 
 vi.mock("@/lib/email", () => ({
@@ -30,7 +29,7 @@ describe("admin-assistant-tools", () => {
 
   describe("ASSISTANT_TOOLS registry", () => {
     it("exposes the 3 expected tools by name", () => {
-      const names = ASSISTANT_TOOLS.map(t => t.name);
+      const names = ASSISTANT_TOOLS.map((t) => t.name);
       expect(names).toEqual(["search_notion", "get_recent_orders", "draft_email"]);
     });
 
@@ -43,15 +42,13 @@ describe("admin-assistant-tools", () => {
     });
 
     it("search_notion requires 'query'", () => {
-      const t = ASSISTANT_TOOLS.find(t => t.name === "search_notion")!;
+      const t = ASSISTANT_TOOLS.find((t) => t.name === "search_notion")!;
       expect(t.input_schema.required).toContain("query");
     });
 
     it("draft_email requires subject + body", () => {
-      const t = ASSISTANT_TOOLS.find(t => t.name === "draft_email")!;
-      expect(t.input_schema.required).toEqual(
-        expect.arrayContaining(["subject", "body"]),
-      );
+      const t = ASSISTANT_TOOLS.find((t) => t.name === "draft_email")!;
+      expect(t.input_schema.required).toEqual(expect.arrayContaining(["subject", "body"]));
     });
   });
 

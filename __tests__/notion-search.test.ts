@@ -84,7 +84,11 @@ describe("notion-search.ts", () => {
     });
 
     it("returns empty on API error", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: () => Promise.resolve("err") });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve("err"),
+      });
       const result = await searchPages("test");
       expect(result.results).toEqual([]);
     });
@@ -186,7 +190,11 @@ describe("notion-search.ts", () => {
     });
 
     it("returns empty on error", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: () => Promise.resolve("unauthorized") });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve("unauthorized"),
+      });
       const users = await listUsers();
       expect(users).toEqual([]);
     });
@@ -242,7 +250,11 @@ describe("notion-search.ts", () => {
     });
 
     it("returns null on error", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: () => Promise.resolve("not found") });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve("not found"),
+      });
       expect(await getUser("bad-id")).toBeNull();
     });
   });
@@ -297,11 +309,17 @@ describe("notion-search.ts", () => {
     it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      await expect(getDatabaseSchema("db-id")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(getDatabaseSchema("db-id")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
     });
 
     it("returns null on error", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: () => Promise.resolve("not found") });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve("not found"),
+      });
       expect(await getDatabaseSchema("bad-id")).toBeNull();
     });
   });

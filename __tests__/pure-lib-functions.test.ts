@@ -44,7 +44,13 @@ describe("bedrock-shared.ts — pure helpers", () => {
 
   it("buildBedrockToolConfig builds correct structure", async () => {
     const { buildBedrockToolConfig } = await import("@/lib/bedrock-shared");
-    const tools = [{ name: "my_tool", description: "does stuff", inputSchema: { json: { type: "object", properties: {} } } }];
+    const tools = [
+      {
+        name: "my_tool",
+        description: "does stuff",
+        inputSchema: { json: { type: "object", properties: {} } },
+      },
+    ];
     const config = buildBedrockToolConfig(tools as never[]);
     expect(config).toHaveProperty("tools");
     expect(Array.isArray(config.tools)).toBe(true);
@@ -83,7 +89,9 @@ describe("rate-limit.ts", () => {
 
   it("getClientIp returns forwarded IP", async () => {
     const { getClientIp } = await import("@/lib/rate-limit");
-    const req = new Request("http://localhost", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } });
+    const req = new Request("http://localhost", {
+      headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" },
+    });
     expect(getClientIp(req)).toBe("1.2.3.4");
   });
 
@@ -99,7 +107,9 @@ describe("rate-limit.ts", () => {
 describe("escape-html.ts", () => {
   it("escapes HTML special characters", async () => {
     const { escapeHtml } = await import("@/lib/escape-html");
-    expect(escapeHtml("<script>alert('xss')</script>")).toBe("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;");
+    expect(escapeHtml("<script>alert('xss')</script>")).toBe(
+      "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;"
+    );
   });
 
   it("escapes ampersands", async () => {
@@ -252,17 +262,29 @@ describe("notion-cache.ts", () => {
     const { cached, invalidateCache } = await import("@/lib/notion-cache");
     invalidateCache("test-pure-key2");
     let calls = 0;
-    await cached("test-pure-key2", async () => { calls++; return "value"; });
-    await cached("test-pure-key2", async () => { calls++; return "value"; });
+    await cached("test-pure-key2", async () => {
+      calls++;
+      return "value";
+    });
+    await cached("test-pure-key2", async () => {
+      calls++;
+      return "value";
+    });
     expect(calls).toBe(1);
   });
 
   it("invalidateCache forces re-fetch on next call", async () => {
     const { cached, invalidateCache } = await import("@/lib/notion-cache");
     let calls = 0;
-    await cached("test-invalidate-key", async () => { calls++; return "v"; });
+    await cached("test-invalidate-key", async () => {
+      calls++;
+      return "v";
+    });
     invalidateCache("test-invalidate-key");
-    await cached("test-invalidate-key", async () => { calls++; return "v"; });
+    await cached("test-invalidate-key", async () => {
+      calls++;
+      return "v";
+    });
     expect(calls).toBe(2);
   });
 });

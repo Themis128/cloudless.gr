@@ -101,13 +101,15 @@ describe("notion-testimonials.ts", () => {
       expect(result).toEqual([]);
       expect(errorSpy).toHaveBeenCalledWith(
         "[Notion Testimonials] Failed to fetch:",
-        expect.any(Error),
+        expect.any(Error)
       );
     });
 
     it("clamps rating to 1–5 range", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
-        makeTestimonialPage({ properties: { ...makeTestimonialPage().properties, Rating: { number: 10 } } }),
+        makeTestimonialPage({
+          properties: { ...makeTestimonialPage().properties, Rating: { number: 10 } },
+        }),
       ]);
 
       const { getTestimonials } = await import("@/lib/notion-testimonials");
@@ -127,7 +129,9 @@ describe("notion-testimonials.ts", () => {
 
     it("omits avatar when url is null", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
-        makeTestimonialPage({ properties: { ...makeTestimonialPage().properties, Avatar: { url: null } } }),
+        makeTestimonialPage({
+          properties: { ...makeTestimonialPage().properties, Avatar: { url: null } },
+        }),
       ]);
 
       const { getTestimonials } = await import("@/lib/notion-testimonials");
@@ -137,7 +141,9 @@ describe("notion-testimonials.ts", () => {
 
     it("defaults name to Anonymous when title is empty", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
-        makeTestimonialPage({ properties: { ...makeTestimonialPage().properties, Name: { title: [] } } }),
+        makeTestimonialPage({
+          properties: { ...makeTestimonialPage().properties, Name: { title: [] } },
+        }),
       ]);
 
       const { getTestimonials } = await import("@/lib/notion-testimonials");
@@ -150,7 +156,10 @@ describe("notion-testimonials.ts", () => {
     it("returns only featured testimonials", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
         makeTestimonialPage(),
-        makeTestimonialPage({ id: "t-2", properties: { ...makeTestimonialPage().properties, Featured: { checkbox: false } } }),
+        makeTestimonialPage({
+          id: "t-2",
+          properties: { ...makeTestimonialPage().properties, Featured: { checkbox: false } },
+        }),
       ]);
 
       const { getFeaturedTestimonials } = await import("@/lib/notion-testimonials");
@@ -162,7 +171,9 @@ describe("notion-testimonials.ts", () => {
 
     it("returns empty array when none are featured", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
-        makeTestimonialPage({ properties: { ...makeTestimonialPage().properties, Featured: { checkbox: false } } }),
+        makeTestimonialPage({
+          properties: { ...makeTestimonialPage().properties, Featured: { checkbox: false } },
+        }),
       ]);
 
       const { getFeaturedTestimonials } = await import("@/lib/notion-testimonials");
@@ -189,7 +200,8 @@ describe("notion-testimonials.ts", () => {
     it("returns static fallback when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      const { getAllTestimonialsAdmin, staticTestimonials } = await import("@/lib/notion-testimonials");
+      const { getAllTestimonialsAdmin, staticTestimonials } =
+        await import("@/lib/notion-testimonials");
       const result = await getAllTestimonialsAdmin();
       expect(result).toEqual(staticTestimonials);
       expect(mockNotionFetchAll).not.toHaveBeenCalled();
@@ -198,7 +210,10 @@ describe("notion-testimonials.ts", () => {
     it("lists every page sorted by Order (no Published filter)", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
         makeTestimonialPage(),
-        makeTestimonialPage({ id: "t-2", properties: { ...makeTestimonialPage().properties, Published: { checkbox: false } } }),
+        makeTestimonialPage({
+          id: "t-2",
+          properties: { ...makeTestimonialPage().properties, Published: { checkbox: false } },
+        }),
       ]);
       const { getAllTestimonialsAdmin } = await import("@/lib/notion-testimonials");
       const result = await getAllTestimonialsAdmin();
@@ -221,8 +236,16 @@ describe("notion-testimonials.ts", () => {
       const { createTestimonial } = await import("@/lib/notion-testimonials");
       const { invalidateCache } = await import("@/lib/notion-cache");
       const id = await createTestimonial({
-        name: "Maria K.", company: "Acme", role: "CEO", quote: "Great work",
-        avatar: "https://x/a.png", service: "Audit", rating: 4, featured: true, published: true, order: 2,
+        name: "Maria K.",
+        company: "Acme",
+        role: "CEO",
+        quote: "Great work",
+        avatar: "https://x/a.png",
+        service: "Audit",
+        rating: 4,
+        featured: true,
+        published: true,
+        order: 2,
       });
       expect(id).toBe("new-page-id");
       const [dbId, props] = mockCreatePage.mock.calls[0];

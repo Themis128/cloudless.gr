@@ -4,8 +4,18 @@ import { useAuth } from "@/context/AuthContext";
 
 // Mock @/i18n/navigation so the Link component doesn't need an IntlProvider.
 vi.mock("@/i18n/navigation", () => ({
-  Link: ({ children, href, ...props }: { children: React.ReactNode; href: string; [key: string]: unknown }) => (
-    <a href={String(href)} {...props}>{children}</a>
+  Link: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={String(href)} {...props}>
+      {children}
+    </a>
   ),
   useRouter: () => ({ push: () => {}, replace: () => {}, back: () => {} }),
   usePathname: () => "/",
@@ -47,9 +57,7 @@ describe("dashboard /settings — theme button live preview", () => {
   afterEach(() => cleanup());
 
   it("clicking a theme button writes localStorage immediately, before Save", async () => {
-    const SettingsPage = (await import(
-      "@/app/[locale]/dashboard/settings/page"
-    )).default;
+    const SettingsPage = (await import("@/app/[locale]/dashboard/settings/page")).default;
     render(<SettingsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /Light \(Default\)|^Light$/i }));
@@ -60,9 +68,7 @@ describe("dashboard /settings — theme button live preview", () => {
     const handler = vi.fn();
     window.addEventListener(PREF_EVENT, handler);
 
-    const SettingsPage = (await import(
-      "@/app/[locale]/dashboard/settings/page"
-    )).default;
+    const SettingsPage = (await import("@/app/[locale]/dashboard/settings/page")).default;
     render(<SettingsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /^System$/i }));
@@ -77,9 +83,7 @@ describe("dashboard /settings — theme button live preview", () => {
       updatePreferences,
     } as never);
 
-    const SettingsPage = (await import(
-      "@/app/[locale]/dashboard/settings/page"
-    )).default;
+    const SettingsPage = (await import("@/app/[locale]/dashboard/settings/page")).default;
     render(<SettingsPage />);
 
     fireEvent.click(screen.getByRole("button", { name: /^Light$/i }));

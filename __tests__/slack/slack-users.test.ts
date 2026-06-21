@@ -100,8 +100,25 @@ describe("slack-users.ts", () => {
           json: async () => ({
             ok: true,
             members: [
-              { ...okUser({ id: "U001" }).json().then(() => {}), id: "U001", name: "alice", is_bot: false, is_app_user: false, deleted: false, profile: { display_name: "alice", real_name: "Alice" } },
-              { id: "U002", name: "deleted-user", is_bot: false, is_app_user: false, deleted: true, profile: { display_name: "", real_name: "" } },
+              {
+                ...okUser({ id: "U001" })
+                  .json()
+                  .then(() => {}),
+                id: "U001",
+                name: "alice",
+                is_bot: false,
+                is_app_user: false,
+                deleted: false,
+                profile: { display_name: "alice", real_name: "Alice" },
+              },
+              {
+                id: "U002",
+                name: "deleted-user",
+                is_bot: false,
+                is_app_user: false,
+                deleted: true,
+                profile: { display_name: "", real_name: "" },
+              },
             ],
             response_metadata: { next_cursor: "cursor1" },
           }),
@@ -111,7 +128,14 @@ describe("slack-users.ts", () => {
           json: async () => ({
             ok: true,
             members: [
-              { id: "U003", name: "bob", is_bot: false, is_app_user: false, deleted: false, profile: { display_name: "bob", real_name: "Bob" } },
+              {
+                id: "U003",
+                name: "bob",
+                is_bot: false,
+                is_app_user: false,
+                deleted: false,
+                profile: { display_name: "bob", real_name: "Bob" },
+              },
             ],
             response_metadata: { next_cursor: "" },
           }),

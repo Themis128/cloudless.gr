@@ -108,7 +108,7 @@ describe("sentry.ts", () => {
     it("returns issue list with total and fetchedAt", async () => {
       const issues = [makeSentryIssue(), makeSentryIssue({ id: "issue-2" })];
       vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify(issues), { status: 200 }),
+        new Response(JSON.stringify(issues), { status: 200 })
       );
       const result = await getUnresolvedIssues();
       expect(result).not.toBeNull();
@@ -138,7 +138,7 @@ describe("sentry.ts", () => {
 
     it("returns issues from getUnresolvedIssues", async () => {
       vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify([makeSentryIssue()]), { status: 200 }),
+        new Response(JSON.stringify([makeSentryIssue()]), { status: 200 })
       );
       expect(await getTopErrors(1)).toHaveLength(1);
     });
@@ -160,7 +160,7 @@ describe("sentry.ts", () => {
         makeSentryIssue({ level: "warning" }),
       ];
       vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify(issues), { status: 200 }),
+        new Response(JSON.stringify(issues), { status: 200 })
       );
       const result = await getErrorCounts();
       expect(result).not.toBeNull();
@@ -176,14 +176,14 @@ describe("sentry.ts", () => {
   describe("updateIssueStatus()", () => {
     it("returns true when patch succeeds", async () => {
       vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: STATUS_RESOLVED }), { status: 200 }),
+        new Response(JSON.stringify({ status: STATUS_RESOLVED }), { status: 200 })
       );
       expect(await updateIssueStatus(ISSUE_ID, STATUS_RESOLVED)).toBe(true);
     });
 
     it("returns false when API returns a different status", async () => {
       vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: "unresolved" }), { status: 200 }),
+        new Response(JSON.stringify({ status: "unresolved" }), { status: 200 })
       );
       expect(await updateIssueStatus(ISSUE_ID, STATUS_RESOLVED)).toBe(false);
     });

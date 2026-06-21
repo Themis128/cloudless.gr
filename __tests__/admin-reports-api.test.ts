@@ -13,7 +13,7 @@ vi.mock("@/lib/api-auth", () => ({
   requireAdmin: requireAdminMock,
 }));
 
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   isHubSpotConfigured: isHubSpotConfiguredMock,
   getPipelineStats: getPipelineStatsMock,
 }));
@@ -120,18 +120,22 @@ describe("Admin Reports API routes", () => {
   describe("POST /api/admin/reports/generate", () => {
     it("returns 400 when clientName missing", async () => {
       const { POST } = await import("@/app/api/admin/reports/generate/route");
-      const res = await POST(makePost("/api/admin/reports/generate", { dateStart: "2026-04-01", dateEnd: "2026-04-30" }));
+      const res = await POST(
+        makePost("/api/admin/reports/generate", { dateStart: "2026-04-01", dateEnd: "2026-04-30" })
+      );
       expect(res.status).toBe(400);
     });
 
     it("generates report with pipeline and email sections", async () => {
       const { POST } = await import("@/app/api/admin/reports/generate/route");
-      const res = await POST(makePost("/api/admin/reports/generate", {
-        clientName: "Acme Corp",
-        dateStart: "2026-04-01",
-        dateEnd: "2026-04-30",
-        includeSections: ["pipeline", "email"],
-      }));
+      const res = await POST(
+        makePost("/api/admin/reports/generate", {
+          clientName: "Acme Corp",
+          dateStart: "2026-04-01",
+          dateEnd: "2026-04-30",
+          includeSections: ["pipeline", "email"],
+        })
+      );
       const data = await res.json();
       expect(res.status).toBe(201);
       expect(data.report.clientName).toBe("Acme Corp");
@@ -143,12 +147,14 @@ describe("Admin Reports API routes", () => {
     it("skips pipeline section when HubSpot not configured", async () => {
       isHubSpotConfiguredMock.mockResolvedValue(false);
       const { POST } = await import("@/app/api/admin/reports/generate/route");
-      const res = await POST(makePost("/api/admin/reports/generate", {
-        clientName: "Client X",
-        dateStart: "2026-04-01",
-        dateEnd: "2026-04-30",
-        includeSections: ["pipeline", "email"],
-      }));
+      const res = await POST(
+        makePost("/api/admin/reports/generate", {
+          clientName: "Client X",
+          dateStart: "2026-04-01",
+          dateEnd: "2026-04-30",
+          includeSections: ["pipeline", "email"],
+        })
+      );
       const data = await res.json();
       expect(res.status).toBe(201);
       expect(data.report.sections.some((s: { id: string }) => s.id === "pipeline")).toBe(false);
@@ -157,17 +163,21 @@ describe("Admin Reports API routes", () => {
 
     it("generates report and appears in list", async () => {
       const { POST } = await import("@/app/api/admin/reports/generate/route");
-      await POST(makePost("/api/admin/reports/generate", {
-        clientName: "Listed Client",
-        dateStart: "2026-04-01",
-        dateEnd: "2026-04-30",
-        includeSections: ["email"],
-      }));
+      await POST(
+        makePost("/api/admin/reports/generate", {
+          clientName: "Listed Client",
+          dateStart: "2026-04-01",
+          dateEnd: "2026-04-30",
+          includeSections: ["email"],
+        })
+      );
 
       const { GET } = await import("@/app/api/admin/reports/route");
       const listRes = await GET(makeGet("/api/admin/reports"));
       const listData = await listRes.json();
-      expect(listData.reports.some((r: { clientName: string }) => r.clientName === "Listed Client")).toBe(true);
+      expect(
+        listData.reports.some((r: { clientName: string }) => r.clientName === "Listed Client")
+      ).toBe(true);
     });
   });
 
@@ -176,22 +186,28 @@ describe("Admin Reports API routes", () => {
   describe("GET /api/admin/reports/[id]", () => {
     it("returns 404 for unknown id", async () => {
       const { GET } = await import("@/app/api/admin/reports/[id]/route");
-      const res = await GET(makeGet("/api/admin/reports/report_ghost"), { params: Promise.resolve({ id: "report_ghost" }) });
+      const res = await GET(makeGet("/api/admin/reports/report_ghost"), {
+        params: Promise.resolve({ id: "report_ghost" }),
+      });
       expect(res.status).toBe(404);
     });
 
     it("returns report by id", async () => {
       const { POST } = await import("@/app/api/admin/reports/generate/route");
-      const genRes = await POST(makePost("/api/admin/reports/generate", {
-        clientName: "Find Me",
-        dateStart: "2026-04-01",
-        dateEnd: "2026-04-30",
-        includeSections: ["email"],
-      }));
+      const genRes = await POST(
+        makePost("/api/admin/reports/generate", {
+          clientName: "Find Me",
+          dateStart: "2026-04-01",
+          dateEnd: "2026-04-30",
+          includeSections: ["email"],
+        })
+      );
       const { report } = await genRes.json();
 
       const { GET } = await import("@/app/api/admin/reports/[id]/route");
-      const res = await GET(makeGet(`/api/admin/reports/${report.id}`), { params: Promise.resolve({ id: report.id }) });
+      const res = await GET(makeGet(`/api/admin/reports/${report.id}`), {
+        params: Promise.resolve({ id: report.id }),
+      });
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.report.clientName).toBe("Find Me");
@@ -203,26 +219,34 @@ describe("Admin Reports API routes", () => {
   describe("DELETE /api/admin/reports/[id]", () => {
     it("returns 404 for unknown id", async () => {
       const { DELETE } = await import("@/app/api/admin/reports/[id]/route");
-      const res = await DELETE(makeDelete("/api/admin/reports/report_ghost"), { params: Promise.resolve({ id: "report_ghost" }) });
+      const res = await DELETE(makeDelete("/api/admin/reports/report_ghost"), {
+        params: Promise.resolve({ id: "report_ghost" }),
+      });
       expect(res.status).toBe(404);
     });
 
     it("deletes report and returns 200", async () => {
       const { POST } = await import("@/app/api/admin/reports/generate/route");
-      const genRes = await POST(makePost("/api/admin/reports/generate", {
-        clientName: "Delete Me",
-        dateStart: "2026-04-01",
-        dateEnd: "2026-04-30",
-        includeSections: [],
-      }));
+      const genRes = await POST(
+        makePost("/api/admin/reports/generate", {
+          clientName: "Delete Me",
+          dateStart: "2026-04-01",
+          dateEnd: "2026-04-30",
+          includeSections: [],
+        })
+      );
       const { report } = await genRes.json();
 
       const { DELETE } = await import("@/app/api/admin/reports/[id]/route");
-      const res = await DELETE(makeDelete(`/api/admin/reports/${report.id}`), { params: Promise.resolve({ id: report.id }) });
+      const res = await DELETE(makeDelete(`/api/admin/reports/${report.id}`), {
+        params: Promise.resolve({ id: report.id }),
+      });
       expect(res.status).toBe(200);
 
       const { GET } = await import("@/app/api/admin/reports/[id]/route");
-      const getRes = await GET(makeGet(`/api/admin/reports/${report.id}`), { params: Promise.resolve({ id: report.id }) });
+      const getRes = await GET(makeGet(`/api/admin/reports/${report.id}`), {
+        params: Promise.resolve({ id: report.id }),
+      });
       expect(getRes.status).toBe(404);
     });
   });

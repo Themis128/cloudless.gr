@@ -22,8 +22,7 @@ const source = readFileSync(PROXY, "utf-8");
 
 describe("proxy.ts HSTS header — preload eligibility", () => {
   // Match the .set("Strict-Transport-Security", "...") call's value string.
-  const m =
-    /Strict-Transport-Security['"]\s*,\s*['"`]([^'"`]+)['"`]/i.exec(source);
+  const m = /Strict-Transport-Security['"]\s*,\s*['"`]([^'"`]+)['"`]/i.exec(source);
 
   it("Strict-Transport-Security is set", () => {
     expect(m, "no Strict-Transport-Security header found in proxy.ts").toBeTruthy();

@@ -14,7 +14,7 @@ vi.mock("@/lib/api-auth", () => ({
   requireAdmin: requireAdminMock,
 }));
 
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   isHubSpotConfigured: isHubSpotConfiguredMock,
   getDealsByStage: getDealsByStageMock,
   getPipelines: getPipelinesMock,
@@ -110,7 +110,10 @@ describe("Admin Pipeline API routes", () => {
     it("returns 503 when HubSpot not configured", async () => {
       isHubSpotConfiguredMock.mockResolvedValueOnce(false);
       const { POST } = await import("@/app/api/admin/pipeline/deals/[id]/move/route");
-      const res = await POST(makePost("/api/admin/pipeline/deals/deal_1/move", { stageId: "closedwon" }), { params });
+      const res = await POST(
+        makePost("/api/admin/pipeline/deals/deal_1/move", { stageId: "closedwon" }),
+        { params }
+      );
       expect(res.status).toBe(503);
     });
 
@@ -123,7 +126,10 @@ describe("Admin Pipeline API routes", () => {
     it("moves deal and returns updated deal", async () => {
       moveDealStageMock.mockResolvedValueOnce({ id: "deal_1" });
       const { POST } = await import("@/app/api/admin/pipeline/deals/[id]/move/route");
-      const res = await POST(makePost("/api/admin/pipeline/deals/deal_1/move", { stageId: "closedwon" }), { params });
+      const res = await POST(
+        makePost("/api/admin/pipeline/deals/deal_1/move", { stageId: "closedwon" }),
+        { params }
+      );
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.deal.id).toBe("deal_1");
@@ -132,7 +138,10 @@ describe("Admin Pipeline API routes", () => {
     it("returns 500 when moveDealStage returns null", async () => {
       moveDealStageMock.mockResolvedValueOnce(null);
       const { POST } = await import("@/app/api/admin/pipeline/deals/[id]/move/route");
-      const res = await POST(makePost("/api/admin/pipeline/deals/deal_1/move", { stageId: "closedwon" }), { params });
+      const res = await POST(
+        makePost("/api/admin/pipeline/deals/deal_1/move", { stageId: "closedwon" }),
+        { params }
+      );
       expect(res.status).toBe(500);
     });
   });
@@ -143,7 +152,9 @@ describe("Admin Pipeline API routes", () => {
     const params = Promise.resolve({ id: "deal_1" });
 
     it("returns notes list", async () => {
-      listNotesMock.mockResolvedValueOnce([{ id: "note_1", properties: { hs_note_body: "Hello" } }]);
+      listNotesMock.mockResolvedValueOnce([
+        { id: "note_1", properties: { hs_note_body: "Hello" } },
+      ]);
       const { GET } = await import("@/app/api/admin/pipeline/deals/[id]/notes/route");
       const res = await GET(makeGet("/api/admin/pipeline/deals/deal_1/notes"), { params });
       const data = await res.json();
@@ -158,7 +169,10 @@ describe("Admin Pipeline API routes", () => {
     it("creates note and returns it", async () => {
       createNoteMock.mockResolvedValueOnce({ id: "note_1" });
       const { POST } = await import("@/app/api/admin/pipeline/deals/[id]/notes/route");
-      const res = await POST(makePost("/api/admin/pipeline/deals/deal_1/notes", { body: "Test note" }), { params });
+      const res = await POST(
+        makePost("/api/admin/pipeline/deals/deal_1/notes", { body: "Test note" }),
+        { params }
+      );
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.note.id).toBe("note_1");

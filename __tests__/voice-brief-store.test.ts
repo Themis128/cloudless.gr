@@ -24,9 +24,7 @@ describe("voice-brief-store", () => {
 
   it("VOICE_BRIEF_SSM_NAME points at the production prefix", async () => {
     const mod = await import("@/lib/voice-brief-store");
-    expect(mod.VOICE_BRIEF_SSM_NAME).toBe(
-      "/cloudless/production/VOICE_BRIEF_LATEST",
-    );
+    expect(mod.VOICE_BRIEF_SSM_NAME).toBe("/cloudless/production/VOICE_BRIEF_LATEST");
   });
 
   it("persistVoiceBrief writes JSON to SSM with Overwrite=true", async () => {

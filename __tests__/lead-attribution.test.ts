@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseAttribution,
-  sanitizeAttribution,
-  formatAttribution,
-} from "@/lib/lead-attribution";
+import { parseAttribution, sanitizeAttribution, formatAttribution } from "@/lib/lead-attribution";
 
 describe("parseAttribution", () => {
   it("extracts all five UTM params and the landing page", () => {

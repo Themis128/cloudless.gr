@@ -41,7 +41,9 @@ describe("getStripeAnalyticsSnapshot()", () => {
   it("throws when STRIPE_TRANSACTIONS_TABLE is not set", async () => {
     delete process.env.STRIPE_TRANSACTIONS_TABLE;
     const { getStripeAnalyticsSnapshot } = await import("@/lib/stripe-analytics-read");
-    await expect(getStripeAnalyticsSnapshot()).rejects.toThrow("STRIPE_TRANSACTIONS_TABLE is not configured");
+    await expect(getStripeAnalyticsSnapshot()).rejects.toThrow(
+      "STRIPE_TRANSACTIONS_TABLE is not configured"
+    );
   });
 
   it("returns an empty snapshot when DynamoDB returns no items", async () => {
@@ -57,9 +59,21 @@ describe("getStripeAnalyticsSnapshot()", () => {
   it("aggregates totals correctly from items", async () => {
     const today = new Date().toISOString().slice(0, 10);
     const items = [
-      makeItem({ eventDay: { S: today }, amountMinor: { N: "1000" }, processingStatus: { S: "processed" } }),
-      makeItem({ eventDay: { S: today }, amountMinor: { N: "2000" }, processingStatus: { S: "processed" } }),
-      makeItem({ eventDay: { S: today }, amountMinor: { N: "500" }, processingStatus: { S: "handler_failed" } }),
+      makeItem({
+        eventDay: { S: today },
+        amountMinor: { N: "1000" },
+        processingStatus: { S: "processed" },
+      }),
+      makeItem({
+        eventDay: { S: today },
+        amountMinor: { N: "2000" },
+        processingStatus: { S: "processed" },
+      }),
+      makeItem({
+        eventDay: { S: today },
+        amountMinor: { N: "500" },
+        processingStatus: { S: "handler_failed" },
+      }),
     ];
     // 1-day window → single DynamoDB query; no multi-day accumulation
     mockSend.mockResolvedValue({ Items: items, LastEvaluatedKey: undefined });
@@ -74,9 +88,21 @@ describe("getStripeAnalyticsSnapshot()", () => {
   it("groups events by category", async () => {
     const today = new Date().toISOString().slice(0, 10);
     const items = [
-      makeItem({ eventDay: { S: today }, tagCategory: { S: "checkout" }, amountMinor: { N: "1000" } }),
-      makeItem({ eventDay: { S: today }, tagCategory: { S: "subscription" }, amountMinor: { N: "2000" } }),
-      makeItem({ eventDay: { S: today }, tagCategory: { S: "checkout" }, amountMinor: { N: "500" } }),
+      makeItem({
+        eventDay: { S: today },
+        tagCategory: { S: "checkout" },
+        amountMinor: { N: "1000" },
+      }),
+      makeItem({
+        eventDay: { S: today },
+        tagCategory: { S: "subscription" },
+        amountMinor: { N: "2000" },
+      }),
+      makeItem({
+        eventDay: { S: today },
+        tagCategory: { S: "checkout" },
+        amountMinor: { N: "500" },
+      }),
     ];
     mockSend.mockResolvedValue({ Items: items, LastEvaluatedKey: undefined });
     const { getStripeAnalyticsSnapshot } = await import("@/lib/stripe-analytics-read");
@@ -134,7 +160,8 @@ describe("getStripeAnalyticsSnapshot()", () => {
     const today = new Date().toISOString().slice(0, 10);
     mockSend
       .mockRejectedValueOnce(validationError) // query fails
-      .mockResolvedValueOnce({ // scan succeeds
+      .mockResolvedValueOnce({
+        // scan succeeds
         Items: [makeItem({ eventDay: { S: today }, amountMinor: { N: "9900" } })],
         LastEvaluatedKey: undefined,
       });

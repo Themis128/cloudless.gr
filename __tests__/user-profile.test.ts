@@ -82,16 +82,12 @@ describe("user-profile", () => {
 
     it("throws when USER_PROFILE_TABLE is unset", async () => {
       delete process.env.USER_PROFILE_TABLE;
-      await expect(getUserProfile("user-1")).rejects.toThrow(
-        /USER_PROFILE_TABLE/,
-      );
+      await expect(getUserProfile("user-1")).rejects.toThrow(/USER_PROFILE_TABLE/);
     });
 
     it("treats whitespace-only USER_PROFILE_TABLE as unset", async () => {
       process.env.USER_PROFILE_TABLE = "   ";
-      await expect(getUserProfile("user-1")).rejects.toThrow(
-        /USER_PROFILE_TABLE/,
-      );
+      await expect(getUserProfile("user-1")).rejects.toThrow(/USER_PROFILE_TABLE/);
     });
   });
 
