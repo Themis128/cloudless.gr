@@ -279,20 +279,61 @@ function buildStaticReports(cfg: Cfg): IntegrationReport[] {
   return [...buildCoreReports(cfg), ...buildSocialAdsReports(cfg)];
 }
 
+async function pingAppFlowy(baseUrl: string): Promise<PingResult> {
+  // /api/health is public — proves the AppFlowy Cloud pod + nginx + tunnel are all up.
+  try {
+    const res = await fetch(baseUrl.replace(/\/$/, "") + "/api/health", {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return { status: "error", message: `health returned ${res.status}` };
+    return { status: "configured", message: "AppFlowy Cloud healthy." };
+  } catch {
+    return { status: "error", message: "Connection failed." };
+  }
+}
+
+async function pingN8n(baseUrl: string, apiKey: string): Promise<PingResult> {
+  // GET /api/v1/workflows?limit=1 — cheapest authenticated call. 401 = bad key.
+  try {
+    const res = await fetch(baseUrl.replace(/\/$/, "") + "/api/v1/workflows?limit=1", {
+      headers: { "X-N8N-API-KEY": apiKey, Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.status === 401)
+      return { status: "degraded", message: "API key rejected (regenerate in Settings → API)." };
+    if (!res.ok) return { status: "error", message: `API returned ${res.status}` };
+    return { status: "configured" };
+  } catch {
+    return { status: "error", message: "Connection failed." };
+  }
+}
+
 async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
-  const [stripeResult, espocrmResult, slackResult, notionResult, acResult, postizResult] =
-    await Promise.all([
-      cfg.STRIPE_SECRET_KEY ? pingStripe(cfg.STRIPE_SECRET_KEY) : Promise.resolve(NOT_CONFIGURED),
-      cfg.ESPOCRM_BASE_URL && cfg.ESPOCRM_API_KEY
-        ? pingEspoCRM(cfg.ESPOCRM_BASE_URL, cfg.ESPOCRM_API_KEY)
-        : Promise.resolve(NOT_CONFIGURED),
-      cfg.SLACK_BOT_TOKEN ? pingSlack(cfg.SLACK_BOT_TOKEN) : Promise.resolve(NOT_CONFIGURED),
-      cfg.NOTION_API_KEY ? pingNotion(cfg.NOTION_API_KEY) : Promise.resolve(NOT_CONFIGURED),
-      verifyActiveCampaignToken(),
-      cfg.POSTIZ_API_URL && cfg.POSTIZ_API_KEY
-        ? pingPostiz(cfg.POSTIZ_API_URL, cfg.POSTIZ_API_KEY)
-        : Promise.resolve(NOT_CONFIGURED),
-    ]);
+  const [
+    stripeResult,
+    espocrmResult,
+    slackResult,
+    notionResult,
+    acResult,
+    postizResult,
+    appflowyResult,
+    n8nResult,
+  ] = await Promise.all([
+    cfg.STRIPE_SECRET_KEY ? pingStripe(cfg.STRIPE_SECRET_KEY) : Promise.resolve(NOT_CONFIGURED),
+    cfg.ESPOCRM_BASE_URL && cfg.ESPOCRM_API_KEY
+      ? pingEspoCRM(cfg.ESPOCRM_BASE_URL, cfg.ESPOCRM_API_KEY)
+      : Promise.resolve(NOT_CONFIGURED),
+    cfg.SLACK_BOT_TOKEN ? pingSlack(cfg.SLACK_BOT_TOKEN) : Promise.resolve(NOT_CONFIGURED),
+    cfg.NOTION_API_KEY ? pingNotion(cfg.NOTION_API_KEY) : Promise.resolve(NOT_CONFIGURED),
+    verifyActiveCampaignToken(),
+    cfg.POSTIZ_API_URL && cfg.POSTIZ_API_KEY
+      ? pingPostiz(cfg.POSTIZ_API_URL, cfg.POSTIZ_API_KEY)
+      : Promise.resolve(NOT_CONFIGURED),
+    cfg.APPFLOWY_API_URL ? pingAppFlowy(cfg.APPFLOWY_API_URL) : Promise.resolve(NOT_CONFIGURED),
+    cfg.N8N_API_URL && cfg.N8N_API_KEY
+      ? pingN8n(cfg.N8N_API_URL, cfg.N8N_API_KEY)
+      : Promise.resolve(NOT_CONFIGURED),
+  ]);
 
   const acStatusMap: Record<string, IntegrationStatus> = {
     valid: "configured",
@@ -351,6 +392,20 @@ async function buildPingedReports(cfg: Cfg): Promise<IntegrationReport[]> {
       category: "social_ads",
       ...postizResult,
       setupUrl: cfg.POSTIZ_API_URL || "https://postiz.cloudless.gr",
+    },
+    {
+      id: "appflowy",
+      name: "AppFlowy Cloud (Notion replacement)",
+      category: "content",
+      ...appflowyResult,
+      setupUrl: cfg.APPFLOWY_API_URL || "https://appflowy.cloudless.gr",
+    },
+    {
+      id: "n8n",
+      name: "n8n (workflow automation)",
+      category: "automation",
+      ...n8nResult,
+      setupUrl: cfg.N8N_API_URL || "https://n8n.cloudless.gr",
     },
   ];
 }
