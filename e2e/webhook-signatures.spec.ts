@@ -39,27 +39,9 @@ test.describe("webhook signature gates", () => {
     expect(r.status()).toBeLessThan(500);
   });
 
-  test("/api/webhooks/hubspot rejects missing v3 signature headers", async ({ request }) => {
-    const r = await request.post("/api/webhooks/hubspot", {
-      data: FAKE_BODY,
-      headers: { "Content-Type": "application/json" },
-    });
-    expect(r.status()).toBeGreaterThanOrEqual(400);
-    expect(r.status()).toBeLessThan(500);
-  });
-
-  test("/api/webhooks/hubspot rejects invalid signature", async ({ request }) => {
-    const r = await request.post("/api/webhooks/hubspot", {
-      data: FAKE_BODY,
-      headers: {
-        "Content-Type": "application/json",
-        "x-hubspot-signature-v3": "deadbeef".repeat(8),
-        "x-hubspot-signature-timestamp": String(Date.now()),
-      },
-    });
-    expect(r.status()).toBeGreaterThanOrEqual(400);
-    expect(r.status()).toBeLessThan(500);
-  });
+  // HubSpot webhook signature tests removed 2026-06-20 alongside the route
+  // (PR #1043 — HubSpot decom). EspoCRM webhook auth is URL-secret-based,
+  // not HMAC; covered by `/api/webhooks/espocrm` tests elsewhere.
 
   test("/api/webhooks/notion rejects missing signature", async ({ request }) => {
     const r = await request.post("/api/webhooks/notion", {
