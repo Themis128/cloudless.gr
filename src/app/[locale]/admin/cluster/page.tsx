@@ -57,6 +57,32 @@ interface MqttStatus {
   src?: string;
 }
 
+interface KumaMonitor {
+  id: number;
+  name: string;
+  status: "up" | "down" | "pending";
+  pingMs: number | null;
+  lastHeartbeatAt: string | null;
+  groupName: string;
+}
+
+interface KumaSummary {
+  baseUrl: string;
+  slug: string;
+  monitors: KumaMonitor[];
+  fetchedAt: string;
+}
+
+function kumaPill(s: KumaMonitor): { label: string; klass: string } {
+  if (s.status === "up") {
+    return { label: "UP", klass: "border-neon-green/30 text-neon-green" };
+  }
+  if (s.status === "down") {
+    return { label: "DOWN", klass: "border-red-500/30 text-red-400" };
+  }
+  return { label: "PENDING", klass: "border-slate-700 text-slate-500" };
+}
+
 function mqttChip(s: MqttStatus | null): { label: string; klass: string; dot: string } {
   if (!s) return { label: "—", klass: "border-slate-700 text-slate-500", dot: "bg-slate-600" };
   const sev = s.severity;
@@ -88,6 +114,7 @@ export default function ClusterStatusPage() {
   const [outsideCluster, setOutsideCluster] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [mqttStatus, setMqttStatus] = useState<MqttStatus | null>(null);
+  const [kumaSummary, setKumaSummary] = useState<KumaSummary | null>(null);
 
   async function load() {
     setLoading(true);
@@ -119,6 +146,17 @@ export default function ClusterStatusPage() {
       }
     } catch {
       /* silent — chip degrades to — */
+    }
+
+    // Uptime Kuma — same pattern: silent fail → "Kuma unreachable" placeholder.
+    try {
+      const kres = await fetchWithAuth("/api/admin/cluster/kuma-status");
+      if (kres.ok) {
+        const j = await kres.json();
+        setKumaSummary(j.summary ?? null);
+      }
+    } catch {
+      /* silent */
     }
   }
 
@@ -233,6 +271,114 @@ export default function ClusterStatusPage() {
               Fetched {fmtRelative(fetchedAt)} via the cloudless/default ServiceAccount.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Uptime Kuma panel — grouped grid of monitors from the public
+          status page. Null summary → "configure / unreachable" placeholder.
+          GAP-D, PR R2-deferred (2026-06-21). */}
+      {!loading && (
+        <div className="mt-8">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="font-heading text-lg font-bold text-white">Uptime Kuma</h2>
+            <a
+              href={kumaSummary?.baseUrl || "https://kuma.cloudless.gr"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] text-slate-500 hover:text-slate-300"
+            >
+              {kumaSummary?.baseUrl || "kuma.cloudless.gr"} ↗
+            </a>
+          </div>
+          {!kumaSummary && (
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-6">
+              <p className="font-mono text-xs text-slate-500">
+                No data — set <code className="text-slate-300">KUMA_BASE_URL</code> +{" "}
+                <code className="text-slate-300">KUMA_STATUS_PAGE_SLUG</code> in SSM and create a
+                Kuma status page. Defaults:{" "}
+                <code className="text-slate-300">https://kuma.cloudless.gr</code> and slug{" "}
+                <code className="text-slate-300">default</code>.
+              </p>
+            </div>
+          )}
+          {kumaSummary && kumaSummary.monitors.length === 0 && (
+            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-6">
+              <p className="font-mono text-xs text-slate-500">
+                Kuma is reachable but the <code className="text-slate-300">{kumaSummary.slug}</code>{" "}
+                status page has no monitors. Add some in Kuma → Status Pages → Edit.
+              </p>
+            </div>
+          )}
+          {kumaSummary && kumaSummary.monitors.length > 0 && (
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+              {kumaSummary.monitors.map((m) => {
+                const pill = kumaPill(m);
+                return (
+                  <div
+                    key={m.id}
+                    className="rounded-lg border border-slate-800 bg-slate-900/40 p-3"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate font-mono text-sm text-white">{m.name}</span>
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] ${pill.klass}`}
+                      >
+                        {pill.label}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-baseline justify-between font-mono text-[10px] text-slate-500">
+                      <span>{m.groupName}</span>
+                      <span className="tabular-nums">
+                        {m.pingMs != null ? `${m.pingMs}ms` : "—"}{" "}
+                        {m.lastHeartbeatAt ? `· ${fmtRelative(m.lastHeartbeatAt)}` : ""}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Grafana — deep-link cards to the 2 self-hosted dashboards. Live
+          embedding deferred: grafana isn't tunnel-exposed today
+          (project_blackbox_in_cluster_probes), so the iframe path requires
+          tunnel work that's out of scope here. Operator clicks through via
+          VPN/Tailscale or once GRAFANA_BASE_URL is published to a public
+          host. PR R2-deferred (2026-06-21). */}
+      {!loading && (
+        <div className="mt-8">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="font-heading text-lg font-bold text-white">Grafana dashboards</h2>
+            <span className="rounded-full border border-yellow-500/20 px-2 py-0.5 font-mono text-[10px] text-yellow-400">
+              VPN / operator-only
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <a
+              href="https://grafana.cloudless.gr/d/selfhosted-health"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 transition-colors hover:border-blue-500/30 hover:bg-slate-800/50"
+            >
+              <div className="font-mono text-sm text-white">Self-hosted apps — health</div>
+              <div className="mt-1 font-mono text-[10px] text-slate-500">
+                AppFlowy / EspoCRM / Postiz / n8n / Kuma / Grafana up-down + restart counts.
+              </div>
+            </a>
+            <a
+              href="https://grafana.cloudless.gr/d/selfhosted-slo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 transition-colors hover:border-blue-500/30 hover:bg-slate-800/50"
+            >
+              <div className="font-mono text-sm text-white">Self-hosted apps — SLO burn</div>
+              <div className="mt-1 font-mono text-[10px] text-slate-500">
+                Blackbox-exporter probe success-rate windows + alert burn-rate annotations.
+              </div>
+            </a>
+          </div>
         </div>
       )}
     </div>
