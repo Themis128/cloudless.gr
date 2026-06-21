@@ -33,23 +33,41 @@ USER=$(ssm_get SES_SMTP_USER "")
 PASS=$(ssm_get SES_SMTP_PASSWORD "")
 FROM=$(ssm_get SES_FROM_EMAIL "noreply@cloudless.gr")
 HOST=$(ssm_get SES_SMTP_HOST "email-smtp.${REGION}.amazonaws.com")
-API_KEY=$(ssm_get ESPOCRM_API_KEY "")
 
-for v in USER PASS API_KEY; do
+# Admin auth — HTTP Basic with the unified admin user. Avoids the
+# `ESPOCRM_API_KEY` SSM dependency (the API key was provisioned for the
+# cloudless-app SDK user with a non-admin role; Settings PATCH needs
+# admin privileges so we use the unified human admin instead).
+# Per project_unified_admin_creds: tbaltzakis / TH!123789th!
+ADMIN_USER="${ESPOCRM_ADMIN_USER:-tbaltzakis}"
+ADMIN_PASS="${ESPOCRM_ADMIN_PASSWORD:-}"
+
+if [[ -z "$ADMIN_PASS" ]]; then
+  ADMIN_PASS=$(ssm_get ESPOCRM_ADMIN_PASSWORD "")
+fi
+
+for v in USER PASS ADMIN_PASS; do
   if [[ -z "${!v}" ]]; then
-    echo "✗ SSM key /cloudless/production/${v#API_}... missing (resolved to empty)"
-    echo "  Run \`pnpm ses:provision\` first for SES_SMTP_*."
+    echo "✗ Missing required value: $v"
+    if [[ "$v" == "USER" || "$v" == "PASS" ]]; then
+      echo "  Run \`pnpm ses:provision\` first to populate SES_SMTP_USER/PASSWORD."
+    else
+      echo "  Set ESPOCRM_ADMIN_PASSWORD env var OR put it in SSM at"
+      echo "  /cloudless/production/ESPOCRM_ADMIN_PASSWORD"
+    fi
     exit 1
   fi
 done
 
-echo "→ POSTing EspoCRM SMTP settings to $ESPOCRM_BASE_URL"
+echo "→ PATCHing EspoCRM SMTP settings at $ESPOCRM_BASE_URL"
+echo "  as admin: $ADMIN_USER  via HTTP basic"
 
-# EspoCRM Settings API accepts a JSON body of the same field names that
-# live in data/config.php. Authenticated via X-Api-Key header.
+# EspoCRM PATCH /api/v1/Settings accepts a JSON body matching the keys
+# in data/config.php. Admin-only operation; the API key user (non-admin)
+# would get 403. HTTP Basic with admin creds works.
 HTTP=$(curl -sS -o /tmp/espo-smtp.resp -w '%{http_code}' \
   -X PATCH "$ESPOCRM_BASE_URL/api/v1/Settings" \
-  -H "X-Api-Key: $API_KEY" \
+  -u "$ADMIN_USER:$ADMIN_PASS" \
   -H 'Content-Type: application/json' \
   --data @<(cat <<JSON
 {
@@ -73,10 +91,10 @@ fi
 rm -f /tmp/espo-smtp.resp
 
 # Send a test email to confirm
-echo "→ Sending test email"
+echo "→ Sending test email to tbaltzakis@cloudless.gr"
 TEST=$(curl -sS -o /tmp/espo-test.resp -w '%{http_code}' \
   -X POST "$ESPOCRM_BASE_URL/api/v1/Email/sendTest" \
-  -H "X-Api-Key: $API_KEY" \
+  -u "$ADMIN_USER:$ADMIN_PASS" \
   -H 'Content-Type: application/json' \
-  -d "{\"to\":\"tbaltzakis@cloudless.gr\"}")
-echo "  test HTTP $TEST"; cat /tmp/espo-test.resp; rm -f /tmp/espo-test.resp
+  -d "{\"server\":\"$HOST\",\"port\":587,\"auth\":true,\"security\":\"TLS\",\"username\":\"$USER\",\"password\":\"$PASS\",\"fromAddress\":\"$FROM\",\"emailAddress\":\"tbaltzakis@cloudless.gr\"}")
+echo "  test HTTP $TEST"; cat /tmp/espo-test.resp; echo; rm -f /tmp/espo-test.resp
