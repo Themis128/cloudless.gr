@@ -1,0 +1,49 @@
+# Helm values override for the kube-prometheus-stack chart.
+#
+# The default install of this chart ships ~25 dashboards (Alertmanager,
+# CoreDNS, K8s/* family, Node Exporter/*, Prometheus, Grafana Overview).
+# We don't use them — they were deleted from the cluster on 2026-06-21
+# by removing the `monitoring-*` ConfigMaps directly.
+#
+# This values file tells Helm not to recreate them on the next
+# `helm upgrade kube-prom ./kube-prometheus-stack --values
+# infrastructure/monitoring/kube-prom-stack-values.yaml`.
+#
+# Read the upstream values reference before changing anything else:
+#   https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml
+#
+# What we KEEP:
+#   - All Prometheus scrape (node-exporter, kube-state-metrics,
+#     coredns, kubelet, apiserver, alertmanager, prometheus, operator)
+#   - PrometheusRules (the default alerts are still useful)
+#   - Grafana itself (just with no default dashboards)
+#   - 6 cloudless custom dashboards (cluster-overview-2026,
+#     per-node-detail-2026, pod-health-2026, cluster-infra, edge-computing,
+#     esp32-watchdog)
+#   - 2 new self-hosted dashboards from this PR (selfhosted-health,
+#     selfhosted-slo) — backed by blackbox-exporter probes deployed
+#     in infrastructure/monitoring/blackbox-exporter.yaml.
+#
+# What we DROP:
+#   - 24 monitoring-* default dashboards from kube-prometheus-stack
+#   - 4 grafana-dashboard-cloudflare-* dashboards (we removed Cloudflare
+#     analytics monitoring from the scope per the 2026-06-21 cleanup)
+
+grafana:
+  # Don't render any of the default dashboards into ConfigMaps. If you
+  # ever want them back, set this to `true` and `helm upgrade`.
+  defaultDashboardsEnabled: false
+
+  # Keep the sidecar that watches grafana_dashboard=1 ConfigMaps so our
+  # custom dashboards in this directory + the new self-hosted ones still
+  # get provisioned.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: monitoring
+      provider:
+        foldersFromFilesStructure: true
+        disableDelete: false
+        allowUiUpdates: false

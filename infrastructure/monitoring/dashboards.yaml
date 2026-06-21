@@ -1,0 +1,156 @@
+# Two new Grafana dashboards backed by the blackbox-exporter Probe CRDs
+# from infrastructure/monitoring/blackbox-exporter.yaml.
+#
+# - Self-hosted Apps Health: live stat panel + probe duration + HTTP status code
+# - Self-hosted Apps SLO: 30-day uptime %, 5-min rolling success rate, error
+#   budget burn rate (1h vs 99.9% target)
+#
+# Loaded into Grafana via the kube-prom-grafana-sc-dashboard sidecar which
+# watches ConfigMaps with label grafana_dashboard=1 in the monitoring ns.
+#
+# To edit a panel, modify the JSON below + kubectl apply. The sidecar
+# re-syncs every 30 s. Grafana sidecar provider is `allowUiUpdates: false`
+# so UI edits would be lost — always edit here.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-selfhosted-health
+  namespace: monitoring
+  labels: { grafana_dashboard: "1" }
+data:
+  selfhosted-health.json: |
+    {
+      "title": "Self-hosted Apps — Health",
+      "uid": "selfhosted-health",
+      "tags": ["selfhosted", "cloudless"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-6h", "to": "now" },
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Probe success (live)",
+          "id": 1,
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "targets": [{
+            "expr": "probe_success{scope=\"selfhosted\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" } } },
+                { "type": "value", "options": { "1": { "text": "UP",   "color": "green" } } }
+              ],
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto", "colorMode": "background" }
+        },
+        {
+          "type": "timeseries",
+          "title": "Probe duration (s)",
+          "id": 2,
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 },
+          "targets": [{
+            "expr": "probe_duration_seconds{scope=\"selfhosted\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP status code",
+          "id": 3,
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 },
+          "targets": [{
+            "expr": "probe_http_status_code{scope=\"selfhosted\"}",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-selfhosted-slo
+  namespace: monitoring
+  labels: { grafana_dashboard: "1" }
+data:
+  selfhosted-slo.json: |
+    {
+      "title": "Self-hosted Apps — SLO (30d)",
+      "uid": "selfhosted-slo",
+      "tags": ["selfhosted", "cloudless", "slo"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "5m",
+      "time": { "from": "now-30d", "to": "now" },
+      "templating": { "list": [] },
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Uptime % per app (30d)",
+          "id": 1,
+          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+          "targets": [{
+            "expr": "100 * avg_over_time(probe_success{scope=\"selfhosted\"}[30d])",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 3,
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 99.0 },
+                { "color": "yellow", "value": 99.5 },
+                { "color": "green", "value": 99.9 }
+              ]}
+            }
+          },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "value_and_name", "colorMode": "background" }
+        },
+        {
+          "type": "timeseries",
+          "title": "Probe success rate (5m window)",
+          "id": 2,
+          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
+          "targets": [{
+            "expr": "100 * avg_over_time(probe_success{scope=\"selfhosted\"}[5m])",
+            "legendFormat": "{{app}}",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+        },
+        {
+          "type": "timeseries",
+          "title": "Error budget burn rate (1h vs 30d budget)",
+          "id": 3,
+          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 18 },
+          "targets": [{
+            "expr": "(1 - avg_over_time(probe_success{scope=\"selfhosted\"}[1h])) / (1 - 0.999)",
+            "legendFormat": "{{app}} — burn",
+            "refId": "A",
+            "datasource": { "type": "prometheus", "uid": "prometheus" }
+          }],
+          "fieldConfig": { "defaults": { "decimals": 2 } }
+        }
+      ]
+    }
