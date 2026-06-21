@@ -156,7 +156,9 @@ kind: Probe
 metadata:
   name: selfhosted-grafana
   namespace: monitoring
-  labels: { release: kube-prom }
+  labels:
+    release: kube-prom
+    cluster-protection.io/health: "true"
 spec:
   jobName: selfhosted-grafana
   interval: 60s
@@ -164,7 +166,13 @@ spec:
   prober: { url: blackbox-exporter.monitoring.svc.cluster.local:9115 }
   targets:
     staticConfig:
-      static: ["https://grafana.cloudless.gr/api/health"]
+      # Grafana is NOT publicly exposed via the Cloudflare tunnel —
+      # operator accesses it on the LAN (192.168.x.x) or via port-forward.
+      # Probe the in-cluster Service directly so the dashboard shows
+      # "is the pod actually serving" rather than "is the public route up".
+      # External public-route monitoring lives in healthchecks.io via
+      # `.github/workflows/selfhosted-healthchecks.yml` instead.
+      static: ["http://kube-prom-grafana.monitoring.svc.cluster.local/api/health"]
       labels: { app: grafana, scope: selfhosted }
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -172,15 +180,21 @@ kind: Probe
 metadata:
   name: selfhosted-ntfy
   namespace: monitoring
-  labels: { release: kube-prom }
+  labels:
+    release: kube-prom
+    cluster-protection.io/health: "true"
 spec:
   jobName: selfhosted-ntfy
   interval: 60s
-  module: http_401_ok
+  module: http_2xx
   prober: { url: blackbox-exporter.monitoring.svc.cluster.local:9115 }
   targets:
     staticConfig:
-      static: ["https://ntfy.cloudless.gr/v1/health"]
+      # ntfy is NOT publicly exposed via the Cloudflare tunnel — only
+      # accessible on the LAN. Probe the in-cluster Service directly
+      # (where /v1/health does return 200; the public 404 we saw was a
+      # missing tunnel-ingress rule, not an app-side issue).
+      static: ["http://ntfy.ntfy.svc.cluster.local/v1/health"]
       labels: { app: ntfy, scope: selfhosted }
 ---
 # Alert rule — fire when any self-hosted app probe stays down for > 5 min.
