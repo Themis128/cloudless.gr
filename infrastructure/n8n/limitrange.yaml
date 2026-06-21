@@ -1,0 +1,25 @@
+# n8n namespace LimitRange — bumped 2026-06-21 from 384Mi to 1Gi after the
+# upstream image bump (1.44.1 → latest, which is now ≥ 1.84). The newer
+# n8n binary plus migrations + Task Broker peak around 350-450Mi at boot;
+# the old 384Mi cap caused OOMKilled before migrations finished.
+#
+# Apply on a fresh cluster bootstrap; otherwise this YAML matches the
+# live state on omv. The Deployment requests 200Mi / limits 512Mi which
+# fits comfortably under the new max.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-container-limits
+  namespace: n8n
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 200Mi
+      max:
+        cpu: "2"
+        memory: 1Gi
