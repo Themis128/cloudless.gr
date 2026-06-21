@@ -31,7 +31,7 @@ vi.mock("@/lib/client-portals", async (importOriginal) => {
   return { ...actual, readPortals: mockReadPortals };
 });
 vi.mock("@/lib/content-calendar", () => ({ getCalendarItems: mockGetCalendarItems }));
-vi.mock("@/lib/hubspot", () => ({ listContacts: mockListContacts }));
+vi.mock("@/lib/espocrm", () => ({ listContacts: mockListContacts }));
 vi.mock("@/lib/integrations", () => ({ isConfiguredAsync: mockIsConfiguredAsync }));
 
 import { GET } from "@/app/api/cron/owner-digest/route";

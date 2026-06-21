@@ -7,7 +7,7 @@ vi.mock("@/lib/ssm-config", () => ({
 }));
 
 const listNewsletterSubscribersMock = vi.fn();
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   listNewsletterSubscribers: listNewsletterSubscribersMock,
 }));
 

@@ -18,10 +18,6 @@ describe("integrations.ts", () => {
       expect(getIntegrations().NOTION_API_KEY).toBe("secret_test_key_12345");
     });
 
-    it("reads HUBSPOT_API_KEY from env", () => {
-      expect(getIntegrations().HUBSPOT_API_KEY).toBe("test-hs-token");
-    });
-
     it("defaults SENTRY_ORG to baltzakisthemiscom when env var not set", () => {
       expect(getIntegrations().SENTRY_ORG).toBe("baltzakisthemiscom");
     });
@@ -64,7 +60,7 @@ describe("integrations.ts", () => {
     });
 
     it("returns true when all specified keys have values", () => {
-      expect(isConfigured("NOTION_API_KEY", "HUBSPOT_API_KEY")).toBe(true);
+      expect(isConfigured("NOTION_API_KEY", "STRIPE_SECRET_KEY")).toBe(true);
     });
 
     it("returns false when any specified key is missing", () => {
@@ -89,7 +85,7 @@ describe("integrations.ts", () => {
 
     it("falls back gracefully when SSM is unavailable (test mode reads env)", async () => {
       const cfg = await getIntegrationsAsync();
-      expect(cfg.HUBSPOT_API_KEY).toBe("test-hs-token");
+      expect(cfg.NOTION_API_KEY).toBe("secret_test_key_12345");
     });
 
     it("caches async result across calls", async () => {

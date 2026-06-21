@@ -217,18 +217,11 @@ describe("GET /api/admin/kpi", () => {
     expect(data.tasks.overdueCount).toBe(2);
   });
 
-  it("returns null analytics when Notion analytics is not configured", async () => {
-    mockIsConfiguredAsync.mockImplementation(
-      async (...keys: string[]) => !keys.includes("NOTION_ANALYTICS_DB_ID"),
-    );
-
-    const { GET } = await import("@/app/api/admin/kpi/route");
-    const res = await GET(adminReq(BASE));
-    const data = await res.json();
-
-    expect(data.analytics).toBeNull();
-    expect(mockGetAnalyticsSummary).not.toHaveBeenCalled();
-  });
+  // Test "returns null analytics when Notion analytics is not configured" was removed
+  // 2026-06-21: src/app/api/admin/kpi/route.ts now hard-codes analyticsConf = true
+  // because notion-analytics.ts is an Athena-backed no-op shim that always returns
+  // empty data instead of throwing. The configured/not-configured branch no longer
+  // exists in the route, so the test premise is invalid.
 
   it("returns null gsc when Google credentials are absent", async () => {
     mockGetConfig.mockResolvedValue({

@@ -169,8 +169,8 @@ describe("GET /api/admin/notion/search", () => {
 
 const mockIsHubSpotConfigured = vi.fn();
 const mockListTickets = vi.fn();
-vi.mock("@/lib/hubspot", async (orig) => ({
-  ...(await orig<typeof import("@/lib/hubspot")>()),
+vi.mock("@/lib/espocrm", async (orig) => ({
+  ...(await orig<typeof import("@/lib/espocrm")>()),
   isHubSpotConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
   listTickets: (...a: unknown[]) => mockListTickets(...a),
 }));

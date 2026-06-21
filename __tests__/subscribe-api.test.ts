@@ -21,7 +21,7 @@ vi.mock("@/lib/slack-notify", () => ({
 }));
 
 const setNewsletterStatusMock = vi.fn();
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   setNewsletterStatus: setNewsletterStatusMock,
 }));
 

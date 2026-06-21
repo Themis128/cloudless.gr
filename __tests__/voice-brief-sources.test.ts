@@ -12,8 +12,8 @@ const mockGetStripe = vi.fn();
 vi.mock("@/lib/gsc", () => ({
   getSeoSnapshot: (...a: unknown[]) => mockGetSeoSnapshot(...a),
 }));
-vi.mock("@/lib/hubspot", async (orig) => ({
-  ...(await orig<typeof import("@/lib/hubspot")>()),
+vi.mock("@/lib/espocrm", async (orig) => ({
+  ...(await orig<typeof import("@/lib/espocrm")>()),
   isHubSpotConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
   getPipelineStats: (...a: unknown[]) => mockGetPipelineStats(...a),
   listNewsletterSubscribers: (...a: unknown[]) => mockListNewsletterSubscribers(...a),

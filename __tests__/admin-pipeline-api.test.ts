@@ -14,7 +14,7 @@ vi.mock("@/lib/api-auth", () => ({
   requireAdmin: requireAdminMock,
 }));
 
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   isHubSpotConfigured: isHubSpotConfiguredMock,
   getDealsByStage: getDealsByStageMock,
   getPipelines: getPipelinesMock,

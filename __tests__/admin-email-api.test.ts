@@ -27,7 +27,7 @@ const {
 
 vi.mock("@/lib/api-auth", () => ({ requireAdmin: mockRequireAdmin }));
 
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   isHubSpotConfigured: mockIsHubSpotConfigured,
   listNewsletterSubscribers: mockListNewsletterSubscribers,
 }));

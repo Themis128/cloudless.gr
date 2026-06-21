@@ -14,7 +14,7 @@ vi.mock("@/lib/ses-suppression", () => ({
   addToSuppressionList: addToSuppressionListMock,
 }));
 
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   setNewsletterStatus: setNewsletterStatusMock,
 }));
 
