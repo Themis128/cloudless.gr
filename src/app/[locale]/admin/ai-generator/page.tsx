@@ -71,7 +71,7 @@ export default function AiGeneratorPage() {
           Cloudflare Workers AI is not configured. Set{" "}
           <code className="text-yellow-300">CLOUDFLARE_ACCOUNT_ID</code> and{" "}
           <code className="text-yellow-300">CLOUDFLARE_API_TOKEN</code> in the deploy environment
-          (see WORKERS_AI_SETUP.md).
+          (see <code className="text-yellow-300">docs/WORKERS_AI_SETUP.md</code>).
         </p>
       </div>
     );
