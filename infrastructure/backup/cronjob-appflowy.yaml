@@ -1,0 +1,89 @@
+# R10 — AppFlowy postgres daily backup to S3
+#
+# Streams pg_dump (custom format, compressed) into s3://cloudless-analytics-data/pvc-backups/appflowy/daily/
+# at 03:30 UTC daily. Custom format lets pg_restore re-create cleanly + supports selective restore.
+#
+# DB creds: reads from `appflowy-secrets` (the SAME Secret the postgres pod uses, so credential
+# rotations propagate without separate config).
+# AWS creds: reads from `pvc-backup-aws` Secret in this ns — created from the `cloudless-pi-standby`
+# IAM user's keys (which now has the `PvcBackupsWrite` inline policy on s3://...pvc-backups/*).
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-backup-appflowy
+  namespace: appflowy
+  labels:
+    app.kubernetes.io/name: pvc-backup
+    app.kubernetes.io/component: backup
+    backup.cloudless.gr/target: appflowy-postgres
+spec:
+  schedule: "30 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 7
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 1800
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16-alpine
+              # postgres:16-alpine ships pg_dump 16 — compatible with any AppFlowy postgres version.
+              # Plus we install awscli once at runtime (small image, fast install).
+              env:
+                - name: PGHOST
+                  value: "postgres"
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  value: "postgres"           # default from upstream postgres image; verified against live pod env
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: appflowy-secrets
+                      key: POSTGRES_PASSWORD
+                - name: PGDATABASE
+                  value: "postgres"
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-aws
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-aws
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: AWS_DEFAULT_REGION
+                  value: "us-east-1"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  apk add --no-cache aws-cli >/dev/null
+                  DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+                  KEY="pvc-backups/appflowy/daily/${DATE}.sql.custom"
+                  echo "→ dumping appflowy postgres → s3://cloudless-analytics-data/${KEY}"
+                  pg_dump --format=custom --no-owner --no-privileges \
+                    --exclude-schema=temporal \
+                    | aws s3 cp - "s3://cloudless-analytics-data/${KEY}" \
+                        --expected-size 5368709120 \
+                        --content-type application/octet-stream
+                  SIZE=$(aws s3api head-object --bucket cloudless-analytics-data --key "${KEY}" --query ContentLength --output text)
+                  echo "✅ uploaded ${SIZE} bytes"
+                  if [ "${SIZE}" -lt 10000 ]; then
+                    echo "❌ backup suspiciously small (<10KB) — failing job for retry"
+                    exit 1
+                  fi
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"
