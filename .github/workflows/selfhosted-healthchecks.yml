@@ -1,0 +1,93 @@
+name: Self-hosted apps healthchecks.io ping
+
+# Pings 6 healthchecks.io check URLs every 5 minutes — one per self-hosted
+# app. Each check first probes the app's public health endpoint; on success,
+# pings healthchecks.io with /<uuid> (mark healthy). On failure, pings
+# /<uuid>/fail (mark unhealthy). healthchecks.io alerts via its dashboard
+# (email/Slack/PagerDuty) only when the check is unhealthy for > grace
+# period.
+#
+# Setup per app:
+#   1. Create check at https://healthchecks.io with:
+#        Period:  5 min
+#        Grace:   2 min  (alert fires after 7 min unhealthy)
+#        Alert:   your preferred destination (Slack, email, ntfy, etc.)
+#   2. Copy the ping URL https://hc-ping.com/<uuid>
+#   3. Add to repo secrets:
+#        HEALTHCHECKS_APPFLOWY_URL
+#        HEALTHCHECKS_ESPOCRM_URL
+#        HEALTHCHECKS_POSTIZ_URL
+#        HEALTHCHECKS_N8N_URL
+#        HEALTHCHECKS_GRAFANA_URL
+#        HEALTHCHECKS_NTFY_URL
+#
+# The existing HEALTHCHECKS_CLUSTER_URL is unchanged — covered by
+# cluster-healthcheck.yml (k3s API liveness over tailnet).
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: selfhosted-healthchecks
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: appflowy
+            url: https://appflowy.cloudless.gr/api/health
+            secret_var: HEALTHCHECKS_APPFLOWY_URL
+            expect_codes: "200"
+          - app: espocrm
+            url: https://espocrm.cloudless.gr/
+            secret_var: HEALTHCHECKS_ESPOCRM_URL
+            expect_codes: "200 302"
+          - app: postiz
+            url: https://postiz.cloudless.gr/
+            secret_var: HEALTHCHECKS_POSTIZ_URL
+            expect_codes: "200 307 308"
+          - app: n8n
+            url: https://n8n.cloudless.gr/healthz
+            secret_var: HEALTHCHECKS_N8N_URL
+            expect_codes: "200"
+          - app: grafana
+            url: https://grafana.cloudless.gr/api/health
+            secret_var: HEALTHCHECKS_GRAFANA_URL
+            expect_codes: "200"
+          - app: ntfy
+            url: https://ntfy.cloudless.gr/v1/health
+            secret_var: HEALTHCHECKS_NTFY_URL
+            expect_codes: "200 401"   # 401 if auth required but service is up
+    steps:
+      - name: Probe ${{ matrix.app }} and ping healthchecks.io
+        env:
+          APP: ${{ matrix.app }}
+          URL: ${{ matrix.url }}
+          EXPECT: ${{ matrix.expect_codes }}
+          HC_URL: ${{ secrets[matrix.secret_var] }}
+        run: |
+          set -e
+          if [ -z "$HC_URL" ]; then
+            echo "::warning::${matrix.secret_var} not set — skipping ${APP} ping. Add it as a repo secret."
+            exit 0
+          fi
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || echo 000)
+          echo "$APP HTTP $CODE (expected: $EXPECT)"
+          if echo " $EXPECT " | grep -q " $CODE "; then
+            curl -fsS --max-time 10 --retry 3 "$HC_URL" -d "$APP healthy ($CODE)" >/dev/null
+            echo "✓ pinged $APP healthy"
+          else
+            curl -fsS --max-time 10 --retry 3 "$HC_URL/fail" -d "$APP returned HTTP $CODE (expected $EXPECT)" >/dev/null
+            echo "✗ pinged $APP fail (HTTP $CODE)"
+            exit 1
+          fi
