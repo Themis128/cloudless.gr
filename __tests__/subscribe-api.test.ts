@@ -21,7 +21,7 @@ vi.mock("@/lib/slack-notify", () => ({
 }));
 
 const setNewsletterStatusMock = vi.fn();
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   setNewsletterStatus: setNewsletterStatusMock,
 }));
 
@@ -75,19 +75,14 @@ describe("POST /api/subscribe", () => {
     await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
     expect(setNewsletterStatusMock).toHaveBeenCalledTimes(1);
-    expect(setNewsletterStatusMock).toHaveBeenCalledWith(
-      "hello@cloudless.gr",
-      "newsletter_signup",
-    );
+    expect(setNewsletterStatusMock).toHaveBeenCalledWith("hello@cloudless.gr", "newsletter_signup");
   });
 
   it("clears SES suppression so a re-subscriber can receive email", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
     await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
-    expect(removeFromSuppressionListMock).toHaveBeenCalledWith(
-      "hello@cloudless.gr",
-    );
+    expect(removeFromSuppressionListMock).toHaveBeenCalledWith("hello@cloudless.gr");
   });
 
   it("still returns success when the HubSpot update fails", async () => {

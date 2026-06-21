@@ -76,9 +76,7 @@ describe("gscQuery", () => {
       ok: true,
       json: () =>
         Promise.resolve({
-          rows: [
-            { keys: ["aws cost"], clicks: 12, impressions: 400, ctr: 0.03, position: 5 },
-          ],
+          rows: [{ keys: ["aws cost"], clicks: 12, impressions: 400, ctr: 0.03, position: 5 }],
         }),
       text: () => Promise.resolve(""),
     });
@@ -96,7 +94,7 @@ describe("gscQuery", () => {
       text: () => Promise.resolve("forbidden"),
     });
     await expect(gscQuery("tok", "sc-domain:example", {})).rejects.toThrow(
-      /GSC query failed: 403 forbidden/,
+      /GSC query failed: 403 forbidden/
     );
   });
 });

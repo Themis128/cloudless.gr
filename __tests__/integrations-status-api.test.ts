@@ -31,8 +31,7 @@ const baseConfig = {
   SLACK_BOT_TOKEN: "xoxb-abc",
   NOTION_API_KEY: "secret_abc",
   GOOGLE_CLIENT_EMAIL: "sa@project.iam.gserviceaccount.com",
-  GOOGLE_PRIVATE_KEY:
-    "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
+  GOOGLE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
   GOOGLE_CALENDAR_ID: "primary",
   SENTRY_AUTH_TOKEN: "sntrys_abc",
   ANTHROPIC_API_KEY: "sk-ant-abc",
@@ -101,9 +100,7 @@ describe("GET /api/admin/integrations/status", () => {
       expect(integration.id).toBeTruthy();
       expect(integration.name).toBeTruthy();
       expect(integration.category).toBeTruthy();
-      expect(["configured", "not_configured", "degraded", "error"]).toContain(
-        integration.status,
-      );
+      expect(["configured", "not_configured", "degraded", "error"]).toContain(integration.status);
     }
   });
 
@@ -111,9 +108,7 @@ describe("GET /api/admin/integrations/status", () => {
     const { GET } = await import("@/app/api/admin/integrations/status/route");
     const res = await GET(makeRequest());
     const data = await res.json();
-    const tiktok = data.integrations.find(
-      (i: { id: string }) => i.id === "tiktok",
-    );
+    const tiktok = data.integrations.find((i: { id: string }) => i.id === "tiktok");
     expect(tiktok.status).toBe("degraded");
     expect(tiktok.message).toContain("OAuth");
   });
@@ -127,9 +122,7 @@ describe("GET /api/admin/integrations/status", () => {
     const { GET } = await import("@/app/api/admin/integrations/status/route");
     const res = await GET(makeRequest());
     const data = await res.json();
-    const tiktok = data.integrations.find(
-      (i: { id: string }) => i.id === "tiktok",
-    );
+    const tiktok = data.integrations.find((i: { id: string }) => i.id === "tiktok");
     expect(tiktok.status).toBe("configured");
   });
 
@@ -146,9 +139,7 @@ describe("GET /api/admin/integrations/status", () => {
     const { GET } = await import("@/app/api/admin/integrations/status/route");
     const res = await GET(makeRequest());
     const data = await res.json();
-    const gads = data.integrations.find(
-      (i: { id: string }) => i.id === "google_ads",
-    );
+    const gads = data.integrations.find((i: { id: string }) => i.id === "google_ads");
     expect(gads.status).toBe("not_configured");
   });
 
@@ -160,9 +151,7 @@ describe("GET /api/admin/integrations/status", () => {
     const { GET } = await import("@/app/api/admin/integrations/status/route");
     const res = await GET(makeRequest());
     const data = await res.json();
-    const ac = data.integrations.find(
-      (i: { id: string }) => i.id === "activecampaign",
-    );
+    const ac = data.integrations.find((i: { id: string }) => i.id === "activecampaign");
     expect(ac.status).toBe("degraded");
     expect(ac.message).toContain("expired");
   });
@@ -176,9 +165,7 @@ describe("GET /api/admin/integrations/status", () => {
     const { GET } = await import("@/app/api/admin/integrations/status/route");
     const res = await GET(makeRequest());
     const data = await res.json();
-    const sentry = data.integrations.find(
-      (i: { id: string }) => i.id === "sentry",
-    );
+    const sentry = data.integrations.find((i: { id: string }) => i.id === "sentry");
     expect(sentry.status).toBe("degraded");
     expect(sentry.message).toContain("source map");
     delete process.env.NEXT_PUBLIC_SENTRY_DSN;
@@ -189,12 +176,9 @@ describe("GET /api/admin/integrations/status", () => {
     const res = await GET(makeRequest());
     const data = await res.json();
     const { summary, integrations } = data;
-    expect(
-      summary.configured +
-        summary.degraded +
-        summary.not_configured +
-        summary.error,
-    ).toBe(summary.total);
+    expect(summary.configured + summary.degraded + summary.not_configured + summary.error).toBe(
+      summary.total
+    );
     expect(summary.total).toBe(integrations.length);
   });
 });

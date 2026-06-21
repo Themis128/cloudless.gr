@@ -32,7 +32,7 @@ describe("/api/csp-report", () => {
           "line-number": 42,
           disposition: "report",
         },
-      }),
+      })
     );
 
     expect(res.status).toBe(204);
@@ -64,8 +64,8 @@ describe("/api/csp-report", () => {
             url: "https://cloudless.gr/en",
           },
         ],
-        "application/reports+json",
-      ),
+        "application/reports+json"
+      )
     );
 
     expect(res.status).toBe(204);
@@ -101,8 +101,8 @@ describe("/api/csp-report", () => {
           { type: "csp-violation", body: { effectiveDirective: "font-src", blockedURL: "b" } },
           { type: "intervention", body: {} },
         ],
-        "application/reports+json",
-      ),
+        "application/reports+json"
+      )
     );
     expect(res.status).toBe(204);
     expect(warnSpy).toHaveBeenCalledTimes(2);

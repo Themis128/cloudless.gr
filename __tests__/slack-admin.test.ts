@@ -51,7 +51,7 @@ describe("slack-admin", () => {
     });
 
     it("channel names are unique", () => {
-      const names = Object.values(SLACK_CHANNELS).map(c => c.name);
+      const names = Object.values(SLACK_CHANNELS).map((c) => c.name);
       expect(new Set(names).size).toBe(names.length);
     });
   });
@@ -93,7 +93,13 @@ describe("slack-admin", () => {
         ok: true,
         json: async () => ({
           ok: true,
-          channel: { id: "C1", name: "test", is_private: false, is_member: true, is_archived: false },
+          channel: {
+            id: "C1",
+            name: "test",
+            is_private: false,
+            is_member: true,
+            is_archived: false,
+          },
         }),
       });
       const ch = await createChannel("test", "xoxb-x");

@@ -50,7 +50,7 @@ vi.mock("@/lib/campaigns/meta-ads", () => ({
   isMetaAdsConfigured: mockMetaConfigured,
   getMetaInsights: mockMetaInsights,
 }));
-vi.mock("@/lib/hubspot", () => ({ listContacts: mockListContacts }));
+vi.mock("@/lib/espocrm", () => ({ listContacts: mockListContacts }));
 vi.mock("@/lib/integrations", () => ({ isConfiguredAsync: mockIsConfiguredAsync }));
 vi.mock("@/lib/stripe-analytics-read", () => ({
   getStripeAnalyticsSnapshot: mockStripeSnapshot,

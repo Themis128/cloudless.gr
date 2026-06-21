@@ -16,7 +16,10 @@ vi.mock("@/lib/ssm-config", () => ({
 // ── LinkedIn ──────────────────────────────────────────────────────────────────
 
 describe("linkedin.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("isLinkedInConfigured returns false when token missing", async () => {
     mockGetConfig.mockResolvedValue({});
@@ -25,7 +28,11 @@ describe("linkedin.ts", () => {
   });
 
   it("isLinkedInConfigured returns true when token present", async () => {
-    mockGetConfig.mockResolvedValue({ LINKEDIN_ACCESS_TOKEN: "tok", LINKEDIN_AD_ACCOUNT_ID: "acc", LINKEDIN_ORGANIZATION_URN: "urn:li:org:123" });
+    mockGetConfig.mockResolvedValue({
+      LINKEDIN_ACCESS_TOKEN: "tok",
+      LINKEDIN_AD_ACCOUNT_ID: "acc",
+      LINKEDIN_ORGANIZATION_URN: "urn:li:org:123",
+    });
     const { isLinkedInConfigured } = await import("@/lib/campaigns/linkedin");
     expect(await isLinkedInConfigured()).toBe(true);
   });
@@ -37,20 +44,26 @@ describe("linkedin.ts", () => {
   });
 
   it("listLinkedInCampaigns returns parsed campaigns on success", async () => {
-    mockGetConfig.mockResolvedValue({ LINKEDIN_ACCESS_TOKEN: "tok", LINKEDIN_AD_ACCOUNT_ID: "acc:123", LINKEDIN_ORGANIZATION_URN: "urn:li:org:1" });
+    mockGetConfig.mockResolvedValue({
+      LINKEDIN_ACCESS_TOKEN: "tok",
+      LINKEDIN_AD_ACCOUNT_ID: "acc:123",
+      LINKEDIN_ORGANIZATION_URN: "urn:li:org:1",
+    });
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        elements: [{
-          id: "c1",
-          name: "Campaign 1",
-          status: "ACTIVE",
-          type: "SPONSORED_CONTENT",
-          costType: "CPM",
-          dailyBudget: { amount: "50" },
-          totalBudget: { amount: "500" },
-          unitCost: { amount: "5" },
-        }],
+        elements: [
+          {
+            id: "c1",
+            name: "Campaign 1",
+            status: "ACTIVE",
+            type: "SPONSORED_CONTENT",
+            costType: "CPM",
+            dailyBudget: { amount: "50" },
+            totalBudget: { amount: "500" },
+            unitCost: { amount: "5" },
+          },
+        ],
       }),
     });
     const { listLinkedInCampaigns } = await import("@/lib/campaigns/linkedin");
@@ -60,8 +73,14 @@ describe("linkedin.ts", () => {
   });
 
   it("listLinkedInCampaigns returns [] on API error response", async () => {
-    mockGetConfig.mockResolvedValue({ LINKEDIN_ACCESS_TOKEN: "tok", LINKEDIN_AD_ACCOUNT_ID: "acc:123", LINKEDIN_ORGANIZATION_URN: "urn:li:org:1" });
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403, text: async () => "Forbidden" });
+    mockGetConfig.mockResolvedValue({
+      LINKEDIN_ACCESS_TOKEN: "tok",
+      LINKEDIN_AD_ACCOUNT_ID: "acc:123",
+      LINKEDIN_ORGANIZATION_URN: "urn:li:org:1",
+    });
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue({ ok: false, status: 403, text: async () => "Forbidden" });
     const { listLinkedInCampaigns } = await import("@/lib/campaigns/linkedin");
     expect(await listLinkedInCampaigns()).toEqual([]);
   });
@@ -70,7 +89,10 @@ describe("linkedin.ts", () => {
 // ── TikTok ────────────────────────────────────────────────────────────────────
 
 describe("tiktok.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("isTikTokConfigured returns false when token missing", async () => {
     mockGetConfig.mockResolvedValue({});
@@ -96,16 +118,18 @@ describe("tiktok.ts", () => {
       ok: true,
       json: async () => ({
         data: {
-          list: [{
-            campaign_id: "c1",
-            campaign_name: "TK Camp",
-            status: "ENABLE",
-            budget: 100,
-            budget_mode: "BUDGET_MODE_TOTAL",
-            objective_type: "REACH",
-            create_time: "2024-01-01",
-            modify_time: "2024-01-02",
-          }],
+          list: [
+            {
+              campaign_id: "c1",
+              campaign_name: "TK Camp",
+              status: "ENABLE",
+              budget: 100,
+              budget_mode: "BUDGET_MODE_TOTAL",
+              objective_type: "REACH",
+              create_time: "2024-01-01",
+              modify_time: "2024-01-02",
+            },
+          ],
         },
         code: 0,
       }),
@@ -131,7 +155,10 @@ describe("tiktok.ts", () => {
 // ── X Ads ─────────────────────────────────────────────────────────────────────
 
 describe("x-ads.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("isXConfigured returns false when token missing", async () => {
     mockGetConfig.mockResolvedValue({});
@@ -141,8 +168,10 @@ describe("x-ads.ts", () => {
 
   it("isXConfigured returns true when configured", async () => {
     mockGetConfig.mockResolvedValue({
-      X_API_KEY: "key", X_API_SECRET: "secret",
-      X_ACCESS_TOKEN: "tok", X_ACCESS_SECRET: "sec",
+      X_API_KEY: "key",
+      X_API_SECRET: "secret",
+      X_ACCESS_TOKEN: "tok",
+      X_ACCESS_SECRET: "sec",
       X_AD_ACCOUNT_ID: "acc",
     });
     const { isXConfigured } = await import("@/lib/campaigns/x-ads");
@@ -157,25 +186,29 @@ describe("x-ads.ts", () => {
 
   it("listXCampaigns returns campaigns on success", async () => {
     mockGetConfig.mockResolvedValue({
-      X_API_KEY: "key", X_API_SECRET: "secret",
-      X_ACCESS_TOKEN: "tok", X_ACCESS_SECRET: "sec",
+      X_API_KEY: "key",
+      X_API_SECRET: "secret",
+      X_ACCESS_TOKEN: "tok",
+      X_ACCESS_SECRET: "sec",
       X_AD_ACCOUNT_ID: "acc123",
     });
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        data: [{
-          id: "c1",
-          name: "X Camp",
-          entity_status: "ACTIVE",
-          funding_instrument_id: "fi1",
-          total_budget_amount_local_micro: 5000000,
-          daily_budget_amount_local_micro: 500000,
-          start_time: "2024-01-01",
-          end_time: null,
-          currency: "EUR",
-          objective: "REACH",
-        }],
+        data: [
+          {
+            id: "c1",
+            name: "X Camp",
+            entity_status: "ACTIVE",
+            funding_instrument_id: "fi1",
+            total_budget_amount_local_micro: 5000000,
+            daily_budget_amount_local_micro: 500000,
+            start_time: "2024-01-01",
+            end_time: null,
+            currency: "EUR",
+            objective: "REACH",
+          },
+        ],
       }),
     });
     const { listXCampaigns } = await import("@/lib/campaigns/x-ads");
@@ -187,7 +220,10 @@ describe("x-ads.ts", () => {
 // ── Google Ads ────────────────────────────────────────────────────────────────
 
 describe("google-ads.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("isGoogleAdsConfigured returns false when env vars missing", async () => {
     mockGetConfig.mockResolvedValue({});

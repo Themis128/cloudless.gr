@@ -41,21 +41,21 @@ describe("parseAnalyticsOrchestrationRequestBody()", () => {
   });
 
   it("throws when windowDays is 0", () => {
-    expect(() =>
-      parseAnalyticsOrchestrationRequestBody({ windowDays: 0 }),
-    ).toThrow("windowDays must be between 1 and 365");
+    expect(() => parseAnalyticsOrchestrationRequestBody({ windowDays: 0 })).toThrow(
+      "windowDays must be between 1 and 365"
+    );
   });
 
   it("throws when windowDays is 366", () => {
-    expect(() =>
-      parseAnalyticsOrchestrationRequestBody({ windowDays: 366 }),
-    ).toThrow("windowDays must be between 1 and 365");
+    expect(() => parseAnalyticsOrchestrationRequestBody({ windowDays: 366 })).toThrow(
+      "windowDays must be between 1 and 365"
+    );
   });
 
   it("throws when windowDays is not a number", () => {
-    expect(() =>
-      parseAnalyticsOrchestrationRequestBody({ windowDays: "bad" }),
-    ).toThrow("windowDays must be between 1 and 365");
+    expect(() => parseAnalyticsOrchestrationRequestBody({ windowDays: "bad" })).toThrow(
+      "windowDays must be between 1 and 365"
+    );
   });
 
   it("filters out invalid connectors", () => {
@@ -66,9 +66,9 @@ describe("parseAnalyticsOrchestrationRequestBody()", () => {
   });
 
   it("throws when connectors array contains only invalid entries", () => {
-    expect(() =>
-      parseAnalyticsOrchestrationRequestBody({ connectors: ["bad-tool"] }),
-    ).toThrow("At least one valid connector is required");
+    expect(() => parseAnalyticsOrchestrationRequestBody({ connectors: ["bad-tool"] })).toThrow(
+      "At least one valid connector is required"
+    );
   });
 
   it("falls back to defaults when connectors is an empty array", () => {
@@ -106,9 +106,9 @@ describe("parseAnalyticsOrchestrationRequestBody()", () => {
   });
 
   it("throws when reportTitle is an empty string", () => {
-    expect(() =>
-      parseAnalyticsOrchestrationRequestBody({ reportTitle: "   " }),
-    ).toThrow("reportTitle cannot be empty");
+    expect(() => parseAnalyticsOrchestrationRequestBody({ reportTitle: "   " })).toThrow(
+      "reportTitle cannot be empty"
+    );
   });
 
   it("handles null/non-object body gracefully", () => {

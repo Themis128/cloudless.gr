@@ -1,11 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
-import {
-  bookmarkKeyOf,
-  getBookmarkStore,
-  _resetBookmarkStore,
-} from "@/lib/ad-analytics/bookmarks";
+import { bookmarkKeyOf, getBookmarkStore, _resetBookmarkStore } from "@/lib/ad-analytics/bookmarks";
 import type { AdMetrics } from "@/lib/ad-analytics/types";
 
 beforeEach(() => {

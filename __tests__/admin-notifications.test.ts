@@ -85,7 +85,10 @@ describe("admin-notifications", () => {
       });
       expect(r).not.toBeNull();
       expect(putCalls).toHaveLength(1);
-      const input = putCalls[0] as { TableName: string; Item: Record<string, { S?: string; BOOL?: boolean }> };
+      const input = putCalls[0] as {
+        TableName: string;
+        Item: Record<string, { S?: string; BOOL?: boolean }>;
+      };
       expect(input.TableName).toBe("test-notifs");
       expect(input.Item.pk.S).toBe("NOTIF");
       expect(input.Item.catPk.S).toBe("CAT#contact");

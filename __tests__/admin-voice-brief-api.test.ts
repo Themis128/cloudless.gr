@@ -20,9 +20,7 @@ vi.mock("jose", async () => {
     jwtVerify: async (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length !== 3) throw new Error("Invalid JWT");
-      const payload = JSON.parse(
-        Buffer.from(parts[1], "base64").toString("utf-8"),
-      );
+      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
       return { payload, protectedHeader: { alg: "RS256" } };
     },
   };
@@ -39,9 +37,7 @@ vi.mock("@/lib/voice-brief-store", () => ({
 vi.stubGlobal("fetch", mockFetch);
 
 vi.mock("@aws-sdk/client-ssm", async () => {
-  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>(
-    "@aws-sdk/client-ssm",
-  );
+  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
   return {
     ...actual,
     SSMClient: vi.fn().mockImplementation(function () {
@@ -56,7 +52,7 @@ vi.mock("@aws-sdk/client-ssm", async () => {
 function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -70,7 +66,7 @@ function makeAdminToken(): string {
 function makeUserToken(): string {
   const payload = {
     sub: "user-sub",
-    "groups": [],
+    groups: [],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -81,10 +77,7 @@ function makeUserToken(): string {
   return `${h}.${b}.sig`;
 }
 
-function adminReq(
-  url: string,
-  init?: { method?: string; body?: string },
-): NextRequest {
+function adminReq(url: string, init?: { method?: string; body?: string }): NextRequest {
   const headers = new Headers({ Authorization: `Bearer ${makeAdminToken()}` });
   if (init?.body) headers.set("Content-Type", "application/json");
   return new NextRequest(url, {
@@ -175,9 +168,7 @@ describe("POST /api/admin/voice-brief", () => {
 
   it("returns 401 without token", async () => {
     const { POST } = await import("@/app/api/admin/voice-brief/route");
-    const res = await POST(
-      new NextRequest(VOICE_BRIEF_URL, { method: "POST" }),
-    );
+    const res = await POST(new NextRequest(VOICE_BRIEF_URL, { method: "POST" }));
     expect(res.status).toBe(401);
     expect(mockRunAgent).not.toHaveBeenCalled();
   });
@@ -188,7 +179,7 @@ describe("POST /api/admin/voice-brief", () => {
       new NextRequest(VOICE_BRIEF_URL, {
         method: "POST",
         headers: { Authorization: `Bearer ${makeUserToken()}` },
-      }),
+      })
     );
     expect(res.status).toBe(403);
   });

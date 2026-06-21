@@ -60,9 +60,7 @@ describe("slack-users", () => {
         ok: true,
         json: async () => ({ ok: false, error: "missing_scope" }),
       });
-      await expect(lookupUserByEmail("x@y", "xoxb-x")).rejects.toThrow(
-        /missing_scope/,
-      );
+      await expect(lookupUserByEmail("x@y", "xoxb-x")).rejects.toThrow(/missing_scope/);
     });
 
     it("throws on HTTP error", async () => {
@@ -80,7 +78,7 @@ describe("slack-users", () => {
       const [, init] = fetchMock.mock.calls[0];
       expect((init as { method: string }).method).toBe("POST");
       expect((init as { headers: Record<string, string> }).headers["Content-Type"]).toBe(
-        "application/x-www-form-urlencoded",
+        "application/x-www-form-urlencoded"
       );
     });
   });
@@ -144,7 +142,7 @@ describe("slack-users", () => {
           }),
         });
       const r = await listUsers("xoxb-x");
-      expect(r.map(u => u.id)).toEqual(["U1", "U2"]);
+      expect(r.map((u) => u.id)).toEqual(["U1", "U2"]);
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 

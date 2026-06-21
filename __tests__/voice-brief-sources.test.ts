@@ -12,8 +12,8 @@ const mockGetStripe = vi.fn();
 vi.mock("@/lib/gsc", () => ({
   getSeoSnapshot: (...a: unknown[]) => mockGetSeoSnapshot(...a),
 }));
-vi.mock("@/lib/hubspot", async (orig) => ({
-  ...(await orig<typeof import("@/lib/hubspot")>()),
+vi.mock("@/lib/espocrm", async (orig) => ({
+  ...(await orig<typeof import("@/lib/espocrm")>()),
   isHubSpotConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
   getPipelineStats: (...a: unknown[]) => mockGetPipelineStats(...a),
   listNewsletterSubscribers: (...a: unknown[]) => mockListNewsletterSubscribers(...a),
@@ -23,7 +23,10 @@ vi.mock("@/lib/stripe", () => ({
 }));
 
 describe("voice-brief-sources.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   describe("fetchSeoMetrics", () => {
     it("returns null when getSeoSnapshot returns null", async () => {
@@ -33,7 +36,12 @@ describe("voice-brief-sources.ts", () => {
     });
 
     it("maps snapshot fields correctly", async () => {
-      mockGetSeoSnapshot.mockResolvedValue({ clicks: 100, impressions: 2000, ctr: 5, position: 3.5 });
+      mockGetSeoSnapshot.mockResolvedValue({
+        clicks: 100,
+        impressions: 2000,
+        ctr: 5,
+        position: 3.5,
+      });
       const { fetchSeoMetrics } = await import("@/lib/voice-brief-sources");
       const result = await fetchSeoMetrics();
       expect(result).toEqual({ clicks: 100, impressions: 2000, ctr: 5 });
@@ -54,7 +62,6 @@ describe("voice-brief-sources.ts", () => {
       const result = await fetchPipelineMetrics();
       expect(result?.totalValueEuros).toBe(100);
       expect(result?.totalDeals).toBe(5);
-
     });
   });
 

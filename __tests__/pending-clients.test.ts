@@ -153,9 +153,7 @@ describe("upsertPendingClient()", () => {
   });
 
   it("uses provided planLabel when given", async () => {
-    mockSend
-      .mockResolvedValueOnce({ Parameter: { Value: "[]" } })
-      .mockResolvedValueOnce({});
+    mockSend.mockResolvedValueOnce({ Parameter: { Value: "[]" } }).mockResolvedValueOnce({});
     const result = await upsertPendingClient({
       email: "custom@example.com",
       plan: "custom",
@@ -163,7 +161,6 @@ describe("upsertPendingClient()", () => {
     });
     expect(result.planLabel).toBe("Custom Plan");
   });
-
 });
 
 describe("findPendingByEmail()", () => {

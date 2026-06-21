@@ -122,10 +122,7 @@ describe("notion-faqs.ts", () => {
       const result = await getFaqs();
 
       expect(result).toEqual(staticFaqs);
-      expect(errorSpy).toHaveBeenCalledWith(
-        "[Notion FAQs] Failed to fetch:",
-        expect.any(Error),
-      );
+      expect(errorSpy).toHaveBeenCalledWith("[Notion FAQs] Failed to fetch:", expect.any(Error));
     });
 
     it("filters Notion FAQs by locale when locale provided", async () => {

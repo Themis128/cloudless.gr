@@ -16,10 +16,19 @@ vi.mock("@/lib/api-auth", () => ({
 }));
 vi.mock("@/lib/api-errors", () => ({ mapIntegrationError: () => null }));
 
-function adminOk() { mockRequireAdmin.mockResolvedValue({ ok: true, user: { sub: "a1" } }); }
-function adminFail() { mockRequireAdmin.mockResolvedValue({ ok: false, response: new Response(null, { status: 401 }) }); }
+function adminOk() {
+  mockRequireAdmin.mockResolvedValue({ ok: true, user: { sub: "a1" } });
+}
+function adminFail() {
+  mockRequireAdmin.mockResolvedValue({ ok: false, response: new Response(null, { status: 401 }) });
+}
 function req(url: string, method = "GET", body?: unknown) {
-  return new NextRequest(url, { method, ...(body !== undefined ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } } : {}) });
+  return new NextRequest(url, {
+    method,
+    ...(body !== undefined
+      ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }
+      : {}),
+  });
 }
 
 // ── /api/admin/notion/analytics ───────────────────────────────────────────────
@@ -44,7 +53,10 @@ vi.mock("@/lib/notion-analytics", async (orig) => ({
 }));
 
 describe("GET /api/admin/notion/analytics", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -84,13 +96,18 @@ describe("GET /api/admin/notion/analytics", () => {
 });
 
 describe("POST /api/admin/notion/analytics", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 400 for unknown action", async () => {
     adminOk();
     mockIsConfiguredAsync.mockResolvedValue(true);
     const { POST } = await import("@/app/api/admin/notion/analytics/route");
-    const res = await POST(req("http://localhost/api/admin/notion/analytics", "POST", { action: "unknown" }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/analytics", "POST", { action: "unknown" })
+    );
     expect(res.status).toBe(400);
   });
 
@@ -99,7 +116,9 @@ describe("POST /api/admin/notion/analytics", () => {
     mockIsConfiguredAsync.mockResolvedValue(true);
     mockCreateWeeklyRollup.mockResolvedValue("rollup-id-123");
     const { POST } = await import("@/app/api/admin/notion/analytics/route");
-    const res = await POST(req("http://localhost/api/admin/notion/analytics", "POST", { action: "rollup" }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/analytics", "POST", { action: "rollup" })
+    );
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.rollupId).toBe("rollup-id-123");
@@ -110,7 +129,12 @@ describe("POST /api/admin/notion/analytics", () => {
     mockIsConfiguredAsync.mockResolvedValue(true);
     mockArchiveOldEvents.mockResolvedValue({ archived: 5 });
     const { POST } = await import("@/app/api/admin/notion/analytics/route");
-    const res = await POST(req("http://localhost/api/admin/notion/analytics", "POST", { action: "archive", daysToKeep: 30 }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/analytics", "POST", {
+        action: "archive",
+        daysToKeep: 30,
+      })
+    );
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.archived).toBe(5);
@@ -122,7 +146,9 @@ describe("POST /api/admin/notion/analytics", () => {
     mockCreateWeeklyRollup.mockResolvedValue("r1");
     mockArchiveOldEvents.mockResolvedValue({ archived: 2 });
     const { POST } = await import("@/app/api/admin/notion/analytics/route");
-    const res = await POST(req("http://localhost/api/admin/notion/analytics", "POST", { action: "maintain" }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/analytics", "POST", { action: "maintain" })
+    );
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.rollupId).toBe("r1");
@@ -139,7 +165,10 @@ vi.mock("@/lib/notion-comments", () => ({
 }));
 
 describe("GET /api/admin/notion/comments", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -166,19 +195,29 @@ describe("GET /api/admin/notion/comments", () => {
 });
 
 describe("POST /api/admin/notion/comments", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 400 when page_id or text missing", async () => {
     adminOk();
     const { POST } = await import("@/app/api/admin/notion/comments/route");
-    const res = await POST(req("http://localhost/api/admin/notion/comments", "POST", { page_id: "p1" }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/comments", "POST", { page_id: "p1" })
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when text exceeds 5000 chars", async () => {
     adminOk();
     const { POST } = await import("@/app/api/admin/notion/comments/route");
-    const res = await POST(req("http://localhost/api/admin/notion/comments", "POST", { page_id: "p1", text: "x".repeat(5001) }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/comments", "POST", {
+        page_id: "p1",
+        text: "x".repeat(5001),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
@@ -186,7 +225,9 @@ describe("POST /api/admin/notion/comments", () => {
     adminOk();
     mockAddComment.mockResolvedValue({ id: "c1", text: "Nice!" });
     const { POST } = await import("@/app/api/admin/notion/comments/route");
-    const res = await POST(req("http://localhost/api/admin/notion/comments", "POST", { page_id: "p1", text: "Nice!" }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/comments", "POST", { page_id: "p1", text: "Nice!" })
+    );
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.comment.text).toBe("Nice!");
@@ -196,7 +237,9 @@ describe("POST /api/admin/notion/comments", () => {
     adminOk();
     mockAddComment.mockResolvedValue(null);
     const { POST } = await import("@/app/api/admin/notion/comments/route");
-    const res = await POST(req("http://localhost/api/admin/notion/comments", "POST", { page_id: "p1", text: "Hi" }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/comments", "POST", { page_id: "p1", text: "Hi" })
+    );
     expect(res.status).toBe(500);
   });
 });
@@ -212,7 +255,10 @@ vi.mock("@/lib/notion-projects", async (orig) => ({
 }));
 
 describe("GET /api/admin/notion/projects", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -242,7 +288,10 @@ describe("GET /api/admin/notion/projects", () => {
 });
 
 describe("POST /api/admin/notion/projects", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 400 when name missing", async () => {
     adminOk();
@@ -256,7 +305,9 @@ describe("POST /api/admin/notion/projects", () => {
     adminOk();
     mockIsConfiguredAsync.mockResolvedValue(true);
     const { POST } = await import("@/app/api/admin/notion/projects/route");
-    const res = await POST(req("http://localhost/api/admin/notion/projects", "POST", { name: "x".repeat(201) }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/projects", "POST", { name: "x".repeat(201) })
+    );
     expect(res.status).toBe(400);
   });
 
@@ -265,7 +316,9 @@ describe("POST /api/admin/notion/projects", () => {
     mockIsConfiguredAsync.mockResolvedValue(true);
     mockCreateProject.mockResolvedValue("proj-123");
     const { POST } = await import("@/app/api/admin/notion/projects/route");
-    const res = await POST(req("http://localhost/api/admin/notion/projects", "POST", { name: "New Project" }));
+    const res = await POST(
+      req("http://localhost/api/admin/notion/projects", "POST", { name: "New Project" })
+    );
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.id).toBe("proj-123");
@@ -283,12 +336,17 @@ vi.mock("@/lib/escape-html", () => ({
 }));
 
 describe("GET /api/admin/reports/[id]/pdf", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
     const { GET } = await import("@/app/api/admin/reports/[id]/pdf/route");
-    const res = await GET(req("http://localhost/api/admin/reports/r1/pdf"), { params: Promise.resolve({ id: "r1" }) });
+    const res = await GET(req("http://localhost/api/admin/reports/r1/pdf"), {
+      params: Promise.resolve({ id: "r1" }),
+    });
     expect(res.status).toBe(401);
   });
 
@@ -296,7 +354,9 @@ describe("GET /api/admin/reports/[id]/pdf", () => {
     adminOk();
     mockGetReport.mockResolvedValue(null);
     const { GET } = await import("@/app/api/admin/reports/[id]/pdf/route");
-    const res = await GET(req("http://localhost/api/admin/reports/r1/pdf"), { params: Promise.resolve({ id: "r1" }) });
+    const res = await GET(req("http://localhost/api/admin/reports/r1/pdf"), {
+      params: Promise.resolve({ id: "r1" }),
+    });
     expect(res.status).toBe(404);
   });
 
@@ -313,7 +373,9 @@ describe("GET /api/admin/reports/[id]/pdf", () => {
       sections: [{ title: "Revenue", data: { total: 5000 }, insights: "Good quarter." }],
     });
     const { GET } = await import("@/app/api/admin/reports/[id]/pdf/route");
-    const res = await GET(req("http://localhost/api/admin/reports/r1/pdf"), { params: Promise.resolve({ id: "r1" }) });
+    const res = await GET(req("http://localhost/api/admin/reports/r1/pdf"), {
+      params: Promise.resolve({ id: "r1" }),
+    });
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/text\/html/);
     const html = await res.text();

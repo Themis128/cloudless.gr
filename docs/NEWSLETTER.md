@@ -34,7 +34,7 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
 
 - [src/app/api/subscribe/route.ts](../src/app/api/subscribe/route.ts) records the email in HubSpot via `setNewsletterStatus(email, "newsletter_signup")`, clears any stale SES suppression so a returning subscriber can be emailed again, then sends the branded welcome email and a real-time Slack ping to `#subscribers`.
 - [src/app/api/unsubscribe/route.ts](../src/app/api/unsubscribe/route.ts) (POST for the in-app form, GET for the one-click `List-Unsubscribe` link) atomically adds the address to the SES suppression list and flips the HubSpot contact to `lead_source = "newsletter_unsubscribed"`, removing it from the send audience.
-- [src/lib/hubspot.ts](../src/lib/hubspot.ts) — `setNewsletterStatus()` creates or updates a contact and sets the subscription state; `listNewsletterSubscribers()` returns every contact with `lead_source = "newsletter_signup"` (cursor-paginated search).
+- [src/lib/espocrm.ts](../src/lib/espocrm.ts) — `setNewsletterStatus()` creates or updates a contact and sets the subscription state; `listNewsletterSubscribers()` returns every contact with `lead_source = "newsletter_signup"` (cursor-paginated search). _(HubSpot was decommissioned in PR #1043; this lib is the drop-in replacement with the same 21 exports.)_
 
 ### Welcome email
 
@@ -59,13 +59,13 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
 
 - [scripts/generate-weekly-article.ts](../scripts/generate-weekly-article.ts) picks the least-recently-used category, calls Claude with a brand-voice system prompt plus the last 8 titles to avoid, parses the JSON response, inserts as a Notion Draft, Slack-pings the editor.
 - [scripts/publish-and-send-newsletter.ts](../scripts/publish-and-send-newsletter.ts) finds Approved rows, renders Notion blocks to HTML and plaintext (including a category-matched "This Week at Cloudless" service offer section), marks Published with `Date` and `PublishedAt`, hits the existing Notion webhook to revalidate ISR, then POSTs the rendered email to `/api/newsletter/send`, and Slack-confirms with the delivered/failed counts.
-- [scripts/weekly-subscriber-report.ts](../scripts/weekly-subscriber-report.ts) queries HubSpot for total active subscribers, new signups this week, and total unsubscribed contacts; posts a formatted Block Kit summary to Slack `#subscribers`; and inserts a timestamped row into a Notion "Newsletter Reports" database (auto-created on first run).
+- `scripts/weekly-subscriber-report.ts` _(decommissioned with HubSpot in PR #1043; equivalent reporting now flows from the espocrm-to-lake ETL → Athena)_ — historically queried HubSpot for total active subscribers, new signups this week, and total unsubscribed contacts; posted a formatted Block Kit summary to Slack `#subscribers`; and inserted a timestamped row into a Notion "Newsletter Reports" database.
 
 ### Workflows
 
 - [.github/workflows/weekly-article-draft.yml](../.github/workflows/weekly-article-draft.yml) — `cron: "0 6 * * 1"` (Mondays 06:00 UTC, 08:00 Athens).
 - [.github/workflows/weekly-newsletter.yml](../.github/workflows/weekly-newsletter.yml) — `cron: "0 9 * * 1"` (Mondays 09:00 UTC, 11:00 Athens).
-- [.github/workflows/weekly-subscriber-report.yml](../.github/workflows/weekly-subscriber-report.yml) — `cron: "0 10 * * 1"` (Mondays 10:00 UTC, 12:00 Athens).
+- `.github/workflows/weekly-subscriber-report.yml` _(removed in PR #1043 alongside the HubSpot decom — superseded by the daily espocrm-to-lake ETL workflow)_ — historically `cron: "0 10 * * 1"` (Mondays 10:00 UTC, 12:00 Athens).
 - All three have `workflow_dispatch` for manual triggering from the Actions UI.
 
 ## Local commands

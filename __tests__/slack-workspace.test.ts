@@ -8,11 +8,7 @@ vi.mock("@/lib/integrations", () => ({
   getSlackConfigAsync: () => getSlackConfigAsyncMock(),
 }));
 
-import {
-  getBotInfo,
-  getWorkspaceInfo,
-  getSlackBrandingAudit,
-} from "@/lib/slack-workspace";
+import { getBotInfo, getWorkspaceInfo, getSlackBrandingAudit } from "@/lib/slack-workspace";
 
 const fetchMock = vi.fn();
 const originalFetch = globalThis.fetch;
@@ -57,7 +53,7 @@ describe("slack-workspace", () => {
       await getBotInfo();
       const [, init] = fetchMock.mock.calls[0];
       expect((init as { headers: Record<string, string> }).headers.Authorization).toBe(
-        "Bearer xoxb-from-integ",
+        "Bearer xoxb-from-integ"
       );
     });
 

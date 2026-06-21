@@ -92,9 +92,7 @@ describe("slack-notify", () => {
       getSlackConfigAsyncMock.mockResolvedValueOnce({
         SLACK_BOT_TOKEN: "xoxb-x",
       });
-      fetchMock.mockResolvedValueOnce(
-        jsonResp({ ok: false, error: "invalid_auth" }),
-      );
+      fetchMock.mockResolvedValueOnce(jsonResp({ ok: false, error: "invalid_auth" }));
       const client = new SlackClient();
       expect(await client.post({ text: "hi" })).toBe(false);
     });
@@ -105,10 +103,7 @@ describe("slack-notify", () => {
       });
       fetchMock
         .mockResolvedValueOnce(
-          jsonResp(
-            { ok: false, error: "ratelimited" },
-            { "Retry-After": "2" },
-          ),
+          jsonResp({ ok: false, error: "ratelimited" }, { "Retry-After": "2" })
         )
         .mockResolvedValueOnce(jsonResp({ ok: true }));
 
@@ -125,7 +120,7 @@ describe("slack-notify", () => {
         SLACK_BOT_TOKEN: "xoxb-x",
       });
       fetchMock.mockResolvedValue(
-        jsonResp({ ok: false, error: "ratelimited" }, { "Retry-After": "1" }),
+        jsonResp({ ok: false, error: "ratelimited" }, { "Retry-After": "1" })
       );
       const client = new SlackClient();
       const promise = client.post({ text: "hi" });
@@ -142,9 +137,7 @@ describe("slack-notify", () => {
       fetchMock.mockResolvedValueOnce({ ok: true });
       const client = new SlackClient();
       expect(await client.post({ text: "hi" })).toBe(true);
-      expect(fetchMock.mock.calls[0][0]).toBe(
-        "https://hooks.slack.com/services/x",
-      );
+      expect(fetchMock.mock.calls[0][0]).toBe("https://hooks.slack.com/services/x");
     });
 
     it("retries the webhook on HTTP error, then gives up", async () => {
@@ -169,9 +162,7 @@ describe("slack-notify", () => {
       fetchMock.mockResolvedValueOnce(jsonResp({ ok: true }));
       await slackSubscriberNotify("alice@example.com");
       expect(fetchMock).toHaveBeenCalled();
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.channel).toBe("#subscribers");
       expect(body.text).toContain("alice@example.com");
       expect(body.username).toBe("Cloudless");
@@ -209,9 +200,7 @@ describe("slack-notify", () => {
         title: "UniqueErrorTitle-2",
         message: "details",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.channel).toBe("#errors");
       expect(body.text).toContain("UniqueErrorTitle-2");
     });
@@ -228,9 +217,7 @@ describe("slack-notify", () => {
         stage: "production",
         status: "succeeded",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.text).toMatch(/Deploy succeeded.*1\.2\.3.*production/);
     });
 
@@ -245,9 +232,7 @@ describe("slack-notify", () => {
         status: "failed",
         commitSha: "abcdef1234567890",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.text).toMatch(/Deploy failed/);
       // Body blocks include the short SHA (first 7 chars)
       const rendered = JSON.stringify(body);
@@ -264,9 +249,7 @@ describe("slack-notify", () => {
         stage: "preview",
         status: "started",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.text).toMatch(/Deploy started/);
     });
   });
@@ -282,9 +265,7 @@ describe("slack-notify", () => {
         email: "t@x",
         message: "Hello",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.channel).toBe("#notifications");
       const rendered = JSON.stringify(body);
       expect(rendered).toContain("Themis");
@@ -304,9 +285,7 @@ describe("slack-notify", () => {
         start: "2026-08-12T07:00:00Z",
         notes: "wants serverless review",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.channel).toBe("#bookings");
       expect(JSON.stringify(body)).toContain("alice@x");
     });
@@ -323,9 +302,7 @@ describe("slack-notify", () => {
         amount: "EUR 99.00",
         email: "buyer@x",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.channel).toBe("#orders");
       const rendered = JSON.stringify(body);
       expect(rendered).toContain("EUR 99.00");
@@ -344,9 +321,7 @@ describe("slack-notify", () => {
         attribution:
           "utm_source=linkedin | utm_medium=cpc | utm_campaign=shop_online_founding | utm_content=A_EN | campaign_slug=shop-online | tier=starter",
       });
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       const rendered = JSON.stringify(body);
       // The attribution line surfaces the creative variant so the operator
       // sees ad-creative-level attribution without round-tripping to Stripe.

@@ -71,8 +71,10 @@ describe("markdownToNotionBlocks", () => {
   it("joins consecutive non-empty lines into the same paragraph", () => {
     const blocks = markdownToNotionBlocks("line one\nline two");
     expect(blocks).toHaveLength(1);
-    expect((blocks[0] as { paragraph: { rich_text: { text: { content: string } }[] } }).paragraph.rich_text[0].text.content)
-      .toBe("line one line two");
+    expect(
+      (blocks[0] as { paragraph: { rich_text: { text: { content: string } }[] } }).paragraph
+        .rich_text[0].text.content
+    ).toBe("line one line two");
   });
 
   it("starts a new paragraph after a blank line", () => {
@@ -128,9 +130,7 @@ describe("markdownToNotionBlocks", () => {
       "",
       "Closing thought.",
     ].join("\n");
-    const types = markdownToNotionBlocks(md).map(
-      (b) => (b as { type: string }).type,
-    );
+    const types = markdownToNotionBlocks(md).map((b) => (b as { type: string }).type);
     expect(types).toEqual([
       "heading_1",
       "paragraph",

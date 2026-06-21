@@ -32,10 +32,7 @@ describe("agent-book.isAgentBookConfigured", () => {
   it("returns true when the required Google Calendar keys are configured", async () => {
     isConfiguredAsyncMock.mockResolvedValueOnce(true);
     await expect(isAgentBookConfigured()).resolves.toBe(true);
-    expect(isConfiguredAsyncMock).toHaveBeenCalledWith(
-      "GOOGLE_CLIENT_EMAIL",
-      "GOOGLE_PRIVATE_KEY",
-    );
+    expect(isConfiguredAsyncMock).toHaveBeenCalledWith("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY");
   });
 
   it("returns false when integration keys are missing", async () => {

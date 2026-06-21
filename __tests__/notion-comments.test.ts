@@ -136,7 +136,9 @@ describe("notion-comments.ts", () => {
     it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      await expect(addComment("page-1", "text")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(addComment("page-1", "text")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
     });
 
     it("returns null on error", async () => {
@@ -178,7 +180,9 @@ describe("notion-comments.ts", () => {
     it("throws when not configured", async () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
-      await expect(replyToDiscussion("disc-1", "text")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(replyToDiscussion("disc-1", "text")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
     });
   });
 
@@ -191,9 +195,33 @@ describe("notion-comments.ts", () => {
         json: () =>
           Promise.resolve({
             results: [
-              { id: "c1", parent: {}, discussion_id: "", created_time: "", last_edited_time: "", created_by: {}, rich_text: [] },
-              { id: "c2", parent: {}, discussion_id: "", created_time: "", last_edited_time: "", created_by: {}, rich_text: [] },
-              { id: "c3", parent: {}, discussion_id: "", created_time: "", last_edited_time: "", created_by: {}, rich_text: [] },
+              {
+                id: "c1",
+                parent: {},
+                discussion_id: "",
+                created_time: "",
+                last_edited_time: "",
+                created_by: {},
+                rich_text: [],
+              },
+              {
+                id: "c2",
+                parent: {},
+                discussion_id: "",
+                created_time: "",
+                last_edited_time: "",
+                created_by: {},
+                rich_text: [],
+              },
+              {
+                id: "c3",
+                parent: {},
+                discussion_id: "",
+                created_time: "",
+                last_edited_time: "",
+                created_by: {},
+                rich_text: [],
+              },
             ],
             has_more: false,
           }),

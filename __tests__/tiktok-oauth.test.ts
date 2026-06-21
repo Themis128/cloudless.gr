@@ -30,11 +30,7 @@ function makeRequest(url: string): NextRequest {
 
 describe("buildTikTokAuthUrl", () => {
   it("includes app_id, redirect_uri and state in the URL", () => {
-    const url = buildTikTokAuthUrl(
-      "myapp",
-      "https://example.com/callback",
-      "state123",
-    );
+    const url = buildTikTokAuthUrl("myapp", "https://example.com/callback", "state123");
     expect(url).toContain("app_id=myapp");
     expect(url).toContain("redirect_uri=");
     expect(url).toContain("state=state123");
@@ -65,9 +61,7 @@ describe("GET /api/admin/oauth/tiktok", () => {
       }),
     });
     const { GET } = await import("@/app/api/admin/oauth/tiktok/route");
-    const res = await GET(
-      makeRequest("http://localhost:4000/api/admin/oauth/tiktok"),
-    );
+    const res = await GET(makeRequest("http://localhost:4000/api/admin/oauth/tiktok"));
     expect(res.status).toBe(401);
   });
 
@@ -77,17 +71,13 @@ describe("GET /api/admin/oauth/tiktok", () => {
       TIKTOK_APP_SECRET: "",
     });
     const { GET } = await import("@/app/api/admin/oauth/tiktok/route");
-    const res = await GET(
-      makeRequest("http://localhost:4000/api/admin/oauth/tiktok"),
-    );
+    const res = await GET(makeRequest("http://localhost:4000/api/admin/oauth/tiktok"));
     expect(res.status).toBe(503);
   });
 
   it("redirects to TikTok auth URL when app is configured", async () => {
     const { GET } = await import("@/app/api/admin/oauth/tiktok/route");
-    const res = await GET(
-      makeRequest("http://localhost:4000/api/admin/oauth/tiktok"),
-    );
+    const res = await GET(makeRequest("http://localhost:4000/api/admin/oauth/tiktok"));
     expect(res.status).toBe(307);
     const location = res.headers.get("location") ?? "";
     expect(location).toContain("business-api.tiktok.com/portal/auth");
@@ -109,7 +99,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
   function makeCallbackRequest(qs: Record<string, string>): NextRequest {
     const params = new URLSearchParams(qs);
     return makeRequest(
-      `http://localhost:4000/api/admin/oauth/tiktok/callback?${params.toString()}`,
+      `http://localhost:4000/api/admin/oauth/tiktok/callback?${params.toString()}`
     );
   }
 
@@ -121,17 +111,13 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
       }),
     });
     const { GET } = await import("@/app/api/admin/oauth/tiktok/callback/route");
-    const res = await GET(
-      makeCallbackRequest({ auth_code: "code", state: "bad" }),
-    );
+    const res = await GET(makeCallbackRequest({ auth_code: "code", state: "bad" }));
     expect(res.status).toBe(401);
   });
 
   it("returns 400 HTML when error param is present", async () => {
     const { GET } = await import("@/app/api/admin/oauth/tiktok/callback/route");
-    const res = await GET(
-      makeCallbackRequest({ error: "access_denied", state: "s" }),
-    );
+    const res = await GET(makeCallbackRequest({ error: "access_denied", state: "s" }));
     expect(res.status).toBe(400);
     const body = await res.text();
     expect(body).toContain("access_denied");
@@ -147,9 +133,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
 
   it("returns 400 HTML when state is invalid (CSRF guard)", async () => {
     const { GET } = await import("@/app/api/admin/oauth/tiktok/callback/route");
-    const res = await GET(
-      makeCallbackRequest({ auth_code: "code", state: "bad-state.badsig" }),
-    );
+    const res = await GET(makeCallbackRequest({ auth_code: "code", state: "bad-state.badsig" }));
     expect(res.status).toBe(400);
     const body = await res.text();
     expect(body).toContain("Invalid state");
@@ -160,10 +144,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
     const { createHmac } = await import("crypto");
     const secret = baseConfig.TIKTOK_APP_SECRET;
     const nonce = "test-nonce-123";
-    const sig = createHmac("sha256", secret)
-      .update(nonce)
-      .digest("hex")
-      .slice(0, 16);
+    const sig = createHmac("sha256", secret).update(nonce).digest("hex").slice(0, 16);
     const state = `${nonce}.${sig}`;
 
     fetchMock.mockResolvedValueOnce({
@@ -181,9 +162,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
     });
 
     const { GET } = await import("@/app/api/admin/oauth/tiktok/callback/route");
-    const res = await GET(
-      makeCallbackRequest({ auth_code: "valid_code", state }),
-    );
+    const res = await GET(makeCallbackRequest({ auth_code: "valid_code", state }));
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain("tiktok_access_token_abc");
@@ -195,10 +174,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
     const { createHmac } = await import("crypto");
     const secret = baseConfig.TIKTOK_APP_SECRET;
     const nonce = "test-nonce-456";
-    const sig = createHmac("sha256", secret)
-      .update(nonce)
-      .digest("hex")
-      .slice(0, 16);
+    const sig = createHmac("sha256", secret).update(nonce).digest("hex").slice(0, 16);
     const state = `${nonce}.${sig}`;
 
     fetchMock.mockResolvedValueOnce({
@@ -207,9 +183,7 @@ describe("GET /api/admin/oauth/tiktok/callback", () => {
     });
 
     const { GET } = await import("@/app/api/admin/oauth/tiktok/callback/route");
-    const res = await GET(
-      makeCallbackRequest({ auth_code: "bad_code", state }),
-    );
+    const res = await GET(makeCallbackRequest({ auth_code: "bad_code", state }));
     expect(res.status).toBe(502);
     const body = await res.text();
     expect(body).toContain("Invalid auth_code");

@@ -37,7 +37,7 @@ vi.mock("@aws-sdk/client-ssm", async () => {
 function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -51,7 +51,7 @@ function makeAdminToken(): string {
 function makeUserToken(): string {
   const payload = {
     sub: "user-sub",
-    "groups": [],
+    groups: [],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -125,28 +125,34 @@ describe("PATCH /api/admin/ab-tests", () => {
 
   it("returns 400 when id is missing", async () => {
     const { PATCH } = await import("@/app/api/admin/ab-tests/route");
-    const res = await PATCH(adminReq(ABTEST_URL, {
-      method: "PATCH",
-      body: JSON.stringify({ enabled: true }),
-    }));
+    const res = await PATCH(
+      adminReq(ABTEST_URL, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled: true }),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns 404 when flag id is unknown", async () => {
     const { PATCH } = await import("@/app/api/admin/ab-tests/route");
-    const res = await PATCH(adminReq(ABTEST_URL, {
-      method: "PATCH",
-      body: JSON.stringify({ id: "does-not-exist", enabled: true }),
-    }));
+    const res = await PATCH(
+      adminReq(ABTEST_URL, {
+        method: "PATCH",
+        body: JSON.stringify({ id: "does-not-exist", enabled: true }),
+      })
+    );
     expect(res.status).toBe(404);
   });
 
   it("updates a flag and returns updated flags", async () => {
     const { PATCH } = await import("@/app/api/admin/ab-tests/route");
-    const res = await PATCH(adminReq(ABTEST_URL, {
-      method: "PATCH",
-      body: JSON.stringify({ id: "hero-cta", enabled: true, trafficSplit: 60 }),
-    }));
+    const res = await PATCH(
+      adminReq(ABTEST_URL, {
+        method: "PATCH",
+        body: JSON.stringify({ id: "hero-cta", enabled: true, trafficSplit: 60 }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data.flags)).toBe(true);
@@ -164,10 +170,12 @@ describe("POST /api/admin/ab-tests (reset)", () => {
 
   it("resets to default flags", async () => {
     const { POST } = await import("@/app/api/admin/ab-tests/route");
-    const res = await POST(adminReq(ABTEST_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "reset" }),
-    }));
+    const res = await POST(
+      adminReq(ABTEST_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "reset" }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.flags).toEqual(DEFAULT_FLAGS);
@@ -175,10 +183,12 @@ describe("POST /api/admin/ab-tests (reset)", () => {
 
   it("returns 400 for unknown action", async () => {
     const { POST } = await import("@/app/api/admin/ab-tests/route");
-    const res = await POST(adminReq(ABTEST_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "invalid" }),
-    }));
+    const res = await POST(
+      adminReq(ABTEST_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "invalid" }),
+      })
+    );
     expect(res.status).toBe(400);
   });
 });

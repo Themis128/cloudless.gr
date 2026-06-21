@@ -109,10 +109,34 @@ describe("reducePortals", () => {
     const out = emptyAnalytics("ws-1");
     const portal = makePortal({
       deliverables: [
-        { id: "d1", title: "A", status: "in_review", createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-02T00:00:00Z" },
-        { id: "d2", title: "B", status: "approved", createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-03T00:00:00Z" },
-        { id: "d3", title: "C", status: "changes_requested", createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-04T00:00:00Z" },
-        { id: "d4", title: "D", status: "draft", createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-05T00:00:00Z" },
+        {
+          id: "d1",
+          title: "A",
+          status: "in_review",
+          createdAt: "2024-01-01T00:00:00Z",
+          updatedAt: "2024-01-02T00:00:00Z",
+        },
+        {
+          id: "d2",
+          title: "B",
+          status: "approved",
+          createdAt: "2024-01-01T00:00:00Z",
+          updatedAt: "2024-01-03T00:00:00Z",
+        },
+        {
+          id: "d3",
+          title: "C",
+          status: "changes_requested",
+          createdAt: "2024-01-01T00:00:00Z",
+          updatedAt: "2024-01-04T00:00:00Z",
+        },
+        {
+          id: "d4",
+          title: "D",
+          status: "draft",
+          createdAt: "2024-01-01T00:00:00Z",
+          updatedAt: "2024-01-05T00:00:00Z",
+        },
       ],
     });
     reducePortals(out, [portal]);
@@ -127,9 +151,34 @@ describe("reducePortals", () => {
     const out = emptyAnalytics("ws-1");
     const portal = makePortal({
       paymentLinks: [
-        { id: "pl1", label: "Invoice 1", url: "https://pay.stripe.com/1", amountCents: 10000, currency: "EUR", status: "paid", createdAt: "2024-01-01T00:00:00Z", paidAt: "2024-01-05T00:00:00Z" },
-        { id: "pl2", label: "Invoice 2", url: "https://pay.stripe.com/2", amountCents: 5000, currency: "EUR", status: "open", createdAt: "2024-02-01T00:00:00Z" },
-        { id: "pl3", label: "Voided", url: "https://pay.stripe.com/3", amountCents: 2000, currency: "EUR", status: "void", createdAt: "2024-03-01T00:00:00Z" },
+        {
+          id: "pl1",
+          label: "Invoice 1",
+          url: "https://pay.stripe.com/1",
+          amountCents: 10000,
+          currency: "EUR",
+          status: "paid",
+          createdAt: "2024-01-01T00:00:00Z",
+          paidAt: "2024-01-05T00:00:00Z",
+        },
+        {
+          id: "pl2",
+          label: "Invoice 2",
+          url: "https://pay.stripe.com/2",
+          amountCents: 5000,
+          currency: "EUR",
+          status: "open",
+          createdAt: "2024-02-01T00:00:00Z",
+        },
+        {
+          id: "pl3",
+          label: "Voided",
+          url: "https://pay.stripe.com/3",
+          amountCents: 2000,
+          currency: "EUR",
+          status: "void",
+          createdAt: "2024-03-01T00:00:00Z",
+        },
       ],
     });
     reducePortals(out, [portal]);
@@ -144,7 +193,15 @@ describe("reducePortals", () => {
     const out = emptyAnalytics("ws-1");
     const portal = makePortal({
       paymentLinks: [
-        { id: "pl1", label: "USD Invoice", url: "https://pay.stripe.com/1", amountCents: 100, currency: "USD", status: "open", createdAt: "2024-01-01T00:00:00Z" },
+        {
+          id: "pl1",
+          label: "USD Invoice",
+          url: "https://pay.stripe.com/1",
+          amountCents: 100,
+          currency: "USD",
+          status: "open",
+          createdAt: "2024-01-01T00:00:00Z",
+        },
       ],
     });
     reducePortals(out, [portal]);

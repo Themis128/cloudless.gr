@@ -27,7 +27,7 @@ beforeAll(async () => {
   skipAll = !(await localstackUp());
   if (skipAll) {
     console.warn(
-      `[ssm-config-integration] LocalStack not reachable at ${LOCALSTACK_URL} — skipping.`,
+      `[ssm-config-integration] LocalStack not reachable at ${LOCALSTACK_URL} — skipping.`
     );
   }
 });

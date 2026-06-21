@@ -3,11 +3,7 @@ import en from "@/locales/en.json";
 import el from "@/locales/el.json";
 import fr from "@/locales/fr.json";
 
-function collectLeafKeys(
-  value: unknown,
-  parent = "",
-  target: string[] = [],
-): string[] {
+function collectLeafKeys(value: unknown, parent = "", target: string[] = []): string[] {
   if (value === null || value === undefined) {
     return target;
   }

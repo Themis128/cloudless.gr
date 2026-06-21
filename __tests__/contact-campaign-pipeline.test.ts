@@ -15,8 +15,12 @@ vi.mock("@/lib/rate-limit", () => ({
 // Mock SES
 const mockSend = vi.fn().mockResolvedValue({});
 vi.mock("@aws-sdk/client-sesv2", () => ({
-  SESv2Client: class { send = mockSend; },
-  SendEmailCommand: class { constructor(public input: unknown) {} },
+  SESv2Client: class {
+    send = mockSend;
+  },
+  SendEmailCommand: class {
+    constructor(public input: unknown) {}
+  },
 }));
 
 // Mock Slack
@@ -30,7 +34,7 @@ const mockUpsertContact = vi.fn().mockResolvedValue("contact-123");
 const mockCreateDeal = vi.fn().mockResolvedValue("deal-456");
 const mockAssociateDealWithContact = vi.fn().mockResolvedValue(undefined);
 const mockCreateContactNote = vi.fn().mockResolvedValue(undefined);
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   upsertContact: (...args: unknown[]) => mockUpsertContact(...args),
   createDeal: (...args: unknown[]) => mockCreateDeal(...args),
   associateDealWithContact: (...args: unknown[]) => mockAssociateDealWithContact(...args),

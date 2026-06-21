@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  shaEquivalent,
-  evaluateDrift,
-  type DriftSnapshot,
-} from "@/lib/sha-drift";
+import { shaEquivalent, evaluateDrift, type DriftSnapshot } from "@/lib/sha-drift";
 
 const FULL_A = "49f2b0711ba5ab25d18e3fc2c72158f345aa546a";
 const SHORT_A = "49f2b0711ba5"; // 12-char form
@@ -67,7 +63,7 @@ describe("evaluateDrift", () => {
     // Pi deploys SHORT_A (12-char), cloud deploys FULL_A (40-char), both correct.
     const r = evaluateDrift(
       snap({ cloudExpected: FULL_A, piExpected: SHORT_A, cloud: FULL_A, pi: SHORT_A }),
-      NOW,
+      NOW
     );
     expect(r.drifted).toBe(false);
   });
@@ -94,7 +90,7 @@ describe("evaluateDrift", () => {
         cloud: FULL_A,
         pi: FULL_B,
       }),
-      NOW,
+      NOW
     );
     expect(r.drifted).toBe(false);
   });
@@ -109,7 +105,7 @@ describe("evaluateDrift", () => {
     // Pi just deployed (RECENT) but cloud hasn't caught up yet.
     const r = evaluateDrift(
       snap({ cloudSsmModifiedAt: OLD, piSsmModifiedAt: RECENT, cloud: FULL_B, pi: FULL_B }),
-      NOW,
+      NOW
     );
     expect(r.withinGrace).toBe(true);
     expect(r.drifted).toBe(false);
@@ -118,7 +114,7 @@ describe("evaluateDrift", () => {
   it("flags drift outside the grace window even with the same situation", () => {
     const r = evaluateDrift(
       snap({ cloudSsmModifiedAt: OLD, piSsmModifiedAt: OLD, cloud: FULL_B, pi: FULL_B }),
-      NOW,
+      NOW
     );
     expect(r.withinGrace).toBe(false);
     expect(r.drifted).toBe(true);

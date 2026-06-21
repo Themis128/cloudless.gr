@@ -27,11 +27,7 @@ function scriptedFetch(...responses: Array<Response | (() => Response)>) {
   });
 }
 
-function jsonResponse(
-  body: unknown,
-  status = 200,
-  headers: Record<string, string> = {},
-): Response {
+function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json", ...headers },
@@ -53,10 +49,7 @@ describe("integrationFetch", () => {
 
   it("returns parsed JSON on a 200", async () => {
     globalThis.fetch = scriptedFetch(jsonResponse({ hello: "world" }));
-    const data = await integrationFetch<{ hello: string }>(
-      "test",
-      "https://example.test/x",
-    );
+    const data = await integrationFetch<{ hello: string }>("test", "https://example.test/x");
     expect(data).toEqual({ hello: "world" });
   });
 
@@ -64,7 +57,7 @@ describe("integrationFetch", () => {
     const fetchMock = scriptedFetch(
       jsonResponse({ err: "x" }, 500),
       jsonResponse({ err: "x" }, 500),
-      jsonResponse({ ok: true }),
+      jsonResponse({ ok: true })
     );
     globalThis.fetch = fetchMock;
 
@@ -72,7 +65,7 @@ describe("integrationFetch", () => {
       "test",
       "https://example.test/x",
       undefined,
-      { backoffMs: 1 }, // fast backoff for the test
+      { backoffMs: 1 } // fast backoff for the test
     );
     await vi.advanceTimersByTimeAsync(100);
     const result = await promise;
@@ -89,7 +82,7 @@ describe("integrationFetch", () => {
         status: 429,
         headers: { "Retry-After": "2" },
       }),
-      jsonResponse({ ok: true }),
+      jsonResponse({ ok: true })
     );
     globalThis.fetch = fetchMock;
 
@@ -97,7 +90,7 @@ describe("integrationFetch", () => {
       "test",
       "https://example.test/x",
       undefined,
-      { backoffMs: 1 },
+      { backoffMs: 1 }
     );
     await vi.advanceTimersByTimeAsync(2_500); // 2 s for Retry-After + slack
     const result = await promise;
@@ -109,7 +102,7 @@ describe("integrationFetch", () => {
   it("retries on 429 without Retry-After, using exponential backoff", async () => {
     const fetchMock = scriptedFetch(
       new Response("limit", { status: 429 }),
-      jsonResponse({ ok: true }),
+      jsonResponse({ ok: true })
     );
     globalThis.fetch = fetchMock;
 
@@ -117,7 +110,7 @@ describe("integrationFetch", () => {
       "test",
       "https://example.test/x",
       undefined,
-      { backoffMs: 10 },
+      { backoffMs: 10 }
     );
     await vi.advanceTimersByTimeAsync(50);
     const result = await promise;
@@ -128,7 +121,7 @@ describe("integrationFetch", () => {
 
   it("throws IntegrationError on non-retried 4xx", async () => {
     globalThis.fetch = scriptedFetch(
-      () => new Response("nope", { status: 404, headers: { "x-debug": "1" } }),
+      () => new Response("nope", { status: 404, headers: { "x-debug": "1" } })
     );
     let caught: unknown;
     try {
@@ -150,12 +143,12 @@ describe("integrationFetch", () => {
   it("does not retry 4xx (other than 429)", async () => {
     const fetchMock = scriptedFetch(
       new Response("bad", { status: 400 }),
-      jsonResponse({ ok: true }),
+      jsonResponse({ ok: true })
     );
     globalThis.fetch = fetchMock;
-    await expect(
-      integrationFetch("test", "https://example.test/x"),
-    ).rejects.toThrow(IntegrationError);
+    await expect(integrationFetch("test", "https://example.test/x")).rejects.toThrow(
+      IntegrationError
+    );
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -165,7 +158,7 @@ describe("integrationFetch", () => {
       "test",
       "https://example.test/x",
       undefined,
-      { passthroughErrors: true },
+      { passthroughErrors: true }
     );
     expect(result.status).toBe(409);
     expect(result.data).toEqual({ msg: "conflict" });
@@ -173,10 +166,7 @@ describe("integrationFetch", () => {
 
   it("handles 204 No Content cleanly", async () => {
     globalThis.fetch = scriptedFetch(new Response(null, { status: 204 }));
-    const result = await integrationFetchWithMeta(
-      "test",
-      "https://example.test/x",
-    );
+    const result = await integrationFetchWithMeta("test", "https://example.test/x");
     expect(result.status).toBe(204);
     expect(result.data).toBeUndefined();
   });
@@ -186,7 +176,7 @@ describe("integrationFetch", () => {
       new Response("hello", {
         status: 200,
         headers: { "content-type": "text/plain" },
-      }),
+      })
     );
     const data = await integrationFetch<string>("test", "https://example.test/x");
     expect(data).toBe("hello");
@@ -197,7 +187,7 @@ describe("integrationFetch", () => {
       jsonResponse({}, 500),
       jsonResponse({}, 500),
       jsonResponse({}, 500),
-      jsonResponse({}, 500),
+      jsonResponse({}, 500)
     );
     globalThis.fetch = fetchMock;
     const promise = integrationFetch("test", "https://example.test/x", undefined, {

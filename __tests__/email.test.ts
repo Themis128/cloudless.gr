@@ -41,7 +41,14 @@ describe("email.ts", () => {
         text: "Hello",
       });
       expect(mockSend).toHaveBeenCalledOnce();
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Destination: { ToAddresses: string[] }; Content: { Simple: { Subject: { Data: string } } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        {
+          input: {
+            Destination: { ToAddresses: string[] };
+            Content: { Simple: { Subject: { Data: string } } };
+          };
+        },
+      ];
       expect(cmd.input.Destination.ToAddresses).toContain("user@example.com");
       expect(cmd.input.Content.Simple.Subject.Data).toBe("Test Subject");
     });
@@ -55,7 +62,9 @@ describe("email.ts", () => {
         text: "hi",
         listUnsubscribeUrl: "https://cloudless.gr/api/unsubscribe?email=user@example.com",
       });
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Headers?: Array<{ Name: string }> } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Headers?: Array<{ Name: string }> } } } },
+      ];
       const headers = cmd.input.Content.Simple.Headers ?? [];
       expect(headers.some((h) => h.Name === "List-Unsubscribe")).toBe(true);
     });
@@ -68,7 +77,9 @@ describe("email.ts", () => {
         html: "<p>hi</p>",
         text: "hi",
       });
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Headers?: unknown[] } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Headers?: unknown[] } } } },
+      ];
       expect(cmd.input.Content.Simple.Headers).toBeUndefined();
     });
 
@@ -79,7 +90,7 @@ describe("email.ts", () => {
       });
       mockSend.mockRejectedValueOnce(xmlErr);
       await expect(
-        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" }),
+        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
       ).resolves.toBeUndefined();
     });
 
@@ -90,7 +101,7 @@ describe("email.ts", () => {
       });
       mockSend.mockRejectedValueOnce(err);
       await expect(
-        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" }),
+        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
       ).rejects.toThrow("SES failure");
     });
   });
@@ -105,7 +116,9 @@ describe("email.ts", () => {
     it("escapes special characters in the session ID", async () => {
       const { sendOrderConfirmation } = await import("@/lib/email");
       await sendOrderConfirmation("customer@example.com", "<script>", 4900, "eur");
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
+      ];
       expect(cmd.input.Content.Simple.Body.Html.Data).not.toContain("<script>");
     });
   });
@@ -115,7 +128,9 @@ describe("email.ts", () => {
       const { sendPaymentFailureNotice } = await import("@/lib/email");
       await sendPaymentFailureNotice("cust@example.com", "inv_xyz789");
       expect(mockSend).toHaveBeenCalledOnce();
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
+      ];
       expect(cmd.input.Content.Simple.Body.Html.Data).toContain("inv_xyz789");
     });
   });
@@ -125,19 +140,23 @@ describe("email.ts", () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
       expect(mockSend).toHaveBeenCalledOnce();
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
+      ];
       expect(cmd.input.Content.Simple.Body.Html.Data).toContain("unsubscribe");
     });
 
     it("sends from 'Themis at Cloudless' with branded subject", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [{
-        input: {
-          FromEmailAddress: string;
-          Content: { Simple: { Subject: { Data: string } } };
-        };
-      }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        {
+          input: {
+            FromEmailAddress: string;
+            Content: { Simple: { Subject: { Data: string } } };
+          };
+        },
+      ];
       expect(cmd.input.FromEmailAddress).toContain("Themis at Cloudless");
       expect(cmd.input.Content.Simple.Subject.Data).toContain("Welcome");
       expect(cmd.input.Content.Simple.Subject.Data).toContain("Monday");
@@ -146,7 +165,9 @@ describe("email.ts", () => {
     it("includes what-to-expect content areas in the HTML", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
+      ];
       const html = cmd.input.Content.Simple.Body.Html.Data;
       expect(html).toContain("Cloud and Serverless");
       expect(html).toContain("Analytics and AI Marketing");
@@ -156,18 +177,22 @@ describe("email.ts", () => {
     it("encodes the subscriber email in the unsubscribe URL", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("user+test@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Html: { Data: string } } } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
+      ];
       expect(cmd.input.Content.Simple.Body.Html.Data).toContain(
-        encodeURIComponent("user+test@example.com"),
+        encodeURIComponent("user+test@example.com")
       );
     });
 
     it("adds List-Unsubscribe header for RFC 8058 one-click", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [{
-        input: { Content: { Simple: { Headers?: Array<{ Name: string }> } } };
-      }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        {
+          input: { Content: { Simple: { Headers?: Array<{ Name: string }> } } };
+        },
+      ];
       const headers = cmd.input.Content.Simple.Headers ?? [];
       expect(headers.some((h) => h.Name === "List-Unsubscribe")).toBe(true);
     });
@@ -177,14 +202,18 @@ describe("email.ts", () => {
     it("sends to SES_TO_EMAIL from config", async () => {
       const { notifyTeam } = await import("@/lib/email");
       await notifyTeam("Alert: Something happened", "<p>Details here</p>");
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Destination: { ToAddresses: string[] } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Destination: { ToAddresses: string[] } } },
+      ];
       expect(cmd.input.Destination.ToAddresses).toContain("team@cloudless.gr");
     });
 
     it("strips HTML tags for the plain-text part", async () => {
       const { notifyTeam } = await import("@/lib/email");
       await notifyTeam("Subject", "<p>Hello <strong>world</strong></p>");
-      const [cmd] = mockSend.mock.calls[0] as [{ input: { Content: { Simple: { Body: { Text: { Data: string } } } } } }];
+      const [cmd] = mockSend.mock.calls[0] as [
+        { input: { Content: { Simple: { Body: { Text: { Data: string } } } } } },
+      ];
       expect(cmd.input.Content.Simple.Body.Text.Data).not.toContain("<");
       expect(cmd.input.Content.Simple.Body.Text.Data).toContain("world");
     });

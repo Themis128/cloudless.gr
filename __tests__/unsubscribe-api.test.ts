@@ -14,7 +14,7 @@ vi.mock("@/lib/ses-suppression", () => ({
   addToSuppressionList: addToSuppressionListMock,
 }));
 
-vi.mock("@/lib/hubspot", () => ({
+vi.mock("@/lib/espocrm", () => ({
   setNewsletterStatus: setNewsletterStatusMock,
 }));
 
@@ -81,7 +81,7 @@ describe("POST /api/unsubscribe", () => {
     await POST(req);
     expect(setNewsletterStatusMock).toHaveBeenCalledWith(
       "user@cloudless.gr",
-      "newsletter_unsubscribed",
+      "newsletter_unsubscribed"
     );
   });
 
@@ -141,9 +141,7 @@ describe("GET /api/unsubscribe", () => {
 
   it("returns 200 HTML confirmation for valid email", async () => {
     const { GET } = await import("@/app/api/unsubscribe/route");
-    const req = new Request(
-      "http://localhost:4000/api/unsubscribe?email=user%40cloudless.gr",
-    );
+    const req = new Request("http://localhost:4000/api/unsubscribe?email=user%40cloudless.gr");
     const res = await GET(req);
     expect(res.status).toBe(200);
     const body = await res.text();
@@ -152,16 +150,14 @@ describe("GET /api/unsubscribe", () => {
     expect(addToSuppressionListMock).toHaveBeenCalledWith("user@cloudless.gr");
     expect(setNewsletterStatusMock).toHaveBeenCalledWith(
       "user@cloudless.gr",
-      "newsletter_unsubscribed",
+      "newsletter_unsubscribed"
     );
   });
 
   it("returns 500 HTML when suppression throws", async () => {
     addToSuppressionListMock.mockRejectedValueOnce(new Error("aws-down"));
     const { GET } = await import("@/app/api/unsubscribe/route");
-    const req = new Request(
-      "http://localhost:4000/api/unsubscribe?email=user%40cloudless.gr",
-    );
+    const req = new Request("http://localhost:4000/api/unsubscribe?email=user%40cloudless.gr");
     const res = await GET(req);
     expect(res.status).toBe(500);
     const body = await res.text();

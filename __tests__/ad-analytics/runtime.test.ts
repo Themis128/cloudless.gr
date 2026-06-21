@@ -26,9 +26,7 @@ function fakeAdapter(overrides: Partial<AdPlatformAdapter> = {}): AdPlatformAdap
     id: "linkedin",
     isConfigured: vi.fn().mockResolvedValue(true),
     pullMetrics: vi.fn().mockResolvedValue([]),
-    pushConversion: vi
-      .fn()
-      .mockResolvedValue({ accepted: true, status: 200 }),
+    pushConversion: vi.fn().mockResolvedValue({ accepted: true, status: 200 }),
     ...overrides,
   };
 }
@@ -192,7 +190,9 @@ describe("dispatchConversion", () => {
     const args = (adapter.pushConversion as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(args.conversionId).toBe(99999999);
     expect(args.eventId).toBe("cs_capi_test");
-    expect(outcome.capi).toEqual([{ platform: "linkedin", accepted: true, status: 200, message: undefined }]);
+    expect(outcome.capi).toEqual([
+      { platform: "linkedin", accepted: true, status: 200, message: undefined },
+    ]);
 
     innerRestore();
     vi.doUnmock("@/data/campaigns");

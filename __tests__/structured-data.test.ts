@@ -114,9 +114,7 @@ describe("getBreadcrumbSchema", () => {
   });
 
   it("handles single breadcrumb", () => {
-    const schema = getBreadcrumbSchema([
-      { name: "Home", url: "https://cloudless.gr" },
-    ]);
+    const schema = getBreadcrumbSchema([{ name: "Home", url: "https://cloudless.gr" }]);
 
     expect(schema.itemListElement).toHaveLength(1);
   });

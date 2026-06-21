@@ -24,9 +24,7 @@ function makeServicePage(overrides: Record<string, unknown> = {}) {
       Price: { rich_text: [{ plain_text: "From €1,500" }] },
       Category: { select: { name: "audit" } },
       Features: {
-        rich_text: [
-          { plain_text: "Full cost breakdown\n- Security report\n• Roadmap" },
-        ],
+        rich_text: [{ plain_text: "Full cost breakdown\n- Security report\n• Roadmap" }],
       },
       CTA: { rich_text: [{ plain_text: "Book an audit" }] },
       Icon: { rich_text: [{ plain_text: "🔍" }] },
@@ -77,11 +75,7 @@ describe("notion-services.ts", () => {
       const { getServices } = await import("@/lib/notion-services");
       const [svc] = await getServices();
 
-      expect(svc.features).toEqual([
-        "Full cost breakdown",
-        "Security report",
-        "Roadmap",
-      ]);
+      expect(svc.features).toEqual(["Full cost breakdown", "Security report", "Roadmap"]);
     });
 
     it("falls back to staticServices when not configured", async () => {
@@ -113,7 +107,7 @@ describe("notion-services.ts", () => {
       expect(result).toEqual(staticServices);
       expect(errorSpy).toHaveBeenCalledWith(
         "[Notion Services] Failed to fetch:",
-        expect.any(Error),
+        expect.any(Error)
       );
     });
 

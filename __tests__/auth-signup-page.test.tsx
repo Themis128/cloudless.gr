@@ -58,9 +58,7 @@ vi.mock("@/lib/use-locale", () => ({
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 async function renderSignUp() {
-  const { default: SignUpPage } = await import(
-    "@/app/[locale]/auth/signup/page"
-  );
+  const { default: SignUpPage } = await import("@/app/[locale]/auth/signup/page");
   return render(
     <Suspense fallback={null}>
       <SignUpPage />
@@ -173,9 +171,7 @@ describe("SignUpPage component", () => {
     await act(async () => {
       fireEvent.submit(screen.getByRole("button", { name: /create account/i }).closest("form")!);
     });
-    await waitFor(() =>
-      expect(screen.queryByText(/already exists/i)).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.queryByText(/already exists/i)).toBeTruthy());
     expect(screen.queryByRole("heading", { name: /check your email/i })).toBeNull();
   });
 
@@ -190,9 +186,7 @@ describe("SignUpPage component", () => {
     await act(async () => {
       fireEvent.submit(screen.getByRole("button", { name: /create account/i }).closest("form")!);
     });
-    await waitFor(() =>
-      expect(screen.queryByText(/registration not available/i)).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.queryByText(/registration not available/i)).toBeTruthy());
   });
 
   it("shows generic error when fetch throws", async () => {
@@ -202,9 +196,7 @@ describe("SignUpPage component", () => {
     await act(async () => {
       fireEvent.submit(screen.getByRole("button", { name: /create account/i }).closest("form")!);
     });
-    await waitFor(() =>
-      expect(screen.queryByText(/sign up failed/i)).toBeTruthy()
-    );
+    await waitFor(() => expect(screen.queryByText(/sign up failed/i)).toBeTruthy());
   });
 
   it("omits fullName from the request body when name field is empty", async () => {

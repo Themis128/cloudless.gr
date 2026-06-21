@@ -69,9 +69,7 @@ describe("bedrock-shared", () => {
 
     it("preserves arbitrary input_schema shape under inputSchema.json", () => {
       const schema = { type: "object", required: ["x"], properties: { x: { type: "number" } } };
-      const cfg = buildBedrockToolConfig([
-        { name: "t", description: "d", input_schema: schema },
-      ]);
+      const cfg = buildBedrockToolConfig([{ name: "t", description: "d", input_schema: schema }]);
       const first = cfg.tools?.[0] as { toolSpec: { inputSchema: { json: unknown } } };
       expect(first.toolSpec.inputSchema.json).toBe(schema);
     });
@@ -120,18 +118,14 @@ describe("bedrock-shared", () => {
 
     it("returns empty string when no text blocks present", () => {
       expect(
-        joinAssistantText([
-          { toolUse: { toolUseId: "id", name: "n", input: {} } } as AnyBlock,
-        ]),
+        joinAssistantText([{ toolUse: { toolUseId: "id", name: "n", input: {} } } as AnyBlock])
       ).toBe("");
     });
   });
 
   describe("runBedrockTurn", () => {
     it("returns the content array from Converse output", async () => {
-      const blocks: AnyBlock[] = [
-        { text: "ok" } as AnyBlock,
-      ];
+      const blocks: AnyBlock[] = [{ text: "ok" } as AnyBlock];
       mockSend.mockResolvedValueOnce({
         output: { message: { content: blocks } },
       });

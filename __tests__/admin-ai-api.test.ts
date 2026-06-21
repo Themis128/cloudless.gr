@@ -37,7 +37,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "test-client-id",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -102,21 +102,28 @@ describe("POST /api/admin/ai/campaign", () => {
     const saved = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "";
     const { POST } = await import("@/app/api/admin/ai/campaign/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ai/campaign", { brief: "Promote AI tool" }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/campaign", { brief: "Promote AI tool" })
+    );
     process.env.ANTHROPIC_API_KEY = saved;
     expect(res.status).toBe(503);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("returns campaign strategy from Claude", async () => {
-    const strategy = { recommended_platforms: ["Meta", "LinkedIn"], campaign_objective: "LEAD_GENERATION" };
+    const strategy = {
+      recommended_platforms: ["Meta", "LinkedIn"],
+      campaign_objective: "LEAD_GENERATION",
+    };
     mockAnthropicResponse(JSON.stringify(strategy));
     const { POST } = await import("@/app/api/admin/ai/campaign/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ai/campaign", {
-      brief: "Promote AI marketing tool to Greek SMBs",
-      budget: "€500/month",
-      targetAudience: "Greek small business owners",
-    }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/campaign", {
+        brief: "Promote AI marketing tool to Greek SMBs",
+        budget: "€500/month",
+        targetAudience: "Greek small business owners",
+      })
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.strategy).toBeDefined();
@@ -164,20 +171,33 @@ describe("POST /api/admin/ai/copy", () => {
     const saved = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "";
     const { POST } = await import("@/app/api/admin/ai/copy/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ai/copy", { service: "AI Marketing" }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/copy", { service: "AI Marketing" })
+    );
     process.env.ANTHROPIC_API_KEY = saved;
     expect(res.status).toBe(503);
   });
 
   it("returns ad copy variants", async () => {
-    const variants = { variants: [{ headline: "Grow Faster", body: "AI tools for your business", cta: "Get Started", tone: "professional" }] };
+    const variants = {
+      variants: [
+        {
+          headline: "Grow Faster",
+          body: "AI tools for your business",
+          cta: "Get Started",
+          tone: "professional",
+        },
+      ],
+    };
     mockAnthropicResponse(JSON.stringify(variants));
     const { POST } = await import("@/app/api/admin/ai/copy/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ai/copy", {
-      service: "AI Marketing Platform",
-      platform: "Meta",
-      objective: "leads",
-    }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/copy", {
+        service: "AI Marketing Platform",
+        platform: "Meta",
+        objective: "leads",
+      })
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.variants).toBeDefined();
@@ -215,20 +235,27 @@ describe("POST /api/admin/ai/audience", () => {
     const saved = process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_API_KEY = "";
     const { POST } = await import("@/app/api/admin/ai/audience/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ai/audience", { description: "Greek SMB owners" }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/audience", { description: "Greek SMB owners" })
+    );
     process.env.ANTHROPIC_API_KEY = saved;
     expect(res.status).toBe(503);
   });
 
   it("returns targeting parameters", async () => {
-    const targeting = { summary: "SMB decision makers in Greece", demographics: { age_range: "30-50" } };
+    const targeting = {
+      summary: "SMB decision makers in Greece",
+      demographics: { age_range: "30-50" },
+    };
     mockAnthropicResponse(JSON.stringify(targeting));
     const { POST } = await import("@/app/api/admin/ai/audience/route");
-    const res = await POST(adminReq("http://localhost/api/admin/ai/audience", {
-      description: "Greek small business owners interested in digital marketing",
-      platforms: ["Meta", "LinkedIn"],
-      objective: "LEAD_GENERATION",
-    }));
+    const res = await POST(
+      adminReq("http://localhost/api/admin/ai/audience", {
+        description: "Greek small business owners interested in digital marketing",
+        platforms: ["Meta", "LinkedIn"],
+        objective: "LEAD_GENERATION",
+      })
+    );
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.targeting).toBeDefined();

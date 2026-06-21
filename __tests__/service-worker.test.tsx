@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  cleanup,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { AbstractIntlMessages } from "next-intl";
 import rawMessages from "../src/locales/en.json";
@@ -22,8 +16,18 @@ vi.mock("next/navigation", () => ({
 
 // Provide i18n navigation adapter (createNavigation needs App Router which doesn't exist in jsdom)
 vi.mock("@/i18n/navigation", () => ({
-  Link: ({ children, href, ...props }: { children: React.ReactNode; href: string; [k: string]: unknown }) => (
-    <a href={typeof href === "string" ? href : "/"} {...props}>{children}</a>
+  Link: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [k: string]: unknown;
+  }) => (
+    <a href={typeof href === "string" ? href : "/"} {...props}>
+      {children}
+    </a>
   ),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   usePathname: () => "/",
@@ -71,7 +75,7 @@ describe("ServiceWorkerRegistration", () => {
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
         <ServiceWorkerRegistration />
-      </NextIntlClientProvider>,
+      </NextIntlClientProvider>
     );
 
     await waitFor(() => {
@@ -105,16 +109,12 @@ describe("PushNotificationPrompt", () => {
     });
 
     const buttons = container.querySelectorAll("button");
-    const notNowBtn = Array.from(buttons).find((b) =>
-      b.textContent?.includes("Not now"),
-    );
+    const notNowBtn = Array.from(buttons).find((b) => b.textContent?.includes("Not now"));
     expect(notNowBtn).toBeTruthy();
     fireEvent.click(notNowBtn!);
 
     const prompt = container.querySelector('[class*="text-white"]');
-    expect(
-      prompt === null || !prompt.textContent?.includes("Stay updated"),
-    ).toBe(true);
+    expect(prompt === null || !prompt.textContent?.includes("Stay updated")).toBe(true);
     expect(sessionStorage.getItem("cloudless-push-dismissed")).toBe("1");
   });
 });

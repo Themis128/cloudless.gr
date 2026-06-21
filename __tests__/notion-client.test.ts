@@ -44,9 +44,7 @@ describe("notion.ts — Shared Client", () => {
       });
 
       const { notionFetch } = await import("@/lib/notion");
-      await expect(notionFetch("/pages/nonexistent")).rejects.toThrow(
-        "Notion API error 404",
-      );
+      await expect(notionFetch("/pages/nonexistent")).rejects.toThrow("Notion API error 404");
     });
 
     it("passes custom init options", async () => {
@@ -70,10 +68,7 @@ describe("notion.ts — Shared Client", () => {
   describe("extractText", () => {
     it("extracts plain text from rich_text array", async () => {
       const { extractText } = await import("@/lib/notion");
-      const richText = [
-        { plain_text: "Hello " },
-        { plain_text: "world" },
-      ];
+      const richText = [{ plain_text: "Hello " }, { plain_text: "world" }];
       expect(extractText(richText)).toBe(TEXT_HELLO_WORLD);
     });
 
@@ -120,8 +115,14 @@ describe("notion.ts — Shared Client", () => {
     it("renders bulleted list items wrapped in <ul>", async () => {
       const { blocksToHtml } = await import("@/lib/notion");
       const blocks = [
-        { type: BLOCK_BULLET, bulleted_list_item: { rich_text: [{ plain_text: "Item 1", annotations: {} }] } },
-        { type: BLOCK_BULLET, bulleted_list_item: { rich_text: [{ plain_text: "Item 2", annotations: {} }] } },
+        {
+          type: BLOCK_BULLET,
+          bulleted_list_item: { rich_text: [{ plain_text: "Item 1", annotations: {} }] },
+        },
+        {
+          type: BLOCK_BULLET,
+          bulleted_list_item: { rich_text: [{ plain_text: "Item 2", annotations: {} }] },
+        },
       ];
       const html = blocksToHtml(blocks);
       expect(html).toContain("<ul>");
@@ -133,8 +134,14 @@ describe("notion.ts — Shared Client", () => {
     it("renders numbered list items wrapped in <ol>", async () => {
       const { blocksToHtml } = await import("@/lib/notion");
       const blocks = [
-        { type: BLOCK_NUMBER, numbered_list_item: { rich_text: [{ plain_text: "Step 1", annotations: {} }] } },
-        { type: BLOCK_NUMBER, numbered_list_item: { rich_text: [{ plain_text: "Step 2", annotations: {} }] } },
+        {
+          type: BLOCK_NUMBER,
+          numbered_list_item: { rich_text: [{ plain_text: "Step 1", annotations: {} }] },
+        },
+        {
+          type: BLOCK_NUMBER,
+          numbered_list_item: { rich_text: [{ plain_text: "Step 2", annotations: {} }] },
+        },
       ];
       const html = blocksToHtml(blocks);
       expect(html).toContain("<ol>");
@@ -226,8 +233,14 @@ describe("notion.ts — Shared Client", () => {
     it("flushes list when switching types", async () => {
       const { blocksToHtml } = await import("@/lib/notion");
       const blocks = [
-        { type: BLOCK_BULLET, bulleted_list_item: { rich_text: [{ plain_text: "Bullet", annotations: {} }] } },
-        { type: BLOCK_NUMBER, numbered_list_item: { rich_text: [{ plain_text: "Number", annotations: {} }] } },
+        {
+          type: BLOCK_BULLET,
+          bulleted_list_item: { rich_text: [{ plain_text: "Bullet", annotations: {} }] },
+        },
+        {
+          type: BLOCK_NUMBER,
+          numbered_list_item: { rich_text: [{ plain_text: "Number", annotations: {} }] },
+        },
       ];
       const html = blocksToHtml(blocks);
       expect(html).toContain("<ul>");
@@ -238,9 +251,7 @@ describe("notion.ts — Shared Client", () => {
 
     it("renders empty paragraph as <br />", async () => {
       const { blocksToHtml } = await import("@/lib/notion");
-      const blocks = [
-        { type: BLOCK_PARAGRAPH, paragraph: { rich_text: [] } },
-      ];
+      const blocks = [{ type: BLOCK_PARAGRAPH, paragraph: { rich_text: [] } }];
       const html = blocksToHtml(blocks);
       expect(html).toContain("<br />");
     });
@@ -471,7 +482,10 @@ describe("notion.ts — Shared Client", () => {
     it("flushes pending list at end of blocks", async () => {
       const { blocksToHtml } = await import("@/lib/notion");
       const blocks = [
-        { type: BLOCK_BULLET, bulleted_list_item: { rich_text: [{ plain_text: "Last item", annotations: {} }] } },
+        {
+          type: BLOCK_BULLET,
+          bulleted_list_item: { rich_text: [{ plain_text: "Last item", annotations: {} }] },
+        },
       ];
       const html = blocksToHtml(blocks);
       // List should be flushed even though no non-list block follows
@@ -496,9 +510,7 @@ describe("notion.ts — Shared Client", () => {
 
     it("skips unknown block type with no text", async () => {
       const { blocksToHtml } = await import("@/lib/notion");
-      const blocks = [
-        { type: "table_of_contents", table_of_contents: {} },
-      ];
+      const blocks = [{ type: "table_of_contents", table_of_contents: {} }];
       const html = blocksToHtml(blocks);
       expect(html).toBe("");
     });
@@ -650,7 +662,7 @@ describe("notion.ts — Shared Client", () => {
 
       const { notionFetch } = await import("@/lib/notion");
       await expect(notionFetch("/databases/bad/query")).rejects.toThrow(
-        "Notion API error 400 on /databases/bad/query: Bad request body",
+        "Notion API error 400 on /databases/bad/query: Bad request body"
       );
     });
 
@@ -757,7 +769,11 @@ describe("notion.ts — Shared Client", () => {
     });
 
     it("returns false on error", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: () => Promise.resolve("not found") });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve("not found"),
+      });
       const { updatePage } = await import("@/lib/notion");
       expect(await updatePage("bad-id", {})).toBe(false);
     });
@@ -823,7 +839,11 @@ describe("notion.ts — Shared Client", () => {
     });
 
     it("returns false on error", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 400, text: () => Promise.resolve("bad") });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: () => Promise.resolve("bad"),
+      });
       const { appendBlocks } = await import("@/lib/notion");
       expect(await appendBlocks("bad-id", [])).toBe(false);
     });
@@ -923,7 +943,11 @@ describe("notion.ts — Shared Client", () => {
       const { extractToc } = await import("@/lib/notion");
       const blocks = [
         { id: "b1", type: "heading_1", heading_1: { rich_text: [{ plain_text: "Introduction" }] } },
-        { id: "b2", type: BLOCK_PARAGRAPH, paragraph: { rich_text: [{ plain_text: "Some text" }] } },
+        {
+          id: "b2",
+          type: BLOCK_PARAGRAPH,
+          paragraph: { rich_text: [{ plain_text: "Some text" }] },
+        },
         { id: "b3", type: "heading_2", heading_2: { rich_text: [{ plain_text: "Details" }] } },
         { id: "b4", type: "heading_3", heading_3: { rich_text: [{ plain_text: "Sub-detail" }] } },
       ];
@@ -938,7 +962,11 @@ describe("notion.ts — Shared Client", () => {
     it("returns empty array for no headings", async () => {
       const { extractToc } = await import("@/lib/notion");
       const blocks = [
-        { id: "b1", type: BLOCK_PARAGRAPH, paragraph: { rich_text: [{ plain_text: "Just text" }] } },
+        {
+          id: "b1",
+          type: BLOCK_PARAGRAPH,
+          paragraph: { rich_text: [{ plain_text: "Just text" }] },
+        },
       ];
       expect(extractToc(blocks)).toEqual([]);
     });

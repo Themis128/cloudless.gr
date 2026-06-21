@@ -122,9 +122,7 @@ describe("GET /api/cron/calendar-digest", () => {
     await GET(makeRequest(CRON_SECRET));
 
     const payload = mockSlackPost.mock.calls[0][0];
-    const section = payload.blocks.find(
-      (b: { type: string }) => b.type === "section",
-    );
+    const section = payload.blocks.find((b: { type: string }) => b.type === "section");
     expect(section.text.text).toContain("Weekly Meta Post");
     expect(section.text.text).toContain("Meta");
   });
@@ -138,9 +136,7 @@ describe("GET /api/cron/calendar-digest", () => {
     await GET(makeRequest(CRON_SECRET));
 
     const payload = mockSlackPost.mock.calls[0][0];
-    const section = payload.blocks.find(
-      (b: { type: string }) => b.type === "section",
-    );
+    const section = payload.blocks.find((b: { type: string }) => b.type === "section");
     expect(section.text.text).toContain("https://facebook.com/post/123");
   });
 

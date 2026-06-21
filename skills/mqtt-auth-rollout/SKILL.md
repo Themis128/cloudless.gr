@@ -30,7 +30,7 @@ first, redeploy clients one by one with credentials, then flip
 ## Current state (2026-06-21)
 
 - ConfigMap `monitoring/mosquitto-config`: dual-mode (`allow_anonymous true`
-  + `password_file /mosquitto/secret/passwords`).
+  - `password_file /mosquitto/secret/passwords`).
 - Secret `monitoring/mosquitto-passwords`: 1 user, `tbaltzakis`, password
   matches the unified admin password used across all self-hosted apps
   ([[project-unified-admin-creds]]).
@@ -50,19 +50,24 @@ client has creds, or the dependent client crashes silently (paho's
 ### Phase 1 — DONE — add credentials in parallel with anonymous
 
 1. Generate password hash inside any mosquitto pod:
+
    ```bash
    kubectl -n monitoring exec deploy/mosquitto -- \
      mosquitto_passwd -b /tmp/pw <username> '<password>'
    kubectl -n monitoring exec deploy/mosquitto -- cat /tmp/pw
    ```
+
 2. Apply the `mosquitto-passwords` Secret and ConfigMap update (this PR
    already did both, but for rotation: edit `stringData.passwords` in
    `infrastructure/esp32-watchdog/k8s/mosquitto.yaml` and `kubectl apply`).
 3. Restart mosquitto so it reloads the password file:
+
    ```bash
    kubectl -n monitoring rollout restart deploy/mosquitto
    ```
+
 4. Verify both auth and anonymous still work from inside the broker pod:
+
    ```bash
    kubectl -n monitoring exec deploy/mosquitto -- \
      mosquitto_pub -h localhost -u tbaltzakis -P '<password>' -t test -m ok
@@ -88,6 +93,7 @@ client has creds, or the dependent client crashes silently (paho's
 **Display ESP32** (`homelab_alert_led.ino`):
 
 - Add to the ESPHome / Arduino config:
+
   ```yaml
   mqtt:
     broker: <omv-host-or-LAN-ip>
@@ -95,6 +101,7 @@ client has creds, or the dependent client crashes silently (paho's
     username: tbaltzakis
     password: 'TH!123789th!'    # or !secret mqtt_password
   ```
+
 - Reflash via OTA — see [[esphome-ota-flash]] for the no-USB path. The
   watchdog ESP32 firmware in `infrastructure/esp32-watchdog/esphome/`
   does NOT need this (it has no `mqtt:` block today — telemetry path was
@@ -106,6 +113,7 @@ Run **only** after Phase 2 is done and `kubectl -n monitoring logs
 deploy/mosquitto | grep "anonymous"` shows no recent anonymous CONNECTs.
 
 1. Edit `infrastructure/esp32-watchdog/k8s/mosquitto.yaml`:
+
    ```yaml
    data:
      mosquitto.conf: |
@@ -114,6 +122,7 @@ deploy/mosquitto | grep "anonymous"` shows no recent anonymous CONNECTs.
        password_file /mosquitto/secret/passwords
        ...
    ```
+
 2. `kubectl apply -f infrastructure/esp32-watchdog/k8s/mosquitto.yaml`
 3. `kubectl -n monitoring rollout restart deploy/mosquitto`
 4. Watch logs — any client that wasn't updated will fail with

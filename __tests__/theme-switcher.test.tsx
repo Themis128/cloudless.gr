@@ -2,9 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import ThemeSwitcher, {
-  ThemeSwitcherInline,
-} from "@/components/ThemeSwitcher";
+import ThemeSwitcher, { ThemeSwitcherInline } from "@/components/ThemeSwitcher";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
@@ -73,7 +71,7 @@ describe("ThemeSwitcher (popover)", () => {
       authMockWith({
         user: { preferences: { theme: "system" } },
         updatePreferences,
-      }),
+      })
     );
     render(<ThemeSwitcher />);
     fireEvent.click(screen.getByRole("button"));
@@ -82,9 +80,7 @@ describe("ThemeSwitcher (popover)", () => {
   });
 
   it("seeds the visible selection from the user's stored preference", () => {
-    useAuthMock.mockReturnValue(
-      authMockWith({ user: { preferences: { theme: "light" } } }),
-    );
+    useAuthMock.mockReturnValue(authMockWith({ user: { preferences: { theme: "light" } } }));
     render(<ThemeSwitcher />);
     const trigger = screen.getByRole("button");
     expect(trigger.getAttribute("aria-label")).toMatch(/Light/i);
@@ -92,9 +88,7 @@ describe("ThemeSwitcher (popover)", () => {
 
   it("localStorage override wins over the user's stored preference", () => {
     window.localStorage.setItem(STORAGE_KEY, "dark");
-    useAuthMock.mockReturnValue(
-      authMockWith({ user: { preferences: { theme: "light" } } }),
-    );
+    useAuthMock.mockReturnValue(authMockWith({ user: { preferences: { theme: "light" } } }));
     render(<ThemeSwitcher />);
     const trigger = screen.getByRole("button");
     expect(trigger.getAttribute("aria-label")).toMatch(/Dark/i);

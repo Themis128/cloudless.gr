@@ -2,16 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, act } from "@testing-library/react";
 import { type ReactNode, useState } from "react";
 import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
-import {
-  CookieConsentContext,
-  type CookieConsentState,
-} from "@/context/CookieConsentContext";
+import { CookieConsentContext, type CookieConsentState } from "@/context/CookieConsentContext";
 
 // Minimal context value factory
-function makeConsent(
-  analytics: boolean,
-  marketing: boolean,
-): CookieConsentState {
+function makeConsent(analytics: boolean, marketing: boolean): CookieConsentState {
   return {
     hasConsented: true,
     preferences: { necessary: true, analytics, marketing },
@@ -25,13 +19,7 @@ function makeConsent(
   };
 }
 
-function Wrapper({
-  analytics,
-  marketing,
-}: {
-  analytics: boolean;
-  marketing: boolean;
-}) {
+function Wrapper({ analytics, marketing }: { analytics: boolean; marketing: boolean }) {
   return (
     <CookieConsentContext value={makeConsent(analytics, marketing)}>
       <GoogleAnalyticsConsent />
@@ -43,9 +31,7 @@ function Wrapper({
 function DynamicWrapper({
   children,
 }: {
-  children: (
-    set: (analytics: boolean, marketing: boolean) => void,
-  ) => ReactNode;
+  children: (set: (analytics: boolean, marketing: boolean) => void) => ReactNode;
 }) {
   const [prefs, setPrefs] = useState({ analytics: false, marketing: false });
   return (
@@ -124,7 +110,7 @@ describe("GoogleAnalyticsConsent", () => {
           setPrefs = set;
           return <GoogleAnalyticsConsent />;
         }}
-      </DynamicWrapper>,
+      </DynamicWrapper>
     );
 
     // Initial render: both denied
@@ -166,7 +152,7 @@ describe("GoogleAnalyticsConsent", () => {
           setPrefs = set;
           return <GoogleAnalyticsConsent />;
         }}
-      </DynamicWrapper>,
+      </DynamicWrapper>
     );
 
     await act(async () => setPrefs(true, true));

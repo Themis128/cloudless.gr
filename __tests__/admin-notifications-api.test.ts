@@ -92,8 +92,8 @@ describe("GET /api/admin/notifications", () => {
     await GET(
       makeReq(
         "http://localhost/api/admin/notifications?category=order&since=2026-06-01T00:00:00Z&until=2026-06-12T00:00:00Z&limit=25&includeArchived=1",
-        "GET",
-      ),
+        "GET"
+      )
     );
     expect(mockList).toHaveBeenCalledWith({
       category: "order",
@@ -111,8 +111,8 @@ describe("GET /api/admin/notifications", () => {
     await GET(
       makeReq(
         "http://localhost/api/admin/notifications?category=banana&since=not-a-date&limit=abc",
-        "GET",
-      ),
+        "GET"
+      )
     );
     expect(mockList).toHaveBeenCalledWith({
       category: undefined,
@@ -158,7 +158,7 @@ describe("PATCH /api/admin/notifications", () => {
     });
     const { PATCH } = await import("@/app/api/admin/notifications/route");
     const res = await PATCH(
-      makeReq("http://localhost/api/admin/notifications", "PATCH", { markAllRead: true }),
+      makeReq("http://localhost/api/admin/notifications", "PATCH", { markAllRead: true })
     );
     expect(res.status).toBe(401);
   });
@@ -168,7 +168,7 @@ describe("PATCH /api/admin/notifications", () => {
     mockRequireAdmin.mockResolvedValue(OK_ADMIN);
     const { PATCH } = await import("@/app/api/admin/notifications/route");
     const res = await PATCH(
-      makeReq("http://localhost/api/admin/notifications", "PATCH", { id: "x" }),
+      makeReq("http://localhost/api/admin/notifications", "PATCH", { id: "x" })
     );
     expect(res.status).toBe(503);
   });
@@ -197,7 +197,7 @@ describe("PATCH /api/admin/notifications", () => {
     mockMarkRead.mockResolvedValue(undefined);
     const { PATCH } = await import("@/app/api/admin/notifications/route");
     const res = await PATCH(
-      makeReq("http://localhost/api/admin/notifications", "PATCH", { id: "n_1" }),
+      makeReq("http://localhost/api/admin/notifications", "PATCH", { id: "n_1" })
     );
     expect(res.status).toBe(200);
     expect(mockMarkRead).toHaveBeenCalledWith(["n_1"]);
@@ -208,7 +208,7 @@ describe("PATCH /api/admin/notifications", () => {
     mockMarkRead.mockResolvedValue(undefined);
     const { PATCH } = await import("@/app/api/admin/notifications/route");
     await PATCH(
-      makeReq("http://localhost/api/admin/notifications", "PATCH", { ids: ["a", "b", "c"] }),
+      makeReq("http://localhost/api/admin/notifications", "PATCH", { ids: ["a", "b", "c"] })
     );
     expect(mockMarkRead).toHaveBeenCalledWith(["a", "b", "c"]);
   });
@@ -223,7 +223,7 @@ describe("PATCH /api/admin/notifications", () => {
     mockMarkRead.mockResolvedValue(undefined);
     const { PATCH } = await import("@/app/api/admin/notifications/route");
     const res = await PATCH(
-      makeReq("http://localhost/api/admin/notifications", "PATCH", { markAllRead: true }),
+      makeReq("http://localhost/api/admin/notifications", "PATCH", { markAllRead: true })
     );
     expect(res.status).toBe(200);
     const data = (await res.json()) as { updated: number };
@@ -236,7 +236,7 @@ describe("PATCH /api/admin/notifications", () => {
     mockMarkRead.mockRejectedValue(new Error("boom"));
     const { PATCH } = await import("@/app/api/admin/notifications/route");
     const res = await PATCH(
-      makeReq("http://localhost/api/admin/notifications", "PATCH", { id: "n_1" }),
+      makeReq("http://localhost/api/admin/notifications", "PATCH", { id: "n_1" })
     );
     expect(res.status).toBe(500);
   });
@@ -257,9 +257,7 @@ describe("GET /api/admin/notifications/analytics", () => {
       response: new Response(null, { status: 401 }),
     });
     const { GET } = await import("@/app/api/admin/notifications/analytics/route");
-    const res = await GET(
-      makeReq("http://localhost/api/admin/notifications/analytics", "GET"),
-    );
+    const res = await GET(makeReq("http://localhost/api/admin/notifications/analytics", "GET"));
     expect(res.status).toBe(401);
   });
 
@@ -267,9 +265,7 @@ describe("GET /api/admin/notifications/analytics", () => {
     delete process.env.ADMIN_NOTIFICATIONS_TABLE;
     mockRequireAdmin.mockResolvedValue(OK_ADMIN);
     const { GET } = await import("@/app/api/admin/notifications/analytics/route");
-    const res = await GET(
-      makeReq("http://localhost/api/admin/notifications/analytics", "GET"),
-    );
+    const res = await GET(makeReq("http://localhost/api/admin/notifications/analytics", "GET"));
     expect(res.status).toBe(503);
   });
 
@@ -289,9 +285,7 @@ describe("GET /api/admin/notifications/analytics", () => {
       byDay: {},
     });
     const { GET } = await import("@/app/api/admin/notifications/analytics/route");
-    const res = await GET(
-      makeReq("http://localhost/api/admin/notifications/analytics", "GET"),
-    );
+    const res = await GET(makeReq("http://localhost/api/admin/notifications/analytics", "GET"));
     expect(res.status).toBe(200);
     const data = (await res.json()) as {
       window: { since: string; until: string };
@@ -322,8 +316,8 @@ describe("GET /api/admin/notifications/analytics", () => {
     const res = await GET(
       makeReq(
         "http://localhost/api/admin/notifications/analytics?since=2026-06-10T00:00:00Z&until=2026-06-12T00:00:00Z",
-        "GET",
-      ),
+        "GET"
+      )
     );
     expect(res.status).toBe(200);
     expect(mockAnalytics).toHaveBeenCalledWith({
@@ -338,9 +332,7 @@ describe("GET /api/admin/notifications/analytics", () => {
     mockRequireAdmin.mockResolvedValue(OK_ADMIN);
     mockAnalytics.mockRejectedValue(new Error("boom"));
     const { GET } = await import("@/app/api/admin/notifications/analytics/route");
-    const res = await GET(
-      makeReq("http://localhost/api/admin/notifications/analytics", "GET"),
-    );
+    const res = await GET(makeReq("http://localhost/api/admin/notifications/analytics", "GET"));
     expect(res.status).toBe(500);
   });
 });

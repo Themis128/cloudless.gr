@@ -88,12 +88,13 @@ describe("notion-docs.ts", () => {
             { property: "Category", direction: SORT_ASC },
             { property: "Order", direction: SORT_ASC },
           ],
-        }),
+        })
       );
     });
 
     it("returns empty array when not configured", async () => {
-      vi.doMock("@/lib/integrations", () => ({ // NOSONAR
+      vi.doMock("@/lib/integrations", () => ({
+        // NOSONAR
         getIntegrations: vi.fn().mockReturnValue({}),
       }));
 
@@ -186,7 +187,7 @@ describe("notion-docs.ts", () => {
         expect.arrayContaining([
           { property: "Slug", rich_text: { equals: DOC_SLUG } },
           { property: "Published", checkbox: { equals: true } },
-        ]),
+        ])
       );
       expect(body.page_size).toBe(1);
     });
@@ -269,9 +270,36 @@ describe("notion-docs.ts", () => {
       const { groupDocsByCategory } = await import("@/lib/notion-docs");
 
       const docs = [
-        { id: "1", slug: "a", title: "A", description: "", category: CAT_GUIDES, order: 1, published: true, url: "" },
-        { id: "2", slug: "b", title: "B", description: "", category: "API", order: 1, published: true, url: "" },
-        { id: "3", slug: "c", title: "C", description: "", category: CAT_GUIDES, order: 2, published: true, url: "" },
+        {
+          id: "1",
+          slug: "a",
+          title: "A",
+          description: "",
+          category: CAT_GUIDES,
+          order: 1,
+          published: true,
+          url: "",
+        },
+        {
+          id: "2",
+          slug: "b",
+          title: "B",
+          description: "",
+          category: "API",
+          order: 1,
+          published: true,
+          url: "",
+        },
+        {
+          id: "3",
+          slug: "c",
+          title: "C",
+          description: "",
+          category: CAT_GUIDES,
+          order: 2,
+          published: true,
+          url: "",
+        },
       ];
 
       const grouped = groupDocsByCategory(docs);
@@ -290,8 +318,26 @@ describe("notion-docs.ts", () => {
       const { groupDocsByCategory } = await import("@/lib/notion-docs");
 
       const docs = [
-        { id: "1", slug: "a", title: "A", description: "", category: DOC_CATEGORY, order: 1, published: true, url: "" },
-        { id: "2", slug: "b", title: "B", description: "", category: DOC_CATEGORY, order: 2, published: true, url: "" },
+        {
+          id: "1",
+          slug: "a",
+          title: "A",
+          description: "",
+          category: DOC_CATEGORY,
+          order: 1,
+          published: true,
+          url: "",
+        },
+        {
+          id: "2",
+          slug: "b",
+          title: "B",
+          description: "",
+          category: DOC_CATEGORY,
+          order: 2,
+          published: true,
+          url: "",
+        },
       ];
 
       const grouped = groupDocsByCategory(docs);

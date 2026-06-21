@@ -12,11 +12,7 @@ vi.mock("fs", async () => {
   };
 });
 
-import {
-  validateManifest,
-  applyManifest,
-  readLocalManifest,
-} from "@/lib/slack-manifest";
+import { validateManifest, applyManifest, readLocalManifest } from "@/lib/slack-manifest";
 
 const fetchMock = vi.fn();
 const originalFetch = globalThis.fetch;
@@ -49,9 +45,7 @@ describe("slack-manifest", () => {
 
   describe("validateManifest", () => {
     it("returns valid=true when Slack ok:true", async () => {
-      readFileSyncMock.mockReturnValueOnce(
-        JSON.stringify({ display_information: { name: "x" } }),
-      );
+      readFileSyncMock.mockReturnValueOnce(JSON.stringify({ display_information: { name: "x" } }));
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ ok: true }),
@@ -62,9 +56,7 @@ describe("slack-manifest", () => {
     });
 
     it("maps Slack validation errors to <pointer>: <message>", async () => {
-      readFileSyncMock.mockReturnValueOnce(
-        JSON.stringify({ display_information: { name: "x" } }),
-      );
+      readFileSyncMock.mockReturnValueOnce(JSON.stringify({ display_information: { name: "x" } }));
       fetchMock.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -126,9 +118,7 @@ describe("slack-manifest", () => {
         ok: true,
         json: async () => ({ ok: false, error: "not_allowed_token_type" }),
       });
-      await expect(applyManifest("A1", "xoxb-bot")).rejects.toThrow(
-        /not_allowed_token_type/,
-      );
+      await expect(applyManifest("A1", "xoxb-bot")).rejects.toThrow(/not_allowed_token_type/);
     });
 
     it("sends app_id and manifest in the request body", async () => {

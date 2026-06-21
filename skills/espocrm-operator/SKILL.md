@@ -112,6 +112,7 @@ Athena views in `cloudless_analytics.espocrm_*` join Contact, Lead,
 Opportunity, Case for analytics-dashboard queries.
 
 Failure modes:
+
 - **404 on entities**: Verify the entity is enabled in EspoCRM UI
   (Administration → Entity Manager). Stripe + EspoCRM upgrades sometimes
   silently disable Workflow/BPM entities.

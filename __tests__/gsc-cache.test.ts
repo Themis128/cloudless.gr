@@ -244,7 +244,7 @@ describe("gsc-cache", () => {
       const { readThrough } = await import("@/lib/gsc-cache");
       const fetcher = vi.fn().mockRejectedValue(new Error("quota"));
       await expect(
-        readThrough("seo", {}, fetcher, { ttlSeconds: 3600, acceptStaleSeconds: 24 * 3600 }),
+        readThrough("seo", {}, fetcher, { ttlSeconds: 3600, acceptStaleSeconds: 24 * 3600 })
       ).rejects.toThrow("quota");
     });
   });

@@ -24,7 +24,9 @@ vi.mock("@aws-sdk/client-ssm", async () => {
   const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
   return {
     ...actual,
-    SSMClient: vi.fn().mockImplementation(function() { return { send: mockSSMSend }; }),
+    SSMClient: vi.fn().mockImplementation(function () {
+      return { send: mockSSMSend };
+    }),
   };
 });
 
@@ -48,10 +50,26 @@ const MOCK_PORTAL: ClientPortal = {
   clientName: "Jane Doe",
   createdAt: new Date().toISOString(),
   steps: [
-    { id: "step-1", name: "Free Audit", status: "completed", completedAt: new Date().toISOString(), comments: [] },
-    { id: "step-2", name: "Proposal & Scope", status: "in-progress", comments: [
-      { id: "c1", author: "Cloudless Team", text: "Proposal sent.", createdAt: new Date().toISOString() },
-    ]},
+    {
+      id: "step-1",
+      name: "Free Audit",
+      status: "completed",
+      completedAt: new Date().toISOString(),
+      comments: [],
+    },
+    {
+      id: "step-2",
+      name: "Proposal & Scope",
+      status: "in-progress",
+      comments: [
+        {
+          id: "c1",
+          author: "Cloudless Team",
+          text: "Proposal sent.",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    },
     { id: "step-3", name: "Implementation", status: "pending", comments: [] },
   ],
 };
@@ -81,21 +99,27 @@ describe("GET /api/portal/[token]", () => {
   it("returns 404 for unknown token", async () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([]) } });
     const { GET } = await import("@/app/api/portal/[token]/route");
-    const res = await GET(makeReq(VALID_TOKEN), { params: Promise.resolve({ token: VALID_TOKEN }) });
+    const res = await GET(makeReq(VALID_TOKEN), {
+      params: Promise.resolve({ token: VALID_TOKEN }),
+    });
     expect(res.status).toBe(404);
   });
 
   it("returns 404 when SSM throws", async () => {
     mockSSMSend.mockRejectedValue(new Error("SSM error"));
     const { GET } = await import("@/app/api/portal/[token]/route");
-    const res = await GET(makeReq(VALID_TOKEN), { params: Promise.resolve({ token: VALID_TOKEN }) });
+    const res = await GET(makeReq(VALID_TOKEN), {
+      params: Promise.resolve({ token: VALID_TOKEN }),
+    });
     expect(res.status).toBe(404);
   });
 
   it("returns client data for valid token", async () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
     const { GET } = await import("@/app/api/portal/[token]/route");
-    const res = await GET(makeReq(VALID_TOKEN), { params: Promise.resolve({ token: VALID_TOKEN }) });
+    const res = await GET(makeReq(VALID_TOKEN), {
+      params: Promise.resolve({ token: VALID_TOKEN }),
+    });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.client).toMatchObject({
@@ -116,7 +140,9 @@ describe("GET /api/portal/[token]", () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
     mockCustomersList.mockResolvedValue({ data: [] });
     const { GET } = await import("@/app/api/portal/[token]/route");
-    const res = await GET(makeReq(VALID_TOKEN), { params: Promise.resolve({ token: VALID_TOKEN }) });
+    const res = await GET(makeReq(VALID_TOKEN), {
+      params: Promise.resolve({ token: VALID_TOKEN }),
+    });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.invoices).toEqual([]);
@@ -126,18 +152,22 @@ describe("GET /api/portal/[token]", () => {
   it("returns invoices for matching Stripe customer", async () => {
     mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
     mockInvoicesList.mockResolvedValue({
-      data: [{
-        id: "in_test_1",
-        number: "INV-001",
-        amount_paid: 4900,
-        currency: "eur",
-        status: "paid",
-        created: Math.floor(Date.now() / 1000),
-        invoice_pdf: "https://invoice.stripe.com/pdf",
-      }],
+      data: [
+        {
+          id: "in_test_1",
+          number: "INV-001",
+          amount_paid: 4900,
+          currency: "eur",
+          status: "paid",
+          created: Math.floor(Date.now() / 1000),
+          invoice_pdf: "https://invoice.stripe.com/pdf",
+        },
+      ],
     });
     const { GET } = await import("@/app/api/portal/[token]/route");
-    const res = await GET(makeReq(VALID_TOKEN), { params: Promise.resolve({ token: VALID_TOKEN }) });
+    const res = await GET(makeReq(VALID_TOKEN), {
+      params: Promise.resolve({ token: VALID_TOKEN }),
+    });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.invoices).toHaveLength(1);
