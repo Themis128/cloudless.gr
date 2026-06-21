@@ -16,6 +16,11 @@ Usage (called from main.py):
 Environment variables:
   MQTT_BROKER_HOST  (default: mosquitto.monitoring.svc.cluster.local)
   MQTT_BROKER_PORT  (default: 1883)
+  MQTT_USERNAME     (optional; mosquitto runs in dual-mode `allow_anonymous true`
+                    + `password_file` as of 2026-06-21, so omitting these still
+                    works during the rollout. After the operator flips to
+                    `allow_anonymous false`, both vars become required.)
+  MQTT_PASSWORD
 """
 
 import asyncio
@@ -31,8 +36,12 @@ logger = logging.getLogger(__name__)
 
 MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST", "mosquitto.monitoring.svc.cluster.local")
 MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", "1883"))
+MQTT_USERNAME = os.getenv("MQTT_USERNAME") or None
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD") or None
 MQTT_TOPIC_STATUS = "homelab/alerts/status"
 MQTT_TOPIC_EVENTS = "homelab/alerts/events"
+
+_AUTH = {"username": MQTT_USERNAME, "password": MQTT_PASSWORD} if MQTT_USERNAME else None
 
 # Severity ordering worst-first — matches Notion spec
 _SEVERITY_RANK: dict[str, int] = {
@@ -71,6 +80,7 @@ def _publish_sync(msgs: list[dict]) -> None:
         hostname=MQTT_BROKER_HOST,
         port=MQTT_BROKER_PORT,
         client_id="alert-api-publisher",
+        auth=_AUTH,
     )
 
 
