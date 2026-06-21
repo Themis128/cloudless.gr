@@ -66,7 +66,7 @@ echo "  as admin: $ADMIN_USER  via HTTP basic"
 # in data/config.php. Admin-only operation; the API key user (non-admin)
 # would get 403. HTTP Basic with admin creds works.
 HTTP=$(curl -sS -o /tmp/espo-smtp.resp -w '%{http_code}' \
-  -X PATCH "$ESPOCRM_BASE_URL/api/v1/Settings" \
+  -X PUT "$ESPOCRM_BASE_URL/api/v1/Settings" \
   -u "$ADMIN_USER:$ADMIN_PASS" \
   -H 'Content-Type: application/json' \
   --data @<(cat <<JSON
