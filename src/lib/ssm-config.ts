@@ -85,6 +85,11 @@ interface AppConfig {
   NTFY_BASE_URL: string;
   NTFY_TOPIC: string;
   NTFY_TOKEN: string;
+  /** Apollo.io API key (Settings → Integrations → API). Consumed by the
+   *  n8n `lead-enrich` workflow's HTTP node — written here so the operator
+   *  rotates it from a single place. Optional; the workflow falls back to
+   *  skipping enrichment when unset. */
+  APOLLO_API_KEY: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -257,6 +262,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     NTFY_BASE_URL: params.get("NTFY_BASE_URL") ?? "",
     NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
     NTFY_TOKEN: params.get("NTFY_TOKEN") ?? "",
+    APOLLO_API_KEY: params.get("APOLLO_API_KEY") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
@@ -357,6 +363,7 @@ function buildConfigFromEnv(): AppConfig {
     NTFY_BASE_URL: process.env.NTFY_BASE_URL || "",
     NTFY_TOPIC: process.env.NTFY_TOPIC || "",
     NTFY_TOKEN: process.env.NTFY_TOKEN || "",
+    APOLLO_API_KEY: process.env.APOLLO_API_KEY || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
