@@ -237,7 +237,6 @@ md.push("");
 md.push("> Reports retained 30-60 days per audit. Click an audit name above to open the run.");
 md.push("> Live page: `/admin/audits` reads the latest `audits-dashboard-*` artifact via REST.");
 
-// eslint-disable-next-line no-control-regex
 const CTRL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const stripCtrl = (s) => String(s).replace(CTRL_RE, "");
 const safeMd = md.map(stripCtrl).join("\n") + "\n";
