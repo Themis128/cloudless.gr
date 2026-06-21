@@ -27,6 +27,7 @@
 import { SlackClient } from "@/lib/slack-notify";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
 import { publishNtfy } from "@/lib/ntfy";
+import { getConfig } from "@/lib/ssm-config";
 
 export type AdminAlertSeverity = "info" | "warning" | "error" | "high" | "critical";
 
@@ -115,9 +116,18 @@ export async function notifyAdmin(input: AdminAlertInput): Promise<AdminAlertRes
     }
   })();
 
-  // ntfy: gated by env flag — off by default until operator opts in.
+  // ntfy: opt-in via either env var (build-time) OR SSM (runtime flip).
+  // SSM wins when both set so the operator can toggle without a redeploy.
   const ntfyTask = (async () => {
-    if (process.env.ADMIN_PUSH_VIA_NTFY !== "1") {
+    const envFlag = process.env.ADMIN_PUSH_VIA_NTFY;
+    let ssmFlag = "";
+    try {
+      ssmFlag = (await getConfig()).ADMIN_PUSH_VIA_NTFY ?? "";
+    } catch {
+      /* SSM unreachable — fall back to env */
+    }
+    const enabled = ssmFlag === "1" || (ssmFlag === "" && envFlag === "1");
+    if (!enabled) {
       result.ntfy = { ok: false, skipped: "feature_off" };
       return;
     }
