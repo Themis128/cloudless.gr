@@ -1,0 +1,44 @@
+name: Self-hosted admin login probe
+
+# Runs scripts/probe-selfhosted-admin.sh against AppFlowy, EspoCRM, Postiz,
+# n8n every 6 hours. Fails loudly if the unified admin password
+# (tbaltzakis@cloudless.gr / TH!123789th!) is broken on any app — catches
+# credential drift (an admin pw rotation that didn't sweep one of the apps,
+# a pod that lost its bootstrap, an OIDC misconfig that disables local auth).
+#
+# Source-of-truth for the password is the GitHub repo secret
+# ADMIN_PASSWORD_UNIFIED. The probe NEVER prints the password — only the
+# HTTP code and a 200-char body snippet.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"        # every 6 hours
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/probe-selfhosted-admin.sh"
+      - ".github/workflows/admin-login-probe.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-login-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Probe all self-hosted admin endpoints
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD_UNIFIED }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
+            echo "::warning::ADMIN_PASSWORD_UNIFIED repo secret not set — skipping probe"
+            exit 0
+          fi
+          bash scripts/probe-selfhosted-admin.sh
