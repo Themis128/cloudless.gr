@@ -69,6 +69,15 @@ export interface IntegrationConfig {
   ESPOCRM_BASE_URL?: string;
   ESPOCRM_API_KEY?: string;
   ESPOCRM_WEBHOOK_SECRET?: string;
+  // AppFlowy Cloud (Notion replacement, self-hosted on omv k3s; see skills/appflowy-operator)
+  APPFLOWY_API_URL?: string;
+  APPFLOWY_JWT_SECRET?: string;
+  // n8n workflow automation (self-hosted on omv k3s; X-N8N-API-KEY auth)
+  N8N_API_URL?: string;
+  N8N_API_KEY?: string;
+  // Postiz (social scheduler) API key — used by lib/postiz.ts + admin/postiz console
+  POSTIZ_API_URL?: string;
+  POSTIZ_API_KEY?: string;
 }
 
 let cached: IntegrationConfig | null = null;
@@ -128,6 +137,12 @@ export function getIntegrations(): IntegrationConfig {
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL,
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY,
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET,
+    APPFLOWY_API_URL: process.env.APPFLOWY_API_URL,
+    APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET,
+    N8N_API_URL: process.env.N8N_API_URL,
+    N8N_API_KEY: process.env.N8N_API_KEY,
+    POSTIZ_API_URL: process.env.POSTIZ_API_URL,
+    POSTIZ_API_KEY: process.env.POSTIZ_API_KEY,
   };
 
   return cached;
@@ -236,6 +251,12 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       ESPOCRM_API_KEY: envCfg.ESPOCRM_API_KEY || ssm.ESPOCRM_API_KEY || undefined,
       ESPOCRM_WEBHOOK_SECRET:
         envCfg.ESPOCRM_WEBHOOK_SECRET || ssm.ESPOCRM_WEBHOOK_SECRET || undefined,
+      APPFLOWY_API_URL: envCfg.APPFLOWY_API_URL || ssm.APPFLOWY_API_URL || undefined,
+      APPFLOWY_JWT_SECRET: envCfg.APPFLOWY_JWT_SECRET || ssm.APPFLOWY_JWT_SECRET || undefined,
+      N8N_API_URL: envCfg.N8N_API_URL || ssm.N8N_API_URL || undefined,
+      N8N_API_KEY: envCfg.N8N_API_KEY || ssm.N8N_API_KEY || undefined,
+      POSTIZ_API_URL: envCfg.POSTIZ_API_URL || ssm.POSTIZ_API_URL || undefined,
+      POSTIZ_API_KEY: envCfg.POSTIZ_API_KEY || ssm.POSTIZ_API_KEY || undefined,
     };
   } catch (err) {
     console.warn("[Integrations] SSM fallback failed, using env-only config:", err);

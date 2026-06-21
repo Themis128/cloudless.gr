@@ -13,8 +13,7 @@ const { mockSend, MockConverseCommand, mockRunTool } = vi.hoisted(() => {
   const mockSend = vi.fn();
   const mockRunTool = vi.fn();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function MockConverseCommandImpl(this: unknown, input: any) {
+  function MockConverseCommandImpl(this: unknown, input: object) {
     void input; // args tracked via MockConverseCommand.mock.calls
   }
   const MockConverseCommand = vi.fn(MockConverseCommandImpl);
@@ -24,8 +23,7 @@ const { mockSend, MockConverseCommand, mockRunTool } = vi.hoisted(() => {
 
 vi.mock("@aws-sdk/client-bedrock-runtime", () => {
   // Must be a regular function so `new BedrockRuntimeClient()` succeeds.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function BedrockRuntimeClientImpl(this: any) {
+  function BedrockRuntimeClientImpl(this: Record<string, unknown>) {
     this.send = mockSend;
   }
   return {

@@ -41,6 +41,18 @@ interface AppConfig {
   ESPOCRM_API_KEY: string;
   /** Shared secret for EspoCRM webhook URL query-param auth. */
   ESPOCRM_WEBHOOK_SECRET: string;
+  /** AppFlowy Cloud base URL (Notion replacement, see skills/appflowy-operator). */
+  APPFLOWY_API_URL: string;
+  /** Shared GoTrue JWT secret for signing service-role JWTs against AppFlowy. */
+  APPFLOWY_JWT_SECRET: string;
+  /** n8n base URL. */
+  N8N_API_URL: string;
+  /** n8n public API key (X-N8N-API-KEY). */
+  N8N_API_KEY: string;
+  /** Postiz base URL. */
+  POSTIZ_API_URL: string;
+  /** Postiz organization API key (Settings → Public API). */
+  POSTIZ_API_KEY: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -194,6 +206,12 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     ESPOCRM_BASE_URL: params.get("ESPOCRM_BASE_URL") ?? "",
     ESPOCRM_API_KEY: params.get("ESPOCRM_API_KEY") ?? "",
     ESPOCRM_WEBHOOK_SECRET: params.get("ESPOCRM_WEBHOOK_SECRET") ?? "",
+    APPFLOWY_API_URL: params.get("APPFLOWY_API_URL") ?? "",
+    APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
+    N8N_API_URL: params.get("N8N_API_URL") ?? "",
+    N8N_API_KEY: params.get("N8N_API_KEY") ?? "",
+    POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
+    POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
@@ -275,6 +293,12 @@ function buildConfigFromEnv(): AppConfig {
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL || "",
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY || "",
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET || "",
+    APPFLOWY_API_URL: process.env.APPFLOWY_API_URL || "",
+    APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
+    N8N_API_URL: process.env.N8N_API_URL || "",
+    N8N_API_KEY: process.env.N8N_API_KEY || "",
+    POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
+    POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
