@@ -194,10 +194,15 @@ gh run list --limit 200 --json workflowName,createdAt | \
 
 ## See also
 
+- `docs/gh-workflows-strategy.md` — efficiency / speed strategy:
+  measured baseline, 8 optimization patterns ranked by ROI, prioritized
+  roadmap. Read BEFORE proposing a speedup or consolidation PR.
 - Memory `feedback_organize_gh_workflows` — the rule this catalogue
   implements.
 - Memory `feedback_workflow_must_pass` — every failure must be fixed +
   re-run until green.
+- Memory `project_gh_workflows_speedup_strategy` — pointer to the
+  strategy doc above.
 - `skills/gh-actions-pitfalls/SKILL.md` — 8 CI gotchas catalogue.
 - `docs/master-todo-list.md` — R-row roadmap (each row that adds a
   workflow appends to this catalogue).
