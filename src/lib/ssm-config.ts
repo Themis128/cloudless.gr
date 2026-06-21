@@ -45,6 +45,10 @@ interface AppConfig {
   APPFLOWY_API_URL: string;
   /** Shared GoTrue JWT secret for signing service-role JWTs against AppFlowy. */
   APPFLOWY_JWT_SECRET: string;
+  /** AppFlowy admin email — used by the upload script (scripts/appflowy-upload-md.mjs)
+   *  + future Lambda-side page-create. Pairs with APPFLOWY_PASSWORD. */
+  APPFLOWY_EMAIL: string;
+  APPFLOWY_PASSWORD: string;
   /** n8n base URL. */
   N8N_API_URL: string;
   /** n8n public API key (X-N8N-API-KEY). */
@@ -71,6 +75,16 @@ interface AppConfig {
    *  exposed yet (per project_blackbox_in_cluster_probes) — the card then
    *  links to the internal Service URL with a "VPN-only" badge. */
   GRAFANA_BASE_URL: string;
+  /** Grafana admin API token (Settings → API Keys → Admin). Needed for the
+   *  src/lib/grafana.ts dashboard CRUD client. Optional — empty disables the
+   *  /api/admin/grafana/* routes which then return 503. */
+  GRAFANA_API_TOKEN: string;
+  /** ntfy — push notification broker (https://ntfy.sh-compat). Base URL +
+   *  default topic + optional access token. Used by the cluster alert-api +
+   *  any Lambda that wants to push a notification to the operator's phone. */
+  NTFY_BASE_URL: string;
+  NTFY_TOPIC: string;
+  NTFY_TOKEN: string;
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
   NOTION_WEBHOOK_SECRET: string;
@@ -226,6 +240,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     ESPOCRM_WEBHOOK_SECRET: params.get("ESPOCRM_WEBHOOK_SECRET") ?? "",
     APPFLOWY_API_URL: params.get("APPFLOWY_API_URL") ?? "",
     APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
+    APPFLOWY_EMAIL: params.get("APPFLOWY_EMAIL") ?? "",
+    APPFLOWY_PASSWORD: params.get("APPFLOWY_PASSWORD") ?? "",
     N8N_API_URL: params.get("N8N_API_URL") ?? "",
     N8N_API_KEY: params.get("N8N_API_KEY") ?? "",
     N8N_WORKFLOW_LEAD_ENRICH_ID: params.get("N8N_WORKFLOW_LEAD_ENRICH_ID") ?? "",
@@ -237,6 +253,10 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     KUMA_BASE_URL: params.get("KUMA_BASE_URL") ?? "",
     KUMA_STATUS_PAGE_SLUG: params.get("KUMA_STATUS_PAGE_SLUG") ?? "",
     GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
+    GRAFANA_API_TOKEN: params.get("GRAFANA_API_TOKEN") ?? "",
+    NTFY_BASE_URL: params.get("NTFY_BASE_URL") ?? "",
+    NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
+    NTFY_TOKEN: params.get("NTFY_TOKEN") ?? "",
     NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
     NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
     NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
@@ -320,6 +340,8 @@ function buildConfigFromEnv(): AppConfig {
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET || "",
     APPFLOWY_API_URL: process.env.APPFLOWY_API_URL || "",
     APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
+    APPFLOWY_EMAIL: process.env.APPFLOWY_EMAIL || "",
+    APPFLOWY_PASSWORD: process.env.APPFLOWY_PASSWORD || "",
     N8N_API_URL: process.env.N8N_API_URL || "",
     N8N_API_KEY: process.env.N8N_API_KEY || "",
     N8N_WORKFLOW_LEAD_ENRICH_ID: process.env.N8N_WORKFLOW_LEAD_ENRICH_ID || "",
@@ -331,6 +353,10 @@ function buildConfigFromEnv(): AppConfig {
     KUMA_BASE_URL: process.env.KUMA_BASE_URL || "",
     KUMA_STATUS_PAGE_SLUG: process.env.KUMA_STATUS_PAGE_SLUG || "",
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
+    GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
+    NTFY_BASE_URL: process.env.NTFY_BASE_URL || "",
+    NTFY_TOPIC: process.env.NTFY_TOPIC || "",
+    NTFY_TOKEN: process.env.NTFY_TOKEN || "",
     NOTION_API_KEY: process.env.NOTION_API_KEY || "",
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
     NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",

@@ -323,8 +323,8 @@ WHERE c.contact_id <> '__placeholder__';
 -- ---- v_espocrm_campaign_summary: per-campaign open/click rates --------------
 CREATE OR REPLACE VIEW cloudless_analytics.v_espocrm_campaign_summary AS
 SELECT campaign_id, name, status, type, sent_count, opened_count, clicked_count,
-       CASE WHEN sent_count > 0 THEN opened_count * 1.0 / sent_count ELSE 0 END AS open_rate,
-       CASE WHEN opened_count > 0 THEN clicked_count * 1.0 / opened_count ELSE 0 END AS click_through_rate
+       CASE WHEN sent_count > 0 THEN opened_count *1.0 / sent_count ELSE 0 END AS open_rate,
+       CASE WHEN opened_count > 0 THEN clicked_count* 1.0 / opened_count ELSE 0 END AS click_through_rate
 FROM cloudless_analytics.espocrm_campaigns
 WHERE campaign_id <> '__placeholder__'
 ORDER BY sent_count DESC;
@@ -335,6 +335,7 @@ ORDER BY sent_count DESC;
 -- v_client_health, v_daily_events, v_funnel, v_ltv_ranking,
 -- v_project_velocity, v_revenue_monthly
 --
+
 -- These were created previously and live in the Glue catalog already. The four
 -- views above (v_acquisition_funnel, v_attribution_by_source, v_hubspot_funnel,
 -- v_lead_to_customer) are new in this audit pass and need to be CREATEd once
@@ -343,6 +344,69 @@ ORDER BY sent_count DESC;
 -- ===========================================================================
 -- Example operator queries
 -- ===========================================================================
--- SELECT * FROM cloudless_analytics.v_acquisition_funnel LIMIT 30;
--- SELECT * FROM cloudless_analytics.v_attribution_by_source LIMIT 20;
+-- SELECT *FROM cloudless_analytics.v_acquisition_funnel LIMIT 30;
+-- SELECT* FROM cloudless_analytics.v_attribution_by_source LIMIT 20;
 -- SELECT email, rfm_score, churn_risk FROM cloudless_analytics.v_lead_to_customer ORDER BY rfm_score DESC LIMIT 50;
+
+-- ===========================================================================
+-- Self-hosted app tables + views (PR 2026-06-21 self-hosted ETL+API readiness)
+-- The daily ETL (.github/workflows/etl-selfhosted-to-lake.yml) writes:
+--   s3://cloudless-analytics-data/lake/appflowy-workspaces/workspaces.parquet
+--   s3://cloudless-analytics-data/lake/appflowy-users/users.parquet
+--   s3://cloudless-analytics-data/lake/n8n-workflows/workflows.parquet
+--   s3://cloudless-analytics-data/lake/n8n-executions/executions.parquet
+--   s3://cloudless-analytics-data/lake/postiz-posts/posts.parquet
+--   s3://cloudless-analytics-data/lake/postiz-integrations/integrations.parquet
+-- Tables are external; Glue/Athena reads the matching S3 prefix.
+-- ===========================================================================
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.appflowy_workspaces (
+  workspace_id string, workspace_name string, owner_email string,
+  member_count int, created_at timestamp
+) STORED AS PARQUET LOCATION 's3://cloudless-analytics-data/lake/appflowy-workspaces/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.appflowy_users (
+  uid bigint, email string, name string, created_at timestamp
+) STORED AS PARQUET LOCATION 's3://cloudless-analytics-data/lake/appflowy-users/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.n8n_workflows (
+  id string, name string, active boolean, created_at timestamp, updated_at timestamp
+) STORED AS PARQUET LOCATION 's3://cloudless-analytics-data/lake/n8n-workflows/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.n8n_executions (
+  id string, workflow_id string, status string, mode string,
+  started_at timestamp, stopped_at timestamp, finished boolean
+) STORED AS PARQUET LOCATION 's3://cloudless-analytics-data/lake/n8n-executions/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.postiz_posts (
+  id string, content string, state string, publish_date timestamp,
+  integration_id string, integration_name string, provider string
+) STORED AS PARQUET LOCATION 's3://cloudless-analytics-data/lake/postiz-posts/';
+
+CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.postiz_integrations (
+  id string, name string, provider string, disabled boolean
+) STORED AS PARQUET LOCATION 's3://cloudless-analytics-data/lake/postiz-integrations/';
+
+-- Self-hosted app health view — one row per app with success rate + count.
+CREATE OR REPLACE VIEW cloudless_analytics.v_selfhosted_health AS
+SELECT 'n8n' AS app,
+  CAST(SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS double) /
+    NULLIF(COUNT(*), 0) AS success_rate,
+  COUNT(*) AS recent_count
+FROM cloudless_analytics.n8n_executions
+WHERE started_at > current_timestamp - interval '7' day
+UNION ALL
+SELECT 'postiz' AS app,
+  CAST(SUM(CASE WHEN state = 'PUBLISHED' THEN 1 ELSE 0 END) AS double) /
+    NULLIF(COUNT(*), 0) AS success_rate,
+  COUNT(*) AS recent_count
+FROM cloudless_analytics.postiz_posts
+WHERE publish_date > current_timestamp - interval '7' day
+UNION ALL
+SELECT 'appflowy' AS app, 1.0 AS success_rate, COUNT(DISTINCT uid) AS recent_count
+FROM cloudless_analytics.appflowy_users;
+
+-- Operator queries:
+-- SELECT *FROM cloudless_analytics.v_selfhosted_health;
+-- SELECT* FROM cloudless_analytics.n8n_executions WHERE status = 'error' ORDER BY started_at DESC LIMIT 20;
+-- SELECT state, COUNT(*) FROM cloudless_analytics.postiz_posts GROUP BY state;
