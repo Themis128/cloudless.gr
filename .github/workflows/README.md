@@ -1,6 +1,6 @@
 # `.github/workflows/` — catalogue index
 
-**116 active** workflow files (down from 124 — 8 one-shot ones archived to `.github/workflows.archived/` in the same PR as this index). Curated by category per
+**115 active** workflow files (down from 124 — 9 one-shot/obsolete ones archived to `.github/workflows.archived/`). Curated by category per
 `feedback_organize_gh_workflows` memory. Every new workflow MUST follow
 the naming taxonomy here + carry the comment/timeout/concurrency/alert
 conventions listed in that memory.
@@ -150,6 +150,7 @@ Truly one-shot workflows whose work is permanently done:
 - `restore-oidc-trust.yml` — OIDC trust restoration ✅ done
 - `oidc-diagnostic.yml` — OIDC config diagnostic ✅ ran + info captured
 - `test-indexing.yml` — indexing pipeline smoke test ✅ done
+- `deploy-infrastructure-workaround.yml` — "GPG Workaround" for an old Terraform GPG issue, superseded by the `terraform-doctor` skill ✅ obsolete
 
 **To unarchive** if ever needed: rename `.disabled` back to `.yml` and
 move to `.github/workflows/`. Git history preserves the full content.
@@ -157,6 +158,19 @@ move to `.github/workflows/`. Git history preserves the full content.
 **Quarterly sweep:** review the active one-shots list above; if any
 hasn't been triggered in 90+ days AND its purpose is permanently
 satisfied, move it to the archived list.
+
+## ⚠️ Known-failing workflows (documented per `feedback_workflow_must_pass`)
+
+These fail consistently but the cause is an **operator-side missing
+config**, not a code bug. They stay enabled so the operator gets a
+nudge until the underlying gap is closed.
+
+| Workflow | Last failure | Root cause | Fix |
+|----------|-------------|------------|-----|
+| `apply-cloudflare-lb.yml` | 2026-06-14 | Cloudflare API token in SSM is stale (Phase 0 blocker) | Rotate via `cloudflare-token-doctor` skill |
+| `ad-readiness.yml` | 2026-06-20 | LinkedIn ad secrets not all set | Operator: confirm `LINKEDIN_*` SSM keys are non-empty |
+
+When either of these is fixed, remove its row from this table.
 
 ## Failure routing matrix
 
