@@ -13,7 +13,10 @@ const WEBHOOK_ENDPOINTS = [
   { name: "Slack events", path: "/api/slack/events", expectedStatus: [401, 403, 400] },
   { name: "Slack interactions", path: "/api/slack/interactions", expectedStatus: [401, 403, 400] },
   { name: "Slack commands", path: "/api/slack/commands", expectedStatus: [401, 403, 400] },
-  { name: "HubSpot webhook", path: "/api/webhooks/hubspot", expectedStatus: [401, 403, 400, 405] },
+  // HubSpot webhook deleted 2026-06-20 with PR #1043 (HubSpot decom); EspoCRM
+  // webhook replaces it. The /api/webhooks/espocrm route exists and is exercised
+  // here so a future "EspoCRM webhook accidentally deleted" regression is caught.
+  { name: "EspoCRM webhook", path: "/api/webhooks/espocrm", expectedStatus: [401, 403, 400, 405] },
   { name: "Stripe webhook", path: "/api/webhooks/stripe", expectedStatus: [400, 401, 403] },
   { name: "Notion webhook", path: "/api/webhooks/notion", expectedStatus: [400, 401, 403, 405] },
 ];
@@ -32,15 +35,14 @@ test.describe("Webhook endpoints — route existence and auth rejection", () => 
     });
   }
 
-  test("GET on webhook routes does not return 2xx (except HubSpot which has a GET verification handler)", async ({ request }) => {
+  test("GET on webhook routes does not return 2xx", async ({ request }) => {
     for (const wh of WEBHOOK_ENDPOINTS) {
       const r = await request.get(`https://${K3S_HOST}${wh.path}`, {
         failOnStatusCode: false,
         timeout: 10_000,
       });
-      // HubSpot intentionally exports GET for webhook URL verification during setup.
-      // All other webhook routes should reject GET with 405.
-      if (wh.path.includes("hubspot")) continue;
+      // Webhook routes should reject GET (405) or return 4xx; never 2xx.
+      // (The HubSpot GET-verification exemption was removed with PR #1043.)
       expect(
         [200].includes(r.status()),
         `${wh.name} accepts GET — webhook routes should be POST-only`,

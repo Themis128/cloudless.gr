@@ -96,24 +96,16 @@ test.describe("Integrations contracts", () => {
     expect(response.status()).toBe(401);
   });
 
-  test("HubSpot webhook GET verification responds ok", async ({ page }) => {
-    const response = await page.request.get("/api/webhooks/hubspot");
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body.ok).toBe(true);
-  });
-
-  test("HubSpot webhook POST enforces signature when configured", async ({ page }) => {
-    const response = await postJson(page.request, "/api/webhooks/hubspot", {
-      eventType: "contact.creation",
-      objectId: 123,
+  test("EspoCRM webhook POST requires URL-secret auth", async ({ page }) => {
+    // EspoCRM webhook replaced HubSpot 2026-06-20 (PR #1043). Auth is a
+    // URL-query-param secret (?secret=...), not HMAC. POST without secret → 4xx.
+    const response = await postJson(page.request, "/api/webhooks/espocrm", {
+      entity: "Lead",
+      action: "create",
+      id: "abc123",
     });
-    expect([200, 401]).toContain(response.status());
-
-    if (response.status() === 200) {
-      const body = await response.json();
-      expect(typeof body.received).toBe("number");
-    }
+    expect(response.status()).toBeGreaterThanOrEqual(400);
+    expect(response.status()).toBeLessThan(500);
   });
 
   test("HubSpot CRM upsert route handles invalid email or unconfigured CRM", async ({ page }) => {

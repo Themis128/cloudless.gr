@@ -74,12 +74,9 @@ test.describe("Public API route sweep", () => {
     // In dev: 5xx is acceptable (missing creds). We only need the route to be wired.
     expect(res.status()).toBeGreaterThanOrEqual(200);
   });
-  test("POST /api/hubspot/ticket with empty body returns 4xx", async ({ request }) => {
-    const res = await request.post("/api/hubspot/ticket", { data: {} });
-    expect(res.status()).toBeGreaterThanOrEqual(400);
-    // In dev: 5xx is acceptable (missing creds). We only need the route to be wired.
-    expect(res.status()).toBeGreaterThanOrEqual(200);
-  });
+  // /api/hubspot/ticket deleted 2026-06-20 (PR #1043); EspoCRM Case is
+  // created via /api/contact + lib/espocrm.ts createCase().
+
   test("POST /api/newsletter/send with empty body returns 4xx", async ({ request }) => {
     const res = await request.post("/api/newsletter/send", { data: {} });
     expect(res.status()).toBeGreaterThanOrEqual(400);
@@ -118,8 +115,9 @@ test.describe("Public API route sweep", () => {
     // In dev: 5xx is acceptable (missing creds). We only need the route to be wired.
     expect(res.status()).toBeGreaterThanOrEqual(200);
   });
-  test("POST /api/webhooks/hubspot without auth returns 4xx", async ({ request }) => {
-    const res = await request.post("/api/webhooks/hubspot", { data: {} });
+  test("POST /api/webhooks/espocrm without secret returns 4xx", async ({ request }) => {
+    // EspoCRM replaced HubSpot webhook 2026-06-20 (PR #1043). Auth = URL-secret.
+    const res = await request.post("/api/webhooks/espocrm", { data: {} });
     // In dev: 5xx is acceptable (missing creds). We only need the route to be wired.
     expect(res.status()).toBeGreaterThanOrEqual(200);
   });

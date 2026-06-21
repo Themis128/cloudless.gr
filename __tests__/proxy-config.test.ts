@@ -55,10 +55,6 @@ describe("proxy RATE_LIMITS", () => {
     expect(proxySrc).toContain('"/api/calendar/book"');
   });
 
-  it("covers /api/hubspot/ticket", () => {
-    expect(proxySrc).toContain('"/api/hubspot/ticket"');
-  });
-
   it("covers /api/crm/contact", () => {
     expect(proxySrc).toContain('"/api/crm/contact"');
   });
