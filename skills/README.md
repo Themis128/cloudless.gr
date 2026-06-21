@@ -2,6 +2,7 @@
 
 Every directory under `skills/` is a self-contained runbook for a recurring
 operator task. Each one has a `SKILL.md` with frontmatter that documents:
+
 - when to use it (trigger keywords)
 - the canonical step-by-step path
 - sources (linked docs)

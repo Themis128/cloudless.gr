@@ -46,6 +46,7 @@ webhooks:
 
 The cloudless.gr stack standardised on `chat.postMessage` with a bot
 token instead because:
+
 - The bot token rotates from one place (Slack workspace UI → app).
 - We can post to any channel the bot is in without redeploying.
 - Errors are typed (`channel_not_found`, `not_in_channel`, etc.) so the

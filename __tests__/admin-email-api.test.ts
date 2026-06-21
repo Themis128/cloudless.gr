@@ -28,6 +28,10 @@ const {
 vi.mock("@/lib/api-auth", () => ({ requireAdmin: mockRequireAdmin }));
 
 vi.mock("@/lib/espocrm", () => ({
+  // src/lib/espocrm.ts renamed the configured-check to isEspoCRMConfigured;
+  // route imports the new name. Keep the old mock variable as the backing
+  // implementation so behavior tests don't need to be re-written.
+  isEspoCRMConfigured: mockIsHubSpotConfigured,
   isHubSpotConfigured: mockIsHubSpotConfigured,
   listNewsletterSubscribers: mockListNewsletterSubscribers,
 }));
