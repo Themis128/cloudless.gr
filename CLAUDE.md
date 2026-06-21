@@ -185,6 +185,26 @@ instead — see the **`cluster-incident-response`** skill for the full playbook.
     unused heavy SLO rule groups. Durable fix: kube-prometheus-stack Helm values
     `defaultRules.rules.kubeApiserver{Burnrate,Availability,Slos}: false`.
 
+## Operator skills (read SKILL.md before touching the stack)
+
+Three operator manuals live under `skills/`. Each one is the canonical
+"first stop" for its stack and captures the load-bearing quirks (env-var
+ordering bugs, port mismatches, page-size pins, etc.):
+
+- `skills/appflowy-operator/SKILL.md` — AppFlowy Cloud stack (Notion
+  replacement, 9 pods + 1 worker on omv-ha). The worker pin to omv-ha
+  is mandatory: Pi 5 runs a 16 KiB-page kernel and the worker's jemalloc
+  was built for 4 KiB pages.
+- `skills/espocrm-operator/SKILL.md` — EspoCRM stack (HubSpot replacement).
+  Drop-in mirror at `src/lib/espocrm.ts` (21 exports 1:1 with the old
+  `hubspot.ts`); 6 Webhook entities sync to Slack via `SlackClient`;
+  daily ETL to Athena; SES → Lambda → Case bridge for inbound email.
+- `skills/cloudflare-tunnel-ops/SKILL.md` — adds/removes ingress + DNS
+  for the single shared tunnel (UUID
+  `e977a490-58c5-4fdb-9155-86832e3e636a`). Copy-paste pod manifests for
+  both halves; works end-to-end from `Kubernetes_MCP_Server` alone when
+  the `cloudless-infra` MCP is unavailable.
+
 ## Cluster bash (cluster-bash skill)
 
 Two-node SSH operations go through one of four MCP tools per the
