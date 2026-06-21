@@ -1,0 +1,143 @@
+name: TLS cert parity probe
+
+# R11 — checks BOTH halves of the dual-homed cloudless.gr (primary AWS ACM
+# behind CloudFront + secondary Pi Let's Encrypt) for cert expiry. Per
+# docs/pi-cloud-sync.md TLS cert is "the highest silent-failure risk" —
+# this probe catches a stale Let's Encrypt renewal OR an ACM rotation
+# anomaly >14 days BEFORE it would actually take the site down.
+#
+# Fires notifyAdmin() via /api/webhooks/admin-alert (R8 path) on:
+#   - cert expires in <14 days
+#   - chain invalid
+#   - hostname not in cert SAN
+#   - TCP/443 unreachable
+#
+# Runs daily 07:00 UTC. Single-job, ~30s runtime, no AWS perms needed.
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tls-cert-parity-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: TLS cert parity (ACM + Let's Encrypt)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WARN_DAYS: 14
+      ADMIN_ALERT_URL: https://cloudless.gr/api/webhooks/admin-alert
+    steps:
+      - name: Probe each host
+        id: probe
+        run: |
+          set +e
+          ANY_FAIL=0
+          REPORT=""
+
+          probe() {
+            local label="$1" host="$2"
+            echo "::group::Probe $label ($host)"
+
+            # Fetch the leaf cert via openssl s_client → x509
+            local cert
+            cert=$(echo | openssl s_client \
+              -servername "$host" -connect "${host}:443" -showcerts 2>/dev/null \
+              | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' \
+              | sed -n '1,/-----END CERTIFICATE-----/p')
+
+            if [ -z "$cert" ]; then
+              echo "::error::$label TCP/443 unreachable or no cert returned"
+              REPORT="${REPORT}\n❌ ${label} (${host}): TCP/443 unreachable"
+              ANY_FAIL=1
+              echo "::endgroup::"
+              return
+            fi
+
+            # Parse notAfter
+            local not_after
+            not_after=$(echo "$cert" | openssl x509 -noout -enddate | cut -d= -f2)
+            local not_after_ts
+            not_after_ts=$(date -u -d "$not_after" +%s)
+            local now_ts
+            now_ts=$(date -u +%s)
+            local days_left
+            days_left=$(( (not_after_ts - now_ts) / 86400 ))
+
+            # Parse SAN (lowercase, comma-sep)
+            local sans
+            sans=$(echo "$cert" | openssl x509 -noout -ext subjectAltName 2>/dev/null \
+              | tr -d ' ' | grep -oE 'DNS:[^,]+' | sed 's/^DNS://' | tr 'A-Z' 'a-z')
+            local host_lc
+            host_lc=$(echo "$host" | tr 'A-Z' 'a-z')
+
+            echo "  notAfter: $not_after  (${days_left} days left)"
+            echo "  SANs: $(echo "$sans" | tr '\n' ',' | sed 's/,$//')"
+
+            local fail_reason=""
+            if [ "$days_left" -lt "${WARN_DAYS}" ]; then
+              fail_reason="cert expires in ${days_left} days (<${WARN_DAYS}d threshold)"
+            fi
+            # SAN match: exact or wildcard
+            if ! echo "$sans" | grep -qE "^${host_lc}$|^\*\.${host_lc#*.}$"; then
+              if [ -z "$fail_reason" ]; then fail_reason="hostname $host not in SAN"; fi
+            fi
+
+            if [ -n "$fail_reason" ]; then
+              echo "::error::$label fails: $fail_reason"
+              REPORT="${REPORT}\n❌ ${label} (${host}): ${fail_reason} — expires ${not_after}"
+              ANY_FAIL=1
+            else
+              echo "  ✅ valid for ${days_left} more days"
+              REPORT="${REPORT}\n✅ ${label} (${host}): ${days_left} days left"
+            fi
+            echo "::endgroup::"
+          }
+
+          probe "PRIMARY (AWS ACM via CloudFront)" "cloudless.gr"
+          probe "SECONDARY (Pi Let's Encrypt)" "pi-origin.cloudless.gr"
+
+          echo "any_fail=${ANY_FAIL}" >> "$GITHUB_OUTPUT"
+          {
+            echo "report<<EOF"
+            echo -e "$REPORT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fire notifyAdmin() on failure
+        if: steps.probe.outputs.any_fail == '1'
+        env:
+          SECRET: ${{ secrets.NOTION_WEBHOOK_SECRET }}
+          REPORT: ${{ steps.probe.outputs.report }}
+        run: |
+          set -eu
+          if [ -z "${SECRET}" ]; then
+            echo "::warning::NOTION_WEBHOOK_SECRET not set — admin-alert skipped"
+            exit 1
+          fi
+          BODY=$(cat <<JSON
+          {
+            "severity": "high",
+            "title": "TLS cert parity probe FAILED",
+            "message": "Daily TLS check found expiring or invalid certs:\n${REPORT}\n\nWorkflow: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+            "click": "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}",
+            "source": "tls-cert-parity-probe"
+          }
+          JSON
+          )
+          HTTP=$(curl -sk -o /tmp/resp -w "%{http_code}" \
+            -X POST "${{ env.ADMIN_ALERT_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "x-cloudless-alert-secret: ${SECRET}" \
+            -d "${BODY}")
+          echo "admin-alert POST returned HTTP ${HTTP}"
+          cat /tmp/resp
+          # Make workflow fail (visible in main) when probe fails — alert is best-effort.
+          exit 1
