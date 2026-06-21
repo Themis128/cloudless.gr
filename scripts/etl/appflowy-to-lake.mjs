@@ -1,73 +1,51 @@
 /**
- * ETL: AppFlowy Cloud → S3 Data Lake (Parquet)
+ * ETL: AppFlowy Cloud → S3 Data Lake (Parquet) — postgres-direct edition
  *
- * Pulls workspace + user metadata from the self-hosted AppFlowy Cloud
- * (Notion replacement) via its REST API. Two parquet files:
+ * REVISED 2026-06-21: switched from REST `/admin/*` (which returned 0 rows
+ * because the admin endpoints aren't publicly exposed on the AC version
+ * we run) to direct postgres queries against the cluster's appflowy
+ * namespace via `kubectl exec`.
+ *
+ * Two parquet files:
  *
  *   lake/appflowy-workspaces/workspaces.parquet
  *   lake/appflowy-users/users.parquet
  *
- * Auth: short-lived service-role JWT signed with APPFLOWY_JWT_SECRET
- * (same value as cluster Secret appflowy-secrets/GOTRUE_JWT_SECRET).
- * See src/lib/appflowy.ts for the JWT signing approach this mirrors.
+ * Auth: tailscale connects the runner to the tailnet, then KUBECONFIG_B64
+ * (the same kubeconfig used by cluster-doctor / prometheus-tune workflows)
+ * gives system:admin access to exec into the postgres pod.
  *
  * Runs daily via .github/workflows/etl-selfhosted-to-lake.yml.
- * Full-refresh — counts are well under 1k records.
  */
+import { execSync } from "node:child_process";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { createHmac } from "node:crypto";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
-const BASE = (process.env.APPFLOWY_API_URL || "").replace(/\/$/, "");
-const SECRET = process.env.APPFLOWY_JWT_SECRET;
-
-if (!BASE || !SECRET) {
-  console.error("APPFLOWY_API_URL and APPFLOWY_JWT_SECRET are required");
-  process.exit(1);
-}
 
 const s3 = new S3Client({ region: REGION });
 
-function b64url(input) {
-  return Buffer.from(input)
-    .toString("base64")
-    .replace(/=+$/, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
+// `kubectl exec` into the postgres pod and run a psql query, returning
+// the rows as an array of objects. The pod name varies, so we resolve it
+// dynamically via the app=postgres label.
+function psqlRows(sql) {
+  const podCmd =
+    "kubectl -n appflowy get pod -l app=postgres -o jsonpath='{.items[0].metadata.name}'";
+  const pod = execSync(podCmd, { encoding: "utf8" }).trim();
+  if (!pod) throw new Error("no postgres pod found in appflowy namespace");
 
-function mintServiceJwt() {
-  const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    aud: "",
-    role: "supabase_admin",
-    iss: "cloudless-appflowy-etl",
-    iat: now,
-    exp: now + 600,
-  };
-  const head = b64url(JSON.stringify(header));
-  const body = b64url(JSON.stringify(payload));
-  const sig = b64url(createHmac("sha256", SECRET).update(`${head}.${body}`).digest());
-  return `${head}.${body}.${sig}`;
-}
-
-async function afFetch(path) {
-  const res = await fetch(`${BASE}/api${path}`, {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${mintServiceJwt()}`,
-    },
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`AppFlowy ${path} returned ${res.status}: ${body.slice(0, 200)}`);
-  }
-  return res.json();
+  // Use psql JSON output (PG 14+ supports `json_agg` over the result set).
+  const wrappedSql = `COPY (SELECT json_agg(t) FROM (${sql.replace(/;\s*$/, "")}) t) TO STDOUT`;
+  const escaped = wrappedSql.replace(/'/g, "'\\''");
+  const out = execSync(
+    `kubectl -n appflowy exec ${pod} -- bash -c "PGPASSWORD=\\$POSTGRES_PASSWORD psql -h 127.0.0.1 -U postgres -d postgres -tA -c '${escaped}'"`,
+    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }
+  );
+  const trimmed = out.trim();
+  if (!trimmed || trimmed === "\\N") return [];
+  return JSON.parse(trimmed);
 }
 
 const workspaceSchema = new ParquetSchema({
@@ -107,11 +85,15 @@ async function uploadToS3(key, body) {
 }
 
 async function syncWorkspaces() {
-  const data = await afFetch("/admin/workspace").catch((e) => {
-    console.warn("/admin/workspace failed:", e.message);
-    return { data: [] };
-  });
-  const rows = (data.data || []).map((w) => ({
+  const rows = psqlRows(`
+    SELECT w.workspace_id::text, w.workspace_name,
+           w.owner_uid, w.workspace_type,
+           (SELECT count(*) FROM af_workspace_member m WHERE m.workspace_id = w.workspace_id)::int AS member_count,
+           to_char(w.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+    FROM af_workspace w
+    WHERE w.deleted_at IS NULL
+    ORDER BY w.created_at
+  `).map((w) => ({
     workspace_id: String(w.workspace_id ?? ""),
     workspace_name: String(w.workspace_name ?? ""),
     owner_uid: Number(w.owner_uid ?? 0),
@@ -127,11 +109,15 @@ async function syncWorkspaces() {
 }
 
 async function syncUsers() {
-  const data = await afFetch("/admin/user").catch((e) => {
-    console.warn("/admin/user failed:", e.message);
-    return { data: [] };
-  });
-  const rows = (data.data || []).map((u) => ({
+  const rows = psqlRows(`
+    SELECT uid,
+           uuid::text,
+           email, name,
+           to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+    FROM af_user
+    WHERE deleted_at IS NULL
+    ORDER BY uid
+  `).map((u) => ({
     uid: Number(u.uid ?? 0),
     uuid: String(u.uuid ?? ""),
     email: String(u.email ?? ""),
@@ -147,4 +133,4 @@ async function syncUsers() {
 
 await syncWorkspaces();
 await syncUsers();
-console.log("✓ AppFlowy → S3 sync complete");
+console.log("✓ AppFlowy → S3 sync complete (postgres-direct)");
