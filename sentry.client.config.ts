@@ -6,7 +6,10 @@ Sentry.init({
   tracesSampleRate: 0.1,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
-  environment: process.env.NODE_ENV,
+  // R14: browser events are blind to which surface served them (both serve
+  // the same bundle behind the LB). Use NEXT_PUBLIC_SENTRY_ENVIRONMENT for
+  // an explicit override (e.g. staging, preview); otherwise NODE_ENV.
+  environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || process.env.NODE_ENV,
   release: process.env.NEXT_PUBLIC_APP_VERSION,
   integrations: [
     Sentry.replayIntegration({

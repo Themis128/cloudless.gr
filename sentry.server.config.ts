@@ -48,7 +48,10 @@ function maybeAlertSlack(event: ErrorEvent, hint?: EventHint): void {
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   tracesSampleRate: 0.1,
-  environment: process.env.NODE_ENV,
+  // R14: prefer SENTRY_ENVIRONMENT (set per-surface in deploy config) so failover
+  // events land in the right Sentry environment instead of both being "production".
+  // Lambda env: `production` · Pi k8s env: `pi-standby` · dev: NODE_ENV fallback.
+  environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
   release: process.env.NEXT_PUBLIC_APP_VERSION,
   // Turbopack hashes require-in-the-middle at dev time, breaking OTel module patching.
   // Skip OTel setup in dev; production Webpack builds work fine with it enabled.
