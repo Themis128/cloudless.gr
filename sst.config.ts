@@ -42,6 +42,11 @@ function buildSiteEnvironment(
     // Carry the deploy SHA into runtime so /api/health.version reports
     // what's actually deployed.
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
+    // R14: tag this surface in Sentry as "production" so events route
+    // separately from Pi-side events (which use SENTRY_ENVIRONMENT=pi-standby
+    // via the k8s container env). Lets Sentry dashboards filter by surface
+    // during failover incidents.
+    SENTRY_ENVIRONMENT: isProd ? "production" : `staging-${stage}`,
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
     USER_PROFILE_TABLE: userProfileTableName,
     ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
