@@ -31,30 +31,12 @@
     },
     {
       "parameters": {
-        "url": "=https://api.apollo.io/v1/people/match?email={{ encodeURIComponent($json.email) }}",
-        "options": { "timeout": 8000 },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "X-Api-Key", "value": "={{ $env.APOLLO_API_KEY }}" },
-            { "name": "Content-Type", "value": "application/json" }
-          ]
-        }
-      },
-      "name": "Apollo enrich (optional)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [680, 300],
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
         "functionCode": "// Round-robin owner assignment from a hardcoded list. Replace with your\n// real team usernames in EspoCRM.\nconst owners = ['tbaltzakis'];\nconst idx = Math.floor(Math.random() * owners.length);\nreturn [{ json: { ...items[0].json, assignedUserName: owners[idx] } }];"
       },
       "name": "Round-robin owner",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [900, 300]
+      "position": [680, 300]
     },
     {
       "parameters": {
@@ -74,7 +56,7 @@
       "name": "EspoCRM PUT /Lead/:id",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1120, 300],
+      "position": [900, 300],
       "continueOnFail": true
     },
     {
@@ -95,14 +77,13 @@
       "name": "Slack DM assignee",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [1340, 300],
+      "position": [1120, 300],
       "continueOnFail": true
     }
   ],
   "connections": {
     "Webhook (lead-enrich)": { "main": [[{ "node": "Extract lead fields", "type": "main", "index": 0 }]] },
-    "Extract lead fields": { "main": [[{ "node": "Apollo enrich (optional)", "type": "main", "index": 0 }]] },
-    "Apollo enrich (optional)": { "main": [[{ "node": "Round-robin owner", "type": "main", "index": 0 }]] },
+    "Extract lead fields": { "main": [[{ "node": "Round-robin owner", "type": "main", "index": 0 }]] },
     "Round-robin owner": { "main": [[{ "node": "EspoCRM PUT /Lead/:id", "type": "main", "index": 0 }]] },
     "EspoCRM PUT /Lead/:id": { "main": [[{ "node": "Slack DM assignee", "type": "main", "index": 0 }]] }
   },
