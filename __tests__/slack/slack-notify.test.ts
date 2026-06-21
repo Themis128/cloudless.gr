@@ -12,7 +12,7 @@ function okFetch(body: object = { ok: true }): FetchMock {
     new Response(JSON.stringify(body), {
       status: 200,
       headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
-    }),
+    })
   );
 }
 
@@ -29,7 +29,7 @@ function slackErrorFetch(error: string): FetchMock {
     new Response(JSON.stringify({ ok: false, error }), {
       status: 200,
       headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
-    }),
+    })
   );
 }
 
@@ -126,7 +126,7 @@ describe("SlackClient", () => {
           new Response(JSON.stringify({ ok: true }), {
             status: 200,
             headers: { [HEADER_CONTENT_TYPE]: CONTENT_TYPE_JSON },
-          }),
+          })
         );
       vi.stubGlobal("fetch", mockFetch);
 
@@ -453,7 +453,7 @@ describe("slackErrorNotify", () => {
     vi.stubGlobal("fetch", mockFetch);
 
     await expect(
-      slackErrorNotify({ title: "Oops", message: "Something broke", error: "raw string error" }),
+      slackErrorNotify({ title: "Oops", message: "Something broke", error: "raw string error" })
     ).resolves.not.toThrow();
   });
 });
@@ -472,20 +472,19 @@ describe("slackDeployNotify", () => {
     vi.unstubAllGlobals();
   });
 
-  it.each([
-    ["started"],
-    [STATUS_SUCCEEDED],
-    ["failed"],
-  ] as const)("uses Cloudless brand icon for status=%s", async (status) => {
-    const mockFetch = okFetch({ ok: true });
-    vi.stubGlobal("fetch", mockFetch);
+  it.each([["started"], [STATUS_SUCCEEDED], ["failed"]] as const)(
+    "uses Cloudless brand icon for status=%s",
+    async (status) => {
+      const mockFetch = okFetch({ ok: true });
+      vi.stubGlobal("fetch", mockFetch);
 
-    await slackDeployNotify({ version: "1.0.0", stage: "production", status });
+      await slackDeployNotify({ version: "1.0.0", stage: "production", status });
 
-    const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
-    const body = JSON.parse(opts.body as string);
-    expect(body.icon_url).toBe("https://cloudless.gr/icons/icon-512.png");
-  });
+      const [, opts] = mockFetch.mock.calls[0] as [string, RequestInit];
+      const body = JSON.parse(opts.body as string);
+      expect(body.icon_url).toBe("https://cloudless.gr/icons/icon-512.png");
+    }
+  );
 
   it("truncates commitSha to 7 characters", async () => {
     const mockFetch = okFetch({ ok: true });

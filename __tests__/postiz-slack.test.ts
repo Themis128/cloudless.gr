@@ -79,9 +79,7 @@ describe("postiz-slack notifiers (with token)", () => {
       })
     );
     await notifyPostPublished(POST);
-    const call = fetchSpy.mock.calls.find(([url]) =>
-      String(url).includes("chat.postMessage")
-    );
+    const call = fetchSpy.mock.calls.find(([url]) => String(url).includes("chat.postMessage"));
     expect(call).toBeDefined();
     if (!call) return;
     const [, init] = call;

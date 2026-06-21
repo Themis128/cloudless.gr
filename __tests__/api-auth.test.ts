@@ -394,43 +394,45 @@ describe("api-auth.ts (coverage backfill)", () => {
 
     it("returns false when no admin role/group is present", async () => {
       const { isAdmin } = await import("@/lib/api-auth");
-      expect(isAdmin({ sub: "u", groups: ["user"], realm_access: { roles: ["viewer"] } })).toBe(false);
+      expect(isAdmin({ sub: "u", groups: ["user"], realm_access: { roles: ["viewer"] } })).toBe(
+        false
+      );
     });
   });
 });
 
-  describe("requireAuth E2E_ADMIN_TOKEN bypass (test-only)", () => {
-    beforeEach(() => {
-      delete process.env.NEXT_PUBLIC_E2E;
-      delete process.env.E2E_ADMIN_TOKEN;
-    });
-
-    it("returns admin user when E2E env + matching Bearer token are set", async () => {
-      vi.resetModules();
-      process.env.NEXT_PUBLIC_E2E = "1";
-      process.env.E2E_ADMIN_TOKEN = "e2e-secret-abc";
-      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
-      resetJwksCache();
-      const result = await requireAuth(makeRequest("e2e-secret-abc"));
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.user.sub).toBe("e2e-admin");
-        expect(result.user["cognito:groups"]).toEqual(["admin"]);
-      }
-      delete process.env.NEXT_PUBLIC_E2E;
-      delete process.env.E2E_ADMIN_TOKEN;
-    });
-
-    it("does NOT bypass when Bearer token doesn't match E2E_ADMIN_TOKEN", async () => {
-      vi.resetModules();
-      process.env.NEXT_PUBLIC_E2E = "1";
-      process.env.E2E_ADMIN_TOKEN = "e2e-secret-abc";
-      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
-      resetJwksCache();
-      const result = await requireAuth(makeRequest("wrong-token"));
-      // Falls through to normal auth which will 401 (no valid session)
-      expect(result.ok).toBe(false);
-      delete process.env.NEXT_PUBLIC_E2E;
-      delete process.env.E2E_ADMIN_TOKEN;
-    });
+describe("requireAuth E2E_ADMIN_TOKEN bypass (test-only)", () => {
+  beforeEach(() => {
+    delete process.env.NEXT_PUBLIC_E2E;
+    delete process.env.E2E_ADMIN_TOKEN;
   });
+
+  it("returns admin user when E2E env + matching Bearer token are set", async () => {
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_E2E = "1";
+    process.env.E2E_ADMIN_TOKEN = "e2e-secret-abc";
+    const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+    resetJwksCache();
+    const result = await requireAuth(makeRequest("e2e-secret-abc"));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.user.sub).toBe("e2e-admin");
+      expect(result.user["cognito:groups"]).toEqual(["admin"]);
+    }
+    delete process.env.NEXT_PUBLIC_E2E;
+    delete process.env.E2E_ADMIN_TOKEN;
+  });
+
+  it("does NOT bypass when Bearer token doesn't match E2E_ADMIN_TOKEN", async () => {
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_E2E = "1";
+    process.env.E2E_ADMIN_TOKEN = "e2e-secret-abc";
+    const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+    resetJwksCache();
+    const result = await requireAuth(makeRequest("wrong-token"));
+    // Falls through to normal auth which will 401 (no valid session)
+    expect(result.ok).toBe(false);
+    delete process.env.NEXT_PUBLIC_E2E;
+    delete process.env.E2E_ADMIN_TOKEN;
+  });
+});

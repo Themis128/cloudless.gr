@@ -8,10 +8,7 @@ vi.mock("@aws-sdk/client-sesv2", () => ({
   SESv2Client: vi.fn(function (this: { send: typeof mockSend }) {
     this.send = mockSend;
   }),
-  PutSuppressedDestinationCommand: vi.fn(function (
-    this: { input: unknown },
-    input: unknown,
-  ) {
+  PutSuppressedDestinationCommand: vi.fn(function (this: { input: unknown }, input: unknown) {
     this.input = input;
   }),
 }));
@@ -42,7 +39,7 @@ describe("ses-suppression.ts", () => {
     const { addToSuppressionList } = await import("@/lib/ses-suppression");
     await addToSuppressionList("user@test.com");
     expect(PutSuppressedDestinationCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ EmailAddress: "user@test.com", Reason: "COMPLAINT" }),
+      expect.objectContaining({ EmailAddress: "user@test.com", Reason: "COMPLAINT" })
     );
   });
 

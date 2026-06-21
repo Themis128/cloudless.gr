@@ -18,8 +18,18 @@ vi.mock("next/navigation", () => ({
 
 // Provide i18n navigation adapter (createNavigation needs App Router which doesn't exist in jsdom)
 vi.mock("@/i18n/navigation", () => ({
-  Link: ({ children, href, ...props }: { children: React.ReactNode; href: string; [k: string]: unknown }) => (
-    <a href={typeof href === "string" ? href : "/"} {...props}>{children}</a>
+  Link: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [k: string]: unknown;
+  }) => (
+    <a href={typeof href === "string" ? href : "/"} {...props}>
+      {children}
+    </a>
   ),
   useRouter: () => ({ push: vi.fn(), replace: mockReplace, refresh: vi.fn() }),
   usePathname: () => "/",
@@ -46,7 +56,7 @@ describe("LocaleSwitcher component", () => {
     return render(
       <NextIntlClientProvider locale="en" messages={messages}>
         <LocaleSwitcher />
-      </NextIntlClientProvider>,
+      </NextIntlClientProvider>
     );
   }
 
@@ -71,7 +81,11 @@ describe("LocaleSwitcher component", () => {
   it("opens dropdown and shows all locales on click", async () => {
     renderSwitcher();
     await openDropdown();
-    const languages = ["English", "\u0395\u03bb\u03bb\u03b7\u03bd\u03b9\u03ba\u03ac", "Fran\u00e7ais"];
+    const languages = [
+      "English",
+      "\u0395\u03bb\u03bb\u03b7\u03bd\u03b9\u03ba\u03ac",
+      "Fran\u00e7ais",
+    ];
     for (const lang of languages) {
       expect(screen.getByText(lang)).toBeTruthy();
     }

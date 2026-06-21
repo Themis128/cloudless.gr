@@ -18,9 +18,7 @@ const source = readFileSync(CONFIG, "utf-8");
 describe("next.config.ts — image format negotiation", () => {
   it("declares AVIF first, then WebP in images.formats", () => {
     // Match `formats: ["image/avif", "image/webp"]` allowing whitespace + smart quotes.
-    expect(source).toMatch(
-      /formats:\s*\[\s*["']image\/avif["']\s*,\s*["']image\/webp["']\s*\]/,
-    );
+    expect(source).toMatch(/formats:\s*\[\s*["']image\/avif["']\s*,\s*["']image\/webp["']\s*\]/);
   });
 
   it("trimmed the 3840 deviceSize entry (one fewer optimizer pass per image)", () => {

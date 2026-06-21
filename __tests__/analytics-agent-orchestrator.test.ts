@@ -96,8 +96,7 @@ describe("analytics-agent-orchestrator", () => {
 
   it("falls back to deterministic insights when Claude returns invalid JSON", async () => {
     callClaudeMock.mockResolvedValue("not json");
-    const { runAnalyticsAgentOrchestration } =
-      await import("@/lib/analytics-agent-orchestrator");
+    const { runAnalyticsAgentOrchestration } = await import("@/lib/analytics-agent-orchestrator");
 
     const result = await runAnalyticsAgentOrchestration({
       snapshot: {
@@ -156,8 +155,6 @@ describe("analytics-agent-orchestrator", () => {
     expect(result.preprocessed.failureRatePct).toBe(25);
     expect(result.report.executiveSummary).toContain("Processed 3 of 4 events");
     expect(result.connectorPayloads).toHaveLength(2);
-    expect(
-      result.connectorPayloads[0].summaryMetrics.topRevenueCategories[0],
-    ).toBe("checkout");
+    expect(result.connectorPayloads[0].summaryMetrics.topRevenueCategories[0]).toBe("checkout");
   });
 });

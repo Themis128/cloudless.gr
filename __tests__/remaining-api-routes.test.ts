@@ -16,16 +16,28 @@ vi.mock("@/lib/api-auth", () => ({
   requireAuth: (...a: unknown[]) => mockRequireAuth(...a),
 }));
 
-function adminOk() { mockRequireAdmin.mockResolvedValue({ ok: true, user: { sub: "a1" } }); }
-function adminFail() { mockRequireAdmin.mockResolvedValue({ ok: false, response: new Response(null, { status: 401 }) }); }
+function adminOk() {
+  mockRequireAdmin.mockResolvedValue({ ok: true, user: { sub: "a1" } });
+}
+function adminFail() {
+  mockRequireAdmin.mockResolvedValue({ ok: false, response: new Response(null, { status: 401 }) });
+}
 function req(url: string, method = "GET", body?: unknown) {
-  return new NextRequest(url, { method, ...(body !== undefined ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } } : {}) });
+  return new NextRequest(url, {
+    method,
+    ...(body !== undefined
+      ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }
+      : {}),
+  });
 }
 
 // ── /api/admin/esp32 ──────────────────────────────────────────────────────────
 
 describe("GET /api/admin/esp32", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -56,7 +68,10 @@ vi.mock("@/lib/notion-esp32", () => ({
   upsertEsp32DeviceInNotion: (...a: unknown[]) => mockUpsertEsp32DeviceInNotion(...a),
 }));
 describe("GET /api/admin/esp32/notion-sync", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -103,7 +118,8 @@ const mockGetStripeForPurchases = vi.fn();
 vi.mock("@/lib/stripe", () => ({
   listRecentCheckoutSessions: (...a: unknown[]) => mockListRecentCheckoutSessions(...a),
   getStripe: (...a: unknown[]) => mockGetStripeForPurchases(...a),
-  formatPrice: (amount: number, currency: string) => `${currency.toUpperCase()} ${(amount / 100).toFixed(2)}`,
+  formatPrice: (amount: number, currency: string) =>
+    `${currency.toUpperCase()} ${(amount / 100).toFixed(2)}`,
 }));
 
 class MockSlackClient {
@@ -124,7 +140,10 @@ vi.mock("@/lib/sentry", async (orig) => ({
 }));
 
 describe("GET /api/cron/slack-digest", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not authorized", async () => {
     mockIsCronAuthorized.mockResolvedValue(false);
@@ -155,7 +174,10 @@ vi.mock("@/lib/notion", async (orig) => ({
 }));
 
 describe("GET /api/notion-image", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 400 when id missing", async () => {
     const { GET } = await import("@/app/api/notion-image/route");
@@ -171,14 +193,18 @@ describe("GET /api/notion-image", () => {
 
   it("returns 400 for invalid type", async () => {
     const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012&type=invalid"));
+    const res = await GET(
+      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012&type=invalid")
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns 404 when no file URL found in block", async () => {
     mockNotionFetch.mockResolvedValue({ type: "paragraph", paragraph: {} });
     const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012"));
+    const res = await GET(
+      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012")
+    );
     expect(res.status).toBe(404);
   });
 
@@ -188,7 +214,9 @@ describe("GET /api/notion-image", () => {
       image: { file: { url: "https://evil.com/image.jpg" } },
     });
     const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012"));
+    const res = await GET(
+      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012")
+    );
     expect(res.status).toBe(403);
   });
 
@@ -204,7 +232,9 @@ describe("GET /api/notion-image", () => {
       })
     );
     const { GET } = await import("@/app/api/notion-image/route");
-    const res = await GET(req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012"));
+    const res = await GET(
+      req("http://localhost/api/notion-image?id=12345678-1234-1234-1234-123456789012")
+    );
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("image/jpeg");
   });
@@ -219,7 +249,10 @@ vi.mock("@/lib/integrations", () => ({
 }));
 
 describe("GET /api/user/purchases", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("returns 401 when not authenticated", async () => {
     mockRequireAuth.mockResolvedValue({ ok: false, response: new Response(null, { status: 401 }) });

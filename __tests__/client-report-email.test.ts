@@ -70,9 +70,9 @@ describe("client-report-email.buildReportHtml", () => {
     expect(html).toContain("Build");
     expect(html).toContain("Launch");
     // Status-specific emojis
-    expect(html).toContain("✅");  // completed
-    expect(html).toContain("🔧");  // in-progress
-    expect(html).toContain("⬜");  // pending
+    expect(html).toContain("✅"); // completed
+    expect(html).toContain("🔧"); // in-progress
+    expect(html).toContain("⬜"); // pending
   });
 
   it("filters out draft deliverables", () => {
@@ -102,7 +102,7 @@ describe("client-report-email.buildReportHtml", () => {
   it("omits the review-waiting line when no deliverables are in_review", () => {
     const html = buildReportHtml({
       ...SAMPLE,
-      deliverables: SAMPLE.deliverables?.filter(d => d.status !== "in_review"),
+      deliverables: SAMPLE.deliverables?.filter((d) => d.status !== "in_review"),
     });
     expect(html).not.toMatch(/waiting for your review/);
   });

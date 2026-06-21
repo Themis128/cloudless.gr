@@ -285,9 +285,9 @@ describe("postIdentifier helper", () => {
   });
 
   it("falls back to identifier when providerIdentifier is missing", () => {
-    expect(
-      postIdentifier({ integration: { id: "i", name: "n", identifier: "facebook" } })
-    ).toBe("facebook");
+    expect(postIdentifier({ integration: { id: "i", name: "n", identifier: "facebook" } })).toBe(
+      "facebook"
+    );
   });
 
   it("returns empty string when neither field is set", () => {
@@ -535,7 +535,13 @@ describe("getPostStats (throwing)", () => {
 
 describe("uploadFile (multipart)", () => {
   it("POSTs multipart/form-data with a `file` field and the API key header", async () => {
-    const uploaded = { id: "u1", name: "x.png", path: "https://cdn/u1.png", thumbnail: null, alt: null };
+    const uploaded = {
+      id: "u1",
+      name: "x.png",
+      path: "https://cdn/u1.png",
+      thumbnail: null,
+      alt: null,
+    };
     mockFetch.mockResolvedValueOnce(jsonResponse(uploaded));
     const blob = new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" });
     await expect(uploadFile(blob, "x.png")).resolves.toEqual(uploaded);
@@ -594,9 +600,9 @@ describe("verifyPostizWebhookSignature", () => {
       POSTIZ_WEBHOOK_SECRET: "exact-secret-value",
     });
     // Same length, different bytes — exercises the constant-time arm.
-    await expect(
-      verifyPostizWebhookSignature("body", null, "wrong-secret-value")
-    ).resolves.toBe(false);
+    await expect(verifyPostizWebhookSignature("body", null, "wrong-secret-value")).resolves.toBe(
+      false
+    );
     // Different length — exercises the length-prefilter.
     await expect(verifyPostizWebhookSignature("body", null, "short")).resolves.toBe(false);
   });

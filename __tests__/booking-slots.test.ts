@@ -22,10 +22,7 @@ describe("booking-slots", () => {
   describe("formatAthensSlot", () => {
     it("renders ISO start/end as `<date> <start>–<end> Athens`", () => {
       // 2026-08-12T07:00:00Z = 10:00 Athens (UTC+3, DST)
-      const out = formatAthensSlot(
-        "2026-08-12T07:00:00Z",
-        "2026-08-12T07:30:00Z",
-      );
+      const out = formatAthensSlot("2026-08-12T07:00:00Z", "2026-08-12T07:30:00Z");
       expect(out).toContain("Athens");
       expect(out).toContain("–");
       // The Athens hour for that UTC instant is 10 (DST). The label must
@@ -35,10 +32,7 @@ describe("booking-slots", () => {
     });
 
     it("does not include the timezone offset in the label", () => {
-      const out = formatAthensSlot(
-        "2026-08-12T07:00:00Z",
-        "2026-08-12T07:30:00Z",
-      );
+      const out = formatAthensSlot("2026-08-12T07:00:00Z", "2026-08-12T07:30:00Z");
       // We label "Athens" rather than "+03:00" so the user sees a city
       // name. A regression that re-introduces "+03" would break the UX.
       expect(out).not.toMatch(/\+0?3/);

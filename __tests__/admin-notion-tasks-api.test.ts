@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { resetIntegrationCache } from "@/lib/integrations";
 
-const { listTasksMock, createTaskMock, updateTaskStatusMock, getTaskSummaryMock } = vi.hoisted(() => ({
-  listTasksMock: vi.fn(),
-  createTaskMock: vi.fn(),
-  updateTaskStatusMock: vi.fn(),
-  getTaskSummaryMock: vi.fn(),
-}));
+const { listTasksMock, createTaskMock, updateTaskStatusMock, getTaskSummaryMock } = vi.hoisted(
+  () => ({
+    listTasksMock: vi.fn(),
+    createTaskMock: vi.fn(),
+    updateTaskStatusMock: vi.fn(),
+    getTaskSummaryMock: vi.fn(),
+  })
+);
 
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
@@ -34,7 +36,7 @@ function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
     email: "admin@cloudless.gr",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "test-client-id",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -48,7 +50,10 @@ function makeAdminToken(): string {
 function adminReq(url: string, init?: RequestInit): NextRequest {
   return new NextRequest(url, {
     ...init,
-    headers: { Authorization: `Bearer ${makeAdminToken()}`, ...(init?.headers as Record<string, string>) },
+    headers: {
+      Authorization: `Bearer ${makeAdminToken()}`,
+      ...(init?.headers as Record<string, string>),
+    },
   });
 }
 
@@ -83,7 +88,10 @@ describe("GET /api/admin/notion/tasks", () => {
   });
 
   it("returns task list", async () => {
-    listTasksMock.mockResolvedValueOnce([{ id: "t1", title: "Fix bug" }, { id: "t2", title: "Write docs" }]);
+    listTasksMock.mockResolvedValueOnce([
+      { id: "t1", title: "Fix bug" },
+      { id: "t2", title: "Write docs" },
+    ]);
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
     const res = await GET(adminReq(BASE));
     expect(res.status).toBe(200);
@@ -93,7 +101,7 @@ describe("GET /api/admin/notion/tasks", () => {
   });
 
   it("returns summary when ?summary=true", async () => {
-    getTaskSummaryMock.mockResolvedValueOnce({ "To Do": 3, "Done": 5 });
+    getTaskSummaryMock.mockResolvedValueOnce({ "To Do": 3, Done: 5 });
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
     const res = await GET(adminReq(`${BASE}?summary=true`));
     expect(res.status).toBe(200);
@@ -106,7 +114,11 @@ describe("GET /api/admin/notion/tasks", () => {
     listTasksMock.mockResolvedValueOnce([]);
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
     await GET(adminReq(`${BASE}?status=Done&project=proj1&assignee=alice`));
-    expect(listTasksMock).toHaveBeenCalledWith({ status: "Done", project: "proj1", assignee: "alice" });
+    expect(listTasksMock).toHaveBeenCalledWith({
+      status: "Done",
+      project: "proj1",
+      assignee: "alice",
+    });
   });
 });
 
@@ -126,32 +138,38 @@ describe("POST /api/admin/notion/tasks", () => {
 
   it("returns 400 when task is missing", async () => {
     const { POST } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await POST(adminReq(BASE, {
-      method: "POST",
-      body: JSON.stringify({}),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await POST(
+      adminReq(BASE, {
+        method: "POST",
+        body: JSON.stringify({}),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when task exceeds 500 characters", async () => {
     const { POST } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await POST(adminReq(BASE, {
-      method: "POST",
-      body: JSON.stringify({ task: "x".repeat(501) }),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await POST(
+      adminReq(BASE, {
+        method: "POST",
+        body: JSON.stringify({ task: "x".repeat(501) }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("creates a task and returns 201 with id", async () => {
     createTaskMock.mockResolvedValueOnce("new-task-id");
     const { POST } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await POST(adminReq(BASE, {
-      method: "POST",
-      body: JSON.stringify({ task: "Build feature X" }),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await POST(
+      adminReq(BASE, {
+        method: "POST",
+        body: JSON.stringify({ task: "Build feature X" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.id).toBe("new-task-id");
@@ -160,11 +178,13 @@ describe("POST /api/admin/notion/tasks", () => {
   it("returns 500 when createTask returns falsy", async () => {
     createTaskMock.mockResolvedValueOnce(null);
     const { POST } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await POST(adminReq(BASE, {
-      method: "POST",
-      body: JSON.stringify({ task: "Build feature X" }),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await POST(
+      adminReq(BASE, {
+        method: "POST",
+        body: JSON.stringify({ task: "Build feature X" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(500);
   });
 });
@@ -185,32 +205,38 @@ describe("PATCH /api/admin/notion/tasks", () => {
 
   it("returns 400 when pageId or status is missing", async () => {
     const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await PATCH(adminReq(BASE, {
-      method: "PATCH",
-      body: JSON.stringify({ pageId: "p1" }),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await PATCH(
+      adminReq(BASE, {
+        method: "PATCH",
+        body: JSON.stringify({ pageId: "p1" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for an invalid status value", async () => {
     const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await PATCH(adminReq(BASE, {
-      method: "PATCH",
-      body: JSON.stringify({ pageId: "p1", status: "InvalidStatus" }),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await PATCH(
+      adminReq(BASE, {
+        method: "PATCH",
+        body: JSON.stringify({ pageId: "p1", status: "InvalidStatus" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("updates task status successfully", async () => {
     updateTaskStatusMock.mockResolvedValueOnce(true);
     const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await PATCH(adminReq(BASE, {
-      method: "PATCH",
-      body: JSON.stringify({ pageId: "p1", status: "Done" }),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await PATCH(
+      adminReq(BASE, {
+        method: "PATCH",
+        body: JSON.stringify({ pageId: "p1", status: "Done" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);
@@ -219,11 +245,13 @@ describe("PATCH /api/admin/notion/tasks", () => {
   it("returns 500 when updateTaskStatus fails", async () => {
     updateTaskStatusMock.mockResolvedValueOnce(false);
     const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await PATCH(adminReq(BASE, {
-      method: "PATCH",
-      body: JSON.stringify({ pageId: "p1", status: "Done" }),
-      headers: { "Content-Type": "application/json" },
-    }));
+    const res = await PATCH(
+      adminReq(BASE, {
+        method: "PATCH",
+        body: JSON.stringify({ pageId: "p1", status: "Done" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     expect(res.status).toBe(500);
   });
 
@@ -232,11 +260,13 @@ describe("PATCH /api/admin/notion/tasks", () => {
     const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
     for (const status of validStatuses) {
       updateTaskStatusMock.mockResolvedValueOnce(true);
-      const res = await PATCH(adminReq(BASE, {
-        method: "PATCH",
-        body: JSON.stringify({ pageId: "p1", status }),
-        headers: { "Content-Type": "application/json" },
-      }));
+      const res = await PATCH(
+        adminReq(BASE, {
+          method: "PATCH",
+          body: JSON.stringify({ pageId: "p1", status }),
+          headers: { "Content-Type": "application/json" },
+        })
+      );
       expect(res.status).toBe(200);
     }
   });

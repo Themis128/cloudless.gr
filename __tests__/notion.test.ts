@@ -93,15 +93,11 @@ describe("notion", () => {
 
   describe("notionFetch", () => {
     it("rejects paths containing :// (SSRF guard)", async () => {
-      await expect(notionFetch("https://evil.example/x")).rejects.toThrow(
-        /invalid path/,
-      );
+      await expect(notionFetch("https://evil.example/x")).rejects.toThrow(/invalid path/);
     });
 
     it("rejects paths starting with //", async () => {
-      await expect(notionFetch("//evil.example/x")).rejects.toThrow(
-        /invalid path/,
-      );
+      await expect(notionFetch("//evil.example/x")).rejects.toThrow(/invalid path/);
     });
 
     it("returns JSON on 200", async () => {
@@ -155,24 +151,18 @@ describe("notion", () => {
     it("walks next_cursor until has_more=false", async () => {
       fetchMock
         .mockResolvedValueOnce(
-          jsonResp({ results: [{ id: 1 }], has_more: true, next_cursor: "c1" }),
+          jsonResp({ results: [{ id: 1 }], has_more: true, next_cursor: "c1" })
         )
-        .mockResolvedValueOnce(
-          jsonResp({ results: [{ id: 2 }], has_more: false }),
-        );
+        .mockResolvedValueOnce(jsonResp({ results: [{ id: 2 }], has_more: false }));
       const out = await notionFetchAll<{ id: number }>("/databases/x/query");
-      expect(out.map(o => o.id)).toEqual([1, 2]);
+      expect(out.map((o) => o.id)).toEqual([1, 2]);
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      const secondBody = JSON.parse(
-        (fetchMock.mock.calls[1][1] as { body: string }).body,
-      );
+      const secondBody = JSON.parse((fetchMock.mock.calls[1][1] as { body: string }).body);
       expect(secondBody.start_cursor).toBe("c1");
     });
 
     it("returns [] when first page has no results", async () => {
-      fetchMock.mockResolvedValueOnce(
-        jsonResp({ results: [], has_more: false }),
-      );
+      fetchMock.mockResolvedValueOnce(jsonResp({ results: [], has_more: false }));
       expect(await notionFetchAll("/x")).toEqual([]);
     });
   });
@@ -180,9 +170,7 @@ describe("notion", () => {
   describe("notionListAll (paginated GET)", () => {
     it("appends page_size + start_cursor to existing query string", async () => {
       fetchMock
-        .mockResolvedValueOnce(
-          jsonResp({ results: [1], has_more: true, next_cursor: "c1" }),
-        )
+        .mockResolvedValueOnce(jsonResp({ results: [1], has_more: true, next_cursor: "c1" }))
         .mockResolvedValueOnce(jsonResp({ results: [2], has_more: false }));
       const out = await notionListAll<number>("/blocks/b1/children?foo=bar");
       expect(out).toEqual([1, 2]);
@@ -210,14 +198,14 @@ describe("notion", () => {
               { id: "b2", type: "paragraph", has_children: false },
             ],
             has_more: false,
-          }),
+          })
         )
         // b1's children
         .mockResolvedValueOnce(
           jsonResp({
             results: [{ id: "b1a", type: "paragraph", has_children: false }],
             has_more: false,
-          }),
+          })
         );
       const out = await fetchBlocksDeep("p1");
       expect(out).toHaveLength(2);
@@ -254,18 +242,14 @@ describe("notion", () => {
     it("archivePage sets archived=true", async () => {
       fetchMock.mockResolvedValueOnce(jsonResp({}));
       await archivePage("p1");
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.archived).toBe(true);
     });
 
     it("restorePage sets archived=false", async () => {
       fetchMock.mockResolvedValueOnce(jsonResp({}));
       await restorePage("p1");
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.archived).toBe(false);
     });
 
@@ -292,11 +276,9 @@ describe("notion", () => {
       fetchMock.mockResolvedValueOnce(jsonResp({}));
       await appendBlocks(
         "p1",
-        Array.from({ length: 250 }, (_, i) => ({ id: i })),
+        Array.from({ length: 250 }, (_, i) => ({ id: i }))
       );
-      const body = JSON.parse(
-        (fetchMock.mock.calls[0][1] as { body: string }).body,
-      );
+      const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
       expect(body.children).toHaveLength(100);
     });
 
@@ -311,9 +293,7 @@ describe("notion", () => {
 
   describe("notionImageProxyUrl", () => {
     it("returns the local proxy URL with default type=block", () => {
-      expect(notionImageProxyUrl("abc")).toBe(
-        "/api/notion-image?id=abc&type=block",
-      );
+      expect(notionImageProxyUrl("abc")).toBe("/api/notion-image?id=abc&type=block");
     });
 
     it("supports type=cover", () => {
@@ -327,12 +307,9 @@ describe("notion", () => {
 
   describe("extractText", () => {
     it("joins plain_text fragments", () => {
-      expect(
-        extractText([
-          { plain_text: "Hello, " },
-          { plain_text: "world." },
-        ]),
-      ).toBe("Hello, world.");
+      expect(extractText([{ plain_text: "Hello, " }, { plain_text: "world." }])).toBe(
+        "Hello, world."
+      );
     });
 
     it("returns empty string for undefined", () => {
@@ -433,9 +410,7 @@ describe("notion", () => {
     });
 
     it("returns [] when no headings present", () => {
-      expect(
-        extractToc([{ id: "p1", type: "paragraph" } as never]),
-      ).toEqual([]);
+      expect(extractToc([{ id: "p1", type: "paragraph" } as never])).toEqual([]);
     });
   });
 

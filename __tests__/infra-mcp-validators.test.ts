@@ -14,25 +14,22 @@ import {
 } from "../tools/ssh-mcp/src/validators";
 
 describe("isValidSecretName", () => {
-  it.each([
-    "ANTHROPIC_API_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "X1",
-    "AI_GENERATE_SECRET",
-    "A_B_C_D",
-  ])("accepts %s", (name) => {
-    expect(isValidSecretName(name)).toBe(true);
-  });
+  it.each(["ANTHROPIC_API_KEY", "STRIPE_WEBHOOK_SECRET", "X1", "AI_GENERATE_SECRET", "A_B_C_D"])(
+    "accepts %s",
+    (name) => {
+      expect(isValidSecretName(name)).toBe(true);
+    }
+  );
 
   it.each([
-    "",            // empty
-    "lowercase",   // not uppercase
-    "1LEADING",    // starts with digit
-    "WITH SPACE",  // space
-    "WITH-DASH",   // dash
-    "WITH.DOT",    // dot
-    "_LEADING",    // underscore lead
-    "Mixed",       // mixed case
+    "", // empty
+    "lowercase", // not uppercase
+    "1LEADING", // starts with digit
+    "WITH SPACE", // space
+    "WITH-DASH", // dash
+    "WITH.DOT", // dot
+    "_LEADING", // underscore lead
+    "Mixed", // mixed case
   ])("rejects %s", (name) => {
     expect(isValidSecretName(name)).toBe(false);
   });
@@ -53,10 +50,10 @@ describe("isPlainBase64", () => {
   });
 
   it.each([
-    "abc def",         // whitespace inside
-    "abc\ndef",        // newline (`base64` without -w0)
-    "abc-def_ghi=",    // URL-safe base64 (not what `base64 -d` expects)
-    "abc#def",         // bogus char
+    "abc def", // whitespace inside
+    "abc\ndef", // newline (`base64` without -w0)
+    "abc-def_ghi=", // URL-safe base64 (not what `base64 -d` expects)
+    "abc#def", // bogus char
   ])("rejects malformed value %j", (val) => {
     expect(isPlainBase64(val)).toBe(false);
   });
@@ -73,13 +70,13 @@ describe("isClaudeBranch", () => {
   });
 
   it.each([
-    "main",                 // protected
-    "release/1.0",          // non-claude prefix
-    "claude",               // bare prefix
-    "claude/",              // empty topic
+    "main", // protected
+    "release/1.0", // non-claude prefix
+    "claude", // bare prefix
+    "claude/", // empty topic
     "claude/-leading-dash", // weird first char
-    "claude/with space",    // space in topic
-    "feature/x",            // wrong prefix
+    "claude/with space", // space in topic
+    "feature/x", // wrong prefix
   ])("rejects %s", (name) => {
     expect(isClaudeBranch(name)).toBe(false);
   });
@@ -87,14 +84,10 @@ describe("isClaudeBranch", () => {
 
 describe("resolveSsmName", () => {
   it("prefixes short names with /cloudless/production/", () => {
-    expect(resolveSsmName("AI_GENERATE_SECRET")).toBe(
-      "/cloudless/production/AI_GENERATE_SECRET",
-    );
+    expect(resolveSsmName("AI_GENERATE_SECRET")).toBe("/cloudless/production/AI_GENERATE_SECRET");
   });
 
   it("leaves absolute paths untouched", () => {
-    expect(resolveSsmName("/cloudless/staging/X")).toBe(
-      "/cloudless/staging/X",
-    );
+    expect(resolveSsmName("/cloudless/staging/X")).toBe("/cloudless/staging/X");
   });
 });

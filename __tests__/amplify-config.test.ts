@@ -29,7 +29,7 @@ describe("amplify-config", () => {
       mod.configureAmplifyWith({
         userPoolId: "us-east-1_xxxxx",
         userPoolClientId: "abc",
-      }),
+      })
     ).toBe(false);
     expect(mod.isAmplifyConfigured()).toBe(false);
   });
@@ -41,7 +41,7 @@ describe("amplify-config", () => {
       mod.configureAmplifyWith({
         userPoolId: "us-east-1_xxxxx",
         userPoolClientId: "abc",
-      }),
+      })
     ).toBe(true);
     expect(mod.isAmplifyConfigured()).toBe(true);
   });
@@ -53,7 +53,7 @@ describe("amplify-config", () => {
       mod.configureAmplifyWith({
         userPoolId: "us-east-1_a",
         userPoolClientId: "client-a",
-      }),
+      })
     ).toBe(true);
 
     // Removing the env var after first configure should NOT flip the
@@ -63,7 +63,7 @@ describe("amplify-config", () => {
       mod.configureAmplifyWith({
         userPoolId: "us-east-1_b",
         userPoolClientId: "client-b",
-      }),
+      })
     ).toBe(true);
     expect(mod.isAmplifyConfigured()).toBe(true);
   });

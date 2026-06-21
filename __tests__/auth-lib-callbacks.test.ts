@@ -30,7 +30,9 @@ vi.mock("next-auth", () => ({
 }));
 
 vi.mock("@/lib/session-token-store", () => ({
-  getTokens: vi.fn().mockResolvedValue({ idToken: "stored-id-token", refreshToken: "stored-refresh-token" }),
+  getTokens: vi
+    .fn()
+    .mockResolvedValue({ idToken: "stored-id-token", refreshToken: "stored-refresh-token" }),
   putTokens: vi.fn().mockResolvedValue(undefined),
   deleteTokens: vi.fn().mockResolvedValue(undefined),
 }));

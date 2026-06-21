@@ -101,7 +101,9 @@ describe("notion-case-studies.ts", () => {
 
     it("falls back to page.id as slug when Slug is empty", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
-        makeCaseStudyPage({ properties: { ...makeCaseStudyPage().properties, Slug: { rich_text: [] } } }),
+        makeCaseStudyPage({
+          properties: { ...makeCaseStudyPage().properties, Slug: { rich_text: [] } },
+        }),
       ]);
 
       const { getCaseStudies } = await import("@/lib/notion-case-studies");
@@ -138,7 +140,7 @@ describe("notion-case-studies.ts", () => {
       expect(result).toEqual([]);
       expect(errorSpy).toHaveBeenCalledWith(
         "[Notion Case Studies] Failed to fetch:",
-        expect.any(Error),
+        expect.any(Error)
       );
     });
 
@@ -159,7 +161,14 @@ describe("notion-case-studies.ts", () => {
     it("returns only featured studies", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
         makeCaseStudyPage(),
-        makeCaseStudyPage({ id: "cs-2", properties: { ...makeCaseStudyPage().properties, Featured: { checkbox: false }, Slug: { rich_text: [{ plain_text: "cs-2" }] } } }),
+        makeCaseStudyPage({
+          id: "cs-2",
+          properties: {
+            ...makeCaseStudyPage().properties,
+            Featured: { checkbox: false },
+            Slug: { rich_text: [{ plain_text: "cs-2" }] },
+          },
+        }),
       ]);
 
       const { getFeaturedCaseStudies } = await import("@/lib/notion-case-studies");
@@ -221,7 +230,13 @@ describe("notion-case-studies.ts", () => {
     it("returns slugs for all case studies", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
         makeCaseStudyPage(),
-        makeCaseStudyPage({ id: "cs-2", properties: { ...makeCaseStudyPage().properties, Slug: { rich_text: [{ plain_text: "retail-serverless" }] } } }),
+        makeCaseStudyPage({
+          id: "cs-2",
+          properties: {
+            ...makeCaseStudyPage().properties,
+            Slug: { rich_text: [{ plain_text: "retail-serverless" }] },
+          },
+        }),
       ]);
 
       const { getAllCaseStudySlugs } = await import("@/lib/notion-case-studies");
@@ -232,7 +247,9 @@ describe("notion-case-studies.ts", () => {
 
     it("filters out empty slugs", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
-        makeCaseStudyPage({ properties: { ...makeCaseStudyPage().properties, Slug: { rich_text: [] } } }),
+        makeCaseStudyPage({
+          properties: { ...makeCaseStudyPage().properties, Slug: { rich_text: [] } },
+        }),
       ]);
 
       const { getAllCaseStudySlugs } = await import("@/lib/notion-case-studies");

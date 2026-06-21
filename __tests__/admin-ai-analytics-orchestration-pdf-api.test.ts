@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getConfigMock, getSnapshotMock, runOrchestrationMock } = vi.hoisted(
-  () => ({
-    getConfigMock: vi.fn(),
-    getSnapshotMock: vi.fn(),
-    runOrchestrationMock: vi.fn(),
-  }),
-);
+const { getConfigMock, getSnapshotMock, runOrchestrationMock } = vi.hoisted(() => ({
+  getConfigMock: vi.fn(),
+  getSnapshotMock: vi.fn(),
+  runOrchestrationMock: vi.fn(),
+}));
 
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
@@ -16,11 +14,8 @@ vi.mock("jose", async () => {
     jwtVerify: async (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length !== 3) throw new Error("Invalid JWT structure");
-      const payload = JSON.parse(
-        Buffer.from(parts[1], "base64").toString("utf-8"),
-      );
-      if (payload.exp && Date.now() >= payload.exp * 1000)
-        throw new Error("JWT expired");
+      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+      if (payload.exp && Date.now() >= payload.exp * 1000) throw new Error("JWT expired");
       return { payload, protectedHeader: { alg: "RS256" } };
     },
   };
@@ -42,31 +37,26 @@ function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
     email: "admin@cloudless.gr",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "test-client-id",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
     exp: Math.floor(Date.now() / 1000) + 3600,
   };
-  const header = Buffer.from(
-    JSON.stringify({ alg: "RS256", typ: "JWT" }),
-  ).toString("base64url");
+  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${header}.${body}.fake-sig`;
 }
 
 function adminReq(body?: Record<string, unknown>): NextRequest {
-  return new NextRequest(
-    "http://localhost/api/admin/ai/analytics-orchestration/pdf",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${makeAdminToken()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body ?? {}),
+  return new NextRequest("http://localhost/api/admin/ai/analytics-orchestration/pdf", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${makeAdminToken()}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(body ?? {}),
+  });
 }
 
 describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
@@ -132,12 +122,8 @@ describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
             revenueSharePct: 100,
           },
         ],
-        topFailureDays: [
-          { day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 },
-        ],
-        strongestRevenueDays: [
-          { day: "2026-05-02", revenueMinor: 2500, events: 2 },
-        ],
+        topFailureDays: [{ day: "2026-05-02", failed: 1, events: 2, failureRatePct: 50 }],
+        strongestRevenueDays: [{ day: "2026-05-02", revenueMinor: 2500, events: 2 }],
         momentum: {
           comparisonWindowDays: 2,
           recentRevenueMinor: 4500,
@@ -189,13 +175,9 @@ describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
             revenueDeltaPct: null,
             failureRateDeltaPct: null,
             topRevenueCategories: ["checkout"],
-            dataQualityNotes: [
-              "Sample size is sparse for the selected window.",
-            ],
+            dataQualityNotes: ["Sample size is sparse for the selected window."],
           },
-          chartRecommendations: [
-            "Line chart: daily revenue and failed events trend",
-          ],
+          chartRecommendations: ["Line chart: daily revenue and failed events trend"],
           serviceHints: ["Use SPICE ingestion for daily snapshots."],
         },
       ],
@@ -203,16 +185,13 @@ describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
   });
 
   it("returns a PDF download", async () => {
-    const { POST } =
-      await import("@/app/api/admin/ai/analytics-orchestration/pdf/route");
-    const response = await POST(
-      adminReq({ reportTitle: "Executive Stripe Report" }),
-    );
+    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/pdf/route");
+    const response = await POST(adminReq({ reportTitle: "Executive Stripe Report" }));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("Content-Disposition")).toContain(
-      "analytics-report-2026-05-03.pdf",
+      "analytics-report-2026-05-03.pdf"
     );
 
     const body = new Uint8Array(await response.arrayBuffer());
@@ -220,11 +199,8 @@ describe("POST /api/admin/ai/analytics-orchestration/pdf", () => {
   });
 
   it("returns 400 for invalid input", async () => {
-    const { POST } =
-      await import("@/app/api/admin/ai/analytics-orchestration/pdf/route");
-    const response = await POST(
-      adminReq({ reportTitle: "   ", connectors: [] }),
-    );
+    const { POST } = await import("@/app/api/admin/ai/analytics-orchestration/pdf/route");
+    const response = await POST(adminReq({ reportTitle: "   ", connectors: [] }));
     const body = await response.json();
 
     expect(response.status).toBe(400);

@@ -58,7 +58,7 @@ describe("slack-workspace.ts", () => {
 
       expect(mockFetch).toHaveBeenCalledWith(
         "https://slack.com/api/auth.test",
-        expect.objectContaining({ method: "POST" }),
+        expect.objectContaining({ method: "POST" })
       );
     });
 
@@ -106,7 +106,7 @@ describe("slack-workspace.ts", () => {
             ...TEAM_INFO_OK.team,
             icon: { image_default: true },
           },
-        }),
+        })
       );
 
       const info = await getWorkspaceInfo("xoxb-test");
@@ -126,8 +126,8 @@ describe("slack-workspace.ts", () => {
       const { getSlackBrandingAudit } = await import("@/lib/slack-workspace");
 
       mockFetch
-        .mockResolvedValueOnce(jsonResponse(AUTH_TEST_OK))    // auth.test
-        .mockResolvedValueOnce(jsonResponse(TEAM_INFO_OK));   // team.info
+        .mockResolvedValueOnce(jsonResponse(AUTH_TEST_OK)) // auth.test
+        .mockResolvedValueOnce(jsonResponse(TEAM_INFO_OK)); // team.info
 
       const audit = await getSlackBrandingAudit("xoxb-test");
       expect(audit.bot.team).toBe("Cloudless");

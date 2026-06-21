@@ -23,9 +23,15 @@ function slackErr(error: string) {
   };
 }
 
-function makeChannel(overrides: Partial<{
-  id: string; name: string; is_private: boolean; is_member: boolean; is_archived: boolean;
-}> = {}) {
+function makeChannel(
+  overrides: Partial<{
+    id: string;
+    name: string;
+    is_private: boolean;
+    is_member: boolean;
+    is_archived: boolean;
+  }> = {}
+) {
   return {
     id: "C001",
     name: "general",
@@ -87,7 +93,7 @@ describe("slack-admin.ts", () => {
       const { createChannel } = await import("@/lib/slack-admin");
 
       mockFetch.mockResolvedValueOnce(
-        slackOk({ channel: makeChannel({ id: "C123", name: "bookings" }) }),
+        slackOk({ channel: makeChannel({ id: "C123", name: "bookings" }) })
       );
 
       const ch = await createChannel("bookings", "xoxb-test");
@@ -162,7 +168,9 @@ describe("slack-admin.ts", () => {
     it("throws on invite error", async () => {
       const { inviteToChannel } = await import("@/lib/slack-admin");
       mockFetch.mockResolvedValueOnce(slackErr("cant_invite_self"));
-      await expect(inviteToChannel("C001", ["U001"], "xoxb-test")).rejects.toThrow("cant_invite_self");
+      await expect(inviteToChannel("C001", ["U001"], "xoxb-test")).rejects.toThrow(
+        "cant_invite_self"
+      );
     });
   });
 
@@ -227,12 +235,21 @@ describe("slack-admin.ts", () => {
       mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
         const method = (url as string).split("/").pop()?.split("?")[0];
         if (method === "conversations.list") {
-          return { ok: true, json: async () => ({ ok: true, channels: [], response_metadata: { next_cursor: "" } }) };
+          return {
+            ok: true,
+            json: async () => ({ ok: true, channels: [], response_metadata: { next_cursor: "" } }),
+          };
         }
         if (method === "conversations.create") {
           const name = channelKeys[Math.floor(channelIdx / 2)];
           channelIdx++;
-          return { ok: true, json: async () => ({ ok: true, channel: makeChannel({ id: `C00${channelIdx}`, name }) }) };
+          return {
+            ok: true,
+            json: async () => ({
+              ok: true,
+              channel: makeChannel({ id: `C00${channelIdx}`, name }),
+            }),
+          };
         }
         // setTopic
         channelIdx++;

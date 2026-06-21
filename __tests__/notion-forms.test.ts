@@ -51,7 +51,7 @@ describe("notion-forms.ts", () => {
       expect(result).toBe("new-page-id");
       expect(mockNotionFetch).toHaveBeenCalledWith(
         "/pages",
-        expect.objectContaining({ method: "POST" }),
+        expect.objectContaining({ method: "POST" })
       );
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
@@ -68,7 +68,7 @@ describe("notion-forms.ts", () => {
           name: "Test",
           email: TEST_EMAIL,
           message: "Test message",
-        }),
+        })
       ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
     });
 
@@ -146,7 +146,7 @@ describe("notion-forms.ts", () => {
       expect(result).toBe(true);
       expect(mockNotionFetch).toHaveBeenCalledWith(
         "/pages/page-123",
-        expect.objectContaining({ method: "PATCH" }),
+        expect.objectContaining({ method: "PATCH" })
       );
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
@@ -163,9 +163,9 @@ describe("notion-forms.ts", () => {
 
     it("throws when not configured (no API key)", async () => {
       vi.stubEnv(ENV_NOTION_API_KEY, "");
-      await expect(
-        updateSubmissionStatus(PAGE_123, "Done"),
-      ).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(updateSubmissionStatus(PAGE_123, "Done")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
       expect(mockNotionFetch).not.toHaveBeenCalled();
     });
   });
@@ -224,7 +224,9 @@ describe("notion-forms.ts", () => {
 
       const body = JSON.parse(mockNotionFetch.mock.calls[0][1].body);
       expect(body.properties[SUBMITTED_AT].date.start).toBeDefined();
-      expect(new Date(body.properties[SUBMITTED_AT].date.start).toString()).not.toBe("Invalid Date");
+      expect(new Date(body.properties[SUBMITTED_AT].date.start).toString()).not.toBe(
+        "Invalid Date"
+      );
     });
   });
 
@@ -336,9 +338,7 @@ describe("notion-forms.ts", () => {
 
     it("throws when not configured", async () => {
       vi.stubEnv(ENV_NOTION_API_KEY, "");
-      await expect(listSubmissions()).rejects.toBeInstanceOf(
-        IntegrationNotConfiguredError,
-      );
+      await expect(listSubmissions()).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
       expect(mockNotionFetchAll).not.toHaveBeenCalled();
     });
   });

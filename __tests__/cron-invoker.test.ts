@@ -64,9 +64,7 @@ describe("cron-invoker handler", () => {
   it("throws when SSM returns no secret value", async () => {
     sendMock.mockResolvedValueOnce({ Parameter: { Value: "" } });
     const handler = await loadHandler();
-    await expect(handler()).rejects.toThrow(
-      "CRON_SECRET not found at /test/prefix/CRON_SECRET",
-    );
+    await expect(handler()).rejects.toThrow("CRON_SECRET not found at /test/prefix/CRON_SECRET");
   });
 
   it("calls the route with the SSM secret and returns the parsed body", async () => {
@@ -120,9 +118,7 @@ describe("cron-invoker handler", () => {
       text: () => Promise.resolve(longBody),
     });
     const handler = await loadHandler();
-    await expect(handler()).rejects.toThrow(
-      /Cron \/api\/cron\/foo responded 503: x{200}$/,
-    );
+    await expect(handler()).rejects.toThrow(/Cron \/api\/cron\/foo responded 503: x{200}$/);
   });
 
   it("returns a null payload when the response body is not JSON", async () => {

@@ -15,8 +15,12 @@ vi.mock("@/lib/rate-limit", () => ({
 // Mock SES
 const mockSend = vi.fn().mockResolvedValue({});
 vi.mock("@aws-sdk/client-sesv2", () => ({
-  SESv2Client: class { send = mockSend; },
-  SendEmailCommand: class { constructor(public input: unknown) {} },
+  SESv2Client: class {
+    send = mockSend;
+  },
+  SendEmailCommand: class {
+    constructor(public input: unknown) {}
+  },
 }));
 
 // Mock Slack

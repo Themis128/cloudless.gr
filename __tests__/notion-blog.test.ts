@@ -84,7 +84,7 @@ describe("notion-blog.ts", () => {
         expect.objectContaining({
           filter: { property: "Published", checkbox: { equals: true } },
           sorts: [{ property: "Date", direction: "descending" }],
-        }),
+        })
       );
     });
 
@@ -225,7 +225,13 @@ describe("notion-blog.ts", () => {
     it("returns array of slugs", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
         makePage(),
-        makePage({ id: "page-2", properties: { ...makePage().properties, Slug: { rich_text: [{ plain_text: "second-post" }] } } }),
+        makePage({
+          id: "page-2",
+          properties: {
+            ...makePage().properties,
+            Slug: { rich_text: [{ plain_text: "second-post" }] },
+          },
+        }),
       ]);
 
       const { getAllSlugs } = await import("@/lib/notion-blog");
@@ -247,8 +253,14 @@ describe("notion-blog.ts", () => {
     it("returns unique categories", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
         makePage(),
-        makePage({ id: "p2", properties: { ...makePage().properties, Category: { select: { name: "DevOps" } } } }),
-        makePage({ id: "p3", properties: { ...makePage().properties, Category: { select: { name: "Cloud" } } } }),
+        makePage({
+          id: "p2",
+          properties: { ...makePage().properties, Category: { select: { name: "DevOps" } } },
+        }),
+        makePage({
+          id: "p3",
+          properties: { ...makePage().properties, Category: { select: { name: "Cloud" } } },
+        }),
       ]);
 
       const { getCategories } = await import("@/lib/notion-blog");

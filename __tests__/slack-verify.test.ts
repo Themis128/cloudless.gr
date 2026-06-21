@@ -53,9 +53,7 @@ describe("slack-verify.verifySlackRequest", () => {
     process.env.SLACK_SIGNING_SECRET = "";
     const { verifySlackRequest } = await import("@/lib/slack-verify");
     const ts = Math.floor(Date.now() / 1000).toString();
-    const r = await verifySlackRequest(
-      buildRequest({ body: "{}", timestamp: ts }),
-    );
+    const r = await verifySlackRequest(buildRequest({ body: "{}", timestamp: ts }));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/SLACK_SIGNING_SECRET/);
   });
@@ -64,9 +62,7 @@ describe("slack-verify.verifySlackRequest", () => {
     getSlackConfigAsyncMock.mockResolvedValueOnce({ SLACK_SIGNING_SECRET: "" });
     const { verifySlackRequest } = await import("@/lib/slack-verify");
     const ts = Math.floor(Date.now() / 1000).toString();
-    const r = await verifySlackRequest(
-      buildRequest({ body: "{}", timestamp: ts }),
-    );
+    const r = await verifySlackRequest(buildRequest({ body: "{}", timestamp: ts }));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/SLACK_SIGNING_SECRET/);
   });
@@ -75,7 +71,7 @@ describe("slack-verify.verifySlackRequest", () => {
     const { verifySlackRequest } = await import("@/lib/slack-verify");
     const ts = Math.floor(Date.now() / 1000).toString();
     const r = await verifySlackRequest(
-      buildRequest({ body: "{}", timestamp: ts, omitTimestamp: true }),
+      buildRequest({ body: "{}", timestamp: ts, omitTimestamp: true })
     );
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/timestamp/i);
@@ -85,7 +81,7 @@ describe("slack-verify.verifySlackRequest", () => {
     const { verifySlackRequest } = await import("@/lib/slack-verify");
     const ts = Math.floor(Date.now() / 1000).toString();
     const r = await verifySlackRequest(
-      buildRequest({ body: "{}", timestamp: ts, omitSignature: true }),
+      buildRequest({ body: "{}", timestamp: ts, omitSignature: true })
     );
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/signature/i);
@@ -95,9 +91,7 @@ describe("slack-verify.verifySlackRequest", () => {
     const { verifySlackRequest } = await import("@/lib/slack-verify");
     // 10 minutes ago — past the MAX_AGE_SECONDS window.
     const ts = (Math.floor(Date.now() / 1000) - 600).toString();
-    const r = await verifySlackRequest(
-      buildRequest({ body: "{}", timestamp: ts }),
-    );
+    const r = await verifySlackRequest(buildRequest({ body: "{}", timestamp: ts }));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/timestamp.*too old/i);
   });
@@ -111,7 +105,7 @@ describe("slack-verify.verifySlackRequest", () => {
         body,
         timestamp: ts,
         signature: "v0=" + "f".repeat(64),
-      }),
+      })
     );
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/signature mismatch|comparison failed/i);

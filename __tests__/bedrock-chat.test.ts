@@ -45,9 +45,7 @@ describe("bedrock-chat.runBedrockChatLoop", () => {
         },
       },
     });
-    const r = await runBedrockChatLoop("You are helpful.", [
-      { role: "user", content: "hi" },
-    ]);
+    const r = await runBedrockChatLoop("You are helpful.", [{ role: "user", content: "hi" }]);
     expect(r).toBe("Hello, world.");
   });
 
@@ -98,9 +96,7 @@ describe("bedrock-chat.runBedrockChatLoop", () => {
         stopReason: "tool_use",
         output: {
           message: {
-            content: [
-              { toolUse: { toolUseId: "tu-2", name: "book_slot", input: {} } },
-            ],
+            content: [{ toolUse: { toolUseId: "tu-2", name: "book_slot", input: {} } }],
           },
         },
       })
@@ -152,8 +148,8 @@ describe("bedrock-chat.runBedrockChatLoop", () => {
 
   it("propagates Bedrock API errors to the caller", async () => {
     mockBedrockSend.mockRejectedValueOnce(new Error("ThrottlingException"));
-    await expect(
-      runBedrockChatLoop("s", [{ role: "user", content: "x" }]),
-    ).rejects.toThrow(/ThrottlingException/);
+    await expect(runBedrockChatLoop("s", [{ role: "user", content: "x" }])).rejects.toThrow(
+      /ThrottlingException/
+    );
   });
 });

@@ -24,7 +24,10 @@ vi.mock("stripe", () => {
 });
 
 describe("stripe.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   describe("getStripe", () => {
     it("returns null when STRIPE_SECRET_KEY is not set", async () => {
@@ -54,18 +57,20 @@ describe("stripe.ts", () => {
     it("returns mapped orders and hasMore from Stripe", async () => {
       mockGetConfig.mockResolvedValue({ STRIPE_SECRET_KEY: "sk_test_123" });
       mockCheckoutSessionsList.mockResolvedValue({
-        data: [{
-          id: "cs_1",
-          payment_status: "paid",
-          amount_total: 4900,
-          currency: "eur",
-          customer_email: "a@test.com",
-          customer_details: null,
-          created: 1700000000,
-          status: "complete",
-          mode: "payment",
-          line_items: { data: [{ description: "Product A", quantity: 1, amount_total: 4900 }] },
-        }],
+        data: [
+          {
+            id: "cs_1",
+            payment_status: "paid",
+            amount_total: 4900,
+            currency: "eur",
+            customer_email: "a@test.com",
+            customer_details: null,
+            created: 1700000000,
+            status: "complete",
+            mode: "payment",
+            line_items: { data: [{ description: "Product A", quantity: 1, amount_total: 4900 }] },
+          },
+        ],
         has_more: false,
       });
       const { listRecentCheckoutSessions } = await import("@/lib/stripe");

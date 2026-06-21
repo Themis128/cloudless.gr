@@ -10,9 +10,7 @@ import {
 
 describe("resolvePivotLabel", () => {
   it("resolves a known industry URN to its human label", () => {
-    expect(resolvePivotLabel("MEMBER_INDUSTRY", "urn:li:industry:4")).toBe(
-      "Computer Software"
-    );
+    expect(resolvePivotLabel("MEMBER_INDUSTRY", "urn:li:industry:4")).toBe("Computer Software");
     expect(resolvePivotLabel("MEMBER_INDUSTRY", "urn:li:industry:96")).toBe(
       "Information Technology & Services"
     );
@@ -23,9 +21,7 @@ describe("resolvePivotLabel", () => {
   });
 
   it("falls back to `Industry #N` for unknown industry ids (never empty)", () => {
-    expect(resolvePivotLabel("MEMBER_INDUSTRY", "urn:li:industry:99999")).toBe(
-      "Industry #99999"
-    );
+    expect(resolvePivotLabel("MEMBER_INDUSTRY", "urn:li:industry:99999")).toBe("Industry #99999");
   });
 
   it("resolves the full 10-bucket seniority axis", () => {
@@ -35,36 +31,24 @@ describe("resolvePivotLabel", () => {
   });
 
   it("falls back to `Seniority #N` for unknown seniorities", () => {
-    expect(resolvePivotLabel("MEMBER_SENIORITY", "urn:li:seniority:42")).toBe(
-      "Seniority #42"
-    );
+    expect(resolvePivotLabel("MEMBER_SENIORITY", "urn:li:seniority:42")).toBe("Seniority #42");
   });
 
   it("resolves company size in both the SIZE_* enum form and the letter form", () => {
     // SIZE_* enum (returned by the Marketing API)
     expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "SIZE_2_TO_10")).toBe("2–10");
-    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "SIZE_10001_OR_MORE")).toBe(
-      "10,001+"
-    );
+    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "SIZE_10001_OR_MORE")).toBe("10,001+");
     // Letter-coded URN form
-    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "urn:li:companySize:C")).toBe(
-      "11–50"
-    );
-    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "urn:li:companySize:I")).toBe(
-      "10,001+"
-    );
+    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "urn:li:companySize:C")).toBe("11–50");
+    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "urn:li:companySize:I")).toBe("10,001+");
   });
 
   it("falls back to `Size <code>` for unrecognised company-size codes", () => {
-    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "urn:li:companySize:Z")).toBe(
-      "Size Z"
-    );
+    expect(resolvePivotLabel("MEMBER_COMPANY_SIZE", "urn:li:companySize:Z")).toBe("Size Z");
   });
 
   it("returns `Title #N` for job titles (lookup table not yet shipped)", () => {
-    expect(resolvePivotLabel("MEMBER_JOB_TITLE", "urn:li:title:21")).toBe(
-      "Title #21"
-    );
+    expect(resolvePivotLabel("MEMBER_JOB_TITLE", "urn:li:title:21")).toBe("Title #21");
   });
 
   it("returns 'unknown' for an empty URN tail (never empty string)", () => {

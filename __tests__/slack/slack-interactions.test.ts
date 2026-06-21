@@ -9,7 +9,7 @@ const mockVerify = vi.fn();
 vi.mock("@/lib/slack-verify", () => ({
   verifySlackRequest: (...args: unknown[]) => mockVerify(...args),
   unauthorizedSlack: vi.fn((_reason: string) =>
-    Response.json({ error: "Unauthorized" }, { status: 401 }),
+    Response.json({ error: "Unauthorized" }, { status: 401 })
   ),
 }));
 
@@ -58,7 +58,9 @@ describe("POST /api/slack/interactions", () => {
 
   it("returns 401 when signature verification fails", async () => {
     verifyFail();
-    const response = await POST(makeRequest({ type: "block_actions", user: baseUser, actions: [] }));
+    const response = await POST(
+      makeRequest({ type: "block_actions", user: baseUser, actions: [] })
+    );
     expect(response.status).toBe(401);
   });
 

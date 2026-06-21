@@ -26,7 +26,10 @@ vi.mock("@/lib/integrations", () => ({
 }));
 
 describe("notion-esp32.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   describe("isEsp32NotionConfigured", () => {
     it("returns false when devicesDbId missing", async () => {
@@ -74,7 +77,16 @@ describe("notion-esp32.ts", () => {
       delete process.env.NOTION_ESP32_DEVICES_DB_ID;
       mockGetIntegrationsAsync.mockResolvedValue({});
       const { upsertEsp32DeviceInNotion } = await import("@/lib/notion-esp32");
-      const result = await upsertEsp32DeviceInNotion({ ip: "192.168.1.1", rssi: -60, firmware_ver: "1.0", uptime_s: 3600, free_ram_bytes: 50000, last_heartbeat: new Date().toISOString(), device_id: "esp32-01", stale: false });
+      const result = await upsertEsp32DeviceInNotion({
+        ip: "192.168.1.1",
+        rssi: -60,
+        firmware_ver: "1.0",
+        uptime_s: 3600,
+        free_ram_bytes: 50000,
+        last_heartbeat: new Date().toISOString(),
+        device_id: "esp32-01",
+        stale: false,
+      });
       expect(result).toBeNull();
     });
   });
@@ -83,8 +95,14 @@ describe("notion-esp32.ts", () => {
 // ── store-products.ts ─────────────────────────────────────────────────────────
 
 describe("store-products.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); vi.stubEnv("STRIPE_SECRET_KEY", ""); });
-  afterEach(() => { vi.unstubAllEnvs(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    vi.stubEnv("STRIPE_SECRET_KEY", "");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
 
   it("getProductById returns undefined for unknown id", async () => {
     const { getProductById } = await import("@/lib/store-products");
@@ -100,10 +118,10 @@ describe("store-products.ts", () => {
 
   it("getProductsByCategory returns matching products", async () => {
     const { getProductsByCategory, defaultProducts } = await import("@/lib/store-products");
-    const digital = defaultProducts.filter(p => p.category === "digital");
+    const digital = defaultProducts.filter((p) => p.category === "digital");
     const result = getProductsByCategory("digital");
     expect(result.length).toBe(digital.length);
-    expect(result.every(p => p.category === "digital")).toBe(true);
+    expect(result.every((p) => p.category === "digital")).toBe(true);
   });
 
   it("getProductsByCategory returns empty for unknown category", async () => {
@@ -142,13 +160,20 @@ describe("store-products.ts", () => {
 // ── ssm-config.ts (additional branches) ──────────────────────────────────────
 
 describe("ssm-config.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("getConfig falls back to env vars when SSM keys unset", async () => {
     // With no AWS creds and no SSM prefix override, getConfig should fall back
     // to env vars. We stub the SSM client to throw so env fallback is exercised.
     vi.doMock("@aws-sdk/client-ssm", () => ({
-      SSMClient: class { send() { throw new Error("no credentials"); } },
+      SSMClient: class {
+        send() {
+          throw new Error("no credentials");
+        }
+      },
       GetParametersByPathCommand: class {},
     }));
     process.env.NOTION_API_KEY = "test-notion-key";
@@ -185,7 +210,9 @@ describe("ssm-config.ts — SSM fetch path", () => {
     vi.unstubAllEnvs();
   });
 
-  function stubSsm(pages: Array<{ Parameters?: Array<{ Name: string; Value: string }>; NextToken?: string }>) {
+  function stubSsm(
+    pages: Array<{ Parameters?: Array<{ Name: string; Value: string }>; NextToken?: string }>
+  ) {
     let call = 0;
     const send = vi.fn(async () => pages[Math.min(call++, pages.length - 1)]);
     vi.doMock("@aws-sdk/client-ssm", () => ({
@@ -247,7 +274,10 @@ describe("ssm-config.ts — SSM fetch path", () => {
         Parameters: [
           { Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk" },
           { Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "wh" },
-          { Name: "/cloudless/production/GOOGLE_PRIVATE_KEY", Value: String.raw`-----BEGIN-----\nLINE2\n-----END-----` },
+          {
+            Name: "/cloudless/production/GOOGLE_PRIVATE_KEY",
+            Value: String.raw`-----BEGIN-----\nLINE2\n-----END-----`,
+          },
         ],
       },
     ]);
@@ -276,16 +306,22 @@ describe("ssm-config.ts — SSM fetch path", () => {
     const send = vi.fn(async () => {
       call += 1;
       if (call === 1) {
-        return { Parameters: [
-          { Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk_cached" },
-          { Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "wh_cached" },
-        ] };
+        return {
+          Parameters: [
+            { Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk_cached" },
+            { Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "wh_cached" },
+          ],
+        };
       }
       throw new Error("transient SSM outage");
     });
     vi.doMock("@aws-sdk/client-ssm", () => ({
-      SSMClient: class { send = send; },
-      GetParametersByPathCommand: class { constructor(public input: unknown) {} },
+      SSMClient: class {
+        send = send;
+      },
+      GetParametersByPathCommand: class {
+        constructor(public input: unknown) {}
+      },
     }));
     const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
     resetSsmCache();
@@ -297,7 +333,10 @@ describe("ssm-config.ts — SSM fetch path", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const second = await getConfig();
     expect(second.STRIPE_SECRET_KEY).toBe("sk_cached"); // stale cache served
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("serving stale config"), expect.anything());
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("serving stale config"),
+      expect.anything()
+    );
     warn.mockRestore();
     vi.useRealTimers();
   });
@@ -323,7 +362,10 @@ vi.mock("@/lib/session-token-store", () => ({
 }));
 
 describe("auth.ts", () => {
-  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
 
   it("exports handlers, signIn, signOut, auth", async () => {
     const mod = await import("@/lib/auth");
@@ -336,14 +378,15 @@ describe("auth.ts", () => {
 
 // ── stripe-transactions.ts ────────────────────────────────────────────────────
 
-
 describe("stripe-transactions.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env.STRIPE_TRANSACTIONS_TABLE = "test-stripe-events";
   });
-  afterEach(() => { delete process.env.STRIPE_TRANSACTIONS_TABLE; });
+  afterEach(() => {
+    delete process.env.STRIPE_TRANSACTIONS_TABLE;
+  });
 
   describe("resolveDynamoEndpoint", () => {
     it("returns undefined when DYNAMODB_ENDPOINT not set", async () => {
@@ -398,7 +441,12 @@ describe("stripe-transactions.ts", () => {
       delete process.env.STRIPE_TRANSACTIONS_TABLE;
       const { persistStripeEvent } = await import("@/lib/stripe-transactions");
       await expect(
-        persistStripeEvent({ id: "evt_1", type: "checkout.session.completed", data: { object: {} }, created: 1700000000 } as never)
+        persistStripeEvent({
+          id: "evt_1",
+          type: "checkout.session.completed",
+          data: { object: {} },
+          created: 1700000000,
+        } as never)
       ).rejects.toThrow(/STRIPE_TRANSACTIONS_TABLE is not configured/);
     });
 
@@ -408,7 +456,12 @@ describe("stripe-transactions.ts", () => {
       // DynamoDB stub has no send method → will throw; verify it at least
       // gets past the table name check and fails on the client, not config.
       await expect(
-        persistStripeEvent({ id: "evt_1", type: "checkout.session.completed", data: { object: {} }, created: 1700000000 } as never)
+        persistStripeEvent({
+          id: "evt_1",
+          type: "checkout.session.completed",
+          data: { object: {} },
+          created: 1700000000,
+        } as never)
       ).rejects.toThrow();
     });
   });

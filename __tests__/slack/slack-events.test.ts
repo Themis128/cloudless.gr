@@ -13,7 +13,6 @@ vi.mock("@/lib/slack-verify", () => ({
   }),
 }));
 
-
 // ---------------------------------------------------------------------------
 // Mock rate limiter
 // ---------------------------------------------------------------------------
@@ -79,7 +78,11 @@ describe("POST /api/slack/events", () => {
   // --- URL verification challenge ---
 
   it("responds to url_verification challenge with the challenge value", async () => {
-    const body = { type: "url_verification", challenge: "3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P", token: "Jhj5dZrVaK7ZwHHjRyZWjbDl" };
+    const body = {
+      type: "url_verification",
+      challenge: "3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P",
+      token: "Jhj5dZrVaK7ZwHHjRyZWjbDl",
+    };
     verifyOk(JSON.stringify(body));
 
     const response = await POST(makeRequest(body));
@@ -96,7 +99,7 @@ describe("POST /api/slack/events", () => {
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "content-type": "application/json" },
-      }),
+      })
     );
     vi.stubGlobal("fetch", mockFetch);
 
@@ -126,7 +129,7 @@ describe("POST /api/slack/events", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://slack.com/api/chat.postMessage",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({ method: "POST" })
     );
   });
 
@@ -135,7 +138,7 @@ describe("POST /api/slack/events", () => {
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "content-type": "application/json" },
-      }),
+      })
     );
     vi.stubGlobal("fetch", mockFetch);
 
@@ -167,7 +170,7 @@ describe("POST /api/slack/events", () => {
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "content-type": "application/json" },
-      }),
+      })
     );
     vi.stubGlobal("fetch", mockFetch);
 
@@ -201,7 +204,7 @@ describe("POST /api/slack/events", () => {
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "content-type": "application/json" },
-      }),
+      })
     );
     vi.stubGlobal("fetch", mockFetch);
 
@@ -258,7 +261,7 @@ describe("POST /api/slack/events", () => {
         method: "POST",
         headers: { "x-slack-request-timestamp": "123", "x-slack-signature": "v0=abc" },
         body: "not-json{{{",
-      }),
+      })
     );
 
     expect(response.status).toBe(400);
@@ -268,12 +271,19 @@ describe("POST /api/slack/events", () => {
 
   it("returns 429 when rate limit is exceeded", async () => {
     mockRateLimit.mockReturnValueOnce(false);
-    verifyOk(JSON.stringify({ type: "event_callback", team_id: "T123", event_id: "EvRL1", event_time: 0, event: { type: "app_mention" } }));
+    verifyOk(
+      JSON.stringify({
+        type: "event_callback",
+        team_id: "T123",
+        event_id: "EvRL1",
+        event_time: 0,
+        event: { type: "app_mention" },
+      })
+    );
 
     const response = await POST(makeRequest({ type: "event_callback" }));
     expect(response.status).toBe(429);
     const data = await response.json();
     expect(data.error).toBe("Too many requests");
   });
-
 });

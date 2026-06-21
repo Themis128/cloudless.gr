@@ -55,8 +55,18 @@ vi.mock("next/navigation", () => ({
 
 // Provide i18n navigation adapter (createNavigation needs App Router which doesn't exist in jsdom)
 vi.mock("@/i18n/navigation", () => ({
-  Link: ({ children, href, ...props }: { children: React.ReactNode; href: string; [k: string]: unknown }) => (
-    <a href={typeof href === "string" ? href : "/"} {...props}>{children}</a>
+  Link: ({
+    children,
+    href,
+    ...props
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [k: string]: unknown;
+  }) => (
+    <a href={typeof href === "string" ? href : "/"} {...props}>
+      {children}
+    </a>
   ),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   usePathname: () => "/",
@@ -86,9 +96,7 @@ describe("JsonLd", () => {
     const data = { "@type": "Organization", name: "Cloudless" };
     const { container } = render(<JsonLd data={data} />);
 
-    const script = container.querySelector(
-      'script[type="application/ld+json"]',
-    );
+    const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeTruthy();
     expect(script?.innerHTML).toBe(JSON.stringify(data));
   });
@@ -100,8 +108,7 @@ describe("JsonLd", () => {
     ];
     const { container } = render(<JsonLd data={data} />);
 
-    const script = container.querySelector(
-      'script[type="application/ld+json"]',    );
+    const script = container.querySelector('script[type="application/ld+json"]');
     expect(script).toBeTruthy();
     const parsed = JSON.parse(script!.innerHTML);
     expect(Array.isArray(parsed)).toBe(true);
@@ -114,7 +121,7 @@ describe("HolographicCard", () => {
     render(
       <HolographicCard>
         <p>Hello Card</p>
-      </HolographicCard>,
+      </HolographicCard>
     );
 
     expect(screen.getByText("Hello Card")).toBeTruthy();
@@ -124,7 +131,7 @@ describe("HolographicCard", () => {
     const { container } = render(
       <HolographicCard className="test-class">
         <p>Content</p>
-      </HolographicCard>,
+      </HolographicCard>
     );
 
     const wrapper = container.firstElementChild;
@@ -134,7 +141,7 @@ describe("HolographicCard", () => {
     const { container } = render(
       <HolographicCard>
         <p>Content</p>
-      </HolographicCard>,
+      </HolographicCard>
     );
 
     // Should have the glare overlay div (pointer-events-none)
@@ -148,7 +155,7 @@ describe("ScrollReveal", () => {
     const { container } = render(
       <ScrollReveal>
         <p>Revealed content</p>
-      </ScrollReveal>,
+      </ScrollReveal>
     );
 
     expect(screen.getByText("Revealed content")).toBeTruthy();
@@ -156,10 +163,11 @@ describe("ScrollReveal", () => {
     expect(wrapper?.classList.contains("reveal")).toBe(true);
   });
 
-  it("applies custom className alongside reveal", () => {    const { container } = render(
+  it("applies custom className alongside reveal", () => {
+    const { container } = render(
       <ScrollReveal className="my-custom-class">
         <p>Content</p>
-      </ScrollReveal>,
+      </ScrollReveal>
     );
 
     const wrapper = container.firstElementChild;
@@ -171,7 +179,7 @@ describe("ScrollReveal", () => {
     render(
       <ScrollReveal>
         <p>Observed</p>
-      </ScrollReveal>,
+      </ScrollReveal>
     );
 
     expect(mockObserve).toHaveBeenCalled();
@@ -184,7 +192,8 @@ describe("ScrollReveal", () => {
 
 describe("Navbar", () => {
   beforeEach(() => {
-    document.cookie = `NEXT_LOCALE=en; path=/`;    document.documentElement.lang = "en";
+    document.cookie = `NEXT_LOCALE=en; path=/`;
+    document.documentElement.lang = "en";
   });
 
   function renderNavbar() {
@@ -193,7 +202,7 @@ describe("Navbar", () => {
         <CartProvider>
           <Navbar />
         </CartProvider>
-      </NextIntlClientProvider>,
+      </NextIntlClientProvider>
     );
   }
 
@@ -244,7 +253,8 @@ describe("Navbar", () => {
 
     // Menu should be collapsed (opacity-0)
     const mobileMenu = container.querySelector(".lg\\:hidden.overflow-x-hidden");
-    expect(mobileMenu?.className).toContain("opacity-0");  });
+    expect(mobileMenu?.className).toContain("opacity-0");
+  });
 
   it("renders Sign In CTA in both desktop and mobile when unauthenticated", () => {
     const { container } = renderNavbar();
@@ -264,7 +274,7 @@ describe("Navbar", () => {
     const mobileMenu = container.querySelector(".lg\\:hidden.overflow-x-hidden");
     const links = mobileMenu?.querySelectorAll("a");
     const linksWithMinHeight = Array.from(links ?? []).filter(
-      (a) => a.className.includes("min-h-[44px]") || a.className.includes("min-h-11"),
+      (a) => a.className.includes("min-h-[44px]") || a.className.includes("min-h-11")
     );
     expect(linksWithMinHeight.length).toBeGreaterThanOrEqual(5);
   });

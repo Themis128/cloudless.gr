@@ -213,8 +213,14 @@ describe("notion-projects.ts", () => {
     it("returns counts by status", async () => {
       mockNotionFetchAll.mockResolvedValueOnce([
         makeTaskPage(),
-        makeTaskPage({ id: "t2", properties: { ...makeTaskPage().properties, Status: { select: { name: "Done" } } } }),
-        makeTaskPage({ id: "t3", properties: { ...makeTaskPage().properties, Status: { select: { name: "Done" } } } }),
+        makeTaskPage({
+          id: "t2",
+          properties: { ...makeTaskPage().properties, Status: { select: { name: "Done" } } },
+        }),
+        makeTaskPage({
+          id: "t3",
+          properties: { ...makeTaskPage().properties, Status: { select: { name: "Done" } } },
+        }),
       ]);
 
       const { getTaskSummary } = await import("@/lib/notion-projects");
@@ -291,7 +297,9 @@ describe("notion-projects.ts", () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       const { updateTaskStatus } = await import("@/lib/notion-projects");
-      await expect(updateTaskStatus("task-1", "Done")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(updateTaskStatus("task-1", "Done")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
     });
   });
 
@@ -304,8 +312,8 @@ describe("notion-projects.ts", () => {
       expect(
         await updateProjectStatus(
           "proj-1",
-          "Done" as unknown as Parameters<typeof updateProjectStatus>[1],
-        ),
+          "Done" as unknown as Parameters<typeof updateProjectStatus>[1]
+        )
       ).toBe(false);
     });
 
@@ -313,7 +321,9 @@ describe("notion-projects.ts", () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       const { updateProjectStatus } = await import("@/lib/notion-projects");
-      await expect(updateProjectStatus("proj-1", "Completed")).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(updateProjectStatus("proj-1", "Completed")).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
     });
   });
 
@@ -374,7 +384,9 @@ describe("notion-projects.ts", () => {
       process.env.NOTION_API_KEY = "";
       resetIntegrationCache();
       const { createProject } = await import("@/lib/notion-projects");
-      await expect(createProject({ name: "X" })).rejects.toBeInstanceOf(IntegrationNotConfiguredError);
+      await expect(createProject({ name: "X" })).rejects.toBeInstanceOf(
+        IntegrationNotConfiguredError
+      );
     });
   });
 

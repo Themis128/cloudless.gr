@@ -33,13 +33,19 @@ describe("activecampaign.ts", () => {
     });
 
     it("returns false when API URL missing", async () => {
-      mockGetConfig.mockResolvedValueOnce({ ACTIVECAMPAIGN_API_URL: "", ACTIVECAMPAIGN_API_TOKEN: AC_TOKEN });
+      mockGetConfig.mockResolvedValueOnce({
+        ACTIVECAMPAIGN_API_URL: "",
+        ACTIVECAMPAIGN_API_TOKEN: AC_TOKEN,
+      });
       const { isActiveCampaignConfigured } = await import("@/lib/activecampaign");
       expect(await isActiveCampaignConfigured()).toBe(false);
     });
 
     it("returns false when API token missing", async () => {
-      mockGetConfig.mockResolvedValueOnce({ ACTIVECAMPAIGN_API_URL: AC_URL, ACTIVECAMPAIGN_API_TOKEN: "" });
+      mockGetConfig.mockResolvedValueOnce({
+        ACTIVECAMPAIGN_API_URL: AC_URL,
+        ACTIVECAMPAIGN_API_TOKEN: "",
+      });
       const { isActiveCampaignConfigured } = await import("@/lib/activecampaign");
       expect(await isActiveCampaignConfigured()).toBe(false);
     });
@@ -53,7 +59,18 @@ describe("activecampaign.ts", () => {
         ok: true,
         json: async () => ({
           campaigns: [
-            { id: "1", name: "Newsletter", subject: "Hello", status: "1", send_amt: "500", opens: "100", uniqueopens: "90", linkclicks: "20", sdate: "2026-04-01", cdate: "2026-03-20" },
+            {
+              id: "1",
+              name: "Newsletter",
+              subject: "Hello",
+              status: "1",
+              send_amt: "500",
+              opens: "100",
+              uniqueopens: "90",
+              linkclicks: "20",
+              sdate: "2026-04-01",
+              cdate: "2026-03-20",
+            },
           ],
         }),
       });
@@ -63,7 +80,7 @@ describe("activecampaign.ts", () => {
       expect(result[0].name).toBe("Newsletter");
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/3/campaigns"),
-        expect.objectContaining({ headers: expect.objectContaining({ "Api-Token": AC_TOKEN }) }),
+        expect.objectContaining({ headers: expect.objectContaining({ "Api-Token": AC_TOKEN }) })
       );
     });
 
@@ -80,7 +97,20 @@ describe("activecampaign.ts", () => {
     it("returns a single campaign", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ campaign: { id: "42", name: "Single", subject: "Sub", status: "1", send_amt: "0", opens: "0", uniqueopens: "0", linkclicks: "0", sdate: "", cdate: "" } }),
+        json: async () => ({
+          campaign: {
+            id: "42",
+            name: "Single",
+            subject: "Sub",
+            status: "1",
+            send_amt: "0",
+            opens: "0",
+            uniqueopens: "0",
+            linkclicks: "0",
+            sdate: "",
+            cdate: "",
+          },
+        }),
       });
       const { getCampaign } = await import("@/lib/activecampaign");
       const c = await getCampaign("42");
@@ -100,7 +130,20 @@ describe("activecampaign.ts", () => {
     it("POSTs campaign and returns result", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ campaign: { id: "99", name: "New Camp", subject: "Hi", status: "0", send_amt: "0", opens: "0", uniqueopens: "0", linkclicks: "0", sdate: "", cdate: "" } }),
+        json: async () => ({
+          campaign: {
+            id: "99",
+            name: "New Camp",
+            subject: "Hi",
+            status: "0",
+            send_amt: "0",
+            opens: "0",
+            uniqueopens: "0",
+            linkclicks: "0",
+            sdate: "",
+            cdate: "",
+          },
+        }),
       });
       const { createCampaign } = await import("@/lib/activecampaign");
       const result = await createCampaign({
@@ -138,7 +181,14 @@ describe("activecampaign.ts", () => {
         ok: true,
         json: async () => ({
           contacts: [
-            { id: "1", email: "a@b.com", firstName: "Alice", lastName: "Smith", cdate: "", udate: "" },
+            {
+              id: "1",
+              email: "a@b.com",
+              firstName: "Alice",
+              lastName: "Smith",
+              cdate: "",
+              udate: "",
+            },
           ],
         }),
       });

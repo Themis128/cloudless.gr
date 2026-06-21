@@ -40,7 +40,9 @@ vi.mock("next-auth", () => ({
 }));
 
 vi.mock("@/lib/session-token-store", () => ({
-  getTokens: vi.fn().mockResolvedValue({ idToken: "stored-id-token", refreshToken: "stored-refresh-token" }),
+  getTokens: vi
+    .fn()
+    .mockResolvedValue({ idToken: "stored-id-token", refreshToken: "stored-refresh-token" }),
   putTokens: vi.fn().mockResolvedValue(undefined),
   deleteTokens: vi.fn().mockResolvedValue(undefined),
 }));
@@ -197,7 +199,9 @@ describe("src/lib/auth.ts — Cognito mode", () => {
 
   it("keeps the existing refresh_token when the response omits one", async () => {
     await loadAuth();
-    const { putTokens } = await import("@/lib/session-token-store") as { putTokens: ReturnType<typeof vi.fn> };
+    const { putTokens } = (await import("@/lib/session-token-store")) as {
+      putTokens: ReturnType<typeof vi.fn>;
+    };
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
@@ -218,9 +222,12 @@ describe("src/lib/auth.ts — Cognito mode", () => {
       },
     });
     // putTokens should preserve the existing refresh_token from DynamoDB
-    expect(putTokens).toHaveBeenCalledWith("user-123", expect.objectContaining({
-      refreshToken: "stored-refresh-token",
-    }));
+    expect(putTokens).toHaveBeenCalledWith(
+      "user-123",
+      expect.objectContaining({
+        refreshToken: "stored-refresh-token",
+      })
+    );
     expect(result.groups).toEqual(["admin"]);
     expect(result.error).toBeUndefined();
   });

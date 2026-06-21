@@ -37,7 +37,7 @@ describe("meta-pixel.ts", () => {
         "track",
         "Lead",
         { value: 10, currency: "EUR" },
-        { eventID: "evt-123" },
+        { eventID: "evt-123" }
       );
     });
 
@@ -45,12 +45,7 @@ describe("meta-pixel.ts", () => {
       const fbq = vi.fn();
       (window as unknown as WindowWithFbq).fbq = fbq;
       trackPixelEvent("Contact", { content_name: "form" });
-      expect(fbq).toHaveBeenCalledWith(
-        "track",
-        "Contact",
-        { content_name: "form" },
-        undefined,
-      );
+      expect(fbq).toHaveBeenCalledWith("track", "Contact", { content_name: "form" }, undefined);
     });
 
     it("defaults to empty params object when none provided", () => {

@@ -84,7 +84,7 @@ describe("slack-manifest.ts", () => {
       mockFetch.mockResolvedValueOnce(
         apiErr("invalid_manifest", [
           { pointer: "/features/slash_commands/0", message: "url is required" },
-        ]),
+        ])
       );
 
       const result = await validateManifest("xapp-test");

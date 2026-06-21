@@ -30,11 +30,8 @@ vi.mock("jose", async () => {
     jwtVerify: async (jwt: string) => {
       const parts = jwt.split(".");
       if (parts.length !== 3) throw new Error("Invalid JWT");
-      const payload = JSON.parse(
-        Buffer.from(parts[1], "base64").toString("utf-8"),
-      );
-      if (payload.exp && Date.now() >= payload.exp * 1000)
-        throw new Error("expired");
+      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+      if (payload.exp && Date.now() >= payload.exp * 1000) throw new Error("expired");
       return { payload, protectedHeader: { alg: "RS256" } };
     },
   };
@@ -67,7 +64,7 @@ function makeToken(groups: string[]): string {
   const payload = {
     sub: "user-sub",
     email: "user@test.com",
-    "groups": groups,
+    groups: groups,
     aud: "test-client",
     iss: "https://auth.cloudless.gr/realms/cloudless",
     iat: Math.floor(Date.now() / 1000) - 60,
@@ -239,7 +236,7 @@ describe("GET /api/admin/kpi", () => {
 
   it("returns empty projects when Notion projects not configured", async () => {
     mockIsConfiguredAsync.mockImplementation(
-      async (...keys: string[]) => !keys.includes("NOTION_PROJECTS_DB_ID"),
+      async (...keys: string[]) => !keys.includes("NOTION_PROJECTS_DB_ID")
     );
 
     const { GET } = await import("@/app/api/admin/kpi/route");
@@ -253,7 +250,7 @@ describe("GET /api/admin/kpi", () => {
 
   it("returns zeroed tasks when Notion tasks not configured", async () => {
     mockIsConfiguredAsync.mockImplementation(
-      async (...keys: string[]) => !keys.includes("NOTION_TASKS_DB_ID"),
+      async (...keys: string[]) => !keys.includes("NOTION_TASKS_DB_ID")
     );
 
     const { GET } = await import("@/app/api/admin/kpi/route");

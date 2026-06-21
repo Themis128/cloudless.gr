@@ -101,9 +101,6 @@ describe("AuthContext provider handoff", () => {
     await act(async () => {
       await get().signIn("e@x.com", "pw");
     });
-    expect(signInMock).toHaveBeenCalledWith(
-      "cognito",
-      expect.objectContaining({ redirect: true })
-    );
+    expect(signInMock).toHaveBeenCalledWith("cognito", expect.objectContaining({ redirect: true }));
   });
 });

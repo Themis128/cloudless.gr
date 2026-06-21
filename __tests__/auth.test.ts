@@ -71,8 +71,7 @@ describe("getAuthProvider", () => {
   });
 
   it("returns 'cognito' when explicit COGNITO_ISSUER is set", async () => {
-    process.env.COGNITO_ISSUER =
-      "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc";
+    process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc";
     const { getAuthProvider } = await import("@/lib/auth");
     expect(getAuthProvider()).toBe("cognito");
   });
@@ -90,8 +89,7 @@ describe("getAuthProvider", () => {
   });
 
   it("strips a trailing slash from COGNITO_ISSUER", async () => {
-    process.env.COGNITO_ISSUER =
-      "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc/";
+    process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc/";
     // The exported getAuthProvider only reports truthy, but the stripping
     // logic is exercised under the hood — any string remains "cognito".
     const { getAuthProvider } = await import("@/lib/auth");
@@ -142,16 +140,13 @@ describe("handlers happy path (auth configured)", () => {
   beforeEach(() => {
     // Provide enough env for getNextAuth() to materialize a real instance.
     process.env.AUTH_SECRET = "test-auth-secret-32-chars-aaaaaaaaaa";
-    process.env.COGNITO_ISSUER =
-      "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc";
+    process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc";
     process.env.COGNITO_CLIENT_ID = "client-x";
     process.env.COGNITO_CLIENT_SECRET = "secret-x";
   });
 
   it("delegates GET to the underlying next-auth handler", async () => {
-    const getHandler = vi.fn().mockResolvedValue(
-      new Response("upstream-get", { status: 200 }),
-    );
+    const getHandler = vi.fn().mockResolvedValue(new Response("upstream-get", { status: 200 }));
     nextAuthMock.mockReturnValue({
       handlers: { GET: getHandler, POST: vi.fn() },
       signIn: vi.fn(),
@@ -166,9 +161,7 @@ describe("handlers happy path (auth configured)", () => {
   });
 
   it("delegates POST to the underlying next-auth handler", async () => {
-    const postHandler = vi.fn().mockResolvedValue(
-      new Response("upstream-post", { status: 200 }),
-    );
+    const postHandler = vi.fn().mockResolvedValue(new Response("upstream-post", { status: 200 }));
     nextAuthMock.mockReturnValue({
       handlers: { GET: vi.fn(), POST: postHandler },
       signIn: vi.fn(),
@@ -222,8 +215,7 @@ describe("signIn / signOut / auth shims", () => {
 
   it("auth() delegates to the underlying instance when configured", async () => {
     process.env.AUTH_SECRET = "test-auth-secret-32-chars-aaaaaaaaaa";
-    process.env.COGNITO_ISSUER =
-      "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc";
+    process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_abc";
     process.env.COGNITO_CLIENT_ID = "client-x";
     process.env.COGNITO_CLIENT_SECRET = "secret-x";
 

@@ -1,11 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
 
-import {
-  evaluateAnomalies,
-  findingDedupKey,
-  DEFAULTS,
-} from "@/lib/ad-analytics/anomaly";
+import { evaluateAnomalies, findingDedupKey, DEFAULTS } from "@/lib/ad-analytics/anomaly";
 import type { AdMetrics } from "@/lib/ad-analytics/types";
 
 function m(over: Partial<AdMetrics> = {}): AdMetrics {

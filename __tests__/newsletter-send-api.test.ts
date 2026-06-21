@@ -26,7 +26,7 @@ const VALID_BODY = {
 
 function makeRequest(
   body: unknown,
-  headers: Record<string, string> = { "x-newsletter-secret": SECRET },
+  headers: Record<string, string> = { "x-newsletter-secret": SECRET }
 ): Request {
   return new globalThis.Request("http://localhost:4000/api/newsletter/send", {
     method: "POST",
@@ -39,10 +39,7 @@ describe("POST /api/newsletter/send", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getConfigMock.mockResolvedValue({ NEWSLETTER_SEND_SECRET: SECRET });
-    listNewsletterSubscribersMock.mockResolvedValue([
-      "a@cloudless.gr",
-      "b@cloudless.gr",
-    ]);
+    listNewsletterSubscribersMock.mockResolvedValue(["a@cloudless.gr", "b@cloudless.gr"]);
     sendEmailMock.mockResolvedValue(undefined);
   });
 
@@ -55,9 +52,7 @@ describe("POST /api/newsletter/send", () => {
 
   it("returns 401 when the secret header is wrong", async () => {
     const { POST } = await import("@/app/api/newsletter/send/route");
-    const response = await POST(
-      makeRequest(VALID_BODY, { "x-newsletter-secret": "nope" }),
-    );
+    const response = await POST(makeRequest(VALID_BODY, { "x-newsletter-secret": "nope" }));
     expect(response.status).toBe(401);
     expect(sendEmailMock).not.toHaveBeenCalled();
   });

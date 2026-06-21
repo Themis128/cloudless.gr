@@ -15,7 +15,7 @@ const mockVerify = vi.fn();
 vi.mock("@/lib/slack-verify", () => ({
   verifySlackRequest: (...args: unknown[]) => mockVerify(...args),
   unauthorizedSlack: vi.fn((_reason: string) =>
-    Response.json({ error: "Unauthorized" }, { status: 401 }),
+    Response.json({ error: "Unauthorized" }, { status: 401 })
   ),
 }));
 
@@ -103,11 +103,13 @@ function ticketSubmission(overrides: Record<string, string> = {}) {
 }
 
 /** Builds a view_submission payload for deploy-confirm-modal */
-function deploySubmission(opts: {
-  releaseNotes?: string;
-  userId?: string;
-  userName?: string;
-} = {}) {
+function deploySubmission(
+  opts: {
+    releaseNotes?: string;
+    userId?: string;
+    userName?: string;
+  } = {}
+) {
   return {
     type: "view_submission",
     user: { id: opts.userId ?? "U123", username: opts.userName ?? "themis" },
@@ -140,9 +142,7 @@ describe("view_submission: create-ticket-modal", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // chat.postMessage succeeds
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), { status: 200 }),
-    );
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const mod = await import("@/app/api/slack/interactions/route");
     POST = mod.POST;
   });
@@ -162,7 +162,7 @@ describe("view_submission: create-ticket-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const postCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     expect(postCall).toBeDefined();
     const body = JSON.parse(postCall![1].body as string) as {
@@ -180,7 +180,7 @@ describe("view_submission: create-ticket-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const postCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     const body = JSON.parse(postCall![1].body as string) as { blocks: unknown[] };
     expect(JSON.stringify(body.blocks)).toContain("vip@example.com");
@@ -194,7 +194,7 @@ describe("view_submission: create-ticket-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const postCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     const bodyStr = postCall![1].body as string;
     // :red_circle: for high priority
@@ -209,7 +209,7 @@ describe("view_submission: create-ticket-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const postCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     const bodyStr = postCall![1].body as string;
     expect(bodyStr).toContain("white_circle");
@@ -223,7 +223,7 @@ describe("view_submission: create-ticket-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const postCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     const bodyStr = postCall![1].body as string;
     expect(bodyStr).not.toContain("<script>");
@@ -238,7 +238,7 @@ describe("view_submission: create-ticket-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const postCall = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     const bodyStr = postCall![1].body as string;
     expect(bodyStr).toContain("U999");
@@ -255,9 +255,7 @@ describe("view_submission: deploy-confirm-modal", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Default: all fetches succeed
-    mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), { status: 200 }),
-    );
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     const mod = await import("@/app/api/slack/interactions/route");
     POST = mod.POST;
   });
@@ -293,7 +291,7 @@ describe("view_submission: deploy-confirm-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const deployPost = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     expect(deployPost![1].body as string).toContain("Hotfix: fix payment crash");
   });
@@ -308,8 +306,8 @@ describe("view_submission: deploy-confirm-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     // codeql[js/incomplete-url-scheme-check] -- test assertion on mock fetch call args, not URL sanitization
-    const githubCall = mockFetch.mock.calls.find((c) =>
-      new URL(c[0] as string).hostname === "api.github.com",
+    const githubCall = mockFetch.mock.calls.find(
+      (c) => new URL(c[0] as string).hostname === "api.github.com"
     );
     expect(githubCall).toBeDefined();
     expect(githubCall![0]).toContain("dispatches");
@@ -328,14 +326,14 @@ describe("view_submission: deploy-confirm-modal", () => {
 
     // Should not call GitHub at all
     // codeql[js/incomplete-url-scheme-check] -- test assertion on mock fetch call args, not URL sanitization
-    const githubCall = mockFetch.mock.calls.find((c) =>
-      new URL(c[0] as string).hostname === "api.github.com",
+    const githubCall = mockFetch.mock.calls.find(
+      (c) => new URL(c[0] as string).hostname === "api.github.com"
     );
     expect(githubCall).toBeUndefined();
 
     // Should post error to Slack instead
     const errorPost = mockFetch.mock.calls.find((c) => {
-      const body = c[1]?.body as string ?? "";
+      const body = (c[1]?.body as string) ?? "";
       return body.includes("GITHUB_TOKEN");
     });
     expect(errorPost).toBeDefined();
@@ -358,7 +356,7 @@ describe("view_submission: deploy-confirm-modal", () => {
 
     // Should post failure back to Slack
     const failPost = mockFetch.mock.calls.find((c) => {
-      const body = c[1]?.body as string ?? "";
+      const body = (c[1]?.body as string) ?? "";
       return body.includes("failed") || body.includes("422");
     });
     expect(failPost).toBeDefined();
@@ -379,7 +377,7 @@ describe("view_submission: deploy-confirm-modal", () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const deployPost = mockFetch.mock.calls.find((c) =>
-      (c[0] as string).includes("chat.postMessage"),
+      (c[0] as string).includes("chat.postMessage")
     );
     expect(deployPost![1].body as string).toContain("U777");
 

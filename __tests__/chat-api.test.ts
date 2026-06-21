@@ -54,11 +54,7 @@ function bedrockTextResponse(text: string) {
   };
 }
 
-function bedrockToolResponse(
-  toolUseId: string,
-  name: string,
-  input: object,
-) {
+function bedrockToolResponse(toolUseId: string, name: string, input: object) {
   return {
     stopReason: "tool_use",
     output: {
@@ -129,9 +125,7 @@ describe("POST /api/chat", () => {
   it("streams plain text when the model returns text directly (no tools)", async () => {
     mockSend.mockResolvedValueOnce(bedrockTextResponse("Hello there!"));
     const { POST } = await import("@/app/api/chat/route");
-    const res = await POST(
-      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
-    );
+    const res = await POST(makeRequest({ messages: [{ role: "user", content: "Hi" }] }));
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
     expect(await readSseText(res)).toBe("Hello there!");
@@ -145,9 +139,11 @@ describe("POST /api/chat", () => {
       toolConfig: { tools: { toolSpec: { name: string } }[] };
     };
     expect(cmdInput.toolConfig.tools).toHaveLength(3);
-    expect(
-      cmdInput.toolConfig.tools.map((t) => t.toolSpec.name),
-    ).toEqual(["lookup_product", "check_calendar_availability", "book_slot"]);
+    expect(cmdInput.toolConfig.tools.map((t) => t.toolSpec.name)).toEqual([
+      "lookup_product",
+      "check_calendar_availability",
+      "book_slot",
+    ]);
   });
 
   it("caps history to last 10 turns", async () => {
@@ -170,9 +166,7 @@ describe("POST /api/chat", () => {
     });
     mockSend.mockRejectedValueOnce(err);
     const { POST } = await import("@/app/api/chat/route");
-    const res = await POST(
-      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
-    );
+    const res = await POST(makeRequest({ messages: [{ role: "user", content: "Hi" }] }));
     expect(res.status).toBe(503);
     const data = await res.json();
     expect(data.error).toMatch(/contact page/i);
@@ -184,9 +178,7 @@ describe("POST /api/chat", () => {
     });
     mockSend.mockRejectedValueOnce(err);
     const { POST } = await import("@/app/api/chat/route");
-    const res = await POST(
-      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
-    );
+    const res = await POST(makeRequest({ messages: [{ role: "user", content: "Hi" }] }));
     expect(res.status).toBe(502);
   });
 
@@ -196,28 +188,22 @@ describe("POST /api/chat", () => {
     });
     mockSend.mockRejectedValueOnce(err);
     const { POST } = await import("@/app/api/chat/route");
-    const res = await POST(
-      makeRequest({ messages: [{ role: "user", content: "Hi" }] }),
-    );
+    const res = await POST(makeRequest({ messages: [{ role: "user", content: "Hi" }] }));
     expect(res.status).toBe(502);
   });
 
   it("dispatches tool_use blocks, feeds results back, then streams the final text", async () => {
     mockSend.mockResolvedValueOnce(
-      bedrockToolResponse("tu-1", "lookup_product", { query: "serverless" }),
+      bedrockToolResponse("tu-1", "lookup_product", { query: "serverless" })
     );
-    mockRunTool.mockResolvedValueOnce(
-      "Found 1 match: Serverless Starter (€2400).",
-    );
-    mockSend.mockResolvedValueOnce(
-      bedrockTextResponse("Serverless Starter is €2400."),
-    );
+    mockRunTool.mockResolvedValueOnce("Found 1 match: Serverless Starter (€2400).");
+    mockSend.mockResolvedValueOnce(bedrockTextResponse("Serverless Starter is €2400."));
 
     const { POST } = await import("@/app/api/chat/route");
     const res = await POST(
       makeRequest({
         messages: [{ role: "user", content: "Got a serverless package?" }],
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -237,23 +223,19 @@ describe("POST /api/chat", () => {
     expect(secondCmdInput.messages).toHaveLength(3);
     expect(secondCmdInput.messages[1].role).toBe("assistant");
     expect(secondCmdInput.messages[2].role).toBe("user");
-    expect(secondCmdInput.messages[2].content[0].toolResult?.toolUseId).toBe(
-      "tu-1",
-    );
+    expect(secondCmdInput.messages[2].content[0].toolResult?.toolUseId).toBe("tu-1");
   });
 
   it("falls back to a contact-page nudge if the loop exceeds the iteration cap", async () => {
     for (let i = 0; i < 5; i++) {
       mockSend.mockResolvedValueOnce(
-        bedrockToolResponse(`tu-${i}`, "lookup_product", { query: "loop" }),
+        bedrockToolResponse(`tu-${i}`, "lookup_product", { query: "loop" })
       );
     }
     mockRunTool.mockResolvedValue("no match");
 
     const { POST } = await import("@/app/api/chat/route");
-    const res = await POST(
-      makeRequest({ messages: [{ role: "user", content: "stuck" }] }),
-    );
+    const res = await POST(makeRequest({ messages: [{ role: "user", content: "stuck" }] }));
     expect(res.status).toBe(200);
     const text = await readSseText(res);
     expect(text.toLowerCase()).toContain("contact page");

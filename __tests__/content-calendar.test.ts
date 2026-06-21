@@ -52,8 +52,20 @@ describe("content-calendar.ts", () => {
     });
 
     it("persists items in the store", async () => {
-      await createCalendarItem({ title: "A", type: "social_post", platform: "x", date: "2026-05-01", status: "draft" });
-      await createCalendarItem({ title: "B", type: "email_campaign", platform: "activecampaign", date: "2026-05-02", status: "scheduled" });
+      await createCalendarItem({
+        title: "A",
+        type: "social_post",
+        platform: "x",
+        date: "2026-05-01",
+        status: "draft",
+      });
+      await createCalendarItem({
+        title: "B",
+        type: "email_campaign",
+        platform: "activecampaign",
+        date: "2026-05-02",
+        status: "scheduled",
+      });
       expect(await getCalendarItems()).toHaveLength(2);
     });
   });
@@ -62,9 +74,27 @@ describe("content-calendar.ts", () => {
 
   describe("getCalendarItems", () => {
     beforeEach(async () => {
-      await createCalendarItem({ title: "Past", type: "blog_post", platform: "notion", date: "2026-04-01", status: "published" });
-      await createCalendarItem({ title: "Now", type: "consultation", platform: "google_calendar", date: "2026-05-15", status: "scheduled" });
-      await createCalendarItem({ title: "Future", type: "ad_campaign", platform: "google", date: "2026-06-01", status: "draft" });
+      await createCalendarItem({
+        title: "Past",
+        type: "blog_post",
+        platform: "notion",
+        date: "2026-04-01",
+        status: "published",
+      });
+      await createCalendarItem({
+        title: "Now",
+        type: "consultation",
+        platform: "google_calendar",
+        date: "2026-05-15",
+        status: "scheduled",
+      });
+      await createCalendarItem({
+        title: "Future",
+        type: "ad_campaign",
+        platform: "google",
+        date: "2026-06-01",
+        status: "draft",
+      });
     });
 
     it("returns all items when no range provided", async () => {
@@ -93,8 +123,17 @@ describe("content-calendar.ts", () => {
 
   describe("updateCalendarItem", () => {
     it("updates fields and returns updated item", async () => {
-      const item = await createCalendarItem({ title: "Draft", type: "social_post", platform: "tiktok", date: "2026-05-10", status: "draft" });
-      const updated = await updateCalendarItem(item.id, { status: "published", title: "Live Post" });
+      const item = await createCalendarItem({
+        title: "Draft",
+        type: "social_post",
+        platform: "tiktok",
+        date: "2026-05-10",
+        status: "draft",
+      });
+      const updated = await updateCalendarItem(item.id, {
+        status: "published",
+        title: "Live Post",
+      });
       expect(updated?.status).toBe("published");
       expect(updated?.title).toBe("Live Post");
       expect(updated?.platform).toBe("tiktok");
@@ -105,7 +144,13 @@ describe("content-calendar.ts", () => {
     });
 
     it("persists updates in the store", async () => {
-      const item = await createCalendarItem({ title: "Old", type: "social_post", platform: "meta", date: "2026-05-01", status: "draft" });
+      const item = await createCalendarItem({
+        title: "Old",
+        type: "social_post",
+        platform: "meta",
+        date: "2026-05-01",
+        status: "draft",
+      });
       await updateCalendarItem(item.id, { title: "New" });
       const stored = (await getCalendarItems()).find((i) => i.id === item.id);
       expect(stored?.title).toBe("New");
@@ -116,7 +161,13 @@ describe("content-calendar.ts", () => {
 
   describe("deleteCalendarItem", () => {
     it("removes item and returns true", async () => {
-      const item = await createCalendarItem({ title: "To Delete", type: "social_post", platform: "x", date: "2026-05-01", status: "draft" });
+      const item = await createCalendarItem({
+        title: "To Delete",
+        type: "social_post",
+        platform: "x",
+        date: "2026-05-01",
+        status: "draft",
+      });
       expect(await deleteCalendarItem(item.id)).toBe(true);
       expect(await getCalendarItems()).toHaveLength(0);
     });

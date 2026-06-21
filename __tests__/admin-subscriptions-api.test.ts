@@ -38,7 +38,7 @@ vi.mock("@/lib/stripe", () => ({
 function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
-    "groups": ["admin"],
+    groups: ["admin"],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -52,7 +52,7 @@ function makeAdminToken(): string {
 function makeUserToken(): string {
   const payload = {
     sub: "user-sub",
-    "groups": [],
+    groups: [],
     aud: "client",
     iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
     iat: Math.floor(Date.now() / 1000) - 10,
@@ -78,15 +78,17 @@ const MOCK_SUB = {
   customer: { id: "cus_test1abc123", email: "customer@test.com", name: "Test Customer" },
   status: "active",
   items: {
-    data: [{
-      price: {
-        unit_amount: 4900,
-        currency: "eur",
-        recurring: { interval: "month" },
-        nickname: null,
-        product: { name: "Pro Plan" },
+    data: [
+      {
+        price: {
+          unit_amount: 4900,
+          currency: "eur",
+          recurring: { interval: "month" },
+          nickname: null,
+          product: { name: "Pro Plan" },
+        },
       },
-    }],
+    ],
   },
   current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
   cancel_at_period_end: false,
@@ -162,19 +164,23 @@ describe("POST /api/admin/subscriptions", () => {
 
   it("returns 400 for invalid action", async () => {
     const { POST } = await import("@/app/api/admin/subscriptions/route");
-    const res = await POST(adminReq(SUBSCRIPTIONS_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "refund" }),
-    }));
+    const res = await POST(
+      adminReq(SUBSCRIPTIONS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "refund" }),
+      })
+    );
     expect(res.status).toBe(400);
   });
 
   it("returns portal URL for portal action", async () => {
     const { POST } = await import("@/app/api/admin/subscriptions/route");
-    const res = await POST(adminReq(SUBSCRIPTIONS_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "portal", customerId: "cus_test1abc123" }),
-    }));
+    const res = await POST(
+      adminReq(SUBSCRIPTIONS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "portal", customerId: "cus_test1abc123" }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.url).toContain("billing.stripe.com");
@@ -182,10 +188,12 @@ describe("POST /api/admin/subscriptions", () => {
 
   it("cancels subscription at period end", async () => {
     const { POST } = await import("@/app/api/admin/subscriptions/route");
-    const res = await POST(adminReq(SUBSCRIPTIONS_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "cancel", subscriptionId: TEST_SUB_ID }),
-    }));
+    const res = await POST(
+      adminReq(SUBSCRIPTIONS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "cancel", subscriptionId: TEST_SUB_ID }),
+      })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);
