@@ -9,6 +9,8 @@ const {
   mockRequireAdmin,
   mockIsHubSpotConfigured,
   mockListNewsletterSubscribers,
+  mockSearchContacts,
+  mockListContacts,
   mockIsActiveCampaignConfigured,
   mockListACLists,
   mockListAutomations,
@@ -18,6 +20,8 @@ const {
   mockRequireAdmin: vi.fn(),
   mockIsHubSpotConfigured: vi.fn(),
   mockListNewsletterSubscribers: vi.fn(),
+  mockSearchContacts: vi.fn(),
+  mockListContacts: vi.fn(),
   mockIsActiveCampaignConfigured: vi.fn(),
   mockListACLists: vi.fn(),
   mockListAutomations: vi.fn(),
@@ -34,6 +38,11 @@ vi.mock("@/lib/espocrm", () => ({
   isEspoCRMConfigured: mockIsHubSpotConfigured,
   isHubSpotConfigured: mockIsHubSpotConfigured,
   listNewsletterSubscribers: mockListNewsletterSubscribers,
+  // /api/admin/email/contacts switched from raw fetch → searchContacts /
+  // listContacts (lib/espocrm) after the HubSpot decom. Mock both so the
+  // route's `try { … }` branch resolves instead of throwing → 500.
+  searchContacts: mockSearchContacts,
+  listContacts: mockListContacts,
 }));
 
 vi.mock("@/lib/activecampaign", () => ({
@@ -107,22 +116,22 @@ describe("Admin Email API routes", () => {
       expect(res.status).toBe(503);
     });
 
-    it("returns contacts from HubSpot", async () => {
-      mockFetch.mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            results: [{ id: "1", properties: { email: "a@b.com" } }],
-            total: 1,
-          }),
-          { status: 200 }
-        )
-      );
+    it("returns contacts from EspoCRM (subscribers tab → searchContacts)", async () => {
+      // Route at `?tab=subscribers` calls searchContacts("leadSource",
+      // "newsletter_signup") and returns the .results slice + .total.
+      // Schema mirrors the old HubSpot shape (id + properties.email) so the
+      // admin UI didn't need to change.
+      mockSearchContacts.mockResolvedValueOnce({
+        results: [{ id: "1", properties: { email: "a@b.com" } }],
+        total: 1,
+      });
       const { GET } = await import("@/app/api/admin/email/contacts/route");
       const res = await GET(makeGet("/api/admin/email/contacts?tab=subscribers"));
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.contacts).toHaveLength(1);
       expect(data.contacts[0].properties.email).toBe("a@b.com");
+      expect(mockSearchContacts).toHaveBeenCalledWith("leadSource", "newsletter_signup");
     });
   });
 
