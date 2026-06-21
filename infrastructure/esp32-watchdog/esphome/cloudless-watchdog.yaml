@@ -10,19 +10,20 @@
 # We probe Pi nodes via HTTP GET to their Prometheus port (:9100).
 # Any 2xx/3xx response = reachable; timeout/error = unreachable.
 #
-# LED STATE MATRIX
+# LED STATE MATRIX (cluster-only since 2026-06-21 — AWS probe removed)
 # ─────────────────────────────────────────────────────────────────────────────
-# AWS  omv  omv-ha │ Color          Effect
-# ─────────────────┼───────────────────────────────────────────────────────────
-#  ✓    ✓    ✓     │ Green          solid (40% brightness)
-#  ✗    ✓    ✓     │ Orange         slow blink — AWS only down
-#  ✓    ✗    ✓     │ Yellow         slow blink — one Pi down
-#  ✓    ✓    ✗     │ Yellow         slow blink — one Pi down
-#  ✓    ✗    ✗     │ Red            fast blink — both Pi nodes down
-#  ✗    ✗    ✓     │ Deep orange    fast blink — AWS + one Pi down
-#  ✗    ✓    ✗     │ Deep orange    fast blink — AWS + one Pi down
-#  ✗    ✗    ✗     │ Magenta        fast blink — total outage
+# omv  omv-ha │ Color          Effect
+# ─────────────┼───────────────────────────────────────────────────────────────
+#  ✓    ✓     │ Green          solid (40% brightness)
+#  ✗    ✓     │ Yellow         slow blink — omv down
+#  ✓    ✗     │ Yellow         slow blink — omv-ha down
+#  ✗    ✗     │ Red            fast blink — both nodes down
 # ─────────────────────────────────────────────────────────────────────────────
+# The deeper LED-update lambda still references aws_up, but aws_up's global
+# default is "true" (line ~172), so the AWS branches are now dead code. To
+# fully prune them, edit the update_led script + the strobe effects below.
+# Kept as-is to minimise the diff and keep the AWS path one substitution away
+# from re-enabling.
 
 substitutions:
   node_name:       cloudless-watchdog
@@ -36,7 +37,12 @@ substitutions:
   # is dead (the death-spiral scenario). This probe exercises etcd + apiserver
   # so we can hardware-reset omv when k3s is wedged but the OS is still up.
   omv_k3s_probe:   "https://192.168.1.128:6443/livez"
-  aws_health:      "https://cloudless.gr/api/health"
+  # AWS probe removed 2026-06-21 — ESP32 now watches CLUSTER ONLY per the
+  # operator's monitoring-scope cleanup. The `aws_up` global stays
+  # `initial_value: "true"` so the existing LED-state matrix collapses
+  # naturally to a cluster-only 4-state matrix (omv × omv-ha). To re-enable
+  # AWS monitoring, restore aws_health here + the probe_aws interval +
+  # the aws_app_reachable binary_sensor + the notify_alerts AWS branch.
   # Relay control — GPIO10 drives an active-LOW 5V relay that interrupts
   # omv's 5V USB-C power line for hard-reset when k3s is wedged.
   # Wiring: ESP32 GPIO10 → NPN base (10kΩ) → relay coil GND ; coil VCC → 5V
@@ -233,11 +239,7 @@ binary_sensor:
     entity_category: diagnostic
     lambda: "return id(omv_ha_up);"
 
-  - platform: template
-    id:         aws_app_reachable
-    name:       "cloudless.gr (AWS) reachable"
-    entity_category: diagnostic
-    lambda: "return id(aws_up);"
+  # aws_app_reachable removed 2026-06-21 — AWS probe disabled (cluster-only scope).
 
   - platform: template
     id:         omv_k3s_reachable
@@ -397,38 +399,7 @@ interval:
                     id(heartbeat_pulse).execute();
                   }
 
-  # AWS probe — fires every 60 s
-  - id: probe_aws
-    interval: 60s
-    then:
-      - http_request.get:
-          url: ${aws_health}
-          on_response:
-            then:
-              - lambda: |-
-                  bool was = id(aws_up);
-                  bool now = (response->status_code >= 200 && response->status_code < 400);
-                  if (!now) id(aws_fail_count)++;
-                  if (was != now) {
-                    id(aws_up) = now;
-                    id(aws_app_reachable).publish_state(now);
-                    id(update_led).execute();
-                    id(heartbeat_pulse).execute();
-                  }
-                  if (!was && now) {
-                    id(aws_last_alerted) = 0;
-                    id(send_aws_recovery).execute();
-                  }
-          on_error:
-            then:
-              - lambda: |-
-                  id(aws_fail_count)++;
-                  if (id(aws_up)) {
-                    id(aws_up) = false;
-                    id(aws_app_reachable).publish_state(false);
-                    id(update_led).execute();
-                    id(heartbeat_pulse).execute();
-                  }
+  # probe_aws interval removed 2026-06-21 — ESP32 watches CLUSTER ONLY.
 
   # k3s API probe — fires every 30 s, staggered 22 s into each cycle so it
   # doesn't overlap with the omv (0 s) / omv-ha (15 s) probes.
@@ -474,20 +445,7 @@ interval:
   - id: notify_alerts
     interval: 60s
     then:
-      - if:
-          condition:
-            lambda: "return !id(aws_up) && (id(aws_last_alerted) == 0 || (millis() - id(aws_last_alerted)) >= 600000);"
-          then:
-            - http_request.post:
-                url:  ${ntfy_url}
-                request_headers:
-                  Content-Type: text/plain
-                  Authorization: "Bearer ${ntfy_token}"
-                  Title: "🟠 cloudless.gr (AWS) UNREACHABLE"
-                  Priority: "high"
-                  Tags: "warning,cloud"
-                body: "HTTP probe to cloudless.gr returned non-2xx or timed out."
-            - lambda: "id(aws_last_alerted) = millis();"
+      # AWS alert removed 2026-06-21 — cluster-only scope.
       - if:
           condition:
             lambda: "return !id(omv_up) && (id(omv_last_alerted) == 0 || (millis() - id(omv_last_alerted)) >= 600000);"
