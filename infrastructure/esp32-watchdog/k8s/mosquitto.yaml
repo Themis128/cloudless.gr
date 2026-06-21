@@ -19,12 +19,15 @@ metadata:
 data:
   mosquitto.conf: |
     listener 1883
-    # DUAL-MODE TRANSITION. Authenticated clients use a username/password
-    # from /mosquitto/secret/passwords (loaded via the mosquitto-passwords
-    # Secret). Anonymous publishes still work for backward compatibility.
-    # Final cutover: set `allow_anonymous false` and `kubectl rollout
-    # restart deploy/mosquitto -n monitoring` AFTER all clients have creds.
-    allow_anonymous true
+    # AUTH-ONLY (Phase 3 cutover complete 2026-06-21).
+    # alert-api v3.4 publishes with MQTT_USERNAME/PASSWORD env from the
+    # alert-api-mqtt-creds Secret. Display ESP32 was offline at cutover
+    # — when it comes back online it MUST be OTA-reflashed with creds
+    # per skills/esphome-ota-flash/SKILL.md before it can subscribe.
+    # To roll back (forgotten anonymous client surfaces):
+    #   kubectl -n monitoring edit cm mosquitto-config → allow_anonymous true
+    #   kubectl -n monitoring rollout restart deploy/mosquitto
+    allow_anonymous false
     password_file /mosquitto/secret/passwords
     persistence true
     persistence_location /mosquitto/data/
