@@ -91,8 +91,15 @@ async function dispatch(
   const tasks: Promise<void>[] = [];
   for (const rec of records ?? []) {
     if (entity === "Contact" && action === "create") tasks.push(notifyContactCreated(rec));
-    else if (entity === "Lead" && action === "create") tasks.push(notifyLeadCreated(rec));
-    else if (entity === "Opportunity" && action === "create")
+    else if (entity === "Lead" && action === "create") {
+      tasks.push(notifyLeadCreated(rec));
+      // Lead.create also fans out to the n8n `lead-enrich` workflow (Apollo
+      // enrichment + round-robin owner assignment + Slack DM to assignee).
+      // The trigger receiver returns 204 No Content if the workflow ID
+      // hasn't been set in SSM yet — so a missing N8N_WORKFLOW_LEAD_ENRICH_ID
+      // is a silent no-op, not a failure.
+      tasks.push(triggerN8n("lead-enrich", { entity, action, record: rec }));
+    } else if (entity === "Opportunity" && action === "create")
       tasks.push(notifyOpportunityCreated(rec));
     else if (entity === "Opportunity" && action === "update" && rec.stage)
       tasks.push(notifyOpportunityStageChanged(rec));
@@ -103,4 +110,24 @@ async function dispatch(
     // forward-compatible with EspoCRM versions that add new event types.
   }
   await Promise.allSettled(tasks);
+}
+
+/** Fire-and-forget n8n trigger by alias. Never throws. Same shape as the
+ *  loopback the EspoCRM Slack notifier uses. */
+async function triggerN8n(name: string, payload: unknown): Promise<void> {
+  try {
+    const { triggerWorkflowByWebhookPath } = await import("@/lib/n8n");
+    const { getConfig } = await import("@/lib/ssm-config");
+    const cfg = await getConfig();
+    const id =
+      name === "lead-enrich"
+        ? cfg.N8N_WORKFLOW_LEAD_ENRICH_ID
+        : name === "newsletter-nurture"
+          ? cfg.N8N_WORKFLOW_NEWSLETTER_NURTURE_ID
+          : "";
+    if (!id) return; // operator hasn't created the workflow yet — silent no-op
+    await triggerWorkflowByWebhookPath(id, payload);
+  } catch (err) {
+    console.error("[espocrm webhook → n8n] trigger failed:", (err as Error).message);
+  }
 }

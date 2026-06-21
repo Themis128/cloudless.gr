@@ -1,0 +1,112 @@
+{
+  "name": "Lead enrich + assign (cloudless.gr starter)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-enrich",
+        "options": {}
+      },
+      "name": "Webhook (lead-enrich)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "lead-enrich"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "email", "value": "={{ $json.payload.record.emailAddress || $json.payload.record.email || '' }}" },
+            { "name": "first", "value": "={{ $json.payload.record.firstName || '' }}" },
+            { "name": "last",  "value": "={{ $json.payload.record.lastName  || '' }}" },
+            { "name": "leadId","value": "={{ $json.payload.record.id || '' }}" }
+          ]
+        }
+      },
+      "name": "Extract lead fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apollo.io/v1/people/match?email={{ encodeURIComponent($json.email) }}",
+        "options": { "timeout": 8000 },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Api-Key", "value": "={{ $env.APOLLO_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      },
+      "name": "Apollo enrich (optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Round-robin owner assignment from a hardcoded list. Replace with your\n// real team usernames in EspoCRM.\nconst owners = ['tbaltzakis'];\nconst idx = Math.floor(Math.random() * owners.length);\nreturn [{ json: { ...items[0].json, assignedUserName: owners[idx] } }];"
+      },
+      "name": "Round-robin owner",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.ESPOCRM_BASE_URL || 'https://espocrm.cloudless.gr' }}/api/v1/Lead/{{ $('Extract lead fields').item.json.leadId }}",
+        "method": "PUT",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Api-Key", "value": "={{ $env.ESPOCRM_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ assignedUserName: $json.assignedUserName }) }}",
+        "options": { "timeout": 8000 }
+      },
+      "name": "EspoCRM PUT /Lead/:id",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://slack.com/api/chat.postMessage",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.SLACK_BOT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ channel: '#leads', text: `:dart: New lead assigned to *${$json.assignedUserName}*: ${$('Extract lead fields').item.json.first} ${$('Extract lead fields').item.json.last} <${$('Extract lead fields').item.json.email}>` }) }}",
+        "options": { "timeout": 5000 }
+      },
+      "name": "Slack DM assignee",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook (lead-enrich)": { "main": [[{ "node": "Extract lead fields", "type": "main", "index": 0 }]] },
+    "Extract lead fields": { "main": [[{ "node": "Apollo enrich (optional)", "type": "main", "index": 0 }]] },
+    "Apollo enrich (optional)": { "main": [[{ "node": "Round-robin owner", "type": "main", "index": 0 }]] },
+    "Round-robin owner": { "main": [[{ "node": "EspoCRM PUT /Lead/:id", "type": "main", "index": 0 }]] },
+    "EspoCRM PUT /Lead/:id": { "main": [[{ "node": "Slack DM assignee", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "cloudless" }]
+}
