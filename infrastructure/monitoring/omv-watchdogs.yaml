@@ -147,8 +147,20 @@ spec:
                   cpu: 200m
                   memory: 128Mi
 ---
-# omv-backup-verify — every 6h, confirms a `nas-backup` journal entry
-# in the last 25h. Replaces the remote "NAS Backup Check" routine.
+# omv-backup-verify — every 6h, confirms the k3s etcd snapshot on
+# /srv/.../Backups/k3s-db/ is fresh (< 2h old).
+#
+# Originally (pre-2026-06-21) this watchdog grep'd journalctl for tag
+# `nas-backup`, but that systemd unit was disabled May 1 (renamed
+# nas-backup.bak.20260501). Result: false alert "nas-backup has not run
+# in 25h" every 6h. The fix: monitor what's ACTUALLY backing up — the
+# hourly k3s etcd snapshot pulled to /srv/.../Backups/k3s-db/ via the
+# scheduled cron documented in CLAUDE.md "k3s Tuning".
+#
+# Windows-to-NAS backup runs on the Office machine via Windows Backup
+# (writes to OMV SMB share); we don't need a separate watchdog for it
+# because Windows Backup surfaces its own failures + the disk-usage
+# watchdog catches a stalled backup eventually.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -189,40 +201,34 @@ spec:
                 - name: SLACK_CHANNEL
                   value: "C09AF5W3X16"
                 - name: MAX_AGE_HOURS
-                  value: "25"
+                  value: "2"
+                - name: SNAPSHOT_DIR
+                  value: "/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/k3s-db"
               command:
                 - /bin/sh
                 - -c
                 - |
                   set -eo pipefail
                   STAMP="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-
-                  # Read journalctl on the host. The remote routine was looking
-                  # for `journalctl -t nas-backup --since '24 hours ago'`.
-                  ENTRIES=$(nsenter --target 1 --mount --uts --ipc --net --pid \
-                    journalctl -t nas-backup --since "${MAX_AGE_HOURS} hours ago" \
-                    --no-pager -q 2>/dev/null | tail -50 || true)
-
-                  if [ -n "$ENTRIES" ]; then
-                    echo "[${STAMP}] nas-backup entries found (last ${MAX_AGE_HOURS}h):"
-                    echo "$ENTRIES" | head -5
-                    # Check the last line for "error" / "failed" — escalate if so
-                    LAST=$(echo "$ENTRIES" | tail -1)
-                    if echo "$LAST" | grep -qiE '(error|fail|FATAL)'; then
-                      BODY=":x: *nas-backup last run reported an error:*\n\`\`\`${LAST}\`\`\`"
+                  # Newest file under SNAPSHOT_DIR via nsenter (host fs).
+                  NEWEST=$(nsenter --target 1 --mount --uts --ipc --net --pid \
+                    find "$SNAPSHOT_DIR" -type f -printf '%T@ %p\n' 2>/dev/null \
+                    | sort -nr | head -1 || true)
+                  if [ -z "$NEWEST" ]; then
+                    BODY=":rotating_light: *k3s etcd snapshot directory empty or missing* on omv ($SNAPSHOT_DIR). Backup pipeline broken."
+                  else
+                    MTIME=$(printf '%s' "$NEWEST" | awk '{print $1}' | cut -d. -f1)
+                    NOW=$(date +%s)
+                    AGE_H=$(( (NOW - MTIME) / 3600 ))
+                    if [ $AGE_H -gt $MAX_AGE_HOURS ]; then
+                      LATEST_FILE=$(printf '%s' "$NEWEST" | cut -d' ' -f2-)
+                      BODY=":warning: *k3s etcd snapshot is ${AGE_H}h old* (expected <${MAX_AGE_HOURS}h). Latest: \`${LATEST_FILE}\`. Check the hourly snapshot cron on omv-main."
                     else
-                      echo "[${STAMP}] backup healthy — no alert"
+                      echo "[${STAMP}] backup healthy: newest snapshot ${AGE_H}h old"
                       exit 0
                     fi
-                  else
-                    BODY=":rotating_light: *nas-backup has not run in the last ${MAX_AGE_HOURS}h* — no journal entries with tag \`nas-backup\` found on omv host. Either the backup job is broken, or it's not tagging journalctl correctly."
                   fi
-
-                  PAYLOAD=$(printf '%s' "$BODY" | python3 -c '
-                  import json,os,sys
-                  print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))
-                  ')
-                  echo "[${STAMP}] posting nas-backup alert"
+                  PAYLOAD=$(printf '%s' "$BODY" | python3 -c 'import json,os,sys; print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))')
                   RESP=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
                     -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
                     -H 'Content-Type: application/json; charset=utf-8' \

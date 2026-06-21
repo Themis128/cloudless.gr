@@ -13,24 +13,27 @@
 | Feature | How |
 |---|---|
 | External Pi probe | Pings `omv` (192.168.1.128) and `omv-ha` (192.168.1.130) every 30 s |
-| AWS app probe | HTTP GET `https://cloudless.gr` every 60 s |
-| RGB status LED | 8-state color matrix — see table below |
-| Push alerts | Posts to ntfy at `192.168.1.128:30080/cloudless-alerts` |
+| k3s API probe | HTTPS GET `omv:6443/livez` every 30 s; triggers hardware reset after 3 min unreachable |
+| RGB status LED | 4-state color matrix — cluster-only since 2026-06-21 (see table below) |
+| Push alerts | Posts to ntfy at `192.168.1.130:30080/cloudless-alerts` |
 | Prometheus `/metrics` | Scraped by kube-prometheus on port 9101 |
-| Grafana alerts | `PrometheusRule` fires for node-down, AWS-down, ESP32-down, weak Wi-Fi |
+| Grafana alerts | `PrometheusRule` fires for node-down, ESP32-down, weak Wi-Fi |
 
-### LED color matrix
+> **AWS probe removed 2026-06-21** — ESP32 watches CLUSTER ONLY per the
+> monitoring-scope cleanup. The `aws_up` global stays `true` so the LED
+> matrix collapses naturally to the 4-state cluster matrix below.
+> Re-enable by restoring the `aws_health` substitution, the `probe_aws`
+> interval, the `aws_app_reachable` binary_sensor, and the AWS branch of
+> `notify_alerts` in `cloudless-watchdog.yaml`.
 
-| AWS | omv | omv-ha | Color | Effect |
-|-----|-----|--------|-------|--------|
-| ✅ | ✅ | ✅ | 🟢 Green | Solid — everything healthy |
-| ❌ | ✅ | ✅ | 🟠 Orange | Slow blink — AWS only down |
-| ✅ | ❌ | ✅ | 🟡 Yellow | Slow blink — one Pi down |
-| ✅ | ✅ | ❌ | 🟡 Yellow | Slow blink — one Pi down |
-| ✅ | ❌ | ❌ | 🔴 Red | Fast blink — both Pi nodes down |
-| ❌ | ❌ | ✅ | 🔶 Deep orange | Fast blink — AWS + one Pi down |
-| ❌ | ✅ | ❌ | 🔶 Deep orange | Fast blink — AWS + one Pi down |
-| ❌ | ❌ | ❌ | 🟣 Magenta | Fast blink — total outage |
+### LED color matrix (cluster-only)
+
+| omv | omv-ha | Color | Effect |
+|-----|--------|-------|--------|
+| ✅ | ✅ | 🟢 Green | Solid — both cluster nodes healthy |
+| ❌ | ✅ | 🟡 Yellow | Slow blink — omv down, omv-ha up |
+| ✅ | ❌ | 🟡 Yellow | Slow blink — omv-ha down, omv up |
+| ❌ | ❌ | 🔴 Red | Fast blink — total cluster outage |
 
 Blue = booting / connecting to Wi-Fi.
 
