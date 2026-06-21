@@ -51,7 +51,6 @@ operator polish or unlock follow-on automation.
 - [x] ~~🤖 🔵 **R12** `/admin/cost` panel rendering Athena directly~~ ✅ **SHIPPED 2026-06-21** — `src/lib/cost-analytics.ts` + `/api/admin/cost` route + `/admin/cost` page (4 panels: 30d total + yesterday vs 7d-avg + daily trend bars + top-10 services). Bypasses the Grafana SCP block. Linked from `/admin` home grid under "System". Fulfills the admin-must-track-backend rule for R9.
 - [x] ~~🤖 🔵 **R14** Sentry env tagging~~ ✅ **SHIPPED 2026-06-21** — Lambda env adds `SENTRY_ENVIRONMENT: isProd ? "production" : "staging-${stage}"` (sst.config.ts); Pi container env hardcodes `SENTRY_ENVIRONMENT=pi-standby` (k8s/cloudless-app-optimized.yaml). All 3 sentry.{client,server,edge}.config.ts now prefer `SENTRY_ENVIRONMENT` over `NODE_ENV`. Closes pi-cloud-sync.md gap #3.
 - [ ] 🤖 🟣 **R25** (NEW) Self-hosted admin auto-login bridge — `src/lib/selfhosted-autologin.ts` helper + per-app pre-auth tokens; every `/admin/cluster` tile becomes one-click ingress. Per `feedback_selfhosted_admin_autologin`. Per-app PRs (EspoCRM + AppFlowy first). **EFFORT: L (one PR per app) / RISK: MED**
-- [ ] 🤖 🔵 **R14** Sentry env tagging: `SENTRY_ENVIRONMENT=pi-standby` on Pi build, `prod` on Lambda. **EFFORT: XS / RISK: LOW**
 
 ---
 
