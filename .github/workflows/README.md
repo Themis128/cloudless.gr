@@ -1,6 +1,6 @@
 # `.github/workflows/` — catalogue index
 
-124 workflow files as of 2026-06-21. Curated by category per
+**116 active** workflow files (down from 124 — 8 one-shot ones archived to `.github/workflows.archived/` in the same PR as this index). Curated by category per
 `feedback_organize_gh_workflows` memory. Every new workflow MUST follow
 the naming taxonomy here + carry the comment/timeout/concurrency/alert
 conventions listed in that memory.
@@ -124,19 +124,39 @@ Conventions in use today (consolidated retroactively):
 
 ## 🏷️ One-shots / candidates for archival (review quarterly)
 
-`apply-cognito-ui.yml` · `cognito-setup.yml` · `ses-smtp-iam-bootstrap.yml`
-· `decommission-cloudless-online.yml` · `delete-cloudless-online-r53.yml` ·
-`retry-delete-cloudless-online-cert.yml` · `recreate-r53-hc.yml` ·
-`fix-oidc-thumbprint.yml` · `oidc-diagnostic.yml` · `restore-oidc-trust.yml` ·
-`wire-pi-cognito.yml` · `wire-pi-cognito-from-pi.yml` ·
-`slack-manifest-apply.yml` · `test-indexing.yml` ·
-`grafana-esp32-query.yml` · `ntfy-restore.yml` · `analytics-restore.yml` ·
-`linkedin-poll.yml` · `platform-crons.yml` · `workers-ai-verify.yml` ·
-`domain-decommission.yml`
+Still-active one-shots (kept because still actively referenced OR
+plausibly re-needed):
 
-**Suggested action:** review each in this section quarterly. If it
-hasn't been triggered in 90 days AND its purpose is satisfied by another
-workflow, archive (`.github/workflows.archived/<name>.yml.disabled`).
+- `apply-cognito-ui.yml`, `cognito-setup.yml`, `ses-smtp-iam-bootstrap.yml`
+  — initial-setup workflows; may be needed if env is rebuilt
+- `wire-pi-cognito.yml`, `wire-pi-cognito-from-pi.yml` — re-run after
+  Cognito creds rotation
+- `slack-manifest-apply.yml` — actively used by `scripts/seed-slack-*`
+- `domain-decommission.yml` — driver for future decommissions
+- `grafana-esp32-query.yml`, `ntfy-restore.yml`, `analytics-restore.yml`
+  — recovery procedures
+- `linkedin-poll.yml`, `platform-crons.yml`, `workers-ai-verify.yml`
+  — scheduled/manual ops surfaces
+
+### ✅ Archived 2026-06-21 (moved to `.github/workflows.archived/<name>.yml.disabled`)
+
+Truly one-shot workflows whose work is permanently done:
+
+- `decommission-cloudless-online.yml` — cloudless.online domain decommission ✅ done
+- `delete-cloudless-online-r53.yml` — R53 record cleanup ✅ done
+- `retry-delete-cloudless-online-cert.yml` — ACM cert delete ✅ done
+- `recreate-r53-hc.yml` — R53 health-check recreation ✅ done
+- `fix-oidc-thumbprint.yml` — OIDC trust thumbprint fix ✅ done
+- `restore-oidc-trust.yml` — OIDC trust restoration ✅ done
+- `oidc-diagnostic.yml` — OIDC config diagnostic ✅ ran + info captured
+- `test-indexing.yml` — indexing pipeline smoke test ✅ done
+
+**To unarchive** if ever needed: rename `.disabled` back to `.yml` and
+move to `.github/workflows/`. Git history preserves the full content.
+
+**Quarterly sweep:** review the active one-shots list above; if any
+hasn't been triggered in 90+ days AND its purpose is permanently
+satisfied, move it to the archived list.
 
 ## Failure routing matrix
 
