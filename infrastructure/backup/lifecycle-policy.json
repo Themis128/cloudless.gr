@@ -1,0 +1,22 @@
+{
+  "Rules": [
+    {
+      "ID": "pvc-backups-daily-7d-then-glacier-30d",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "pvc-backups/" },
+      "Transitions": [
+        { "Days": 7, "StorageClass": "GLACIER" }
+      ],
+      "Expiration": { "Days": 30 }
+    },
+    {
+      "ID": "pvc-backups-weekly-28d-then-glacier-90d",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "pvc-backups/weekly/" },
+      "Transitions": [
+        { "Days": 28, "StorageClass": "GLACIER" }
+      ],
+      "Expiration": { "Days": 90 }
+    }
+  ]
+}
