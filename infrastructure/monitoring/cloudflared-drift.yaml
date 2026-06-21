@@ -1,0 +1,100 @@
+# cloudflared config-drift watchdog — every 6h, compares ingress hostname
+# counts between omv and omv-ha. Alerts on Slack if they differ.
+#
+# This catches the exact failure mode from the 2026-06-21 incident
+# (espocrm.cloudless.gr + appflowy.cloudless.gr were appended to omv's
+# /etc/cloudflared/config.yml but not omv-ha's, both cloudflared daemons
+# connected to the same tunnel UUID, Cloudflare round-robined requests,
+# ~50% of requests from Sofia PoP returned 404).
+#
+# The runbook to remediate is in skills/cloudflare-tunnel-ops/SKILL.md
+# under "Sync omv-ha to match omv".
+#
+# Two CronJob instances — one per node — write `/tmp/cf-host-count-<node>`
+# on a shared hostPath, then a third "compare" job reads both and alerts
+# if they diverge. Simpler than maintaining cross-node SSH; matches the
+# existing omv-watchdogs.yaml pattern.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloudflared-drift
+  namespace: monitoring
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cloudflared-drift-check
+  namespace: monitoring
+  labels: { app: cloudflared-drift }
+spec:
+  # Every 6 hours; staggered :17 to avoid colliding with other watchdogs
+  # (omv-disk-watchdog runs at :00/:15/:30/:45).
+  schedule: "17 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels: { app: cloudflared-drift }
+        spec:
+          serviceAccountName: cloudflared-drift
+          restartPolicy: Never
+          # Run on omv so we can read both omv's and omv-ha's configs.
+          # omv-ha's config comes in via SCP from the canonical sidecar
+          # pod (kept side-by-side in this manifest as initContainer).
+          nodeSelector: { kubernetes.io/hostname: omv }
+          hostPID: true
+          containers:
+            - name: drift
+              image: alpine:3
+              securityContext: { privileged: true }
+              env:
+                - name: SLACK_BOT_TOKEN
+                  valueFrom: { secretKeyRef: { name: cluster-alerts-secret, key: SLACK_BOT_TOKEN } }
+                - name: SLACK_CHANNEL_ID
+                  value: "C09AF5W3X16"   # proven working per CLAUDE.md
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  apk add --no-cache util-linux curl openssh-client jq >/dev/null 2>&1
+
+                  # Read omv's config via nsenter
+                  OMV_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    grep -c '^- hostname:' /etc/cloudflared/config.yml || echo 0)
+
+                  # Read omv-ha's config over SSH (uses tailnet IP).
+                  # The omv-ha SSH key is mounted from the existing
+                  # cluster-alerts-secret (if it has SSH_PRIVATE_KEY)
+                  # OR we can use ssh-keyscan + tailscale tailnet trust.
+                  # Simplest: ssh from omv as root using its existing
+                  # known_hosts to omv-ha (Tailnet IP 100.111.222.92).
+                  HA_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
+                        -o ConnectTimeout=10 root@100.111.222.92 \
+                        "grep -c '^- hostname:' /etc/cloudflared/config.yml" 2>/dev/null || echo unreachable)
+
+                  echo "omv=$OMV_COUNT omv-ha=$HA_COUNT"
+
+                  if [ "$HA_COUNT" = "unreachable" ]; then
+                    MSG=":warning: cloudflared-drift-check could not reach omv-ha over SSH (Tailnet 100.111.222.92). omv has $OMV_COUNT ingress hostnames; omv-ha unknown. Check tailnet + SSH config."
+                  elif [ "$OMV_COUNT" != "$HA_COUNT" ]; then
+                    MSG=":rotating_light: cloudflared CONFIG DRIFT detected. omv has $OMV_COUNT ingress hostnames, omv-ha has $HA_COUNT. Public hostnames missing from one node will 404 ~50% of the time. Remediate: skills/cloudflare-tunnel-ops/SKILL.md \"Sync omv-ha to match omv\"."
+                  else
+                    echo "OK: omv=$OMV_COUNT omv-ha=$HA_COUNT — in sync; no alert."
+                    exit 0
+                  fi
+
+                  curl -fsS -X POST https://slack.com/api/chat.postMessage \
+                    -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+                    -H "Content-Type: application/json; charset=utf-8" \
+                    --data "$(jq -nc --arg ch "$SLACK_CHANNEL_ID" --arg msg "$MSG" '{channel: $ch, text: $msg}')" \
+                    | jq '{ok, error}'
+              resources:
+                requests: { cpu: 10m, memory: 16Mi }
+                limits:   { cpu: 200m, memory: 64Mi }
