@@ -241,6 +241,30 @@ For ongoing Photos sync to omv, [`gphotos-sync`](https://github.com/gilesknap/gp
 runs as a CronJob (similar pattern to `infrastructure/backup/cronjob-*.yaml`).
 Not in scope here — add as an R-row if you want it.
 
+## NAS-headroom guard (auto-deployed)
+
+A daily k8s CronJob (`infrastructure/omv-sdb1/cronjob-share-readme-and-probe.yaml`)
+pinned to omv-main does two things at 04:30 UTC:
+
+1. Refreshes this runbook into `\\omv\google-archive\README.md` so
+   it's discoverable from your Windows workstation.
+2. Probes sdb1 free space and POSTs to `/api/webhooks/admin-alert`
+   (Slack + ntfy) when free space drops below **200 GB** (medium)
+   or **100 GB** (high — NAS unusable for ad-hoc writes).
+
+Budget enforced:
+
+| Slice | Target |
+|---|---|
+| Google-archive (Photos + Drive + Gmail) | ~150 GB |
+| Working headroom for NAS drops | ~300 GB |
+| Alert threshold | 200 GB free |
+| Hard floor | 100 GB free |
+
+If the alert fires, prune oldest Takeout snapshots or move cold
+content to an external drive / S3 Glacier. The probe itself never
+deletes anything.
+
 ## See also
 
 - `docs/google-drive-cleanup.md` — broader Drive/Gmail/Photos cleanup runbook
