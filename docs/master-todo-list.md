@@ -29,10 +29,11 @@ Synthesizes:
 
 ## Session log — 2026-06-22 (workflows + ops sweep + R18)
 
-17 PRs merged today after R10-R14 landed in the previous session.
+18 PRs merged today after R10-R14 landed in the previous session.
 15 on the ops / CI / housekeeping side + 2 shipping R18 (Pi-side SSM
-scope assertion probe). Listed here so future sessions know what
-state the repo is in without diffing git.
+scope assertion probe) + 1 automated chore (Notion sitemap sync).
+Listed here so future sessions know what state the repo is in
+without diffing git.
 
 | PR | Theme | Net |
 |---|---|---|
@@ -53,7 +54,8 @@ state the repo is in without diffing git.
 | #1114 | Master TODO session-log addendum (PR #1112+#1113, Pi-back confirmation, CI-green note). | docs |
 | #1115 | **feat(R18)**: `scripts/audit-pi-ssm-scope.sh` + `.github/workflows/probe-pi-ssm-scope.yml`. Daily 06:05 UTC `iam:SimulatePrincipalPolicy` diff of SSM keys vs `cloudless-pi-standby`. Drift → `/api/webhooks/admin-alert` (severity=high). Closes pi-cloud-sync.md gap #2. | feat |
 | #1116 | **perf(R18)**: batch `simulate-principal-policy` 32 ARNs/call. v1 sequential timed out at 5 min on first verification run; v2 runs ~75s end-to-end. | perf |
-| #1117 | This doc update — added #1114-#1116 + status header bump (R18 now ✅). | docs |
+| #1117 | Automated: Notion sitemap entries sync. | chore |
+| #1122 | This doc update — added #1114-#1117 + status header bump (R18 now ✅). | docs |
 
 **Pi runners** (`omv`, `omv-build`) were offline for most of the
 session and **are back online as of 2026-06-22 ~01:30 UTC**
