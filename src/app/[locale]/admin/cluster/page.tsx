@@ -7,6 +7,11 @@
  * as the LinkedIn campaigns page; data comes from
  * /api/admin/cluster/watchdogs which talks to the k8s API via the in-pod
  * SA + the `watchdog-reader` RoleBinding.
+ *
+ * R25: Self-hosted admin auto-login bridge — each app tile has an "Open →"
+ * button that calls /api/admin/autologin?app=<name> and opens the result URL
+ * in a new tab. AppFlowy gets a token-injected deep-link; all others get the
+ * canonical admin URL.
  */
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
@@ -106,6 +111,10 @@ function mqttChip(s: MqttStatus | null): { label: string; klass: string; dot: st
     dot: "bg-red-400",
   };
 }
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default function ClusterStatusPage() {
   const [watchdogs, setWatchdogs] = useState<Watchdog[]>([]);
@@ -381,6 +390,26 @@ export default function ClusterStatusPage() {
           </div>
         </div>
       )}
+
+      {/* R25 — Self-hosted portal link */}
+      <div className="mt-8">
+        <div className="border-neon-cyan/20 bg-neon-cyan/5 flex items-center justify-between rounded-xl border px-5 py-4">
+          <div>
+            <h2 className="font-heading text-sm font-semibold text-white">
+              Self-hosted Apps Portal
+            </h2>
+            <p className="mt-0.5 font-mono text-[10px] text-slate-400">
+              One-click admin ingress to EspoCRM, AppFlowy, n8n, Postiz, Grafana, Kuma
+            </p>
+          </div>
+          <Link
+            href="/admin/selfhosted"
+            className="border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 shrink-0 rounded-lg border px-4 py-2 font-mono text-xs transition-colors"
+          >
+            Open portal →
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
