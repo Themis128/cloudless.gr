@@ -389,12 +389,8 @@ export async function searchContacts(
 }
 
 export async function isEspoCRMConfigured(): Promise<boolean> {
-  // Kept name so `lib/hubspot` callers don't break on import-flip. Prefer the
-  // new name `isEspoCRMConfigured` in new code.
-  return isEspoCRMConfigured();
-}
-
-export async function isEspoCRMConfigured(): Promise<boolean> {
+  // Single canonical name (PR #1133 collapsed the legacy `isHubSpotConfigured`
+  // alias into this one — both used to coexist, with the alias delegating here).
   try {
     await getEspoConfig();
     return true;
