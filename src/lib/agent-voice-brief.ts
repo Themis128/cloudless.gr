@@ -81,12 +81,12 @@ const AGENT_TOOLS = [
   },
   {
     name: "get_pipeline_stats",
-    description: "Fetch HubSpot open-deal pipeline totals (deal count + total value in euros).",
+    description: "Fetch EspoCRM open-deal pipeline totals (deal count + total value in euros).",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
     name: "get_email_metrics",
-    description: "Fetch the size of the newsletter subscriber list (HubSpot marketing contacts).",
+    description: "Fetch the size of the newsletter subscriber list (EspoCRM contacts with newsletter opt-in).",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
@@ -179,15 +179,15 @@ const TOOL_HANDLERS: Record<string, () => Promise<string>> = {
     toolName: "get_pipeline_stats",
     fetch: fetchPipelineMetrics,
     format: (p) =>
-      `HubSpot pipeline: ${p.totalDeals} open deals worth €${p.totalValueEuros.toFixed(0)}.`,
-    emptyMessage: "HubSpot not configured.",
-    failMessage: "HubSpot pipeline lookup failed after retries.",
+      `EspoCRM pipeline: ${p.totalDeals} open deals worth €${p.totalValueEuros.toFixed(0)}.`,
+    emptyMessage: "EspoCRM not configured.",
+    failMessage: "EspoCRM pipeline lookup failed after retries.",
   }),
   get_email_metrics: makeToolHandler({
     toolName: "get_email_metrics",
     fetch: fetchEmailMetrics,
     format: (e) => `Newsletter: ${e.totalContacts.toLocaleString()} subscribers.`,
-    emptyMessage: "HubSpot not configured.",
+    emptyMessage: "EspoCRM not configured.",
     failMessage: "Newsletter lookup failed after retries.",
   }),
   get_stripe_revenue: makeToolHandler({

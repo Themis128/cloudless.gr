@@ -30,19 +30,27 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: admin-alert-token
+  name: admin-alert-secret
   namespace: omv-ops
 type: Opaque
 stringData:
-  # Populated out-of-band by the operator:
-  #   kubectl -n omv-ops create secret generic admin-alert-token \
-  #     --from-literal=ADMIN_ALERT_TOKEN=$(aws ssm get-parameter \
-  #       --name /cloudless/production/ADMIN_ALERT_TOKEN \
-  #       --with-decryption --query Parameter.Value --output text) \
-  #     --dry-run=client -o yaml | kubectl apply -f -
-  # If absent, the probe still runs but admin-alert POST will 401
-  # (logged as warning, doesn't fail the job).
-  ADMIN_ALERT_TOKEN: ""
+  # The /api/webhooks/admin-alert route expects header
+  # `x-cloudless-alert-secret` matching SSM `ADMIN_ALERT_SECRET`
+  # (route handler: src/app/api/webhooks/admin-alert/route.ts L70).
+  #
+  # Operator one-time setup (see docs/admin-alert-secret-setup.md):
+  #   1. Generate shared secret + write to SSM:
+  #        TOKEN=$(openssl rand -hex 32)
+  #        aws ssm put-parameter --name /cloudless/production/ADMIN_ALERT_SECRET \
+  #          --type SecureString --value "$TOKEN" --overwrite --region us-east-1
+  #        (the Lambda reads SSM at cold-start; rotate together with the k8s secret)
+  #   2. Mirror into this k8s Secret:
+  #        kubectl -n omv-ops create secret generic admin-alert-secret \
+  #          --from-literal=ADMIN_ALERT_SECRET="$TOKEN" \
+  #          --dry-run=client -o yaml | kubectl apply -f -
+  # If absent, the probe still runs but the alert POST is skipped
+  # (logged as warning; the job itself doesn't fail).
+  ADMIN_ALERT_SECRET: ""
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -85,11 +93,11 @@ spec:
                   value: "100"
                 - name: ADMIN_ALERT_URL
                   value: https://cloudless.gr/api/webhooks/admin-alert
-                - name: ADMIN_ALERT_TOKEN
+                - name: ADMIN_ALERT_SECRET
                   valueFrom:
                     secretKeyRef:
-                      name: admin-alert-token
-                      key: ADMIN_ALERT_TOKEN
+                      name: admin-alert-secret
+                      key: ADMIN_ALERT_SECRET
                       optional: true
               command:
                 - /bin/sh
@@ -134,14 +142,14 @@ spec:
                   echo "::warning::$TITLE"
                   MESSAGE="omv-main sdb1 (/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7) at ${USED_GB}G of ${SIZE_GB}G, only ${AVAIL_GB}G free. Headroom budget = ${ALERT_FREE_GB}G alert / ${HARD_FLOOR_GB}G hard floor. Prune Google-archive snapshots or WindowsImageBackup. See docs/google-to-omv-migration.md."
 
-                  if [ -n "${ADMIN_ALERT_TOKEN:-}" ]; then
+                  if [ -n "${ADMIN_ALERT_SECRET:-}" ]; then
                     curl -fsS -X POST "$ADMIN_ALERT_URL" \
                       -H "Content-Type: application/json" \
-                      -H "Authorization: Bearer $ADMIN_ALERT_TOKEN" \
+                      -H "x-cloudless-alert-secret: $ADMIN_ALERT_SECRET" \
                       -d "$(printf '{"severity":"%s","source":"sdb1-capacity","title":"%s","message":"%s"}' "$SEVERITY" "$TITLE" "$MESSAGE")" \
                       || echo "::warning::admin-alert POST failed (alert lost; check logs)"
                   else
-                    echo "::warning::ADMIN_ALERT_TOKEN not set in omv-ops/admin-alert-token Secret — alert logged only, not POSTed."
+                    echo "::warning::ADMIN_ALERT_SECRET not set in omv-ops/admin-alert-secret Secret — alert logged only, not POSTed."
                   fi
 
                   # Don't fail the job on capacity alert (probe is informational)

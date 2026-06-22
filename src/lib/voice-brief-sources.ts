@@ -7,7 +7,7 @@
  * the agent loop and can be unit-tested independently.
  */
 import { getSeoSnapshot } from "@/lib/gsc";
-import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/espocrm";
+import { isEspoCRMConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/espocrm";
 import { getStripe } from "@/lib/stripe";
 
 export interface SeoMetrics {
@@ -37,16 +37,16 @@ export async function fetchSeoMetrics(): Promise<SeoMetrics | null> {
   return { clicks: snap.clicks, impressions: snap.impressions, ctr: snap.ctr };
 }
 
-/** Returns null when HubSpot isn't configured; throws on transport errors. */
+/** Returns null when EspoCRM isn't configured; throws on transport errors. */
 export async function fetchPipelineMetrics(): Promise<PipelineMetrics | null> {
-  if (!(await isHubSpotConfigured())) return null;
+  if (!(await isEspoCRMConfigured())) return null;
   const p = await getPipelineStats();
   return { totalDeals: p.totalDeals, totalValueEuros: p.totalValue / 100 };
 }
 
-/** Newsletter subscriber count — null when HubSpot isn't configured. */
+/** Newsletter subscriber count — null when EspoCRM isn't configured. */
 export async function fetchEmailMetrics(): Promise<EmailMetrics | null> {
-  if (!(await isHubSpotConfigured())) return null;
+  if (!(await isEspoCRMConfigured())) return null;
   const subs = await listNewsletterSubscribers();
   return { totalContacts: subs.length };
 }
