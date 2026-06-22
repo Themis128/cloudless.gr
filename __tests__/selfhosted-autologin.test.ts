@@ -179,7 +179,7 @@ describe("getAutologinUrl — AppFlowy (GoTrue password-grant)", () => {
 describe("getAutologinUrl — AppFlowy misconfiguration", () => {
   it("throws when APPFLOWY_API_URL is missing", async () => {
     const { getConfig } = await import("@/lib/ssm-config");
-    vi.mocked(getConfig).mockResolvedValueOnce({
+    vi.mocked(getConfig).mockResolvedValue({
       APPFLOWY_API_URL: "",
       APPFLOWY_EMAIL: "admin@cloudless.gr",
       APPFLOWY_PASSWORD: "pw",
