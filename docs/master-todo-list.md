@@ -1,12 +1,13 @@
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
 **Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
-**R22** (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
+R22 (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
 **Phase 2 is 3/3 done.** R13 descoped to 24h cadence ⇒ already covered
 by R10's daily EspoCRM CronJob; R22 audit confirmed the existing
 ConditionalWrite-dedup pattern is safe at SMB volume. The 2026-06-22
-session ran a 19-PR ops sweep on top of that — see the "Session log"
-section below.
+session ran a 22-PR ops sweep on top of that — see the "Session log"
+section below. **Next R-row: R21a** (Meilisearch self-host on omv-ha —
+entry to the AI baseline arc).
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
