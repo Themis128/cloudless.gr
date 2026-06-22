@@ -1,10 +1,12 @@
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
-**Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18
-(Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open). Phase 2 is
-**2/3 done** (only R22 remains; R13 descoped to 24h cadence ⇒ already
-covered by R10's daily EspoCRM CronJob). The 2026-06-22 session ran a
-18-PR ops sweep on top of that — see the "Session log" section below.
+**Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
+**R22** (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
+**Phase 2 is 3/3 done.** R13 descoped to 24h cadence ⇒ already covered
+by R10's daily EspoCRM CronJob; R22 audit confirmed the existing
+ConditionalWrite-dedup pattern is safe at SMB volume. The 2026-06-22
+session ran a 19-PR ops sweep on top of that — see the "Session log"
+section below.
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
@@ -121,7 +123,7 @@ operator polish or unlock follow-on automation.
 
 - [x] ~~🤖 🟠 **R13** EspoCRM `mariadb-backup` hourly to S3~~ ✅ **DESCOPED to 24h cadence — already shipped via R10** (2026-06-22). Operator chose RPO=24h over the originally-planned RPO=1h. The daily `infrastructure/backup/cronjob-espocrm.yaml` CronJob at 03:45 UTC (mariadb-dump → gzip → S3 `pvc-backups/espocrm/daily/`) covers this. If the RPO ever needs to drop back to 1h, add a sibling CronJob with `schedule: "0 * * * *"` reusing the same Secret + ServiceAccount.
 - [x] ~~🤖 🟣 **R18** Pi-side SSM scope assertion~~ ✅ **SHIPPED 2026-06-22** — `scripts/audit-pi-ssm-scope.sh` walks `/cloudless/production/*` and runs `iam:SimulatePrincipalPolicy` for `ssm:GetParameter` against `cloudless-pi-standby`. `.github/workflows/probe-pi-ssm-scope.yml` runs daily 06:05 UTC; drift POSTs to `/api/webhooks/admin-alert` (severity=high) which fans to Slack + ntfy + Sentry per the R8 path. Read-only — needs only `ssm:DescribeParameters` + `iam:SimulatePrincipalPolicy` on the caller. Closes pi-cloud-sync.md gap #2.
-- [ ] 🤖 🔵 **R22** Stripe webhook idempotency audit — confirm `event.id` dedup table in DDB + return 200 fast + process async. Prevents duplicate-charge bugs. **EFFORT: S (audit-only)**
+- [x] ~~🤖 🔵 **R22** Stripe webhook idempotency audit~~ ✅ **AUDIT COMPLETE 2026-06-22** — `event.id` dedup via DDB ConditionalWrite ✅; <10s synchronous handler under Stripe's 10s timeout ✅; no async queue (rejected — would require SQS, banned by same-hardware constraint, and the conditional-write dedup makes it unnecessary). Full audit + 3-rule guard for future contributors in `docs/stripe-webhook-audit-r22.md`. Guard also inlined as JSDoc on `handleStripeEvent()` in the route. **Phase 2: 3/3 done.**
 
 ---
 

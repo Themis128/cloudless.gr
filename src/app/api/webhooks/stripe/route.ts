@@ -190,6 +190,20 @@ async function handleSubscriptionEvent(
   );
 }
 
+/**
+ * Dispatch the event to its handler.
+ *
+ * **R22 guard rule** — any new case added here MUST:
+ *   1. Complete in <5s under normal load (Stripe's webhook timeout is 10s)
+ *   2. Be idempotent on partial failure (re-run with same event.id must
+ *      not double-bill, double-notify, or double-write user state)
+ *   3. Be fully synchronous — no `void promise()` escapes (the dedup
+ *      safety in persistStripeEvent only holds if the handler's work is
+ *      complete before the 200 is returned)
+ *
+ * If those rules don't fit a new event, add a queue first
+ * (see docs/stripe-webhook-audit-r22.md).
+ */
 async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
     case "checkout.session.completed":
