@@ -33,7 +33,7 @@ This doc is the contract for what's kept in sync, how, and what to monitor.
 | **Runtime secrets** | Both read from SSM at `/cloudless/production/*` (see [sst.config.ts:31-32](../sst.config.ts)). | Pi must have `ssm:GetParametersByPath` on that prefix via `cloudless-pi-standby`. |
 | **Notion content** | Both fetch live from Notion API; ISR per-process. | Pi cache lags by up to its ISR TTL after Notion edits. |
 | **Auth sessions** | Both verify JWTs against the same Cognito JWKS. | Pi must have the `COGNITO_*` vars in SSM. |
-| **Webhooks (Stripe/Notion/HubSpot)** | Hit `cloudless.gr` and route to whichever is live. | Pi must hold the same webhook secrets in SSM. |
+| **Webhooks (Stripe/Notion/EspoCRM)** | Hit `cloudless.gr` and route to whichever is live. | Pi must hold the same webhook secrets in SSM. |
 | **TLS cert** | Cloud uses ACM; Pi uses its own (Let's Encrypt / cert-manager). | Independent expiry. **Highest silent-failure risk.** |
 | **Outbound IP / source reputation** | Differs (CloudFront IP vs WAN `150.228.63.192`). | Anything with IP allowlists — outbound APIs, SES — must allowlist both. |
 

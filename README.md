@@ -86,7 +86,7 @@ graph TB
     subgraph External["External Services"]
         Stripe["Stripe Payments"]
         Slack["Slack Notifications"]
-        HubSpot["HubSpot CRM"]
+        EspoCRM["EspoCRM CRM"]
         GCal["Google Calendar"]
         Notion["Notion Blog CMS"]
     end
@@ -96,7 +96,7 @@ graph TB
     Routes --> SSM
     Contact --> SES
     Contact --> Slack
-    Contact --> HubSpot
+    Contact --> EspoCRM
     Subscribe --> SES
     Subscribe --> Slack
     Checkout --> Stripe
@@ -188,7 +188,7 @@ The app has a full two-way Slack integration. Last verified 2026-04-09 (56 unit 
 
 **Outbound notifications** (cloudless.gr → Slack):
 
-- `slackContactNotify` — fires on every contact form submission (fire-and-forget, parallel with HubSpot CRM upsert)
+- `slackContactNotify` — fires on every contact form submission (fire-and-forget, parallel with EspoCRM CRM upsert)
 - `slackSubscriberNotify` — fires on every newsletter sign-up, in parallel with the SES email
 - `slackOrderNotify` — fires on Stripe checkout completion with amount and session ID
 - `slackErrorNotify` — surface unexpected API errors to your Slack channel
@@ -327,7 +327,7 @@ All Stripe operations use a lazy singleton from `src/lib/stripe.ts` (`getStripe(
 - Webhook secret loaded exclusively from SSM (`STRIPE_WEBHOOK_SECRET`) — no env var fast-path.
 - `checkout.session.completed`: order confirmation email sent only when `payment_status === "paid"` OR `mode === "subscription"`. One-time payments with `payment_status !== "paid"` (e.g. async bank transfers still pending) do not trigger the email.
 - `invoice.payment_failed`: sends failure notice to customer + team alert.
-- HubSpot contact upsert + deal creation runs fire-and-forget after `checkout.session.completed`.
+- EspoCRM contact upsert + deal creation runs fire-and-forget after `checkout.session.completed`.
 - Sentry `captureException` and `flush` called on handler errors before Lambda returns.
 
 ### User purchases (`GET /api/user/purchases`)

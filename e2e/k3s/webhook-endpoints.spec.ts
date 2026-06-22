@@ -13,7 +13,7 @@ const WEBHOOK_ENDPOINTS = [
   { name: "Slack events", path: "/api/slack/events", expectedStatus: [401, 403, 400] },
   { name: "Slack interactions", path: "/api/slack/interactions", expectedStatus: [401, 403, 400] },
   { name: "Slack commands", path: "/api/slack/commands", expectedStatus: [401, 403, 400] },
-  // HubSpot webhook deleted 2026-06-20 with PR #1043 (HubSpot decom); EspoCRM
+  // EspoCRM webhook deleted 2026-06-20 with PR #1043 (EspoCRM decom); EspoCRM
   // webhook replaces it. The /api/webhooks/espocrm route exists and is exercised
   // here so a future "EspoCRM webhook accidentally deleted" regression is caught.
   { name: "EspoCRM webhook", path: "/api/webhooks/espocrm", expectedStatus: [401, 403, 400, 405] },
@@ -42,7 +42,7 @@ test.describe("Webhook endpoints — route existence and auth rejection", () => 
         timeout: 10_000,
       });
       // Webhook routes should reject GET (405) or return 4xx; never 2xx.
-      // (The HubSpot GET-verification exemption was removed with PR #1043.)
+      // (The EspoCRM GET-verification exemption was removed with PR #1043.)
       expect(
         [200].includes(r.status()),
         `${wh.name} accepts GET — webhook routes should be POST-only`,

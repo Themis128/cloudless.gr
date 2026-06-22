@@ -36,10 +36,10 @@ vi.mock("@/lib/espocrm", () => ({
   // route imports the new name. Keep the old mock variable as the backing
   // implementation so behavior tests don't need to be re-written.
   isEspoCRMConfigured: mockIsHubSpotConfigured,
-  isHubSpotConfigured: mockIsHubSpotConfigured,
+  isEspoCRMConfigured: mockIsHubSpotConfigured,
   listNewsletterSubscribers: mockListNewsletterSubscribers,
   // /api/admin/email/contacts switched from raw fetch → searchContacts /
-  // listContacts (lib/espocrm) after the HubSpot decom. Mock both so the
+  // listContacts (lib/espocrm) after the EspoCRM decom. Mock both so the
   // route's `try { … }` branch resolves instead of throwing → 500.
   searchContacts: mockSearchContacts,
   listContacts: mockListContacts,
@@ -71,10 +71,10 @@ describe("Admin Email API routes", () => {
   });
 
   // ── GET /api/admin/email/campaigns ───────────────────────────────────────────
-  // Route is a 501 stub — HubSpot Marketing Emails requires 'content' scope.
+  // Route is a 501 stub — EspoCRM Marketing Emails requires 'content' scope.
 
   describe("GET /api/admin/email/campaigns", () => {
-    it("returns 501 (HubSpot scope not available)", async () => {
+    it("returns 501 (EspoCRM scope not available)", async () => {
       const { GET } = await import("@/app/api/admin/email/campaigns/route");
       const res = await GET(makeGet("/api/admin/email/campaigns"));
       expect(res.status).toBe(501);
@@ -84,10 +84,10 @@ describe("Admin Email API routes", () => {
   });
 
   // ── GET /api/admin/email/stats ───────────────────────────────────────────────
-  // Route uses HubSpot: isHubSpotConfigured + listNewsletterSubscribers.
+  // Route uses EspoCRM: isEspoCRMConfigured + listNewsletterSubscribers.
 
   describe("GET /api/admin/email/stats", () => {
-    it("returns 503 when HubSpot not configured", async () => {
+    it("returns 503 when EspoCRM not configured", async () => {
       mockIsHubSpotConfigured.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/email/stats/route");
       const res = await GET(makeGet("/api/admin/email/stats"));
@@ -106,10 +106,10 @@ describe("Admin Email API routes", () => {
   });
 
   // ── GET /api/admin/email/contacts ────────────────────────────────────────────
-  // Route uses HubSpot: isHubSpotConfigured + getConfig + raw fetch to HubSpot API.
+  // Route uses EspoCRM: isEspoCRMConfigured + getConfig + raw fetch to EspoCRM API.
 
   describe("GET /api/admin/email/contacts", () => {
-    it("returns 503 when HubSpot not configured", async () => {
+    it("returns 503 when EspoCRM not configured", async () => {
       mockIsHubSpotConfigured.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/email/contacts/route");
       const res = await GET(makeGet("/api/admin/email/contacts"));
@@ -119,7 +119,7 @@ describe("Admin Email API routes", () => {
     it("returns contacts from EspoCRM (subscribers tab → searchContacts)", async () => {
       // Route at `?tab=subscribers` calls searchContacts("leadSource",
       // "newsletter_signup") and returns the .results slice + .total.
-      // Schema mirrors the old HubSpot shape (id + properties.email) so the
+      // Schema mirrors the old EspoCRM shape (id + properties.email) so the
       // admin UI didn't need to change.
       mockSearchContacts.mockResolvedValueOnce({
         results: [{ id: "1", properties: { email: "a@b.com" } }],

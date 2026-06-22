@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       metadata: { start, notes: notes ? String(notes).slice(0, 500) : null },
     });
 
-    // HubSpot: upsert contact + create consultation deal (fire-and-forget)
+    // EspoCRM: upsert contact + create consultation deal (fire-and-forget)
     (async () => {
       try {
         const [firstName, ...rest] = (name as string).trim().split(" ");
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       } catch (err) {
         const _r = mapIntegrationError(err);
         if (_r) return _r;
-        console.error("[Calendar→HubSpot] Deal creation failed:", err);
+        console.error("[Calendar→EspoCRM] Deal creation failed:", err);
       }
     })();
 

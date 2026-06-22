@@ -77,7 +77,7 @@ check "AUTH_URL" required "callback URL construction"
 echo ""
 echo "▸ Required for SSM-loaded secrets:"
 check "SSM_PREFIX" required "where ssm-config.ts looks"
-check "NEXT_PUBLIC_SITE_URL" required "Stripe/HubSpot callback URLs"
+check "NEXT_PUBLIC_SITE_URL" required "Stripe/EspoCRM callback URLs"
 
 echo ""
 echo "▸ Deploy traceability:"

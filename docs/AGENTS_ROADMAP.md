@@ -79,7 +79,7 @@ Today there are 4 cron routes (analytics-rollup, calendar-digest, report-cleanup
 
 The original linear `Promise.all(…)` pipeline is preserved verbatim — pass `?legacy=true` on the cron request to fall back to it for at least one full release cycle. Both paths share the same SSM persistence (`/cloudless/VOICE_BRIEF_LATEST`) so the admin assistant page sees the same shape regardless.
 
-**Cost model in practice**: one cron tick a week, ~3–8 LLM calls (model often skips HubSpot/Stripe if `isConfigured` returns false on the first probe), < $0.05/run on Bedrock Haiku.
+**Cost model in practice**: one cron tick a week, ~3–8 LLM calls (model often skips EspoCRM/Stripe if `isConfigured` returns false on the first probe), < $0.05/run on Bedrock Haiku.
 
 **Tests**: 6 specs in `__tests__/cron-voice-brief.test.ts` covering auth, agent happy path, agent failure tolerance (SSM/Slack), legacy default, and legacy fallback when the Anthropic narrate call returns non-200.
 

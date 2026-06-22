@@ -36,7 +36,7 @@ test.describe("k3s static assets", () => {
       const t = m.text();
       const url = m.location().url ?? "";
       // Treat anything emitted from a 3rd-party host as benign — extensions,
-      // ad blockers, or geo-restricted Stripe/HubSpot/Sentry endpoints will
+      // ad blockers, or geo-restricted Stripe/EspoCRM/Sentry endpoints will
       // routinely produce console.error noise on first load.
       const thirdParty =
         /(stripe|hubspot|sentry|facebook|hsforms|hs-scripts|googletagmanager|google-analytics)/i;

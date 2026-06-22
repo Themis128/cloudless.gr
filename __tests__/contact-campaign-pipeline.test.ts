@@ -2,7 +2,7 @@
 /**
  * Tests the full /api/contact pipeline with campaign tier context
  * (the payload shape produced by the inline TierTable form).
- * Verifies SES, Slack, HubSpot, and Notion all receive the tier data.
+ * Verifies SES, Slack, EspoCRM, and Notion all receive the tier data.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -29,7 +29,7 @@ vi.mock("@/lib/slack-notify", () => ({
   slackContactNotify: (...args: unknown[]) => mockSlackContactNotify(...args),
 }));
 
-// Mock HubSpot
+// Mock EspoCRM
 const mockUpsertContact = vi.fn().mockResolvedValue("contact-123");
 const mockCreateDeal = vi.fn().mockResolvedValue("deal-456");
 const mockAssociateDealWithContact = vi.fn().mockResolvedValue(undefined);
@@ -133,7 +133,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     );
   });
 
-  it("upserts HubSpot contact with name and email", async () => {
+  it("upserts EspoCRM contact with name and email", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -152,7 +152,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     );
   });
 
-  it("creates HubSpot deal with campaign tier context", async () => {
+  it("creates EspoCRM deal with campaign tier context", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -172,7 +172,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     );
   });
 
-  it("associates deal with contact in HubSpot", async () => {
+  it("associates deal with contact in EspoCRM", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -42,7 +42,7 @@ interface AppConfig {
   NEWSLETTER_SLACK_BOT_TOKEN: string;
   NEWSLETTER_SLACK_SIGNING_SECRET: string;
   NEWSLETTER_SLACK_CHANNEL_ID: string;
-  /** EspoCRM (replaced HubSpot 2026-06-20) — base URL of the self-hosted instance. */
+  /** EspoCRM (replaced EspoCRM 2026-06-20) — base URL of the self-hosted instance. */
   ESPOCRM_BASE_URL: string;
   /** EspoCRM API key for the `cloudless-app` API user. */
   ESPOCRM_API_KEY: string;

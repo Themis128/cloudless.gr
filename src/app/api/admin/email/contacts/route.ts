@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     if (tab === "subscribers") {
       // Newsletter subscribers: EspoCRM Contacts whose leadSource equals
-      // "newsletter_signup" (same string the HubSpot import used, preserved
+      // "newsletter_signup" (same string the EspoCRM import used, preserved
       // by lib/espocrm.ts upsertContact). searchContacts handles the
       // EspoCRM `where[…]` syntax.
       const data = await searchContacts("leadSource", "newsletter_signup");

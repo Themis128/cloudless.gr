@@ -153,7 +153,7 @@ Site-wide totals + top 20 pages — used as a lightweight web analytics proxy.
 
 ### `GET /api/admin/analytics/unified`
 
-Cross-integration dashboard combining SEO (GSC), pipeline (HubSpot), email (ActiveCampaign), and revenue (Stripe) in a single parallel fetch. Returns `null` for any integration that is not configured or fails.
+Cross-integration dashboard combining SEO (GSC), pipeline (EspoCRM), email (ActiveCampaign), and revenue (Stripe) in a single parallel fetch. Returns `null` for any integration that is not configured or fails.
 
 ---
 
@@ -251,4 +251,4 @@ Test coverage (29 + 33 tests):
 | `src/lib/google-auth.ts` | Shared `createGoogleAuth(scope)` factory — provides cached token for both Calendar and GSC |
 | `src/lib/gsc.ts` | All GSC functions: snapshot, keywords, pages, history, devices, countries, CTR opportunities, query-page mapping, search intent, web analytics |
 | `src/app/api/admin/analytics/seo/route.ts` | Combined snapshot + keywords dashboard endpoint |
-| `src/app/api/admin/analytics/unified/route.ts` | Cross-integration unified dashboard (GSC + HubSpot + ActiveCampaign + Stripe) |
+| `src/app/api/admin/analytics/unified/route.ts` | Cross-integration unified dashboard (GSC + EspoCRM + ActiveCampaign + Stripe) |

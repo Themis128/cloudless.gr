@@ -92,7 +92,7 @@ const NAV_GROUPS: NavGroup[] = [
     cards: [
       card(
         "Lead Inbox",
-        "Unified leads from HubSpot + portal enrollments",
+        "Unified leads from EspoCRM + portal enrollments",
         "📥",
         "/admin/leads",
         (s) => (s.leads === null ? null : `${s.leads} leads`)
@@ -120,7 +120,7 @@ const NAV_GROUPS: NavGroup[] = [
         "📧",
         "/admin/email/campaigns"
       ),
-      card("Pipeline", "HubSpot deals by stage", "🔀", "/admin/pipeline"),
+      card("Pipeline", "EspoCRM deals by stage", "🔀", "/admin/pipeline"),
     ],
   },
   {
@@ -138,7 +138,7 @@ const NAV_GROUPS: NavGroup[] = [
         s.orders === null ? null : `${s.orders} orders · €${(s.revenue ?? 0).toFixed(0)}`
       ),
       card("Subscriptions", "Recurring plans and MRR", "🔁", "/admin/subscriptions"),
-      card("CRM", "HubSpot contacts, companies, tickets", "◉", "/admin/crm"),
+      card("CRM", "EspoCRM contacts, companies, tickets", "◉", "/admin/crm"),
     ],
   },
   {

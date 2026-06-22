@@ -561,7 +561,7 @@ export async function slackChatNotify(data: { message: string; ip?: string }): P
   });
 }
 
-/** Notify when a support ticket is created via HubSpot. */
+/** Notify when a support ticket is created via EspoCRM. */
 export async function slackTicketNotify(data: {
   subject: string;
   email?: string;

@@ -1,5 +1,5 @@
 // Service connectivity check script for Cloudless.gr
-// Checks actual connectivity for AWS SSM, SES, Stripe, Notion, HubSpot, Google Calendar, Slack, Sentry,
+// Checks actual connectivity for AWS SSM, SES, Stripe, Notion, EspoCRM, Google Calendar, Slack, Sentry,
 // Cognito OIDC (when COGNITO_ISSUER is set).
 
 const fs = require('fs');
@@ -51,7 +51,7 @@ async function checkHubSpot() {
   const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?limit=1', {
     headers: { Authorization: `Bearer ${key}` },
   });
-  if (!res.ok) throw new Error(`HubSpot API unreachable (${res.status})`);
+  if (!res.ok) throw new Error(`EspoCRM API unreachable (${res.status})`);
 }
 
 async function checkNotion() {
@@ -144,7 +144,7 @@ async function main() {
   const checks = [
     [checkStripe, 'Stripe', false],
     [checkSlack, 'Slack', false],
-    [checkHubSpot, 'HubSpot', false],
+    [checkHubSpot, 'EspoCRM', false],
     [checkNotion, 'Notion', false],
     [checkGoogleCalendar, 'Google Calendar', false],
     [checkCognito, 'Cognito', false],

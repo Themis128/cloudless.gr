@@ -299,8 +299,8 @@ vi.mock("@/lib/gsc", () => ({
     ]),
 }));
 
-// HubSpot
-vi.mock("@/lib/hubspot", () => ({
+// EspoCRM
+vi.mock("@/lib/espocrm", () => ({
   listContacts: vi
     .fn()
     .mockResolvedValue([{ id: "1", email: "lead@example.com", firstName: "Test" }]),
@@ -459,7 +459,7 @@ describe("GET /api/admin/crm/contacts", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when HubSpot is not configured", async () => {
+  it("returns 503 when EspoCRM is not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValueOnce(false);
     const { GET } = await import("@/app/api/admin/crm/contacts/route");
     const res = await GET(adminRequest("http://localhost/api/admin/crm/contacts"));

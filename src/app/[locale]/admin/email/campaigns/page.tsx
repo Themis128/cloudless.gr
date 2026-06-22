@@ -23,7 +23,7 @@ export default function EmailCampaignsPage() {
   const [lists, setLists] = useState<ACList[]>([]);
   const [listsConfigured, setListsConfigured] = useState(true);
   const [automations, setAutomations] = useState<ACAutomation[]>([]);
-  // /api/admin/email/campaigns deliberately returns 501 until the HubSpot
+  // /api/admin/email/campaigns deliberately returns 501 until the EspoCRM
   // token gains the Marketing Emails "content" scope — surface that here.
   const [campaignsNotice, setCampaignsNotice] = useState<{
     text: string;
@@ -123,7 +123,7 @@ export default function EmailCampaignsPage() {
                       rel="noopener noreferrer"
                       className="underline hover:text-yellow-100"
                     >
-                      Open HubSpot private-apps →
+                      Open EspoCRM private-apps →
                     </a>
                   )}
                   {campaignsNotice.setupUrl && campaignsNotice.docsUrl && (

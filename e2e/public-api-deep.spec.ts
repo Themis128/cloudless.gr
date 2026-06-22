@@ -141,7 +141,7 @@ test("POST /api/newsletter/send — without auth returns 401/403", async ({ requ
   expect(r.status()).toBeLessThan(500);
 });
 
-// /api/hubspot/ticket deleted 2026-06-20 (PR #1043 — HubSpot decom).
+// /api/hubspot/ticket deleted 2026-06-20 (PR #1043 — EspoCRM decom).
 
 test("GET /api/health — returns ok shape", async ({ request }) => {
   const r = await request.get("/api/health");

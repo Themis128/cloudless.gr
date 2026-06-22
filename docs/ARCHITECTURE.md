@@ -4,7 +4,7 @@
 >
 > **Purpose:** Digital solutions business providing cloud computing, AI marketing, serverless development, and e-commerce services to startups and SMBs.
 >
-> **Stack:** Next.js 16 · React 19 · Tailwind CSS 4 · TypeScript · AWS · Stripe · Notion · HubSpot
+> **Stack:** Next.js 16 · React 19 · Tailwind CSS 4 · TypeScript · AWS · Stripe · Notion · EspoCRM
 
 ---
 
@@ -98,7 +98,7 @@ src/
 │   │   │   ├── page.tsx          ← Store listing
 │   │   │   ├── [id]/page.tsx     ← Product detail + JSON-LD
 │   │   │   └── success/          ← Order confirmation page
-│   │   ├── contact/              ← Contact form (SES + Slack + HubSpot + Notion)
+│   │   ├── contact/              ← Contact form (SES + Slack + EspoCRM + Notion)
 │   │   ├── auth/                 ← Login · Signup · Forgot Password (Cognito + next-auth)
 │   │   ├── dashboard/            ← Customer portal (auth-protected)
 │   │   │   ├── page.tsx          ← Personalized overview
@@ -109,7 +109,7 @@ src/
 │   │   └── admin/                ← Admin panel (admin-group only)
 │   │       ├── page.tsx          ← Dashboard: orders, contacts, SEO, errors
 │   │       ├── orders/           ← Stripe sessions + subscriptions
-│   │       ├── crm/              ← HubSpot contacts
+│   │       ├── crm/              ← EspoCRM contacts
 │   │       ├── analytics/        ← Google Search Console + Notion Analytics
 │   │       ├── errors/           ← Sentry issues
 │   │       ├── notion/           ← Notion DB explorer (blog, docs, tasks, projects)
@@ -117,7 +117,7 @@ src/
 │   │       ├── settings/         ← App config viewer
 │   │       └── users/            ← Cognito user management
 │   └── api/                      ← API Routes (server-only)
-│       ├── contact/              ← POST: SES + Slack + HubSpot + Notion
+│       ├── contact/              ← POST: SES + Slack + EspoCRM + Notion
 │       ├── checkout/             ← POST: Stripe checkout session
 │       ├── subscribe/            ← POST: newsletter (SES + Slack)
 │       ├── unsubscribe/          ← POST: SES suppression list
@@ -133,15 +133,15 @@ src/
 │       ├── user/
 │       │   ├── purchases/        ← GET: Stripe orders for authenticated user
 │       │   └── consultations/    ← GET: Calendar bookings for authenticated user
-│       ├── crm/contact/          ← POST: HubSpot contact upsert (standalone)
-│       ├── hubspot/ticket/       ← POST: HubSpot support ticket creation
+│       ├── crm/contact/          ← POST: EspoCRM contact upsert (standalone)
+│       ├── hubspot/ticket/       ← POST: EspoCRM support ticket creation
 │       ├── webhooks/
 │       │   ├── stripe/           ← POST: Stripe webhook (orders, subs, failures)
 │       │   └── notion/           ← POST: Notion webhook (cache invalidation)
 │       └── admin/                ← All require admin JWT
 │           ├── analytics/        ← Google Search Console data (10 endpoints)
 │           ├── cache/            ← Notion cache management
-│           ├── crm/              ← HubSpot: contacts, companies, deals, owners, pipelines
+│           ├── crm/              ← EspoCRM: contacts, companies, deals, owners, pipelines
 │           ├── notifications/    ← Slack test messages
 │           ├── notion/           ← Notion DB queries: blog, docs, tasks, projects, submissions
 │           ├── ops/errors/       ← Sentry issues
@@ -228,7 +228,7 @@ src/
 | `SLACK_SIGNING_SECRET` | SecureString | Inbound Slack verification |
 | `SLACK_WEBHOOK_URL` | SecureString | Outbound Slack notifications |
 | `HUBSPOT_API_KEY` | SecureString | CRM operations |
-| `HUBSPOT_CLIENT_SECRET` | SecureString | HubSpot webhook signature verification |
+| `HUBSPOT_CLIENT_SECRET` | SecureString | EspoCRM webhook signature verification |
 | `NOTION_API_KEY` | SecureString | All Notion DB access |
 | `NOTION_BLOG_DB_ID` | String | Blog CMS |
 | `NOTION_WEBHOOK_SECRET` | SecureString | Notion webhook auth |
@@ -360,7 +360,7 @@ graph TB
         NA["Analytics DB"]
     end
 
-    subgraph CRM["🤝 HubSpot CRM"]
+    subgraph CRM["🤝 EspoCRM CRM"]
         HC["Contacts"]
         HD["Deals"]
         HT["Tickets"]
@@ -434,7 +434,7 @@ graph TB
 |---|---|---|---|
 | `GET` | `/api/health` | App status + version | — |
 | `GET` | `/api/blog/posts` | Blog posts (Notion or static fallback) | Notion Blog DB |
-| `POST` | `/api/contact` | Contact form submission | SES · Slack · HubSpot · Notion Submissions |
+| `POST` | `/api/contact` | Contact form submission | SES · Slack · EspoCRM · Notion Submissions |
 | `POST` | `/api/checkout` | Create Stripe checkout session | Stripe |
 | `POST` | `/api/subscribe` | Newsletter signup — both SES sends must succeed; Slack notification is fire-and-forget | SES · Slack |
 | `POST` | `/api/unsubscribe` | Unsubscribe via API (rate-limited: 5/min/IP) | SES suppression |
@@ -463,8 +463,8 @@ graph TB
 
 | Method | Route | What it does |
 |---|---|---|
-| `POST` | `/api/crm/contact` | Upsert contact in HubSpot (standalone) |
-| `POST` | `/api/hubspot/ticket` | Create support ticket in HubSpot |
+| `POST` | `/api/crm/contact` | Upsert contact in EspoCRM (standalone) |
+| `POST` | `/api/hubspot/ticket` | Create support ticket in EspoCRM |
 
 ### Admin Routes (Admin JWT required)
 
@@ -482,11 +482,11 @@ graph TB
 | `GET /api/admin/analytics/countries` | GSC | Traffic by country |
 | `GET /api/admin/analytics/web` | GSC + Notion | Combined analytics |
 | `POST /api/admin/cache` | — | Invalidate Notion cache |
-| `GET /api/admin/crm/contacts` | HubSpot | Contact list |
-| `GET /api/admin/crm/companies` | HubSpot | Company list |
-| `GET /api/admin/crm/deals` | HubSpot | Deal pipeline |
-| `GET /api/admin/crm/owners` | HubSpot | CRM owners |
-| `GET /api/admin/crm/pipelines` | HubSpot | Pipeline stages |
+| `GET /api/admin/crm/contacts` | EspoCRM | Contact list |
+| `GET /api/admin/crm/companies` | EspoCRM | Company list |
+| `GET /api/admin/crm/deals` | EspoCRM | Deal pipeline |
+| `GET /api/admin/crm/owners` | EspoCRM | CRM owners |
+| `GET /api/admin/crm/pipelines` | EspoCRM | Pipeline stages |
 | `POST /api/admin/notifications/test` | Slack | Test Slack message |
 | `GET /api/admin/notion/analytics` | Notion | Analytics DB |
 | `GET /api/admin/notion/comments` | Notion | Comment threads |
@@ -512,7 +512,7 @@ AWS SES                ✅ Live         IAM (Lambda role)              Contact, 
 AWS SSM                ✅ Live         IAM (Lambda role)              All API routes (secrets)
 Stripe                 ✅ Live         Secret key (SSM)               Store, checkout, webhooks
 Notion                 ✅ Live         API key (SSM)                  Blog, docs, forms, analytics
-HubSpot CRM            ✅ Live         API key (SSM)                  CRM, contact form, admin
+EspoCRM CRM            ✅ Live         API key (SSM)                  CRM, contact form, admin
 Slack                  ✅ Live         Bot token + secret (SSM)       Notifications, inbound cmds
 Google Calendar + GSC  ✅ Live         Service account (SSM)          Consultation booking, SEO admin
 Sentry                 ✅ Live         DSN (SDK) + auth token (SSM)   Error monitoring, admin
@@ -531,7 +531,7 @@ Google Ads             🔸 Pending      Dev token approval required    Campaign
 | Integration | What happens when not configured |
 |---|---|
 | Slack | Notifications skipped silently |
-| HubSpot | 503 response from CRM routes |
+| EspoCRM | 503 response from CRM routes |
 | Notion | Blog falls back to static `lib/blog.ts` data |
 | Google Calendar | 503 response from calendar routes |
 | Google Search Console | 503 response from analytics routes |
@@ -713,7 +713,7 @@ POST /api/webhooks/stripe (checkout.session.completed)
        skipped for one-time payments with unpaid status)
   → notifyTeam()           → SES email to admin
   → slackOrderNotify()     → Slack notification (fire-and-forget)
-  → HubSpot upsertContact + createDeal (fire-and-forget)
+  → EspoCRM upsertContact + createDeal (fire-and-forget)
         │
         ▼
 Redirect to /store/success
@@ -753,9 +753,9 @@ These are the recommended next layers to build toward an AI-powered marketing pl
 
 ### Phase 2 — Lead Intelligence
 
-- [x] HubSpot deal automation: contact form → contact upsert already live; deal creation via `createDeal()` added 2026-04-21
-- [x] Google Calendar → HubSpot: create deal on consultation booking — done 2026-04-21
-- [x] Stripe → HubSpot: create deal on checkout (via `checkout.session.completed` webhook) — done 2026-04-21
+- [x] EspoCRM deal automation: contact form → contact upsert already live; deal creation via `createDeal()` added 2026-04-21
+- [x] Google Calendar → EspoCRM: create deal on consultation booking — done 2026-04-21
+- [x] Stripe → EspoCRM: create deal on checkout (via `checkout.session.completed` webhook) — done 2026-04-21
 
 ### Phase 3 — AI Content & Automation
 
@@ -766,9 +766,9 @@ These are the recommended next layers to build toward an AI-powered marketing pl
 ### Phase 4 — Advanced Marketing
 
 - [ ] Meta Ads integration (campaign management via Meta Marketing API)
-- [ ] HubSpot email sequences for lead nurturing
+- [ ] EspoCRM email sequences for lead nurturing
 - [ ] A/B testing on landing page CTAs (using feature flags or edge middleware)
-- [ ] Customer lifetime value dashboard (Stripe + HubSpot combined)
+- [ ] Customer lifetime value dashboard (Stripe + EspoCRM combined)
 
 ---
 
@@ -788,8 +788,8 @@ pnpm test:e2e      # Playwright E2E
 | `__tests__/admin-analytics-api.test.ts` | All 10 GSC analytics admin endpoints |
 | `__tests__/admin-campaigns-api.test.ts` | Google, LinkedIn, TikTok, X campaign routes |
 | `__tests__/admin-client-portals-api.test.ts` | Client portal enroll + token lookup |
-| `__tests__/admin-crm-api.test.ts` | HubSpot contacts/companies/deals/tickets admin routes |
-| `__tests__/admin-pipeline-api.test.ts` | HubSpot deal pipeline board + move + notes |
+| `__tests__/admin-crm-api.test.ts` | EspoCRM contacts/companies/deals/tickets admin routes |
+| `__tests__/admin-pipeline-api.test.ts` | EspoCRM deal pipeline board + move + notes |
 | `__tests__/admin-workspaces-api.test.ts` | Workspace CRUD admin routes |
 | `__tests__/gsc.test.ts` | All 11 GSC functions, success + error paths |
 | `__tests__/hubspot-crm.test.ts` | `getPipelines`, `listCompanies`, `listDeals`, `listOwners` |
@@ -887,7 +887,7 @@ The analysis runs **in addition to** the following static-analysis workflows def
 - AWS SES email (contact form, order confirmation, newsletter)
 - SES suppression list (unsubscribe)
 - Notion CMS (blog, docs, forms, projects, analytics)
-- HubSpot CRM (contacts, deals, companies, pipelines, tickets)
+- EspoCRM CRM (contacts, deals, companies, pipelines, tickets)
 - Slack two-way integration (notifications + slash commands + events)
 - Google Calendar consultation booking
 - Google Search Console SEO analytics
@@ -908,7 +908,7 @@ The analysis runs **in addition to** the following static-analysis workflows def
 ### 🚧 Planned (not yet built)
 
 - AI content generation pipeline
-- ~~HubSpot deal automation (Calendar → Deal, Stripe → Deal)~~ ✅ Done 2026-04-21
+- ~~EspoCRM deal automation (Calendar → Deal, Stripe → Deal)~~ ✅ Done 2026-04-21
 - Email marketing sequences
 - A/B testing framework
 - Customer lifetime value dashboard

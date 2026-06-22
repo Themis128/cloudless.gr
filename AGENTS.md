@@ -62,7 +62,7 @@ src/
 │   │   │   ├── page.tsx         # Store listing
 │   │   │   ├── [id]/page.tsx    # Product detail + JSON-LD
 │   │   │   └── success/         # Order confirmation
-│   │   ├── contact/             # Contact form (SES + Slack + HubSpot + Notion)
+│   │   ├── contact/             # Contact form (SES + Slack + EspoCRM + Notion)
 │   │   ├── auth/                # Login · Signup · Forgot Password (Cognito + next-auth)
 │   │   ├── dashboard/           # Customer portal (auth-protected, cyan accent)
 │   │   │   ├── profile/         # Edit name, company, phone
@@ -71,7 +71,7 @@ src/
 │   │   │   └── settings/        # Theme, language, notifications
 │   │   └── admin/               # Admin panel (admin group only, magenta accent)
 │   │       ├── orders/          # Stripe sessions + subscriptions
-│   │       ├── crm/             # HubSpot contacts
+│   │       ├── crm/             # EspoCRM contacts
 │   │       ├── analytics/       # Google Search Console SEO dashboard
 │   │       ├── errors/          # Sentry issues
 │   │       ├── notion/          # Notion DB explorer
@@ -79,7 +79,7 @@ src/
 │   │       ├── settings/        # App config viewer
 │   │       └── users/           # Cognito user management
 │   └── api/
-│       ├── contact/             # POST → SES + Slack + HubSpot + Notion
+│       ├── contact/             # POST → SES + Slack + EspoCRM + Notion
 │       ├── checkout/            # POST → Stripe Checkout Session
 │       ├── subscribe/           # POST → SES + Slack
 │       ├── unsubscribe/         # POST → SES suppression list
@@ -95,15 +95,15 @@ src/
 │       ├── user/
 │       │   ├── purchases/       # GET → Stripe orders (requires JWT)
 │       │   └── consultations/   # GET → Calendar bookings (requires JWT)
-│       ├── crm/contact/         # POST → HubSpot upsert
-│       ├── hubspot/ticket/      # POST → HubSpot support ticket
+│       ├── crm/contact/         # POST → EspoCRM upsert
+│       ├── hubspot/ticket/      # POST → EspoCRM support ticket
 │       ├── webhooks/
 │       │   ├── stripe/          # POST → fulfillment (SES + Slack)
 │       │   └── notion/          # POST → cache invalidation + email
 │       └── admin/               # All require admin JWT
 │           ├── analytics/       # 10x GSC endpoints
 │           ├── cache/           # Notion cache flush
-│           ├── crm/             # HubSpot contacts/companies/deals/owners/pipelines
+│           ├── crm/             # EspoCRM contacts/companies/deals/owners/pipelines
 │           ├── notifications/   # Slack test
 │           ├── notion/          # Blog/docs/tasks/projects/submissions/search
 │           ├── ops/errors/      # Sentry issues
@@ -352,7 +352,7 @@ All integrations are optional and degrade gracefully. Config is centralized in `
 | Integration     | Env vars                                                                   | Lib file             |
 | --------------- | -------------------------------------------------------------------------- | -------------------- |
 | Slack           | `SLACK_WEBHOOK_URL`                                                        | `slack-notify.ts`    |
-| HubSpot CRM     | `HUBSPOT_API_KEY`                                                          | `hubspot.ts`         |
+| EspoCRM CRM     | `HUBSPOT_API_KEY`                                                          | `hubspot.ts`         |
 | Notion CMS      | `NOTION_API_KEY`, `NOTION_BLOG_DB`                                         | `notion-blog.ts`     |
 | Google Calendar | `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID` | `google-calendar.ts` |
 | Sentry          | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`                        | (inline in route)    |

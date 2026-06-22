@@ -3,7 +3,7 @@
  *
  * Probes the dispatch surface — each /newsletter-* subcommand should
  * either return a help/usage block or short-circuit with ops-allowlist
- * gating. We don't hit Notion/HubSpot/GitHub here; those are covered by
+ * gating. We don't hit Notion/EspoCRM/GitHub here; those are covered by
  * their own lib tests. The point is to lock the COMMAND ROUTING surface.
  */
 

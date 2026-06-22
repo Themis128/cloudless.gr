@@ -14,7 +14,7 @@ vi.mock("@/lib/api-auth", () => ({
 }));
 
 vi.mock("@/lib/espocrm", () => ({
-  isHubSpotConfigured: isHubSpotConfiguredMock,
+  isEspoCRMConfigured: isHubSpotConfiguredMock,
   getPipelineStats: getPipelineStatsMock,
 }));
 
@@ -144,7 +144,7 @@ describe("Admin Reports API routes", () => {
       expect(data.report.sections.some((s: { id: string }) => s.id === "email")).toBe(true);
     });
 
-    it("skips pipeline section when HubSpot not configured", async () => {
+    it("skips pipeline section when EspoCRM not configured", async () => {
       isHubSpotConfiguredMock.mockResolvedValue(false);
       const { POST } = await import("@/app/api/admin/reports/generate/route");
       const res = await POST(

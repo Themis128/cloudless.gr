@@ -22,7 +22,7 @@ test.describe("Webhook signature gates", () => {
   });
 
   test("POST /api/webhooks/espocrm without secret → 4xx", async ({ request }) => {
-    // EspoCRM webhook (replaced HubSpot 2026-06-20, PR #1043). Auth is a
+    // EspoCRM webhook (replaced EspoCRM 2026-06-20, PR #1043). Auth is a
     // URL-query-param secret rather than HMAC; rejects unauth POSTs with 4xx.
     const r = await request.post("/api/webhooks/espocrm", { data: [] });
     expect(r.status()).toBeGreaterThanOrEqual(400);

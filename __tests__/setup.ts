@@ -28,7 +28,7 @@ process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";
 process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
 process.env.NOTION_WEBHOOK_SECRET = "whsec_notion_test";
 
-// ── HubSpot ───────────────────────────────────────────────────────────────────
+// ── EspoCRM ───────────────────────────────────────────────────────────────────
 process.env.HUBSPOT_API_KEY = "test-hs-token";
 
 // ── ActiveCampaign ────────────────────────────────────────────────────────────

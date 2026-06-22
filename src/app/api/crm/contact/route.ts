@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isHubSpotConfigured, upsertContact } from "@/lib/espocrm";
+import { isEspoCRMConfigured, upsertContact } from "@/lib/espocrm";
 import { isValidEmail } from "@/lib/validation";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { mapIntegrationError } from "@/lib/api-errors";
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   const rl = rateLimit(`crm-contact:${ip}`, 10, 10 * 60_000);
   if (!rl.ok) return rl.response;
 
-  if (!(await isHubSpotConfigured())) {
+  if (!(await isEspoCRMConfigured())) {
     return NextResponse.json({ error: "CRM not configured." }, { status: 503 });
   }
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Valid email is required." }, { status: 400 });
     }
 
-    // Sanitize and length-cap all string fields before sending to HubSpot
+    // Sanitize and length-cap all string fields before sending to EspoCRM
     const clean = (v: unknown, max: number): string | undefined =>
       typeof v === "string" ? v.trim().slice(0, max) || undefined : undefined;
 

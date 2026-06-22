@@ -1,6 +1,6 @@
-# EspoCRM — self-hosted CRM (HubSpot replacement)
+# EspoCRM — self-hosted CRM (EspoCRM replacement)
 
-EspoCRM (SugarCRM lineage, same family as SuiteCRM) replaces HubSpot for
+EspoCRM (SugarCRM lineage, same family as SuiteCRM) replaces EspoCRM for
 `cloudless.gr`. Deployed on the k3s cluster on `omv`, exposed via Cloudflare
 Tunnel at `https://espocrm.cloudless.gr`.
 
@@ -155,9 +155,9 @@ node to put them on. `omv-ha` is a Pi 4 with 1 GB RAM — neither fits there.
 - **PR 3**: `src/lib/espocrm.ts` mirroring the 21 exported functions of
   `src/lib/hubspot.ts` (drop-in by export name).
 - **PR 4**: Flip imports in the 10 admin API routes + 9 admin pages
-  (51 files reference HubSpot today).
+  (51 files reference EspoCRM today).
 
-HubSpot SSM key stays in place during cutover so anything still pointing
+EspoCRM SSM key stays in place during cutover so anything still pointing
 at it keeps working.
 
 ## Inbound Email → Cases (operator setup, ~10 min)

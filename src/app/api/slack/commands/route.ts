@@ -890,7 +890,7 @@ function handleHelp(): Response {
             "• `/cloudless-ads pause|resume` — pause or resume LinkedIn campaign",
             "• `/cloudless-ads budget <EUR>` — set daily budget",
             "• `/cloudless-seo` — GSC top 10 keywords, clicks, impressions, avg position",
-            "• `/cloudless-leads` — recent HubSpot contacts/leads",
+            "• `/cloudless-leads` — recent EspoCRM contacts/leads",
             "• `/cloudless-errors` — top 5 unresolved Sentry errors",
             "• `/cloudless-uptime` — ping all endpoints (site, CloudFront, Pi)",
             "• `/cloudless-subscribers` — newsletter subscriber count + recent signups",

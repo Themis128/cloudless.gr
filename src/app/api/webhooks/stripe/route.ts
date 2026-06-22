@@ -41,7 +41,7 @@ function extractUtmFromSession(session: Stripe.Checkout.Session): {
   };
 }
 
-async function syncHubSpotDeal(session: Stripe.Checkout.Session): Promise<void> {
+async function syncEspoCRMDeal(session: Stripe.Checkout.Session): Promise<void> {
   try {
     const amountEur = (session.amount_total ?? 0) / 100;
     const currency = (session.currency ?? "eur").toUpperCase();
@@ -66,8 +66,8 @@ async function syncHubSpotDeal(session: Stripe.Checkout.Session): Promise<void> 
     if (dealId && contactId) {
       await associateDealWithContact(dealId, contactId);
     }
-  } catch (hubspotError) {
-    console.error("[Stripe→HubSpot] Deal creation failed:", hubspotError);
+  } catch (espocrmError) {
+    console.error("[Stripe→EspoCRM] Deal creation failed:", espocrmError);
   }
 }
 
@@ -139,7 +139,7 @@ async function handleCheckoutCompleted(
   });
 
   if (session.customer_email) {
-    syncHubSpotDeal(session).catch(() => {});
+    syncEspoCRMDeal(session).catch(() => {});
   }
 }
 

@@ -15,8 +15,8 @@ social publishing).
 
 | Area | Already built | Key files |
 |------|---------------|-----------|
-| Lead capture | Contact form → HubSpot contact + ticket, newsletter/subscribe | `src/app/api/contact`, `src/lib/hubspot.ts` |
-| CRM | Companies, tickets, pipeline views, HubSpot dashboard | `/admin/crm/*`, `/admin/pipeline`, `/admin/hubspot` |
+| Lead capture | Contact form → EspoCRM contact + ticket, newsletter/subscribe | `src/app/api/contact`, `src/lib/hubspot.ts` |
+| CRM | Companies, tickets, pipeline views, EspoCRM dashboard | `/admin/crm/*`, `/admin/pipeline`, `/admin/hubspot` |
 | Email marketing | SES transactional + suppression, ActiveCampaign client, campaigns page | `src/lib/email.ts`, `src/lib/ses-suppression.ts`, `src/lib/activecampaign.ts`, `/admin/email/campaigns` |
 | Ad campaign insights | Google, LinkedIn, TikTok, X (read-only insights) | `src/lib/campaigns/{google-ads,linkedin,tiktok,x-ads}.ts` |
 | Attribution plumbing | Meta Pixel + Conversions API, GSC | `src/lib/meta-capi.ts`, `src/lib/meta-pixel.ts`, `src/lib/gsc.ts` |
@@ -32,7 +32,7 @@ social publishing).
 1. **No Meta/Instagram anywhere in campaigns** — `src/lib/campaigns/` has no
    Meta module despite the calendar listing `meta` as a platform.
 2. **No publishing** — the calendar plans posts but nothing posts them.
-3. **No lead scoring or automated follow-up** — leads land in HubSpot and stop.
+3. **No lead scoring or automated follow-up** — leads land in EspoCRM and stop.
 4. **No campaign→lead→revenue attribution** — insights, CRM, and Stripe data
    are never joined.
 5. **Portal has a timeline but no deliverables, approvals, scheduled client
@@ -44,15 +44,15 @@ social publishing).
 
 Make every lead captured, scored, routed, and followed up automatically.
 
-1. **Unified lead inbox** (`/admin/leads`): one view joining HubSpot contacts,
+1. **Unified lead inbox** (`/admin/leads`): one view joining EspoCRM contacts,
    contact-form tickets, newsletter signups, and portal enrollments
    (`pending-clients.ts`). *Build* — thin UI over existing libs.
 2. **Lead source attribution**: persist UTM params + landing page on the
-   contact form and pass them to HubSpot properties and Meta CAPI events
+   contact form and pass them to EspoCRM properties and Meta CAPI events
    (plumbing exists in `meta-capi.ts`). *Build.*
 3. **Lead scoring**: simple rules engine (source, service interest, company
-   size, engagement) writing a score property to HubSpot. *Build* — avoids
-   HubSpot Pro-tier licensing.
+   size, engagement) writing a score property to EspoCRM. *Build* — avoids
+   EspoCRM Pro-tier licensing.
 4. **Automated follow-up sequences**: trigger ActiveCampaign automations from
    lead events (new lead, no-reply-3-days, proposal-sent). *Integrate* —
    `activecampaign.ts` already authenticates; build the trigger calls, let
@@ -101,7 +101,7 @@ TikTok from the calendar.
 ## Phase 4 — Unify: the one-stop dashboard
 
 1. **ROI view**: extend `/admin/analytics/unified` to join ad spend
-   (campaign insights) → leads (HubSpot, with Phase-1 attribution) → revenue
+   (campaign insights) → leads (EspoCRM, with Phase-1 attribution) → revenue
    (Stripe) per channel and per client.
 2. **Client health score** on `/admin/kpi`: project status + payment status +
    engagement, with alerts for at-risk clients.

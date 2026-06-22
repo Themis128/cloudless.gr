@@ -103,7 +103,7 @@ export default function AccessibilityPage() {
                 <p>The following known issues are being addressed:</p>
                 <ul className="list-disc space-y-1 pl-5">
                   <li>
-                    Some third-party embedded content (e.g. HubSpot forms) may not fully meet WCAG
+                    Some third-party embedded content (e.g. EspoCRM forms) may not fully meet WCAG
                     2.1 AA — we are working with vendors on remediation
                   </li>
                   <li>

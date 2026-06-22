@@ -126,7 +126,7 @@ The MCP being green is a convenience, not a requirement. Every secret
 in the Cloud Session Secrets table is also available in one of:
 
 - **AWS SSM** at `/cloudless/production/<KEY>` (for Cloudflare, Anthropic,
-  Notion, HubSpot, Stripe, etc.) — readable via the bash tool with
+  Notion, EspoCRM, Stripe, etc.) — readable via the bash tool with
   `aws ssm get-parameter --with-decryption ...`
 - **GitHub Secrets** (for `AWS_DEPLOY_ROLE_ARN`, OIDC roles)
 - **Direct env in the bash sandbox** (for `GITHUB_PAT` — the agent

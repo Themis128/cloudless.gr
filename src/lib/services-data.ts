@@ -210,7 +210,7 @@ export const getServices = (t: (key: string, fallback: string) => string) => [
       "Next.js + Tailwind, fully responsive",
       "WCAG AA accessible by default",
       "CMS integration (Notion / Sanity / Contentful)",
-      "Analytics + CRM wiring (HubSpot, Meta Pixel)",
+      "Analytics + CRM wiring (EspoCRM, Meta Pixel)",
     ],
     stats: [
       { value: "<2s", label: "Time to Interactive" },

@@ -216,7 +216,7 @@ const mockIsHubSpotConfigured = vi.fn();
 const mockListTickets = vi.fn();
 vi.mock("@/lib/espocrm", async (orig) => ({
   ...(await orig<typeof import("@/lib/espocrm")>()),
-  isHubSpotConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
+  isEspoCRMConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
   listTickets: (...a: unknown[]) => mockListTickets(...a),
 }));
 
@@ -233,7 +233,7 @@ describe("GET /api/admin/crm/tickets", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when HubSpot not configured", async () => {
+  it("returns 503 when EspoCRM not configured", async () => {
     adminOk();
     mockIsHubSpotConfigured.mockResolvedValue(false);
     const { GET } = await import("@/app/api/admin/crm/tickets/route");

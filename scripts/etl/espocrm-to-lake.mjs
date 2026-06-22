@@ -5,9 +5,9 @@
  * instance via the v1 REST API. Five entities → five parquet files:
  *
  *   lake/espocrm-contacts/contacts.parquet
- *   lake/espocrm-accounts/accounts.parquet           (HubSpot's companies)
- *   lake/espocrm-opportunities/opportunities.parquet (HubSpot's deals)
- *   lake/espocrm-cases/cases.parquet                 (HubSpot's tickets)
+ *   lake/espocrm-accounts/accounts.parquet           (EspoCRM's companies)
+ *   lake/espocrm-opportunities/opportunities.parquet (EspoCRM's deals)
+ *   lake/espocrm-cases/cases.parquet                 (EspoCRM's tickets)
  *   lake/espocrm-campaigns/campaigns.parquet
  *
  * Auth: X-Api-Key (the same SSM-stored ESPOCRM_API_KEY the app uses).
