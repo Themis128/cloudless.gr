@@ -1,0 +1,153 @@
+# Daily CronJob — keeps the google-archive SMB share's README up to date
+# AND alerts when sdb1 free space drops below the NAS-headroom budget.
+#
+# Why: the operator wants to use omv as a NAS from their Windows
+# workstation (\\omv\google-archive). To keep that usable they need
+# (a) the runbook discoverable inside the share, and (b) a guarantee
+# that the share has free space — Windows showing "disk full" makes
+# the NAS unusable for everyday drops. This CronJob does both.
+#
+# Schedule: 30 4 * * *  (04:30 UTC daily, offset from existing PVC
+#                       backups at 03:30/03:45/04:00/04:15)
+#
+# Headroom budget on sdb1 (916 GB Samsung 1TB Samsung SSD):
+#   - target Google-archive footprint: ~150 GB (Photos+Drive+Gmail)
+#   - working headroom for ad-hoc NAS drops:    300 GB
+#   - alert threshold:                          free < 200 GB
+#   - hard floor (manual intervention needed):  free < 100 GB
+#
+# Pinned to `omv` because sdb1 only exists on that node (the worker
+# omv-ha is a Pi 4 with no second SSD).
+#
+# Read+write hostPath into /srv/dev-disk-by-uuid-... so the pod can
+# (a) write the README into google-archive/, (b) df the filesystem.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: omv-ops
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-alert-token
+  namespace: omv-ops
+type: Opaque
+stringData:
+  # Populated out-of-band by the operator:
+  #   kubectl -n omv-ops create secret generic admin-alert-token \
+  #     --from-literal=ADMIN_ALERT_TOKEN=$(aws ssm get-parameter \
+  #       --name /cloudless/production/ADMIN_ALERT_TOKEN \
+  #       --with-decryption --query Parameter.Value --output text) \
+  #     --dry-run=client -o yaml | kubectl apply -f -
+  # If absent, the probe still runs but admin-alert POST will 401
+  # (logged as warning, doesn't fail the job).
+  ADMIN_ALERT_TOKEN: ""
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sdb1-readme-and-probe
+  namespace: omv-ops
+  labels:
+    app.kubernetes.io/name: sdb1-readme-and-probe
+    cloudless.gr/owner: operator
+spec:
+  schedule: "30 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 7
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 300
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            kubernetes.io/hostname: omv
+          tolerations:
+            - operator: Exists
+          containers:
+            - name: readme-and-probe
+              image: alpine:3.20
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: README_URL
+                  value: https://raw.githubusercontent.com/Themis128/cloudless.gr/main/docs/google-to-omv-migration.md
+                - name: MOUNT
+                  value: /sdb1
+                - name: SHARE_DIR
+                  value: /sdb1/google-archive
+                - name: ALERT_FREE_GB
+                  value: "200"
+                - name: HARD_FLOOR_GB
+                  value: "100"
+                - name: ADMIN_ALERT_URL
+                  value: https://cloudless.gr/api/webhooks/admin-alert
+                - name: ADMIN_ALERT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: admin-alert-token
+                      key: ADMIN_ALERT_TOKEN
+                      optional: true
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -u
+                  apk add --no-cache curl coreutils >/dev/null
+
+                  # 1. Make sure the share dir exists, sync README
+                  mkdir -p "$SHARE_DIR"
+                  if curl -fsSL --max-time 15 "$README_URL" -o "$SHARE_DIR/README.md.tmp"; then
+                    mv "$SHARE_DIR/README.md.tmp" "$SHARE_DIR/README.md"
+                    echo "README synced ($(wc -c < "$SHARE_DIR/README.md") bytes)"
+                  else
+                    rm -f "$SHARE_DIR/README.md.tmp"
+                    echo "::warning::README fetch failed (network blip?); leaving previous copy in place"
+                  fi
+
+                  # 2. Probe sdb1 capacity
+                  read -r SIZE USED AVAIL PCT MOUNTED <<< "$(df -BG --output=size,used,avail,pcent,target "$MOUNT" | tail -1)"
+                  AVAIL_GB="${AVAIL%G}"
+                  SIZE_GB="${SIZE%G}"
+                  USED_GB="${USED%G}"
+                  echo "sdb1: size=${SIZE_GB}G used=${USED_GB}G avail=${AVAIL_GB}G (${PCT}) at ${MOUNTED}"
+
+                  SEVERITY=""
+                  TITLE=""
+                  if [ "$AVAIL_GB" -lt "$HARD_FLOOR_GB" ]; then
+                    SEVERITY="high"
+                    TITLE="sdb1 BELOW HARD FLOOR — only ${AVAIL_GB}G free (<${HARD_FLOOR_GB}G). NAS unusable for new writes; prune now."
+                  elif [ "$AVAIL_GB" -lt "$ALERT_FREE_GB" ]; then
+                    SEVERITY="medium"
+                    TITLE="sdb1 free space below NAS-headroom budget — ${AVAIL_GB}G free (<${ALERT_FREE_GB}G target)"
+                  else
+                    echo "sdb1 healthy — ${AVAIL_GB}G free comfortably above ${ALERT_FREE_GB}G alert threshold."
+                    exit 0
+                  fi
+
+                  echo "::warning::$TITLE"
+                  MESSAGE="omv-main sdb1 (/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7) at ${USED_GB}G of ${SIZE_GB}G, only ${AVAIL_GB}G free. Headroom budget = ${ALERT_FREE_GB}G alert / ${HARD_FLOOR_GB}G hard floor. Prune Google-archive snapshots or WindowsImageBackup. See docs/google-to-omv-migration.md."
+
+                  if [ -n "${ADMIN_ALERT_TOKEN:-}" ]; then
+                    curl -fsS -X POST "$ADMIN_ALERT_URL" \
+                      -H "Content-Type: application/json" \
+                      -H "Authorization: Bearer $ADMIN_ALERT_TOKEN" \
+                      -d "$(printf '{"severity":"%s","source":"sdb1-capacity","title":"%s","message":"%s"}' "$SEVERITY" "$TITLE" "$MESSAGE")" \
+                      || echo "::warning::admin-alert POST failed (alert lost; check logs)"
+                  else
+                    echo "::warning::ADMIN_ALERT_TOKEN not set in omv-ops/admin-alert-token Secret — alert logged only, not POSTed."
+                  fi
+
+                  # Don't fail the job on capacity alert (probe is informational)
+                  exit 0
+              volumeMounts:
+                - name: sdb1
+                  mountPath: /sdb1
+          volumes:
+            - name: sdb1
+              hostPath:
+                path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
+                type: Directory
