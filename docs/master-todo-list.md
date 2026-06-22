@@ -48,12 +48,19 @@ without diffing git.
 | #1109 | **fix(ci)**: `lint:md:fix` swept 161 markdown files clean (was red since R10-R14 docs landed) + excluded `etl-aws-cost-to-lake.test.ts` from vitest (separate npm project unresolvable from root). | fix |
 | #1110 | **feat(ops)**: `skills/pi-runner-failover/SKILL.md` + `scripts/pi-runner-doctor.sh` + refactored `sync-smtp-secrets.yml` from Pi-pinned to GH-hosted-with-tailnet. Memory `reference_pi_runner_failover` added. | feat |
 | #1111 | Honesty pass on the pi-runner-failover inventory: only 1 of 5 hard-pinned workflows is actually moveable (not 3 of 5). Added "non-DC-IP-required" bullet to Step 5 for Cloudflare bot-detection case. | docs |
+| #1112 | This doc update — Master TODO marked post-R12 with the session log. | docs |
+| #1113 | **fix(sync-smtp-secrets)**: `timeout 30s` wrapper on `kubectl get ns` smoke test. Default kubectl client-side timeout is 0; hung 5+ min on first GH-hosted → tailnet handshake (verified twice in this session). | fix |
 
 **Pi runners** (`omv`, `omv-build`) were offline for most of the
-session and are coming back online 2026-06-22 ~01:30 UTC. Use
-`bash scripts/pi-runner-doctor.sh` to verify; flip `RUNNER_GENERIC`
-back to `[self-hosted, omv, build]` via
-`.github/scripts/toggle-runner.sh pi` when you want load on Pi again.
+session and **are back online as of 2026-06-22 ~01:30 UTC**
+(verified via `scripts/pi-runner-doctor.sh`; EspoCRM ETL re-trigger
+ran cleanly on the Pi end-to-end). Flip `RUNNER_GENERIC` back to
+`[self-hosted, omv, build]` via `.github/scripts/toggle-runner.sh pi`
+when you want load on Pi again.
+
+**CI on main:** ✅ green after PR #1109. `pnpm lint:md` reports
+**0 errors** (was 161 across 12 files); `pnpm test:ci` ignores the
+parquetjs-dependent test that vitest couldn't resolve from root.
 
 **Operator-side blockers documented** (still pending — see Phase 0):
 
