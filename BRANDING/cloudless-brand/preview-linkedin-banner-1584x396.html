@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cloudless · LinkedIn banner preview</title>
+<style>
+  :root{--bg-0:#0a0a0f;--bg-1:#12121a;--bg-2:#1a1a2e;--cyan:#00fff5;--cyan-dim:#0ad4ff;--ink-60:rgba(255,255,255,.6)}
+  html,body{margin:0;background:#15151c;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;color:#fff;padding:24px}
+  .banner{width:1584px;height:396px;position:relative;overflow:hidden;
+    background:linear-gradient(120deg,var(--bg-0) 0%,var(--bg-1) 50%,var(--bg-2) 100%);
+    border-radius:16px;padding:64px 96px;box-sizing:border-box;
+    display:flex;flex-direction:column;justify-content:center;gap:18px;
+    box-shadow:0 24px 64px rgba(0,0,0,.5)}
+  .grid{position:absolute;inset:0;background-image:
+    linear-gradient(90deg,rgba(0,255,245,.04) 1px,transparent 1px),
+    linear-gradient(rgba(0,255,245,.04) 1px,transparent 1px);background-size:72px 72px}
+  .glow-r{position:absolute;top:-120px;right:-160px;width:520px;height:520px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,255,245,.20),rgba(0,255,245,0));filter:blur(60px)}
+  .stripe{position:absolute;left:0;bottom:0;width:100%;height:5px;
+    background:linear-gradient(90deg,var(--cyan) 0%,var(--cyan-dim) 50%,transparent 100%)}
+  .row{position:relative;display:flex;align-items:center;gap:24px}
+  .mark{width:80px;height:80px;border-radius:18px;background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));
+    display:flex;align-items:center;justify-content:center;color:#0a0a0f;font-weight:900;font-size:48px;letter-spacing:-1px}
+  .word{font-size:96px;font-weight:800;letter-spacing:-3px;line-height:1}
+  .word em{font-style:normal;color:var(--cyan)}
+  .tag{position:relative;font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;
+    font-size:22px;color:var(--cyan);letter-spacing:.28em;text-transform:uppercase}
+  .sub{position:relative;font-size:28px;color:var(--ink-60);font-weight:400;max-width:1080px}
+  .url{position:absolute;right:96px;bottom:48px;
+    font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;font-size:22px;color:var(--cyan);letter-spacing:.05em}
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="grid"></div>
+  <div class="glow-r"></div>
+  <div class="row">
+    <div class="mark">C</div>
+    <div class="word">Cloud<em>less</em></div>
+  </div>
+  <div class="tag">CLOUD · SERVERLESS · FINOPS · GREECE</div>
+  <div class="sub">We cut AWS bills 30–80% and keep them down. FinOps audits, migrations, and serverless that actually pays off.</div>
+  <div class="url">cloudless.gr</div>
+  <div class="stripe"></div>
+</div>
+</body>
+</html>

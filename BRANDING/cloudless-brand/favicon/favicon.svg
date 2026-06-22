@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Cloudless">
+  <title>Cloudless</title>
+  <style>
+    /* Light mode: teal plate (matches site theme-color #0a7785) + bright-cyan mark */
+    .plate { fill: #0a7785; }
+    .mark  { fill: #00fff5; }
+    .slash { stroke: #00fff5; }
+    /* Dark mode: transparent plate so the icon floats on the OS dark UI; brighter cyan */
+    @media (prefers-color-scheme: dark) {
+      .plate { fill: transparent; }
+      .mark  { fill: #00fff5; }
+      .slash { stroke: #00fff5; }
+    }
+  </style>
+  <rect class="plate" width="32" height="32" rx="7" ry="7"/>
+  <mask id="c-cut" maskUnits="userSpaceOnUse">
+    <rect width="32" height="32" fill="white"/>
+    <path d="M10 20c-1.9 0-3.4-1.5-3.4-3.4S8.1 13.2 10 13.2c.2 0 .4.01.6.04A4.4 4.4 0 0 1 18.7 14.5a3.1 3.1 0 0 1 1 6.1H10Z" fill="black"/>
+  </mask>
+  <rect class="mark" x="6" y="7" width="20" height="18" rx="4" ry="4" mask="url(#c-cut)"/>
+  <line class="slash" x1="7" y1="25" x2="25" y2="7" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

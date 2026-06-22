@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="hz:canvas-width" content="1584">
+<meta name="hz:canvas-height" content="396">
+<title>Cloudless · LinkedIn banner (v3 — live tagline)</title>
+<style>
+  :root{--theme:#0a7785;--bg-0:#0a0a0f;--bg-1:#12121a;--bg-2:#1a1a2e;--cyan:#00fff5;--cyan-dim:#0ad4ff;--ink-60:rgba(255,255,255,.6)}
+  html,body{margin:0;background:#15151c;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;color:#fff;padding:24px}
+  .banner{width:1584px;height:396px;position:relative;overflow:hidden;
+    background:linear-gradient(120deg,var(--bg-0) 0%,var(--bg-1) 50%,var(--bg-2) 100%);
+    border-radius:16px;padding:56px 96px;box-sizing:border-box;
+    display:flex;flex-direction:column;justify-content:center;gap:14px;
+    box-shadow:0 24px 64px rgba(0,0,0,.5)}
+  .grid{position:absolute;inset:0;background-image:
+    linear-gradient(90deg,rgba(0,255,245,.04) 1px,transparent 1px),
+    linear-gradient(rgba(0,255,245,.04) 1px,transparent 1px);background-size:72px 72px}
+  .glow-r{position:absolute;top:-120px;right:-160px;width:520px;height:520px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,255,245,.20),rgba(0,255,245,0));filter:blur(60px)}
+  .stripe{position:absolute;left:0;bottom:0;width:100%;height:5px;
+    background:linear-gradient(90deg,var(--cyan) 0%,var(--cyan-dim) 50%,transparent 100%)}
+
+  .row{position:relative;display:flex;align-items:center;gap:24px}
+  .mark{width:80px;height:80px;border-radius:18px;background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));
+    display:flex;align-items:center;justify-content:center;color:#0a0a0f;font-weight:900;font-size:48px;letter-spacing:-1px}
+  .word{font-size:88px;font-weight:800;letter-spacing:-2.5px;line-height:1}
+  .word em{font-style:normal;color:var(--cyan)}
+
+  .hero{position:relative;font-size:36px;font-weight:700;color:#fff;letter-spacing:-.5px}
+  .hero em{font-style:normal;color:var(--cyan)}
+  .tag{position:relative;font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;
+    font-size:18px;color:var(--ink-60);letter-spacing:.22em;text-transform:uppercase}
+
+  .pills{position:absolute;right:96px;top:56px;display:flex;gap:12px}
+  .pill{font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;font-size:14px;
+    color:var(--cyan);padding:8px 14px;border:1px solid rgba(0,255,245,.35);border-radius:999px;letter-spacing:.1em}
+
+  .url{position:absolute;right:96px;bottom:48px;
+    font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;font-size:22px;color:var(--cyan);letter-spacing:.05em}
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="grid"></div>
+  <div class="glow-r"></div>
+
+  <div class="pills">
+    <div class="pill">01 CLOUD</div>
+    <div class="pill">02 SERVERLESS</div>
+    <div class="pill">03 ANALYTICS</div>
+    <div class="pill">04 AI</div>
+  </div>
+
+  <div class="row">
+    <div class="mark">C</div>
+    <div class="word">Cloud<em>less</em></div>
+  </div>
+
+  <div class="hero">Clear skies. <em>Zero friction.</em></div>
+  <div class="tag">THE THIRD WAY · SERVERLESS · DATA-DRIVEN · NO ENTERPRISE BS</div>
+
+  <div class="url">cloudless.gr</div>
+  <div class="stripe"></div>
+</div>
+</body>
+</html>

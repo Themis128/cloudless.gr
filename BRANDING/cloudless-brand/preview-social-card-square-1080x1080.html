@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cloudless · Square card preview</title>
+<style>
+  :root{--bg-0:#0a0a0f;--bg-1:#12121a;--bg-2:#1a1a2e;--cyan:#00fff5;--cyan-dim:#0ad4ff;--ink-60:rgba(255,255,255,.6)}
+  html,body{margin:0;background:#15151c;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;color:#fff;padding:24px}
+  .card{width:1080px;height:1080px;position:relative;overflow:hidden;
+    background:linear-gradient(135deg,var(--bg-0) 0%,var(--bg-1) 50%,var(--bg-2) 100%);
+    border-radius:24px;padding:88px;box-sizing:border-box;
+    display:flex;flex-direction:column;justify-content:space-between;
+    box-shadow:0 24px 64px rgba(0,0,0,.5)}
+  .grid{position:absolute;inset:0;background-image:
+    linear-gradient(90deg,rgba(0,255,245,.05) 1px,transparent 1px),
+    linear-gradient(rgba(0,255,245,.05) 1px,transparent 1px);background-size:64px 64px}
+  .glow{position:absolute;top:-160px;right:-160px;width:600px;height:600px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,255,245,.18),rgba(0,255,245,0));filter:blur(60px)}
+  .top{position:relative;display:flex;justify-content:space-between;align-items:flex-start}
+  .category{display:flex;align-items:center;gap:14px;font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;
+    font-size:22px;color:var(--cyan);letter-spacing:.22em;text-transform:uppercase}
+  .dot{width:12px;height:12px;border-radius:50%;background:var(--cyan);box-shadow:0 0 18px var(--cyan)}
+  .brand{display:flex;align-items:center;gap:14px;font-weight:800;font-size:24px;letter-spacing:-.5px}
+  .brand .mark{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));
+    display:flex;align-items:center;justify-content:center;color:#0a0a0f;font-weight:900;font-size:24px}
+  .brand .less{color:var(--cyan)}
+  .title{position:relative;font-size:92px;line-height:1.05;font-weight:800;letter-spacing:-2.5px;max-width:880px}
+  .title em{font-style:normal;color:var(--cyan)}
+  .bottom{position:relative;display:flex;justify-content:space-between;align-items:flex-end;color:var(--ink-60)}
+  .meta strong{display:block;color:#fff;font-size:24px;margin-bottom:4px}
+  .meta span{font-size:20px}
+  .url{font-family:ui-monospace,'JetBrains Mono',Consolas,monospace;font-size:22px;color:var(--cyan);letter-spacing:.05em}
+  .stripe{position:absolute;left:0;bottom:0;width:100%;height:8px;
+    background:linear-gradient(90deg,var(--cyan) 0%,var(--cyan-dim) 50%,transparent 100%)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid"></div>
+  <div class="glow"></div>
+  <div class="top">
+    <div class="category"><span class="dot"></span>FinOps</div>
+    <div class="brand"><div class="mark">C</div><span>Cloud<span class="less">less</span></span></div>
+  </div>
+  <div class="title">5 AWS cost <em>mistakes</em><br/>killing your cloud bill.</div>
+  <div class="bottom">
+    <div class="meta"><strong>Themis Baltzakis</strong><span>Cloudless · 6 min read</span></div>
+    <div class="url">cloudless.gr</div>
+  </div>
+  <div class="stripe"></div>
+</div>
+</body>
+</html>

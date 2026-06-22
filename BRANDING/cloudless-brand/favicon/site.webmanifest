@@ -1,0 +1,15 @@
+{
+  "name": "Cloudless",
+  "short_name": "Cloudless",
+  "description": "Clear skies. Zero friction. Cloud architecture, serverless, data analytics & AI marketing for startups and SMBs.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a7785",
+  "icons": [
+    { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/favicon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
