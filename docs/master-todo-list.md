@@ -60,6 +60,11 @@ without diffing git.
 | #1116 | **perf(R18)**: batch `simulate-principal-policy` 32 ARNs/call. v1 sequential timed out at 5 min on first verification run; v2 runs ~75s end-to-end. | perf |
 | #1117 | Automated: Notion sitemap entries sync. | chore |
 | #1122 | This doc update — added #1114-#1117 + status header bump (R18 now ✅). | docs |
+| #1123 | docs(master-todo): correct PR number table after #1117 merge race | living roadmap |
+| #1124 | docs(master-todo): R13 descoped to 24h (already covered by R10) | Phase 2 → 2/3 done |
+| #1125 | docs(session): summary of 2026-06-22 — workflows sweep + R13/R18; saved local + Drive + AppFlowy | docs |
+| #1126 | **audit(R22)**: Stripe webhook idempotency — safe at SMB volume; 3-rule JSDoc guard inlined on `handleStripeEvent()` | Phase 2 → **3/3 done** |
+| #1127 | **docs(drive)**: `docs/google-drive-cleanup.md` operator runbook + `scripts/audit-drive-folder.mjs` (read-only, local-execution). No Drive cleanup workflow in CI (would need operator-provisioned service account; cloudless.gr Drive footprint is ~50 KB so not yet worth wiring). | docs |
 
 **Pi runners** (`omv`, `omv-build`) were offline for most of the
 session and **are back online as of 2026-06-22 ~01:30 UTC**
