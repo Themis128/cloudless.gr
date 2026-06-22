@@ -47,7 +47,11 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ETL_ROLE_ARN }}
+          # Align with the 8 other ETL workflows — AWS_ETL_ROLE_ARN was
+          # never provisioned as a repo secret. The deploy role already
+          # has S3 (writes to lake bucket), SSM (reads /cloudless/production/*),
+          # and Athena perms it needs for ETL work.
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Hydrate self-hosted-app tokens from SSM
