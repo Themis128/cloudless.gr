@@ -80,13 +80,13 @@ grep -l "runs-on:.*self-hosted.*omv.*pi\|runs-on:.*omv.*pi.*build" \
 
 As of 2026-06-22 the 5 hard-pinned workflows are:
 
-| Workflow | Can move to GH-hosted? | How |
+| Workflow | Can move to GH-hosted? | Why / How |
 |---|---|---|
-| `sync-smtp-secrets.yml` | ✅ Yes | Already refactored — pattern below |
-| `etl-espocrm-to-lake.yml` | ✅ Yes | Add Tailscale + KUBECONFIG_B64 + OIDC AWS |
-| `deploy-alert-api.yml` | ⚠️ Partial | Needs `pi-standby-aws-creds` k8s Secret → requires kubectl from CI; doable |
-| `rollout-pi-force.yml` | ❌ No | Literally restarts the Pi k3s service via SSH; needs to be on the Pi or pivot through SSM |
-| `wire-pi-cognito-from-pi.yml` | ❌ No | Injects creds into the Pi runner's env; on-Pi by design |
+| `sync-smtp-secrets.yml` | ✅ Yes | Refactored 2026-06-22 (PR #1110). Pattern below. |
+| `etl-espocrm-to-lake.yml` | ❌ No | Cloudflare Super Bot Fight Mode 401/404s `/api/v1/*` requests from data-center IPs (incl. GH Actions ubuntu-latest pool). Pi has a residential IP that scores clean. Long-term fix needs a Cloudflare WAF skip rule for `/api/*` + `X-Api-Key`, gated on `cloudflare-token-doctor` skill / token rotation. |
+| `deploy-alert-api.yml` | ❌ No | Writes to `~/alert-api/` on the Pi local FS (Dockerfile lives there outside the repo) AND runs `sudo k3s ctr images import` to push directly into k3s containerd. Both require physical Pi execution. |
+| `rollout-pi-force.yml` | ❌ No | Restarts the Pi k3s service via SSH; needs to be on the Pi or pivot through SSM. |
+| `wire-pi-cognito-from-pi.yml` | ❌ No | Injects creds into the Pi runner's env; on-Pi by design. |
 
 When a hard-pinned workflow is needed during a Pi outage and can't
 move, use the **GitHub Actions tailnet fallback** from CLAUDE.md
@@ -191,16 +191,34 @@ again:
 Keep the Pi pin (i.e. **don't** add a GH-hosted fallback) when the
 work fundamentally needs to be on the Pi:
 
-- Anything that reads `pi-standby-aws-creds` from the Pi's local
-  k3s Secret without going through the cluster API
-- Anything that writes to a Pi local filesystem (e.g.
-  `/etc/rancher/k3s/config.yaml`, OMV web UI, USB-SSD mount)
-- Anything that needs to be triggered FROM the Pi (e.g. a heartbeat
-  that proves the Pi is healthy — a GH-hosted runner doing it would
-  be a lie)
+- **Pi-local filesystem writes** — anything that writes to
+  `/etc/rancher/k3s/config.yaml`, `~/alert-api/`, the OMV web UI,
+  USB-SSD mount, or any Pi-owned path the cluster API doesn't see.
+- **`sudo` on the Pi** — anything that `sudo k3s ctr ...`, `sudo
+  systemctl ...`, or otherwise needs root on the host (not just on
+  the cluster).
+- **Pi-local Secret access** — anything that reads
+  `pi-standby-aws-creds` from the Pi's local k3s Secret without
+  going through the cluster API.
+- **Heartbeat / proof-of-life** — anything that needs to be triggered
+  FROM the Pi to prove the Pi is healthy. A GH-hosted runner doing
+  it would be a lie.
+- **Non-DC-IP-required** — anything where the destination has bot
+  protection that rejects GitHub Actions IPs (Cloudflare Super Bot
+  Fight Mode, Akamai bot manager, etc). The Pi's residential IP
+  scores clean; GH-hosted DC IPs get 401/404'd. This was the issue
+  with `etl-espocrm-to-lake.yml` against `espocrm.cloudless.gr`
+  through its Cloudflare tunnel.
 
-For those, the right answer when the Pi is down is "fix the Pi", not
-"move the work."
+For all of those, the right answer when the Pi is down is "fix the
+Pi", not "move the work."
+
+When you find yourself wanting to add a GH-hosted fallback for one of
+these, the better fix is usually the **GitHub Actions tailnet
+fallback** pattern from CLAUDE.md "Cluster Incident Response" —
+trigger work in the cluster via a workflow that uses the tailnet to
+reach the cluster, and have a long-running pod do the Pi-bound
+operation. Not always possible, but covers more cases than you'd think.
 
 ## Apply this skill
 
