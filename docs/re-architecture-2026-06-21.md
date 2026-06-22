@@ -1,6 +1,8 @@
 # Re-architecture plan — connect self-hosted apps to cloudless.gr
+
 **Status:** Plan-for-approval. Per-app PRs ship after the operator approves the table below.
 **Constraints:**
+
 - Revenue / marketing ops prioritized first.
 - Both the **Next.js cloudless.gr app** (Pi k3s) AND the **AWS serverless half** (Lambda + SST + SES + S3 + Athena + DynamoDB + SSM + Cognito + CloudFront) MUST share resources.
 - **No new EC2 instances. No new AWS services.** Reuse only what's already provisioned.
@@ -11,6 +13,7 @@ Both halves call into the same `src/lib/<app>.ts` clients. The Next.js app
 imports them directly via Next routes; Lambda imports them via the same
 ESM path (Next.js builds the Lambda bundle from the same `src/` tree
 through SST's `NextjsSite` construct per CLAUDE.md). Already proven by:
+
 - `src/lib/espocrm.ts` ← used by `/api/admin/crm/*` (Next.js) AND
   `infrastructure/ses-to-espocrm/` Lambda (`SES → Case` bridge).
 - `src/lib/email.ts` ← used by `/api/newsletter/send` AND the Lambda-driven
@@ -52,6 +55,7 @@ flags what wiring is **missing** that this re-arch needs to close.
 ## Per-PR acceptance criteria (what "done" looks like)
 
 **R1 Postiz**
+
 - `/admin/social` lists scheduled + published posts, last 30 days, with image/preview.
 - Composer creates a post + schedule via Postiz API + returns toast on success.
 - Blog Status=Published webhook fires `schedulePost()` with rendered Twitter/LinkedIn/Facebook copy.
@@ -59,12 +63,14 @@ flags what wiring is **missing** that this re-arch needs to close.
 - Login uses unified admin creds (already set up).
 
 **R2 n8n**
+
 - Operator creates 2 workflows in n8n UI, copies their IDs into SSM.
 - App-side `/api/webhooks/n8n/trigger/route.ts` accepts `{workflowId, payload}` and POSTs to `https://n8n.cloudless.gr/webhook/<id>`.
 - `/admin/automation` lists last 50 runs (via `GET /rest/executions`) with status + duration.
 - EspoCRM lead-create webhook → triggers workflow (1) automatically.
 
 **R3 MQTT chip**
+
 - `/admin/cluster` shows a live status chip that updates without a page refresh.
 - Falls back to "—" if MQTT broker unreachable (no error, no crashloop).
 - The chip uses **the same** `MQTT_USERNAME`/`MQTT_PASSWORD` from SSM that the alert-api Lambda uses (single source of truth).
@@ -91,7 +97,7 @@ the existing `src/`, `scripts/etl/`, and `infrastructure/` trees.
 1. Approve this plan (or push back on any row).
 2. Pick the FIRST PR to ship (R1 / R2 / R3) — I'll execute it end-to-end:
    manifests + library + Next route + admin page + ETL workflow if applicable
-   + test + memory entry + commit + push + merge.
+   - test + memory entry + commit + push + merge.
 3. For R2 (n8n), confirm: do you want me to ship a starter workflow JSON
    in `infrastructure/n8n/workflows/` that you import via n8n UI, or do
    you prefer to design the workflows yourself in n8n then give me the
@@ -100,6 +106,7 @@ the existing `src/`, `scripts/etl/`, and `infrastructure/` trees.
 After PR R1-R3 land, GAP-C/D/F can be re-prioritized (or stay deferred).
 
 ## See also
+
 - `docs/cluster-capacity-audit-2026-06-21.md` — confirms there's headroom on omv for any new ETL pod.
 - `skills/espocrm-operator/SKILL.md` — the wiring pattern R1/R2 follow.
 - `skills/mqtt-auth-rollout/SKILL.md` — the MQTT auth context R3 builds on.

@@ -7,6 +7,7 @@ budget under $50/mo unless ROI is obvious. Everything else stays
 installed-but-unauthenticated — no clutter, no bills.
 
 **Filter rules applied:**
+
 - Drop tools for the wrong region (US-only payroll/banking).
 - Drop tools that overlap with what you already self-host (Zapier vs n8n, Cloudinary vs S3+Lambda).
 - Drop tools that decommissioned products use (HubSpot, Apollo).

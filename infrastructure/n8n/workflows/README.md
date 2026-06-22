@@ -20,6 +20,7 @@ two app-side automations wired in PR R2:
 5. Copy the workflow's **ID** from the URL (it's a UUID in
    `https://n8n.cloudless.gr/workflow/<UUID>`).
 6. Write the ID to SSM so `/api/webhooks/n8n/trigger` can find it:
+
    ```bash
    aws ssm put-parameter \
      --name /cloudless/production/N8N_WORKFLOW_LEAD_ENRICH_ID \
@@ -28,7 +29,9 @@ two app-side automations wired in PR R2:
      --name /cloudless/production/N8N_WORKFLOW_NEWSLETTER_NURTURE_ID \
      --type String --value '<UUID>' --overwrite
    ```
+
 7. (Optional) refresh the SSM cache in the Next.js Lambda:
+
    ```bash
    kubectl -n cloudless rollout restart deploy/cloudless
    ```

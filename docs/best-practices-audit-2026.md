@@ -93,6 +93,7 @@ Reconciling with `docs/optimal-architecture-assessment.md`:
 ## Sources
 
 **Compute / DB / Analytics:**
+
 - [Elogic composable 2026](https://elogic.co/blog/composable-commerce-vs-headless-vs-monolith/)
 - [PkgPulse Workers vs Lambda](https://www.pkgpulse.com/guides/cloudflare-workers-vs-vercel-edge-vs-aws-lambda-2026)
 - [OpenNext](https://opennext.js.org/)
@@ -101,6 +102,7 @@ Reconciling with `docs/optimal-architecture-assessment.md`:
 - [DuckDB SME 2026](https://datasofttechnologies.com/blog/duckdb-is-quietly-replacing-the-sme-analytics-stack-a-2026-reality-check)
 
 **Auth / Payments / Email / Ops:**
+
 - [LogRocket Next.js auth 2026](https://blog.logrocket.com/best-auth-library-nextjs-2026/)
 - [Zuplo auth pricing](https://zuplo.com/learning-center/api-authentication-pricing)
 - [Stripe Sessions vs PI](https://docs.stripe.com/payments/checkout-sessions-and-payment-intents-comparison)
@@ -110,6 +112,7 @@ Reconciling with `docs/optimal-architecture-assessment.md`:
 - [HN ntfy vs Pushover](https://news.ycombinator.com/item?id=44975650)
 
 **Self-hosted apps / HA:**
+
 - [Twenty vs EspoCRM 2026](https://use-apify.com/blog/twenty-crm-vs-espocrm-2026)
 - [n8n 2.0 hardening](https://medium.com/@aksh8t/n8n-2-0-a-hardening-release-that-redefines-enterprise-workflow-automation-a1a59bbb397e)
 - [AWS multi-region active-passive](https://aws.amazon.com/blogs/architecture/disaster-recovery-solutions-with-aws-managed-services-part-3-multi-site-active-passive/)
@@ -119,6 +122,7 @@ Reconciling with `docs/optimal-architecture-assessment.md`:
 - [Uptime Kuma + Grafana](https://builder.aws.com/content/37UYQpI9EINmQYcV0EYWgHYC0W0/building-a-self-hosted-monitoring-stack-with-uptime-kuma-grafana-and-prometheus)
 
 **AI / CDP / CDN / Tracking:**
+
 - [Envive AI personalization stats](https://www.envive.ai/post/ai-personalization-in-ecommerce-lift-statistics)
 - [Shopify AI recs](https://www.shopify.com/blog/ai-recommendation-system)
 - [Meilisearch vs Algolia](https://www.meilisearch.com/blog/algolia-vs-typesense)
