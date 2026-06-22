@@ -159,6 +159,12 @@ const NAV_GROUPS: NavGroup[] = [
     label: "System — keep it running",
     accent: "text-yellow-400",
     cards: [
+      card(
+        "Self-hosted Apps",
+        "One-click admin ingress to EspoCRM, AppFlowy, n8n, Postiz, Grafana, Kuma",
+        "🖥",
+        "/admin/selfhosted"
+      ),
       card("Integrations", "Live status of every connected service", "🔌", "/admin/integrations"),
       card("AWS Cost", "Per-service spend (Athena view, R9 ETL)", "💸", "/admin/cost"),
       card("Errors", "Unresolved Sentry issues", "⚠️", "/admin/errors", (s) =>
