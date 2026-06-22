@@ -1,4 +1,9 @@
-# Master TODO — cloudless.gr perfection roadmap
+# Master TODO — cloudless.gr perfection roadmap (post-R12)
+
+**Status as of 2026-06-22:** R10, R11, R12, R14 all shipped (Phase 1 is
+4/5 done; R25 added mid-session is the only Phase 1 item still open).
+The 2026-06-22 session ran a 12-PR ops sweep on top of that — see the
+"Session log" section below.
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
@@ -21,6 +26,40 @@ Synthesizes:
 - **Pi side:** omv + omv-ha only. No third node, no NAS migration.
 - **Solo Greek SMB volume.** Budget per change must match value — reject
   $50/mo+ recurring costs unless ROI is obvious.
+
+## Session log — 2026-06-22 (workflows + ops sweep)
+
+Not a new R-row, but the work needs a home. 12 PRs merged today after
+R10-R14 landed in the previous session, all on the ops / CI / housekeeping
+side. Listed here so future sessions know what state the repo is in
+without diffing git.
+
+| PR | Theme | Net |
+|---|---|---|
+| #1100 | `.github/workflows/README.md` catalogue index (124 wfs grouped into 14 categories) | docs |
+| #1101 | Archived 8 truly-one-shot workflows (cloudless.online decom, OIDC fixes, indexing smoke) → 116 active | -8 wfs |
+| #1102 | Archived 9th (`deploy-infrastructure-workaround.yml`, GPG fix obsolete since `terraform-doctor` skill) + documented 2 known-failing wfs | -1 wf |
+| #1103 | Cleanup: 3 tmp survey scripts that slipped into #1102 via `git add -A` | hygiene |
+| #1104 | **perf(ci)**: `.next/cache` restore added to `ci.yml` + `bundle-budget.yml` + `bundle-size-pr.yml`. All 4 Next builders now cached. ~2-3 min savings per cache-hit run. | perf |
+| #1105 | `docs/gh-workflows-strategy.md` — measured baseline + 8 ROI-ranked optimization patterns + prioritized roadmap. Memory `project_gh_workflows_speedup_strategy` added as pointer. | docs |
+| #1106 | **fix(etl-selfhosted)**: dropped unneeded `pnpm/action-setup` (the install is `npm ci` in `scripts/etl/`, separate npm project). | fix |
+| #1107 | `.gitignore`: `tmp_*.sh` + `q-dev-chat-*.md` so session helpers stop slipping into PRs. | hygiene |
+| #1108 | **fix(etl-selfhosted)**: use `AWS_DEPLOY_ROLE_ARN` (the `AWS_ETL_ROLE_ARN` secret was never created). End-to-end ETL run verified green. | fix |
+| #1109 | **fix(ci)**: `lint:md:fix` swept 161 markdown files clean (was red since R10-R14 docs landed) + excluded `etl-aws-cost-to-lake.test.ts` from vitest (separate npm project unresolvable from root). | fix |
+| #1110 | **feat(ops)**: `skills/pi-runner-failover/SKILL.md` + `scripts/pi-runner-doctor.sh` + refactored `sync-smtp-secrets.yml` from Pi-pinned to GH-hosted-with-tailnet. Memory `reference_pi_runner_failover` added. | feat |
+| #1111 | Honesty pass on the pi-runner-failover inventory: only 1 of 5 hard-pinned workflows is actually moveable (not 3 of 5). Added "non-DC-IP-required" bullet to Step 5 for Cloudflare bot-detection case. | docs |
+
+**Pi runners** (`omv`, `omv-build`) were offline for most of the
+session and are coming back online 2026-06-22 ~01:30 UTC. Use
+`bash scripts/pi-runner-doctor.sh` to verify; flip `RUNNER_GENERIC`
+back to `[self-hosted, omv, build]` via
+`.github/scripts/toggle-runner.sh pi` when you want load on Pi again.
+
+**Operator-side blockers documented** (still pending — see Phase 0):
+
+- Cloudflare token rotation (gates HA LB, email-obfuscation fix, infra MCP, AND `etl-espocrm-to-lake` move-off-Pi)
+- LinkedIn `LINKEDIN_*` SSM keys (for `ad-readiness.yml`)
+- Healthchecks.io URLs (6 of them) — workflow skips gracefully without them
 
 ## Legend
 
