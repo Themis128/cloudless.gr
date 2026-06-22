@@ -65,27 +65,58 @@ if [ "${#KEYS[@]}" -eq 0 ]; then
   exit 0
 fi
 
-# 2. For each key, build its ARN and simulate ssm:GetParameter.
-#    Iterate one at a time (simulate-principal-policy accepts up to 32 ResourceArns
-#    per call but the per-resource decision is simpler to read).
+# 2. Batch-simulate ssm:GetParameter against all keys.
+#    simulate-principal-policy accepts up to 32 ResourceArns per call.
+#    With ~50-200 SSM keys, serial calls hit the 5-min workflow timeout
+#    (v1 of this script was sequential and timed out — verified
+#    2026-06-22 run 27924648322). Batch by 32 → 7 calls for 200 keys.
 DENIED=()
+ARNS=()
 for key in "${KEYS[@]}"; do
   [ -z "$key" ] && continue
-  # Strip leading slash for ARN
   arn_path="${key#/}"
-  param_arn="arn:aws:ssm:${REGION}:${ACCOUNT_ID}:parameter/${arn_path}"
+  ARNS+=("arn:aws:ssm:${REGION}:${ACCOUNT_ID}:parameter/${arn_path}")
+done
 
-  decision=$(aws iam simulate-principal-policy \
+BATCH_SIZE=32
+TOTAL_ARNS=${#ARNS[@]}
+i=0
+while [ "$i" -lt "$TOTAL_ARNS" ]; do
+  end=$((i + BATCH_SIZE))
+  [ "$end" -gt "$TOTAL_ARNS" ] && end="$TOTAL_ARNS"
+  BATCH=("${ARNS[@]:$i:$((end - i))}")
+
+  # Simulate this batch. Returns one EvaluationResult per ResourceArn,
+  # in the same order. We pair them back up via the ARN field.
+  result=$(aws iam simulate-principal-policy \
     --policy-source-arn "$USER_ARN" \
     --action-names "ssm:GetParameter" \
-    --resource-arns "$param_arn" \
-    --query 'EvaluationResults[0].EvalDecision' \
-    --output text 2>/dev/null) || decision="ERROR"
+    --resource-arns "${BATCH[@]}" \
+    --query 'EvaluationResults[].[EvalResourceName,EvalDecision]' \
+    --output text 2>&1) || {
+      echo "::warning::simulate-principal-policy batch failed (i=$i): $result"
+      # Mark this whole batch as denied so the alert surfaces it.
+      for arn in "${BATCH[@]}"; do
+        DENIED+=("${arn##*:parameter}")
+      done
+      i="$end"
+      continue
+    }
 
-  case "$decision" in
-    allowed) ;;
-    *)       DENIED+=("$key") ;;
-  esac
+  # Parse "ARN\tdecision\n..." per line.
+  while IFS=$'\t' read -r arn decision; do
+    [ -z "$arn" ] && continue
+    case "$decision" in
+      allowed) ;;
+      *)
+        # Strip "arn:aws:ssm:REGION:ACCT:parameter" prefix to recover key
+        key_name="${arn##*:parameter}"
+        DENIED+=("$key_name")
+        ;;
+    esac
+  done <<< "$result"
+
+  i="$end"
 done
 
 # 3. Report.
