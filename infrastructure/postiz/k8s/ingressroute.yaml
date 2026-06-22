@@ -1,0 +1,19 @@
+# Traefik IngressRoute: postiz.cloudless.gr → postiz:5000
+# Uses the same letsencrypt certResolver as other cloudless routes.
+# Applied to the postiz namespace where the service lives.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: postiz
+  namespace: postiz
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`postiz.cloudless.gr`)
+      services:
+        - name: postiz
+          port: 5000
+  tls:
+    certResolver: letsencrypt-cloudflare
