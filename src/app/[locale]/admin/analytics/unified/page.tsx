@@ -140,7 +140,7 @@ function RoiSection({ roi }: Readonly<{ roi: RoiData | null }>) {
         <KpiCard
           label="New leads"
           value={roi.totals.newLeads === null ? "—" : String(roi.totals.newLeads)}
-          sub={roi.totals.newLeads === null ? "HubSpot not configured" : "HubSpot contacts"}
+          sub={roi.totals.newLeads === null ? "EspoCRM not configured" : "EspoCRM contacts"}
           color="text-neon-cyan"
         />
         <KpiCard
@@ -379,7 +379,7 @@ export default function UnifiedAnalyticsPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState label="HubSpot pipeline" />
+              <EmptyState label="EspoCRM pipeline" />
             )}
           </div>
 
@@ -414,7 +414,7 @@ export default function UnifiedAnalyticsPage() {
                 )}
               </div>
             ) : (
-              <EmptyState label="HubSpot email" />
+              <EmptyState label="EspoCRM email" />
             )}
           </div>
         </div>

@@ -97,7 +97,7 @@ test.describe("Integrations contracts", () => {
   });
 
   test("EspoCRM webhook POST requires URL-secret auth", async ({ page }) => {
-    // EspoCRM webhook replaced HubSpot 2026-06-20 (PR #1043). Auth is a
+    // EspoCRM webhook replaced EspoCRM 2026-06-20 (PR #1043). Auth is a
     // URL-query-param secret (?secret=...), not HMAC. POST without secret → 4xx.
     const response = await postJson(page.request, "/api/webhooks/espocrm", {
       entity: "Lead",
@@ -108,7 +108,7 @@ test.describe("Integrations contracts", () => {
     expect(response.status()).toBeLessThan(500);
   });
 
-  test("HubSpot CRM upsert route handles invalid email or unconfigured CRM", async ({ page }) => {
+  test("EspoCRM CRM upsert route handles invalid email or unconfigured CRM", async ({ page }) => {
     const response = await postJson(page.request, "/api/crm/contact", {
       email: "invalid-email",
     });

@@ -37,7 +37,7 @@ export interface IntegrationFetchOptions {
   /**
    * If true, do NOT throw on non-ok responses — return the Response object
    * unchanged. Useful for callers that need to read 4xx error bodies in a
-   * domain-specific way (e.g. HubSpot's 409 conflict on upsert).
+   * domain-specific way (e.g. EspoCRM's 409 conflict on upsert).
    */
   passthroughErrors?: boolean;
 }

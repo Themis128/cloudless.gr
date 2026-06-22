@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 
 type Tab = "subscribers" | "contacts";
 
-interface HubSpotContact {
+interface EspoCRMContact {
   id: string;
   properties: {
     email?: string;
@@ -20,7 +20,7 @@ interface HubSpotContact {
 }
 
 interface ContactsResponse {
-  contacts: HubSpotContact[];
+  contacts: EspoCRMContact[];
   total: number;
   fetchedAt: string;
 }
@@ -81,7 +81,7 @@ export default function EmailPage() {
         <PageHeader />
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            HubSpot is not configured. Add <code className="text-yellow-300">HUBSPOT_API_KEY</code>{" "}
+            EspoCRM is not configured. Add <code className="text-yellow-300">HUBSPOT_API_KEY</code>{" "}
             to AWS SSM.
           </p>
         </div>
@@ -106,7 +106,7 @@ export default function EmailPage() {
           </div>
           <div className="h-8 w-px bg-slate-800" />
           <p className="font-mono text-xs text-slate-600">
-            via HubSpot CRM ·{" "}
+            via EspoCRM CRM ·{" "}
             {new Date(data.fetchedAt).toLocaleTimeString("en-IE", {
               hour: "2-digit",
               minute: "2-digit",
@@ -227,7 +227,7 @@ function PageHeader() {
         </Link>
       </div>
       <p className="font-body mt-1 text-slate-400">
-        HubSpot newsletter subscribers and CRM contacts.
+        EspoCRM newsletter subscribers and CRM contacts.
       </p>
     </div>
   );

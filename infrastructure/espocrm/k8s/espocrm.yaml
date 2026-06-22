@@ -1,4 +1,4 @@
-# EspoCRM — self-hosted CRM (HubSpot replacement). DEPLOYED + LIVE 2026-06-20.
+# EspoCRM — self-hosted CRM (EspoCRM replacement). DEPLOYED + LIVE 2026-06-20.
 # Namespace: espocrm | App: espocrm/espocrm:9 | DB: mariadb:11
 #
 # Components (both run on omv only — nodeSelector kubernetes.io/hostname=omv):

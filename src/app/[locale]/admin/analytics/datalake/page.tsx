@@ -9,7 +9,7 @@
  *   - GSC top keywords (90d rolling window)
  *   - LinkedIn ads campaign rollup (90d)
  *   - Sentry top unresolved issues (14d)
- *   - HubSpot lifecycle funnel
+ *   - EspoCRM lifecycle funnel
  *
  * Fetches all six in parallel from /api/admin/analytics/datalake. Each card
  * renders independently — a section with an error (e.g. ETL hasn't run yet)
@@ -106,7 +106,7 @@ const SECTION_META: Record<
     ],
   },
   hubspot_funnel: {
-    title: "HubSpot lifecycle funnel",
+    title: "EspoCRM lifecycle funnel",
     subtitle:
       "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_hubspot_funnel.",
     columns: [

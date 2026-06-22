@@ -44,7 +44,7 @@ export default function AdminTicketsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/crm/tickets?limit=100");
       if (!res.ok) {
-        if (res.status === 503) throw new Error("HubSpot not configured");
+        if (res.status === 503) throw new Error("EspoCRM not configured");
         throw new Error(`HTTP ${res.status}`);
       }
       const data = await res.json();
@@ -98,9 +98,9 @@ export default function AdminTicketsPage() {
       <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
         <p className="font-mono text-sm text-red-400">{error}</p>
         <p className="mt-2 text-xs text-slate-500">
-          {error === "HubSpot not configured"
+          {error === "EspoCRM not configured"
             ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
-            : "Check your HubSpot API key configuration."}
+            : "Check your EspoCRM API key configuration."}
         </p>
       </div>
     );
@@ -179,7 +179,7 @@ export default function AdminTicketsPage() {
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Support Tickets</h1>
           <p className="font-body mt-1 text-slate-400">
-            Customer support tickets synced from HubSpot.
+            Customer support tickets synced from EspoCRM.
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">

@@ -51,7 +51,7 @@ Write-Host @"
 
    - New: src/lib/integrations/http.ts — timeout, exponential-backoff retry on
      429+5xx, typed IntegrationError, Sentry breadcrumb per call, passthrough
-     mode for callers that handle 4xx themselves (e.g. HubSpot 409 upsert).
+     mode for callers that handle 4xx themselves (e.g. EspoCRM 409 upsert).
    - New: __tests__/integrations-http.test.ts — covers happy path, 5xx retry,
      429 with and without Retry-After, 4xx no-retry, passthrough, 204, text
      content-type, max-retry exhaustion, network errors.

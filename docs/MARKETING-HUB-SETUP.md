@@ -8,7 +8,7 @@ The Marketing Hub is fully implemented in code. Every platform degrades graceful
 
 | Platform | Admin page | Keys needed | Status |
 |---|---|---|---|
-| HubSpot Pipeline | `/admin/pipeline` | `HUBSPOT_API_KEY` (already in SSM) | Ready |
+| EspoCRM Pipeline | `/admin/pipeline` | `HUBSPOT_API_KEY` (already in SSM) | Ready |
 | Email (ActiveCampaign) | `/admin/email` | `ACTIVECAMPAIGN_API_URL`, `ACTIVECAMPAIGN_API_TOKEN` | Needs keys |
 | Google Ads | `/admin/campaigns/google` | `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_CUSTOMER_ID` | Needs keys |
 | LinkedIn | `/admin/campaigns/linkedin` | `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_AD_ACCOUNT_ID`, `LINKEDIN_ORGANIZATION_URN` | Needs keys |
@@ -17,7 +17,7 @@ The Marketing Hub is fully implemented in code. Every platform degrades graceful
 | Meta/Instagram | `/admin/campaigns/meta` | `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID` | Blocked (policy appeal) |
 | AI Assistant | `/admin/ai-assistant` | `ANTHROPIC_API_KEY` | Needs key |
 | Content Calendar | `/admin/calendar` | None (in-memory store) | Ready |
-| Client Reports | `/admin/reports` | Uses HubSpot + AC for data; `ANTHROPIC_API_KEY` for AI insights | Ready (no AI insights until key set) |
+| Client Reports | `/admin/reports` | Uses EspoCRM + AC for data; `ANTHROPIC_API_KEY` for AI insights | Ready (no AI insights until key set) |
 
 ---
 
@@ -109,7 +109,7 @@ console.anthropic.com → API Keys → Create key. The AI assistant uses `claude
 
 ---
 
-## HubSpot pipeline scopes
+## EspoCRM pipeline scopes
 
 The existing `HUBSPOT_API_KEY` token needs additional scopes for the pipeline board:
 
@@ -120,7 +120,7 @@ The existing `HUBSPOT_API_KEY` token needs additional scopes for the pipeline bo
 | `crm.objects.notes.write` | Create notes |
 | `crm.schemas.deals.read` | Pipeline definitions |
 
-Go to HubSpot → Settings → Integrations → Private Apps → edit the `cloudless.gr` app and add these scopes.
+Go to EspoCRM → Settings → Integrations → Private Apps → edit the `cloudless.gr` app and add these scopes.
 
 ---
 

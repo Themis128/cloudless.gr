@@ -35,7 +35,7 @@ ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
 LOCATION 's3://cloudless-analytics-data/events/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
--- ---- HubSpot CRM tables (Parquet, full-refresh daily) ---------------------
+-- ---- EspoCRM CRM tables (Parquet, full-refresh daily) ---------------------
 CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.hubspot_contacts (
   contact_id       string,
   email            string,
@@ -173,8 +173,8 @@ HAVING COUNT(*) > 1
 ORDER BY revenue DESC NULLS LAST, sessions DESC;
 
 -- ---- v_hubspot_funnel ------------------------------------------------------
--- HubSpot contact lifecycle stage breakdown joined to whether they have a
--- closed-won deal in HubSpot. Lets us see lead-source ROI by stage.
+-- EspoCRM contact lifecycle stage breakdown joined to whether they have a
+-- closed-won deal in EspoCRM. Lets us see lead-source ROI by stage.
 CREATE OR REPLACE VIEW cloudless_analytics.v_hubspot_funnel AS
 SELECT
   COALESCE(c.lifecyclestage, 'unknown') AS lifecycle_stage,
@@ -188,7 +188,7 @@ GROUP BY 1, 2
 ORDER BY contact_count DESC;
 
 -- ---- v_lead_to_customer ----------------------------------------------------
--- Cross-source funnel join: HubSpot contact → Cognito client → first Stripe
+-- Cross-source funnel join: EspoCRM contact → Cognito client → first Stripe
 -- transaction. Joins on lowercased email. Shows time-to-conversion + lifetime
 -- value once the contact becomes a paying customer.
 CREATE OR REPLACE VIEW cloudless_analytics.v_lead_to_customer AS
@@ -259,7 +259,7 @@ GROUP BY campaign_id, campaign_name
 ORDER BY spend DESC;
 
 -- ===========================================================================
--- EspoCRM tables (replaces HubSpot, fed by scripts/etl/espocrm-to-lake.mjs)
+-- EspoCRM tables (replaces EspoCRM, fed by scripts/etl/espocrm-to-lake.mjs)
 -- ===========================================================================
 
 CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_contacts (

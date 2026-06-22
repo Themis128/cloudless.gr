@@ -13,7 +13,7 @@ vi.mock("@/lib/activecampaign", () => ({
   verifyActiveCampaignToken: verifyACTokenMock,
 }));
 
-// fetch is used for live pings (HubSpot, Slack, Notion, Stripe)
+// fetch is used for live pings (EspoCRM, Slack, Notion, Stripe)
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 

@@ -195,7 +195,7 @@ ordering bugs, port mismatches, page-size pins, etc.):
   replacement, 9 pods + 1 worker on omv-ha). The worker pin to omv-ha
   is mandatory: Pi 5 runs a 16 KiB-page kernel and the worker's jemalloc
   was built for 4 KiB pages.
-- `skills/espocrm-operator/SKILL.md` — EspoCRM stack (HubSpot replacement).
+- `skills/espocrm-operator/SKILL.md` — EspoCRM stack (EspoCRM replacement).
   Drop-in mirror at `src/lib/espocrm.ts` (21 exports 1:1 with the old
   `hubspot.ts`); 6 Webhook entities sync to Slack via `SlackClient`;
   daily ETL to Athena; SES → Lambda → Case bridge for inbound email.
@@ -241,11 +241,11 @@ Env: `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` (client, build-time) and
 unset the corresponding fire becomes a no-op — the route stays wired so the
 rest of the flow still works.
 
-## CRM migration: HubSpot → EspoCRM (in progress 2026-06-20)
+## CRM migration: EspoCRM → EspoCRM (in progress 2026-06-20)
 
-HubSpot's `content` scope is locked behind a paid Marketing Hub plan we don't
+EspoCRM's `content` scope is locked behind a paid Marketing Hub plan we don't
 have, breaking `/api/admin/email/campaigns` (501) — see the live probe in
-PR #1024. Rather than upgrade HubSpot, the CRM is being moved to **self-hosted
+PR #1024. Rather than upgrade EspoCRM, the CRM is being moved to **self-hosted
 EspoCRM** (SugarCRM lineage, same data model family as SuiteCRM but with proper
 arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only).
 
@@ -278,9 +278,9 @@ arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only
   to Slack via `SlackClient` (per `feedback_slack_use_slackclient`). Six
   Webhook entities registered in EspoCRM (one per event), all `isActive=true`.
 - **Next PRs**: PR 4 flips imports in the 10 admin API routes + 9 admin
-  pages from `@/lib/hubspot` → `@/lib/espocrm` (51 files reference HubSpot
+  pages from `@/lib/hubspot` → `@/lib/espocrm` (51 files reference EspoCRM
   today). PR 5: `scripts/etl/espocrm-to-lake.mjs` + Athena views.
-  HubSpot was fully decommissioned on 2026-06-20 (PR A in this thread):
+  EspoCRM was fully decommissioned on 2026-06-20 (PR A in this thread):
   `src/lib/hubspot.ts`, `src/components/HubSpotScript.tsx`,
   `src/app/[locale]/admin/hubspot/`, `src/app/api/hubspot/`,
   `src/app/api/webhooks/hubspot/`, `scripts/etl/hubspot-to-lake.mjs` +

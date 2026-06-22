@@ -38,8 +38,8 @@ vi.mock("@/lib/gsc", () => ({
   }),
 }));
 
-vi.mock("@/lib/hubspot", () => ({
-  isHubSpotConfigured: mockIsHubSpot,
+vi.mock("@/lib/espocrm", () => ({
+  isEspoCRMConfigured: mockIsHubSpot,
   getPipelineStats: vi.fn().mockResolvedValue({
     totalDeals: 5,
     totalValue: 150000,
@@ -168,7 +168,7 @@ describe("GET /api/admin/analytics/unified", () => {
     expect(data.seo).toBeNull();
   });
 
-  it("returns null pipeline when HubSpot not configured", async () => {
+  it("returns null pipeline when EspoCRM not configured", async () => {
     mockIsHubSpot.mockResolvedValue(false);
     const { GET } = await import("@/app/api/admin/analytics/unified/route");
     const res = await GET(adminReq(ANALYTICS_URL));

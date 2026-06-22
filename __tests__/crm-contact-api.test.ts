@@ -4,7 +4,7 @@ const isHubSpotConfiguredMock = vi.fn();
 const upsertContactMock = vi.fn();
 
 vi.mock("@/lib/espocrm", () => ({
-  isHubSpotConfigured: isHubSpotConfiguredMock,
+  isEspoCRMConfigured: isHubSpotConfiguredMock,
   upsertContact: upsertContactMock,
 }));
 
@@ -15,7 +15,7 @@ describe("POST /api/crm/contact", () => {
     upsertContactMock.mockResolvedValue("contact_123");
   });
 
-  it("returns 503 when HubSpot is not configured", async () => {
+  it("returns 503 when EspoCRM is not configured", async () => {
     isHubSpotConfiguredMock.mockResolvedValueOnce(false);
 
     const { POST } = await import("@/app/api/crm/contact/route");

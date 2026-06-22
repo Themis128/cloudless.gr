@@ -67,7 +67,7 @@ test.describe("Contact form (/en/contact)", () => {
       .click();
 
     const response = await responsePromise;
-    // In dev without HubSpot creds the route may 4xx/5xx — both are fine.
+    // In dev without EspoCRM creds the route may 4xx/5xx — both are fine.
     // The contract is: the route was hit and we got SOMETHING back.
     expect(response.status()).toBeGreaterThanOrEqual(200);
   });

@@ -33,7 +33,7 @@ graph TB
 
     subgraph Notify["Post-Booking"]
         BookAPI -->|fire-and-forget| Slack["slackBookingNotify()"]
-        BookAPI -->|fire-and-forget| HubSpot["upsertContact + createDeal"]
+        BookAPI -->|fire-and-forget| EspoCRM["upsertContact + createDeal"]
     end
 ```
 
@@ -135,7 +135,7 @@ Books a consultation slot.
   - Reminders: email (60 min before) + popup (15 min before)
   - Timezone: Europe/Athens
 - Fires `slackBookingNotify()` (fire-and-forget) with Block Kit blocks
-- Creates HubSpot contact + deal + note (fire-and-forget)
+- Creates EspoCRM contact + deal + note (fire-and-forget)
 - Returns `{ success: true, eventId, meetingLink }`
 
 ### `getConsultationsByEmail(email)`
@@ -153,7 +153,7 @@ sequenceDiagram
     participant Book as /api/calendar/book
     participant GCal as Google Calendar API
     participant Slack as slackBookingNotify
-    participant HS as HubSpot
+    participant HS as EspoCRM
     User->>Avail: GET /api/calendar/availability?days=7
     Avail->>GCal: POST freeBusy query
     GCal-->>Avail: Busy time ranges
@@ -218,5 +218,5 @@ Test coverage (8 + 13 tests):
 | `src/lib/google-auth.ts` | Shared OAuth2 service-account JWT factory (`createGoogleAuth`) used by both Calendar and GSC |
 | `src/lib/google-calendar.ts` | freeBusy queries, event creation, consultation lookup, DST-aware slot generation |
 | `src/app/api/calendar/availability/route.ts` | GET available slots (days 1–30, 5-min CDN cache) |
-| `src/app/api/calendar/book/route.ts` | POST booking with validation, rate-limit, Slack + HubSpot fire-and-forget |
+| `src/app/api/calendar/book/route.ts` | POST booking with validation, rate-limit, Slack + EspoCRM fire-and-forget |
 | `src/lib/slack-notify.ts` | `slackBookingNotify()` — Block Kit booking notification with mrkdwn-escaped fields |

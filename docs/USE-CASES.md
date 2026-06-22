@@ -17,11 +17,11 @@ Last verified against the codebase: 2026-06-12.
 | Read marketing content (blog)        | `/blog`, `/blog/[slug]` — Notion-backed                                                          | live   |
 | Read documentation                   | `/docs`, `/docs/[slug]` — Notion-backed                                                          | live   |
 | Browse case studies and social proof | `/case-studies`, testimonials across pages — Notion CMS with static fallback                     | live   |
-| Contact the company                  | `/contact` form → SES email + auto-reply, HubSpot contact + deal, Notion submission, Slack alert | live   |
+| Contact the company                  | `/contact` form → SES email + auto-reply, EspoCRM contact + deal, Notion submission, Slack alert | live   |
 | Get scored as a lead invisibly       | First-touch UTM/referrer capture site-wide → lead score 0–100 on submission                      | live   |
 | Buy a product or service             | `/store`, `/store/[id]` → Stripe checkout → `/store/success`                                     | live   |
 | Book a consultation                  | Chat widget / calendar booking → Google Calendar + Meet link, Slack alert                        | live   |
-| Subscribe to the newsletter          | Subscribe form → HubSpot list, unsubscribe flow                                                  | live   |
+| Subscribe to the newsletter          | Subscribe form → EspoCRM list, unsubscribe flow                                                  | live   |
 | Sign up and pick a plan              | `/auth/signup` (Cognito) → plan selection → `/portal/waiting`                                    | live   |
 | Use the site in 4 languages          | `en`, `el`, `fr`, `de` locale routing everywhere                                                 | live   |
 | Chat with an AI assistant            | Chat widget (Bedrock/Anthropic backed)                                                           | live   |
@@ -43,12 +43,12 @@ Last verified against the codebase: 2026-06-12.
 
 | Use case                       | Surface                                                                                                                | Status                                                   |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| See every lead in one inbox    | `/admin/leads` — HubSpot contacts + portal enrollments merged by email                                                 | live                                                     |
-| Know where each lead came from | First-touch attribution (UTM, referrer, landing page) in HubSpot notes & Slack                                         | live                                                     |
+| See every lead in one inbox    | `/admin/leads` — EspoCRM contacts + portal enrollments merged by email                                                 | live                                                     |
+| Know where each lead came from | First-touch attribution (UTM, referrer, landing page) in EspoCRM notes & Slack                                         | live                                                     |
 | Know which leads are hot       | Explainable 0–100 score (service interest, company, message signals, paid traffic, business email) with 🔥/🌤️/❄️ bands | live                                                     |
 | Get instant lead alerts        | Slack message with score, band, attribution per submission                                                             | live                                                     |
 | Auto-follow-up new leads       | ActiveCampaign automation enrollment on submission                                                                     | needs config: `ACTIVECAMPAIGN_LEAD_AUTOMATION_ID` in SSM |
-| Manage the sales pipeline      | `/admin/pipeline` — HubSpot deals by stage                                                                             | live                                                     |
+| Manage the sales pipeline      | `/admin/pipeline` — EspoCRM deals by stage                                                                             | live                                                     |
 | Manage CRM records             | `/admin/crm` (+ companies, tickets), `/admin/hubspot`                                                                  | live                                                     |
 
 ## 4. Owner — marketing & publishing (Phase 2)
@@ -101,7 +101,7 @@ Last verified against the codebase: 2026-06-12.
 
 | Automation                                                                     | Trigger                                        | Status                                       |
 | ------------------------------------------------------------------------------ | ---------------------------------------------- | -------------------------------------------- |
-| Lead capture fan-out (email, HubSpot, Notion, Slack, Meta CAPI, AC enrollment) | Contact form submit                            | live                                         |
+| Lead capture fan-out (email, EspoCRM, Notion, Slack, Meta CAPI, AC enrollment) | Contact form submit                            | live                                         |
 | Weekly owner digest → Slack                                                    | GH Actions `platform-crons.yml`, Mon 06:00 UTC | live                                         |
 | Monthly client status emails                                                   | GH Actions `platform-crons.yml`, 1st 08:00 UTC | live                                         |
 | Daily content-calendar digest → Slack                                          | Cron `calendar-digest`                         | endpoint live; schedule externally if wanted |
@@ -129,7 +129,7 @@ Already configured in SSM — no action needed: Meta Ads
 (`META_ACCESS_TOKEN` + `META_AD_ACCOUNT_ID`), Google Ads
 (`GOOGLE_ADS_DEVELOPER_TOKEN` + `GOOGLE_ADS_CUSTOMER_ID`), LinkedIn (client
 ID/secret, access token, ad account), X API keys/tokens, Slack bot token +
-default channel, HubSpot, Notion, Stripe, SES, Sentry, GSC, Anthropic.
+default channel, EspoCRM, Notion, Stripe, SES, Sentry, GSC, Anthropic.
 
 Still pending (the genuinely human items):
 

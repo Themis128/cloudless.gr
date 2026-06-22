@@ -6,8 +6,8 @@ import { Link } from "@/i18n/navigation";
 import type { Report } from "@/lib/reports";
 
 const SECTION_OPTIONS = [
-  { id: "pipeline", label: "Lead Pipeline (HubSpot)" },
-  { id: "email", label: "Email Marketing (HubSpot)" },
+  { id: "pipeline", label: "Lead Pipeline (EspoCRM)" },
+  { id: "email", label: "Email Marketing (EspoCRM)" },
 ];
 
 export default function ReportsPage() {

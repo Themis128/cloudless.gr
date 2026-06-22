@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
 - Always use `Response.json()` (not `NextResponse.json()`) for response creation
 - SSM config loaded via `await getConfig()` — never read secrets from `process.env` directly in production routes
-- Fire-and-forget side effects (Slack, HubSpot) call `.catch(() => {})` inline — they never fail the main response
+- Fire-and-forget side effects (Slack, EspoCRM) call `.catch(() => {})` inline — they never fail the main response
 - Webhook routes verify signatures **before** any payload processing
 - `mapIntegrationError(err)` called first in every catch block — handles known AWS/Stripe/Slack errors uniformly
 - Sentry: dynamic `import("@sentry/nextjs")` only when `NEXT_PUBLIC_SENTRY_DSN` is set; always `.catch(() => {})` to prevent Sentry from failing the route

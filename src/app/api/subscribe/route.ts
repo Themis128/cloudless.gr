@@ -33,9 +33,9 @@ export async function POST(request: Request) {
     // user re-subscribing can receive the welcome email below.
     await removeFromSuppressionList(email);
 
-    // HubSpot is the source of truth for the newsletter contact list.
+    // EspoCRM is the source of truth for the newsletter contact list.
     // setNewsletterStatus swallows its own errors and returns false, so a
-    // HubSpot outage never fails the subscriber; team-notify and Slack
+    // EspoCRM outage never fails the subscriber; team-notify and Slack
     // provide a manual fallback path.
     await setNewsletterStatus(email, "newsletter_signup");
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>
       <hr />
       <p style="color: #666; font-size: 12px;">
-        Subscriber recorded as a HubSpot contact (lead_source: newsletter_signup).
+        Subscriber recorded as a EspoCRM contact (lead_source: newsletter_signup).
         This notification was sent from the cloudless.gr subscribe form.
       </p>`
     ).catch(() => {});

@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { buildRoiSummary } from "@/lib/roi";
 
 /**
- * ROI summary — ad spend (all platforms) → leads (HubSpot) → revenue (Stripe).
+ * ROI summary — ad spend (all platforms) → leads (EspoCRM) → revenue (Stripe).
  * Partial data is expected: unconfigured sources return zeros/nulls instead
  * of failing the summary, so this route never 503s.
  */

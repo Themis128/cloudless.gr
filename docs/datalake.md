@@ -80,7 +80,7 @@ should show files growing with each request.
 |---|---|---|
 | `scripts/etl/stripe-to-lake.mjs` | Stripe API | `lake/transactions/` |
 | `scripts/etl/portals-to-lake.mjs` | Notion / portal DB | `lake/portals/` |
-| `scripts/etl/clients-to-lake.mjs` | HubSpot / Notion | `lake/clients/` |
+| `scripts/etl/clients-to-lake.mjs` | EspoCRM / Notion | `lake/clients/` |
 
 These run from a local laptop or CI, **not** from Lambda. They use
 long-lived credentials with broader S3 access (Get/Put/Delete). Not

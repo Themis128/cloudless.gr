@@ -75,7 +75,7 @@ SKIP_FOR_BRAND = {
     "Hosted UI",
     "Cognito",
     "Slack",
-    "HubSpot",
+    "EspoCRM",
     "Sentry",
     "OpenNext",
     "Cloudflare",

@@ -17,7 +17,7 @@
 5. [Phase 1 — Meta (Facebook + Instagram)](#5-phase-1--meta-facebook--instagram--deferred)
 6. [Phase 2 — Email Marketing (ActiveCampaign)](#6-phase-2--email-marketing-activecampaign--done)
 7. [Phase 3 — Google Ads](#7-phase-3--google-ads--done)
-8. [Phase 4 — Lead Pipeline Automation (HubSpot)](#8-phase-4--lead-pipeline-automation-hubspot--done)
+8. [Phase 4 — Lead Pipeline Automation (EspoCRM)](#8-phase-4--lead-pipeline-automation-hubspot--done)
 9. [Phase 5 — LinkedIn Campaigns](#9-phase-5--linkedin-campaigns--done)
 10. [Phase 6 — TikTok Campaigns](#10-phase-6--tiktok-campaigns--done)
 11. [Phase 7 — X (Twitter) Campaigns](#11-phase-7--x-twitter-campaigns--done)
@@ -52,7 +52,7 @@ The admin panel gains a **"Marketing Hub"** — a set of new sections alongside 
     │   ├── tiktok/         ← TikTok
     │   └── x/              ← X / Twitter
     ├── email/              ← ActiveCampaign: campaigns, automations, lists
-    ├── pipeline/           ← HubSpot full deal pipeline view
+    ├── pipeline/           ← EspoCRM full deal pipeline view
     ├── calendar/           ← Content calendar (posts, blogs, emails)
     ├── reports/            ← Client-facing performance reports
     └── ai-assistant/       ← AI campaign creation wizard
@@ -164,7 +164,7 @@ AI campaign creation routes call **Anthropic Claude API** (or OpenAI) server-sid
 | **1** | Meta campaigns + Pixel activation | DEFERRED | Blocked: ad policy appeal pending (see `project_instagram_blocker.md`) |
 | **2** | ActiveCampaign email marketing | DONE | `src/lib/activecampaign.ts`, `/admin/email`, API routes at `/api/admin/email/` |
 | **3** | Google Ads | DONE | `src/lib/campaigns/google-ads.ts`, `/admin/campaigns/google`, insights route |
-| **4** | HubSpot full deal pipeline | DONE | Extended `hubspot.ts`; kanban at `/admin/pipeline`; API at `/api/admin/pipeline/` |
+| **4** | EspoCRM full deal pipeline | DONE | Extended `hubspot.ts`; kanban at `/admin/pipeline`; API at `/api/admin/pipeline/` |
 | **5** | LinkedIn campaigns | DONE | `src/lib/campaigns/linkedin.ts`, `/admin/campaigns/linkedin` |
 | **6** | TikTok campaigns | DONE | `src/lib/campaigns/tiktok.ts`, `/admin/campaigns/tiktok` |
 | **7** | X (Twitter) campaigns | DONE | `src/lib/campaigns/x-ads.ts` (OAuth 1.0a), `/admin/campaigns/x` |
@@ -344,7 +344,7 @@ pauseCampaign(id: string): Promise<void>
 
 ---
 
-## 8. Phase 4 — Lead Pipeline Automation (HubSpot) — DONE
+## 8. Phase 4 — Lead Pipeline Automation (EspoCRM) — DONE
 
 **Implemented files:**
 
@@ -385,14 +385,14 @@ src/app/api/admin/pipeline/
 
 ```
 src/app/[locale]/admin/pipeline/
-    page.tsx                           ← Kanban board view of HubSpot pipeline
+    page.tsx                           ← Kanban board view of EspoCRM pipeline
 ```
 
 **Automations to wire up (in API routes):**
 
-- `POST /api/calendar/book` → auto-create HubSpot deal (stage: "Consultation Booked")
-- `POST /api/webhooks/stripe` (checkout.completed) → auto-create HubSpot deal (stage: "Closed Won")
-- `POST /api/contact` → auto-create HubSpot deal (stage: "New Lead") — already upserts contact, add deal creation
+- `POST /api/calendar/book` → auto-create EspoCRM deal (stage: "Consultation Booked")
+- `POST /api/webhooks/stripe` (checkout.completed) → auto-create EspoCRM deal (stage: "Closed Won")
+- `POST /api/contact` → auto-create EspoCRM deal (stage: "New Lead") — already upserts contact, add deal creation
 
 ---
 
@@ -500,7 +500,7 @@ src/app/[locale]/admin/calendar/
 
 ## 13. Phase 9 — Client Reporting — DONE
 
-**Implemented:** `src/lib/reports.ts` (in-memory report store), API routes at `/api/admin/reports/` (GET list), `/api/admin/reports/generate/` (POST), `/api/admin/reports/[id]/` (GET/DELETE), `src/app/[locale]/admin/reports/page.tsx` (list + generate modal), `src/app/[locale]/admin/reports/[id]/page.tsx` (report viewer with AI insights + print/PDF button). Report generation aggregates HubSpot pipeline stats and ActiveCampaign email stats. AI insights generated per section via Claude when `ANTHROPIC_API_KEY` is set.
+**Implemented:** `src/lib/reports.ts` (in-memory report store), API routes at `/api/admin/reports/` (GET list), `/api/admin/reports/generate/` (POST), `/api/admin/reports/[id]/` (GET/DELETE), `src/app/[locale]/admin/reports/page.tsx` (list + generate modal), `src/app/[locale]/admin/reports/[id]/page.tsx` (report viewer with AI insights + print/PDF button). Report generation aggregates EspoCRM pipeline stats and ActiveCampaign email stats. AI insights generated per section via Claude when `ANTHROPIC_API_KEY` is set.
 
 **Note:** Reports use an in-memory store (reset on restart). For persistence, connect `reports.ts` to a database.
 
@@ -526,7 +526,7 @@ src/app/[locale]/admin/reports/
 2. **SEO Performance** — GSC clicks/impressions/keywords (already built)
 3. **Paid Social** — Meta / LinkedIn / TikTok / X: impressions, clicks, conversions, ROAS
 4. **Email Marketing** — ActiveCampaign: sent, open rate, click rate, unsubscribes
-5. **Lead Pipeline** — HubSpot: new leads, qualified, proposals, closed won, conversion rate
+5. **Lead Pipeline** — EspoCRM: new leads, qualified, proposals, closed won, conversion rate
 6. **Website Analytics** — Notion Analytics: page views, form submits, store visits
 
 **Report generation flow:**
@@ -688,7 +688,7 @@ Phases 2-10 are fully implemented and deployed. The remaining work is operationa
 1. **Populate SSM keys** for each platform (see table in Section 4)
 2. **Complete Meta policy appeal** to unblock Phase 1 (see `project_instagram_blocker.md`)
 3. **Add database persistence** for content calendar and reports (currently in-memory)
-4. **Wire automation hooks** from Phase 4 plan (e.g. `/api/contact` creating HubSpot deals)
+4. **Wire automation hooks** from Phase 4 plan (e.g. `/api/contact` creating EspoCRM deals)
 
 ### Test coverage
 

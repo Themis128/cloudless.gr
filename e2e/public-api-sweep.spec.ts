@@ -116,7 +116,7 @@ test.describe("Public API route sweep", () => {
     expect(res.status()).toBeGreaterThanOrEqual(200);
   });
   test("POST /api/webhooks/espocrm without secret returns 4xx", async ({ request }) => {
-    // EspoCRM replaced HubSpot webhook 2026-06-20 (PR #1043). Auth = URL-secret.
+    // EspoCRM replaced EspoCRM webhook 2026-06-20 (PR #1043). Auth = URL-secret.
     const res = await request.post("/api/webhooks/espocrm", { data: {} });
     // In dev: 5xx is acceptable (missing creds). We only need the route to be wired.
     expect(res.status()).toBeGreaterThanOrEqual(200);

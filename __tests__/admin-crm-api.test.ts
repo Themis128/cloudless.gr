@@ -13,7 +13,7 @@ vi.mock("@/lib/api-auth", () => ({
 }));
 
 vi.mock("@/lib/espocrm", () => ({
-  isHubSpotConfigured: isHubSpotConfiguredMock,
+  isEspoCRMConfigured: isHubSpotConfiguredMock,
   listCompanies: listCompaniesMock,
   listDeals: listDealsMock,
   listOwners: listOwnersMock,
@@ -31,7 +31,7 @@ const unauthorizedResponse = {
   }),
 };
 
-describe("Admin HubSpot CRM API", () => {
+describe("Admin EspoCRM CRM API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireAdminMock.mockReturnValue({ ok: true, user: { sub: "admin" } });
@@ -82,12 +82,12 @@ describe("Admin HubSpot CRM API", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when HubSpot is not configured for companies", async () => {
+  it("returns 503 when EspoCRM is not configured for companies", async () => {
     isHubSpotConfiguredMock.mockResolvedValueOnce(false);
     const { GET } = await import("@/app/api/admin/crm/companies/route");
     const response = await GET(makeRequest("/api/admin/crm/companies"));
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "HubSpot not configured." });
+    expect(await response.json()).toEqual({ error: "EspoCRM not configured." });
   });
 
   it("returns companies data", async () => {
@@ -108,7 +108,7 @@ describe("Admin HubSpot CRM API", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when HubSpot is not configured for deals", async () => {
+  it("returns 503 when EspoCRM is not configured for deals", async () => {
     isHubSpotConfiguredMock.mockResolvedValueOnce(false);
     const { GET } = await import("@/app/api/admin/crm/deals/route");
     const res = await GET(makeRequest("/api/admin/crm/deals"));
@@ -133,7 +133,7 @@ describe("Admin HubSpot CRM API", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when HubSpot is not configured for owners", async () => {
+  it("returns 503 when EspoCRM is not configured for owners", async () => {
     isHubSpotConfiguredMock.mockResolvedValueOnce(false);
     const { GET } = await import("@/app/api/admin/crm/owners/route");
     const res = await GET(makeRequest("/api/admin/crm/owners"));
@@ -158,12 +158,12 @@ describe("Admin HubSpot CRM API", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when HubSpot is not configured for pipelines", async () => {
+  it("returns 503 when EspoCRM is not configured for pipelines", async () => {
     isHubSpotConfiguredMock.mockResolvedValueOnce(false);
     const { GET } = await import("@/app/api/admin/crm/pipelines/route");
     const res = await GET(makeRequest("/api/admin/crm/pipelines"));
     expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "HubSpot not configured." });
+    expect(await res.json()).toEqual({ error: "EspoCRM not configured." });
   });
 
   it("returns pipelines for deals objectType by default", async () => {
@@ -195,7 +195,7 @@ describe("Admin HubSpot CRM API", () => {
   });
 
   it("returns 500 when getPipelines throws", async () => {
-    getPipelinesMock.mockRejectedValueOnce(new Error("HubSpot API error"));
+    getPipelinesMock.mockRejectedValueOnce(new Error("EspoCRM API error"));
     const { GET } = await import("@/app/api/admin/crm/pipelines/route");
     const res = await GET(makeRequest("/api/admin/crm/pipelines"));
     expect(res.status).toBe(500);

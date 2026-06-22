@@ -10,7 +10,7 @@ Status legend: ✅ working · ⚠️ degraded · ❌ broken · ⏸ integration m
 |---|---|---|---|---|---|---|---|
 | `/admin/settings` | `POST /api/admin/cache` | 307 → login ✅ | 405 on GET (POST-only by design) ✅ | n/a (action-only page) | clear-cache + per-prefix | ✅ | Page has Clear Cache (all) + per-namespace clear buttons. `invalidateCache` exists in `src/lib/notion-cache.ts`. |
 | `/admin/users` | `GET/POST /api/admin/users` | 307 → login ✅ | 401 unauth ✅ | lists Cognito users + groups | enable/disable/promote/demote | ✅ | Reads `cognito:groups` and exposes admin promote/demote + enable/disable per user. |
-| `/admin/integrations` | `GET /api/admin/integrations/status` | 307 → login ✅ | 401 unauth ✅ | pings HubSpot/Slack/Notion/AC/Stripe/Sentry/GSC live | refresh button | ✅ | Each ping uses `AbortSignal.timeout(5000)` so a hung integration can't stall the page. |
+| `/admin/integrations` | `GET /api/admin/integrations/status` | 307 → login ✅ | 401 unauth ✅ | pings EspoCRM/Slack/Notion/AC/Stripe/Sentry/GSC live | refresh button | ✅ | Each ping uses `AbortSignal.timeout(5000)` so a hung integration can't stall the page. |
 | `/admin/notifications` | `GET/PATCH /api/admin/notifications` | 307 → login ✅ | 401 unauth ✅ | reads ring buffer (50 entries) | PATCH to mark read | ⚠️ | **In-memory ring buffer** — survives warm Lambda only. Acceptable for ops dashboards, NOT for durable alerts. Documented in the source comment. |
 | `/admin/workspaces` | `GET/POST/PATCH/DELETE /api/admin/workspaces` | 307 → login ✅ | 401 unauth ✅ | lists workspaces | create/edit/delete | ✅ | Full CRUD wired. SSM-backed storage. |
 
@@ -19,7 +19,7 @@ Status legend: ✅ working · ⚠️ degraded · ❌ broken · ⏸ integration m
 - **Unauthenticated**: every page redirects (307) to `/auth/login`; every API returns 401 (notifications cold-start was 9s on first hit but warm runs settle at 0.4–1.0s — Lambda init time, not a bug).
 - **Auth gate consistency**: every route calls `requireAdmin(request)` first and returns its 401/403 response before touching any backing service.
 - **`/api/admin/cache` 405 on GET is correct**: the route is intentionally POST-only (it's a destructive action). The Settings page only POSTs to it.
-- **Integration ping timeouts**: HubSpot/Slack/Notion/AC pings use `AbortSignal.timeout(5000)` so a stuck external service can't lock the dashboard.
+- **Integration ping timeouts**: EspoCRM/Slack/Notion/AC pings use `AbortSignal.timeout(5000)` so a stuck external service can't lock the dashboard.
 
 ## What's NOT broken but worth knowing
 

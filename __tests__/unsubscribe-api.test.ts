@@ -71,7 +71,7 @@ describe("POST /api/unsubscribe", () => {
     expect(addToSuppressionListMock).toHaveBeenCalledWith("user@cloudless.gr");
   });
 
-  it("flips the HubSpot contact to unsubscribed", async () => {
+  it("flips the EspoCRM contact to unsubscribed", async () => {
     const { POST } = await import("@/app/api/unsubscribe/route");
     const req = new Request("http://localhost:4000/api/unsubscribe", {
       method: "POST",

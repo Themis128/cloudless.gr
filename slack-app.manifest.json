@@ -96,7 +96,7 @@
       {
         "command": "/cloudless-leads",
         "url": "https://cloudless.gr/api/slack/commands",
-        "description": "Recent leads from HubSpot CRM",
+        "description": "Recent leads from EspoCRM CRM",
         "usage_hint": "(no arguments)",
         "should_escape": false
       },

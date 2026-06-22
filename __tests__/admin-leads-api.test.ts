@@ -59,7 +59,7 @@ describe("GET /api/admin/leads", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns HubSpot contacts as unified leads", async () => {
+  it("returns EspoCRM contacts as unified leads", async () => {
     const res = await GET(makeRequest());
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -84,7 +84,7 @@ describe("GET /api/admin/leads", () => {
     ]);
     expect(data.leads[0].interest).toBe("Full-Stack Growth Engine (Bundle)");
     expect(data.leads[0].portalStatus).toBe("waiting");
-    // First touch wins: portal submission predates HubSpot createdate.
+    // First touch wins: portal submission predates EspoCRM createdate.
     expect(data.leads[0].createdAt).toBe("2026-05-30T09:00:00Z");
   });
 
@@ -104,14 +104,14 @@ describe("GET /api/admin/leads", () => {
     ]);
   });
 
-  it("skips HubSpot contacts without an email", async () => {
+  it("skips EspoCRM contacts without an email", async () => {
     mockListContacts.mockResolvedValue([{ id: "3", properties: { firstname: "Ghost" } }]);
     const res = await GET(makeRequest());
     const data = await res.json();
     expect(data.total).toBe(0);
   });
 
-  it("still serves portal leads when HubSpot is unconfigured", async () => {
+  it("still serves portal leads when EspoCRM is unconfigured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
     mockReadPendingClients.mockResolvedValue([PENDING_CLIENT]);
     const res = await GET(makeRequest());

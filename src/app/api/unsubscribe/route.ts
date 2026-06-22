@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });
     }
 
-    // Suppress future SES sends, and flip the HubSpot contact out of the
+    // Suppress future SES sends, and flip the EspoCRM contact out of the
     // newsletter audience so the weekly send no longer targets them.
     const [suppressed, hubspotUpdated] = await Promise.all([
       addToSuppressionList(email),
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       `<h2>Newsletter unsubscribe</h2>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed (manual removal needed)"}</p>
-      <p><strong>HubSpot updated:</strong> ${hubspotUpdated ? "Yes" : "Failed (manual removal needed)"}</p>
+      <p><strong>EspoCRM updated:</strong> ${hubspotUpdated ? "Yes" : "Failed (manual removal needed)"}</p>
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`
     ).catch(() => {});
     sendUnsubscribeConfirmation(email).catch((err) =>
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       `<h2>Newsletter unsubscribe (via email link)</h2>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed"}</p>
-      <p><strong>HubSpot updated:</strong> ${hubspotUpdated ? "Yes" : "Failed"}</p>
+      <p><strong>EspoCRM updated:</strong> ${hubspotUpdated ? "Yes" : "Failed"}</p>
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`
     ).catch(() => {});
     sendUnsubscribeConfirmation(email).catch((err) =>

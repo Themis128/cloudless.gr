@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { getConfig } from "@/lib/ssm-config";
 import { getSeoSnapshot } from "@/lib/gsc";
 import { readThrough } from "@/lib/gsc-cache";
-import { isHubSpotConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/espocrm";
+import { isEspoCRMConfigured, getPipelineStats, listNewsletterSubscribers } from "@/lib/espocrm";
 import { getStripe } from "@/lib/stripe";
 
 async function safeCall<T>(fn: () => Promise<T>): Promise<T | null> {
@@ -38,11 +38,11 @@ export async function GET(request: NextRequest) {
         )
       : Promise.resolve(null),
 
-    (await isHubSpotConfigured())
+    (await isEspoCRMConfigured())
       ? safeCall(() => getPipelineStats())
       : Promise.resolve(null),
 
-    (await isHubSpotConfigured())
+    (await isEspoCRMConfigured())
       ? safeCall(async () => {
           const subscribers = await listNewsletterSubscribers();
           return { totalContacts: subscribers.length, totalCampaigns: 0 };

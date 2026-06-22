@@ -12,7 +12,7 @@ CREATE DATABASE IF NOT EXISTS cloudless_analytics;
 -- Already defined in docs/analytics-athena.sql
 
 -- ============================================================================
--- CLIENTS — unified client profile (synced from Cognito + portals + HubSpot)
+-- CLIENTS — unified client profile (synced from Cognito + portals + EspoCRM)
 -- ============================================================================
 CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.clients (
   user_id         string,

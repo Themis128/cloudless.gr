@@ -15,7 +15,7 @@ vi.mock("@/lib/api-auth", () => ({
 }));
 
 vi.mock("@/lib/espocrm", () => ({
-  isHubSpotConfigured: isHubSpotConfiguredMock,
+  isEspoCRMConfigured: isHubSpotConfiguredMock,
   getDealsByStage: getDealsByStageMock,
   getPipelines: getPipelinesMock,
   getPipelineStats: getPipelineStatsMock,
@@ -46,7 +46,7 @@ describe("Admin Pipeline API routes", () => {
   // ── GET /api/admin/pipeline/board ────────────────────────────────────────────
 
   describe("GET /api/admin/pipeline/board", () => {
-    it("returns 503 when HubSpot not configured", async () => {
+    it("returns 503 when EspoCRM not configured", async () => {
       isHubSpotConfiguredMock.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/pipeline/board/route");
       const res = await GET(makeGet("/api/admin/pipeline/board"));
@@ -79,7 +79,7 @@ describe("Admin Pipeline API routes", () => {
   // ── GET /api/admin/pipeline/stats ────────────────────────────────────────────
 
   describe("GET /api/admin/pipeline/stats", () => {
-    it("returns 503 when HubSpot not configured", async () => {
+    it("returns 503 when EspoCRM not configured", async () => {
       isHubSpotConfiguredMock.mockResolvedValueOnce(false);
       const { GET } = await import("@/app/api/admin/pipeline/stats/route");
       const res = await GET(makeGet("/api/admin/pipeline/stats"));
@@ -107,7 +107,7 @@ describe("Admin Pipeline API routes", () => {
   describe("POST /api/admin/pipeline/deals/[id]/move", () => {
     const params = Promise.resolve({ id: "deal_1" });
 
-    it("returns 503 when HubSpot not configured", async () => {
+    it("returns 503 when EspoCRM not configured", async () => {
       isHubSpotConfiguredMock.mockResolvedValueOnce(false);
       const { POST } = await import("@/app/api/admin/pipeline/deals/[id]/move/route");
       const res = await POST(

@@ -2,7 +2,7 @@ name: ETL — EspoCRM to Data Lake
 
 on:
   schedule:
-    - cron: "20 * * * *" # hourly at :20 (offset from HubSpot 03:15 + Stripe 03:30)
+    - cron: "20 * * * *" # hourly at :20 (offset from EspoCRM 03:15 + Stripe 03:30)
   workflow_dispatch:
   push:
     paths:

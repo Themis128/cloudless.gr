@@ -7,7 +7,7 @@
  */
 
 import { getSeoSnapshot, getTopKeywords } from "@/lib/gsc";
-import { listContacts, isHubSpotConfigured } from "@/lib/espocrm";
+import { listContacts, isEspoCRMConfigured } from "@/lib/espocrm";
 import { getTopErrors, isSentryConfigured } from "@/lib/sentry";
 import { invalidateCache } from "@/lib/notion-cache";
 import { listNewsletterSubscribers } from "@/lib/espocrm";
@@ -71,18 +71,18 @@ export async function buildSeoBlocks(userId: string): Promise<unknown[]> {
 }
 
 // ---------------------------------------------------------------------------
-// /cloudless-leads — HubSpot recent contacts
+// /cloudless-leads — EspoCRM recent contacts
 // ---------------------------------------------------------------------------
 
 export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
   try {
-    if (!(await isHubSpotConfigured())) {
+    if (!(await isEspoCRMConfigured())) {
       return [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: ":warning: HubSpot not configured (HUBSPOT_API_KEY missing).",
+            text: ":warning: EspoCRM not configured (HUBSPOT_API_KEY missing).",
           },
         },
       ];
@@ -95,7 +95,7 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
           type: "header",
           text: { type: "plain_text", text: ":busts_in_silhouette: Leads", emoji: true },
         },
-        { type: "section", text: { type: "mrkdwn", text: "No contacts found in HubSpot." } },
+        { type: "section", text: { type: "mrkdwn", text: "No contacts found in EspoCRM." } },
       ];
     }
     const rows = results.slice(0, 10).map((c) => {
@@ -112,7 +112,7 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
         type: "header",
         text: {
           type: "plain_text",
-          text: ":busts_in_silhouette: Recent Leads (HubSpot)",
+          text: ":busts_in_silhouette: Recent Leads (EspoCRM)",
           emoji: true,
         },
       },
@@ -257,9 +257,9 @@ export async function buildUptimeBlocks(userId: string): Promise<unknown[]> {
 
 export async function buildSubscribersBlocks(userId: string): Promise<unknown[]> {
   try {
-    if (!(await isHubSpotConfigured())) {
+    if (!(await isEspoCRMConfigured())) {
       return [
-        { type: "section", text: { type: "mrkdwn", text: ":warning: HubSpot not configured." } },
+        { type: "section", text: { type: "mrkdwn", text: ":warning: EspoCRM not configured." } },
       ];
     }
     const subs = await listNewsletterSubscribers();

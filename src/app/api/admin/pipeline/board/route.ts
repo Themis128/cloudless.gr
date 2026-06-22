@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { mapIntegrationError } from "@/lib/api-errors";
-import { isHubSpotConfigured, getDealsByStage, getPipelines } from "@/lib/espocrm";
+import { isEspoCRMConfigured, getDealsByStage, getPipelines } from "@/lib/espocrm";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+  if (!(await isEspoCRMConfigured())) {
+    return NextResponse.json({ error: "EspoCRM not configured." }, { status: 503 });
   }
 
   try {

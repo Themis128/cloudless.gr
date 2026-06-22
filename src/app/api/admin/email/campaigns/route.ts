@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 
 // Marketing Emails API requires the `content` scope, which is not granted
-// on the current HubSpot private-app token. We return a structured 501 so the
+// on the current EspoCRM private-app token. We return a structured 501 so the
 // /admin/email/campaigns page can render an actionable "Add scope" link
 // instead of a bare status code.
 //
@@ -14,7 +14,7 @@ import { requireAdmin } from "@/lib/api-auth";
 //        --type SecureString --overwrite --value <new-token>
 //   5. Wait <=5min for Lambda SSM cache TTL or recycle the function
 //
-// The integrations dashboard (/admin/integrations) will also flip HubSpot
+// The integrations dashboard (/admin/integrations) will also flip EspoCRM
 // from "degraded — content scope missing" to "configured" automatically.
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       setupUrl: "https://app.hubspot.com/private-apps",
       docsUrl: "https://developers.hubspot.com/docs/api/marketing/marketing-emails",
       instructions:
-        "Open the HubSpot private-app, add the `content` scope under Marketing, save, then update HUBSPOT_API_KEY in SSM. The /admin/integrations dashboard pings this scope automatically.",
+        "Open the EspoCRM private-app, add the `content` scope under Marketing, save, then update HUBSPOT_API_KEY in SSM. The /admin/integrations dashboard pings this scope automatically.",
     },
     { status: 501 }
   );
