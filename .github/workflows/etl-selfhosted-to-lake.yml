@@ -32,12 +32,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
+      # ETL scripts live in scripts/etl/ which uses npm + its own
+      # package-lock.json. Do NOT add pnpm/action-setup here — it has
+      # historically failed this job (the runner can't find pnpm-lock
+      # at the working directory). Pattern matches etl-aws-cost-to-lake.yml.
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: pnpm
 
       - name: Install ETL deps
         working-directory: scripts/etl
