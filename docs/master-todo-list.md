@@ -1,9 +1,9 @@
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
-**Status as of 2026-06-22:** R10, R11, R12, R14 all shipped (Phase 1 is
-4/5 done; R25 added mid-session is the only Phase 1 item still open).
-The 2026-06-22 session ran a 12-PR ops sweep on top of that — see the
-"Session log" section below.
+**Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R18
+(Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open). Phase 2 is
+1/3 done (R13 + R22 remain). The 2026-06-22 session ran a 17-PR ops
+sweep on top of that — see the "Session log" section below.
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
@@ -27,12 +27,12 @@ Synthesizes:
 - **Solo Greek SMB volume.** Budget per change must match value — reject
   $50/mo+ recurring costs unless ROI is obvious.
 
-## Session log — 2026-06-22 (workflows + ops sweep)
+## Session log — 2026-06-22 (workflows + ops sweep + R18)
 
-Not a new R-row, but the work needs a home. 12 PRs merged today after
-R10-R14 landed in the previous session, all on the ops / CI / housekeeping
-side. Listed here so future sessions know what state the repo is in
-without diffing git.
+17 PRs merged today after R10-R14 landed in the previous session.
+15 on the ops / CI / housekeeping side + 2 shipping R18 (Pi-side SSM
+scope assertion probe). Listed here so future sessions know what
+state the repo is in without diffing git.
 
 | PR | Theme | Net |
 |---|---|---|
@@ -50,6 +50,10 @@ without diffing git.
 | #1111 | Honesty pass on the pi-runner-failover inventory: only 1 of 5 hard-pinned workflows is actually moveable (not 3 of 5). Added "non-DC-IP-required" bullet to Step 5 for Cloudflare bot-detection case. | docs |
 | #1112 | This doc update — Master TODO marked post-R12 with the session log. | docs |
 | #1113 | **fix(sync-smtp-secrets)**: `timeout 30s` wrapper on `kubectl get ns` smoke test. Default kubectl client-side timeout is 0; hung 5+ min on first GH-hosted → tailnet handshake (verified twice in this session). | fix |
+| #1114 | Master TODO session-log addendum (PR #1112+#1113, Pi-back confirmation, CI-green note). | docs |
+| #1115 | **feat(R18)**: `scripts/audit-pi-ssm-scope.sh` + `.github/workflows/probe-pi-ssm-scope.yml`. Daily 06:05 UTC `iam:SimulatePrincipalPolicy` diff of SSM keys vs `cloudless-pi-standby`. Drift → `/api/webhooks/admin-alert` (severity=high). Closes pi-cloud-sync.md gap #2. | feat |
+| #1116 | **perf(R18)**: batch `simulate-principal-policy` 32 ARNs/call. v1 sequential timed out at 5 min on first verification run; v2 runs ~75s end-to-end. | perf |
+| #1117 | This doc update — added #1114-#1116 + status header bump (R18 now ✅). | docs |
 
 **Pi runners** (`omv`, `omv-build`) were offline for most of the
 session and **are back online as of 2026-06-22 ~01:30 UTC**
@@ -61,6 +65,14 @@ when you want load on Pi again.
 **CI on main:** ✅ green after PR #1109. `pnpm lint:md` reports
 **0 errors** (was 161 across 12 files); `pnpm test:ci` ignores the
 parquetjs-dependent test that vitest couldn't resolve from root.
+Re-verified live on sha `4f558a1b` after R18 + all follow-up PRs:
+run #27927063197 = completed/success.
+
+**R18 verified live:** probe run #27924784597 = completed/success in
+~75s. Zero drift detected — `cloudless-pi-standby` can read every
+SSM key under `/cloudless/production/*` today. From now on, any
+"added SSM key, forgot Pi" drift will fire a Slack + ntfy alert
+within 24h instead of surfacing as a runtime crash.
 
 **Operator-side blockers documented** (still pending — see Phase 0):
 
