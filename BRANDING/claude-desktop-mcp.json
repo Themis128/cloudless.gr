@@ -1,0 +1,35 @@
+{
+  "_comment": "Merge the 'mcpServers' object below into %APPDATA%\\Claude\\claude_desktop_config.json on Windows. Don't overwrite existing entries — preserve adobe / postiz / etc.",
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
+      }
+    },
+    "canva": {
+      "command": "npx",
+      "args": ["-y", "@canva/cli", "mcp"],
+      "env": {
+        "CANVA_CONNECT_TOKEN": "${CANVA_CONNECT_TOKEN}"
+      }
+    },
+    "brand-system": {
+      "command": "npx",
+      "args": ["-y", "@brandsystem/mcp"],
+      "env": {
+        "BRAND_SYSTEM_API_KEY": "${BRAND_SYSTEM_API_KEY}",
+        "BRAND_SYSTEM_SITE": "https://cloudless.gr"
+      }
+    },
+    "postiz": {
+      "command": "npx",
+      "args": ["-y", "@postiz/mcp"],
+      "env": {
+        "POSTIZ_API_URL": "https://postiz.cloudless.gr",
+        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}"
+      }
+    }
+  }
+}

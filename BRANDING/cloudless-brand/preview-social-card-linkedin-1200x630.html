@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cloudless · LinkedIn card preview</title>
+<style>
+  :root {
+    --bg-0:#0a0a0f; --bg-1:#12121a; --bg-2:#1a1a2e;
+    --cyan:#00fff5; --cyan-dim:#0ad4ff;
+    --ink-100:#ffffff; --ink-60:rgba(255,255,255,.6); --ink-30:rgba(255,255,255,.3);
+  }
+  html,body{margin:0;background:#15151c;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;color:#fff;padding:24px}
+  .card{
+    width:1200px;height:630px;position:relative;overflow:hidden;
+    background:linear-gradient(135deg,var(--bg-0) 0%,var(--bg-1) 50%,var(--bg-2) 100%);
+    border-radius:16px;padding:72px;box-sizing:border-box;
+    display:flex;flex-direction:column;justify-content:space-between;
+    box-shadow:0 24px 64px rgba(0,0,0,.5);
+  }
+  .grid{position:absolute;inset:0;background-image:
+    linear-gradient(90deg,rgba(0,255,245,.05) 1px,transparent 1px),
+    linear-gradient(rgba(0,255,245,.05) 1px,transparent 1px);
+    background-size:60px 60px;pointer-events:none;}
+  .glow-tr{position:absolute;top:-120px;right:-120px;width:480px;height:480px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,255,245,.18),rgba(0,255,245,0));filter:blur(40px);}
+  .glow-bl{position:absolute;bottom:-160px;left:-160px;width:520px;height:520px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(10,212,255,.10),rgba(10,212,255,0));filter:blur(50px);}
+  .top{position:relative;display:flex;justify-content:space-between;align-items:flex-start}
+  .category{display:flex;align-items:center;gap:14px;
+    font-family:ui-monospace,'JetBrains Mono','SF Mono',Consolas,monospace;
+    font-size:18px;color:var(--cyan);letter-spacing:.22em;text-transform:uppercase}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 16px var(--cyan)}
+  .brand{display:flex;align-items:center;gap:14px;color:#fff;font-weight:800;font-size:22px;letter-spacing:-.5px}
+  .brand .mark{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--cyan-dim));
+    display:flex;align-items:center;justify-content:center;color:#0a0a0f;font-weight:900;font-size:20px}
+  .brand .less{color:var(--cyan)}
+  .title{
+    position:relative;font-size:84px;line-height:1.05;font-weight:800;letter-spacing:-2px;
+    max-width:1000px;color:#fff;
+    text-wrap:balance;
+  }
+  .title em{font-style:normal;color:var(--cyan)}
+  .bottom{position:relative;display:flex;justify-content:space-between;align-items:flex-end}
+  .meta{display:flex;flex-direction:column;gap:8px;color:var(--ink-60);font-size:18px}
+  .meta strong{color:#fff;font-weight:600;font-size:20px}
+  .url{font-family:ui-monospace,'JetBrains Mono','SF Mono',Consolas,monospace;font-size:18px;color:var(--cyan);letter-spacing:.05em}
+  .stripe{position:absolute;left:0;bottom:0;width:100%;height:6px;
+    background:linear-gradient(90deg,var(--cyan) 0%,var(--cyan-dim) 50%,transparent 100%)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="grid"></div>
+  <div class="glow-tr"></div>
+  <div class="glow-bl"></div>
+
+  <div class="top">
+    <div class="category"><span class="dot"></span>FinOps</div>
+    <div class="brand">
+      <div class="mark">C</div>
+      <span>Cloud<span class="less">less</span></span>
+    </div>
+  </div>
+
+  <div class="title">
+    5 AWS cost <em>mistakes</em> killing your<br/>cloud bill.
+  </div>
+
+  <div class="bottom">
+    <div class="meta">
+      <strong>Themis Baltzakis</strong>
+      <span>Cloudless · 6 min read</span>
+    </div>
+    <div class="url">cloudless.gr/blog</div>
+  </div>
+
+  <div class="stripe"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" fill="none" role="img" aria-label="Cloudless">
+  <title>Cloudless wordmark (light background)</title>
+  <defs>
+    <linearGradient id="wml-grad" x1="0" y1="0" x2="360" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00b8b0"/>
+      <stop offset="1" stop-color="#0084a0"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(8 16)">
+    <rect width="48" height="48" rx="10" fill="#0a0a0f"/>
+    <mask id="wml-cut" maskUnits="userSpaceOnUse">
+      <rect width="48" height="48" fill="white"/>
+      <path d="M14 30c-2.7 0-4.9-2.2-4.9-4.9s2.2-4.9 4.9-4.9c.3 0 .6.02.9.07A6.4 6.4 0 0 1 27.6 21.5a4.5 4.5 0 0 1 1.5 8.8H14Z" fill="black"/>
+    </mask>
+    <rect width="48" height="48" rx="10" fill="#00fff5" mask="url(#wml-cut)"/>
+    <line x1="4" y1="44" x2="44" y2="4" stroke="#00fff5" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <text x="76" y="54"
+        font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif"
+        font-weight="800"
+        font-size="44"
+        letter-spacing="-1.5"
+        fill="#0a0a0f">
+    Cloud<tspan fill="url(#wml-grad)">less</tspan>
+  </text>
+
+  <text x="78" y="72"
+        font-family="ui-monospace, 'JetBrains Mono', 'SF Mono', Consolas, monospace"
+        font-weight="500"
+        font-size="10"
+        letter-spacing="2.2"
+        fill="#0084a0">
+    CLOUD · SERVERLESS · FINOPS
+  </text>
+</svg>
