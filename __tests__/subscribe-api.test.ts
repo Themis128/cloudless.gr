@@ -70,7 +70,7 @@ describe("POST /api/subscribe", () => {
     expect(notifyTeamMock.mock.calls[0][0]).toContain("New subscriber");
   });
 
-  it("marks the subscriber as a newsletter signup in HubSpot", async () => {
+  it("marks the subscriber as a newsletter signup in EspoCRM", async () => {
     const { POST } = await import("@/app/api/subscribe/route");
     await POST(makeRequest({ email: "hello@cloudless.gr" }));
 
@@ -85,7 +85,7 @@ describe("POST /api/subscribe", () => {
     expect(removeFromSuppressionListMock).toHaveBeenCalledWith("hello@cloudless.gr");
   });
 
-  it("still returns success when the HubSpot update fails", async () => {
+  it("still returns success when the EspoCRM update fails", async () => {
     setNewsletterStatusMock.mockResolvedValueOnce(false);
     const { POST } = await import("@/app/api/subscribe/route");
     const response = await POST(makeRequest({ email: "hello@cloudless.gr" }));

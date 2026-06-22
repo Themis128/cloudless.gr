@@ -9,7 +9,7 @@
  *   2. The contact form reads the stored value via `getStoredAttribution()`
  *      and sends it with the submission payload.
  *   3. `/api/contact` validates it with `sanitizeAttribution()` and forwards
- *      it to HubSpot (contact note), Slack, and Meta CAPI.
+ *      it to EspoCRM (contact note), Slack, and Meta CAPI.
  *
  * `parseAttribution` is a pure function so it can be unit-tested without a
  * browser environment.

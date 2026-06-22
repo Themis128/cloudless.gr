@@ -52,13 +52,13 @@ step lists the file that implements it and flags wins ✅ and failures ❌.
 | 4 | Open cart drawer | `CartSlideOver.tsx` |
 | 5 | "Checkout" → `POST /api/checkout` → Stripe session → redirect | `api/checkout/route.ts` |
 | 6 | Pay on Stripe → redirect to `/store/success` | `store/success/page.tsx` |
-| 7 | `checkout.session.completed` webhook: email, team notify, Slack, HubSpot deal, persist | `api/webhooks/stripe/route.ts` |
+| 7 | `checkout.session.completed` webhook: email, team notify, Slack, EspoCRM deal, persist | `api/webhooks/stripe/route.ts` |
 
 ### ✅ Wins
 
 - Catalog renders with **zero** Stripe dependency; client (`store-products-client.ts`) and server (`store-products.ts`) `defaultProducts` IDs verified **in sync** → no "unknown product" on checkout.
 - Checkout route is hardened: origin allowlist (anti open-redirect), quantity clamp 1–99, idempotency-key support, subscription-vs-payment mode, EU+ shipping for physical goods, `503` when Stripe unconfigured.
-- Webhook: signature verification, duplicate suppression, failure marking, Sentry, graceful HubSpot/Slack degradation.
+- Webhook: signature verification, duplicate suppression, failure marking, Sentry, graceful EspoCRM/Slack degradation.
 - Purchases read **live from Stripe by email** — no separate order DB to drift.
 
 ### ❌ Failures / risks

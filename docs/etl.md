@@ -23,7 +23,7 @@ Athena Glue catalog        ←  analytics-etl.yml (MSCK REPAIR) ← s3://…/eve
 | Workflow | Schedule (UTC) | Source | Sink | Idempotency |
 |---|---|---|---|---|
 | `analytics-etl.yml` | `0 2 * * *` (02:00) | Hive partitions on `events/` | Glue catalog | Yes — `MSCK REPAIR TABLE` |
-| `etl-hubspot-to-lake.yml` | `15 3 * * *` (03:15) | HubSpot v3 API (contacts + deals + tickets) | `lake/hubspot-{contacts,deals,tickets}/` | Full refresh — overwrites |
+| `etl-hubspot-to-lake.yml` | `15 3 * * *` (03:15) | EspoCRM v3 API (contacts + deals + tickets) | `lake/hubspot-{contacts,deals,tickets}/` | Full refresh — overwrites |
 | `etl-stripe-to-lake.yml` | `30 3 * * *` (03:30) | Stripe API (sessions/invoices/subs) | `lake/transactions/transactions.parquet` | Full refresh — overwrites |
 | `etl-compute-rfm-churn.yml` | `45 3 * * *` (03:45) | `lake/transactions/transactions.parquet` (Stripe ETL output) | `ml-parquet/scores_{rfm,churn}.parquet` | Full refresh — replaces external ML pipeline |
 | `etl-clients-to-lake.yml` | `0 4 * * *` (04:00) | Cognito + SSM + ml-parquet | `lake/clients/clients.parquet` + `lake/portals/portals.parquet` | Full refresh — overwrites |
@@ -51,7 +51,7 @@ read the RFM scores written 15 min earlier (instead of yesterday's).
   into a transactions schema (id, email, type=checkout/invoice/sub,
   status, amount_cents, currency, product, plan, timestamps), writes
   parquet via `@dsnp/parquetjs`.
-- `scripts/etl/hubspot-to-lake.mjs` — pulls HubSpot v3 (contacts,
+- `scripts/etl/hubspot-to-lake.mjs` — pulls EspoCRM v3 (contacts,
   deals, tickets) with cursor pagination, writes 3 parquet files.
   Drives the v_hubspot_funnel and v_lead_to_customer Athena views.
 - `scripts/etl/compute-rfm-churn.mjs` — reads

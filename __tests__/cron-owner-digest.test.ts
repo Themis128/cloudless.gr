@@ -139,14 +139,14 @@ describe("GET /api/cron/owner-digest", () => {
     expect(body).toContain("blocked");
   });
 
-  it("reports HubSpot as unconfigured without failing", async () => {
+  it("reports EspoCRM as unconfigured without failing", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
     const res = await GET(makeRequest());
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.newLeads).toBeNull();
     const body = JSON.stringify(mockSlackPost.mock.calls[0][0].blocks);
-    expect(body).toContain("HubSpot not configured");
+    expect(body).toContain("EspoCRM not configured");
   });
 
   it("degrades gracefully when calendar and portals sources throw", async () => {

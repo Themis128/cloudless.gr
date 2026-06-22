@@ -10,7 +10,7 @@ installed-but-unauthenticated — no clutter, no bills.
 
 - Drop tools for the wrong region (US-only payroll/banking).
 - Drop tools that overlap with what you already self-host (Zapier vs n8n, Cloudinary vs S3+Lambda).
-- Drop tools that decommissioned products use (HubSpot, Apollo).
+- Drop tools that decommissioned products use (EspoCRM, Apollo).
 - Drop tools whose value-proposition needs a team (Gong, Intercom for a 1-person op).
 - Keep only what maps to a specific need on your roadmap or daily ops.
 
@@ -89,7 +89,7 @@ first principles. Top 10 most-load-bearing for cloudless.gr build:
 These stay installed-but-unauthenticated — available if you ever need
 them, but no setup time spent now:
 
-- **HubSpot** (decommissioned 2026-06-20, moved to EspoCRM)
+- **EspoCRM** (decommissioned 2026-06-20, moved to EspoCRM)
 - **Apollo** (removed PR #1080 — Greek SMB volume too low)
 - **Cloudinary** (Lambda image-resize fits same-hardware rule)
 - **Fastly / Vercel** (you're on AWS+Cloudflare)

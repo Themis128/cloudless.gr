@@ -47,8 +47,8 @@ vi.mock("@/lib/gsc", () => ({
   getSeoSnapshot: (...args: unknown[]) => mockGetSeo(...args),
 }));
 
-vi.mock("@/lib/hubspot", () => ({
-  isHubSpotConfigured: (...args: unknown[]) => mockIsHubSpot(...args),
+vi.mock("@/lib/espocrm", () => ({
+  isEspoCRMConfigured: (...args: unknown[]) => mockIsHubSpot(...args),
   getPipelineStats: (...args: unknown[]) => mockPipeline(...args),
   listNewsletterSubscribers: (...args: unknown[]) => mockSubscribers(...args),
 }));

@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       fromLabel: "Cloudless Contact Form",
     });
 
-    // Map form display strings to HubSpot service_interest dropdown values
+    // Map form display strings to EspoCRM service_interest dropdown values
     const SERVICE_SLUG: Record<string, string> = {
       "Cloud Architecture & Migration": "cloud-architecture",
       "Serverless Development": "serverless",

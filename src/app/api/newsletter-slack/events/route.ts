@@ -165,7 +165,7 @@ function renderHomeView(userId: string, data: DashboardData): unknown {
   const dateLabel = `<!date^${ts}^{date_short_pretty} at {time}|${new Date().toISOString()}>`;
   const subscriberCell = data.subscribersOk
     ? `*Subscribers*\n${data.subscriberCount}`
-    : `*Subscribers*\n— (HubSpot error)`;
+    : `*Subscribers*\n— (EspoCRM error)`;
 
   // Current week's top draft (most recent by createdAt)
   const sorted = [...data.drafts].sort((a, b) =>

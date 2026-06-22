@@ -2,7 +2,7 @@
  * Public API route input-validation coverage.
  *
  * These tests exercise validation branches that don't depend on external
- * services (SES, HubSpot, Stripe, Slack) so they're deterministic with no
+ * services (SES, EspoCRM, Stripe, Slack) so they're deterministic with no
  * secrets configured.
  *
  * Each request sends a unique `x-forwarded-for` so the per-IP rate limiter

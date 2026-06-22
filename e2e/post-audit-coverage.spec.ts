@@ -6,9 +6,9 @@
  *   2. /_next/image content-negotiates AVIF when the client accepts it,
  *      proving the next.config.ts `formats: ["image/avif", "image/webp"]`
  *      change actually reaches user devices.
- *   3. HubSpot's loader is NOT injected on localhost — proves the
+ *   3. EspoCRM's loader is NOT injected on localhost — proves the
  *      runtime hostname gate in src/components/HubSpotScript.tsx works,
- *      and that the entire HubSpot+Typekit dependency chain stays out
+ *      and that the entire EspoCRM+Typekit dependency chain stays out
  *      of dev / preview / Pi-internal-IP environments.
  */
 
@@ -107,8 +107,8 @@ test.describe("image optimizer — AVIF/WebP support", () => {
   });
 });
 
-test.describe("HubSpot loader gate (only on real cloudless.gr hosts)", () => {
-  test("the HubSpot script tag is NOT in the DOM on localhost", async ({
+test.describe("EspoCRM loader gate (only on real cloudless.gr hosts)", () => {
+  test("the EspoCRM script tag is NOT in the DOM on localhost", async ({
     page,
   }) => {
     await page.goto("/en");

@@ -18,7 +18,7 @@
 | [ANTHROPIC.md](ANTHROPIC.md) | Anthropic SDK / Claude API usage in the app. |
 | [GSC.md](GSC.md) | Google Search Console integration. |
 | [GOOGLE-CALENDAR.md](GOOGLE-CALENDAR.md) | Calendar integration. |
-| [HUBSPOT.md](HUBSPOT.md) | HubSpot CRM integration. |
+| [HUBSPOT.md](HUBSPOT.md) | EspoCRM CRM integration. |
 | [SENTRY.md](SENTRY.md) | Error monitoring. |
 | [SLACK.md](SLACK.md) | Slack notifications. |
 | [STRIPE.md](STRIPE.md) | Stripe checkout + webhooks. |
@@ -43,7 +43,7 @@
 |---|---|---|
 | Dashboard | `/admin` | Stat cards (orders, contacts, errors) + Infrastructure shortcuts |
 | Analytics | `/admin/analytics`, `/admin/analytics/unified` | GSC + web metrics |
-| HubSpot | `/admin/hubspot`, `/admin/crm/**` | Contacts, companies, tickets |
+| EspoCRM | `/admin/hubspot`, `/admin/crm/**` | Contacts, companies, tickets |
 | Marketing | `/admin/campaigns/**`, `/admin/email`, `/admin/calendar` | Campaigns, email, content calendar |
 | Notion | `/admin/notion/**` | Submissions, projects, tasks, analytics |
 | System | `/admin/orders`, `/admin/errors`, `/admin/integrations`, `/admin/settings` | Ops and config |

@@ -1,15 +1,15 @@
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { NextResponse } from "next/server";
-import { isHubSpotConfigured, listOwners } from "@/lib/espocrm";
+import { isEspoCRMConfigured, listOwners } from "@/lib/espocrm";
 import { mapIntegrationError } from "@/lib/api-errors";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!(await isHubSpotConfigured())) {
-    return NextResponse.json({ error: "HubSpot not configured." }, { status: 503 });
+  if (!(await isEspoCRMConfigured())) {
+    return NextResponse.json({ error: "EspoCRM not configured." }, { status: 503 });
   }
 
   try {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;
-    console.error("[HubSpot] Error listing owners:", err);
+    console.error("[EspoCRM] Error listing owners:", err);
     return NextResponse.json({ error: "Failed to fetch owners." }, { status: 500 });
   }
 }

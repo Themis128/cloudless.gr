@@ -1,8 +1,8 @@
-# HubSpot CRM Integration
+# EspoCRM CRM Integration
 
-cloudless.gr integrates with HubSpot CRM to automatically capture leads from the contact form and provide contact management, search, and ticket creation capabilities.
+cloudless.gr integrates with EspoCRM CRM to automatically capture leads from the contact form and provide contact management, search, and ticket creation capabilities.
 
-> **Status:** Optional integration — degrades gracefully when `HUBSPOT_API_KEY` is not configured. The contact form continues to work (email + Slack) even without HubSpot.
+> **Status:** Optional integration — degrades gracefully when `HUBSPOT_API_KEY` is not configured. The contact form continues to work (email + Slack) even without EspoCRM.
 
 ---
 
@@ -40,22 +40,22 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant Caller as API Route / Lib
-    participant HubSpot as hubspot.ts
+    participant EspoCRM as hubspot.ts
     participant Env as process.env
     participant SSM as SSM Parameter Store
 
-    Caller->>HubSpot: upsertContact() / listContacts() / etc.
-    HubSpot->>HubSpot: getHubSpotToken()
-    HubSpot->>Env: Check HUBSPOT_API_KEY
+    Caller->>EspoCRM: upsertContact() / listContacts() / etc.
+    EspoCRM->>EspoCRM: getHubSpotToken()
+    EspoCRM->>Env: Check HUBSPOT_API_KEY
     alt Token in env
-        Env-->>HubSpot: Return token
+        Env-->>EspoCRM: Return token
     else Not in env
-        HubSpot->>SSM: getConfig()
+        EspoCRM->>SSM: getConfig()
         alt Token in SSM
-            SSM-->>HubSpot: Return HUBSPOT_API_KEY
+            SSM-->>EspoCRM: Return HUBSPOT_API_KEY
         else Not configured anywhere
-            SSM-->>HubSpot: undefined
-            HubSpot-->>Caller: Return null silently
+            SSM-->>EspoCRM: undefined
+            EspoCRM-->>Caller: Return null silently
         end
     end
 ```
@@ -68,14 +68,14 @@ sequenceDiagram
 
 ### `hubspotFetch(path, options?)`
 
-Authenticated `fetch` wrapper. Prepends the HubSpot base URL, sets the
+Authenticated `fetch` wrapper. Prepends the EspoCRM base URL, sets the
 `Authorization: Bearer …` header, and ensures `Content-Type: application/json`.
 All exported functions go through this helper, so the token is resolved exactly
 once per request thanks to the integration cache.
 
 ### `hubspotListAll<T>(path)`
 
-Cursor-paginated walker for HubSpot list endpoints. Appends `limit=100` and
+Cursor-paginated walker for EspoCRM list endpoints. Appends `limit=100` and
 `after=<cursor>` to the URL on each iteration, accumulating `results` until
 `paging.next.after` is absent.
 
@@ -85,7 +85,7 @@ boards reflect every deal in the portal rather than the first 100.
 ### Token-resolution guard
 
 `upsertContact`, `createDeal`, and `createTicket` early-exit with `null` when
-HubSpot is not configured. They use `isHubSpotConfigured()` for that guard
+EspoCRM is not configured. They use `isEspoCRMConfigured()` for that guard
 instead of an explicit `getHubSpotToken()` call — `hubspotFetch` resolves the
 token itself, and the integration cache makes the second resolution free.
 
@@ -105,7 +105,7 @@ HUBSPOT_API_KEY=pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 |---------------------------------------|--------------|
 | `/cloudless/production/HUBSPOT_API_KEY` | SecureString |
 
-### Required HubSpot scopes
+### Required EspoCRM scopes
 
 The private app token needs these scopes:
 
@@ -114,7 +114,7 @@ The private app token needs these scopes:
 | `crm.objects.contacts.read` | `listContacts()`, `searchContacts()` |
 | `crm.objects.contacts.write` | `upsertContact()` |
 | `crm.objects.tickets.write` | `createTicket()` |
-| `content` | `/api/admin/email/campaigns` (Marketing Emails list). Without it the route returns a structured 501 with `setupUrl`/`docsUrl`, and the `/admin/integrations` dashboard flags HubSpot as "degraded — content scope missing". |
+| `content` | `/api/admin/email/campaigns` (Marketing Emails list). Without it the route returns a structured 501 with `setupUrl`/`docsUrl`, and the `/admin/integrations` dashboard flags EspoCRM as "degraded — content scope missing". |
 
 When you add or remove a scope, the private-app token is invalidated and a new one is issued. Update SSM in place; no redeploy needed:
 
@@ -139,7 +139,7 @@ Create or update a CRM contact using email as the unique identifier.
 sequenceDiagram
     participant Route as /api/contact
     participant Upsert as upsertContact()
-    participant API as HubSpot API
+    participant API as EspoCRM API
 
     Route->>Upsert: { email, firstname, lastname, company, ... }
     Upsert->>API: POST /crm/v3/objects/contacts
@@ -206,9 +206,9 @@ Create a support ticket, optionally associated with an existing contact.
 | `hs_pipeline_stage` | string | No | `"1"` (first stage) |
 | `hs_ticket_priority` | string | No | `"MEDIUM"` |
 
-**Contact association:** If `contactId` is provided, the ticket is linked to that contact using HubSpot's association type ID `16` (ticket-to-contact).
+**Contact association:** If `contactId` is provided, the ticket is linked to that contact using EspoCRM's association type ID `16` (ticket-to-contact).
 
-**Error handling:** Returns `null` if HubSpot is not configured. Throws on API errors (non-2xx responses).
+**Error handling:** Returns `null` if EspoCRM is not configured. Throws on API errors (non-2xx responses).
 
 ---
 
@@ -224,7 +224,7 @@ Search contacts by any property using exact match (`EQ` operator).
 
 ## Contact Form Integration
 
-The contact form (`/api/contact`) is the primary consumer of the HubSpot integration:
+The contact form (`/api/contact`) is the primary consumer of the EspoCRM integration:
 
 ```mermaid
 sequenceDiagram
@@ -253,15 +253,15 @@ sequenceDiagram
 **Key design decisions:**
 
 - Email sending is **awaited** (critical path) — if SES fails, the user gets a 500 error
-- Slack and HubSpot are **fire-and-forget** via `Promise.allSettled().catch(() => {})` — failures are logged but don't block the response
+- Slack and EspoCRM are **fire-and-forget** via `Promise.allSettled().catch(() => {})` — failures are logged but don't block the response
 - Name splitting: `"Themis Baltzakis"` → `firstname: "Themis"`, `lastname: "Baltzakis"`
-- Message is truncated to 500 chars before sending to HubSpot
+- Message is truncated to 500 chars before sending to EspoCRM
 
 ---
 
 ## Custom Properties
 
-These custom properties must exist in your HubSpot account for full functionality:
+These custom properties must exist in your EspoCRM account for full functionality:
 
 | Property | Type | Group | Used by |
 |----------|------|-------|---------|
@@ -269,7 +269,7 @@ These custom properties must exist in your HubSpot account for full functionalit
 | `message` | Multi-line text | Contact information | `upsertContact()` |
 | `lead_source` | Single-line text | Contact information | `upsertContact()` (default: `website_contact_form`) |
 
-To create these in HubSpot:
+To create these in EspoCRM:
 
 1. Go to **Settings → Properties → Contact properties**
 2. Click **Create property**
@@ -278,11 +278,11 @@ To create these in HubSpot:
 
 ---
 
-## HubSpot App Setup
+## EspoCRM App Setup
 
 ### 1. Create a Private App
 
-1. Go to [HubSpot Developer](https://app.hubspot.com/) → **Settings → Integrations → Private Apps**
+1. Go to [EspoCRM Developer](https://app.hubspot.com/) → **Settings → Integrations → Private Apps**
 2. Click **Create a private app**
 3. Name: `cloudless.gr`
 4. Under **Scopes**, enable:
@@ -319,7 +319,7 @@ See the [Custom Properties](#custom-properties) section above.
 
 ### Unit tests
 
-The contact form test (`__tests__/contact-api.test.ts`) covers the integration indirectly — it mocks SSM config and verifies the contact route returns 200 with valid fields, which triggers the fire-and-forget HubSpot upsert.
+The contact form test (`__tests__/contact-api.test.ts`) covers the integration indirectly — it mocks SSM config and verifies the contact route returns 200 with valid fields, which triggers the fire-and-forget EspoCRM upsert.
 
 ```bash
 # Run contact tests
@@ -334,14 +334,14 @@ curl -X POST http://localhost:4000/api/contact \
   -H "Content-Type: application/json" \
   -d '{"name":"Test User","email":"test@example.com","message":"Integration test"}'
 
-# Then check HubSpot → Contacts → search for test@example.com
+# Then check EspoCRM → Contacts → search for test@example.com
 ```
 
 ### Verifying graceful degradation
 
 ```bash
 # Remove HUBSPOT_API_KEY from .env.local, restart dev server
-# Submit contact form — should still return 200 (email works, HubSpot silently skipped)
+# Submit contact form — should still return 200 (email works, EspoCRM silently skipped)
 ```
 
 ---
@@ -349,8 +349,8 @@ curl -X POST http://localhost:4000/api/contact \
 ## Security Notes
 
 - **Token storage:** Never commit `HUBSPOT_API_KEY` to the repo. Use `.env.local` (gitignored) locally, SSM Parameter Store in production.
-- **Error isolation:** HubSpot failures never surface to the end user — they're caught by `Promise.allSettled` and logged to console.
-- **Data minimization:** Only contact-relevant fields are sent to HubSpot. Message is truncated to 500 characters.
+- **Error isolation:** EspoCRM failures never surface to the end user — they're caught by `Promise.allSettled` and logged to console.
+- **Data minimization:** Only contact-relevant fields are sent to EspoCRM. Message is truncated to 500 characters.
 - **No PII in logs:** Error handlers log the error type but not the contact data.
 
 ---
@@ -359,7 +359,7 @@ curl -X POST http://localhost:4000/api/contact \
 
 | File | Purpose |
 |------|---------|
-| `src/lib/hubspot.ts` | All HubSpot API operations — CRM contacts + pipeline extensions |
+| `src/lib/hubspot.ts` | All EspoCRM API operations — CRM contacts + pipeline extensions |
 | `src/lib/integrations.ts` | Config loader — reads `HUBSPOT_API_KEY` from env, provides `isConfigured()` |
 | `src/lib/ssm-config.ts` | SSM Parameter Store fallback for production token resolution |
 | `src/app/api/contact/route.ts` | Contact form handler — calls `upsertContact()` as fire-and-forget |
@@ -368,7 +368,7 @@ curl -X POST http://localhost:4000/api/contact \
 | `src/app/api/admin/pipeline/deals/[id]/notes/route.ts` | GET/POST deal notes |
 | `src/app/api/admin/pipeline/stats/route.ts` | GET pipeline stats (totalDeals, totalValue, byStage) |
 | `src/app/[locale]/admin/pipeline/page.tsx` | Kanban board UI |
-| `__tests__/contact-api.test.ts` | Contact route unit tests (indirect HubSpot coverage) |
+| `__tests__/contact-api.test.ts` | Contact route unit tests (indirect EspoCRM coverage) |
 | `__tests__/hubspot-pipeline.test.ts` | Pipeline extension unit tests |
 | `__tests__/admin-pipeline-api.test.ts` | Pipeline API route tests |
 
@@ -434,7 +434,7 @@ Fetch all notes associated with a deal in two requests total:
 1. `GET /crm/v3/objects/deals/:id/associations/notes` to collect note IDs
 2. `POST /crm/v3/objects/notes/batch/read` to resolve all bodies in a single batch call
 
-This avoids the previous N+1 pattern (one GET per note). HubSpot caps batch reads
+This avoids the previous N+1 pattern (one GET per note). EspoCRM caps batch reads
 at 100 inputs per request, so the helper slices accordingly.
 
 ```typescript
@@ -471,7 +471,7 @@ Deals with no `amount` contribute `0` to the value totals. Returns zeroed stats 
 
 ### Pipeline API Routes
 
-All pipeline routes require a valid admin session or Bearer JWT (checked by `requireAdmin`) and return `503` when HubSpot is not configured.
+All pipeline routes require a valid admin session or Bearer JWT (checked by `requireAdmin`) and return `503` when EspoCRM is not configured.
 
 | Route | Method | Description |
 |---|---|---|
@@ -481,7 +481,7 @@ All pipeline routes require a valid admin session or Bearer JWT (checked by `req
 | `/api/admin/pipeline/deals/[id]/notes` | GET | Returns `{ notes }` |
 | `/api/admin/pipeline/deals/[id]/notes` | POST | Body: `{ body }` — returns `{ note }` |
 
-### Required HubSpot scopes for pipeline
+### Required EspoCRM scopes for pipeline
 
 In addition to the contact scopes above:
 

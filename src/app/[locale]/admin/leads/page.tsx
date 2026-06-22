@@ -94,7 +94,7 @@ export default function AdminLeadsPage() {
         <div>
           <h1 className="font-heading text-2xl font-bold text-white">Lead Inbox</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Unified view of HubSpot contacts and portal enrollment requests.
+            Unified view of EspoCRM contacts and portal enrollment requests.
           </p>
         </div>
         <div className="flex items-center gap-3">

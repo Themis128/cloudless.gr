@@ -69,12 +69,12 @@ sk = ssm("STRIPE_SECRET_KEY")
 code, _ = api_check("https://api.stripe.com/v1/balance", {"Authorization": f"Bearer {sk}"})
 R.append((":green_circle:" if code == 200 else ":red_circle:", "Stripe", f"HTTP {code}"))
 
-# HubSpot
+# EspoCRM
 hk = ssm("HUBSPOT_API_KEY")
 code, _ = api_check(
     "https://api.hubapi.com/crm/v3/objects/contacts?limit=1", {"Authorization": f"Bearer {hk}"}
 )
-R.append((":green_circle:" if code == 200 else ":red_circle:", "HubSpot CRM", f"HTTP {code}"))
+R.append((":green_circle:" if code == 200 else ":red_circle:", "EspoCRM CRM", f"HTTP {code}"))
 
 # Slack bot
 code, data = api_check("https://slack.com/api/auth.test", {"Authorization": f"Bearer {token}"})

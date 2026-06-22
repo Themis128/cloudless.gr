@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { createReport, updateReport, type ReportSection } from "@/lib/reports";
-import { isHubSpotConfigured, getPipelineStats } from "@/lib/espocrm";
+import { isEspoCRMConfigured, getPipelineStats } from "@/lib/espocrm";
 import {
   isActiveCampaignConfigured,
   getEmailStats,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
   const sections: ReportSection[] = [];
 
-  if (includeSections.includes("pipeline") && (await isHubSpotConfigured())) {
+  if (includeSections.includes("pipeline") && (await isEspoCRMConfigured())) {
     const pipelineData = await getPipelineStats();
     const insights = anthropicKey
       ? await generateInsights(

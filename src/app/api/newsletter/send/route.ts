@@ -69,7 +69,7 @@ async function broadcast(
 }
 
 /**
- * Sends a rendered newsletter to every HubSpot newsletter subscriber.
+ * Sends a rendered newsletter to every EspoCRM newsletter subscriber.
  *
  * Called by scripts/publish-and-send-newsletter.ts from the weekly cron.
  * Runs on Lambda, which already holds SES permissions, so no AWS keys are

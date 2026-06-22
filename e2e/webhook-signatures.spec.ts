@@ -2,7 +2,7 @@
  * Webhook signature rejection — negative-path coverage.
  *
  * The security audit confirmed all three webhook handlers (Stripe,
- * HubSpot, Notion) verify signatures before touching the request body.
+ * EspoCRM, Notion) verify signatures before touching the request body.
  * These tests pin that contract: requests without a valid signature
  * MUST be rejected with 4xx, never silently processed.
  *
@@ -39,8 +39,8 @@ test.describe("webhook signature gates", () => {
     expect(r.status()).toBeLessThan(500);
   });
 
-  // HubSpot webhook signature tests removed 2026-06-20 alongside the route
-  // (PR #1043 — HubSpot decom). EspoCRM webhook auth is URL-secret-based,
+  // EspoCRM webhook signature tests removed 2026-06-20 alongside the route
+  // (PR #1043 — EspoCRM decom). EspoCRM webhook auth is URL-secret-based,
   // not HMAC; covered by `/api/webhooks/espocrm` tests elsewhere.
 
   test("/api/webhooks/notion rejects missing signature", async ({ request }) => {

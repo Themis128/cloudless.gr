@@ -3,7 +3,7 @@
  *
  * Finds Notion Blog rows with Status="In Review", promotes them to Published,
  * triggers ISR revalidation on the public blog, then asks the site's
- * newsletter send endpoint to email each post to every HubSpot subscriber.
+ * newsletter send endpoint to email each post to every EspoCRM subscriber.
  *
  * Designed to run from .github/workflows/weekly-newsletter.yml on Mondays
  * at 09:00 UTC, three hours after the draft generator (the human review
@@ -13,7 +13,7 @@
  * Why a server endpoint for the send: delivery runs through SES, and the
  * Lambda the site runs on already holds SES permissions. Posting the
  * rendered email to /api/newsletter/send keeps AWS keys out of CI; the
- * endpoint resolves the recipient list from HubSpot and sends.
+ * endpoint resolves the recipient list from EspoCRM and sends.
  *
  * Flow per approved post:
  *   1. Fetch full block tree, render to HTML + plaintext.
@@ -379,7 +379,7 @@ interface SendResult {
 
 /**
  * Hands the rendered email to the site's /api/newsletter/send endpoint, which
- * resolves the HubSpot subscriber list and delivers via SES. Authenticated
+ * resolves the EspoCRM subscriber list and delivers via SES. Authenticated
  * with the shared NEWSLETTER_SEND_SECRET.
  */
 async function postNewsletter(subject: string, html: string, text: string): Promise<SendResult> {

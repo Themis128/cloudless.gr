@@ -295,7 +295,7 @@ All outbound notifications use the `SlackClient` class, which automatically sele
 
 ### `slackContactNotify({ name, email, company?, service?, message })`
 
-Called from `/api/contact` as **fire-and-forget** via `Promise.allSettled` (runs in parallel with HubSpot CRM upsert). Does not block the API response.
+Called from `/api/contact` as **fire-and-forget** via `Promise.allSettled` (runs in parallel with EspoCRM CRM upsert). Does not block the API response.
 
 Block Kit message includes:
 

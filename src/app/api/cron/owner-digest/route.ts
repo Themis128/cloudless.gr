@@ -10,7 +10,7 @@ import { isConfiguredAsync } from "@/lib/integrations";
 /**
  * Weekly owner digest (Phase 4) — one Slack message with everything that
  * needs the owner's attention:
- *   - new leads (HubSpot contacts created in the last 7 days)
+ *   - new leads (EspoCRM contacts created in the last 7 days)
  *   - content published/scheduled this week (calendar)
  *   - deliverables awaiting client review
  *   - open payment links
@@ -22,14 +22,14 @@ import { isConfiguredAsync } from "@/lib/integrations";
 
 const WEEK_MS = 7 * 86_400_000;
 
-interface HubSpotContactRecord {
+interface EspoCRMContactRecord {
   properties?: { email?: string; createdate?: string };
 }
 
 async function countNewLeads(sinceIso: string): Promise<number | null> {
   if (!(await isConfiguredAsync("ESPOCRM_API_KEY"))) return null;
   try {
-    const contacts = (await listContacts(100)) as HubSpotContactRecord[];
+    const contacts = (await listContacts(100)) as EspoCRMContactRecord[];
     return contacts.filter((c) => {
       const created = c.properties?.createdate;
       return created !== undefined && created >= sinceIso;
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     );
 
   const lines: string[] = [
-    `*Leads:* ${newLeads === null ? "HubSpot not configured" : `${newLeads} new in the last 7 days`}`,
+    `*Leads:* ${newLeads === null ? "EspoCRM not configured" : `${newLeads} new in the last 7 days`}`,
     `*Content:* ${published} published, ${scheduled} scheduled this week`,
     `*Deliverables awaiting client review:* ${awaitingReview.length}`,
     ...awaitingReview.slice(0, 10),

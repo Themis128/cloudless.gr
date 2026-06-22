@@ -12,7 +12,7 @@
  *
  * Adds (idempotent — re-running is safe):
  *   Blog Posts:                Locale, Updated At, Status
- *   Contact Form Submissions:  Locale, Replied At, Notes, HubSpot Contact ID
+ *   Contact Form Submissions:  Locale, Replied At, Notes, EspoCRM Contact ID
  *   Site Analytics:            Locale
  *   Content Calendar:          Locale, Target Blog Post (relation → Blog Posts)
  *   Tasks:                     Related Blog Post (relation → Blog Posts)
@@ -71,7 +71,7 @@ const PLAN: { db: string; id: string; props: Record<string, PropSchema> }[] = [
       Locale: { select: { options: LOCALE_OPTIONS } },
       "Replied At": { date: {} },
       Notes: { rich_text: {} },
-      "HubSpot Contact ID": { rich_text: {} },
+      "EspoCRM Contact ID": { rich_text: {} },
     },
   },
   {

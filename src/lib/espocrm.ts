@@ -1,9 +1,9 @@
 /**
  * EspoCRM client. Replaced the deleted src/lib/hubspot.ts on 2026-06-20
- * (HubSpot fully decommissioned). All call-site imports use this module.
+ * (EspoCRM fully decommissioned). All call-site imports use this module.
  *
- * EspoCRM module mapping vs the historical HubSpot equivalents:
- *   HubSpot           EspoCRM
+ * EspoCRM module mapping vs the historical EspoCRM equivalents:
+ *   EspoCRM           EspoCRM
  *   -------           -------
  *   contact           Contact
  *   company           Account
@@ -87,7 +87,7 @@ async function espoListAll<T = unknown>(
 }
 
 /**
- * Map a HubSpot-shaped contact onto EspoCRM Contact fields. EspoCRM stores
+ * Map a EspoCRM-shaped contact onto EspoCRM Contact fields. EspoCRM stores
  * `accountId` not `company` name — we leave company as a free-text custom
  * field (cAccountName) on initial create; an admin can wire it to a real
  * Account record later via Workflow.
@@ -162,7 +162,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
 }
 
 /** Fetch every newsletter subscriber email. We treat leadSource=Email as
- *  the subscribed state. Mirrors the HubSpot newsletter_signup convention. */
+ *  the subscribed state. Mirrors the EspoCRM newsletter_signup convention. */
 export async function listNewsletterSubscribers(): Promise<string[]> {
   try {
     const all = await espoListAll<{ emailAddress?: string }>("Contact", {
@@ -254,7 +254,7 @@ interface TicketData {
 }
 
 /**
- * Create a Case. Maps HubSpot ticket-priority strings (LOW/MEDIUM/HIGH/URGENT)
+ * Create a Case. Maps EspoCRM ticket-priority strings (LOW/MEDIUM/HIGH/URGENT)
  * to EspoCRM Case.priority (Low/Normal/High/Urgent).
  */
 export async function createTicket(
@@ -284,7 +284,7 @@ export async function createTicket(
 }
 
 /**
- * Return a single-pipeline shape compatible with HubSpot's getPipelines() so
+ * Return a single-pipeline shape compatible with EspoCRM's getPipelines() so
  * the admin pipeline UI doesn't have to branch on backend. The OSS EspoCRM
  * Opportunity module has one pipeline backed by the `stage` enum.
  */
@@ -345,7 +345,7 @@ export async function listOwners(): Promise<unknown[]> {
 }
 
 /** Search Contacts by an attribute (e.g. emailAddress). Property names map:
- *  HubSpot `email` -> EspoCRM `emailAddress`; firstname/lastname unchanged. */
+ *  EspoCRM `email` -> EspoCRM `emailAddress`; firstname/lastname unchanged. */
 export async function searchContacts(
   propertyName: string,
   value: string
@@ -388,7 +388,7 @@ export async function searchContacts(
   };
 }
 
-export async function isHubSpotConfigured(): Promise<boolean> {
+export async function isEspoCRMConfigured(): Promise<boolean> {
   // Kept name so `lib/hubspot` callers don't break on import-flip. Prefer the
   // new name `isEspoCRMConfigured` in new code.
   return isEspoCRMConfigured();
@@ -502,7 +502,7 @@ export async function countLeadsForCampaign(campaignSlug: string): Promise<numbe
   }
 }
 
-/* ─── Opportunity automation (HubSpot "deal" equivalents) ────────────────── */
+/* ─── Opportunity automation (EspoCRM "deal" equivalents) ────────────────── */
 
 export type DealSource = "stripe_checkout" | "calendar_booking" | "contact_form";
 
@@ -555,7 +555,7 @@ export async function updateDeal(
   data: Partial<Record<string, string>>
 ): Promise<{ id: string } | null> {
   try {
-    // HubSpot uses snake_case property names; EspoCRM uses camelCase. Map the
+    // EspoCRM uses snake_case property names; EspoCRM uses camelCase. Map the
     // common ones; pass anything else through (custom fields use whatever name
     // the operator created them with).
     const mapped: Record<string, unknown> = {};

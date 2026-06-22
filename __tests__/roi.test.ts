@@ -143,7 +143,7 @@ describe("buildRoiSummary", () => {
     expect(summary.totals.platformLeads).toBe(3);
   });
 
-  it("counts HubSpot leads inside the window and computes cost per lead", async () => {
+  it("counts EspoCRM leads inside the window and computes cost per lead", async () => {
     mockGoogleConfigured.mockResolvedValue(true);
     mockGoogleMetrics.mockResolvedValue({ impressions: 0, clicks: 0, costMicros: 100_000_000 }); // €100
     mockIsConfiguredAsync.mockResolvedValue(true);

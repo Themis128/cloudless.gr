@@ -110,7 +110,7 @@ describe("agent-voice-brief.runVoiceBriefAgent", () => {
   });
 
   it("classifies a tool that throws past its retries as failed", async () => {
-    fetchPipelineMetricsMock.mockRejectedValue(new Error("HubSpot 500"));
+    fetchPipelineMetricsMock.mockRejectedValue(new Error("EspoCRM 500"));
     runBedrockTurnMock
       .mockResolvedValueOnce([dataBlock("get_pipeline_stats")])
       .mockResolvedValueOnce([emitBlock("Brief.")]);

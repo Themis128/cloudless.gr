@@ -65,7 +65,7 @@ export interface IntegrationConfig {
   META_PAGE_ID?: string;
   // AI
   ANTHROPIC_API_KEY?: string;
-  // EspoCRM (HubSpot replacement, self-hosted on omv k3s)
+  // EspoCRM (EspoCRM replacement, self-hosted on omv k3s)
   ESPOCRM_BASE_URL?: string;
   ESPOCRM_API_KEY?: string;
   ESPOCRM_WEBHOOK_SECRET?: string;

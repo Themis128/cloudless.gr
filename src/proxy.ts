@@ -150,7 +150,7 @@ function generateNonce(): string {
  * blanket 'unsafe-inline'. This means:
  *   - Inline scripts without the matching nonce attribute are blocked.
  *   - Scripts loaded by a trusted (nonced) script are implicitly trusted,
- *     so GTM / Stripe / HubSpot child scripts continue to work.
+ *     so GTM / Stripe / EspoCRM child scripts continue to work.
  *   - 'unsafe-eval' is retained for Three.js WebGL shader compilation on
  *     the home page — removing it would require pre-compiling all GLSL.
  *
@@ -162,7 +162,7 @@ function generateNonce(): string {
  *   - Stripe (checkout + redirect)
  *   - Sentry (browser SDK + ingest)
  *   - Meta Pixel (connect.facebook.net)
- *   - HubSpot (forms + tracking)
+ *   - EspoCRM (forms + tracking)
  *   - Google Analytics / GTM
  */
 function buildCSP(nonce: string): string {
@@ -263,7 +263,7 @@ function addSecurityHeaders(response: NextResponse, nonce: string): void {
   //   COOP: same-origin    → popups from any cross-origin opener are isolated
   //   CORP: same-origin    → resources can only be loaded by same-origin pages
   //   COEP: credentialless → loads any subresource without forcing CORP on it,
-  //                          which would otherwise break Stripe + Sentry + HubSpot
+  //                          which would otherwise break Stripe + Sentry + EspoCRM
   //                          scripts that don't set CORP on their CDN responses
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   response.headers.set("Cross-Origin-Resource-Policy", "same-origin");

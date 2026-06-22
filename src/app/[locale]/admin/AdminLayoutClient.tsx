@@ -64,7 +64,7 @@ const adminGroups: AdminGroup[] = [
     ],
   },
   {
-    label: "HubSpot",
+    label: "EspoCRM",
     links: [
       { href: "/admin/hubspot", label: "Overview", Icon: LayoutGrid },
       { href: "/admin/leads", label: "Lead Inbox", Icon: Inbox },

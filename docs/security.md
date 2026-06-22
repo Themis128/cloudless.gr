@@ -13,7 +13,7 @@ same image, so all controls below apply identically to both).
 | Auth (user) | OIDC JWT (Cognito or Cognito), RS256-verified against provider JWKS | `src/lib/api-auth.ts` |
 | Auth (admin) | All 71 `/api/admin/*` routes gated by `requireAdmin`/`requireAuth` | `src/app/api/admin/**` |
 | Auth (cron) | `Bearer ${CRON_SECRET}`, constant-time compare | `src/lib/cron-auth.ts` |
-| Auth (webhook) | Stripe `constructEvent`, HubSpot v3 timing-safe HMAC, Notion HMAC, Pi-sync HMAC-SHA256 | `src/app/api/webhooks/**`, `.github/workflows/build-pi-image.yml` |
+| Auth (webhook) | Stripe `constructEvent`, EspoCRM v3 timing-safe HMAC, Notion HMAC, Pi-sync HMAC-SHA256 | `src/app/api/webhooks/**`, `.github/workflows/build-pi-image.yml` |
 | Headers | HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin | `src/proxy.ts` |
 | Headers | Permissions-Policy with 24 directives — most denied, only payment/fullscreen/autoplay/web-share/publickey-credentials-get kept as `(self)` | `src/proxy.ts` |
 | Headers | Content-Security-Policy-Report-Only (full directive set; `report-uri /api/csp-report` + `report-to csp-endpoint`) | `src/proxy.ts` |
@@ -60,7 +60,7 @@ same image, so all controls below apply identically to both).
 | Source | Algorithm | Verifier |
 |---|---|---|
 | Stripe | HMAC via `stripe.webhooks.constructEvent` (canonical, includes timestamp) | `src/app/api/webhooks/stripe/route.ts` |
-| HubSpot | v3 HMAC-SHA256 over `${method}${url}${body}${timestamp}`, `timingSafeEqual` | `src/app/api/webhooks/hubspot/route.ts` |
+| EspoCRM | v3 HMAC-SHA256 over `${method}${url}${body}${timestamp}`, `timingSafeEqual` | `src/app/api/webhooks/hubspot/route.ts` |
 | Notion | HMAC-SHA256 of body | `src/app/api/webhooks/notion/route.ts` |
 | Pi sync (build → Pi) | HMAC-SHA256 over JSON body, sent as `X-Hub-Signature-256` | `.github/workflows/build-pi-image.yml` |
 
@@ -205,9 +205,9 @@ permission-update path that doesn't require root keys.
 | Topic | Why skipped |
 |---|---|
 | **CSRF tokens** | App uses Bearer tokens in `Authorization` header, not cookies. CORS allowlist further restricts cross-origin requests. CSRF surface is minimal. |
-| **SRI on third-party scripts** | HubSpot's tracking script is loaded dynamically by another HubSpot loader. CSP allowlist already constrains the scripts that can run; SRI on Stripe/Sentry is feasible if needed. |
+| **SRI on third-party scripts** | EspoCRM's tracking script is loaded dynamically by another EspoCRM loader. CSP allowlist already constrains the scripts that can run; SRI on Stripe/Sentry is feasible if needed. |
 | **WAF / DDoS protection at edge** | Not currently configured. CloudFront's built-in DDoS protection (Shield Standard) is on by default. AWS WAF is the next step if needed. |
-| **`'unsafe-inline'` / `'unsafe-eval'` in CSP** | Required by HubSpot's tracking script. Removing them would break HubSpot. CSP nonces could narrow this if HubSpot is ever removed. |
+| **`'unsafe-inline'` / `'unsafe-eval'` in CSP** | Required by EspoCRM's tracking script. Removing them would break EspoCRM. CSP nonces could narrow this if EspoCRM is ever removed. |
 
 ## Verifying
 

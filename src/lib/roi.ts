@@ -1,5 +1,5 @@
 /**
- * ROI summary — joins ad spend (all campaign platforms), leads (HubSpot),
+ * ROI summary — joins ad spend (all campaign platforms), leads (EspoCRM),
  * and revenue (Stripe analytics) into one view (Phase 4 of the roadmap).
  *
  * Every source is optional: unconfigured platforms report configured=false
@@ -36,7 +36,7 @@ export interface RoiSummary {
     impressions: number;
     clicks: number;
     platformLeads: number;
-    /** New HubSpot contacts created inside the window (capped at 100). */
+    /** New EspoCRM contacts created inside the window (capped at 100). */
     newLeads: number | null;
     revenueCents: number | null;
     /** Total spend / new leads; null when either side is missing. */
@@ -140,15 +140,15 @@ async function collectMeta(start: string, end: string): Promise<ChannelRoi> {
   return out;
 }
 
-interface HubSpotContactRecord {
+interface EspoCRMContactRecord {
   properties?: { createdate?: string };
 }
 
-/** New HubSpot contacts created since `sinceIso`. Null when HubSpot is unconfigured. */
+/** New EspoCRM contacts created since `sinceIso`. Null when EspoCRM is unconfigured. */
 async function countNewLeads(sinceIso: string): Promise<number | null> {
   if (!(await isConfiguredAsync("ESPOCRM_API_KEY"))) return null;
   try {
-    const contacts = (await listContacts(100)) as HubSpotContactRecord[];
+    const contacts = (await listContacts(100)) as EspoCRMContactRecord[];
     return contacts.filter((c) => {
       const created = c.properties?.createdate;
       return created !== undefined && created >= sinceIso;

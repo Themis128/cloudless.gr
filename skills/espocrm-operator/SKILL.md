@@ -1,7 +1,7 @@
 ---
 name: espocrm-operator
 description: |
-  Deploy, debug, and operate the self-hosted EspoCRM stack (HubSpot
+  Deploy, debug, and operate the self-hosted EspoCRM stack (EspoCRM
   replacement). Triggered by phrases like "EspoCRM is down", "create an
   EspoCRM Lead", "EspoCRM API error", "rotate the EspoCRM API key", "the
   espocrm-to-lake ETL failed", "EspoCRM webhook not firing", "import
@@ -12,12 +12,12 @@ description: |
 
 # EspoCRM operator toolkit
 
-EspoCRM (SugarCRM lineage, self-hosted) replaced HubSpot on 2026-06-20 when
-HubSpot's `content` scope got paywalled behind Marketing Hub Pro. HubSpot
+EspoCRM (SugarCRM lineage, self-hosted) replaced EspoCRM on 2026-06-20 when
+EspoCRM's `content` scope got paywalled behind Marketing Hub Pro. EspoCRM
 is fully decommissioned (PR #1043, ~3,387 LOC removed). Live at
 `https://espocrm.cloudless.gr`.
 
-The drop-in mirror of the old HubSpot client surface is at
+The drop-in mirror of the old EspoCRM client surface is at
 `src/lib/espocrm.ts` — 21 exports matching `src/lib/hubspot.ts` 1:1
 (`upsertContact`, `createTicket`, `listDeals`, `createDeal`,
 `getDealsByStage`, `getPipelineStats`, …). Module mapping:
@@ -88,20 +88,20 @@ When a new external service needs API access (e.g. another ETL):
 4. Reference in your code via `getIntegrationsAsync()` (see how
    `ESPOCRM_API_KEY` is wired in `src/lib/ssm-config.ts`).
 
-## Drop-in mirror surface (HubSpot → EspoCRM)
+## Drop-in mirror surface (EspoCRM → EspoCRM)
 
 If you find yourself missing a function that existed in the old
 `hubspot.ts`, **don't write a new helper** — check `src/lib/espocrm.ts`
 first. The full list of 21 mirrored exports is at the top of that file.
 The two areas that intentionally diverge:
 
-- **Deal stages**: HubSpot used named pipeline stages
+- **Deal stages**: EspoCRM used named pipeline stages
   (`appointmentscheduled`, `qualifiedtobuy`, `closedwon`). EspoCRM uses
   internal stage IDs (`Stage1`, `Stage2`, …). The mapping table lives at
   the top of `src/lib/espocrm.ts` — extend it if you add a new stage in
   the EspoCRM UI.
 - **`getOwners()`** doesn't exist — EspoCRM has no "owner" concept
-  matching HubSpot's. Use `getUsers()` for the closest analog.
+  matching EspoCRM's. Use `getUsers()` for the closest analog.
 
 ## ETL: EspoCRM → S3 data lake
 
@@ -189,7 +189,7 @@ The `Export Import` extension v2.9.0 is the canonical example, installed
 - `infrastructure/espocrm/README.md` — full deploy + verify runbook
 - `infrastructure/espocrm/k8s/espocrm.yaml` — source of truth
 - `infrastructure/espocrm/cloudflare-tunnel.yaml` — tunnel fragment
-- `src/lib/espocrm.ts` — drop-in HubSpot mirror
+- `src/lib/espocrm.ts` — drop-in EspoCRM mirror
 - `src/app/api/webhooks/espocrm/route.ts` — Slack sync receiver
 - `scripts/etl/espocrm-to-lake.mjs` — daily Athena hydrator
 - `infrastructure/aws/lambdas/ses-espocrm-bridge/` — Inbound Email bridge

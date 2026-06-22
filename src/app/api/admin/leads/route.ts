@@ -6,11 +6,11 @@ import { readPendingClients, PLAN_LABELS } from "@/lib/pending-clients";
 import { mapIntegrationError } from "@/lib/api-errors";
 
 /**
- * Unified lead inbox — joins HubSpot contacts with portal enrollment
+ * Unified lead inbox — joins EspoCRM contacts with portal enrollment
  * requests (pending clients) into one email-keyed list, newest first.
  *
- * HubSpot is the primary source; the route still returns portal leads when
- * HubSpot is unconfigured (and 503 only when no source is available).
+ * EspoCRM is the primary source; the route still returns portal leads when
+ * EspoCRM is unconfigured (and 503 only when no source is available).
  */
 
 export interface UnifiedLead {
@@ -20,14 +20,14 @@ export interface UnifiedLead {
   sources: string[];
   /** Plan/service interest, when known. */
   interest?: string;
-  /** HubSpot hs_lead_status, when present. */
+  /** EspoCRM hs_lead_status, when present. */
   status?: string;
   /** Portal enrollment status, when present. */
   portalStatus?: string;
   createdAt?: string;
 }
 
-interface HubSpotContactRecord {
+interface EspoCRMContactRecord {
   id: string;
   properties?: {
     email?: string;
@@ -74,12 +74,12 @@ export async function GET(request: NextRequest) {
     ]);
 
     const contacts =
-      contactsResult.status === "fulfilled" ? (contactsResult.value as HubSpotContactRecord[]) : [];
+      contactsResult.status === "fulfilled" ? (contactsResult.value as EspoCRMContactRecord[]) : [];
     const pending = pendingResult.status === "fulfilled" ? pendingResult.value : [];
 
     if (!hubspotConfigured && pending.length === 0) {
       return NextResponse.json(
-        { error: "No lead source configured (HubSpot key missing, no portal leads)." },
+        { error: "No lead source configured (EspoCRM key missing, no portal leads)." },
         { status: 503 }
       );
     }

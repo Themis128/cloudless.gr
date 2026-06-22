@@ -103,7 +103,7 @@ export default function PipelinePage() {
           <span className="text-neon-cyan font-mono text-xs">PIPELINE</span>
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">Lead Pipeline</h1>
-        <p className="font-body mt-1 text-slate-400">HubSpot deal pipeline kanban board.</p>
+        <p className="font-body mt-1 text-slate-400">EspoCRM deal pipeline kanban board.</p>
       </div>
 
       {stats && (

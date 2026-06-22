@@ -11,7 +11,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 ### Public / Marketing
 
 - Multi-locale site (en, el, fr, de) with cookie-based locale switching
-- Blog via Notion CMS, services listing, contact form (SES + Slack + HubSpot)
+- Blog via Notion CMS, services listing, contact form (SES + Slack + EspoCRM)
 - Newsletter signup with SES welcome email + Slack notification
 - E-commerce store (checkout redirects to contact page with product/campaign context instead of Stripe Checkout)
 - PWA support (service worker, offline.html, web manifest)
@@ -35,7 +35,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 ### Admin Panel (`/admin`)
 
 - Full analytics: GSC (Google Search Console), Stripe, DuckDB
-- CRM: HubSpot contacts, pipelines, deals
+- CRM: EspoCRM contacts, pipelines, deals
 - Notion CMS management: blog, docs, forms, case studies, tasks
 - AI analytics orchestration with Anthropic Claude + AWS Bedrock
 - A/B test flag management (SSM-backed)
@@ -50,7 +50,7 @@ Core value: One platform that serves as a marketing site, lead capture engine, c
 
 - Slack: full two-way (outbound notify + inbound slash commands, events, interactions)
 - Notion: blog, docs, forms, projects, analytics, calendar, reports
-- HubSpot: CRM contacts, deals, pipelines, webhooks
+- EspoCRM: CRM contacts, deals, pipelines, webhooks
 - Google Calendar: booking availability and slot reservation
 - Google Search Console: 10+ analytics functions
 - Stripe: webhooks, subscription management (checkout disabled — redirects to contact page)
