@@ -4,6 +4,7 @@ A complete chronicle of the work shipped in this single day across the
 cloudless.gr serverless app + the k3s self-hosted stack on omv + omv-ha.
 
 ## TL;DR
+
 Shipped 8 R-row PRs, 2 hotfix PRs, 2 doc PRs, plus mid-session ops
 (MQTT/KUMA SSM bootstrap, Grafana Athena plugin install + datasource
 registration + dashboard provisioning, end-to-end alert pipeline
@@ -65,6 +66,7 @@ Organization-level SCP — operator action).
 | `documentation/README.md` | Folder convention note |
 
 Also mirrored to AppFlowy via `scripts/appflowy-upload-md.mjs`:
+
 - "Purchase flow — how the self-hosted apps connect end-to-end" → view_id `ba2f98ea-c759-4992-9b9b-9dbddf6dba60`
 
 ## Memory entries written (persist across sessions)
@@ -78,6 +80,7 @@ Also mirrored to AppFlowy via `scripts/appflowy-upload-md.mjs`:
 ## Where the app stands now (Saturday 2026-06-21, end-of-day)
 
 ### What works fully ✅
+
 - **All 8 self-hosted apps configured + reachable.** AppFlowy, EspoCRM, Postiz, n8n, Mosquitto, ntfy, Uptime Kuma, Grafana — every SSM key present, every public tunnel responding.
 - **Notification fan-out end-to-end live.** Any caller that POSTs `/api/webhooks/admin-alert` (or Sentry webhook receiver, or MQTT publish at severity ≥ high) reaches Slack + phone push within ~5 s.
 - **AWS↔Pi sync surfaces.** Image SHA pinned, SSM shared, Cognito shared, webhooks idempotent on DDB. Drift detector runs every 6 h.
@@ -85,6 +88,7 @@ Also mirrored to AppFlowy via `scripts/appflowy-upload-md.mjs`:
 - **CI green** across all critical workflows on main.
 
 ### What's pending operator action ⚠️
+
 1. Cloudflare API token rotation — blocks 3 stale items (HA LB, email-obfuscation fix, infra MCP).
 2. Sentry webhook URL + secret into SSM `SENTRY_WEBHOOK_SECRET` (R8 closure).
 3. SCP-lift OR different IAM user for Grafana → Athena query path (or ship R12 to render in app).
@@ -92,7 +96,9 @@ Also mirrored to AppFlowy via `scripts/appflowy-upload-md.mjs`:
 5. ESP32 Notion page restore via page history.
 
 ### What's next (R10-R20 roadmap)
+
 See `documentation/optimal-architecture-assessment.md`. Top 3:
+
 - **R10:** PVC daily backup to S3 via Restic — closes the 8-SPOF gap in one PR
 - **R11:** TLS cert parity probe — addresses "highest silent-failure risk" per `pi-cloud-sync.md`
 - **R12:** `/admin/cost` Athena panel — bypasses the Grafana SCP block

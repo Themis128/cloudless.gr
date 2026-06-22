@@ -47,11 +47,13 @@ section adds the **upstream-doc-aligned** hardening each app's vendor
 recommends but we haven't shipped yet.
 
 ### AppFlowy Cloud
+
 - ✅ Already done: nginx ingress, GoTrue, postgres + redis + minio, worker pinned to omv-ha (16 K-page jemalloc fix).
 - ⚠️ Gap: **no off-Pi Postgres replication.** AppFlowy docs recommend either logical replication or wal-g to S3 for production. We do daily postgres-direct ETL but it's row-extract, not byte-for-byte.
 - ⚠️ Gap: **MinIO bucket isn't mirrored.** AppFlowy uses MinIO for file attachments; loss = file loss. Mirror to S3 via `mc mirror` cron.
 
 ### EspoCRM
+
 - ✅ Already done: webhooks → Slack via `SlackClient`, IMAP-via-SES bridge, ETL to lake.
 - ⚠️ Gap: **rate-limiting not configured.** EspoCRM docs recommend `requestLimiter` in `data/config.php`. Today the API key is unrestricted. With public tunnel exposure, this is exploit surface.
 - ⚠️ Gap: **`Auth Token Lifetime` is default (1 day).** Doc recommends 30 m for API keys + IP whitelist for admin users.
@@ -59,12 +61,14 @@ recommends but we haven't shipped yet.
 - 🔴 Gap: **MariaDB binlog backup to S3.** Daily `mariadb-backup` is the upstream-recommended path; we have neither logical dumps nor binlogs off-Pi.
 
 ### Postiz
+
 - ✅ Already done: SES SMTP, webhook receiver, tunnel + auth.
 - ⚠️ Gap: **per-provider OAuth credentials in env.** Postiz docs recommend rotating provider tokens quarterly; we have no rotation cron.
 - ⚠️ Gap: **`POSTIZ_FRONTEND_URL` mismatch risk** — must equal the tunnel hostname or Postiz's OAuth callbacks 404.
 - ⚠️ Gap: **postgres + redis PVCs not snapshotted to S3.**
 
 ### n8n
+
 - ✅ Already done: REST API + workflow trigger pattern, 2 starter workflows live.
 - ⚠️ Gap: **`N8N_ENCRYPTION_KEY` not rotated since install.** n8n docs say rotate annually + on suspected key compromise.
 - ⚠️ Gap: **task runners disabled** — n8n 1.84+ recommends external Task Runner mode for CPU-intensive workflows. We're still on legacy mode.
@@ -72,29 +76,34 @@ recommends but we haven't shipped yet.
 - 🔴 Gap: **workflows-as-code drift.** The 2 JSON files in `infrastructure/n8n/workflows/` are *starters* — the live versions may have diverged. Run a weekly export + diff job.
 
 ### Mosquitto MQTT
+
 - ✅ Already done: auth-only mode (allow_anonymous=false), tbaltzakis admin, pi-alert-api publisher.
 - ⚠️ Gap: **no TLS on the broker.** Mosquitto docs strongly recommend MQTTS (port 8883) for prod. Today's traffic is in-cluster plain TCP. Acceptable inside the cluster but breaks if you ever want to publish from outside.
 - ⚠️ Gap: **persistence file is on the SD card.** Move `/mosquitto/data` to the SSD PVC.
 - ⚠️ Gap: **bridge to ntfy not wired.** A Mosquitto→ntfy bridge would let MQTT alerts auto-fan-out to your phone without round-tripping through the app.
 
 ### Uptime Kuma
+
 - ✅ Already done: tunnel + admin.
 - 🔴 Gap: **no monitors actually defined yet** (status-page slug 404). Per Kuma docs, you need at least 1 monitor per critical surface: cloudless.gr/api/health, each self-hosted app, each cluster node.
 - ⚠️ Gap: **no notification channel configured** in Kuma itself. Today notifications come via the cloudless.gr app's chip. Kuma can push directly to Slack/Discord/ntfy on monitor-down — set this up so Kuma alerts even when the app is down.
 
 ### Grafana (kube-prom)
+
 - ✅ Already done: token, dashboards as JSON, plugin installed (this session).
 - 🔴 Gap: **Athena datasource blocked by SCP** (this session). Workaround: render in `/admin/cost` page using existing `src/lib/athena.ts`.
 - ⚠️ Gap: **dashboard versioning** — Grafana docs recommend `provisioning/dashboards/*.yaml` filesystem mode (vs REST POST). Survives full pod recreation without re-running the script.
 - ⚠️ Gap: **alerting rules in Grafana, not just Prometheus.** Migrate `kube-prom-alerts` → Grafana Alerting for richer routing.
 
 ### ntfy
+
 - ✅ Already done: Bearer auth, public tunnel (R7), R8 push wired to `notifyAdmin()`.
 - ⚠️ Gap: **no rate-limit per-topic.** ntfy docs recommend `visitor-request-limit-burst: 60` to prevent abuse if the topic name leaks.
 - ⚠️ Gap: **no message retention tuning.** Default keeps 12 h; for incident audit, raise to 7 d on the `cloudless-ops` topic.
 - ⚠️ Gap: **no attachment storage cap.** Default unlimited → fills SSD.
 
 ### Cloudflare Tunnel
+
 - ✅ Already done: HA pair on omv + omv-ha, shared tunnel UUID, config drift watchdog.
 - 🔴 Gap: **CLOUDFLARE_API_TOKEN rotation overdue.** Per CLAUDE.md blocks 3 stale items.
 - ⚠️ Gap: **no Service Token (mTLS) on internal routes.** Anyone with the hostname can hit grafana / kuma / ntfy. Add `cloudflare-tunnel-ops` Access Application + Service Token for admin surfaces.
@@ -107,15 +116,18 @@ The user's hard requirement: AWS↔Pi must exchange data continuously.
 What's already flowing and what's not:
 
 ### Outbound: AWS Lambda → Pi (working ✅)
+
 - Lambda hits Pi's public tunnel for EspoCRM/n8n/Postiz/ntfy calls.
 - Webhook fan-out fires regardless of which surface is live (idempotent on DDB).
 
 ### Outbound: Pi → AWS (working ✅)
+
 - Pi reads SSM, DDB, S3, Cognito directly via `cloudless-pi-standby` IAM user.
 - All 29 SSM keys, all DDB tables, all S3 buckets are reachable.
 - ETLs push EspoCRM/AppFlowy/Stripe/Sentry/GSC/LinkedIn → S3 lake nightly.
 
 ### Outbound: Pi → AWS for **stateful self-hosted apps** (gap 🔴)
+
 - EspoCRM MariaDB: snapshotted to S3? **No.**
 - AppFlowy Postgres: snapshotted to S3? **Daily ETL only — not WAL/binlog.**
 - AppFlowy MinIO files: mirrored to S3? **No.**
@@ -128,12 +140,14 @@ This is THE gap. If Pi dies, you keep cloudless.gr running on AWS, but
 you lose every self-hosted app's state since the last nightly ETL.
 
 ### The missing daemon: **velero or restic to S3**
+
 Run a Pi-side k8s CronJob that takes a daily snapshot of every PVC and
 writes a Restic backup to `s3://cloudless-analytics-data/pvc-backups/`.
 Single, generic, app-agnostic solution. RTO ~30 min (restore PVCs +
 restart pods). RPO 24 h.
 
 For RPO < 1 h on the highest-value apps (EspoCRM + AppFlowy):
+
 - EspoCRM: `mariadb-backup --backup --compress --stream=xbstream` every
   hour into S3.
 - AppFlowy: wal-g WAL archive to S3 (continuous, RPO ~5 min).
@@ -159,6 +173,7 @@ Each row: PR-sized, ranked by `value × (1/effort)`. Ship top-down.
 | **R20** | **n8n + Postiz + Kuma logical-replication subscriber on AWS** | Tiny EC2 / Lightsail running a Postgres subscriber to AppFlowy + Postiz primary. RPO seconds. | Last-mile: full state mirror for the apps with the most operational dependencies. | L | MED-HIGH |
 
 Plus the persistent **operator-only items** from CLAUDE.md:
+
 - Cloudflare API token rotation (unlocks 3 stale workflows)
 - Sentry webhook URL + secret (R8 closure)
 - Athena SCP lift / different IAM user (or R12)
@@ -171,13 +186,14 @@ Plus the persistent **operator-only items** from CLAUDE.md:
 
 If we ship in order:
 
-**Week 1:** R10 (backups) + R14 (sentry tag) + R12 (cost panel). 
-**Week 2:** R11 (TLS probe) + R13 (mariadb hourly) + R18 (SSM scope assertion). 
-**Week 3:** R15 (Cloudflare Access) + R17 (Kuma monitors). 
-**Week 4:** R19 (failover drill) + R16 (AppFlowy WAL-G). 
+**Week 1:** R10 (backups) + R14 (sentry tag) + R12 (cost panel).
+**Week 2:** R11 (TLS probe) + R13 (mariadb hourly) + R18 (SSM scope assertion).
+**Week 3:** R15 (Cloudflare Access) + R17 (Kuma monitors).
+**Week 4:** R19 (failover drill) + R16 (AppFlowy WAL-G).
 **Beyond:** R20 only if you actually need RPO seconds.
 
 By end of week 4 you'll have:
+
 - Every PVC backed up daily, EspoCRM hourly, AppFlowy continuous.
 - TLS expiry alerts on both halves.
 - Cost dashboard rendering inside admin.
