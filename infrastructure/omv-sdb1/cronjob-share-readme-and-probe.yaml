@@ -108,11 +108,14 @@ spec:
                     echo "::warning::README fetch failed (network blip?); leaving previous copy in place"
                   fi
 
-                  # 2. Probe sdb1 capacity
-                  read -r SIZE USED AVAIL PCT MOUNTED <<< "$(df -BG --output=size,used,avail,pcent,target "$MOUNT" | tail -1)"
-                  AVAIL_GB="${AVAIL%G}"
-                  SIZE_GB="${SIZE%G}"
-                  USED_GB="${USED%G}"
+                  # 2. Probe sdb1 capacity (POSIX-compatible parsing — alpine
+                  #    /bin/sh is BusyBox ash, no `read <<<` herestrings).
+                  DFLINE=$(df -BG --output=size,used,avail,pcent,target "$MOUNT" | tail -1)
+                  SIZE_GB=$(echo "$DFLINE" | awk '{print $1}' | tr -d 'G')
+                  USED_GB=$(echo "$DFLINE" | awk '{print $2}' | tr -d 'G')
+                  AVAIL_GB=$(echo "$DFLINE" | awk '{print $3}' | tr -d 'G')
+                  PCT=$(echo "$DFLINE" | awk '{print $4}')
+                  MOUNTED=$(echo "$DFLINE" | awk '{print $5}')
                   echo "sdb1: size=${SIZE_GB}G used=${USED_GB}G avail=${AVAIL_GB}G (${PCT}) at ${MOUNTED}"
 
                   SEVERITY=""
