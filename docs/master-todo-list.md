@@ -233,4 +233,5 @@ with the same hardware you have today and no new AWS service categories.
 - `docs/best-practices-audit-2026.md` — R21-R24 detailed rationale + 30+ sources
 - `docs/architecture-purchase-flow.md` — current end-to-end purchase flow
 - `docs/pi-cloud-sync.md` — canonical AWS↔Pi sync contract
-- `docs/session-summary-2026-06-21.md` — what shipped this session
+- `docs/session-summary-2026-06-21.md` — previous session (R7-R9 + R10-R14)
+- `docs/session-summary-2026-06-22.md` — this session (workflows + R13/R18)
