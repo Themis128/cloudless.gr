@@ -17,6 +17,7 @@ Each stateful self-hosted app's canonical state lands in
 Schedules staggered 15 min apart so S3 PUT bursts don't pile up.
 
 **Not yet covered (separate PRs, lower priority):**
+
 - AppFlowy MinIO blobs (file attachments) — `mc mirror` based, **R10b**
 - Uptime Kuma SQLite history (re-creatable from monitor config) — **R10c**
 - Grafana plugins + dashboards — dashboards live in git, plugins re-installable
@@ -29,7 +30,7 @@ Schedules staggered 15 min apart so S3 PUT bursts don't pile up.
   on `arn:aws:s3:::cloudless-analytics-data/pvc-backups/*` (added to inline
   policy `AthenaReadAccess` during this PR).
 - Each backup namespace has a `pvc-backup-aws` Secret with `AWS_ACCESS_KEY_ID`
-  + `AWS_SECRET_ACCESS_KEY` from that IAM user.
+  - `AWS_SECRET_ACCESS_KEY` from that IAM user.
 - DB creds: each CronJob reads the SAME secret the app pod uses (e.g. AppFlowy
   `appflowy-secrets.POSTGRES_PASSWORD`, EspoCRM `espocrm-secrets.mariadb-root-password`,
   Postiz `postiz-secrets.POSTGRES_PASSWORD`). Credential rotations propagate
@@ -47,6 +48,7 @@ aws s3api put-bucket-lifecycle-configuration \
 ```
 
 Rules:
+
 - `pvc-backups/**` (default) — 7 days standard → transition to GLACIER → expire after 30 days
 - `pvc-backups/weekly/**` — 28 days standard → transition to GLACIER → expire after 90 days
 

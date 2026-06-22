@@ -17,12 +17,15 @@ operator laptop.
 1. **AWS Cost Explorer enabled** — Billing console → Cost Explorer → Enable.
    Free. Takes ~24h for the API to start returning data.
 2. **`ce:GetCostAndUsage` granted to `AWS_DEPLOY_ROLE_ARN`** — inline policy:
+
    ```json
    { "Version": "2012-10-17",
      "Statement": [{ "Effect": "Allow", "Action": "ce:GetCostAndUsage", "Resource": "*" }] }
    ```
+
 3. **Athena table + view** — run once via the `awsathena` CLI or the AWS
    console (Athena query editor, workgroup `primary`):
+
    ```sql
    CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.aws_cost_daily (
      cost_date   string,
@@ -39,6 +42,7 @@ operator laptop.
      FROM   cloudless_analytics.aws_cost_daily
      WHERE  cost_date IS NOT NULL;
    ```
+
 4. **Grafana Athena data source plugin + connection.** Verified 2026-06-21:
    the cluster Grafana (`kube-prom-grafana` pod) has CloudWatch / Loki /
    Prometheus / Alertmanager datasources, but **no Athena plugin installed**.
@@ -64,9 +68,11 @@ operator laptop.
    in S3 + the Athena view returns rows.
 5. **Provision the dashboard** — from anywhere with AWS CLI + the
    `GRAFANA_API_TOKEN` SSM key readable:
+
    ```bash
    node scripts/provision-aws-cost-dashboard.mjs
    ```
+
    Re-runnable; overwrites in place.
 
 ## Verifying

@@ -6,6 +6,7 @@ stack to "production-perfect with full data-analytics features", under the
 already use, no new Pi nodes beyond omv + omv-ha.
 
 Synthesizes:
+
 - CLAUDE.md "Pending One-Time Setup" table
 - `docs/optimal-architecture-assessment.md` R10-R20 roadmap
 - `docs/best-practices-audit-2026.md` R21-R24 additions
@@ -22,6 +23,7 @@ Synthesizes:
   $50/mo+ recurring costs unless ROI is obvious.
 
 ## Legend
+
 - 👤 Operator-only (UI clicks / external dashboards / out-of-band)
 - 🤖 Claude can ship (PR-sized code change)
 - 🔵 AWS-side change
@@ -115,6 +117,7 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 ✅ already shipping; ⬜ needs work.
 
 ### Data sources flowing into Athena (✅ all 10 ETLs daily)
+
 - ✅ AWS Cost (R9, this session)
 - ✅ EspoCRM contacts/leads/deals/cases
 - ✅ Stripe orders + subscriptions + payouts
@@ -128,6 +131,7 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 - ✅ Computed RFM/churn segments
 
 ### Analytics surfaces (operator views)
+
 - ✅ `/admin/analytics` consolidated dashboard
 - ✅ `/admin/cluster` real-time health chips (MQTT + Kuma + Grafana + AppFlowy + EspoCRM + Postiz + n8n + ntfy)
 - ✅ Grafana per-app dashboards (kube-prom + 2 custom)
@@ -136,6 +140,7 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 - ⬜ **Phase 3:** AI recommendation A/B vs no-rec baseline analytics — added when R21c lands
 
 ### Customer-facing data features
+
 - ⬜ **Phase 3:** Personalized product recommendations (R21c) — biggest 2026 SMB e-shop expectation
 - ⬜ **Phase 3:** Semantic search box on `/store` (R21b) — replaces keyword-only search
 - ⬜ **Phase 3:** AI-generated product descriptions (R21d) — operator-approved before publish

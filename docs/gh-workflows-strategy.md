@@ -136,7 +136,7 @@ mechanical PR (~50 files, no behavior change).
 ### 5. Docker buildx GHA cache for `build-pi-image.yml`
 
 **Current state:** uses `cache-from: type=local,src=/opt/docker-cache`
-+ `cache-to: type=local,dest=...,mode=max`. The runner is
+plus `cache-to: type=local,dest=...,mode=max`. The runner is
 `ubuntu-latest` (GH-hosted), so `/opt/docker-cache` is **ephemeral** —
 gone after every run. The local-cache lines are effectively no-ops.
 
@@ -160,8 +160,8 @@ TODO.
 
 Originally floated as "extract 31 callers into one action". After
 auditing: only 4 actually build Next.js, the other 27 do varied work
-(lint, typecheck, test, audit). A composite covering "checkout + pnpm
-+ node + install" would save ~10 lines × 27 callers, but speed-wise
+(lint, typecheck, test, audit). A composite covering "checkout, pnpm,
+node, install" would save ~10 lines × 27 callers, but speed-wise
 it's a wash (cache behavior identical).
 
 **Verdict:** skip until the count crosses ~50 callers OR we want to
