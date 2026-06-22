@@ -105,7 +105,7 @@ operator polish or unlock follow-on automation.
 ## Phase 2 — Week 2 (resilience + tighter RPO)
 
 - [ ] 🤖 🟠 **R13** EspoCRM `mariadb-backup` hourly to S3 (RPO 1h on canonical CRM). CronJob exec into mariadb pod → xbstream → S3. **EFFORT: S / RISK: LOW**
-- [ ] 🤖 🟣 **R18** Pi-side SSM scope assertion — daily workflow diffs SSM key list vs `cloudless-pi-standby` IAM read access. Catches "added key, forgot Pi" silently. **EFFORT: S / RISK: LOW**
+- [x] ~~🤖 🟣 **R18** Pi-side SSM scope assertion~~ ✅ **SHIPPED 2026-06-22** — `scripts/audit-pi-ssm-scope.sh` walks `/cloudless/production/*` and runs `iam:SimulatePrincipalPolicy` for `ssm:GetParameter` against `cloudless-pi-standby`. `.github/workflows/probe-pi-ssm-scope.yml` runs daily 06:05 UTC; drift POSTs to `/api/webhooks/admin-alert` (severity=high) which fans to Slack + ntfy + Sentry per the R8 path. Read-only — needs only `ssm:DescribeParameters` + `iam:SimulatePrincipalPolicy` on the caller. Closes pi-cloud-sync.md gap #2.
 - [ ] 🤖 🔵 **R22** Stripe webhook idempotency audit — confirm `event.id` dedup table in DDB + return 200 fast + process async. Prevents duplicate-charge bugs. **EFFORT: S (audit-only)**
 
 ---
