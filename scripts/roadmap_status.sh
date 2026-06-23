@@ -9,12 +9,12 @@ echo "Completed from canonical TODO:"
 echo "- R10 PVC daily backup CronJobs to S3"
 echo "- R11 TLS cert parity probe"
 echo "- R12 /admin/cost Athena panel"
-echo
-echo "Next app task:"
 echo "- R14 Sentry environment tagging: prod on AWS Lambda, pi-standby on Pi build"
 echo
-echo "Next roadmap rows:"
+echo "Next app task:"
 echo "- R13 EspoCRM MariaDB hourly backup to S3"
+echo
+echo "Next roadmap rows:"
 echo "- R18 Pi-side SSM scope assertion"
 echo "- R22 Stripe webhook idempotency audit + DynamoDB dedup"
 echo "- R21 AI baseline: Meilisearch, semantic search, recommendations, GenAI copy"
