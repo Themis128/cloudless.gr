@@ -14,16 +14,16 @@ Keep these as experiments for now. Do not replace the current Deep Agents workfl
 
 ## Current app roadmap priority
 
-### Immediate next
+### Completed recently
 
 - R14 — Sentry environment tagging:
   - `prod` on AWS Lambda / production.
   - `pi-standby` on Pi build.
-
-### Phase 2
-
-- R13 — EspoCRM MariaDB hourly backup to S3.
+- R13 — Descoped to 24h RPO and covered by the existing R10 daily EspoCRM MariaDB backup.
 - R18 — Pi-side SSM scope assertion.
+
+### Immediate next
+
 - R22 — Stripe webhook idempotency audit and DynamoDB dedup table.
 
 ### Phase 3 AI baseline
@@ -70,7 +70,9 @@ Before some roadmap rows can complete, operator actions are still needed:
 1. Commit or stash the validated LangChain v1 experiment files.
 2. Run `scripts/run_langchain_v1_suite.sh` whenever changing LangChain/vLLM dependencies.
 3. Run `scripts/audit_langchain_v1_imports.sh` before any LangChain migration work.
-4. Finish R14.
-5. Finish R13, R18, and R22.
-6. Start R21 AI baseline.
-7. Only after R21 is stable, decide whether any `create_agent` experiment should become production code.
+4. R14 is complete.
+5. R13 is descoped to 24h RPO and covered by R10 daily EspoCRM backup.
+6. R18 is complete.
+7. Finish R22 Stripe webhook idempotency audit and DynamoDB dedup.
+8. Start R21 AI baseline.
+9. Only after R21 is stable, decide whether any `create_agent` experiment should become production code.
