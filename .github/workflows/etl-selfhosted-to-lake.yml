@@ -45,7 +45,7 @@ jobs:
         run: npm ci || npm install
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           # Align with the 8 other ETL workflows — AWS_ETL_ROLE_ARN was
           # never provisioned as a repo secret. The deploy role already
