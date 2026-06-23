@@ -1,3 +1,5 @@
+import { traceable } from "langsmith/traceable";
+
 import { getProducts, type StoreProduct } from "@/lib/store-products";
 import { BEDROCK_EMBED_DIMENSIONS, embedTextWithTitan } from "@/lib/bedrock-embeddings";
 import {
@@ -7,6 +9,21 @@ import {
   isMeilisearchConfigured,
   meiliRequest,
 } from "@/lib/meilisearch";
+
+const SEARCH_TRACE_METADATA = {
+  app: "cloudless.gr",
+  feature: "R21-search",
+  searchBackend: "meilisearch",
+  embeddingProvider: "aws-bedrock",
+  embeddingModel: "amazon.titan-embed-text-v2:0",
+  runtime: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? "unknown",
+};
+
+const tracedEmbedTextWithTitan = traceable(embedTextWithTitan, {
+  name: "cloudless_bedrock_titan_embedding",
+  run_type: "chain",
+  metadata: SEARCH_TRACE_METADATA,
+});
 
 export interface ProductSearchDocument {
   id: string;
@@ -194,7 +211,7 @@ export async function reindexProductsWithEmbeddings(): Promise<{
   const docs = await Promise.all(
     products.map(async (product) => {
       const doc = productToSearchDocument(product);
-      const embedding = await embedTextWithTitan(doc.text || doc.name);
+      const embedding = await tracedEmbedTextWithTitan(doc.text || doc.name);
 
       return {
         ...doc,
@@ -223,11 +240,11 @@ export async function reindexProductsWithEmbeddings(): Promise<{
   };
 }
 
-export async function searchProductsWithMeili(
+async function searchProductsWithMeiliCore(
   query: string,
   limit = 8,
 ): Promise<ProductSearchHit[]> {
-  const vector = await embedTextWithTitan(query);
+  const vector = await tracedEmbedTextWithTitan(query);
 
   const res = await meiliRequest<{ hits?: ProductSearchHit[] }>(
     `/indexes/${PRODUCTS_INDEX}/search`,
@@ -250,7 +267,23 @@ export async function searchProductsWithMeili(
   return res.hits ?? [];
 }
 
-export async function searchProductsFallback(
+const tracedSearchProductsWithMeili = traceable(searchProductsWithMeiliCore, {
+  name: "cloudless_meilisearch_hybrid_product_search",
+  run_type: "chain",
+  metadata: {
+    ...SEARCH_TRACE_METADATA,
+    mode: "hybrid",
+  },
+});
+
+export async function searchProductsWithMeili(
+  query: string,
+  limit = 8,
+): Promise<ProductSearchHit[]> {
+  return tracedSearchProductsWithMeili(query, limit);
+}
+
+async function searchProductsFallbackCore(
   query: string,
   limit = 8,
 ): Promise<ProductSearchHit[]> {
@@ -263,4 +296,20 @@ export async function searchProductsFallback(
       [p.name, p.category, p.description, p.text].join(" ").toLowerCase().includes(q),
     )
     .slice(0, limit);
+}
+
+const tracedSearchProductsFallback = traceable(searchProductsFallbackCore, {
+  name: "cloudless_product_search_fallback",
+  run_type: "chain",
+  metadata: {
+    ...SEARCH_TRACE_METADATA,
+    mode: "fallback",
+  },
+});
+
+export async function searchProductsFallback(
+  query: string,
+  limit = 8,
+): Promise<ProductSearchHit[]> {
+  return tracedSearchProductsFallback(query, limit);
 }
