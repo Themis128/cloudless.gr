@@ -46,19 +46,20 @@ metadata:
     app.kubernetes.io/name: mariadb-xbstream-backup
     backup.cloudless.gr/type: physical
     backup.cloudless.gr/target: espocrm-mariadb
+    backup.cloudless.gr/rpo: 1h
 spec:
-  schedule: "0 2 * * *"
+  schedule: "0 * * * *"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 7
   successfulJobsHistoryLimit: 3
   jobTemplate:
     spec:
       activeDeadlineSeconds: 3600
-      backoffLimit: 2
+      backoffLimit: 1
       template:
         spec:
           serviceAccountName: mariadb-xbstream-backup
-          restartPolicy: OnFailure
+          restartPolicy: Never
           containers:
             - name: backup
               image: alpine:3.20
@@ -73,17 +74,25 @@ spec:
                   # Install tools: aws-cli for S3, kubectl for pod exec
                   apk add --no-cache aws-cli kubectl >/dev/null 2>&1
 
-                  # Get the MariaDB pod name
+                  # Get the currently Running MariaDB pod.
+                  # In the 2-node Pi cluster, this avoids selecting a Terminating
+                  # pod during reschedule/failover windows.
                   POD=$(kubectl get pod \
                     -n espocrm \
                     -l app=espocrm,component=mariadb \
+                    --field-selector=status.phase=Running \
                     -o jsonpath='{.items[0].metadata.name}')
+
+                  [ -n "${POD}" ] || {
+                    echo "❌ no running MariaDB pod found"
+                    exit 1
+                  }
 
                   echo "→ backing up via pod: ${POD}"
 
                   # Timestamp and S3 path
                   DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
-                  KEY="pvc-backups/espocrm/xbstream/daily/${DATE}.xbstream"
+                  KEY="pvc-backups/espocrm/xbstream/hourly/${DATE}.xbstream"
                   BUCKET="cloudless-analytics-data"
 
                   echo "→ streaming xbstream → s3://${BUCKET}/${KEY}"
