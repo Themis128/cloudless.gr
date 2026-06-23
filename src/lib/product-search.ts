@@ -69,8 +69,92 @@ export function productToSearchDocument(product: StoreProduct): ProductSearchDoc
   };
 }
 
+
+interface MeiliTaskResponse {
+  taskUid?: number;
+  uid?: number;
+  status?: string;
+  error?: {
+    message?: string;
+    code?: string;
+  } | null;
+}
+
+function meiliTaskUid(task: MeiliTaskResponse): number | undefined {
+  return task.taskUid ?? task.uid;
+}
+
+async function waitForMeiliTask(uid: number | undefined): Promise<void> {
+  if (uid === undefined) return;
+
+  const deadline = Date.now() + 60_000;
+
+  while (Date.now() < deadline) {
+    const task = await meiliRequest<MeiliTaskResponse>(
+      `/tasks/${uid}`,
+      {},
+      getMeiliAdminKey(),
+    );
+
+    if (task.status === "succeeded") return;
+
+    if (task.status === "failed" || task.status === "canceled") {
+      throw new Error(
+        `Meilisearch task ${uid} ${task.status}: ${task.error?.message ?? "unknown error"}`,
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error(`Timed out waiting for Meilisearch task ${uid}`);
+}
+
+async function deleteProductsIndexIfExists(): Promise<void> {
+  try {
+    const task = await meiliRequest<MeiliTaskResponse>(
+      `/indexes/${PRODUCTS_INDEX}`,
+      { method: "DELETE" },
+      getMeiliAdminKey(),
+    );
+
+    await waitForMeiliTask(meiliTaskUid(task));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+
+    if (!message.includes("404") && !message.includes("index_not_found")) {
+      throw err;
+    }
+  }
+}
+
+async function createProductsIndex(): Promise<void> {
+  try {
+    const task = await meiliRequest<MeiliTaskResponse>(
+      "/indexes",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          uid: PRODUCTS_INDEX,
+          primaryKey: "id",
+        }),
+      },
+      getMeiliAdminKey(),
+    );
+
+    await waitForMeiliTask(meiliTaskUid(task));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+
+    if (!message.includes("409") && !message.includes("index_already_exists")) {
+      throw err;
+    }
+  }
+}
+
+
 export async function ensureProductsSearchIndex(): Promise<void> {
-  await meiliRequest(
+  const task = await meiliRequest<MeiliTaskResponse>(
     `/indexes/${PRODUCTS_INDEX}/settings`,
     {
       method: "PATCH",
@@ -89,6 +173,8 @@ export async function ensureProductsSearchIndex(): Promise<void> {
     },
     getMeiliAdminKey(),
   );
+
+  await waitForMeiliTask(meiliTaskUid(task));
 }
 
 export async function reindexProductsWithEmbeddings(): Promise<{
@@ -99,6 +185,8 @@ export async function reindexProductsWithEmbeddings(): Promise<{
     throw new Error("Meilisearch is not configured");
   }
 
+  await deleteProductsIndexIfExists();
+  await createProductsIndex();
   await ensureProductsSearchIndex();
 
   const products = await getProducts();
@@ -117,7 +205,7 @@ export async function reindexProductsWithEmbeddings(): Promise<{
     }),
   );
 
-  const task = await meiliRequest<{ taskUid?: number }>(
+  const task = await meiliRequest<MeiliTaskResponse>(
     `/indexes/${PRODUCTS_INDEX}/documents`,
     {
       method: "POST",
@@ -126,9 +214,12 @@ export async function reindexProductsWithEmbeddings(): Promise<{
     getMeiliAdminKey(),
   );
 
+  const uid = meiliTaskUid(task);
+  await waitForMeiliTask(uid);
+
   return {
     indexed: docs.length,
-    taskUid: task.taskUid,
+    taskUid: uid,
   };
 }
 
