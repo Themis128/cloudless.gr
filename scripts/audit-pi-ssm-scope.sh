@@ -125,10 +125,15 @@ KEYS_TOTAL=${#KEYS[@]}
 DENIED_COUNT=${#DENIED[@]}
 
 if [ "$JSON_OUT" -eq 1 ]; then
-  # Build JSON manually (no jq dep)
-  denied_json=$(printf '"%s",' "${DENIED[@]}" | sed 's/,$//')
+  # Build JSON manually (no jq dep). Avoid [""] when DENIED is empty.
+  if [ "$DENIED_COUNT" -gt 0 ]; then
+    denied_json=$(printf '"%s",' "${DENIED[@]}" | sed 's/,$//')
+  else
+    denied_json=""
+  fi
+
   cat <<EOF
-{"keys_total":${KEYS_TOTAL},"keys_denied_count":${DENIED_COUNT},"keys_denied":[${denied_json}],"pi_user":"${PI_USER}","action":"$( [ "$DENIED_COUNT" -gt 0 ] && echo "Grant ssm:GetParameter on the denied resources to ${PI_USER}" || echo "ok" )"}
+{"keys_total":${KEYS_TOTAL},"keys_denied_count":${DENIED_COUNT},"keys_denied":[${denied_json}],"pi_user":"${PI_USER}","action":"$( [ "$DENIED_COUNT" -gt 0 ] && echo "Grant SSM read actions on the denied resources to ${PI_USER}" || echo "ok" )"}
 EOF
 else
   echo "=== Pi SSM scope audit ==="
