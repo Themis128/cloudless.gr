@@ -79,7 +79,7 @@ jobs:
       # in-cluster postgres pod. Pattern matches cluster-doctor.yml.
       - name: Tailscale (for AppFlowy postgres exec)
         if: contains(github.event.inputs.apps || 'appflowy,n8n,postiz', 'appflowy')
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
           version: latest
