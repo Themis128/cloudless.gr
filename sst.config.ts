@@ -46,7 +46,7 @@ function buildSiteEnvironment(
     // separately from Pi-side events (which use SENTRY_ENVIRONMENT=pi-standby
     // via the k8s container env). Lets Sentry dashboards filter by surface
     // during failover incidents.
-    SENTRY_ENVIRONMENT: isProd ? "production" : `staging-${stage}`,
+    SENTRY_ENVIRONMENT: isProd ? "prod" : `staging-${stage}`,
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
     USER_PROFILE_TABLE: userProfileTableName,
     ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
