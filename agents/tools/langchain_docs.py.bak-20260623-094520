@@ -1,0 +1,104 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from typing import Iterable
+
+import requests
+from dotenv import load_dotenv
+
+load_dotenv(".env.local")
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DOCS_CACHE_DIR = PROJECT_ROOT / ".agent-memory" / "docs"
+LANGCHAIN_INDEX_CACHE = DOCS_CACHE_DIR / "langchain_llms.txt"
+LANGCHAIN_LLMS_URL = "https://docs.langchain.com/llms.txt"
+
+
+def fetch_url(url: str, timeout: int = 30) -> str:
+    response = requests.get(
+        url,
+        timeout=timeout,
+        headers={"User-Agent": "cloudless-gr-local-agent/0.1"},
+    )
+    response.raise_for_status()
+    return response.text
+
+
+def refresh_langchain_docs_index() -> str:
+    DOCS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    text = fetch_url(LANGCHAIN_LLMS_URL)
+    LANGCHAIN_INDEX_CACHE.write_text(text, encoding="utf-8")
+    return text
+
+
+def load_langchain_docs_index(refresh: bool = False) -> str:
+    if refresh or not LANGCHAIN_INDEX_CACHE.exists():
+        return refresh_langchain_docs_index()
+    return LANGCHAIN_INDEX_CACHE.read_text(encoding="utf-8")
+
+
+def _extract_markdown_links(text: str) -> list[dict[str, str]]:
+    pattern = re.compile(r"- \[(.*?)\]\((https://docs\.langchain\.com/.*?\.md)\)")
+    links = []
+    for title, url in pattern.findall(text):
+        title = title.strip() or url.rsplit("/", 1)[-1]
+        links.append({"title": title, "url": url.strip()})
+    return links
+
+
+def _tokenize(query: str) -> set[str]:
+    return {
+        token.lower()
+        for token in re.findall(r"[a-zA-Z0-9_\-/.]+", query)
+        if len(token) > 2
+    }
+
+
+def search_langchain_docs_index(query: str, max_results: int = 10) -> list[dict[str, str]]:
+    index = load_langchain_docs_index(refresh=False)
+    links = _extract_markdown_links(index)
+    query_lower = query.lower()
+    query_tokens = _tokenize(query)
+
+    scored = []
+    for link in links:
+        haystack = f"{link['title']} {link['url']}".lower()
+        score = sum(1 for token in query_tokens if token in haystack)
+
+        boosts = {
+            "deepagents": 4,
+            "deepagent": 4,
+            "langgraph": 4,
+            "memory": 3,
+            "backend": 3,
+            "filesystem": 3,
+            "skills": 2,
+            "context": 2,
+            "deployment": 2,
+            "custom-openai": 3,
+        }
+
+        for term, boost in boosts.items():
+            if term in query_lower and term in haystack:
+                score += boost
+
+        if score > 0:
+            scored.append((score, link))
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    return [link for _, link in scored[:max_results]]
+
+
+def fetch_langchain_doc_pages(
+    urls: Iterable[str],
+    max_chars_per_page: int = 8000,
+) -> list[dict[str, str]]:
+    pages = []
+    for url in urls:
+        try:
+            text = fetch_url(url)
+            pages.append({"url": url, "content": text[:max_chars_per_page]})
+        except Exception as exc:
+            pages.append({"url": url, "content": f"ERROR fetching page: {exc}"})
+    return pages
