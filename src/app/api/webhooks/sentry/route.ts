@@ -100,8 +100,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Drop noise: resolved events, low-priority info from non-prod environments.
+  // R14: AWS/Lambda production emits "prod"; keep accepting legacy "production"
+  // during transition. Pi standby emits "pi-standby" and should be skipped here.
   const env = body.data?.event?.environment ?? "";
-  if (env && env !== "production") {
+  const isProdEnv = env === "prod" || env === "production";
+  if (env && !isProdEnv) {
     return NextResponse.json({ ok: true, skipped: `non_prod_env:${env}` });
   }
   if (issue.status === "resolved" || issue.status === "ignored") {
