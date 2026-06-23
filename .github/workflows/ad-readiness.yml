@@ -110,7 +110,7 @@ jobs:
               'Does not block merge — exists so silent tracking outages are caught at PR time.',
               '',
               '### Secrets',
-              `${`${{ steps.probe.outputs.summary }}`.trim()}`,
+              ${{ toJSON(steps.probe.outputs.summary) }}.trim(),
               '',
               '### Campaign data',
               `${`${{ steps.cids.outputs.campaigns_summary }}`.trim()}`,

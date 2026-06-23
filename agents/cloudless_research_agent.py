@@ -1,15 +1,13 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 from deepagents import create_deep_agent
-from langchain_openai import ChatOpenAI
-
 from deepagents.backends import CompositeBackend, StateBackend
 from deepagents.backends.filesystem import FilesystemBackend
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 
 from agents.tools.search import internet_search
-
 
 load_dotenv(".env.local")
 
