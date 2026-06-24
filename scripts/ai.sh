@@ -90,6 +90,10 @@ case "${1:-help}" in
     python scripts/langsmith_endpoint_call.py "$@"
     ;;
 
+  skills-check)
+    python scripts/check_deepagent_skills.py
+    ;;
+
   *)
     cat <<'EOF'
 Usage: ./scripts/ai.sh <command>
@@ -110,6 +114,7 @@ Commands:
   langsmith-page    Paginated LangSmith API caller
   langsmith-stream  Streaming LangSmith API caller
   langsmith-endpoint Registered endpoint caller
+  skills-check      Check Deep Agent tools and skills
 EOF
     ;;
 esac
