@@ -109,7 +109,18 @@ def build_plan(proposal_path: Path) -> str:
 
     request_lc = request.lower()
 
-    if "langsmith" in request_lc and "auth" in request_lc:
+    if "sentry" in request_lc or "sentry_environment" in request_lc or "r14" in request_lc:
+        lines.extend(
+            [
+                "- Inspect `sentry.server.config.ts`, `sentry.edge.config.ts`, and `sentry.client.config.ts`.",
+                "- Verify server/edge use `process.env.SENTRY_ENVIRONMENT`.",
+                "- Verify client/browser uses `process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT`.",
+                "- Verify AWS deploy sets `SENTRY_ENVIRONMENT: prod` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod`.",
+                "- Verify Pi deploy/build workflows set `SENTRY_ENVIRONMENT=pi-standby` and `NEXT_PUBLIC_SENTRY_ENVIRONMENT=pi-standby`.",
+                "- Run `bash scripts/check_r14_sentry_env_tagging.sh`.",
+            ]
+        )
+    elif "langsmith" in request_lc and "auth" in request_lc:
         lines.extend(
             [
                 "- Open `tests/langsmith_api/test_endpoints.py`.",

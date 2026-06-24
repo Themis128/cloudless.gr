@@ -48,6 +48,20 @@ def infer_relevant_files(request):
             'docs/agentic-migration/mcp-config-template.json',
         ])
 
+    if "sentry" in request_lc or "sentry_environment" in request_lc or "r14" in request_lc:
+        files.extend([
+            "sentry.client.config.ts",
+            "sentry.server.config.ts",
+            "sentry.edge.config.ts",
+            "sst.config.ts",
+            "Dockerfile",
+            ".github/workflows/deploy.yml",
+            ".github/workflows/deploy-pi.yml",
+            ".github/workflows/build-pi-image.yml",
+            "scripts/check_r14_sentry_env_tagging.sh",
+            "__tests__/r14-sentry-env-tagging.test.ts",
+        ])
+
     if not files:
         files.extend([
             'docs/cloudless-agent-profile.md',
