@@ -1,4 +1,12 @@
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -12,11 +20,43 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 
+from agents.tools.cloudless_project_tools import (
+    cloudless_constraints,
+    list_project_files,
+    package_scripts,
+    project_tree_summary,
+    read_project_file,
+)
+from agents.tools.langsmith_registry_tools import (
+    call_registered_langsmith_endpoint,
+    describe_langsmith_endpoint,
+    list_langsmith_endpoints,
+)
+
 LANGCHAIN_DB_DIR = ".deepagents/langchain_docs_chroma"
 LANGCHAIN_COLLECTION = "langchain_docs"
 
 REPO_DB_DIR = ".deepagents/cloudless_repo_chroma"
 REPO_COLLECTION = "cloudless_repo"
+
+SKILL_FILES = [
+    "skills/cloudless-architecture/SKILL.md",
+    "skills/cloudless-langsmith/SKILL.md",
+    "skills/cloudless-vibe-coding/SKILL.md",
+    "skills/cloudless-k3s-storage/SKILL.md",
+    "skills/cloudless-roadmap/SKILL.md",
+]
+
+ACTIVE_TOOLS = [
+    cloudless_constraints,
+    list_project_files,
+    read_project_file,
+    project_tree_summary,
+    package_scripts,
+    list_langsmith_endpoints,
+    describe_langsmith_endpoint,
+    call_registered_langsmith_endpoint,
+]
 
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-small-en-v1.5",
@@ -43,7 +83,7 @@ llm = ChatOpenAI(
     base_url=os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:8001/v1"),
     api_key=os.getenv("OPENAI_API_KEY", "EMPTY"),
     temperature=0.0,
-    max_tokens=1800,
+    max_tokens=700,
 )
 
 
@@ -75,12 +115,37 @@ def expand_docs_query(question: str) -> str:
     return question
 
 
-def retrieve_repo(question: str, k: int = 6):
+def retrieve_repo(question: str, k: int = 2):
     return repo_db.similarity_search(expand_repo_query(question), k=k)
 
 
-def retrieve_docs(question: str, k: int = 5):
+def retrieve_docs(question: str, k: int = 1):
     return langchain_db.similarity_search(expand_docs_query(question), k=k)
+
+
+
+def load_skill_context(max_chars: int = 4000) -> str:
+    """Load cloudless.gr Deep Agent skills as prompt context."""
+    parts = []
+
+    for skill_path in SKILL_FILES:
+        path = Path(skill_path)
+
+        if not path.exists():
+            continue
+
+        content = path.read_text(encoding="utf-8", errors="ignore").strip()
+
+        if not content:
+            continue
+
+        parts.append(
+            f"[SKILL]\n"
+            f"File: {skill_path}\n\n"
+            f"{content}"
+        )
+
+    return "\n\n---\n\n".join(parts)[:max_chars]
 
 
 def format_context(repo_docs, docs_docs) -> str:
@@ -88,7 +153,7 @@ def format_context(repo_docs, docs_docs) -> str:
 
     for i, doc in enumerate(repo_docs, start=1):
         source = doc.metadata.get("source", "Unknown file")
-        content = doc.page_content[:1800]
+        content = doc.page_content[:500]
         parts.append(
             f"[REPO {i}]\n"
             f"File: {source}\n\n"
@@ -98,7 +163,7 @@ def format_context(repo_docs, docs_docs) -> str:
     for i, doc in enumerate(docs_docs, start=1):
         title = doc.metadata.get("title", "Untitled")
         source = doc.metadata.get("source", "Unknown source")
-        content = doc.page_content[:1800]
+        content = doc.page_content[:500]
         parts.append(
             f"[DOCS {i}]\n"
             f"Title: {title}\n"
@@ -149,21 +214,50 @@ agent = create_deep_agent(
 
 
 def ask(question: str) -> str:
-    repo_docs = retrieve_repo(question)
-    docs_docs = retrieve_docs(question)
-    context = format_context(repo_docs, docs_docs)
+    skills_context = load_skill_context()
+    question_lc = question.lower()
+
+    repo_docs = []
+    docs_docs = []
+
+    if "registered langsmith endpoint" in question_lc or "langsmith endpoints" in question_lc:
+        context = (
+            "[LANGSMITH ENDPOINT REGISTRY]\n"
+            + list_langsmith_endpoints()[:6000]
+        )
+    elif "package.json" in question_lc and "script" in question_lc:
+        context = (
+            "[PACKAGE.JSON SCRIPTS]\n"
+            + package_scripts()[:6000]
+        )
+    elif "cloudless constraint" in question_lc or "k3s storage" in question_lc:
+        context = (
+            "[CLOUDLESS CONSTRAINTS]\n"
+            + cloudless_constraints()[:3000]
+        )
+    else:
+        repo_docs = retrieve_repo(question)
+        docs_docs = retrieve_docs(question)
+        context = format_context(repo_docs, docs_docs)
 
     grounded_question = f"""
 Question:
 {question}
 
-Use only the following retrieved context.
+Use only the following retrieved context and skills.
+
+Skills:
+{skills_context}
 
 Context:
 {context}
 
 Instructions:
 - Answer specifically for the existing cloudless.gr repository.
+- Use cloudless.gr skills as project operating rules.
+- Use read-only project tools when file inspection is needed.
+- Use LangSmith registry tools only for registered endpoints.
+- Do not call arbitrary URLs or unregistered LangSmith paths.
 - Prefer the existing canonical local AI files:
   - docs/local-ai-deep-agent-structure.md
   - agents/cloudless_deep_agent.py
@@ -179,6 +273,11 @@ Instructions:
 - Do not propose generic directories unless they already appear in the repo context.
 - Do not invent new filenames when existing files already satisfy the role.
 - If suggesting a new file, clearly label it as optional.
+- If context does not contain the answer, say what is missing.
+- Prefer exact existing file paths over generic suggestions.
+- For vibe-coding requests, propose patches but do not claim files were modified.
+- For LangSmith endpoint questions, use only the registered endpoint context.
+- For k3s/PVC questions, enforce the OMV-MAIN 120GB SSD rule.
 - Keep the answer concise and actionable.
 - Do not include sources; they will be appended by the program.
 """
