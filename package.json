@@ -103,7 +103,8 @@
     "ai:langsmith-call": "./scripts/ai.sh langsmith-call",
     "ai:langsmith-page": "./scripts/ai.sh langsmith-page",
     "ai:langsmith-stream": "./scripts/ai.sh langsmith-stream",
-    "ai:test:api": "python -m pytest tests/langsmith_api -q"
+    "ai:test:api": "python -m pytest tests/langsmith_api -q",
+    "ai:langsmith-endpoint": "./scripts/ai.sh langsmith-endpoint"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",

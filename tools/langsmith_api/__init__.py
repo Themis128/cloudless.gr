@@ -5,6 +5,9 @@ from .langsmith import LangSmithClient
 from .managed_deepagents import ManagedDeepAgentsClient
 
 __all__ = [
+    "load_endpoint_registry",
+    "list_endpoints",
+    "get_endpoint",
     "APIResponse",
     "AgentServerClient",
     "BaseAPIClient",
@@ -13,3 +16,5 @@ __all__ = [
     "LangSmithClient",
     "ManagedDeepAgentsClient",
 ]
+
+from .endpoints import get_endpoint, list_endpoints, load_endpoint_registry
