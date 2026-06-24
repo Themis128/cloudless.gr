@@ -89,6 +89,7 @@ describe("R21 product search baseline", () => {
       name: "Serverless Audit",
       category: "infrastructure",
       description: "AWS posture review.",
+      price: "790",
       href: "/store/serverless%20audit",
     });
 
