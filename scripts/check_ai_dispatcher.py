@@ -12,6 +12,7 @@ required_handlers = [
     "unified",
     "deep-smoke",
     "deep",
+    "vibe-review",
     "vibe-patch",
     "fast-answer",
     "langsmith-check",
