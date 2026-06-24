@@ -62,6 +62,33 @@ def infer_relevant_files(request):
             "__tests__/r14-sentry-env-tagging.test.ts",
         ])
 
+    if (
+        "r21" in request_lc
+        or "ai baseline" in request_lc
+        or "product search" in request_lc
+        or "meilisearch" in request_lc
+        or "semantic search" in request_lc
+        or "bedrock embedding" in request_lc
+        or "recommendation" in request_lc
+        or "genai product" in request_lc
+        or "admin reindex" in request_lc
+    ):
+        files.extend([
+            "src/app/api/search/route.ts",
+            "src/app/api/admin/search/reindex/route.ts",
+            "src/lib/product-search.ts",
+            "src/lib/meilisearch.ts",
+            "src/lib/bedrock-embeddings.ts",
+            "src/lib/bedrock-chat.ts",
+            "src/lib/store-products.ts",
+            "src/lib/store-products-client.ts",
+            "src/components/store/StoreGrid.tsx",
+            "__tests__/r21-ai-baseline.test.ts",
+            "__tests__/product-search.test.ts",
+            "__tests__/api-search-route.test.ts",
+            "__tests__/admin-search-reindex-route.test.ts",
+        ])
+
     if not files:
         files.extend([
             'docs/cloudless-agent-profile.md',

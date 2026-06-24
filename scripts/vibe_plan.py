@@ -109,7 +109,27 @@ def build_plan(proposal_path: Path) -> str:
 
     request_lc = request.lower()
 
-    if "sentry" in request_lc or "sentry_environment" in request_lc or "r14" in request_lc:
+    if (
+        "r21" in request_lc
+        or "ai baseline" in request_lc
+        or "product search" in request_lc
+        or "meilisearch" in request_lc
+        or "semantic search" in request_lc
+        or "bedrock embedding" in request_lc
+        or "admin reindex" in request_lc
+    ):
+        lines.extend(
+            [
+                "- Inspect `src/lib/product-search.ts`, `src/lib/meilisearch.ts`, and `src/lib/bedrock-embeddings.ts`.",
+                "- Verify `/api/search` returns `source: empty` for blank queries.",
+                "- Verify `/api/search` uses fallback search when Meilisearch is not configured.",
+                "- Verify `/api/search` falls back if Meilisearch or Bedrock search throws.",
+                "- Verify admin reindex requires `x-cron-secret` or `x-admin-secret`.",
+                "- Verify product search documents preserve numeric prices as strings.",
+                "- Run the R21 focused Vitest suite.",
+            ]
+        )
+    elif "sentry" in request_lc or "sentry_environment" in request_lc or "r14" in request_lc:
         lines.extend(
             [
                 "- Inspect `sentry.server.config.ts`, `sentry.edge.config.ts`, and `sentry.client.config.ts`.",
