@@ -108,7 +108,8 @@
     "ai:skills-check": "./scripts/ai.sh skills-check",
     "ai:vibe": "./scripts/ai.sh deep",
     "ai:fast": "./scripts/ai.sh fast-answer",
-    "ai:vibe:patch": "./scripts/ai.sh vibe-patch"
+    "ai:vibe:patch": "./scripts/ai.sh vibe-patch",
+    "ai:vibe:review": "./scripts/ai.sh vibe-review"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",
