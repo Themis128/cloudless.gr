@@ -6,6 +6,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -250,9 +251,65 @@ agent = create_deep_agent(
 )
 
 
+
+def answer_registered_langsmith_endpoints() -> str:
+    """Return registered LangSmith endpoint safety without calling the LLM."""
+    registry = json.loads(list_langsmith_endpoints())
+
+    safe = []
+    protected = []
+
+    for name in sorted(registry):
+        endpoint = registry[name]
+        item = f"- `{name}` — {endpoint['client']} {endpoint['method']} {endpoint['path']}"
+
+        if endpoint.get("auth_required"):
+            protected.append(item)
+        else:
+            safe.append(item)
+
+    return (
+        "Registered LangSmith-related endpoints\n\n"
+        "Safe without `LANGSMITH_API_KEY` (`auth_required=false`):\n"
+        + "\n".join(safe)
+        + "\n\nRequires `LANGSMITH_API_KEY` (`auth_required=true`):\n"
+        + "\n".join(protected)
+        + "\n\nRule: only endpoints with `auth_required=false` are safe without `LANGSMITH_API_KEY`."
+    )
+
+
+def answer_package_scripts() -> str:
+    """Return package.json scripts without calling the LLM."""
+    scripts = json.loads(package_scripts())
+    ai_scripts = {k: v for k, v in scripts.items() if k.startswith("ai:")}
+
+    lines = ["AI package scripts from package.json", ""]
+
+    for name in sorted(ai_scripts):
+        lines.append(f"- `{name}` → `{ai_scripts[name]}`")
+
+    return "\n".join(lines)
+
+
+def answer_cloudless_constraints() -> str:
+    """Return cloudless.gr constraints without calling the LLM."""
+    return cloudless_constraints().strip()
+
+
 def ask(question: str) -> str:
-    skills_context = load_skill_context(question)
     question_lc = question.lower()
+
+    # Deterministic fast paths: do not call the LLM for registry/config lookups.
+    if "registered langsmith endpoint" in question_lc or "langsmith endpoints" in question_lc:
+        return answer_registered_langsmith_endpoints()
+
+    if "package.json" in question_lc and "script" in question_lc:
+        return answer_package_scripts()
+
+    if "cloudless constraint" in question_lc or "k3s storage" in question_lc:
+        return answer_cloudless_constraints()
+
+    skills_context = load_skill_context(question)
 
     repo_docs = []
     docs_docs = []
