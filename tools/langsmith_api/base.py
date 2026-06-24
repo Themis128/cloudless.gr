@@ -268,3 +268,54 @@ class BaseAPIClient:
                 break
 
         return output
+
+
+    def stream(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Optional[Dict[str, Any]] = None,
+        json_body: Optional[Any] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ):
+        """Stream Server-Sent Events from a LangSmith-compatible endpoint."""
+        from .streaming import iter_sse_events
+
+        url = f"{self.base_url}/{path.lstrip('/')}"
+
+        stream_headers = {
+            "Accept": "text/event-stream",
+        }
+
+        if headers:
+            stream_headers.update(headers)
+
+        with self.session.request(
+            method=method.upper(),
+            url=url,
+            params=params,
+            json=json_body,
+            headers=self._headers(stream_headers),
+            timeout=self.timeout,
+            stream=True,
+        ) as response:
+            content_type = response.headers.get("content-type", "")
+
+            if response.status_code >= 400:
+                if "application/json" in content_type:
+                    try:
+                        data = response.json()
+                    except json.JSONDecodeError:
+                        data = response.text
+                else:
+                    data = response.text
+
+                raise LangSmithAPIError(
+                    f"{method.upper()} {url} failed with HTTP {response.status_code}",
+                    status_code=response.status_code,
+                    body=data,
+                    url=url,
+                )
+
+            yield from iter_sse_events(response.iter_lines(decode_unicode=True))

@@ -101,7 +101,8 @@
     "ai:deep": "./scripts/ai.sh deep",
     "ai:langsmith-check": "./scripts/ai.sh langsmith-check",
     "ai:langsmith-call": "./scripts/ai.sh langsmith-call",
-    "ai:langsmith-page": "./scripts/ai.sh langsmith-page"
+    "ai:langsmith-page": "./scripts/ai.sh langsmith-page",
+    "ai:langsmith-stream": "./scripts/ai.sh langsmith-stream"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",

@@ -72,6 +72,15 @@ case "${1:-help}" in
     python scripts/langsmith_api_page.py "$@"
     ;;
 
+  langsmith-stream)
+    shift
+    # pnpm passes a literal "--" before forwarded args.
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    python scripts/langsmith_api_stream.py "$@"
+    ;;
+
   *)
     cat <<'EOF'
 Usage: ./scripts/ai.sh <command>
@@ -90,6 +99,7 @@ Commands:
   langsmith-check   Check LangSmith API clients
   langsmith-call    Generic LangSmith API caller
   langsmith-page    Paginated LangSmith API caller
+  langsmith-stream  Streaming LangSmith API caller
 EOF
     ;;
 esac
