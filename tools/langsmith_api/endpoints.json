@@ -23,35 +23,11 @@
     "auth_required": true,
     "paginated": true
   },
-  "langsmith.examples.list": {
-    "client": "langsmith",
-    "method": "GET",
-    "path": "/examples",
-    "description": "List LangSmith examples.",
-    "auth_required": true,
-    "paginated": true
-  },
   "langsmith.runs.query": {
     "client": "langsmith",
     "method": "POST",
     "path": "/runs/query",
     "description": "Query LangSmith runs/traces.",
-    "auth_required": true,
-    "paginated": true
-  },
-  "langsmith.feedback.list": {
-    "client": "langsmith",
-    "method": "GET",
-    "path": "/feedback",
-    "description": "List LangSmith feedback records.",
-    "auth_required": true,
-    "paginated": true
-  },
-  "langsmith.annotation_queues.list": {
-    "client": "langsmith",
-    "method": "GET",
-    "path": "/annotation-queues",
-    "description": "List LangSmith annotation queues.",
     "auth_required": true,
     "paginated": true
   },
@@ -71,27 +47,11 @@
     "auth_required": true,
     "paginated": true
   },
-  "deepagents.mcp_servers.list": {
-    "client": "deepagents",
-    "method": "GET",
-    "path": "/mcp-servers",
-    "description": "List Managed Deep Agents MCP servers.",
-    "auth_required": true,
-    "paginated": true
-  },
   "agent_server.health": {
     "client": "agent-server",
     "method": "GET",
     "path": "/health",
     "description": "Check local or remote Agent Server health.",
-    "auth_required": false,
-    "paginated": false
-  },
-  "agent_server.info": {
-    "client": "agent-server",
-    "method": "GET",
-    "path": "/info",
-    "description": "Get Agent Server info.",
     "auth_required": false,
     "paginated": false
   },
@@ -103,19 +63,11 @@
     "auth_required": false,
     "paginated": false
   },
-  "agent_server.threads.search": {
-    "client": "agent-server",
-    "method": "POST",
-    "path": "/threads/search",
-    "description": "Search Agent Server threads.",
-    "auth_required": false,
-    "paginated": false
-  },
   "fleet.connections.list": {
     "client": "fleet",
     "method": "GET",
     "path": "/agent-connections",
-    "description": "List Fleet or agent connections. Exact path may vary by deployment.",
+    "description": "List Fleet/agent connections. Exact path may vary by deployment.",
     "auth_required": true,
     "paginated": true
   }
