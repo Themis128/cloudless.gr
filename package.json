@@ -112,7 +112,8 @@
     "ai:vibe:review": "./scripts/ai.sh vibe-review",
     "ai:vibe:status": "./scripts/ai.sh vibe-status",
     "ai:vibe:plan": "./scripts/ai.sh vibe-plan",
-    "ai:troubleshoot": "./scripts/ai.sh troubleshoot"
+    "ai:troubleshoot": "./scripts/ai.sh troubleshoot",
+    "ai:analyze": "./scripts/ai.sh analyze-app"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",
