@@ -1,3 +1,5 @@
+import type { Breadcrumb, ErrorEvent, EventHint } from "@sentry/nextjs";
+
 /**
  * Sentry beforeSend / beforeBreadcrumb scrubbers.
  *
@@ -7,9 +9,6 @@
  * dumps in stack frames) and any client-side fetch URLs that include tokens.
  */
 
-type ErrorEvent = any;
-type EventHint = any;
-type Breadcrumb = any;
 
 const REDACT = "[REDACTED]";
 
