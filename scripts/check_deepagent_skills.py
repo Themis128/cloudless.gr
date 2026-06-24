@@ -9,6 +9,8 @@ required = [
     "agents/tools/cloudless_project_tools.py",
     "agents/tools/langsmith_registry_tools.py",
     "docs/cloudless-agent-profile.md",
+    "docs/agentic-migration/mcp-config-template.json",
+    "docs/agentic-migration/claude-desktop-inventory.md",
 ]
 
 failed = False

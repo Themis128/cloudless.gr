@@ -16,6 +16,10 @@ case "${1:-help}" in
     python scripts/check_deepagent_cloudless.py
     ;;
 
+  skills-check)
+    python scripts/check_deepagent_skills.py
+    ;;
+
   ingest-docs)
     python scripts/ingest_langchain_docs_focused.py
     ;;
@@ -55,8 +59,6 @@ case "${1:-help}" in
 
   langsmith-call)
     shift
-    # pnpm passes a literal "--" before forwarded args.
-    # Remove it so argparse can parse flags like --allow-error.
     if [ "${1:-}" = "--" ]; then
       shift
     fi
@@ -65,7 +67,6 @@ case "${1:-help}" in
 
   langsmith-page)
     shift
-    # pnpm passes a literal "--" before forwarded args.
     if [ "${1:-}" = "--" ]; then
       shift
     fi
@@ -74,7 +75,6 @@ case "${1:-help}" in
 
   langsmith-stream)
     shift
-    # pnpm passes a literal "--" before forwarded args.
     if [ "${1:-}" = "--" ]; then
       shift
     fi
@@ -83,15 +83,10 @@ case "${1:-help}" in
 
   langsmith-endpoint)
     shift
-    # pnpm passes a literal "--" before forwarded args.
     if [ "${1:-}" = "--" ]; then
       shift
     fi
     python scripts/langsmith_endpoint_call.py "$@"
-    ;;
-
-  skills-check)
-    python scripts/check_deepagent_skills.py
     ;;
 
   *)
@@ -99,22 +94,22 @@ case "${1:-help}" in
 Usage: ./scripts/ai.sh <command>
 
 Commands:
-  test              Test local vLLM connection
-  check             Check Deep Agent readiness
-  ingest-docs       Rebuild LangChain docs vector DB
-  ingest-repo       Rebuild cloudless.gr repo vector DB
-  ingest-all        Rebuild both vector DBs
-  docs              Run LangChain docs assistant
-  repo              Run repo assistant
-  unified           Run unified repo + docs assistant
-  deep-smoke        Run Deep Agent smoke test
-  deep              Run main cloudless.gr Deep Agent
-  langsmith-check   Check LangSmith API clients
-  langsmith-call    Generic LangSmith API caller
-  langsmith-page    Paginated LangSmith API caller
-  langsmith-stream  Streaming LangSmith API caller
+  test               Test local vLLM connection
+  check              Check Deep Agent readiness
+  skills-check       Check Deep Agent tools and skills
+  ingest-docs        Rebuild LangChain docs vector DB
+  ingest-repo        Rebuild cloudless.gr repo vector DB
+  ingest-all         Rebuild both vector DBs
+  docs               Run LangChain docs assistant
+  repo               Run repo assistant
+  unified            Run unified repo + docs assistant
+  deep-smoke         Run Deep Agent smoke test
+  deep               Run main cloudless.gr Deep Agent
+  langsmith-check    Check LangSmith API clients
+  langsmith-call     Generic LangSmith API caller
+  langsmith-page     Paginated LangSmith API caller
+  langsmith-stream   Streaming LangSmith API caller
   langsmith-endpoint Registered endpoint caller
-  skills-check      Check Deep Agent tools and skills
 EOF
     ;;
 esac

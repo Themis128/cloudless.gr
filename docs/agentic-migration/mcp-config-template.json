@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "example-readonly-server": {
+      "type": "stdio",
+      "command": "example-command",
+      "args": ["--readonly"],
+      "env": {
+        "EXAMPLE_API_KEY": "SET_IN_LOCAL_ENV_NOT_COMMITTED"
+      }
+    },
+    "example-remote-readonly-server": {
+      "type": "http",
+      "url": "https://example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer SET_IN_LOCAL_ENV_NOT_COMMITTED"
+      }
+    }
+  }
+}
