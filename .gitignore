@@ -203,3 +203,6 @@ ai-ui/
 # Local package backups
 package.json.bak.*
 *.bak
+
+# Local AI patch proposals
+.agent-patches/

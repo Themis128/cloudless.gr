@@ -107,7 +107,8 @@
     "ai:langsmith-endpoint": "./scripts/ai.sh langsmith-endpoint",
     "ai:skills-check": "./scripts/ai.sh skills-check",
     "ai:vibe": "./scripts/ai.sh deep",
-    "ai:fast": "./scripts/ai.sh fast-answer"
+    "ai:fast": "./scripts/ai.sh fast-answer",
+    "ai:vibe:patch": "./scripts/ai.sh vibe-patch"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",
