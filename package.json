@@ -110,7 +110,8 @@
     "ai:fast": "./scripts/ai.sh fast-answer",
     "ai:vibe:patch": "./scripts/ai.sh vibe-patch",
     "ai:vibe:review": "./scripts/ai.sh vibe-review",
-    "ai:vibe:status": "./scripts/ai.sh vibe-status"
+    "ai:vibe:status": "./scripts/ai.sh vibe-status",
+    "ai:vibe:plan": "./scripts/ai.sh vibe-plan"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",

@@ -12,6 +12,7 @@ required_handlers = [
     "unified",
     "deep-smoke",
     "deep",
+    "vibe-plan",
     "vibe-status",
     "vibe-review",
     "vibe-patch",
