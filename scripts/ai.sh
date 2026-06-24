@@ -61,6 +61,14 @@ case "${1:-help}" in
     python scripts/cloudless_fast_answer.py "$@"
     ;;
 
+  vibe-patch)
+    shift
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    python scripts/vibe_patch.py "$@"
+    ;;
+
   langsmith-check)
     python scripts/check_langsmith_api_clients.py
     ;;
@@ -114,6 +122,7 @@ Commands:
   deep-smoke         Run Deep Agent smoke test
   deep               Run main cloudless.gr Deep Agent
   fast-answer        Fast deterministic app-config answer
+  vibe-patch         Create deterministic patch proposal
   langsmith-check    Check LangSmith API clients
   langsmith-call     Generic LangSmith API caller
   langsmith-page     Paginated LangSmith API caller
