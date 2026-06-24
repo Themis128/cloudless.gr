@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [ -d ".venv" ]; then
+  source .venv/bin/activate
+fi
+
+case "${1:-help}" in
+  test)
+    python scripts/test_vllm_connection.py
+    ;;
+
+  check)
+    python scripts/check_deepagent_cloudless.py
+    ;;
+
+  ingest-docs)
+    python scripts/ingest_langchain_docs_focused.py
+    ;;
+
+  ingest-repo)
+    python scripts/ingest_repo_docs.py
+    ;;
+
+  ingest-all)
+    python scripts/ingest_langchain_docs_focused.py
+    python scripts/ingest_repo_docs.py
+    ;;
+
+  docs)
+    python agents/langchain_docs_fast_rag.py
+    ;;
+
+  repo)
+    python agents/cloudless_repo_fast_rag.py
+    ;;
+
+  unified)
+    python agents/cloudless_unified_assistant.py
+    ;;
+
+  deep-smoke)
+    python agents/cloudless_deep_agent_smoke.py
+    ;;
+
+  deep)
+    python agents/cloudless_deep_agent.py
+    ;;
+
+  langsmith-check)
+    python scripts/check_langsmith_api_clients.py
+    ;;
+
+  langsmith-call)
+    shift
+    # pnpm passes a literal "--" before forwarded args.
+    # Remove it so argparse can parse flags like --allow-error.
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    python scripts/langsmith_api_call.py "$@"
+    ;;
+
+  langsmith-page)
+    shift
+    # pnpm passes a literal "--" before forwarded args.
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    python scripts/langsmith_api_page.py "$@"
+    ;;
+
+  *)
+    cat <<'EOF'
+Usage: ./scripts/ai.sh <command>
+
+Commands:
+  test              Test local vLLM connection
+  check             Check Deep Agent readiness
+  ingest-docs       Rebuild LangChain docs vector DB
+  ingest-repo       Rebuild cloudless.gr repo vector DB
+  ingest-all        Rebuild both vector DBs
+  docs              Run LangChain docs assistant
+  repo              Run repo assistant
+  unified           Run unified repo + docs assistant
+  deep-smoke        Run Deep Agent smoke test
+  deep              Run main cloudless.gr Deep Agent
+  langsmith-check   Check LangSmith API clients
+  langsmith-call    Generic LangSmith API caller
+  langsmith-page    Paginated LangSmith API caller
+EOF
+    ;;
+esac

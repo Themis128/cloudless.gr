@@ -88,7 +88,20 @@
     "coverage:merge": "node scripts/coverage-merge.mjs",
     "test:unit:coverage": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1",
     "test:unit:coverage:ci": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1 --reporter=default",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "ai:test": "./scripts/ai.sh test",
+    "ai:check": "./scripts/ai.sh check",
+    "ai:ingest:docs": "./scripts/ai.sh ingest-docs",
+    "ai:ingest:repo": "./scripts/ai.sh ingest-repo",
+    "ai:ingest:all": "./scripts/ai.sh ingest-all",
+    "ai:docs": "./scripts/ai.sh docs",
+    "ai:repo": "./scripts/ai.sh repo",
+    "ai:unified": "./scripts/ai.sh unified",
+    "ai:deep-smoke": "./scripts/ai.sh deep-smoke",
+    "ai:deep": "./scripts/ai.sh deep",
+    "ai:langsmith-check": "./scripts/ai.sh langsmith-check",
+    "ai:langsmith-call": "./scripts/ai.sh langsmith-call",
+    "ai:langsmith-page": "./scripts/ai.sh langsmith-page"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",
