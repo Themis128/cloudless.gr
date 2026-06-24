@@ -48,3 +48,11 @@ Before writes, ask:
     Apply this patch? yes/no
 
 Only apply if the user explicitly approves.
+
+    Apply this patch? yes/no
+
+Only apply if the user explicitly approves.
+
+    Apply this patch? yes/no
+
+Only apply if the user explicitly approves.
