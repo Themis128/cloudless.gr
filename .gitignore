@@ -206,3 +206,5 @@ package.json.bak.*
 
 # Local AI patch proposals
 .agent-patches/
+
+.agent-runs/

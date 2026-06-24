@@ -113,7 +113,10 @@
     "ai:vibe:status": "./scripts/ai.sh vibe-status",
     "ai:vibe:plan": "./scripts/ai.sh vibe-plan",
     "ai:troubleshoot": "./scripts/ai.sh troubleshoot",
-    "ai:analyze": "./scripts/ai.sh analyze-app"
+    "ai:analyze": "./scripts/ai.sh analyze-app",
+    "ai:app-check": "python scripts/app_check_with_progress.py",
+    "ai:app-check:fast": "python scripts/app_check_with_progress.py --no-test",
+    "ai:app-check:offline": "python scripts/app_check_with_progress.py --no-live"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",
