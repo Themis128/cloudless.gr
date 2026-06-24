@@ -44,10 +44,10 @@ else
   missing "$node missing executable /usr/local/bin/ddns-update-auth.sh"
 fi
 
-if ssh -o BatchMode=yes -o ConnectTimeout=8 "$node" 'test -f /etc/cloudless/ddns-update-auth.env'; then
+if ssh -o BatchMode=yes -o ConnectTimeout=8 "$node" 'sudo test -f /etc/cloudless/ddns-update-auth.env'; then
   pass "$node has /etc/cloudless/ddns-update-auth.env"
 
-  if ssh -o BatchMode=yes -o ConnectTimeout=8 "$node" 'grep -q "^DDNS_ENABLED=true" /etc/cloudless/ddns-update-auth.env'; then
+  if ssh -o BatchMode=yes -o ConnectTimeout=8 "$node" 'sudo grep -q "^DDNS_ENABLED=true" /etc/cloudless/ddns-update-auth.env'; then
     pass "$node DDNS is enabled"
   else
     warning "$node DDNS is installed but disabled; this is OK while auth.cloudless.gr is legacy/inactive"
@@ -66,6 +66,12 @@ if ssh -o BatchMode=yes -o ConnectTimeout=8 "$node" 'crontab -l 2>/dev/null | gr
   pass "$node DDNS cron output is redirected to log"
 else
   warning "$node DDNS cron output may still generate mail if the script writes output"
+fi
+
+if ssh -o BatchMode=yes -o ConnectTimeout=8 "$node" 'test -w /var/log/ddns-update-auth.log'; then
+  pass "$node cron user can write /var/log/ddns-update-auth.log"
+else
+  missing "$node cron user cannot write /var/log/ddns-update-auth.log"
 fi
 
 if ssh -o BatchMode=yes -o ConnectTimeout=8 "$node" 'sudo /usr/local/bin/ddns-update-auth.sh >/tmp/ddns-check.out 2>&1; code=$?; cat /tmp/ddns-check.out; exit $code'; then
