@@ -40,6 +40,7 @@ REPO_DB_DIR = ".deepagents/cloudless_repo_chroma"
 REPO_COLLECTION = "cloudless_repo"
 
 SKILL_FILES = [
+    "docs/cloudless-agent-profile.md",
     "skills/cloudless-architecture/SKILL.md",
     "skills/cloudless-langsmith/SKILL.md",
     "skills/cloudless-vibe-coding/SKILL.md",
@@ -277,6 +278,10 @@ Instructions:
 - Prefer exact existing file paths over generic suggestions.
 - For vibe-coding requests, propose patches but do not claim files were modified.
 - For LangSmith endpoint questions, use only the registered endpoint context.
+- Endpoint safety rule: only endpoints with auth_required=false are safe without LANGSMITH_API_KEY; endpoints with auth_required=true are not safe without LANGSMITH_API_KEY.
+- For LangSmith API tests, prefer files under tests/langsmith_api/.
+- Never suggest adding LANGSMITH_API_KEY values, placeholders, or secrets to committed files.
+- For tests requiring credentials, mark them optional or skipped when LANGSMITH_API_KEY is missing.
 - For endpoint safety, use auth_required exactly: auth_required=false is safe without LANGSMITH_API_KEY; auth_required=true is not safe without LANGSMITH_API_KEY.
 - For LangSmith API tests, prefer files under tests/langsmith_api/ and do not suggest unrelated scripts.
 - Never suggest adding real API keys, placeholder API keys, or secrets to committed files.

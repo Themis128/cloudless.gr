@@ -8,6 +8,7 @@ required = [
     "skills/cloudless-roadmap/SKILL.md",
     "agents/tools/cloudless_project_tools.py",
     "agents/tools/langsmith_registry_tools.py",
+    "docs/cloudless-agent-profile.md",
 ]
 
 failed = False
