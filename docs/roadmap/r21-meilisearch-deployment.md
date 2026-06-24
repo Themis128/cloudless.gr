@@ -86,20 +86,3 @@ Validate with:
 
     bash scripts/check_r21_meilisearch_k3s_storage.sh
 
-## k3s manifest
-
-The Meilisearch k3s manifest lives at:
-
-    k8s/search/meilisearch.yaml
-
-The PVC must carry these audit labels:
-
-    cloudless.gr/storage-node: OMV-MAIN
-    cloudless.gr/storage-tier: dedicated-ssd
-    cloudless.gr/storage-purpose: r21-search
-
-The manifest must document that persistent data uses the dedicated 120GB SSD on OMV-MAIN.
-
-Validate with:
-
-    bash scripts/check_r21_meilisearch_k3s_storage.sh
