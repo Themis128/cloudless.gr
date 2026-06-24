@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import {
   getProductById,
-  getProductsByCategory,
   categoryLabels,
   categoryColors,
 } from "@/lib/store-products";
@@ -14,6 +13,7 @@ import ProductIcon from "@/components/store/ProductIcon";
 import JsonLd from "@/components/JsonLd";
 import { formatPrice } from "@/lib/format-price";
 import { getProductSchema, getBreadcrumbSchema } from "@/lib/structured-data";
+import { recommendProductsForProduct } from "@/lib/product-recommendations";
 
 export async function generateMetadata({
   params,
@@ -39,9 +39,7 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
-  const related = getProductsByCategory(product.category)
-    .filter((p) => p.id !== product.id)
-    .slice(0, 3);
+  const recommendations = await recommendProductsForProduct(product.id, 3);
 
   const productJsonLd = getProductSchema({
     name: product.name,
@@ -139,15 +137,15 @@ export default async function ProductPage({
         </div>
       </section>
 
-      {/* Related Products */}
-      {related.length > 0 && (
+      {/* Recommended Products */}
+      {recommendations.length > 0 && (
         <section className="bg-void border-t border-slate-800 py-16 md:py-20">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-neon-cyan/60 mb-8 font-mono text-xs font-medium tracking-[0.3em]">
-              YOU MAY ALSO LIKE
+              RECOMMENDED NEXT
             </h2>
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {related.map((rel) => (
+              {recommendations.map((rel) => (
                 <Link
                   key={rel.id}
                   href={`/store/${rel.id}`}
