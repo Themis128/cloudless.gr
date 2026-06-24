@@ -55,6 +55,12 @@ function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function optionalSearchString(value: unknown): string | undefined {
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
 function productHref(id: string): string {
   return `/store/${encodeURIComponent(id)}`;
 }
@@ -80,7 +86,7 @@ export function productToSearchDocument(product: StoreProduct): ProductSearchDoc
     name: str(p.name),
     category: str(p.category),
     description: str(p.description),
-    price: str(p.price) || undefined,
+    price: optionalSearchString(p.price),
     href: productHref(id),
     text: productToSearchText(product),
   };
