@@ -93,6 +93,14 @@ case "${1:-help}" in
     python scripts/vibe_plan.py "$@"
     ;;
 
+  troubleshoot)
+    shift
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    python scripts/troubleshoot.py "$@"
+    ;;
+
   langsmith-check)
     python scripts/check_langsmith_api_clients.py
     ;;
@@ -150,6 +158,7 @@ Commands:
   vibe-review        Review deterministic patch proposal
   vibe-status        Show patch proposal readiness status
   vibe-plan          Create implementation plan from proposal
+  troubleshoot       Run read-only troubleshooting workflow
   langsmith-check    Check LangSmith API clients
   langsmith-call     Generic LangSmith API caller
   langsmith-page     Paginated LangSmith API caller

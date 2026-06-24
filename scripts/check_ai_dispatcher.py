@@ -13,6 +13,7 @@ required_handlers = [
     "deep-smoke",
     "deep",
     "vibe-plan",
+    "troubleshoot",
     "vibe-status",
     "vibe-review",
     "vibe-patch",
