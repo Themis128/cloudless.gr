@@ -69,3 +69,25 @@ describe("R21 product recommendations", () => {
     expect(recommendations).toEqual([]);
   });
 });
+
+describe("R21 product recommendations with order-history signals", () => {
+  it("uses co-purchase signals as an optional ranking boost", async () => {
+    const recommendations = await recommendProductsForProduct("analytics-starter", 3, {
+      signals: [
+        {
+          productId: "analytics-starter",
+          relatedProductId: "ai-growth-pack",
+          count: 20,
+        },
+      ],
+    });
+
+    expect(recommendations[0].id).toBe("ai-growth-pack");
+  });
+
+  it("keeps existing behavior when no signals are provided", async () => {
+    const recommendations = await recommendProductsForProduct("analytics-starter", 3);
+
+    expect(recommendations[0].id).toBe("analytics-growth");
+  });
+});
