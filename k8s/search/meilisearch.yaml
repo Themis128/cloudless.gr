@@ -12,6 +12,11 @@ metadata:
   namespace: search
   labels:
     app.kubernetes.io/name: meilisearch
+    cloudless.gr/storage-node: OMV-MAIN
+    cloudless.gr/storage-tier: dedicated-ssd
+    cloudless.gr/storage-purpose: r21-search
+  annotations:
+    cloudless.gr/storage-note: "Persistent data must use the dedicated 120GB SSD on OMV-MAIN."
 spec:
   accessModes:
     - ReadWriteOnce
@@ -42,6 +47,8 @@ spec:
         app.kubernetes.io/name: meilisearch
         app.kubernetes.io/component: search-engine
     spec:
+      # R21I: Meilisearch is a persistent workload and must run on
+      # OMV-MAIN where the dedicated 120GB SSD-backed local-path storage lives.
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
