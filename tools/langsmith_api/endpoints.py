@@ -12,10 +12,6 @@ def load_endpoint_registry() -> Dict[str, Dict[str, Any]]:
     return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
 
 
-def list_endpoints() -> Dict[str, Dict[str, Any]]:
-    return load_endpoint_registry()
-
-
 def get_endpoint(name: str) -> Dict[str, Any]:
     registry = load_endpoint_registry()
 
@@ -24,3 +20,7 @@ def get_endpoint(name: str) -> Dict[str, Any]:
         raise KeyError(f"Unknown endpoint: {name}. Available endpoints: {available}")
 
     return registry[name]
+
+
+def list_endpoints() -> Dict[str, Dict[str, Any]]:
+    return load_endpoint_registry()
