@@ -277,6 +277,10 @@ Instructions:
 - Prefer exact existing file paths over generic suggestions.
 - For vibe-coding requests, propose patches but do not claim files were modified.
 - For LangSmith endpoint questions, use only the registered endpoint context.
+- For endpoint safety, use auth_required exactly: auth_required=false is safe without LANGSMITH_API_KEY; auth_required=true is not safe without LANGSMITH_API_KEY.
+- For LangSmith API tests, prefer files under tests/langsmith_api/ and do not suggest unrelated scripts.
+- Never suggest adding real API keys, placeholder API keys, or secrets to committed files.
+- For tests needing credentials, use environment variables only and mark live-auth tests as optional/skipped without LANGSMITH_API_KEY.
 - For k3s/PVC questions, enforce the OMV-MAIN 120GB SSD rule.
 - Keep the answer concise and actionable.
 - Do not include sources; they will be appended by the program.
