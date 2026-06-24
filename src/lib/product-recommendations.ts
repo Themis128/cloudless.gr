@@ -1,4 +1,5 @@
 import { getProducts, type StoreProduct } from "@/lib/store-products";
+import type { ProductOrderSignal } from "@/lib/product-recommendation-signals";
 
 function normalize(value: unknown): string {
   return typeof value === "string" ? value.toLowerCase().trim() : "";
@@ -30,9 +31,24 @@ function sharedFeatureScore(a: StoreProduct, b: StoreProduct): number {
   return score;
 }
 
+export interface ProductRecommendationOptions {
+  signals?: ProductOrderSignal[];
+}
+
+function coPurchaseScore(
+  productId: string,
+  relatedProductId: string,
+  signals: ProductOrderSignal[] = [],
+): number {
+  return signals
+    .filter((signal) => signal.productId === productId && signal.relatedProductId === relatedProductId)
+    .reduce((sum, signal) => sum + signal.count, 0);
+}
+
 export async function recommendProductsForProduct(
   productId: string,
   limit = 3,
+  options: ProductRecommendationOptions = {},
 ): Promise<StoreProduct[]> {
   const products = await getProducts();
   const current = products.find((product) => product.id === productId);
@@ -46,10 +62,11 @@ export async function recommendProductsForProduct(
     .map((product) => {
       const sameCategory = normalize(product.category) === currentCategory ? 10 : 0;
       const sharedFeatures = sharedFeatureScore(current, product);
+      const coPurchased = coPurchaseScore(productId, product.id, options.signals);
 
       return {
         product,
-        score: sameCategory + sharedFeatures,
+        score: sameCategory + sharedFeatures + coPurchased,
       };
     })
     .filter((item) => item.score > 0)
