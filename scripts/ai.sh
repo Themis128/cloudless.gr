@@ -77,6 +77,14 @@ case "${1:-help}" in
     python scripts/vibe_review.py "$@"
     ;;
 
+  vibe-status)
+    shift
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    python scripts/vibe_status.py "$@"
+    ;;
+
   langsmith-check)
     python scripts/check_langsmith_api_clients.py
     ;;
@@ -132,6 +140,7 @@ Commands:
   fast-answer        Fast deterministic app-config answer
   vibe-patch         Create deterministic patch proposal
   vibe-review        Review deterministic patch proposal
+  vibe-status        Show patch proposal readiness status
   langsmith-check    Check LangSmith API clients
   langsmith-call     Generic LangSmith API caller
   langsmith-page     Paginated LangSmith API caller
