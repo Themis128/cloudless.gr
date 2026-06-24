@@ -53,6 +53,14 @@ case "${1:-help}" in
     python agents/cloudless_deep_agent.py
     ;;
 
+  fast-answer)
+    shift
+    if [ "${1:-}" = "--" ]; then
+      shift
+    fi
+    python scripts/cloudless_fast_answer.py "$@"
+    ;;
+
   langsmith-check)
     python scripts/check_langsmith_api_clients.py
     ;;
@@ -105,11 +113,15 @@ Commands:
   unified            Run unified repo + docs assistant
   deep-smoke         Run Deep Agent smoke test
   deep               Run main cloudless.gr Deep Agent
+  fast-answer        Fast deterministic app-config answer
   langsmith-check    Check LangSmith API clients
   langsmith-call     Generic LangSmith API caller
   langsmith-page     Paginated LangSmith API caller
   langsmith-stream   Streaming LangSmith API caller
   langsmith-endpoint Registered endpoint caller
 EOF
+    if [ "${1:-help}" != "help" ]; then
+      exit 2
+    fi
     ;;
 esac

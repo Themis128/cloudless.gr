@@ -28,6 +28,8 @@ from agents.tools.cloudless_project_tools import (
     project_tree_summary,
     read_project_file,
 )
+from agents.cloudless_fast_answers import try_fast_answer
+from agents.skill_loader import load_skill_context
 from agents.tools.langsmith_registry_tools import (
     call_registered_langsmith_endpoint,
     describe_langsmith_endpoint,
@@ -297,18 +299,11 @@ def answer_cloudless_constraints() -> str:
 
 
 def ask(question: str) -> str:
+    fast_answer = try_fast_answer(question)
+    if fast_answer is not None:
+        return fast_answer
+
     question_lc = question.lower()
-
-    # Deterministic fast paths: do not call the LLM for registry/config lookups.
-    if "registered langsmith endpoint" in question_lc or "langsmith endpoints" in question_lc:
-        return answer_registered_langsmith_endpoints()
-
-    if "package.json" in question_lc and "script" in question_lc:
-        return answer_package_scripts()
-
-    if "cloudless constraint" in question_lc or "k3s storage" in question_lc:
-        return answer_cloudless_constraints()
-
     skills_context = load_skill_context(question)
 
     repo_docs = []
