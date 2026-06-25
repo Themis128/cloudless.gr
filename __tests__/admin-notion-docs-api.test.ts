@@ -1,18 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { resetIntegrationCache } from "@/lib/integrations";
 
-// ---------------------------------------------------------------------------
-// Hoist mock variables so vi.mock() factories can reference them safely.
-// ---------------------------------------------------------------------------
-const { getDocsMock } = vi.hoisted(() => ({
-  getDocsMock: vi.fn(),
+const { listAllWorkspacesMock, listWorkspaceViewsMock } = vi.hoisted(() => ({
+  listAllWorkspacesMock: vi.fn(),
+  listWorkspaceViewsMock: vi.fn(),
 }));
 
-// ---------------------------------------------------------------------------
-// Mock jose: replace jwtVerify with a decode-only version so tests can use
-// fake-signed tokens without hitting the real Cognito JWKS endpoint.
-// ---------------------------------------------------------------------------
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
   return {
@@ -27,14 +20,15 @@ vi.mock("jose", async () => {
   };
 });
 
-// Mock only the Notion data layer — auth and integrations use real code.
-vi.mock("@/lib/notion-docs", () => ({
-  getDocs: getDocsMock,
-}));
+vi.mock("@/lib/appflowy", async (orig) => {
+  const mod = await orig<typeof import("@/lib/appflowy")>();
+  return {
+    ...mod,
+    listAllWorkspaces: (...a: unknown[]) => listAllWorkspacesMock(...a),
+    listWorkspaceViews: (...a: unknown[]) => listWorkspaceViewsMock(...a),
+  };
+});
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function makeAdminToken(): string {
   const payload = {
     sub: "test-admin-sub",
@@ -61,39 +55,33 @@ function unauthRequest(url: string): NextRequest {
   return new NextRequest(url);
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/notion/docs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetIntegrationCache();
-    process.env.NOTION_API_KEY = "secret_test_key_12345";
-    process.env.NOTION_DOCS_DB_ID = "docs-db-123";
+    vi.resetModules();
+    listAllWorkspacesMock.mockResolvedValue([{ workspace_id: "ws1" }]);
   });
 
   it("returns 401 when not authenticated", async () => {
     const { GET } = await import("@/app/api/admin/notion/docs/route");
     const res = await GET(unauthRequest("http://localhost/api/admin/notion/docs"));
     expect(res.status).toBe(401);
-    expect(getDocsMock).not.toHaveBeenCalled();
+    expect(listWorkspaceViewsMock).not.toHaveBeenCalled();
   });
 
   it("returns 503 when Notion Docs not configured", async () => {
-    vi.stubEnv("NOTION_DOCS_DB_ID", "");
-    resetIntegrationCache();
+    const { AppFlowyNotConfiguredError } = await import("@/lib/appflowy");
+    listAllWorkspacesMock.mockRejectedValue(new AppFlowyNotConfiguredError());
     const { GET } = await import("@/app/api/admin/notion/docs/route");
     const res = await GET(adminRequest("http://localhost/api/admin/notion/docs"));
-    const data = await res.json();
     expect(res.status).toBe(503);
-    expect(data.error).toBe("Notion Docs not configured");
-    expect(getDocsMock).not.toHaveBeenCalled();
+    expect(listWorkspaceViewsMock).not.toHaveBeenCalled();
   });
 
   it("returns all docs including unpublished", async () => {
-    getDocsMock.mockResolvedValueOnce([
-      { id: "d1", title: "Getting Started", published: true, category: "Guides" },
-      { id: "d2", title: "Draft Doc", published: false, category: "Guides" },
+    listWorkspaceViewsMock.mockResolvedValue([
+      { view_id: "d1", name: "Getting Started", layout: "Document", created_at: "2026-01-01", last_edited_time: "2026-06-01" },
+      { view_id: "d2", name: "Draft Doc", layout: "Document", created_at: "2026-01-02", last_edited_time: "2026-06-02" },
     ]);
     const { GET } = await import("@/app/api/admin/notion/docs/route");
     const res = await GET(adminRequest("http://localhost/api/admin/notion/docs"));
@@ -101,12 +89,12 @@ describe("GET /api/admin/notion/docs", () => {
     expect(res.status).toBe(200);
     expect(data.docs).toHaveLength(2);
     expect(data.count).toBe(2);
-    expect(data.docs[0].published).toBe(true);
-    expect(data.docs[1].published).toBe(false);
+    expect(data.docs[0].title).toBe("Getting Started");
+    expect(data.docs[1].title).toBe("Draft Doc");
   });
 
   it("returns empty list when no docs exist", async () => {
-    getDocsMock.mockResolvedValueOnce([]);
+    listWorkspaceViewsMock.mockResolvedValue([]);
     const { GET } = await import("@/app/api/admin/notion/docs/route");
     const res = await GET(adminRequest("http://localhost/api/admin/notion/docs"));
     const data = await res.json();
@@ -115,12 +103,12 @@ describe("GET /api/admin/notion/docs", () => {
     expect(data.count).toBe(0);
   });
 
-  it("returns 503 when NOTION_API_KEY is missing", async () => {
-    vi.stubEnv("NOTION_API_KEY", "");
-    resetIntegrationCache();
+  it("returns 503 when AppFlowy is not configured", async () => {
+    const { AppFlowyNotConfiguredError } = await import("@/lib/appflowy");
+    listAllWorkspacesMock.mockRejectedValue(new AppFlowyNotConfiguredError());
     const { GET } = await import("@/app/api/admin/notion/docs/route");
     const res = await GET(adminRequest("http://localhost/api/admin/notion/docs"));
     expect(res.status).toBe(503);
-    expect(getDocsMock).not.toHaveBeenCalled();
+    expect(listWorkspaceViewsMock).not.toHaveBeenCalled();
   });
 });

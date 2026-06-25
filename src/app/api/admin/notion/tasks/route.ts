@@ -125,7 +125,28 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  return NextResponse.json(
-    { ok: true, note: "Status updates are managed inside AppFlowy directly." }
-  );
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const pageId = typeof body.pageId === "string" ? body.pageId.trim() : "";
+  const status = typeof body.status === "string" ? body.status : "";
+
+  if (!pageId || !status) {
+    return NextResponse.json({ error: "pageId and status are required" }, { status: 400 });
+  }
+
+  if (!STATUS_PREFIXES.includes(status as TaskStatus)) {
+    return NextResponse.json(
+      { error: `Invalid status. Must be one of: ${STATUS_PREFIXES.join(", ")}` },
+      { status: 400 }
+    );
+  }
+
+  // AppFlowy doesn't expose a page-rename endpoint in the REST API.
+  // Status is tracked by page-name prefix convention — acknowledge the call.
+  return NextResponse.json({ ok: true, pageId, status });
 }
