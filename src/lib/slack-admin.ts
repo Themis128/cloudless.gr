@@ -35,8 +35,8 @@ export const SLACK_CHANNELS = {
     name: "deployments",
     topic: "Deploy events from the cloudless.gr CI pipeline",
   },
-  leads: {
-    name: "leads",
+  contacts: {
+    name: "contacts",
     topic: "Contact form submissions and leads from cloudless.gr",
   },
   subscribers: {

@@ -255,7 +255,7 @@ describe("slack-notify", () => {
   });
 
   describe("slackContactNotify", () => {
-    it("posts to #leads with name and email", async () => {
+    it("posts to #contacts with name and email", async () => {
       getSlackConfigAsyncMock.mockResolvedValueOnce({
         SLACK_BOT_TOKEN: "xoxb-x",
       });
@@ -266,7 +266,7 @@ describe("slack-notify", () => {
         message: "Hello",
       });
       const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
-      expect(body.channel).toBe("#leads");
+      expect(body.channel).toBe("#contacts");
       const rendered = JSON.stringify(body);
       expect(rendered).toContain("Themis");
       expect(rendered).toContain("t@x");
