@@ -44,7 +44,7 @@ jobs:
       # image IS in ECR for this SHA, the build effectively succeeded
       # regardless of what the GitHub run shows — short-circuit here.
       - name: configure AWS for ECR check
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
