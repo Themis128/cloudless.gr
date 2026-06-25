@@ -77,6 +77,8 @@ interface AppConfig {
    *  panel to a "configure me" placeholder. */
   KUMA_BASE_URL: string;
   KUMA_STATUS_PAGE_SLUG: string;
+  /** uk1_* API key from Kuma Settings → API Keys. Used in push monitor URLs. */
+  KUMA_API_KEY: string;
   /** Grafana — base URL for the deep-link cards on /admin/cluster. Defaults
    *  to https://grafana.cloudless.gr; left empty when grafana isn't tunnel-
    *  exposed yet (per project_blackbox_in_cluster_probes) — the card then
@@ -275,6 +277,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     MQTT_PASSWORD: params.get("MQTT_PASSWORD") ?? "",
     KUMA_BASE_URL: params.get("KUMA_BASE_URL") ?? "",
     KUMA_STATUS_PAGE_SLUG: params.get("KUMA_STATUS_PAGE_SLUG") ?? "",
+    KUMA_API_KEY: params.get("KUMA_API_KEY") ?? "",
     GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
     GRAFANA_API_TOKEN: params.get("GRAFANA_API_TOKEN") ?? "",
     PROMETHEUS_URL: params.get("PROMETHEUS_URL") ?? "",
@@ -381,6 +384,7 @@ function buildConfigFromEnv(): AppConfig {
     MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
     KUMA_BASE_URL: process.env.KUMA_BASE_URL || "",
     KUMA_STATUS_PAGE_SLUG: process.env.KUMA_STATUS_PAGE_SLUG || "",
+    KUMA_API_KEY: process.env.KUMA_API_KEY || "",
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
     GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
     PROMETHEUS_URL: process.env.PROMETHEUS_URL || "",
