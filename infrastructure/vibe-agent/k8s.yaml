@@ -59,10 +59,10 @@ spec:
         app: vibe-agent
     spec:
       nodeSelector:
-        kubernetes.io/hostname: omv-main
+        kubernetes.io/hostname: omv
       containers:
         - name: vibe
-          image: ghcr.io/tbaltzakis/vibe-agent:latest
+          image: ghcr.io/themis128/vibe-agent:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 2024
