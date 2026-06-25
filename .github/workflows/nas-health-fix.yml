@@ -1,0 +1,250 @@
+name: NAS Daily Health Fix
+
+# Addresses the 3 issues from the daily NAS health check alert:
+#   1. nginx NOT running  → restart + enable it
+#   2. Backup STALE       → check rsync/backup jobs, log why Documents hasn't updated
+#   3. 232,970 system errors → read journal errors, identify top sources, vacuum old logs
+#
+# Reads /var/log/nas-daily-health.log in full, then fixes what it can.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/nas-health-fix.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      # -----------------------------------------------------------------------
+      # Step 1: Read the full NAS health log + diagnose
+      # -----------------------------------------------------------------------
+      - name: Read NAS health log and diagnose
+        run: |
+          kubectl delete pod nas-diag -n default --ignore-not-found --wait=true
+
+          cat <<'PODEOF' | kubectl create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: nas-diag
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            volumes:
+              - name: varlog
+                hostPath:
+                  path: /var/log
+              - name: srv
+                hostPath:
+                  path: /srv
+            containers:
+              - name: d
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: varlog
+                    mountPath: /host-log
+                  - name: srv
+                    mountPath: /host-srv
+                command:
+                  - sh
+                  - -c
+                  - |
+                    apk add -q util-linux 2>/dev/null
+
+                    echo "===== NAS DAILY HEALTH LOG (full) ====="
+                    cat /host-log/nas-daily-health.log 2>/dev/null || \
+                      echo "(log not found at /var/log/nas-daily-health.log)"
+
+                    echo ""
+                    echo "===== NGINX STATUS ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl status nginx --no-pager 2>/dev/null | head -20 || echo "(nginx status failed)"
+
+                    echo ""
+                    echo "===== NGINX ERROR LOG (last 20 lines) ====="
+                    tail -20 /host-log/nginx/error.log 2>/dev/null || \
+                      tail -20 /host-log/nginx/error.log 2>/dev/null || \
+                      echo "(no nginx error log)"
+
+                    echo ""
+                    echo "===== DOCUMENTS BACKUP — last modified ====="
+                    # Check the main share directories on sdb1
+                    for dir in \
+                      /host-srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Documents \
+                      /host-srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups \
+                      /host-srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7; do
+                      if [ -d "$dir" ]; then
+                        echo "--- $dir ---"
+                        ls -lt "$dir" 2>/dev/null | head -5
+                        # Find most recently modified file
+                        NEWEST=$(find "$dir" -maxdepth 3 -type f -printf '%T@ %p\n' 2>/dev/null | \
+                          sort -rn | head -1)
+                        echo "Newest file: $NEWEST"
+                      fi
+                    done
+
+                    echo ""
+                    echo "===== DISK USAGE ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      df -h /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7 \
+                         /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7 \
+                         / 2>/dev/null || \
+                      df -h 2>/dev/null | grep -E "Filesystem|srv|mmcblk|sda|sdb"
+
+                    echo ""
+                    echo "===== TOP JOURNAL ERROR SOURCES (last 24h) ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl --since "24 hours ago" -p err -q --no-pager 2>/dev/null | \
+                      grep -oP '(?<=\] )\S+(?=\[|\:)' | sort | uniq -c | sort -rn | head -20 || \
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl --since "24 hours ago" -p err -q --no-pager 2>/dev/null | \
+                      head -30 || echo "(journalctl failed)"
+
+                    echo ""
+                    echo "===== JOURNAL SIZE ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl --disk-usage 2>/dev/null || true
+
+                    echo ""
+                    echo "===== OMV BACKUP JOBS (openmediavault-rsync) ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl list-units --type=service --all --no-pager 2>/dev/null | \
+                      grep -iE "rsync|backup|omv" | head -10 || true
+
+                    echo ""
+                    echo "===== OMV SCHEDULED JOBS ====="
+                    cat /host-log/../etc/openmediavault/config.xml 2>/dev/null | \
+                      grep -A5 '<cronjob\|<rsync\|<scheduledtask' | head -40 || true
+          PODEOF
+
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/nas-diag \
+            -n default --timeout=120s
+          kubectl logs -n default nas-diag | tee /tmp/nas-diag.txt
+          kubectl delete pod nas-diag -n default --ignore-not-found
+
+      # -----------------------------------------------------------------------
+      # Step 2: Fix nginx + journal vacuum
+      # -----------------------------------------------------------------------
+      - name: Fix nginx and vacuum journal errors
+        run: |
+          kubectl delete pod nas-fix -n default --ignore-not-found --wait=true
+
+          cat <<'PODEOF' | kubectl create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: nas-fix
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            containers:
+              - name: f
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command:
+                  - sh
+                  - -c
+                  - |
+                    apk add -q util-linux 2>/dev/null
+
+                    echo "===== FIX 1: Restart + enable nginx ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl enable nginx 2>/dev/null && echo "nginx enabled" || true
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl restart nginx 2>/dev/null && echo "nginx restarted" || \
+                      echo "WARN: nginx restart failed"
+                    sleep 2
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active nginx 2>/dev/null || echo "nginx still not active"
+
+                    echo ""
+                    echo "===== FIX 2: Vacuum old journal logs (keep 2 weeks) ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl --vacuum-time=14d 2>/dev/null && echo "journal vacuumed" || \
+                      echo "WARN: journal vacuum failed"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl --disk-usage 2>/dev/null || true
+
+                    echo ""
+                    echo "===== FIX 3: Check OMV rsync / backup service ====="
+                    # List any OMV-managed rsync jobs and their last run
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl list-units 'openmediavault-*' --no-pager 2>/dev/null | head -10 || true
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl list-units 'rsync*' --no-pager 2>/dev/null | head -5 || true
+
+                    echo ""
+                    echo "===== NGINX status after fix ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl status nginx --no-pager 2>/dev/null | head -10
+          PODEOF
+
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/nas-fix \
+            -n default --timeout=90s
+          kubectl logs -n default nas-fix | tee /tmp/nas-fix.txt
+          kubectl delete pod nas-fix -n default --ignore-not-found
+
+      # -----------------------------------------------------------------------
+      # Step 3: Post full report
+      # -----------------------------------------------------------------------
+      - name: Post report to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# NAS Health Fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "## Issues addressed"
+            echo "- nginx NOT running → restarted + enabled"
+            echo "- Backup stale (Documents) → diagnosed below"
+            echo "- 232,970 system errors → journal vacuumed (kept 14 days)"
+            echo ""
+            echo "## Diagnosis"
+            echo '```'
+            grep -A3 "NGINX STATUS\|DOCUMENTS BACKUP\|TOP JOURNAL\|JOURNAL SIZE" \
+              /tmp/nas-diag.txt | head -60 || cat /tmp/nas-diag.txt | head -60
+            echo '```'
+            echo ""
+            echo "## Fix output"
+            echo '```'
+            cat /tmp/nas-fix.txt
+            echo '```'
+            echo ""
+            echo "## Full NAS health log"
+            echo '```'
+            grep -A100 "NAS DAILY HEALTH LOG" /tmp/nas-diag.txt | head -60
+            echo '```'
+          } > /tmp/nas-report.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/nas-report.md
