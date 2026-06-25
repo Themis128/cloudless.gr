@@ -139,6 +139,9 @@ jobs:
               - name: patch
                 configMap:
                   name: cf-patch
+              - name: cfdir
+                hostPath:
+                  path: /etc/cloudflared
             containers:
               - name: w
                 image: alpine:3
@@ -147,26 +150,26 @@ jobs:
                 volumeMounts:
                   - name: patch
                     mountPath: /patch
+                  - name: cfdir
+                    mountPath: /host-cf
                 command:
                   - sh
                   - -c
                   - |
                     set -e
                     apk add -q util-linux 2>/dev/null
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
-                      CFG=/etc/cloudflared/config.yml
-                      cp "$CFG" "$CFG.bak.$(date +%s)"
-                      cp /patch/config.yml "$CFG"
-                      echo "=== grafana entry ===" && grep -A6 "grafana.cloudless.gr" "$CFG"
-                      echo "=== kuma entry ===" && grep -A4 "kuma.cloudless.gr" "$CFG"
-                      echo "=== n8n entry ===" && grep -A6 "n8n.cloudless.gr" "$CFG"
+                    cp /host-cf/config.yml /host-cf/config.yml.bak
+                    cp /patch/config.yml /host-cf/config.yml
+                    echo "=== grafana entry ===" && grep -A4 "grafana.cloudless.gr" /host-cf/config.yml
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
-                      sleep 3
-                      systemctl is-active cloudflared && echo "cloudflared OK on omv"
-                    '
+                    sleep 3
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active cloudflared
+                    echo "cloudflared OK on omv"
           PODEOF
 
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-omv -n default --timeout=120s || true
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-omv -n default --timeout=120s
           kubectl logs -n default cf-apply-omv
           kubectl delete pod -n default cf-apply-omv --ignore-not-found
 
@@ -194,6 +197,9 @@ jobs:
               - name: patch
                 configMap:
                   name: cf-patch
+              - name: cfdir
+                hostPath:
+                  path: /etc/cloudflared
             containers:
               - name: w
                 image: alpine:3
@@ -202,21 +208,23 @@ jobs:
                 volumeMounts:
                   - name: patch
                     mountPath: /patch
+                  - name: cfdir
+                    mountPath: /host-cf
                 command:
                   - sh
                   - -c
                   - |
                     set -e
                     apk add -q util-linux 2>/dev/null
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
-                      CFG=/etc/cloudflared/config.yml
-                      cp "$CFG" "$CFG.bak.$(date +%s)"
-                      cat /proc/1/root/patch/config.yml > "$CFG"
-                      echo "=== grafana entry ===" && grep -A3 "grafana.cloudless.gr" "$CFG"
+                    cp /host-cf/config.yml /host-cf/config.yml.bak
+                    cp /patch/config.yml /host-cf/config.yml
+                    echo "=== grafana entry ===" && grep -A4 "grafana.cloudless.gr" /host-cf/config.yml
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
-                      sleep 3
-                      systemctl is-active cloudflared && echo "cloudflared OK on omv-ha"
-                    '
+                    sleep 3
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active cloudflared
+                    echo "cloudflared OK on omv-ha"
           PODEOF
 
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-ha -n default --timeout=120s || true
