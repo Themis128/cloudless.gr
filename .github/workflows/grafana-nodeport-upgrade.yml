@@ -1,0 +1,86 @@
+name: Grafana NodePort upgrade (expose port 30850)
+
+# Upgrades kube-prometheus-stack Helm release to expose Grafana as NodePort 30850
+# so the Cloudflare tunnel rule can reach it.
+#
+# Trigger: workflow_dispatch, or push to the values file or this workflow.
+# Safe to re-run: Helm upgrades are idempotent.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/grafana-nodeport-upgrade.yml"
+      - "infrastructure/monitoring/kube-prom-stack-values.yaml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl + Helm
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl version --client
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash -s -- --version v3.17.0 2>&1 | tail -3
+          helm version --short
+
+      - name: Add prometheus-community Helm repo
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+
+      - name: Upgrade kube-prometheus-stack (expose Grafana NodePort 30850)
+        run: |
+          helm upgrade kube-prom prometheus-community/kube-prometheus-stack \
+            --namespace monitoring \
+            --values infrastructure/monitoring/kube-prom-stack-values.yaml \
+            --reuse-values \
+            --timeout 5m \
+            --wait 2>&1 | tee helm-upgrade.log
+
+      - name: Verify Grafana NodePort service
+        run: |
+          echo "=== Grafana service ==="
+          kubectl get svc -n monitoring kube-prom-stack-grafana -o wide 2>/dev/null || \
+            kubectl get svc -n monitoring | grep grafana
+          echo "=== Grafana pods ==="
+          kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana
+          echo "=== NodePort 30850 ==="
+          kubectl get svc -n monitoring -o json | \
+            python3 -c "import sys,json; svcs=json.load(sys.stdin)['items']; [print(s['metadata']['name'], [p for p in s.get('spec',{}).get('ports',[]) if p.get('nodePort')==30850]) for s in svcs if any(p.get('nodePort')==30850 for p in s.get('spec',{}).get('ports',[]))]" || \
+            echo "(no service on NodePort 30850 yet)"
+          echo "=== Health check ==="
+          curl -s -o /dev/null -w "grafana.cloudless.gr: %{http_code}\n" \
+            https://grafana.cloudless.gr/api/health --max-time 15 || echo "grafana.cloudless.gr: ERR"
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Grafana NodePort upgrade — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo
+            echo '```'
+            cat helm-upgrade.log 2>/dev/null | tail -20 || echo '(no log)'
+            echo
+            kubectl get svc -n monitoring kube-prom-stack-grafana 2>/dev/null || true
+            curl -s -o /dev/null -w "grafana.cloudless.gr HTTP: %{http_code}" \
+              https://grafana.cloudless.gr/api/health --max-time 15 || echo "grafana.cloudless.gr: ERR"
+            echo '```'
+          } > upgrade-comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file upgrade-comment.md
