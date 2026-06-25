@@ -250,7 +250,7 @@ const bookingsClient = new SlackClient({ channel: "#bookings" });
 const ordersClient = new SlackClient({ channel: "#orders" });
 const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
-const contactsClient = new SlackClient({ channel: "#leads" });
+const contactsClient = new SlackClient({ channel: "#contacts" });
 const subscribersClient = new SlackClient({ channel: "#subscribers" });
 
 /**
