@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Callable
+from collections.abc import Callable
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent

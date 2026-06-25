@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 
 from agents.cloudless_research_agent import agent
 from agents.tools.langchain_docs import (
+    fetch_langchain_doc_pages,
     load_langchain_docs_index,
     search_langchain_docs_index,
-    fetch_langchain_doc_pages,
 )
 
 load_dotenv(".env.local")
