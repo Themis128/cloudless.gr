@@ -186,6 +186,9 @@ async function createPage({ token, workspaceId, parentViewId, title, blocks, vie
     collab_id: viewId, // MUST equal view_id — see weironz/appflowy_mcp importer.py
   };
 
+  // Working-directory boundary check above ensures filePath is within cwd.
+  // Uploading parsed markdown blocks to the configured AppFlowy instance is intentional.
+  // lgtm[js/file-data-in-outbound-request]
   const res = await fetch(`${baseUrl}/api/workspace/${workspaceId}/page-view`, {
     method: "POST",
     headers: {
