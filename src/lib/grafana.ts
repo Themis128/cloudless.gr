@@ -130,3 +130,95 @@ export async function upsertDashboard(
   const data = (await res.json()) as { uid: string; url: string; version: number };
   return data;
 }
+
+// ---------------------------------------------------------------------------
+// Datasource management (Prometheus sync)
+// ---------------------------------------------------------------------------
+
+export interface GrafanaDatasource {
+  id: number;
+  uid: string;
+  name: string;
+  type: string;
+  url: string;
+  access: "proxy" | "direct";
+  isDefault: boolean;
+}
+
+export async function listDatasources(): Promise<GrafanaDatasource[]> {
+  const res = await grafanaFetch("/datasources");
+  if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
+  return (await res.json()) as GrafanaDatasource[];
+}
+
+export async function getDatasourceByName(name: string): Promise<GrafanaDatasource | null> {
+  const sources = await listDatasources();
+  return sources.find((s) => s.name === name) ?? null;
+}
+
+/**
+ * Ensure a Prometheus datasource named `name` pointing at `prometheusUrl`
+ * exists and is the default datasource. Creates if missing, updates URL if changed.
+ */
+export async function syncPrometheusDatasource(
+  prometheusUrl: string,
+  name = "Prometheus"
+): Promise<GrafanaDatasource> {
+  const existing = await getDatasourceByName(name);
+
+  const payload = {
+    name,
+    type: "prometheus",
+    url: prometheusUrl,
+    access: "proxy",
+    isDefault: true,
+    jsonData: { httpMethod: "POST", timeInterval: "15s" },
+  };
+
+  if (existing) {
+    if (existing.url === prometheusUrl) return existing;
+    const res = await grafanaFetch(`/datasources/${existing.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...payload, id: existing.id, uid: existing.uid }),
+    });
+    if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
+    return (await res.json()) as GrafanaDatasource;
+  }
+
+  const res = await grafanaFetch("/datasources", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
+  const created = (await res.json()) as { datasource: GrafanaDatasource };
+  return created.datasource;
+}
+
+// ---------------------------------------------------------------------------
+// Prometheus instant query (via Grafana datasource proxy)
+// ---------------------------------------------------------------------------
+
+export interface PrometheusQueryResult {
+  metric: Record<string, string>;
+  value: [number, string];
+}
+
+/**
+ * Run a PromQL instant query via the Grafana datasource proxy.
+ * The datasource UID is resolved automatically from the "Prometheus" datasource.
+ */
+export async function prometheusQuery(query: string): Promise<PrometheusQueryResult[]> {
+  const ds = await getDatasourceByName("Prometheus");
+  if (!ds) throw new Error('No "Prometheus" datasource configured in Grafana');
+  const qs = new URLSearchParams({ query, time: String(Math.floor(Date.now() / 1000)) });
+  const res = await grafanaFetch(
+    `/datasources/proxy/uid/${encodeURIComponent(ds.uid)}/api/v1/query?${qs.toString()}`
+  );
+  if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
+  const body = (await res.json()) as {
+    status: string;
+    data: { resultType: string; result: PrometheusQueryResult[] };
+  };
+  if (body.status !== "success") throw new Error(`Prometheus query failed: ${body.status}`);
+  return body.data.result;
+}
