@@ -1,0 +1,151 @@
+{
+  "name": "Postiz UTM guard — alert #campaigns on missing UTM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "postiz-published",
+        "options": {
+          "responseMode": "responseNode"
+        }
+      },
+      "name": "Webhook (postiz-published)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "postiz-published"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "postUrl",
+              "value": "={{ $json.body.postUrl || $json.body.url || $json.body.link || '' }}"
+            },
+            {
+              "name": "platform",
+              "value": "={{ $json.body.platform || $json.body.integration || 'unknown' }}"
+            },
+            {
+              "name": "scheduledAt",
+              "value": "={{ $json.body.scheduledAt || $json.body.publishedAt || $json.body.date || '' }}"
+            },
+            {
+              "name": "contentSnippet",
+              "value": "={{ ($json.body.content || $json.body.message || '').slice(0, 120) }}"
+            }
+          ]
+        }
+      },
+      "name": "Extract post fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.postUrl }}",
+              "operation": "contains",
+              "value2": "utm_source="
+            }
+          ]
+        }
+      },
+      "name": "Has UTM source?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"note\": \"UTM present — no alert needed\" }"
+      },
+      "name": "Respond OK (UTM present)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"channel\": \"#campaigns\",\n  \"text\": \"⚠️ Postiz post published without UTM params\",\n  \"username\": \"Cloudless\",\n  \"icon_url\": \"https://cloudless.gr/icons/icon-512.png\",\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": { \"type\": \"plain_text\", \"text\": \"⚠️ Post published without UTM params\", \"emoji\": true }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"*Platform:* {{ $json.platform }}\\n*URL:* {{ $json.postUrl || '(no URL in post)' }}\\n*Scheduled:* {{ $json.scheduledAt }}\\n*Content:* {{ $json.contentSnippet }}...\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Add UTM params to your post link:\\n`?utm_source=linkedin&utm_medium=social&utm_campaign=<slug>&utm_content=<variant>`\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": { \"type\": \"plain_text\", \"text\": \"Open Postiz\", \"emoji\": true },\n          \"url\": \"https://postiz.cloudless.gr\",\n          \"style\": \"danger\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "name": "Alert #campaigns (missing UTM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Slack Bot Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"note\": \"UTM missing — alert sent to #campaigns\" }"
+      },
+      "name": "Respond OK (alert sent)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    }
+  ],
+  "connections": {
+    "Webhook (postiz-published)": {
+      "main": [
+        [
+          { "node": "Extract post fields", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract post fields": {
+      "main": [
+        [
+          { "node": "Has UTM source?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Has UTM source?": {
+      "main": [
+        [
+          { "node": "Respond OK (UTM present)", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Alert #campaigns (missing UTM)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Alert #campaigns (missing UTM)": {
+      "main": [
+        [
+          { "node": "Respond OK (alert sent)", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["postiz", "campaigns", "utm", "slack"]
+}
