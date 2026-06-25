@@ -86,6 +86,10 @@ interface AppConfig {
    *  src/lib/grafana.ts dashboard CRUD client. Optional — empty disables the
    *  /api/admin/grafana/* routes which then return 503. */
   GRAFANA_API_TOKEN: string;
+  /** In-cluster Prometheus base URL. Used by the Grafana datasource sync route
+   *  to ensure the Prometheus datasource is wired in Grafana.
+   *  Default: http://kube-prom-stack-kube-prome-prometheus.monitoring.svc.cluster.local:9090 */
+  PROMETHEUS_URL: string;
   /** ntfy — push notification broker (https://ntfy.sh-compat). Base URL +
    *  default topic + optional access token. Used by the cluster alert-api +
    *  any Lambda that wants to push a notification to the operator's phone. */
@@ -273,6 +277,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     KUMA_STATUS_PAGE_SLUG: params.get("KUMA_STATUS_PAGE_SLUG") ?? "",
     GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
     GRAFANA_API_TOKEN: params.get("GRAFANA_API_TOKEN") ?? "",
+    PROMETHEUS_URL: params.get("PROMETHEUS_URL") ?? "",
     NTFY_BASE_URL: params.get("NTFY_BASE_URL") ?? "",
     NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
     NTFY_TOKEN: params.get("NTFY_TOKEN") ?? "",
@@ -378,6 +383,7 @@ function buildConfigFromEnv(): AppConfig {
     KUMA_STATUS_PAGE_SLUG: process.env.KUMA_STATUS_PAGE_SLUG || "",
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
     GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
+    PROMETHEUS_URL: process.env.PROMETHEUS_URL || "",
     NTFY_BASE_URL: process.env.NTFY_BASE_URL || "",
     NTFY_TOPIC: process.env.NTFY_TOPIC || "",
     NTFY_TOKEN: process.env.NTFY_TOKEN || "",
