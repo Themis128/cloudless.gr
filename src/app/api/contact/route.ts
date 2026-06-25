@@ -103,33 +103,9 @@ export async function POST(request: Request) {
     const lead = scoreLead({ email, service, company, message: String(message), attribution });
     const attributionSummary = attribution ? formatAttribution(attribution) : undefined;
 
-    Promise.allSettled([
-      slackContactNotify({
-        name,
-        email,
-        phone,
-        company,
-        service,
-        message,
-        leadScore: lead.score,
-        leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
-        attributionSummary,
-      }),
-      recordNotification({
-        category: "contact",
-        type: "info",
-        title: `New contact: ${String(name)}`,
-        message: String(message).slice(0, 500),
-        actor: String(email),
-        route: "/api/contact",
-        metadata: {
-          company: company || null,
-          service: service || null,
-          leadScore: lead.score,
-          leadBand: lead.band,
-        },
-      }),
-      (async () => {
+    // EspoCRM runs first so we have the contact ID for the Slack deep-link.
+    const espoContactId = await (async () => {
+      try {
         const contactId = await upsertContact({
           email,
           firstname: nameParts[0] ?? "",
@@ -151,7 +127,7 @@ export async function POST(request: Request) {
         }
         const dealId = await createDeal({
           dealname: `Lead – ${String(name).slice(0, 80)} (${service || "General"})`,
-          dealstage: "qualifiedtobuy",
+          dealstage: "Prospecting",
           lead_source: "contact_form",
           description: String(message).slice(0, 500),
           service_interest: serviceSlug,
@@ -159,7 +135,40 @@ export async function POST(request: Request) {
         if (dealId && contactId) {
           await associateDealWithContact(dealId, contactId);
         }
-      })(),
+        return contactId;
+      } catch (err) {
+        console.error("[Contact] EspoCRM sync failed:", err);
+        return null;
+      }
+    })();
+
+    Promise.allSettled([
+      slackContactNotify({
+        name,
+        email,
+        phone,
+        company,
+        service,
+        message,
+        leadScore: lead.score,
+        leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
+        attributionSummary,
+        espoContactId,
+      }),
+      recordNotification({
+        category: "contact",
+        type: "info",
+        title: `New contact: ${String(name)}`,
+        message: String(message).slice(0, 500),
+        actor: String(email),
+        route: "/api/contact",
+        metadata: {
+          company: company || null,
+          service: service || null,
+          leadScore: lead.score,
+          leadBand: lead.band,
+        },
+      }),
       saveSubmission({
         name,
         email,
@@ -177,7 +186,7 @@ export async function POST(request: Request) {
       }),
     ])
       .then((results) => {
-        const labels = ["slack", "hubspot", "notion", "activecampaign"];
+        const labels = ["slack", "notification", "notion", "activecampaign"];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
