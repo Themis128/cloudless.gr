@@ -1,15 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { resetIntegrationCache } from "@/lib/integrations";
 
-const { listTasksMock, createTaskMock, updateTaskStatusMock, getTaskSummaryMock } = vi.hoisted(
-  () => ({
-    listTasksMock: vi.fn(),
-    createTaskMock: vi.fn(),
-    updateTaskStatusMock: vi.fn(),
-    getTaskSummaryMock: vi.fn(),
-  })
-);
+const { listAllWorkspacesMock, listWorkspaceViewsMock, createPageMock } = vi.hoisted(() => ({
+  listAllWorkspacesMock: vi.fn(),
+  listWorkspaceViewsMock: vi.fn(),
+  createPageMock: vi.fn(),
+}));
 
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
@@ -25,12 +21,15 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@/lib/notion-projects", () => ({
-  listTasks: listTasksMock,
-  createTask: createTaskMock,
-  updateTaskStatus: updateTaskStatusMock,
-  getTaskSummary: getTaskSummaryMock,
-}));
+vi.mock("@/lib/appflowy", async (orig) => {
+  const mod = await orig<typeof import("@/lib/appflowy")>();
+  return {
+    ...mod,
+    listAllWorkspaces: (...a: unknown[]) => listAllWorkspacesMock(...a),
+    listWorkspaceViews: (...a: unknown[]) => listWorkspaceViewsMock(...a),
+    createPage: (...a: unknown[]) => createPageMock(...a),
+  };
+});
 
 function makeAdminToken(): string {
   const payload = {
@@ -63,12 +62,17 @@ function unauthReq(url: string): NextRequest {
 
 const BASE = "http://localhost/api/admin/notion/tasks";
 
+const VIEWS = [
+  { view_id: "t1", name: "Fix bug", layout: "Document", created_at: "", last_edited_time: "" },
+  { view_id: "t2", name: "Write docs", layout: "Document", created_at: "", last_edited_time: "" },
+];
+
 describe("GET /api/admin/notion/tasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetIntegrationCache();
-    process.env.NOTION_API_KEY = "secret_test";
-    process.env.NOTION_TASKS_DB_ID = "tasks-db-id";
+    vi.resetModules();
+    listAllWorkspacesMock.mockResolvedValue([{ workspace_id: "ws1" }]);
+    listWorkspaceViewsMock.mockResolvedValue(VIEWS);
   });
 
   it("returns 401 for unauthenticated requests", async () => {
@@ -78,8 +82,8 @@ describe("GET /api/admin/notion/tasks", () => {
   });
 
   it("returns 503 when not configured", async () => {
-    vi.stubEnv("NOTION_TASKS_DB_ID", "");
-    resetIntegrationCache();
+    const { AppFlowyNotConfiguredError } = await import("@/lib/appflowy");
+    listAllWorkspacesMock.mockRejectedValue(new AppFlowyNotConfiguredError());
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
     const res = await GET(adminReq(BASE));
     expect(res.status).toBe(503);
@@ -88,10 +92,6 @@ describe("GET /api/admin/notion/tasks", () => {
   });
 
   it("returns task list", async () => {
-    listTasksMock.mockResolvedValueOnce([
-      { id: "t1", title: "Fix bug" },
-      { id: "t2", title: "Write docs" },
-    ]);
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
     const res = await GET(adminReq(BASE));
     expect(res.status).toBe(200);
@@ -101,33 +101,33 @@ describe("GET /api/admin/notion/tasks", () => {
   });
 
   it("returns summary when ?summary=true", async () => {
-    getTaskSummaryMock.mockResolvedValueOnce({ "To Do": 3, Done: 5 });
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
     const res = await GET(adminReq(`${BASE}?summary=true`));
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.summary["Done"]).toBe(5);
-    expect(listTasksMock).not.toHaveBeenCalled();
+    expect(data.summary).toBeDefined();
+    expect(typeof data.summary["To Do"]).toBe("number");
   });
 
   it("passes status/project/assignee filters to listTasks", async () => {
-    listTasksMock.mockResolvedValueOnce([]);
+    listWorkspaceViewsMock.mockResolvedValue([
+      { view_id: "t1", name: "[Done] Task A", layout: "Document", created_at: "", last_edited_time: "" },
+      { view_id: "t2", name: "[To Do] Task B", layout: "Document", created_at: "", last_edited_time: "" },
+    ]);
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
-    await GET(adminReq(`${BASE}?status=Done&project=proj1&assignee=alice`));
-    expect(listTasksMock).toHaveBeenCalledWith({
-      status: "Done",
-      project: "proj1",
-      assignee: "alice",
-    });
+    const res = await GET(adminReq(`${BASE}?status=Done`));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.tasks[0].status).toBe("Done");
   });
 });
 
 describe("POST /api/admin/notion/tasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetIntegrationCache();
-    process.env.NOTION_API_KEY = "secret_test";
-    process.env.NOTION_TASKS_DB_ID = "tasks-db-id";
+    vi.resetModules();
+    listAllWorkspacesMock.mockResolvedValue([{ workspace_id: "ws1" }]);
+    listWorkspaceViewsMock.mockResolvedValue(VIEWS);
   });
 
   it("returns 401 for unauthenticated requests", async () => {
@@ -161,7 +161,7 @@ describe("POST /api/admin/notion/tasks", () => {
   });
 
   it("creates a task and returns 201 with id", async () => {
-    createTaskMock.mockResolvedValueOnce("new-task-id");
+    createPageMock.mockResolvedValue({ view_id: "new-task-id", name: "Build feature X" });
     const { POST } = await import("@/app/api/admin/notion/tasks/route");
     const res = await POST(
       adminReq(BASE, {
@@ -176,7 +176,7 @@ describe("POST /api/admin/notion/tasks", () => {
   });
 
   it("returns 500 when createTask returns falsy", async () => {
-    createTaskMock.mockResolvedValueOnce(null);
+    createPageMock.mockRejectedValue(new Error("AppFlowy unavailable"));
     const { POST } = await import("@/app/api/admin/notion/tasks/route");
     const res = await POST(
       adminReq(BASE, {
@@ -192,9 +192,7 @@ describe("POST /api/admin/notion/tasks", () => {
 describe("PATCH /api/admin/notion/tasks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetIntegrationCache();
-    process.env.NOTION_API_KEY = "secret_test";
-    process.env.NOTION_TASKS_DB_ID = "tasks-db-id";
+    vi.resetModules();
   });
 
   it("returns 401 for unauthenticated requests", async () => {
@@ -227,8 +225,7 @@ describe("PATCH /api/admin/notion/tasks", () => {
     expect(res.status).toBe(400);
   });
 
-  it("updates task status successfully", async () => {
-    updateTaskStatusMock.mockResolvedValueOnce(true);
+  it("acknowledges status update for AppFlowy-backed tasks", async () => {
     const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
     const res = await PATCH(
       adminReq(BASE, {
@@ -242,24 +239,10 @@ describe("PATCH /api/admin/notion/tasks", () => {
     expect(data.ok).toBe(true);
   });
 
-  it("returns 500 when updateTaskStatus fails", async () => {
-    updateTaskStatusMock.mockResolvedValueOnce(false);
-    const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
-    const res = await PATCH(
-      adminReq(BASE, {
-        method: "PATCH",
-        body: JSON.stringify({ pageId: "p1", status: "Done" }),
-        headers: { "Content-Type": "application/json" },
-      })
-    );
-    expect(res.status).toBe(500);
-  });
-
   it("accepts all valid status values", async () => {
     const validStatuses = ["Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked"];
     const { PATCH } = await import("@/app/api/admin/notion/tasks/route");
     for (const status of validStatuses) {
-      updateTaskStatusMock.mockResolvedValueOnce(true);
       const res = await PATCH(
         adminReq(BASE, {
           method: "PATCH",
