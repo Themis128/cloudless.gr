@@ -68,6 +68,13 @@ try {
 
 async function main() {
   const filePath = resolve(args.file);
+  // Guard against path traversal: only allow files within the current working
+  // directory tree. The AppFlowy endpoint receives this content directly, so
+  // an attacker-controlled path could exfiltrate arbitrary host files.
+  const safeRoot = resolve(process.cwd());
+  if (!filePath.startsWith(safeRoot + "/") && filePath !== safeRoot) {
+    throw new Error(`File path escapes working directory: ${filePath}`);
+  }
   const markdown = await readFile(filePath, "utf8");
   const title = args.title || derivePageTitle(filePath, markdown);
 
