@@ -8,7 +8,14 @@ const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-5
 
 interface Ticket {
   id: string;
-  properties: {
+  // EspoCRM flat fields
+  name?: string;
+  description?: string;
+  priority?: string;
+  status?: string;
+  createdAt?: string;
+  // Fallback HubSpot-style wrapper
+  properties?: {
     subject?: string;
     content?: string;
     hs_pipeline?: string;
@@ -20,11 +27,21 @@ interface Ticket {
 
 const priorityClasses: Record<string, string> = {
   HIGH: "text-red-400 bg-red-400/10",
+  HIGH_ESPO: "text-red-400 bg-red-400/10",
   MEDIUM: "text-yellow-400 bg-yellow-400/10",
   LOW: "text-neon-green bg-neon-green/10",
+  URGENT: "text-red-500 bg-red-500/10",
 };
 
+// EspoCRM status values map to display labels
 const stageLabels: Record<string, string> = {
+  New: "New",
+  "Assigned": "Assigned",
+  "Pending": "Pending",
+  "Closed": "Closed",
+  "Rejected": "Rejected",
+  "Duplicate": "Duplicate",
+  // legacy numeric HubSpot stage IDs
   "1": "New",
   "2": "Waiting on contact",
   "3": "Waiting on us",
@@ -79,12 +96,22 @@ export default function AdminTicketsPage() {
     };
   }, [fetchTickets]);
 
+  const getSubject = (t: Ticket) => t.name ?? t.properties?.subject ?? "";
+  const getPriority = (t: Ticket) =>
+    (t.priority ?? t.properties?.hs_ticket_priority ?? "").toUpperCase();
+  const getStatus = (t: Ticket) => t.status ?? t.properties?.hs_pipeline_stage ?? "";
+  const getDate = (t: Ticket) => t.createdAt ?? t.properties?.createdate ?? "";
+  const isClosed = (t: Ticket) => {
+    const s = getStatus(t);
+    return s === "Closed" || s === "Rejected" || s === "Duplicate" || s === "4";
+  };
+
   const filtered = tickets.filter((t) => {
     const q = search.toLowerCase();
-    return (t.properties.subject ?? "").toLowerCase().includes(q);
+    return getSubject(t).toLowerCase().includes(q);
   });
 
-  const open = tickets.filter((t) => t.properties.hs_pipeline_stage !== "4").length;
+  const open = tickets.filter((t) => !isClosed(t)).length;
 
   let mainContent: React.ReactElement;
   if (loading) {
@@ -99,7 +126,7 @@ export default function AdminTicketsPage() {
         <p className="font-mono text-sm text-red-400">{error}</p>
         <p className="mt-2 text-xs text-slate-500">
           {error === "EspoCRM not configured"
-            ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
+            ? "Set ESPOCRM_BASE_URL and ESPOCRM_API_KEY in SSM to enable CRM."
             : "Check your EspoCRM API key configuration."}
         </p>
       </div>
@@ -119,15 +146,16 @@ export default function AdminTicketsPage() {
             </thead>
             <tbody>
               {filtered.map((t) => {
-                const priority = t.properties.hs_ticket_priority?.toUpperCase() ?? "";
-                const stage = t.properties.hs_pipeline_stage ?? "";
+                const priority = getPriority(t);
+                const status = getStatus(t);
+                const closed = isClosed(t);
                 return (
                   <tr
                     key={t.id}
                     className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
                   >
                     <td className="max-w-xs px-6 py-4 text-white">
-                      <span className="line-clamp-2">{t.properties.subject || "—"}</span>
+                      <span className="line-clamp-2">{getSubject(t) || "—"}</span>
                     </td>
                     <td className="px-6 py-4">
                       {priority ? (
@@ -142,14 +170,14 @@ export default function AdminTicketsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${stage === "4" ? "text-neon-green bg-neon-green/10" : "bg-yellow-400/10 text-yellow-400"}`}
+                        className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${closed ? "text-neon-green bg-neon-green/10" : "bg-yellow-400/10 text-yellow-400"}`}
                       >
-                        {stageLabels[stage] ?? (stage || "—")}
+                        {stageLabels[status] ?? (status || "—")}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {t.properties.createdate
-                        ? new Date(t.properties.createdate).toLocaleDateString("en-IE")
+                      {getDate(t)
+                        ? new Date(getDate(t)).toLocaleDateString("en-IE")
                         : "—"}
                     </td>
                   </tr>

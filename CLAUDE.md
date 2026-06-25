@@ -108,6 +108,96 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
 - **Verify load artifacts solo before changing code.** Under full-suite load the dev server can transiently 404 a real API route (seen once on `POST /api/admin/ai/analytics-orchestration/pdf`, both projects + retries). Re-run the failing spec alone first — if it passes (route verified: unauth → 401), it's a dev-server race, not a regression. Never widen a security assertion (e.g. adding 404 to "unauth must be 401/403") to absorb such flakes.
 - Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/notion-integration-reshare.md`](docs/notion-integration-reshare.md). **Note:** The content-publishing workflows (sitemap sync, newsletter, article draft) were migrated from Notion to AppFlowy on 2026-06-25 — see section below.
 
+## VIBE Agentic Dev Workspace (live 2026-06-25)
+
+VIBE is a project-agnostic agentic dev workspace at `/home/tbaltzakis/VIBE/` that wraps the local vLLM server (Qwen2.5-Coder-7B, port 8080) with LangGraph and exposes all-layer tools for any project.
+
+### Structure
+
+```
+/home/tbaltzakis/VIBE/
+  agent/              LangGraph agent server (port 2024)
+    src/graph.py      3 compiled graphs: vibe_agent, vibe_coding, vibe_research
+    src/tools.py      18 tools across all layers (see below)
+    langgraph.json    server config pointing at all 3 graphs
+    .env              LangSmith + vLLM + project env vars
+    requirements.txt  Python deps
+  scripts/
+    start.sh          start vLLM health-check + LangGraph server + UI
+    stop.sh           stop by PID or port
+    load-project.sh   switch active project (path or GitHub URL)
+  ui/
+    server.py         project-picker web UI on port 3001
+  projects/           cloned repos live here
+```
+
+### Tools (all 18 wired into every graph)
+
+| Category | Tools |
+|----------|-------|
+| File | `read_file`, `write_file`, `list_files`, `grep` |
+| Shell | `bash`, `pnpm`, `git` |
+| Cluster | `kubectl`, `pod_logs`, `pod_list` |
+| CI/CD | `gh`, `ci_status` |
+| Observability | `langsmith_runs`, `langsmith_run_detail` |
+| Secrets | `ssm_get`, `ssm_list` |
+| CRM | `espocrm_query` |
+| Content | `appflowy_pages` |
+
+### Graphs
+
+| Graph | Use when |
+|-------|----------|
+| `vibe_agent` | Interactive chat + tool use (default, streaming) |
+| `vibe_coding` | Deep coding task — Understand → Plan → Code → Review → Fix |
+| `vibe_research` | Codebase investigation — Plan → Search → Analyze → Synthesize |
+
+### How to use
+
+```bash
+# Start (assumes vLLM already running on 8080)
+cd /home/tbaltzakis/VIBE && ./scripts/start.sh
+
+# Switch project
+./scripts/load-project.sh /home/tbaltzakis/my-other-app
+./scripts/load-project.sh https://github.com/owner/repo
+./scripts/load-project.sh          # interactive picker
+
+# Open LangGraph Studio
+# → https://smith.langchain.com/studio/?baseUrl=http://localhost:2024
+
+# Open project picker UI
+# → http://localhost:3001
+```
+
+### LangSmith
+
+- Project `vibe-agent` — VIBE coding session traces
+- Project `vllm-agents` — raw vLLM inference traces
+- Project `cloudless-gr` — cloudless.gr app traces (keep separate)
+- MCP server added to `mcp.json` — LangSmith tools available in Claude Code sessions (requires `uvx`)
+
+### LangSmith env vars (official, from docs.langchain.com/langsmith)
+
+```
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_pt_...
+LANGSMITH_PROJECT=<project-name>
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+```
+Legacy `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` are NOT used (removed from vLLM .env).
+
+### k3s pod (always-on, internet access)
+
+`infrastructure/vibe-agent/k8s.yaml` deploys the VIBE agent server as a k3s pod at `agent.cloudless.gr` (port 2024) and `vibe.cloudless.gr` (port 3001).
+
+**Pending before deploying to k3s:**
+1. Build Docker image: `docker build -t ghcr.io/tbaltzakis/vibe-agent:latest /home/tbaltzakis/VIBE/agent/`
+2. Push: `docker push ghcr.io/tbaltzakis/vibe-agent:latest`
+3. `kubectl create secret generic vibe-env -n vibe --from-literal=...` (all env vars from agent/.env)
+4. `kubectl apply -f infrastructure/vibe-agent/k8s.yaml`
+5. Append tunnel ingress rules to `/etc/cloudflared/config.yml` and add DNS CNAMEs
+
 ## AppFlowy-Backed Workflows (live 2026-06-25)
 
 Three GitHub Actions workflows use AppFlowy (self-hosted at `appflowy.cloudless.gr`) as their content source. All three passed end-to-end on 2026-06-25.
