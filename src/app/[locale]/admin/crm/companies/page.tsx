@@ -8,7 +8,14 @@ const TH_CLASS = "px-6 py-3 text-left font-mono text-xs font-medium text-slate-5
 
 interface Company {
   id: string;
-  properties: {
+  // EspoCRM flat fields (Account entity)
+  name?: string;
+  website?: string;
+  billingAddressCity?: string;
+  billingAddressCountry?: string;
+  createdAt?: string;
+  // Fallback HubSpot-style wrapper
+  properties?: {
     name?: string;
     domain?: string;
     city?: string;
@@ -65,14 +72,19 @@ export default function AdminCompaniesPage() {
     };
   }, [fetchCompanies]);
 
+  const getName = (c: Company) => c.name ?? c.properties?.name ?? "";
+  const getDomain = (c: Company) => c.website ?? c.properties?.domain ?? "";
+  const getCity = (c: Company) => c.billingAddressCity ?? c.properties?.city ?? "";
+  const getCountry = (c: Company) => c.billingAddressCountry ?? c.properties?.country ?? "";
+  const getDate = (c: Company) => c.createdAt ?? c.properties?.createdate ?? "";
+
   const filtered = companies.filter((c) => {
     const q = search.toLowerCase();
-    const p = c.properties;
     return (
-      (p.name ?? "").toLowerCase().includes(q) ||
-      (p.domain ?? "").toLowerCase().includes(q) ||
-      (p.city ?? "").toLowerCase().includes(q) ||
-      (p.country ?? "").toLowerCase().includes(q)
+      getName(c).toLowerCase().includes(q) ||
+      getDomain(c).toLowerCase().includes(q) ||
+      getCity(c).toLowerCase().includes(q) ||
+      getCountry(c).toLowerCase().includes(q)
     );
   });
 
@@ -89,7 +101,7 @@ export default function AdminCompaniesPage() {
         <p className="font-mono text-sm text-red-400">{error}</p>
         <p className="mt-2 text-xs text-slate-500">
           {error === "EspoCRM not configured"
-            ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
+            ? "Set ESPOCRM_BASE_URL and ESPOCRM_API_KEY in SSM to enable CRM."
             : "Check your EspoCRM API key configuration."}
         </p>
       </div>
@@ -108,36 +120,37 @@ export default function AdminCompaniesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
-                <tr
-                  key={c.id}
-                  className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
-                >
-                  <td className="px-6 py-4 font-medium text-white">{c.properties.name || "—"}</td>
-                  <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
-                    {c.properties.domain ? (
-                      <a
-                        href={`https://${c.properties.domain}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {c.properties.domain}
-                      </a>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-slate-300">
-                    {[c.properties.city, c.properties.country].filter(Boolean).join(", ") || "—"}
-                  </td>
-                  <td className="px-6 py-4 font-mono text-slate-500">
-                    {c.properties.createdate
-                      ? new Date(c.properties.createdate).toLocaleDateString("en-IE")
-                      : "—"}
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((c) => {
+                const domain = getDomain(c);
+                const location = [getCity(c), getCountry(c)].filter(Boolean).join(", ");
+                const date = getDate(c);
+                return (
+                  <tr
+                    key={c.id}
+                    className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-medium text-white">{getName(c) || "—"}</td>
+                    <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
+                      {domain ? (
+                        <a
+                          href={domain.startsWith("http") ? domain : `https://${domain}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {domain}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-slate-300">{location || "—"}</td>
+                    <td className="px-6 py-4 font-mono text-slate-500">
+                      {date ? new Date(date).toLocaleDateString("en-IE") : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center font-mono text-slate-600">
@@ -191,7 +204,7 @@ export default function AdminCompaniesPage() {
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">With Domain</p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading ? "…" : companies.filter((c) => c.properties.domain).length}
+            {loading ? "…" : companies.filter((c) => getDomain(c)).length}
           </p>
         </div>
       </div>

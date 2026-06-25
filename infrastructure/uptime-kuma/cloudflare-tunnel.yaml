@@ -1,0 +1,25 @@
+# Cloudflare Tunnel route: kuma.cloudless.gr → Uptime Kuma NodePort on omv-main
+#
+# Same tunnel as espocrm.cloudless.gr, postiz.cloudless.gr, n8n.cloudless.gr
+# (ID e977a490-58c5-4fdb-9155-86832e3e636a).
+#
+# DNS record to add in Cloudflare (cloudless.gr zone):
+#   kuma.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+#   (proxied=true, TTL=auto)
+#
+# NodePort: 32501 (see infrastructure/uptime-kuma/k8s/uptime-kuma.yaml)
+# Pod runs on omv (Pi 5 — nodeSelector kubernetes.io/hostname: omv).
+#
+# To activate on omv-main (or run fix-selfhosted-tunnels.yml workflow):
+#   1. Append the ingress rule below to /etc/cloudflared/config.yml
+#      BEFORE the catch-all `service: http_status:404` rule.
+#   2. Copy updated config to omv-ha (/etc/cloudflared/config.yml).
+#   3. sudo systemctl restart cloudflared  (on both nodes)
+#   4. Verify: curl -I https://kuma.cloudless.gr/
+---
+ingress_rule:
+  hostname: kuma.cloudless.gr
+  service: http://192.168.1.128:32501
+  originRequest:
+    connectTimeout: 10s
+    tcpKeepAlive: 30s

@@ -89,8 +89,8 @@ const APPS: AppDef[] = [
     name: "Grafana",
     description: "Dashboards · Metrics · Alerts",
     icon: "📊",
-    authMode: "vpn",
-    detail: "Requires VPN / Tailscale — not tunnel-exposed",
+    authMode: "link",
+    detail: "Tunnel-exposed via NodePort 30850 — opens Grafana login",
   },
   {
     key: "kuma",

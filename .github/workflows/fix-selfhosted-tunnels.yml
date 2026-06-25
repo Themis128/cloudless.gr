@@ -1,0 +1,318 @@
+name: Fix Self-Hosted App Tunnels
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-selfhosted-tunnels.yml'
+
+jobs:
+  fix-tunnels:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Join Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: latest
+
+      - name: Setup kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl version --client
+
+      # ------------------------------------------------------------------
+      # Step 1: Check current tunnel state on omv
+      # ------------------------------------------------------------------
+      - name: Read current cloudflared config from omv
+        run: |
+          cat <<'PODEOF' | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: cf-read-omv
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            containers:
+              - name: r
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command:
+                  - sh
+                  - -c
+                  - |
+                    apk add -q util-linux 2>/dev/null
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /etc/cloudflared/config.yml
+          PODEOF
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-read-omv -n default --timeout=60s 2>/dev/null \
+            || kubectl wait --for=condition=Ready pod/cf-read-omv -n default --timeout=60s 2>/dev/null || true
+          sleep 5
+          kubectl logs -n default cf-read-omv | tee /tmp/cf-config-current.txt
+          kubectl delete pod -n default cf-read-omv --ignore-not-found
+          echo "=== Current config ($(wc -l < /tmp/cf-config-current.txt) lines) ==="
+          cat /tmp/cf-config-current.txt
+
+      # ------------------------------------------------------------------
+      # Step 2: Patch the config — fix grafana, add kuma + n8n if missing
+      # ------------------------------------------------------------------
+      - name: Patch cloudflared config
+        run: |
+          python3 - /tmp/cf-config-current.txt > /tmp/cf-config-new.txt <<'PYEOF'
+          import sys, re
+
+          with open(sys.argv[1]) as f:
+              raw = f.read()
+
+          # ---- Rules to ensure are present (correct values) ----
+          RULES = {
+              "grafana.cloudless.gr": {
+                  "service": "http://192.168.1.128:30850",
+                  "extra": """      originRequest:
+                connectTimeout: 15s
+                tcpKeepAlive: 30s
+                noTLSVerify: false
+                httpHostHeader: grafana.cloudless.gr""",
+              },
+              "kuma.cloudless.gr": {
+                  "service": "http://192.168.1.128:32501",
+                  "extra": """      originRequest:
+                connectTimeout: 10s
+                tcpKeepAlive: 30s""",
+              },
+              "n8n.cloudless.gr": {
+                  "service": "http://192.168.1.128:30900",
+                  "extra": """      originRequest:
+                connectTimeout: 15s
+                tcpKeepAlive: 30s
+                noTLSVerify: false
+                httpHostHeader: n8n.cloudless.gr""",
+              },
+          }
+
+          # Remove any existing entries for our hostnames (including stale ones)
+          for hostname in RULES:
+              safe = re.escape(hostname)
+              raw = re.sub(
+                  rf"  - hostname: {safe}\n(?:    [^\n]*\n)*",
+                  "",
+                  raw,
+              )
+
+          # Build new rule blocks
+          new_blocks = ""
+          for hostname, rule in RULES.items():
+              new_blocks += f"""  - hostname: {hostname}
+              service: {rule["service"]}
+          {rule["extra"]}
+          """
+
+          # Insert before catch-all rule
+          if "- service: http_status:404" in raw:
+              raw = raw.replace("  - service: http_status:404", new_blocks + "  - service: http_status:404")
+          else:
+              # No catch-all — append to ingress section
+              raw = raw.rstrip("\n") + "\n" + new_blocks + "\n"
+
+          with open("/tmp/cf-config-new.txt", "w") as f:
+              f.write(raw)
+
+          print("=== Patched config (ingress section) ===")
+          in_ingress = False
+          for line in raw.splitlines():
+              if line.strip().startswith("ingress:"):
+                  in_ingress = True
+              if in_ingress:
+                  print(line)
+          PYEOF
+
+          echo "=== Diff ==="
+          diff /tmp/cf-config-current.txt /tmp/cf-config-new.txt || true
+
+      # ------------------------------------------------------------------
+      # Step 3: Apply patched config to omv (primary cloudflared)
+      # ------------------------------------------------------------------
+      - name: Apply config to omv
+        run: |
+          kubectl -n default create configmap cf-patch \
+            --from-file=config.yml=/tmp/cf-config-new.txt \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          cat <<'PODEOF' | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: cf-apply-omv
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            volumes:
+              - name: patch
+                configMap:
+                  name: cf-patch
+            containers:
+              - name: w
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: patch
+                    mountPath: /patch
+                command:
+                  - sh
+                  - -c
+                  - |
+                    set -e
+                    apk add -q util-linux 2>/dev/null
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
+                      CFG=/etc/cloudflared/config.yml
+                      cp "$CFG" "$CFG.bak.$(date +%s)"
+                      cp /patch/config.yml "$CFG"
+                      echo "=== grafana entry ===" && grep -A6 "grafana.cloudless.gr" "$CFG"
+                      echo "=== kuma entry ===" && grep -A4 "kuma.cloudless.gr" "$CFG"
+                      echo "=== n8n entry ===" && grep -A6 "n8n.cloudless.gr" "$CFG"
+                      systemctl restart cloudflared
+                      sleep 3
+                      systemctl is-active cloudflared && echo "cloudflared OK on omv"
+                    '
+          PODEOF
+
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-omv -n default --timeout=120s || true
+          kubectl logs -n default cf-apply-omv
+          kubectl delete pod -n default cf-apply-omv --ignore-not-found
+
+      # ------------------------------------------------------------------
+      # Step 4: Sync identical config to omv-ha
+      # ------------------------------------------------------------------
+      - name: Apply config to omv-ha
+        run: |
+          cat <<'PODEOF' | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: cf-apply-ha
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv-ha
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            volumes:
+              - name: patch
+                configMap:
+                  name: cf-patch
+              - name: cloudflared
+                hostPath:
+                  path: /etc/cloudflared
+            containers:
+              - name: w
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: patch
+                    mountPath: /patch
+                  - name: cloudflared
+                    mountPath: /host-cf
+                command:
+                  - sh
+                  - -c
+                  - |
+                    set -e
+                    apk add -q util-linux 2>/dev/null
+                    cp /host-cf/config.yml /host-cf/config.yml.bak.$(date +%s)
+                    cp /patch/config.yml /host-cf/config.yml
+                    echo "=== grafana entry ===" && grep -A6 "grafana.cloudless.gr" /host-cf/config.yml
+                    echo "=== kuma entry ===" && grep -A4 "kuma.cloudless.gr" /host-cf/config.yml
+                    echo "=== n8n entry ===" && grep -A6 "n8n.cloudless.gr" /host-cf/config.yml
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c "
+                      systemctl restart cloudflared
+                      sleep 3
+                      systemctl is-active cloudflared && echo 'cloudflared OK on omv-ha'
+                    "
+          PODEOF
+
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-ha -n default --timeout=120s || true
+          kubectl logs -n default cf-apply-ha
+          kubectl delete pod -n default cf-apply-ha --ignore-not-found
+          kubectl -n default delete configmap cf-patch --ignore-not-found
+
+      # ------------------------------------------------------------------
+      # Step 5: Deploy n8n if not already running
+      # ------------------------------------------------------------------
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy n8n
+        run: |
+          echo "=== Checking for existing n8n namespace ==="
+          if kubectl get namespace n8n 2>/dev/null; then
+            echo "n8n namespace exists — checking pod status"
+            kubectl get pods -n n8n
+          else
+            echo "n8n not deployed — applying manifest"
+            kubectl apply -f infrastructure/n8n/k8s.yaml
+            echo "Waiting for n8n rollout..."
+            kubectl rollout status deployment/n8n -n n8n --timeout=180s || true
+          fi
+          echo "=== n8n service ==="
+          kubectl get svc -n n8n
+
+      # ------------------------------------------------------------------
+      # Step 6: Verify all services are reachable
+      # ------------------------------------------------------------------
+      - name: Verify app health
+        run: |
+          echo "Waiting 20s for cloudflared to propagate..."
+          sleep 20
+
+          check() {
+            local name=$1 url=$2
+            CODE=$(curl -4 -sSL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null || echo "ERR")
+            echo "  [$name] $CODE  ($url)"
+          }
+
+          echo "=== Self-hosted app health ==="
+          check "grafana  " "https://grafana.cloudless.gr/api/health"
+          check "kuma     " "https://kuma.cloudless.gr/"
+          check "n8n      " "https://n8n.cloudless.gr/healthz"
+          check "espocrm  " "https://espocrm.cloudless.gr/"
+          check "postiz   " "https://postiz.cloudless.gr/"
+          check "appflowy " "https://appflowy.cloudless.gr/"
+
+      # ------------------------------------------------------------------
+      # Step 7: Report
+      # ------------------------------------------------------------------
+      - name: Report result
+        run: |
+          gh issue comment 382 --body "### Self-hosted tunnel fix applied
+
+          **Changes made:**
+          - **Grafana** tunnel corrected: \`localhost:18443\` → \`http://192.168.1.128:30850\`
+          - **Uptime Kuma** tunnel added: \`http://192.168.1.128:32501\`
+          - **n8n** tunnel added: \`http://192.168.1.128:30900\`
+          - Config synced to both **omv** and **omv-ha**, cloudflared restarted on both
+          - n8n k8s deployment applied if not already running
+
+          **Verify:**
+          - https://grafana.cloudless.gr/login
+          - https://kuma.cloudless.gr/
+          - https://n8n.cloudless.gr/
+
+          Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

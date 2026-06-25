@@ -31,6 +31,16 @@
         "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
       },
       "autoStart": true
+    },
+    "langsmith": {
+      "command": "uvx",
+      "args": [
+        "langsmith-mcp"
+      ],
+      "env": {
+        "LANGSMITH_API_KEY": "${LANGSMITH_API_KEY}"
+      },
+      "autoStart": true
     }
   }
 }
