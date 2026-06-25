@@ -245,14 +245,20 @@ describe("POST /api/admin/notion/comments", () => {
 });
 
 // ── /api/admin/notion/projects ────────────────────────────────────────────────
+// Route now backed by AppFlowy — mock @/lib/appflowy instead of notion-projects.
 
-const mockListProjects = vi.fn();
-const mockCreateProject = vi.fn();
-vi.mock("@/lib/notion-projects", async (orig) => ({
-  ...(await orig<typeof import("@/lib/notion-projects")>()),
-  listProjects: (...a: unknown[]) => mockListProjects(...a),
-  createProject: (...a: unknown[]) => mockCreateProject(...a),
-}));
+const mockListAllWorkspaces = vi.fn();
+const mockListWorkspaceViews = vi.fn();
+const mockCreatePage = vi.fn();
+vi.mock("@/lib/appflowy", async (orig) => {
+  const mod = await orig<typeof import("@/lib/appflowy")>();
+  return {
+    ...mod,
+    listAllWorkspaces: (...a: unknown[]) => mockListAllWorkspaces(...a),
+    listWorkspaceViews: (...a: unknown[]) => mockListWorkspaceViews(...a),
+    createPage: (...a: unknown[]) => mockCreatePage(...a),
+  };
+});
 
 describe("GET /api/admin/notion/projects", () => {
   beforeEach(() => {
@@ -269,7 +275,8 @@ describe("GET /api/admin/notion/projects", () => {
 
   it("returns 503 when not configured", async () => {
     adminOk();
-    mockIsConfiguredAsync.mockResolvedValue(false);
+    const { AppFlowyNotConfiguredError } = await import("@/lib/appflowy");
+    mockListAllWorkspaces.mockRejectedValue(new AppFlowyNotConfiguredError());
     const { GET } = await import("@/app/api/admin/notion/projects/route");
     const res = await GET(req("http://localhost/api/admin/notion/projects"));
     expect(res.status).toBe(503);
@@ -277,8 +284,10 @@ describe("GET /api/admin/notion/projects", () => {
 
   it("returns project list when configured", async () => {
     adminOk();
-    mockIsConfiguredAsync.mockResolvedValue(true);
-    mockListProjects.mockResolvedValue([{ id: "p1", name: "Alpha" }]);
+    mockListAllWorkspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
+    mockListWorkspaceViews.mockResolvedValue([
+      { view_id: "v1", name: "Alpha", layout: "Document", created_at: "", last_edited_time: "" },
+    ]);
     const { GET } = await import("@/app/api/admin/notion/projects/route");
     const res = await GET(req("http://localhost/api/admin/notion/projects"));
     const data = await res.json();
@@ -295,7 +304,7 @@ describe("POST /api/admin/notion/projects", () => {
 
   it("returns 400 when name missing", async () => {
     adminOk();
-    mockIsConfiguredAsync.mockResolvedValue(true);
+    mockListAllWorkspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
     const { POST } = await import("@/app/api/admin/notion/projects/route");
     const res = await POST(req("http://localhost/api/admin/notion/projects", "POST", {}));
     expect(res.status).toBe(400);
@@ -303,7 +312,7 @@ describe("POST /api/admin/notion/projects", () => {
 
   it("returns 400 when name too long", async () => {
     adminOk();
-    mockIsConfiguredAsync.mockResolvedValue(true);
+    mockListAllWorkspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
     const { POST } = await import("@/app/api/admin/notion/projects/route");
     const res = await POST(
       req("http://localhost/api/admin/notion/projects", "POST", { name: "x".repeat(201) })
@@ -313,8 +322,11 @@ describe("POST /api/admin/notion/projects", () => {
 
   it("creates project and returns id", async () => {
     adminOk();
-    mockIsConfiguredAsync.mockResolvedValue(true);
-    mockCreateProject.mockResolvedValue("proj-123");
+    mockListAllWorkspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
+    mockListWorkspaceViews.mockResolvedValue([
+      { view_id: "root-view", name: "Root", layout: "Document", created_at: "", last_edited_time: "" },
+    ]);
+    mockCreatePage.mockResolvedValue({ view_id: "proj-123", name: "New Project" });
     const { POST } = await import("@/app/api/admin/notion/projects/route");
     const res = await POST(
       req("http://localhost/api/admin/notion/projects", "POST", { name: "New Project" })
