@@ -141,9 +141,7 @@ export default function AdminCRMPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 font-mono text-slate-500">
-                    {getDate(c)
-                      ? new Date(getDate(c)).toLocaleDateString("en-IE")
-                      : "—"}
+                    {getDate(c) ? new Date(getDate(c)).toLocaleDateString("en-IE") : "—"}
                   </td>
                 </tr>
               ))}
