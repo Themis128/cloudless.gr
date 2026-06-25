@@ -118,18 +118,34 @@ async function appflowyLogin(): Promise<{ token: string; workspaceId: string; ba
  * AppFlowy pages don't have typed Category/Date properties.
  * Category is inferred from the page name (first matching keyword wins).
  * Date is the page's last_edited_time.
+ * Returns [] if the workspace is empty (no spaces created yet).
  */
 async function fetchRecentPosts(): Promise<RecentPost[]> {
   const { token, workspaceId, base } = await appflowyLogin();
   const res = await fetch(
-    `${base}/api/workspace/${workspaceId}/search?query=blog&limit=12`,
+    `${base}/api/workspace/${workspaceId}/folder?depth=5`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (!res.ok) throw new Error(`AppFlowy search failed: ${res.status}`);
-  const data = (await res.json()) as {
-    data: Array<{ view_id: string; name: string; layout: string; created_at: string; last_edited_time: string }>;
-  };
-  return (data.data ?? [])
+  if (!res.ok) throw new Error(`AppFlowy folder fetch failed: ${res.status}`);
+  const data = (await res.json()) as { code?: number; data?: Record<string, unknown> };
+  // code -2 = workspace is empty (no spaces created yet) — treat as no recent posts
+  if (data.code !== 0) {
+    console.log("[generate-weekly-article] AppFlowy workspace has no content yet — starting fresh");
+    return [];
+  }
+
+  // Flatten the nested view tree
+  const views: Array<{ view_id: string; name: string; layout: string; created_at: string; last_edited_time: string }> = [];
+  function walk(node: Record<string, unknown>) {
+    if (node.view_id && node.name) {
+      views.push(node as typeof views[0]);
+    }
+    const children = (node.children as { views?: Record<string, unknown>[] })?.views ?? [];
+    for (const child of children) walk(child);
+  }
+  walk(data.data ?? {});
+
+  return views
     .filter((v) => v.layout === "Document")
     .slice(0, 12)
     .map((v) => {
@@ -494,15 +510,23 @@ async function createDraftPage(
 ): Promise<{ id: string; url: string }> {
   const { token, workspaceId, base } = await appflowyLogin();
 
-  // Get root view to parent the new page under
+  // Get root view to parent the new page under.
+  // If the workspace is empty (code -2), use the workspace_id as the parent —
+  // AppFlowy will create the first space automatically.
   const folderRes = await fetch(
     `${base}/api/workspace/${workspaceId}/folder?depth=1`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   if (!folderRes.ok) throw new Error(`AppFlowy folder fetch failed: ${folderRes.status}`);
-  const folderData = (await folderRes.json()) as { data: { view_id?: string; views?: Array<{ view_id: string }> } };
-  const parentId = folderData.data?.view_id ?? folderData.data?.views?.[0]?.view_id ?? "";
-  if (!parentId) throw new Error("AppFlowy workspace has no root view");
+  const folderData = (await folderRes.json()) as {
+    code?: number;
+    data?: { view_id?: string; views?: Array<{ view_id: string }> };
+  };
+  // code -2 = empty workspace — fall back to workspace_id as parent
+  const parentId =
+    folderData.code === 0
+      ? (folderData.data?.view_id ?? folderData.data?.views?.[0]?.view_id ?? workspaceId)
+      : workspaceId;
 
   // Convention: "[Review] <title>" queues the page for newsletter publication.
   // "Draft" status means the page name is just the plain title.

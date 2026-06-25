@@ -83,19 +83,39 @@ interface ApprovedPost {
 }
 
 // AppFlowy pages don't have typed "Status" properties.
-// Blog posts pending review are all Document pages under the "Blog" workspace folder.
-// The name prefix "[Review]" marks posts ready for newsletter publication.
+// Blog posts pending review are named "[Review] <title>" in the workspace.
+// Walk the folder tree and collect all Document pages with that prefix.
 async function fetchApprovedPosts(): Promise<ApprovedPost[]> {
   const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
   const { token, workspaceId } = await appflowyLogin();
   const res = await fetch(
-    `${base}/api/workspace/${workspaceId}/search?query=Review&limit=50`,
+    `${base}/api/workspace/${workspaceId}/folder?depth=5`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (!res.ok) throw new Error(`AppFlowy search failed: ${res.status}`);
-  const data = (await res.json()) as { data: Array<{ view_id: string; name: string; layout: string }> };
-  return (data.data ?? [])
-    .filter((v) => v.layout === "Document" && v.name.startsWith("[Review]"))
+  // code -2 = workspace is empty (no spaces created yet) — not an error
+  if (!res.ok) throw new Error(`AppFlowy folder fetch failed: ${res.status}`);
+  const data = (await res.json()) as {
+    code?: number;
+    data?: Record<string, unknown>;
+  };
+  if (data.code !== 0) {
+    console.log("[publish-and-send-newsletter] AppFlowy workspace has no content yet");
+    return [];
+  }
+
+  // Flatten the nested view tree
+  const views: Array<{ view_id: string; name: string; layout: string }> = [];
+  function walk(node: Record<string, unknown>) {
+    if (node.view_id && node.name) {
+      views.push(node as { view_id: string; name: string; layout: string });
+    }
+    const children = (node.children as { views?: Record<string, unknown>[] })?.views ?? [];
+    for (const child of children) walk(child);
+  }
+  walk(data.data ?? {});
+
+  return views
+    .filter((v) => v.layout === "Document" && String(v.name).startsWith("[Review]"))
     .map((v) => {
       const title = v.name.replace(/^\[Review\]\s*/, "").trim();
       return {
