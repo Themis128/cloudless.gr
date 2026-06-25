@@ -91,13 +91,13 @@ spec:
               cpu: 1000m
           livenessProbe:
             httpGet:
-              path: /health
+              path: /ok
               port: 2024
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ok
               port: 2024
             initialDelaySeconds: 15
             periodSeconds: 10
