@@ -176,6 +176,72 @@ export async function listAllUsers(): Promise<AppFlowyUserSummary[]> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Workspace documents / pages (AppFlowy Cloud REST API)
+// ---------------------------------------------------------------------------
+
+export type AppFlowyViewLayout = "Document" | "Grid" | "Board" | "Calendar" | "Chat";
+
+export interface AppFlowyView {
+  view_id: string;
+  parent_view_id: string;
+  name: string;
+  layout: AppFlowyViewLayout;
+  created_at: string;
+  last_edited_time: string;
+  is_favorite?: boolean;
+  extra?: Record<string, unknown>;
+}
+
+export interface AppFlowyDocument {
+  view: AppFlowyView;
+  data?: Record<string, unknown>;
+}
+
+/** List the top-level views (pages) of a workspace. */
+export async function listWorkspaceViews(workspaceId: string): Promise<AppFlowyView[]> {
+  const r = await callThrowing<{ data: AppFlowyView[] }>(
+    `/workspace/${encodeURIComponent(workspaceId)}/folder?depth=2`
+  );
+  return r.data ?? [];
+}
+
+/** Read a single document (page) by view ID. */
+export async function getDocument(workspaceId: string, viewId: string): Promise<AppFlowyDocument> {
+  return callThrowing<AppFlowyDocument>(
+    `/workspace/${encodeURIComponent(workspaceId)}/doc/${encodeURIComponent(viewId)}`
+  );
+}
+
+/** Create a new Document page under a parent view. Returns the new view. */
+export async function createPage(
+  workspaceId: string,
+  parentViewId: string,
+  name: string
+): Promise<AppFlowyView> {
+  const r = await callThrowing<{ data: AppFlowyView }>(
+    `/workspace/${encodeURIComponent(workspaceId)}/page-view`,
+    {
+      method: "POST",
+      body: JSON.stringify({ name, parent_view_id: parentViewId, layout: 0 }),
+    }
+  );
+  return r.data;
+}
+
+/** Search across all documents in a workspace. */
+export async function searchDocuments(
+  workspaceId: string,
+  query: string,
+  limit = 20
+): Promise<AppFlowyView[]> {
+  const qs = new URLSearchParams({ query, limit: String(limit) });
+  const r = await callThrowing<{ data: AppFlowyView[] }>(
+    `/workspace/${encodeURIComponent(workspaceId)}/search?${qs.toString()}`
+  );
+  return r.data ?? [];
+}
+
 /** Lightweight summary for the admin dashboard tile. */
 export async function getAppFlowySummary(): Promise<{
   configured: boolean;

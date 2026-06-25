@@ -1,52 +1,50 @@
+/**
+ * GET /api/admin/notion/search?q=...&limit=20
+ * Backed by AppFlowy workspace search (self-hosted Notion replacement).
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { mapIntegrationError } from "@/lib/api-errors";
-import { searchPages, searchDatabases, listUsers, getDatabaseSchema } from "@/lib/notion-search";
+import { listAllWorkspaces, searchDocuments, listAllUsers, AppFlowyNotConfiguredError } from "@/lib/appflowy";
 
-/**
- * GET /api/admin/notion/search?q=...&type=page|database&limit=20
- *
- * Search Notion pages/databases or list users.
- */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") ?? "";
-  const type = searchParams.get("type") as "page" | "database" | "users" | "schema" | null;
+  const type = searchParams.get("type");
   const limit = Math.min(Number(searchParams.get("limit") ?? 20), 100);
 
   try {
     if (type === "users") {
-      const users = await listUsers();
+      const users = await listAllUsers();
       return NextResponse.json({ users });
     }
 
-    if (type === "schema") {
-      const dbId = searchParams.get("database_id");
-      if (!dbId) {
-        return NextResponse.json({ error: "database_id is required" }, { status: 400 });
-      }
-      const schema = await getDatabaseSchema(dbId);
-      return NextResponse.json({ schema });
+    const workspaces = await listAllWorkspaces();
+    const workspaceId = workspaces[0]?.workspace_id;
+    if (!workspaceId) {
+      return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 503 });
     }
 
-    if (type === "database") {
-      const results = await searchDatabases(q, limit);
-      return NextResponse.json({ results });
+    if (!q) {
+      return NextResponse.json({ results: [], total: 0 });
     }
 
-    // Default: search all
-    const data = await searchPages(q, {
-      filter: type === "page" ? "page" : undefined,
-      limit,
-    });
-    return NextResponse.json(data);
+    const views = await searchDocuments(workspaceId, q, limit);
+    const results = views.map((v) => ({
+      id: v.view_id,
+      title: v.name,
+      type: v.layout,
+      lastEdited: v.last_edited_time,
+      url: `/appflowy/view/${v.view_id}`,
+    }));
+
+    return NextResponse.json({ results, total: results.length });
   } catch (err) {
-    const _r = mapIntegrationError(err);
-    if (_r) return _r;
-    console.error("[API] Search error:", err);
+    if (err instanceof AppFlowyNotConfiguredError) {
+      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 503 });
+    }
     return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
 }
