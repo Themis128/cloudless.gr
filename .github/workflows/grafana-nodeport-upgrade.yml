@@ -75,11 +75,17 @@ jobs:
         run: |
           PASS=$(kubectl get secret -n monitoring kube-prom-grafana \
             -o jsonpath='{.data.admin-password}' | base64 -d)
-          # Use Tailscale IP — LAN IP 192.168.1.128 is not routable from GH-hosted runners
-          BASE="http://100.113.41.119:30850"
+          # Use cluster-internal Grafana ClusterIP service — reachable via kubectl exec
+          GRAFANA_SVC=$(kubectl get svc -n monitoring -l app.kubernetes.io/name=grafana \
+            -o jsonpath='{.items[0].metadata.name}')
+          GRAFANA_POD=$(kubectl get pod -n monitoring -l app.kubernetes.io/name=grafana \
+            -o jsonpath='{.items[0].metadata.name}')
+          echo "Grafana pod: $GRAFANA_POD"
 
           echo "=== Datasources ==="
-          curl -su "admin:$PASS" "$BASE/api/datasources" | \
+          kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --user=admin --password="$PASS" \
+            "http://localhost:3000/api/datasources" | \
             python3 -c "
           import sys, json
           ds = json.load(sys.stdin)
@@ -90,17 +96,22 @@ jobs:
             print(ds)
           "
 
-          DS_ID=$(curl -su "admin:$PASS" "$BASE/api/datasources" | \
+          DS_ID=$(kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --user=admin --password="$PASS" \
+            "http://localhost:3000/api/datasources" | \
             python3 -c "import sys,json; ds=json.load(sys.stdin); \
             print(next((str(d['id']) for d in (ds if isinstance(ds,list) else []) \
             if d['type']=='prometheus'), '1'))")
 
           echo "=== Datasource $DS_ID health ==="
-          curl -su "admin:$PASS" "$BASE/api/datasources/$DS_ID/health" | python3 -m json.tool
+          kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --user=admin --password="$PASS" \
+            "http://localhost:3000/api/datasources/$DS_ID/health" | python3 -m json.tool
 
           echo "=== Prometheus 'up' metric (first 8 targets) ==="
-          curl -su "admin:$PASS" \
-            "$BASE/api/datasources/proxy/$DS_ID/api/v1/query?query=up" | \
+          kubectl exec -n monitoring "$GRAFANA_POD" -- \
+            wget -qO- --user=admin --password="$PASS" \
+            "http://localhost:3000/api/datasources/proxy/$DS_ID/api/v1/query?query=up" | \
             python3 -c "
           import sys, json
           r = json.load(sys.stdin)
