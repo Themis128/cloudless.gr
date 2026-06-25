@@ -250,7 +250,7 @@ const bookingsClient = new SlackClient({ channel: "#bookings" });
 const ordersClient = new SlackClient({ channel: "#orders" });
 const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
-const contactsClient = new SlackClient({ channel: "#notifications" });
+const contactsClient = new SlackClient({ channel: "#leads" });
 const subscribersClient = new SlackClient({ channel: "#subscribers" });
 
 /**
@@ -411,6 +411,8 @@ export async function slackContactNotify(data: {
   leadBand?: string;
   /** One-line attribution summary (UTM/referrer/landing page). */
   attributionSummary?: string;
+  /** EspoCRM Contact ID \u2014 used to build a deep-link button. */
+  espoContactId?: string | null;
 }): Promise<boolean> {
   const safeName = slackEscape(data.name);
   const safeEmail = slackEscape(data.email);
@@ -431,15 +433,34 @@ export async function slackContactNotify(data: {
   if (data.attributionSummary) {
     detailLines.push(`*Attribution:* ${slackEscape(data.attributionSummary).slice(0, 500)}`);
   }
+
+  const blocks: BlockKitBlock[] = [
+    headerBlock("\ud83d\udce8 New Contact Form Submission"),
+    sectionBlock(detailLines.join("\n")),
+    divider,
+    sectionBlock(`*Message:*\n${safeMessage}`),
+  ];
+
+  if (data.espoContactId) {
+    const espoUrl = `https://espocrm.cloudless.gr/#Contact/view/${data.espoContactId}`;
+    blocks.push({
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: { type: "plain_text", text: "Open in EspoCRM", emoji: true },
+          url: espoUrl,
+          style: "primary",
+        },
+      ],
+    });
+  }
+
+  blocks.push(contextBlock(slackTimestamp(), "cloudless.gr contact form"));
+
   return contactsClient.post({
     text: `New contact from ${safeName} (${safeEmail})`,
-    blocks: [
-      headerBlock("\ud83d\udce8 New Contact Form Submission"),
-      sectionBlock(detailLines.join("\n")),
-      divider,
-      sectionBlock(`*Message:*\n${safeMessage}`),
-      contextBlock(slackTimestamp(), "cloudless.gr contact form"),
-    ],
+    blocks,
     icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
   });
