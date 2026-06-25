@@ -160,13 +160,11 @@ curl http://127.0.0.1:8001/v1/models
     raise SystemExit(0)
 
 formatted_matches = "\n".join(
-    f"{i + 1}. {match['title']} - {match['url']}"
-    for i, match in enumerate(matches)
+    f"{i + 1}. {match['title']} - {match['url']}" for i, match in enumerate(matches)
 )
 
 formatted_pages = "\n\n".join(
-    f"PAGE {i + 1}\nURL: {page['url']}\nCONTENT:\n{page['content']}"
-    for i, page in enumerate(pages)
+    f"PAGE {i + 1}\nURL: {page['url']}\nCONTENT:\n{page['content']}" for i, page in enumerate(pages)
 )
 
 result = agent.invoke(

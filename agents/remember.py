@@ -58,8 +58,6 @@ if __name__ == "__main__":
     note = " ".join(sys.argv[1:]).strip()
 
     if not note:
-        raise SystemExit(
-            'Usage: PYTHONPATH=. python agents/remember.py "memory note"'
-        )
+        raise SystemExit('Usage: PYTHONPATH=. python agents/remember.py "memory note"')
 
     remember(note)

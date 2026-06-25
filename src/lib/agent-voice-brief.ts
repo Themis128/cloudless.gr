@@ -86,7 +86,8 @@ const AGENT_TOOLS = [
   },
   {
     name: "get_email_metrics",
-    description: "Fetch the size of the newsletter subscriber list (EspoCRM contacts with newsletter opt-in).",
+    description:
+      "Fetch the size of the newsletter subscriber list (EspoCRM contacts with newsletter opt-in).",
     input_schema: { type: "object", properties: {}, required: [] },
   },
   {
