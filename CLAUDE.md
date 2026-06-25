@@ -106,7 +106,31 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
 - **Mobile-viewport specs**: navbar controls (contact link, theme/locale switcher) live inside the hamburger drawer (`button[aria-label*="menu" i]`) and the desktop instances stay hidden in the DOM — open the drawer first and select with `.filter({ visible: true })`, never bare `.first()`.
 - A broken `node_modules` (missing `@auth/core`, stale nested `@aws-sdk/*` requiring removed `@smithy/property-provider`) makes API routes 500 en masse while the lockfile is fine — fix with a clean `pnpm install --frozen-lockfile` after deleting `node_modules`, never by touching code.
 - **Verify load artifacts solo before changing code.** Under full-suite load the dev server can transiently 404 a real API route (seen once on `POST /api/admin/ai/analytics-orchestration/pdf`, both projects + retries). Re-run the failing spec alone first — if it passes (route verified: unauth → 401), it's a dev-server race, not a regression. Never widen a security assertion (e.g. adding 404 to "unauth must be 401/403") to absorb such flakes.
-- Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/notion-integration-reshare.md`](docs/notion-integration-reshare.md). AppFlowy was evaluated as a self-host alternative on 2026-06-21 and rejected: 7-pod arm64 stack + new client lib is multi-day work, the runbook fixes drift in 3 minutes per occurrence.
+- Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/notion-integration-reshare.md`](docs/notion-integration-reshare.md). **Note:** The content-publishing workflows (sitemap sync, newsletter, article draft) were migrated from Notion to AppFlowy on 2026-06-25 — see section below.
+
+## AppFlowy-Backed Workflows (live 2026-06-25)
+
+Three GitHub Actions workflows use AppFlowy (self-hosted at `appflowy.cloudless.gr`) as their content source. All three passed end-to-end on 2026-06-25.
+
+| Workflow | File | Schedule | What it does |
+|----------|------|----------|--------------|
+| AppFlowy → Sitemap Sync | `.github/workflows/notion-docs-sitemap.yml` | Every 6h | Walks the folder tree; pages prefixed `[Docs]` → `/docs/*`, `[Blog]` → `/blog/*` in `src/data/notion-sitemap-entries.tsv`. Opens a PR if changed. |
+| Weekly Newsletter | `.github/workflows/weekly-newsletter.yml` | `workflow_dispatch` | Finds pages prefixed `[Review]` and sends them as newsletter emails via Resend. |
+| Weekly Article Draft | `.github/workflows/weekly-article-draft.yml` | `workflow_dispatch` | Generates a blog draft via Cloudflare Workers AI (llama-3.3-70b), creates a Draft page in AppFlowy, pings Slack. |
+
+**GitHub secrets required** (all set ✅ as of 2026-06-25): `APPFLOWY_API_URL`, `APPFLOWY_EMAIL`, `APPFLOWY_PASSWORD`.
+
+**AppFlowy API quirks — read before touching these scripts:**
+
+- **Auth:** `POST /gotrue/token?grant_type=password` → returns `access_token`. Use as `Authorization: Bearer <token>`.
+- **Workspaces:** `GET /api/workspace` → `data[0].workspace_id`.
+- **No search endpoint:** `/api/workspace/{id}/search` returns 404 on this AppFlowy Cloud version. Use the folder tree instead: `GET /api/workspace/{id}/folder?depth=5`.
+- **Empty workspace:** Folder endpoint returns `{"code": -2, "message": "Record not found..."}` when no spaces have been created via the AppFlowy UI yet. Treat code ≠ 0 as "no content" and return `[]` — do not throw.
+- **Page creation layout is a `u8`, not a string:** `POST /api/workspace/{id}/page-view` requires `layout: 0` (Document), NOT `layout: "Document"`. Using the string causes a 400 `Json deserialize error: invalid type: string "Document", expected u8`. (PR #1157, 2026-06-25).
+- **Page naming convention:** `[Docs] <title>` = docs page, `[Blog] <title>` = blog page, `[Review] <title>` = queued for newsletter, plain title = draft.
+- **Creating pages in an empty workspace:** Pass `workspace_id` as `parent_view_id` when the folder endpoint returns code ≠ 0 (no root view exists yet).
+
+**Operator action needed before workflows are fully functional:** Log into AppFlowy UI at `https://appflowy.cloudless.gr` and create at least one Space. Until then, all three workflows exit 0 with "no content yet" — the sitemap stays empty, newsletter sends nothing, and article draft creates pages at the workspace root.
 
 ## Git Workflow
 
