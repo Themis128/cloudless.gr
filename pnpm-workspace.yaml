@@ -1,13 +1,19 @@
+# pnpm workspace configuration
+# Only include actual workspace packages to minimize resolution scope
 packages:
   - "workers/*"
 
+# Allow native builds only for packages that require compilation
+# These match the onlyBuiltDependencies in package.json
 allowBuilds:
   '@parcel/watcher': true
   '@sentry/cli': true
   '@swc/core': true
-  workerd: true
-  sharp: false
-  unrs-resolver: false
+  esbuild: true
 
-overrides:
-  esbuild: '>=0.28.1'
+# Disable unnecessary native builds for faster installs
+sharp: false
+unrs-resolver: false
+
+# Note: overrides are defined in package.json under "pnpm.overrides"
+# to keep workspace config minimal and avoid duplication

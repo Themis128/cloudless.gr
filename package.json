@@ -88,7 +88,17 @@
     "coverage:merge": "node scripts/coverage-merge.mjs",
     "test:unit:coverage": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1",
     "test:unit:coverage:ci": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1 --reporter=default",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "pnpm": "pnpm install",
+    "pnpm:update": "pnpm update --interactive",
+    "pnpm:audit": "pnpm audit",
+    "pnpm:audit:fix": "pnpm audit --fix",
+    "pnpm:dedupe": "pnpm dedupe",
+    "pnpm:why": "pnpm why",
+    "pnpm:list": "pnpm list --depth 0",
+    "pnpm:outdated": "pnpm outdated",
+    "pnpm:clean": "pnpm store prune && rm -rf node_modules/.cache",
+    "pnpm:rebuild": "pnpm rebuild && pnpm run typecheck"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",
