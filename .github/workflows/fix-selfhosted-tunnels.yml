@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/fix-selfhosted-tunnels.yml'
+  workflow_dispatch:
 
 jobs:
   fix-tunnels:
