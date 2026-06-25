@@ -12,6 +12,10 @@ name: Postiz crons
 # Auth: CRON_SECRET is read from SSM /cloudless/production/CRON_SECRET via
 # the existing AWS OIDC deploy role, same pattern as platform-crons.yml.
 #
+# Kuma push monitors (optional dead-man's switch):
+#   KUMA_PUSH_POSTIZ_SYNC   — push token for the postiz-sync monitor
+#   KUMA_PUSH_POSTIZ_OAUTH  — push token for the postiz-oauth-check monitor
+#
 # Manual run: workflow_dispatch with a target picker (defaults to both).
 
 on:
@@ -36,6 +40,7 @@ permissions:
 env:
   AWS_REGION: us-east-1
   BASE_URL: https://cloudless.gr
+  KUMA_BASE_URL: "https://kuma.cloudless.gr"
 
 jobs:
   trigger:
@@ -86,26 +91,52 @@ jobs:
 
       - name: Trigger postiz-sync
         if: steps.targets.outputs.sync == 'true'
+        env:
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_POSTIZ_SYNC }}
         run: |
           echo "Calling $BASE_URL/api/cron/postiz-sync"
-          RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 60 \
+          if RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 60 \
             -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-            "$BASE_URL/api/cron/postiz-sync")
-          echo "Response: $RESPONSE"
-          echo "## Postiz sync" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+            "$BASE_URL/api/cron/postiz-sync"); then
+            echo "Response: $RESPONSE"
+            echo "## Postiz sync" >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            [ -n "$KUMA_PUSH_TOKEN" ] && \
+              curl -fsS --max-time 10 --retry 3 \
+                "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=postiz-sync+ok" \
+                > /dev/null || true
+          else
+            [ -n "$KUMA_PUSH_TOKEN" ] && \
+              curl -fsS --max-time 10 --retry 3 \
+                "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=postiz-sync+failed" \
+                > /dev/null || true
+            exit 1
+          fi
 
       - name: Trigger postiz-oauth-check
         if: steps.targets.outputs.oauth == 'true'
+        env:
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_POSTIZ_OAUTH }}
         run: |
           echo "Calling $BASE_URL/api/cron/postiz-oauth-check"
-          RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 30 \
+          if RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 30 \
             -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-            "$BASE_URL/api/cron/postiz-oauth-check")
-          echo "Response: $RESPONSE"
-          echo "## Postiz OAuth check" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+            "$BASE_URL/api/cron/postiz-oauth-check"); then
+            echo "Response: $RESPONSE"
+            echo "## Postiz OAuth check" >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            [ -n "$KUMA_PUSH_TOKEN" ] && \
+              curl -fsS --max-time 10 --retry 3 \
+                "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=postiz-oauth-check+ok" \
+                > /dev/null || true
+          else
+            [ -n "$KUMA_PUSH_TOKEN" ] && \
+              curl -fsS --max-time 10 --retry 3 \
+                "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=postiz-oauth-check+failed" \
+                > /dev/null || true
+            exit 1
+          fi
