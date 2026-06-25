@@ -98,6 +98,7 @@ pnpm pnpm:rebuild        # Rebuild and typecheck
 ### "node: not found"
 
 Ensure nvm is loaded in your shell:
+
 ```bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
@@ -106,6 +107,7 @@ export NVM_DIR="$HOME/.nvm"
 ### Peer dependency conflicts
 
 The project uses `auto-install-peers=true` to minimize conflicts. If issues persist:
+
 ```bash
 pnpm install --no-frozen-lockfile
 ```

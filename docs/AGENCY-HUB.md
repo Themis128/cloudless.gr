@@ -17,7 +17,7 @@
 5. [Phase 1 — Meta (Facebook + Instagram)](#5-phase-1--meta-facebook--instagram--deferred)
 6. [Phase 2 — Email Marketing (ActiveCampaign)](#6-phase-2--email-marketing-activecampaign--done)
 7. [Phase 3 — Google Ads](#7-phase-3--google-ads--done)
-8. [Phase 4 — Lead Pipeline Automation (EspoCRM)](#8-phase-4--lead-pipeline-automation-hubspot--done)
+8. [Phase 4 — Lead Pipeline Automation (EspoCRM)](#8-phase-4--lead-pipeline-automation-espocrm--done)
 9. [Phase 5 — LinkedIn Campaigns](#9-phase-5--linkedin-campaigns--done)
 10. [Phase 6 — TikTok Campaigns](#10-phase-6--tiktok-campaigns--done)
 11. [Phase 7 — X (Twitter) Campaigns](#11-phase-7--x-twitter-campaigns--done)
