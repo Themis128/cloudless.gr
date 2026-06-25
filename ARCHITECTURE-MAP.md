@@ -70,6 +70,7 @@
 ## 4. Main Pages & Components
 
 ### Public Pages (`src/app/[locale]/`)
+
 | Route | Description |
 |---|---|
 | `/` | Landing page (hero, services summary, stats, testimonials, CTA) |
@@ -92,6 +93,7 @@
 | `/accessibility` | Accessibility statement |
 
 ### Auth Pages (`src/app/[locale]/auth/`)
+
 | Route | Description |
 |---|---|
 | `/auth/login` | Sign in (next-auth custom page) |
@@ -99,8 +101,8 @@
 | `/auth/forgot-password` | Password reset |
 | `/auth/post-login` | Post-authentication redirect |
 
-
 ### Dashboard Pages (`src/app/[locale]/dashboard/`)
+
 | Route | Description |
 |---|---|
 | `/dashboard` | User dashboard home |
@@ -111,6 +113,7 @@
 | `/dashboard/settings` | Account settings |
 
 ### Admin Pages (`src/app/[locale]/admin/`)
+
 ~40+ admin sub-routes — the full admin cockpit covering:
 
 - **Analytics:** datalake, SEO, unified dashboards, workspaces, ROI
@@ -122,12 +125,14 @@
 - **Other:** AI assistant, AI generator, voice brief, email/ActiveCampaign, subscriptions, users, workspaces, calendar, client portals, Postiz, reports, settings, notifications
 
 ### Client Portal (`src/app/portal/`)
+
 | Route | Description |
 |---|---|
 | `/portal/[token]` | Token-authenticated client portal |
 | `/portal/waiting` | Waiting room for pending clients |
 
 ### Core Components (`src/components/`)
+
 - **Layout:** `Navbar`, `Footer`, `Logo`, `ThemeProvider`, `ThemeSwitcher`, `LocaleSwitcher`, `CookieConsent`
 - **UI:** `CommandPalette`, `TierTable`, `HolographicCard`, `TerminalBlock`, `StatCounter`, `ScrollReveal`, `NeonCursor`, `TypingText`, `ParticleField`
 - **Store:** `StoreGrid`, `CartButton`, `CartSlideOver`, `AddToCartButton`, `ProductIcon`
@@ -138,6 +143,7 @@
 - **Contexts:** `AuthContext`, `CartContext`, `WorkspaceContext`, `CookieConsentContext`
 
 ### API Routes (`src/app/api/`) — Key Groups
+
 - `auth/*` — Authentication handlers
 - `admin/*` — Full admin API (AI, analytics, campaigns, CRM, CMS, Notion, Postiz, etc.)
 - `cron/*` — Scheduled tasks (ad-analytics-poll, gsc-cache-refresh, client-reports, etc.)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import requests
 from dotenv import load_dotenv
@@ -19,9 +19,18 @@ CURATED_DOCS = [
         "title": "Deep Agents comparison with Claude Agent SDK",
         "url": "https://docs.langchain.com/oss/python/deepagents/comparison.md",
         "keywords": {
-            "deep", "agents", "deepagents", "comparison", "claude",
-            "claude-agent-sdk", "sdk", "sandbox", "backend", "deployment",
-            "multi-tenancy", "model-provider",
+            "deep",
+            "agents",
+            "deepagents",
+            "comparison",
+            "claude",
+            "claude-agent-sdk",
+            "sdk",
+            "sandbox",
+            "backend",
+            "deployment",
+            "multi-tenancy",
+            "model-provider",
         },
     },
     {
@@ -33,9 +42,18 @@ CURATED_DOCS = [
         "title": "Deep Agents backends",
         "url": "https://docs.langchain.com/oss/python/deepagents/backends.md",
         "keywords": {
-            "deep", "agents", "deepagents", "backend", "backends",
-            "filesystembackend", "filesystem", "compositebackend", "statebackend",
-            "storebackend", "localshellbackend", "sandbox",
+            "deep",
+            "agents",
+            "deepagents",
+            "backend",
+            "backends",
+            "filesystembackend",
+            "filesystem",
+            "compositebackend",
+            "statebackend",
+            "storebackend",
+            "localshellbackend",
+            "sandbox",
         },
     },
     {
@@ -51,7 +69,16 @@ CURATED_DOCS = [
     {
         "title": "Customize Deep Agents",
         "url": "https://docs.langchain.com/oss/python/deepagents/customization.md",
-        "keywords": {"deep", "agents", "deepagents", "customize", "customization", "tools", "subagents", "instructions"},
+        "keywords": {
+            "deep",
+            "agents",
+            "deepagents",
+            "customize",
+            "customization",
+            "tools",
+            "subagents",
+            "instructions",
+        },
     },
     {
         "title": "LangGraph overview",
@@ -82,7 +109,9 @@ CURATED_DOCS = [
 
 
 def fetch_url(url: str, timeout: int = 30) -> str:
-    response = requests.get(url, timeout=timeout, headers={"User-Agent": "cloudless-gr-local-agent/0.1"})
+    response = requests.get(
+        url, timeout=timeout, headers={"User-Agent": "cloudless-gr-local-agent/0.1"}
+    )
     response.raise_for_status()
     return response.text
 
@@ -164,19 +193,44 @@ def search_langchain_docs_index(query: str, max_results: int = 10) -> list[dict[
             if "configure-ttl" in url:
                 score -= 20
 
-        if any(term in query_lower for term in ["backend", "backends", "filesystem", "filesystembackend", "compositebackend", "statebackend", "storebackend"]):
+        if any(
+            term in query_lower
+            for term in [
+                "backend",
+                "backends",
+                "filesystem",
+                "filesystembackend",
+                "compositebackend",
+                "statebackend",
+                "storebackend",
+            ]
+        ):
             if "deepagents/backends" in url:
                 score += 25
             if "configure-ttl" in url:
                 score -= 20
 
-        if any(term in query_lower for term in ["claude agent sdk", "deep agents vs claude", "comparison with claude"]):
+        if any(
+            term in query_lower
+            for term in ["claude agent sdk", "deep agents vs claude", "comparison with claude"]
+        ):
             if "deepagents/comparison" in url:
                 score += 40
             elif "/oss/python/deepagents/" in url:
                 score -= 5
 
-        if any(term in query_lower for term in ["openai-compatible", "openai compliant", "custom model", "custom endpoint", "vllm", "model endpoint", "local model"]):
+        if any(
+            term in query_lower
+            for term in [
+                "openai-compatible",
+                "openai compliant",
+                "custom model",
+                "custom endpoint",
+                "vllm",
+                "model endpoint",
+                "local model",
+            ]
+        ):
             if "custom-endpoint" in url:
                 score += 35
             if "custom-openai-compliant-model" in url:
@@ -186,7 +240,10 @@ def search_langchain_docs_index(query: str, max_results: int = 10) -> list[dict[
             if "/oss/python/deepagents/" in url and "customization" not in url:
                 score -= 8
 
-        if any(term in query_lower for term in ["langgraph dev", "local development", "langgraph cli", "uv run langgraph"]):
+        if any(
+            term in query_lower
+            for term in ["langgraph dev", "local development", "langgraph cli", "uv run langgraph"]
+        ):
             if "langsmith/cli" in url:
                 score += 30
             if "local-dev-testing" in url:
@@ -219,7 +276,9 @@ def search_langchain_docs_index(query: str, max_results: int = 10) -> list[dict[
     return output
 
 
-def fetch_langchain_doc_pages(urls: Iterable[str], max_chars_per_page: int = 8000) -> list[dict[str, str]]:
+def fetch_langchain_doc_pages(
+    urls: Iterable[str], max_chars_per_page: int = 8000
+) -> list[dict[str, str]]:
     pages: list[dict[str, str]] = []
     for url in urls:
         try:
@@ -230,7 +289,11 @@ def fetch_langchain_doc_pages(urls: Iterable[str], max_chars_per_page: int = 800
     return pages
 
 
-def discover_and_fetch_langchain_docs(query: str, max_results: int = 5, max_chars_per_page: int = 7000) -> dict[str, object]:
+def discover_and_fetch_langchain_docs(
+    query: str, max_results: int = 5, max_chars_per_page: int = 7000
+) -> dict[str, object]:
     matches = search_langchain_docs_index(query=query, max_results=max_results)
-    pages = fetch_langchain_doc_pages([match["url"] for match in matches], max_chars_per_page=max_chars_per_page)
+    pages = fetch_langchain_doc_pages(
+        [match["url"] for match in matches], max_chars_per_page=max_chars_per_page
+    )
     return {"matches": matches, "pages": pages}

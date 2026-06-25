@@ -88,7 +88,17 @@
     "coverage:merge": "node scripts/coverage-merge.mjs",
     "test:unit:coverage": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1",
     "test:unit:coverage:ci": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1 --reporter=default",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "pnpm": "pnpm install",
+    "pnpm:update": "pnpm update --interactive",
+    "pnpm:audit": "pnpm audit",
+    "pnpm:audit:fix": "pnpm audit --fix",
+    "pnpm:dedupe": "pnpm dedupe",
+    "pnpm:why": "pnpm why",
+    "pnpm:list": "pnpm list --depth 0",
+    "pnpm:outdated": "pnpm outdated",
+    "pnpm:clean": "pnpm store prune && rm -rf node_modules/.cache",
+    "pnpm:rebuild": "pnpm rebuild && pnpm run typecheck"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",
@@ -100,7 +110,9 @@
     "@aws-sdk/client-s3": "^3.1073.0",
     "@aws-sdk/client-sesv2": "^3.1073.0",
     "@aws-sdk/client-ssm": "^3.1073.0",
+    "@langchain/langgraph-sdk": "^1.9.25",
     "@react-email/components": "1.0.12",
+    "@sentry/core": "10.59.0",
     "@sentry/nextjs": "^10.59.0",
     "cmdk": "^1.1.1",
     "countup.js": "^2.10.0",
@@ -115,7 +127,8 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-email": "^6.6.3",
-    "stripe": "^22.2.2"
+    "stripe": "^22.2.2",
+    "undici": "7.28.0"
   },
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1073.0",
