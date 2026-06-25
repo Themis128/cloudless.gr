@@ -364,7 +364,7 @@ async function handleChannels(payload: SlashCommandPayload): Promise<Response> {
 
     const [channels, bot] = await Promise.all([listChannels(token), getBotInfo(token)]);
 
-    const MANAGED = ["bookings", "orders", "errors", "deployments", "contacts", "subscribers"];
+    const MANAGED = ["bookings", "orders", "errors", "deployments", "contacts", "subscribers", "campaigns"];
 
     const rows = MANAGED.map((name) => {
       const ch = channels.find((c) => c.name === name);
