@@ -118,4 +118,4 @@ If a native build fails, check `pnpm-workspace.yaml` `allowBuilds` and ensure th
 
 - [pnpm Documentation](https://pnpm.io)
 - [pnpm Workspace](https://pnpm.io/workspaces)
-- [Next.js + pnpm](https://nextjs.org/docs/app/building-your-application/configuring/pnpm)
+- [Next.js package managers](https://nextjs.org/docs/app/getting-started/installation#automatic-installation)
