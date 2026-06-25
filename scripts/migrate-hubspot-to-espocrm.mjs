@@ -194,7 +194,7 @@ async function main() {
       name: p.dealname,
       stage: mapStage(p.dealstage),
       amount: p.amount ? parseFloat(p.amount) : 0,
-      closeDate: p.closedate ? p.closedate.slice(0, 10) : undefined,
+      closeDate: p.closedate ? p.closedate.slice(0, 10) : new Date().toISOString().slice(0, 10),
       description: `Migrated from HubSpot Deal ID ${d.id}`,
     };
 
