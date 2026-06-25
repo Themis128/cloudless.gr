@@ -23,20 +23,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+      - uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Write SSH key
+      - name: Write SSH key + wait for tailnet
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/omv_key
           chmod 600 ~/.ssh/omv_key
+          # Wait until the Pi is reachable over the tailnet before attempting SSH
+          for i in $(seq 1 18); do
+            if nc -zv -w3 100.113.41.119 22 2>/dev/null; then
+              echo "tailnet ready after ${i}×2s"
+              break
+            fi
+            echo "waiting for tailnet... ($i/18)"
+            sleep 2
+          done
           ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Fix log file + crontab on omv
         run: |
-          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 bash -s << 'ENDSSH'
+          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.113.41.119 bash -s << 'ENDSSH'
           set -euo pipefail
 
           LOG=/var/log/health-check-cloudless.log
