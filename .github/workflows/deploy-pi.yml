@@ -218,7 +218,7 @@ jobs:
         # key consumed), the runner's pre-existing Tailscale connection still
         # routes kubectl traffic to 100.113.41.119:6443 correctly.
         continue-on-error: true
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
       - name: Verify Tailscale path to omv-main
