@@ -185,6 +185,7 @@ LANGSMITH_API_KEY=lsv2_pt_...
 LANGSMITH_PROJECT=<project-name>
 LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 ```
+
 Legacy `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` are NOT used (removed from vLLM .env).
 
 ### k3s pod (always-on, internet access)
@@ -192,6 +193,7 @@ Legacy `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` are NOT used (removed from v
 `infrastructure/vibe-agent/k8s.yaml` deploys the VIBE agent server as a k3s pod at `agent.cloudless.gr` (port 2024) and `vibe.cloudless.gr` (port 3001).
 
 **Pending before deploying to k3s:**
+
 1. Build Docker image: `docker build -t ghcr.io/tbaltzakis/vibe-agent:latest /home/tbaltzakis/VIBE/agent/`
 2. Push: `docker push ghcr.io/tbaltzakis/vibe-agent:latest`
 3. `kubectl create secret generic vibe-env -n vibe --from-literal=...` (all env vars from agent/.env)
