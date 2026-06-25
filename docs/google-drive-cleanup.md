@@ -49,7 +49,7 @@ To search progressively larger: `larger:25M`, `larger:50M`,
 
 ## Step 3 — Google Photos cleanup
 
-Open [Google Photos storage settings](https://photos.google.com/quota).
+Open [Google storage settings](https://one.google.com/storage).
 
 Three actions in order:
 

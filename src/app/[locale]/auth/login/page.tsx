@@ -23,8 +23,8 @@ function isSafeRedirectPath(path: string | null | undefined): path is string {
   if (!path.startsWith("/")) return false;
   // Defang protocol-relative URLs ("//evil") and Chrome's backslash variant.
   if (path.startsWith("//") || path.startsWith("/\\")) return false;
-  // Defang header-injection / control codepoints.
-  if (/[ -]/.test(path)) return false;
+  // Defang header-injection / control codepoints (spaces, CR, LF).
+  if (/[ \r\n]/.test(path)) return false;
   return true;
 }
 
