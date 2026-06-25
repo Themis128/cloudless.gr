@@ -86,8 +86,11 @@ async function buildAppFlowyUrl(): Promise<AutologinResult> {
     throw new Error("AppFlowy GoTrue did not return an access_token");
   }
 
-  // AppFlowy web SPA reads the access_token from the URL hash on initial load.
-  const redirectUrl = `${base}/web#access_token=${encodeURIComponent(token)}`;
+  // AppFlowy Cloud web SPA is served at the root of the same host as the API.
+  // It reads access_token from the URL hash on initial load via GoTrue client.
+  // Use the origin only (strip any /api path prefix the SSM value may carry).
+  const origin = new URL(base).origin;
+  const redirectUrl = `${origin}/#access_token=${encodeURIComponent(token)}`;
   return { url: redirectUrl, hasToken: true };
 }
 

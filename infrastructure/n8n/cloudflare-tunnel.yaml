@@ -1,0 +1,27 @@
+# Cloudflare Tunnel route: n8n.cloudless.gr → n8n NodePort on omv-main
+#
+# Same tunnel as espocrm.cloudless.gr, postiz.cloudless.gr, kuma.cloudless.gr
+# (ID e977a490-58c5-4fdb-9155-86832e3e636a).
+#
+# DNS record to add in Cloudflare (cloudless.gr zone):
+#   n8n.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+#   (proxied=true, TTL=auto)
+#
+# NodePort: 30900 (see infrastructure/n8n/k8s.yaml)
+# Pod runs on omv (Pi 5 — only node with enough RAM for n8n migrations).
+#
+# To activate on omv-main (or run fix-selfhosted-tunnels.yml workflow):
+#   1. Append the ingress rule below to /etc/cloudflared/config.yml
+#      BEFORE the catch-all `service: http_status:404` rule.
+#   2. Copy updated config to omv-ha (/etc/cloudflared/config.yml).
+#   3. sudo systemctl restart cloudflared  (on both nodes)
+#   4. Verify: curl -I https://n8n.cloudless.gr/healthz
+---
+ingress_rule:
+  hostname: n8n.cloudless.gr
+  service: http://192.168.1.128:30900
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    noTLSVerify: false
+    httpHostHeader: n8n.cloudless.gr

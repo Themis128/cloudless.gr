@@ -1,0 +1,133 @@
+---
+# VIBE Agent — always-on k3s pod at agent.cloudless.gr
+# Graph server (port 2024) + project-picker UI (port 3001)
+# vLLM is NOT bundled here — it runs locally on the dev machine.
+# The k3s pod uses a small OpenAI-compatible proxy model (or points
+# back to the local vLLM via Tailscale) configured via SECRET vibe-env.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vibe
+
+---
+# Secret — create once with:
+#   kubectl create secret generic vibe-env -n vibe \
+#     --from-literal=LANGSMITH_API_KEY=lsv2_pt_... \
+#     --from-literal=LANGSMITH_PROJECT=vibe-agent \
+#     --from-literal=LANGSMITH_ENDPOINT=https://api.smith.langchain.com \
+#     --from-literal=VLLM_BASE_URL=http://<tailscale-ip>:8080/v1 \
+#     --from-literal=VLLM_API_KEY=not-needed \
+#     --from-literal=VLLM_MODEL=Qwen/Qwen2.5-Coder-7B-Instruct-AWQ \
+#     --from-literal=ESPOCRM_BASE_URL=https://espocrm.cloudless.gr \
+#     --from-literal=ESPOCRM_API_KEY=<key> \
+#     --from-literal=APPFLOWY_API_URL=https://appflowy.cloudless.gr \
+#     --from-literal=APPFLOWY_EMAIL=<email> \
+#     --from-literal=APPFLOWY_PASSWORD=<pw> \
+#     --from-literal=GITHUB_TOKEN=<pat>
+# NOTE: the secret is NOT in this file to avoid committing credentials.
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibe-projects-pvc
+  namespace: vibe
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibe-agent
+  namespace: vibe
+  labels:
+    app: vibe-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vibe-agent
+  template:
+    metadata:
+      labels:
+        app: vibe-agent
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omv-main
+      containers:
+        - name: vibe
+          image: ghcr.io/tbaltzakis/vibe-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 2024
+              name: langgraph
+            - containerPort: 3001
+              name: ui
+          envFrom:
+            - secretRef:
+                name: vibe-env
+          env:
+            - name: LANGSMITH_TRACING
+              value: "true"
+            - name: VIBE_PROJECT_PATH
+              value: /projects/active
+            - name: LANGGRAPH_PORT
+              value: "2024"
+          volumeMounts:
+            - name: projects
+              mountPath: /projects
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 1000m
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 2024
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 2024
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: projects
+          persistentVolumeClaim:
+            claimName: vibe-projects-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibe-agent
+  namespace: vibe
+spec:
+  selector:
+    app: vibe-agent
+  ports:
+    - name: langgraph
+      port: 2024
+      targetPort: 2024
+    - name: ui
+      port: 3001
+      targetPort: 3001
+
+---
+# Cloudflare tunnel ingress — append to /etc/cloudflared/config.yml on omv-main:
+#   ingress:
+#     - hostname: agent.cloudless.gr
+#       service: http://vibe-agent.vibe.svc.cluster.local:2024
+#     - hostname: vibe.cloudless.gr
+#       service: http://vibe-agent.vibe.svc.cluster.local:3001
+# Then add DNS CNAMEs pointing to the tunnel UUID.
