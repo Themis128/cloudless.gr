@@ -35,7 +35,7 @@ function fakeChannel(overrides: Partial<NotificationChannel> = {}): Notification
   return {
     id: "slack",
     isConfigured: vi.fn().mockResolvedValue(true),
-    sendBlock: vi.fn().mockResolvedValue({ messageId: "slack:#ads-realtime:1" }),
+    sendBlock: vi.fn().mockResolvedValue({ messageId: "slack:#campaigns:1" }),
     reply: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -76,7 +76,7 @@ describe("dispatchConversion", () => {
 
     expect(channel.sendBlock).toHaveBeenCalledTimes(1);
     const args = (channel.sendBlock as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(args.target).toBe("#ads-realtime");
+    expect(args.target).toBe("#campaigns");
     expect(args.blocks.length).toBeGreaterThan(0);
     // The header block should name the campaign so the operator sees it
     // immediately on a phone notification.
@@ -94,8 +94,8 @@ describe("dispatchConversion", () => {
     expect(outcome.notifications).toEqual([
       {
         channel: "slack",
-        target: "#ads-realtime",
-        messageId: "slack:#ads-realtime:1",
+        target: "#campaigns",
+        messageId: "slack:#campaigns:1",
         ok: true,
       },
     ]);
@@ -167,7 +167,7 @@ describe("dispatchConversion", () => {
                 capiConversionId: 99999999, // operator-wired CONVERSIONS_API-typed
               },
             ],
-            notifyChannels: [{ channel: "slack", target: "#ads-realtime", level: "event" }],
+            notifyChannels: [{ channel: "slack", target: "#campaigns", level: "event" }],
           };
         },
       };
