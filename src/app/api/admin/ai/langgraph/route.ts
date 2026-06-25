@@ -367,11 +367,9 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    // Sanitize for log injection: strip newlines from user-supplied action and
-    // upstream error message so neither can inject fake log lines.
-    const safeAction = String(action).replace(/[\r\n]/g, " ").slice(0, 64);
-    const safeMsg = msg.replace(/[\r\n]/g, " ");
-    console.error("[langgraph]", safeAction, safeMsg);
+    // Log only static text — never user-supplied action or upstream error content,
+    // which could contain newlines that inject fake log lines.
+    console.error("[langgraph] action handler threw — check upstream LangGraph server");
     return Response.json({ error: msg }, { status: 500 });
   }
 }

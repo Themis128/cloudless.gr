@@ -70,6 +70,9 @@ async function main() {
     message: "Provisioned via scripts/provision-aws-cost-dashboard.mjs (R9)",
   };
 
+  // Path-traversal guard above ensures dashPath is within the project root.
+  // Sending local dashboard JSON to the configured Grafana instance is intentional.
+  // lgtm[js/file-data-in-outbound-request]
   const res = await fetch(`${baseUrl}/api/dashboards/db`, {
     method: "POST",
     headers: {
