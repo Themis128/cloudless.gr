@@ -75,7 +75,8 @@ jobs:
         run: |
           PASS=$(kubectl get secret -n monitoring kube-prom-grafana \
             -o jsonpath='{.data.admin-password}' | base64 -d)
-          BASE="http://192.168.1.128:30850"
+          # Use Tailscale IP — LAN IP 192.168.1.128 is not routable from GH-hosted runners
+          BASE="http://100.113.41.119:30850"
 
           echo "=== Datasources ==="
           curl -su "admin:$PASS" "$BASE/api/datasources" | \
