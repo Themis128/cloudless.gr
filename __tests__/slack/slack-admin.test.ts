@@ -273,7 +273,7 @@ describe("slack-admin.ts", () => {
   });
 
   describe("SLACK_CHANNELS registry", () => {
-    it("defines all 6 required channels", async () => {
+    it("defines all 7 required channels", async () => {
       const { SLACK_CHANNELS } = await import("@/lib/slack-admin");
       const names = Object.values(SLACK_CHANNELS).map((c) => c.name);
       expect(names).toContain("bookings");
@@ -281,6 +281,7 @@ describe("slack-admin.ts", () => {
       expect(names).toContain("errors");
       expect(names).toContain("deployments");
       expect(names).toContain("contacts");
+      expect(names).toContain("campaigns");
       expect(names).toContain("subscribers");
     });
 

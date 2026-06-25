@@ -154,6 +154,7 @@ export async function POST(request: Request) {
         leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
         attributionSummary,
         espoContactId,
+        utmSource: attribution?.utmSource ?? null,
       }),
       recordNotification({
         category: "contact",
