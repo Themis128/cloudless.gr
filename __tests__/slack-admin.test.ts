@@ -30,7 +30,7 @@ describe("slack-admin", () => {
   });
 
   describe("SLACK_CHANNELS registry", () => {
-    it("defines the canonical 6 channels", () => {
+    it("defines the canonical 7 channels", () => {
       const keys = Object.keys(SLACK_CHANNELS) as SlackChannelKey[];
       expect(keys).toEqual([
         "bookings",
@@ -38,6 +38,7 @@ describe("slack-admin", () => {
         "errors",
         "deployments",
         "contacts",
+        "campaigns",
         "subscribers",
       ]);
     });

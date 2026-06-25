@@ -39,6 +39,10 @@ export const SLACK_CHANNELS = {
     name: "contacts",
     topic: "Contact form submissions and leads from cloudless.gr",
   },
+  campaigns: {
+    name: "campaigns",
+    topic: "Campaign conversions and ad performance from LinkedIn, Meta, Google, TikTok",
+  },
   subscribers: {
     name: "subscribers",
     topic: "Newsletter subscriber sign-ups from cloudless.gr",

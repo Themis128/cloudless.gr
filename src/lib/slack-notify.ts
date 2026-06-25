@@ -251,6 +251,7 @@ const ordersClient = new SlackClient({ channel: "#orders" });
 const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
 const contactsClient = new SlackClient({ channel: "#contacts" });
+const campaignsClient = new SlackClient({ channel: "#campaigns" });
 const subscribersClient = new SlackClient({ channel: "#subscribers" });
 
 /**
@@ -397,6 +398,23 @@ export async function slackDeployNotify(opts: {
   });
 }
 
+/** UTM sources that indicate a paid social/search campaign origin. */
+const CAMPAIGN_UTM_SOURCES = new Set([
+  "linkedin",
+  "linkedin_ads",
+  "linkedin-ads",
+  "meta",
+  "facebook",
+  "instagram",
+  "google",
+  "google-ads",
+  "google_ads",
+  "tiktok",
+  "tiktok-ads",
+  "twitter",
+  "x-ads",
+]);
+
 /** Pre-formatted notification for new contact form submissions */
 export async function slackContactNotify(data: {
   name: string;
@@ -413,6 +431,8 @@ export async function slackContactNotify(data: {
   attributionSummary?: string;
   /** EspoCRM Contact ID \u2014 used to build a deep-link button. */
   espoContactId?: string | null;
+  /** UTM source \u2014 when it's a paid social/search origin, also posts to #campaigns. */
+  utmSource?: string | null;
 }): Promise<boolean> {
   const safeName = slackEscape(data.name);
   const safeEmail = slackEscape(data.email);
@@ -458,12 +478,22 @@ export async function slackContactNotify(data: {
 
   blocks.push(contextBlock(slackTimestamp(), "cloudless.gr contact form"));
 
-  return contactsClient.post({
+  const payload = {
     text: `New contact from ${safeName} (${safeEmail})`,
     blocks,
     icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
-  });
+  };
+
+  const isCampaignLead = data.utmSource && CAMPAIGN_UTM_SOURCES.has(data.utmSource.toLowerCase());
+
+  const sends: Promise<boolean>[] = [contactsClient.post(payload)];
+  if (isCampaignLead) {
+    sends.push(campaignsClient.post(payload));
+  }
+
+  const results = await Promise.all(sends);
+  return results[0];
 }
 
 /** Pre-formatted notification for a new consultation booking */
