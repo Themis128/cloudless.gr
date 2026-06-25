@@ -3,7 +3,6 @@ name: Fix health-check log path (permission denied)
 # The health-check cron job on omv writes to /var/log/health-check-cloudless.log
 # but tbaltzakis doesn't own that file → "Permission denied".
 # Fix: rewrite the script to use ~/logs/ (no sudo needed, survives reboots).
-# Also creates the log dir and touches the file so tail works immediately.
 
 on:
   workflow_dispatch:
@@ -22,6 +21,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Connect to tailnet
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
@@ -33,11 +34,9 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Fix log path on omv via privileged pod
+      - name: Write pod manifest
         run: |
-          kubectl delete pod fix-health-log -n default --ignore-not-found --wait=true
-
-          cat <<'PODEOF' | kubectl create -f -
+          cat > /tmp/fix-pod.yaml << 'EOF'
           apiVersion: v1
           kind: Pod
           metadata:
@@ -66,60 +65,35 @@ jobs:
                     mountPath: /host-home
                   - name: scripts
                     mountPath: /host-bin
-                command:
-                  - sh
-                  - -c
+                command: [sh, -c]
+                args:
                   - |
                     set -e
-
                     SCRIPT=/host-bin/health-check-cloudless.sh
                     USERLOG=/host-home/logs/health-check-cloudless.log
-                    LOGDIR=/host-home/logs
-
-                    # Create log dir + file if missing
-                    mkdir -p "$LOGDIR"
+                    mkdir -p /host-home/logs
                     touch "$USERLOG"
-
-                    echo "=== Current script (first 5 lines) ==="
-                    head -5 "$SCRIPT" 2>/dev/null || echo "(script not found)"
-
-                    if [ ! -f "$SCRIPT" ]; then
-                      echo "ERROR: $SCRIPT not found on host"
-                      exit 1
-                    fi
-
-                    # Rewrite /var/log/health-check-cloudless.log → ~/logs/ in the script
-                    if grep -q '/var/log/health-check-cloudless.log' "$SCRIPT"; then
-                      sed -i 's|/var/log/health-check-cloudless\.log|/home/tbaltzakis/logs/health-check-cloudless.log|g' "$SCRIPT"
-                      echo "PATCHED: log path updated to ~/logs/"
-                    else
-                      echo "INFO: script already uses a different log path"
-                    fi
-
-                    echo "=== Script log line after patch ==="
-                    grep "health-check-cloudless.log\|LOG=" "$SCRIPT" || true
-
-                    # Also fix the crontab entry if it hardcodes /var/log/
-                    CRON_FILE=/host-home/.local/share/cron/tabs/tbaltzakis
-                    if [ -f "$CRON_FILE" ] && grep -q '/var/log/health-check-cloudless.log' "$CRON_FILE"; then
-                      sed -i 's|/var/log/health-check-cloudless\.log|/home/tbaltzakis/logs/health-check-cloudless.log|g' "$CRON_FILE"
-                      echo "PATCHED: crontab log path updated"
-                    fi
-
-                    # Check system crontab locations too
-                    for f in /host-home/.crontab /host-home/crontab; do
-                      if [ -f "$f" ] && grep -q '/var/log/health-check-cloudless.log' "$f"; then
-                        sed -i 's|/var/log/health-check-cloudless\.log|/home/tbaltzakis/logs/health-check-cloudless.log|g' "$f"
-                        echo "PATCHED: $f log path updated"
+                    if [ -f "$SCRIPT" ]; then
+                      if grep -q '/var/log/health-check-cloudless' "$SCRIPT"; then
+                        sed -i 's|/var/log/health-check-cloudless\.log|/home/tbaltzakis/logs/health-check-cloudless.log|g' "$SCRIPT"
+                        echo "PATCHED: log path updated to ~/logs/"
+                      else
+                        echo "INFO: script already uses correct path"
+                        grep "health-check-cloudless.log" "$SCRIPT" | head -3
                       fi
-                    done
-
-                    echo "=== Log file ==="
-                    ls -la "$USERLOG"
+                    else
+                      echo "WARN: $SCRIPT not found"
+                    fi
+                    echo "=== Log file ===" && ls -la "$USERLOG"
                     echo "DONE"
-          PODEOF
+          EOF
 
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/fix-health-log -n default --timeout=60s
+      - name: Fix log path on omv
+        run: |
+          kubectl delete pod fix-health-log -n default --ignore-not-found --wait=true
+          kubectl create -f /tmp/fix-pod.yaml
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+            pod/fix-health-log -n default --timeout=60s
           kubectl logs -n default fix-health-log
           kubectl delete pod fix-health-log -n default --ignore-not-found
 
@@ -127,6 +101,5 @@ jobs:
         if: always()
         run: |
           gh issue comment 382 --repo "${{ github.repository }}" \
-            --body "# Health-check log path fix — $(date -u '+%Y-%m-%dT%H:%M:%SZ')
-
-Patched \`/usr/local/bin/health-check-cloudless.sh\` on omv: \`/var/log/health-check-cloudless.log\` → \`~/logs/health-check-cloudless.log\`"
+            --body "### Health-check log path fix — $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          Patched \`/usr/local/bin/health-check-cloudless.sh\` on omv: log path moved from \`/var/log/\` to \`~/logs/\`."
