@@ -29,7 +29,10 @@ jobs:
       # ------------------------------------------------------------------
       - name: Read current cloudflared config from omv
         run: |
-          cat <<'PODEOF' | kubectl apply -f -
+          # Delete stale pod from prior run before creating fresh one
+          kubectl delete pod cf-read-omv -n default --ignore-not-found --wait=true
+
+          cat <<'PODEOF' | kubectl create -f -
           apiVersion: v1
           kind: Pod
           metadata:
@@ -54,9 +57,7 @@ jobs:
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       cat /etc/cloudflared/config.yml
           PODEOF
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-read-omv -n default --timeout=60s 2>/dev/null \
-            || kubectl wait --for=condition=Ready pod/cf-read-omv -n default --timeout=60s 2>/dev/null || true
-          sleep 5
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-read-omv -n default --timeout=90s
           kubectl logs -n default cf-read-omv | tee /tmp/cf-config-current.txt
           kubectl delete pod -n default cf-read-omv --ignore-not-found
           echo "=== Current config ($(wc -l < /tmp/cf-config-current.txt) lines) ==="
@@ -117,11 +118,12 @@ jobs:
       # ------------------------------------------------------------------
       - name: Apply config to omv
         run: |
+          kubectl delete pod cf-apply-omv -n default --ignore-not-found --wait=true
           kubectl -n default create configmap cf-patch \
             --from-file=config.yml=/tmp/cf-config-new.txt \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          cat <<'PODEOF' | kubectl apply -f -
+          cat <<'PODEOF' | kubectl create -f -
           apiVersion: v1
           kind: Pod
           metadata:
