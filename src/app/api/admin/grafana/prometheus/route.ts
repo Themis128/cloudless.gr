@@ -14,11 +14,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  prometheusQuery,
-  GrafanaNotConfiguredError,
-  GrafanaApiError,
-} from "@/lib/grafana";
+import { prometheusQuery, GrafanaNotConfiguredError, GrafanaApiError } from "@/lib/grafana";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

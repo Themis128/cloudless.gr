@@ -17,7 +17,8 @@ import { getConfig } from "@/lib/ssm-config";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const DEFAULT_PROMETHEUS_URL = "http://kube-prom-stack-kube-prome-prometheus.monitoring.svc.cluster.local:9090";
+const DEFAULT_PROMETHEUS_URL =
+  "http://kube-prom-stack-kube-prome-prometheus.monitoring.svc.cluster.local:9090";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);

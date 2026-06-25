@@ -111,7 +111,8 @@ export async function PATCH(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   // AppFlowy doesn't have a status field on pages — acknowledge the call gracefully.
-  return NextResponse.json(
-    { ok: true, note: "Status updates are managed inside AppFlowy directly." }
-  );
+  return NextResponse.json({
+    ok: true,
+    note: "Status updates are managed inside AppFlowy directly.",
+  });
 }

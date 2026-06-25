@@ -52,34 +52,28 @@ jobs:
             exit 1
           fi
 
-          # Get all views from the workspace folder
-          VIEWS=$(curl -sS "${BASE}/api/workspace/${WORKSPACE_ID}/folder?depth=2" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            | jq '[.. | objects | select(.name? and .layout? == "Document") | .name]')
+          # Walk the workspace folder tree (depth=5 covers nested spaces).
+          # Pages prefixed "[Docs]" → /docs/*, "[Blog]" → /blog/*.
+          # code -2 means workspace is empty — emit empty arrays and continue.
+          FOLDER_JSON=$(curl -sS "${BASE}/api/workspace/${WORKSPACE_ID}/folder?depth=5" \
+            -H "Authorization: Bearer ${TOKEN}")
 
-          # Convert view names to URL slugs (lowercase, replace spaces with hyphens, strip special chars)
-          slugify() {
-            echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/[^a-z0-9-]//g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//'
-          }
+          FOLDER_CODE=$(echo "$FOLDER_JSON" | jq -r '.code // 0')
+          if [ "$FOLDER_CODE" != "0" ]; then
+            echo "AppFlowy workspace has no content yet (code=${FOLDER_CODE})"
+            ALL_VIEWS="[]"
+            DOCS_VIEWS="[]"
+            BLOG_VIEWS="[]"
+          else
+            ALL_VIEWS=$(echo "$FOLDER_JSON" \
+              | jq '[.. | objects | select(.name? and .layout? == "Document") | .name]' 2>/dev/null || echo "[]")
+            DOCS_VIEWS=$(echo "$FOLDER_JSON" \
+              | jq '[.. | objects | select(.name? and .layout? == "Document" and (.name | startswith("[Docs]"))) | .name | ltrimstr("[Docs] ")]' 2>/dev/null || echo "[]")
+            BLOG_VIEWS=$(echo "$FOLDER_JSON" \
+              | jq '[.. | objects | select(.name? and .layout? == "Document" and (.name | startswith("[Blog]"))) | .name | ltrimstr("[Blog] ")]' 2>/dev/null || echo "[]")
+          fi
 
-          # Separate docs from blog based on known AppFlowy folder names
-          # Views in the "Internal Docs" / "Knowledge Base" folders → /docs/*
-          # Views in "Blog Posts" / "Blog" folders → /blog/*
-          # Use search to find views in each folder section
-          DOCS_VIEWS=$(curl -sS "${BASE}/api/workspace/${WORKSPACE_ID}/search?query=docs&limit=100" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            | jq -r '[.data[]? | select(.layout == "Document") | .name]' 2>/dev/null || echo "[]")
-
-          BLOG_VIEWS=$(curl -sS "${BASE}/api/workspace/${WORKSPACE_ID}/search?query=blog&limit=100" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            | jq -r '[.data[]? | select(.layout == "Document") | .name]' 2>/dev/null || echo "[]")
-
-          # Fall back to all views if search returns nothing
-          ALL_VIEWS=$(curl -sS "${BASE}/api/workspace/${WORKSPACE_ID}/folder?depth=3" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            | jq '[.. | objects | select(.name? and .layout? == "Document") | .name]' 2>/dev/null || echo "[]")
-
-          DOCS_COUNT=$(echo "$ALL_VIEWS" | jq 'length')
+          DOCS_COUNT=$(echo "$DOCS_VIEWS" | jq 'length')
           BLOG_COUNT=$(echo "$BLOG_VIEWS" | jq 'length')
 
           echo "docs_views<<EOF" >> "$GITHUB_OUTPUT"
