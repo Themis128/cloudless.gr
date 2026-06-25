@@ -49,13 +49,29 @@ jobs:
           ANALYTICS_BUCKET: ${{ env.BUCKET }}
           COGNITO_USER_POOL_ID: us-east-1_1Bq3Mpqer
 
-      - name: Notify Slack on failure
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
+      - name: Ping Kuma on success
+        if: success()
+        env:
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_ETL_CLIENTS }}
+        run: |
+          [ -z "$KUMA_PUSH_TOKEN" ] && exit 0
+          curl -fsS --max-time 10 --retry 3 \
+            "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=etl-clients+ok" \
+            > /dev/null || true
+
+      - name: Notify on failure
+        if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_ETL_CLIENTS }}
         run: |
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "text": ":x: ETL — Clients & Portals to Data Lake failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
-            }'
+          [ -n "$KUMA_PUSH_TOKEN" ] && \
+            curl -fsS --max-time 10 --retry 3 \
+              "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=etl-clients+failed" \
+              > /dev/null || true
+          [ -n "$SLACK_WEBHOOK_URL" ] && \
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "text": ":x: ETL — Clients & Portals to Data Lake failed See https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+              }' || true

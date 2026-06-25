@@ -71,10 +71,29 @@ jobs:
           ESPOCRM_API_KEY: ${{ steps.ssm.outputs.ESPOCRM_API_KEY }}
           ANALYTICS_BUCKET: ${{ env.BUCKET }}
 
-      - name: Notify Slack on failure
-        if: failure()
+      - name: Ping Kuma on success
+        if: success()
+        env:
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_ETL_ESPOCRM }}
         run: |
-          curl -sS -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H 'Content-Type: application/json' \
-            -d "{\"text\":\":red_circle: ETL espocrm-to-lake failed — <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|run>\"}" \
-            || true
+          [ -z "$KUMA_PUSH_TOKEN" ] && exit 0
+          curl -fsS --max-time 10 --retry 3 \
+            "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=etl-espocrm+ok" \
+            > /dev/null || true
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_ETL_ESPOCRM }}
+        run: |
+          [ -n "$KUMA_PUSH_TOKEN" ] && \
+            curl -fsS --max-time 10 --retry 3 \
+              "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=etl-espocrm+failed" \
+              > /dev/null || true
+          [ -n "$SLACK_WEBHOOK_URL" ] && \
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "text": ":x: ETL espocrm-to-lake failed See https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+              }' || true

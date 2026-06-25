@@ -1,17 +1,18 @@
-name: Cluster health ping (healthchecks.io)
+name: Cluster health ping (Uptime Kuma)
 
-# Pings healthchecks.io every 10 minutes so a dead-man's alert fires if the
-# k3s API server on omv stops responding. The check URL is stored as the repo
-# secret HEALTHCHECKS_CLUSTER_URL (e.g. https://hc-ping.com/<uuid>).
+# Pings an Uptime Kuma push monitor every 10 minutes so a dead-man's alert
+# fires if the k3s API server on omv stops responding.
 #
-# healthchecks.io check config:
-#   Period:  10 min
-#   Grace:   5 min  → alert fires after 15 min of silence
-#   Alert:   email / Slack (configure in healthchecks.io dashboard)
+# Kuma push monitor setup:
+#   1. Kuma UI → + New Monitor → Type: Push
+#   2. Name: "k3s API server"
+#   3. Heartbeat interval: 10 min  →  Grace: 5 min  →  Save
+#   4. Copy the push token shown (e.g. abc123xyz)
+#   5. Add as repo secret KUMA_PUSH_CLUSTER (the token only, not the full URL)
+#      Kuma base URL is https://kuma.cloudless.gr
 #
-# To set up the secret: go to healthchecks.io, create a new check with
-# period=10min, copy the ping URL, and add it as repo secret
-# HEALTHCHECKS_CLUSTER_URL.
+# Alert fires after 15 min of silence (10 min period + 5 min grace).
+# Configure alert channels in Kuma UI → Edit Monitor → Notifications.
 
 on:
   schedule:
@@ -26,40 +27,47 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      HC_URL: ${{ secrets.HEALTHCHECKS_CLUSTER_URL }}
+      KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_CLUSTER }}
+      KUMA_BASE_URL: "https://kuma.cloudless.gr"
       PI_HOST: "100.113.41.119"
     steps:
       - name: Skip if secret not configured
-        if: ${{ env.HC_URL == '' }}
+        if: ${{ env.KUMA_PUSH_TOKEN == '' }}
         run: |
-          echo "HEALTHCHECKS_CLUSTER_URL is not set — skipping ping."
+          echo "KUMA_PUSH_CLUSTER is not set — skipping ping."
+          echo "Create a Push monitor in Kuma UI and add its token as repo secret KUMA_PUSH_CLUSTER."
           exit 0
 
       - name: Connect to tailnet
-        if: ${{ env.HC_URL != '' }}
+        if: ${{ env.KUMA_PUSH_TOKEN != '' }}
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Ping /start
-        if: ${{ env.HC_URL != '' }}
-        run: curl -fsS --retry 3 --max-time 10 "${HC_URL}/start" > /dev/null || true
-
       - name: Check cluster reachability (port 6443)
-        if: ${{ env.HC_URL != '' }}
+        if: ${{ env.KUMA_PUSH_TOKEN != '' }}
         id: check
         run: |
           if nc -zv -w5 "$PI_HOST" 6443 2>/dev/null; then
-            echo "exit_code=0" >> "$GITHUB_OUTPUT"
+            echo "status=up" >> "$GITHUB_OUTPUT"
+            echo "msg=k3s API port 6443 reachable" >> "$GITHUB_OUTPUT"
           else
-            echo "exit_code=1" >> "$GITHUB_OUTPUT"
+            echo "status=down" >> "$GITHUB_OUTPUT"
+            echo "msg=k3s API port 6443 unreachable" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Ping result (0=up, 1=down)
-        if: ${{ env.HC_URL != '' }}
+      - name: Ping Kuma push monitor
+        if: ${{ env.KUMA_PUSH_TOKEN != '' }}
         run: |
-          EXIT="${{ steps.check.outputs.exit_code }}"
-          curl -fsS --retry 3 --max-time 10 "${HC_URL}/${EXIT}" > /dev/null || true
-          if [ "$EXIT" = "1" ]; then
-            echo "::warning::Cluster port 6443 is unreachable — failure ping sent to healthchecks.io"
+          STATUS="${{ steps.check.outputs.status }}"
+          MSG="${{ steps.check.outputs.msg }}"
+          START_MS=$EPOCHREALTIME
+          # Kuma push: GET /api/push/<token>?status=up|down&msg=...&ping=<ms>
+          PING_MS=$(( (${EPOCHREALTIME/./} - ${START_MS/./}) / 1000 ))
+          PUSH_URL="${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=${STATUS}&msg=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$MSG")&ping=${PING_MS}"
+          curl -fsS --retry 3 --max-time 10 "$PUSH_URL" > /dev/null || true
+          if [ "$STATUS" = "down" ]; then
+            echo "::warning::Cluster port 6443 is unreachable — down ping sent to Kuma"
+          else
+            echo "✓ Kuma push sent: $STATUS"
           fi
