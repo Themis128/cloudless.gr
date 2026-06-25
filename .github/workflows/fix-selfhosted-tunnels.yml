@@ -67,76 +67,50 @@ jobs:
       # ------------------------------------------------------------------
       - name: Patch cloudflared config
         run: |
-          python3 - /tmp/cf-config-current.txt > /tmp/cf-config-new.txt <<'PYEOF'
-          import sys, re
+          # State-machine line replacement — handles any leading-whitespace variant.
+          # Only grafana needs fixing: localhost:18443 → 192.168.1.128:30850.
+          # kuma (32501) and n8n (30820) are already correct on the cluster.
+          python3 <<'PYEOF'
+          import re, sys
 
-          with open(sys.argv[1]) as f:
-              raw = f.read()
+          src = "/tmp/cf-config-current.txt"
+          dst = "/tmp/cf-config-new.txt"
 
-          # ---- Rules to ensure are present (correct values) ----
-          RULES = {
-              "grafana.cloudless.gr": {
-                  "service": "http://192.168.1.128:30850",
-                  "extra": """      originRequest:
-                connectTimeout: 15s
-                tcpKeepAlive: 30s
-                noTLSVerify: false
-                httpHostHeader: grafana.cloudless.gr""",
-              },
-              "kuma.cloudless.gr": {
-                  "service": "http://192.168.1.128:32501",
-                  "extra": """      originRequest:
-                connectTimeout: 10s
-                tcpKeepAlive: 30s""",
-              },
-              "n8n.cloudless.gr": {
-                  "service": "http://192.168.1.128:30900",
-                  "extra": """      originRequest:
-                connectTimeout: 15s
-                tcpKeepAlive: 30s
-                noTLSVerify: false
-                httpHostHeader: n8n.cloudless.gr""",
-              },
-          }
+          with open(src) as f:
+              lines = f.readlines()
 
-          # Remove any existing entries for our hostnames (including stale ones)
-          for hostname in RULES:
-              safe = re.escape(hostname)
-              raw = re.sub(
-                  rf"  - hostname: {safe}\n(?:    [^\n]*\n)*",
-                  "",
-                  raw,
-              )
+          out = []
+          i = 0
+          patched = False
+          while i < len(lines):
+              line = lines[i]
+              if re.match(r'\s*-\s*hostname:\s*grafana\.cloudless\.gr\s*$', line):
+                  out.append(line)
+                  i += 1
+                  if i < len(lines) and re.match(r'\s*service:\s*', lines[i]):
+                      indent = re.match(r'(\s*)', lines[i]).group(1)
+                      new_svc = f"{indent}service: http://192.168.1.128:30850\n"
+                      print(f"PATCHED: '{lines[i].rstrip()}' -> '{new_svc.rstrip()}'")
+                      out.append(new_svc)
+                      patched = True
+                      i += 1
+                  continue
+              out.append(line)
+              i += 1
 
-          # Build new rule blocks
-          new_blocks = ""
-          for hostname, rule in RULES.items():
-              new_blocks += f"""  - hostname: {hostname}
-              service: {rule["service"]}
-          {rule["extra"]}
-          """
+          if not patched:
+              print("WARNING: grafana hostname not found — config unchanged", file=sys.stderr)
 
-          # Insert before catch-all rule
-          if "- service: http_status:404" in raw:
-              raw = raw.replace("  - service: http_status:404", new_blocks + "  - service: http_status:404")
-          else:
-              # No catch-all — append to ingress section
-              raw = raw.rstrip("\n") + "\n" + new_blocks + "\n"
+          with open(dst, "w") as f:
+              f.writelines(out)
 
-          with open("/tmp/cf-config-new.txt", "w") as f:
-              f.write(raw)
-
-          print("=== Patched config (ingress section) ===")
-          in_ingress = False
-          for line in raw.splitlines():
-              if line.strip().startswith("ingress:"):
-                  in_ingress = True
-              if in_ingress:
-                  print(line)
+          print(f"Done — wrote {dst} ({len(out)} lines)")
           PYEOF
 
           echo "=== Diff ==="
           diff /tmp/cf-config-current.txt /tmp/cf-config-new.txt || true
+          echo "=== Grafana entry after patch ==="
+          grep -A3 "grafana.cloudless.gr" /tmp/cf-config-new.txt
 
       # ------------------------------------------------------------------
       # Step 3: Apply patched config to omv (primary cloudflared)
@@ -195,11 +169,14 @@ jobs:
           kubectl delete pod -n default cf-apply-omv --ignore-not-found
 
       # ------------------------------------------------------------------
-      # Step 4: Sync identical config to omv-ha
+      # Step 4: Sync identical config to omv-ha via nsenter (same as omv)
       # ------------------------------------------------------------------
       - name: Apply config to omv-ha
         run: |
-          cat <<'PODEOF' | kubectl apply -f -
+          # Delete any stale pod first so kubectl create (not apply) gives a fresh run
+          kubectl delete pod cf-apply-ha -n default --ignore-not-found --wait=true
+
+          cat <<'PODEOF' | kubectl create -f -
           apiVersion: v1
           kind: Pod
           metadata:
@@ -215,9 +192,6 @@ jobs:
               - name: patch
                 configMap:
                   name: cf-patch
-              - name: cloudflared
-                hostPath:
-                  path: /etc/cloudflared
             containers:
               - name: w
                 image: alpine:3
@@ -226,24 +200,21 @@ jobs:
                 volumeMounts:
                   - name: patch
                     mountPath: /patch
-                  - name: cloudflared
-                    mountPath: /host-cf
                 command:
                   - sh
                   - -c
                   - |
                     set -e
                     apk add -q util-linux 2>/dev/null
-                    cp /host-cf/config.yml /host-cf/config.yml.bak.$(date +%s)
-                    cp /patch/config.yml /host-cf/config.yml
-                    echo "=== grafana entry ===" && grep -A6 "grafana.cloudless.gr" /host-cf/config.yml
-                    echo "=== kuma entry ===" && grep -A4 "kuma.cloudless.gr" /host-cf/config.yml
-                    echo "=== n8n entry ===" && grep -A6 "n8n.cloudless.gr" /host-cf/config.yml
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c "
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- sh -c '
+                      CFG=/etc/cloudflared/config.yml
+                      cp "$CFG" "$CFG.bak.$(date +%s)"
+                      cat /proc/1/root/patch/config.yml > "$CFG"
+                      echo "=== grafana entry ===" && grep -A3 "grafana.cloudless.gr" "$CFG"
                       systemctl restart cloudflared
                       sleep 3
-                      systemctl is-active cloudflared && echo 'cloudflared OK on omv-ha'
-                    "
+                      systemctl is-active cloudflared && echo "cloudflared OK on omv-ha"
+                    '
           PODEOF
 
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-ha -n default --timeout=120s || true
