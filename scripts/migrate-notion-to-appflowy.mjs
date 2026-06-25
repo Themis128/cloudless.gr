@@ -6,9 +6,8 @@
  * Run once after AppFlowy is live and configured in SSM.
  *
  * Prerequisites:
- *   - NOTION_API_KEY in env or SSM
- *   - APPFLOWY_API_URL + APPFLOWY_JWT_SECRET in env or SSM (or env directly)
- *   - APPFLOWY_EMAIL + APPFLOWY_PASSWORD for the GoTrue auth-token upload path
+ *   - NOTION_API_KEY
+ *   - APPFLOWY_API_URL, APPFLOWY_EMAIL, APPFLOWY_PASSWORD
  *
  * Usage:
  *   node scripts/migrate-notion-to-appflowy.mjs [--dry-run]
@@ -25,29 +24,9 @@
  * used by scripts/appflowy-upload-md.mjs.
  */
 
-import { createHmac } from "node:crypto";
-
 const DRY_RUN = process.argv.includes("--dry-run");
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-function b64url(input) {
-  return Buffer.from(input)
-    .toString("base64")
-    .replace(/=+$/, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-function signServiceJwt(secret) {
-  const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = { aud: "", role: "supabase_admin", iss: "migrate-script", iat: now, exp: now + 300 };
-  const head = b64url(JSON.stringify(header));
-  const body = b64url(JSON.stringify(payload));
-  const sig = b64url(createHmac("sha256", secret).update(`${head}.${body}`).digest());
-  return `${head}.${body}.${sig}`;
-}
 
 async function notionGet(path, token, cursor) {
   const url = `https://api.notion.com/v1${path}`;
@@ -74,14 +53,24 @@ async function notionPost(path, token, body) {
   return res.json();
 }
 
-async function appflowyPost(path, jwtSecret, baseUrl, body) {
-  const token = signServiceJwt(jwtSecret);
+// Obtain a real user token via GoTrue password grant (service JWT doesn't have workspace access)
+async function getAppFlowyToken(baseUrl, email, password) {
+  const res = await fetch(`${baseUrl}/gotrue/token?grant_type=password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) throw new Error(`AppFlowy login failed: ${res.status}`);
+  const data = await res.json();
+  if (!data.access_token) throw new Error("AppFlowy login: no access_token in response");
+  return data.access_token;
+}
+
+async function appflowyPost(path, token, baseUrl, body) {
   const res = await fetch(`${baseUrl}/api${path}`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15_000),
   });
@@ -89,8 +78,7 @@ async function appflowyPost(path, jwtSecret, baseUrl, body) {
   return res.json();
 }
 
-async function appflowyGet(path, jwtSecret, baseUrl) {
-  const token = signServiceJwt(jwtSecret);
+async function appflowyGet(path, token, baseUrl) {
   const res = await fetch(`${baseUrl}/api${path}`, {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     signal: AbortSignal.timeout(15_000),
@@ -164,25 +152,30 @@ async function queryDatabaseAll(dbId, notionToken) {
 async function main() {
   const notionToken = process.env.NOTION_API_KEY;
   const appflowyBase = (process.env.APPFLOWY_API_URL ?? "").replace(/\/$/, "");
-  const jwtSecret = process.env.APPFLOWY_JWT_SECRET ?? "";
+  const appflowyEmail = process.env.APPFLOWY_EMAIL ?? "";
+  const appflowyPassword = process.env.APPFLOWY_PASSWORD ?? "";
 
   if (!notionToken) { console.error("NOTION_API_KEY not set"); process.exit(1); }
-  if (!appflowyBase || !jwtSecret) { console.error("APPFLOWY_API_URL and APPFLOWY_JWT_SECRET required"); process.exit(1); }
+  if (!appflowyBase || !appflowyEmail || !appflowyPassword) {
+    console.error("APPFLOWY_API_URL, APPFLOWY_EMAIL, and APPFLOWY_PASSWORD required");
+    process.exit(1);
+  }
 
   console.log(`Mode: ${DRY_RUN ? "DRY RUN" : "LIVE"}`);
 
-  // 1. Get AppFlowy primary workspace
-  const wsData = await appflowyGet("/admin/workspace", jwtSecret, appflowyBase);
+  // 1. Login to AppFlowy and get workspace
+  const appflowyToken = await getAppFlowyToken(appflowyBase, appflowyEmail, appflowyPassword);
+  const wsData = await appflowyGet("/workspace", appflowyToken, appflowyBase);
   const workspaceId = wsData.data?.[0]?.workspace_id;
   if (!workspaceId) { console.error("No AppFlowy workspace found"); process.exit(1); }
   console.log(`AppFlowy workspace: ${workspaceId}`);
 
-  // 2. Get root view to use as parent
+  // 2. Get root view id (workspace root = workspaceId itself)
   const folderData = await appflowyGet(
-    `/workspace/${workspaceId}/folder?depth=1`, jwtSecret, appflowyBase
+    `/workspace/${workspaceId}/folder?depth=1`, appflowyToken, appflowyBase
   );
-  const rootViewId = folderData.data?.[0]?.view_id;
-  if (!rootViewId) { console.error("No root view found in AppFlowy workspace"); process.exit(1); }
+  const rootViewId = folderData.data?.view_id ?? workspaceId;
+  console.log(`Root view: ${rootViewId}`);
 
   // 3. Search Notion for all databases
   let searchCursor;
@@ -208,7 +201,7 @@ async function main() {
       try {
         const createRes = await appflowyPost(
           `/workspace/${workspaceId}/page-view`,
-          jwtSecret,
+          appflowyToken,
           appflowyBase,
           { name: dbTitle, parent_view_id: rootViewId, layout: 0 }
         );
@@ -243,7 +236,7 @@ async function main() {
         try {
           const pageRes = await appflowyPost(
             `/workspace/${workspaceId}/page-view`,
-            jwtSecret,
+            appflowyToken,
             appflowyBase,
             { name: title, parent_view_id: dbViewId, layout: 0 }
           );
@@ -252,7 +245,7 @@ async function main() {
             // Upload markdown content to the page
             await appflowyPost(
               `/workspace/${workspaceId}/doc/${pageViewId}`,
-              jwtSecret,
+              appflowyToken,
               appflowyBase,
               { data: markdown }
             ).catch(() => {
