@@ -226,10 +226,10 @@ jobs:
           # tailscale ping exits 1 when all pings route via DERP (no direct
           # path) even though the connection works fine for kubectl. Treat as
           # diagnostic-only; let kubectl be the definitive connectivity gate.
-          tailscale ping -c 3 --timeout=15s 100.113.41.119 \
+          tailscale ping -c 3 --timeout=15s 100.74.191.58 \
             || echo "Note: Tailscale using DERP relay — kubectl will still work"
           # nc exit code unreliable through DERP; log result but don't fail.
-          nc -zv -w 10 100.113.41.119 6443 \
+          nc -zv -w 10 100.74.191.58 6443 \
             && echo "Port 6443 directly reachable" \
             || echo "Port 6443 via nc failed — proceeding over Tailscale relay"
       - name: Configure kubectl
