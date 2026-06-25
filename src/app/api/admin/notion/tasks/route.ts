@@ -17,7 +17,12 @@ import {
 import type { Task, TaskStatus } from "@/lib/notion-projects";
 
 const STATUS_PREFIXES: TaskStatus[] = [
-  "Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked",
+  "Backlog",
+  "To Do",
+  "In Progress",
+  "In Review",
+  "Done",
+  "Blocked",
 ];
 
 function inferStatus(name: string): TaskStatus {
@@ -27,7 +32,12 @@ function inferStatus(name: string): TaskStatus {
   return "To Do";
 }
 
-function viewToTask(v: { view_id: string; name: string; created_at: string; last_edited_time: string }): Task {
+function viewToTask(v: {
+  view_id: string;
+  name: string;
+  created_at: string;
+  last_edited_time: string;
+}): Task {
   return {
     id: v.view_id,
     task: v.name,
