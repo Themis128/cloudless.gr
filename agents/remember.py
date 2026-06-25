@@ -1,6 +1,5 @@
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MEMORY_FILE = PROJECT_ROOT / ".agent-memory" / "memories" / "AGENTS.md"
@@ -38,7 +37,7 @@ def remember(note: str, section: str = "User preferences") -> None:
         print("Memory already exists.")
         return
 
-    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    timestamp = datetime.now(UTC).isoformat(timespec="seconds")
 
     if f"## {section}" not in existing:
         addition = f"\n\n## {section}\n"
@@ -59,8 +58,6 @@ if __name__ == "__main__":
     note = " ".join(sys.argv[1:]).strip()
 
     if not note:
-        raise SystemExit(
-            'Usage: PYTHONPATH=. python agents/remember.py "memory note"'
-        )
+        raise SystemExit('Usage: PYTHONPATH=. python agents/remember.py "memory note"')
 
     remember(note)

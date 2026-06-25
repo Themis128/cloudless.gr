@@ -1,0 +1,85 @@
+name: Fix health-check-cloudless log permissions
+
+# One-shot: creates /var/log/health-check-cloudless.log owned by tbaltzakis
+# so the user-level cron job can write to it without "Permission denied".
+# Also updates the crontab to redirect to ~/logs/ as a belt-and-suspenders
+# fallback if /var/log stays root-owned after a reboot.
+#
+# Run once via workflow_dispatch, then this workflow can be deleted.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-health-check-log.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fix:
+    name: Fix log permissions on omv
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/omv_key
+          chmod 600 ~/.ssh/omv_key
+          ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Fix log file + crontab on omv
+        run: |
+          ssh -i ~/.ssh/omv_key -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 bash -s << 'ENDSSH'
+          set -euo pipefail
+
+          LOG=/var/log/health-check-cloudless.log
+          USERLOG="$HOME/logs/health-check-cloudless.log"
+
+          # 1) Try to create/chown the system log file (needs sudo, may fail)
+          if sudo touch "$LOG" && sudo chown tbaltzakis:tbaltzakis "$LOG"; then
+            echo "OK: $LOG is now owned by tbaltzakis"
+            TARGET="$LOG"
+          else
+            echo "WARN: cannot chown $LOG (no sudo?), falling back to user log"
+            mkdir -p "$HOME/logs"
+            touch "$USERLOG"
+            TARGET="$USERLOG"
+          fi
+
+          # 2) Verify the cron entry uses the writable target
+          CURRENT_CRON=$(crontab -l 2>/dev/null || true)
+          SCRIPT=/usr/local/bin/health-check-cloudless.sh
+
+          if echo "$CURRENT_CRON" | grep -q "$SCRIPT"; then
+            # Replace whatever log path is in the cron line with TARGET
+            NEW_CRON=$(echo "$CURRENT_CRON" | sed "s|>> .*health-check-cloudless\.log|>> $TARGET|g")
+            if [ "$NEW_CRON" != "$CURRENT_CRON" ]; then
+              echo "$NEW_CRON" | crontab -
+              echo "OK: crontab updated to write to $TARGET"
+            else
+              echo "INFO: crontab already points at $TARGET — no change needed"
+            fi
+          else
+            echo "WARN: $SCRIPT not found in crontab — nothing to fix"
+            echo "Current crontab:"
+            echo "$CURRENT_CRON"
+          fi
+
+          # 3) Test the script runs cleanly
+          if [ -x "$SCRIPT" ]; then
+            echo "Testing $SCRIPT..."
+            bash "$SCRIPT" >> "$TARGET" 2>&1 && echo "OK: test run succeeded" || echo "WARN: test run exited non-zero (check $TARGET)"
+          fi
+
+          echo "--- Final crontab ---"
+          crontab -l || true
+          echo "--- Log tail ---"
+          tail -5 "$TARGET" || true
+          ENDSSH
