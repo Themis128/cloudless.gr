@@ -112,7 +112,6 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (action) {
-
       // ── System ──────────────────────────────────────────────────────────────
       case "health": {
         const res = await fetch(`${LANGGRAPH_URL}/ok`, { signal: AbortSignal.timeout(5000) });
@@ -130,7 +129,9 @@ export async function POST(request: NextRequest) {
 
       // ── Threads ─────────────────────────────────────────────────────────────
       case "create-thread":
-        return Response.json(await createLangGraphThread(body.metadata as Record<string, unknown> | undefined));
+        return Response.json(
+          await createLangGraphThread(body.metadata as Record<string, unknown> | undefined)
+        );
 
       case "get-thread": {
         const tid = body.thread_id as string;
@@ -141,7 +142,9 @@ export async function POST(request: NextRequest) {
       case "patch-thread": {
         const tid = body.thread_id as string;
         if (!tid) return Response.json({ error: "Missing thread_id" }, { status: 400 });
-        return Response.json(await patchLangGraphThread(tid, body.metadata as Record<string, unknown> ?? {}));
+        return Response.json(
+          await patchLangGraphThread(tid, (body.metadata as Record<string, unknown>) ?? {})
+        );
       }
 
       case "get-thread-state": {
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
         if (!tid) return Response.json({ error: "Missing thread_id" }, { status: 400 });
         await updateLangGraphThreadState(
           tid,
-          body.values as Record<string, unknown> ?? {},
+          (body.values as Record<string, unknown>) ?? {},
           body.as_node as string | undefined
         );
         return Response.json({ ok: true });
@@ -189,14 +192,16 @@ export async function POST(request: NextRequest) {
         const tid = body.thread_id as string;
         const aid = body.assistant_id as string;
         const msgs = (body.messages as Array<{ role: string; content: string }>) ?? [];
-        if (!tid || !aid) return Response.json({ error: "Missing thread_id or assistant_id" }, { status: 400 });
+        if (!tid || !aid)
+          return Response.json({ error: "Missing thread_id or assistant_id" }, { status: 400 });
 
         const opts: StreamRunOptions = {
           streamMode: (body.stream_mode as StreamRunOptions["streamMode"]) ?? ["messages"],
           interruptBefore: body.interrupt_before as StreamRunOptions["interruptBefore"],
           interruptAfter: body.interrupt_after as StreamRunOptions["interruptAfter"],
           onDisconnect: (body.on_disconnect as "cancel" | "continue") ?? "continue",
-          multitaskStrategy: (body.multitask_strategy as StreamRunOptions["multitaskStrategy"]) ?? "enqueue",
+          multitaskStrategy:
+            (body.multitask_strategy as StreamRunOptions["multitaskStrategy"]) ?? "enqueue",
           ifNotExists: (body.if_not_exists as "create" | "reject") ?? "reject",
           metadata: body.metadata as Record<string, unknown> | undefined,
           config: body.config as Record<string, unknown> | undefined,
@@ -216,7 +221,8 @@ export async function POST(request: NextRequest) {
         const tid = body.thread_id as string;
         const aid = body.assistant_id as string;
         const msgs = (body.messages as Array<{ role: string; content: string }>) ?? [];
-        if (!tid || !aid) return Response.json({ error: "Missing thread_id or assistant_id" }, { status: 400 });
+        if (!tid || !aid)
+          return Response.json({ error: "Missing thread_id or assistant_id" }, { status: 400 });
         const run = await createBackgroundRun(tid, aid, msgs, {
           multitaskStrategy: body.multitask_strategy as StreamRunOptions["multitaskStrategy"],
           metadata: body.metadata as Record<string, unknown> | undefined,
@@ -230,7 +236,8 @@ export async function POST(request: NextRequest) {
       case "join-run-stream": {
         const tid = body.thread_id as string;
         const rid = body.run_id as string;
-        if (!tid || !rid) return Response.json({ error: "Missing thread_id or run_id" }, { status: 400 });
+        if (!tid || !rid)
+          return Response.json({ error: "Missing thread_id or run_id" }, { status: 400 });
         const upstream = await joinRunStream(tid, rid);
         if (!upstream.ok) {
           const text = await upstream.text().catch(() => "");
@@ -242,7 +249,8 @@ export async function POST(request: NextRequest) {
       case "cancel-run": {
         const tid = body.thread_id as string;
         const rid = body.run_id as string;
-        if (!tid || !rid) return Response.json({ error: "Missing thread_id or run_id" }, { status: 400 });
+        if (!tid || !rid)
+          return Response.json({ error: "Missing thread_id or run_id" }, { status: 400 });
         await cancelRun(tid, rid, Boolean(body.wait));
         return Response.json({ cancelled: rid });
       }
@@ -257,7 +265,8 @@ export async function POST(request: NextRequest) {
       case "get-run": {
         const tid = body.thread_id as string;
         const rid = body.run_id as string;
-        if (!tid || !rid) return Response.json({ error: "Missing thread_id or run_id" }, { status: 400 });
+        if (!tid || !rid)
+          return Response.json({ error: "Missing thread_id or run_id" }, { status: 400 });
         return Response.json(await getRun(tid, rid));
       }
 
@@ -266,7 +275,11 @@ export async function POST(request: NextRequest) {
         const tid = body.thread_id as string;
         const aid = body.assistant_id as string;
         const msgs = body.messages as Array<{ role: string; content: string }>;
-        if (!tid || !aid || !msgs) return Response.json({ error: "Missing thread_id, assistant_id, or messages" }, { status: 400 });
+        if (!tid || !aid || !msgs)
+          return Response.json(
+            { error: "Missing thread_id, assistant_id, or messages" },
+            { status: 400 }
+          );
         const result = await invokeLangGraphRun(tid, aid, msgs, {
           config: body.config as Record<string, unknown> | undefined,
           metadata: body.metadata as Record<string, unknown> | undefined,
@@ -278,9 +291,11 @@ export async function POST(request: NextRequest) {
       case "resume-run": {
         const tid = body.thread_id as string;
         const aid = body.assistant_id as string;
-        if (!tid || !aid) return Response.json({ error: "Missing thread_id or assistant_id" }, { status: 400 });
+        if (!tid || !aid)
+          return Response.json({ error: "Missing thread_id or assistant_id" }, { status: 400 });
         const upstream = await resumeInterruptedRun(
-          tid, aid,
+          tid,
+          aid,
           body.resume_value,
           body.stream_mode as StreamRunOptions["streamMode"]
         );
@@ -295,7 +310,8 @@ export async function POST(request: NextRequest) {
       case "store-get": {
         const ns = body.namespace as string[];
         const key = body.key as string;
-        if (!ns || !key) return Response.json({ error: "Missing namespace or key" }, { status: 400 });
+        if (!ns || !key)
+          return Response.json({ error: "Missing namespace or key" }, { status: 400 });
         return Response.json(await storeGet(ns, key));
       }
 
@@ -303,7 +319,8 @@ export async function POST(request: NextRequest) {
         const ns = body.namespace as string[];
         const key = body.key as string;
         const value = body.value as Record<string, unknown>;
-        if (!ns || !key || value === undefined) return Response.json({ error: "Missing namespace, key, or value" }, { status: 400 });
+        if (!ns || !key || value === undefined)
+          return Response.json({ error: "Missing namespace, key, or value" }, { status: 400 });
         await storePut(ns, key, value);
         return Response.json({ ok: true });
       }
@@ -311,7 +328,8 @@ export async function POST(request: NextRequest) {
       case "store-delete": {
         const ns = body.namespace as string[];
         const key = body.key as string;
-        if (!ns || !key) return Response.json({ error: "Missing namespace or key" }, { status: 400 });
+        if (!ns || !key)
+          return Response.json({ error: "Missing namespace or key" }, { status: 400 });
         await storeDelete(ns, key);
         return Response.json({ ok: true });
       }
@@ -342,7 +360,10 @@ export async function POST(request: NextRequest) {
     const msg = err instanceof Error ? err.message : String(err);
     if (isDown(msg)) {
       return Response.json(
-        { error: "LangGraph server not running. Start: cd ~/cloudless-agent && langgraph dev --port 2024 --no-browser" },
+        {
+          error:
+            "LangGraph server not running. Start: cd ~/cloudless-agent && langgraph dev --port 2024 --no-browser",
+        },
         { status: 503 }
       );
     }

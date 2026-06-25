@@ -7,12 +7,7 @@
  */
 
 import { Client } from "@langchain/langgraph-sdk";
-import type {
-  Thread,
-  ThreadState,
-  Run,
-  Assistant,
-} from "@langchain/langgraph-sdk";
+import type { Thread, ThreadState, Run, Assistant } from "@langchain/langgraph-sdk";
 
 export type { Thread, ThreadState, Run, Assistant };
 
@@ -31,8 +26,7 @@ export async function getCloudlessAssistant(): Promise<Assistant> {
     graphId: CLOUDLESS_GRAPH_ID,
     limit: 1,
   });
-  if (assistants.length === 0)
-    throw new Error("cloudless assistant not found on LangGraph server");
+  if (assistants.length === 0) throw new Error("cloudless assistant not found on LangGraph server");
   return assistants[0];
 }
 
@@ -142,7 +136,10 @@ export async function createBackgroundRun(
   threadId: string,
   assistantId: string,
   messages: Array<{ role: string; content: string }>,
-  opts: Pick<StreamRunOptions, "multitaskStrategy" | "metadata" | "config" | "interruptBefore" | "interruptAfter"> = {}
+  opts: Pick<
+    StreamRunOptions,
+    "multitaskStrategy" | "metadata" | "config" | "interruptBefore" | "interruptAfter"
+  > = {}
 ): Promise<Run> {
   return getClient().runs.create(threadId, assistantId, {
     input: { messages },
@@ -207,10 +204,7 @@ export async function storeSearch(
   return getClient().store.searchItems(namespacePrefix, opts);
 }
 
-export async function storeListNamespaces(
-  prefix?: string[],
-  suffix?: string[]
-) {
+export async function storeListNamespaces(prefix?: string[], suffix?: string[]) {
   return getClient().store.listNamespaces({ prefix, suffix });
 }
 
