@@ -46,6 +46,12 @@ spec:
                       key: AWS_SECRET_ACCESS_KEY
                 - name: AWS_DEFAULT_REGION
                   value: "us-east-1"
+                - name: KUMA_PUSH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-kuma
+                      key: KUMA_PUSH_BACKUP_N8N
+                      optional: true
               command:
                 - /bin/sh
                 - -c
@@ -63,8 +69,12 @@ spec:
                   echo "✅ uploaded ${SIZE} bytes"
                   if [ "${SIZE}" -lt 10000 ]; then
                     echo "❌ backup suspiciously small (<10KB) — failing job for retry"
+                    [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
+                      wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=n8n+backup+too+small" >/dev/null 2>&1 || true
                     exit 1
                   fi
+                  [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
+                    wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=n8n+backup+ok+${SIZE}+bytes" >/dev/null 2>&1 || true
               volumeMounts:
                 - name: n8n-data
                   mountPath: /n8n-data

@@ -57,6 +57,11 @@ jobs:
           CURRENT_CRON=$(crontab -l 2>/dev/null || true)
           SCRIPT=/usr/local/bin/health-check-cloudless.sh
 
+          # Always ensure ~/logs/ exists regardless of which log target we use
+          mkdir -p "$HOME/logs"
+          touch "$USERLOG"
+          chmod 644 "$USERLOG"
+
           if echo "$CURRENT_CRON" | grep -q "$SCRIPT"; then
             # Replace whatever log path is in the cron line with TARGET
             NEW_CRON=$(echo "$CURRENT_CRON" | sed "s|>> .*health-check-cloudless\.log|>> $TARGET|g")
