@@ -1,0 +1,380 @@
+name: Cron Audit & Fix
+
+# Audits every cron surface on the Pi cluster:
+#   1. Host crontab for tbaltzakis on omv (reads via privileged pod)
+#   2. k8s CronJobs — lists them + their last schedule time
+#   3. Systemd timers — cloudless-cleanup, k3s-etcd-defrag (via nsenter)
+#   4. Applies any missing k8s CronJobs from infrastructure/
+#   5. Fixes the health-check-cloudless.sh log path (Permission denied)
+#   6. Rebuilds the tbaltzakis crontab to the canonical set
+#
+# Trigger: push to this file, or workflow_dispatch.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cron-audit-and-fix.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit-and-fix:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      # -----------------------------------------------------------------------
+      # Step 1: Audit — read on-host crontab + systemd timers via pod
+      # -----------------------------------------------------------------------
+      - name: Audit host crontab + systemd timers on omv
+        run: |
+          kubectl delete pod cron-audit -n default --ignore-not-found --wait=true
+
+          cat <<'PODEOF' | kubectl create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: cron-audit
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            volumes:
+              - name: home
+                hostPath:
+                  path: /home/tbaltzakis
+              - name: scripts
+                hostPath:
+                  path: /usr/local/bin
+            containers:
+              - name: a
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: home
+                    mountPath: /host-home
+                  - name: scripts
+                    mountPath: /host-bin
+                command:
+                  - sh
+                  - -c
+                  - |
+                    apk add -q util-linux 2>/dev/null
+
+                    echo "===== HOST CRONTAB (tbaltzakis) ====="
+                    cat /host-home/.crontab 2>/dev/null || \
+                    cat /host-home/crontab 2>/dev/null || \
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      su -s /bin/sh tbaltzakis -c "crontab -l" 2>/dev/null || \
+                    echo "(no crontab found)"
+
+                    echo ""
+                    echo "===== HEALTH-CHECK SCRIPT ====="
+                    cat /host-bin/health-check-cloudless.sh 2>/dev/null || echo "(script not found)"
+
+                    echo ""
+                    echo "===== SYSTEMD TIMERS ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl list-timers --all --no-pager 2>/dev/null | \
+                      grep -E "cloudless|k3s-etcd|pi-disk|NEXT|LAST" || echo "(timer list failed)"
+
+                    echo ""
+                    echo "===== CLOUDLESS-CLEANUP SERVICE STATUS ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl status cloudless-cleanup.timer --no-pager 2>/dev/null | head -10 || \
+                      echo "(not found)"
+
+                    echo ""
+                    echo "===== K3S-ETCD-DEFRAG TIMER STATUS ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl status k3s-etcd-defrag.timer --no-pager 2>/dev/null | head -10 || \
+                      echo "(not found)"
+
+                    echo ""
+                    echo "===== /usr/local/bin scripts ====="
+                    ls -la /host-bin/ | grep -E "\.sh|cloudless|health|cleanup|defrag" || true
+
+                    echo ""
+                    echo "===== ~/logs/ directory ====="
+                    ls -la /host-home/logs/ 2>/dev/null || echo "(~/logs/ does not exist)"
+          PODEOF
+
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cron-audit -n default --timeout=90s
+          echo ""
+          echo "====== AUDIT OUTPUT ======"
+          kubectl logs -n default cron-audit | tee /tmp/cron-audit.txt
+          kubectl delete pod cron-audit -n default --ignore-not-found
+
+      # -----------------------------------------------------------------------
+      # Step 2: Audit k8s CronJobs
+      # -----------------------------------------------------------------------
+      - name: Audit k8s CronJobs
+        run: |
+          echo "===== ALL K8S CRONJOBS ====="
+          kubectl get cronjobs -A -o custom-columns=\
+          'NAMESPACE:.metadata.namespace,NAME:.metadata.name,SCHEDULE:.spec.schedule,SUSPEND:.spec.suspend,LAST:.status.lastScheduleTime,ACTIVE:.status.active' \
+          2>/dev/null | tee /tmp/k8s-cronjobs.txt
+
+          echo ""
+          echo "===== CRONJOB LAST RUNS (recent jobs) ====="
+          kubectl get jobs -A --sort-by='.metadata.creationTimestamp' \
+            -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.conditions[0].type,CREATED:.metadata.creationTimestamp' \
+            2>/dev/null | tail -20
+
+      # -----------------------------------------------------------------------
+      # Step 3: Apply missing k8s CronJobs
+      # -----------------------------------------------------------------------
+      - name: Apply k8s CronJob manifests
+        run: |
+          echo "=== Applying backup CronJobs ==="
+          for f in infrastructure/backup/cronjob-*.yaml; do
+            echo "Applying $f..."
+            kubectl apply -f "$f" 2>&1 || echo "WARN: $f failed (may need secrets)"
+          done
+
+          echo ""
+          echo "=== Applying monitoring CronJobs ==="
+          kubectl apply -f infrastructure/monitoring/omv-watchdogs.yaml 2>&1 || echo "WARN: omv-watchdogs failed"
+          kubectl apply -f infrastructure/monitoring/cloudflared-drift.yaml 2>&1 || echo "WARN: cloudflared-drift failed"
+
+          echo ""
+          echo "=== Applying sdb1 ops CronJob ==="
+          kubectl apply -f infrastructure/omv-sdb1/cronjob-share-readme-and-probe.yaml 2>&1 || echo "WARN: sdb1 probe failed"
+
+          echo ""
+          echo "=== CronJobs after apply ==="
+          kubectl get cronjobs -A -o wide
+
+      # -----------------------------------------------------------------------
+      # Step 4: Fix health-check log path + rebuild canonical crontab on omv
+      # -----------------------------------------------------------------------
+      - name: Fix health-check script and rebuild crontab on omv
+        run: |
+          kubectl delete pod cron-fix -n default --ignore-not-found --wait=true
+
+          cat <<'PODEOF' | kubectl create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: cron-fix
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            volumes:
+              - name: home
+                hostPath:
+                  path: /home/tbaltzakis
+              - name: scripts
+                hostPath:
+                  path: /usr/local/bin
+            containers:
+              - name: f
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: home
+                    mountPath: /host-home
+                  - name: scripts
+                    mountPath: /host-bin
+                command:
+                  - sh
+                  - -c
+                  - |
+                    set -e
+                    apk add -q util-linux 2>/dev/null
+
+                    # 1) Fix health-check script log path
+                    SCRIPT=/host-bin/health-check-cloudless.sh
+                    USERLOG="/home/tbaltzakis/logs/health-check-cloudless.log"
+                    mkdir -p /host-home/logs
+                    touch /host-home/logs/health-check-cloudless.log
+
+                    if [ -f "$SCRIPT" ]; then
+                      if grep -q '/var/log/health-check-cloudless' "$SCRIPT"; then
+                        sed -i "s|/var/log/health-check-cloudless\.log|$USERLOG|g" "$SCRIPT"
+                        echo "FIXED: health-check log path → $USERLOG"
+                      else
+                        echo "INFO: health-check script already uses correct log path"
+                        grep "health-check-cloudless\|LOG=" "$SCRIPT" | head -3
+                      fi
+                    else
+                      echo "WARN: $SCRIPT not found — creating minimal health-check script"
+                      cat > "$SCRIPT" << 'SCRIPTEOF'
+          #!/bin/sh
+          # Minimal health-check for cloudless.gr services
+          LOG="/home/tbaltzakis/logs/health-check-cloudless.log"
+          mkdir -p "$(dirname "$LOG")"
+          DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          check() {
+            CODE=$(wget -qO- --server-response "$1" 2>&1 | head -1 | grep -oP '\d{3}' || echo ERR)
+            echo "$DATE [$CODE] $1" >> "$LOG"
+          }
+          check https://cloudless.gr/
+          check https://grafana.cloudless.gr/api/health
+          check https://kuma.cloudless.gr/
+          check https://n8n.cloudless.gr/healthz
+          SCRIPTEOF
+                      chmod +x "$SCRIPT"
+                      echo "CREATED: $SCRIPT"
+                    fi
+
+                    # 2) Read current crontab (stored in system cron spool)
+                    CRON_SPOOL=/var/spool/cron/crontabs/tbaltzakis
+                    CURRENT=""
+
+                    # Try reading from nsenter (real host cron spool)
+                    CURRENT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /var/spool/cron/crontabs/tbaltzakis 2>/dev/null || true)
+
+                    if [ -z "$CURRENT" ]; then
+                      echo "INFO: no existing crontab found — will create from scratch"
+                    else
+                      echo "INFO: existing crontab has $(echo "$CURRENT" | wc -l) lines"
+                    fi
+
+                    # 3) Write canonical crontab to a temp file on the host home
+                    CRON_TMP=/host-home/.crontab-canonical
+
+                    cat > "$CRON_TMP" << 'CRONEOF'
+          # Cloudless.gr — canonical crontab for tbaltzakis on omv
+          # Managed by cron-audit-and-fix.yml — do not edit manually
+          SHELL=/bin/bash
+          PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+          # Health-check: ping self-hosted services every 5 min
+          */5 * * * * /usr/local/bin/health-check-cloudless.sh >> /home/tbaltzakis/logs/health-check-cloudless.log 2>&1
+          CRONEOF
+
+                    echo "=== Canonical crontab ==="
+                    cat "$CRON_TMP"
+
+                    # 4) Install the crontab via nsenter into the host cron spool
+                    # Copy the file into a host-visible path, then crontab -u
+                    cp "$CRON_TMP" /host-home/.crontab-install
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      crontab -u tbaltzakis /home/tbaltzakis/.crontab-install 2>/dev/null && \
+                      echo "OK: crontab installed for tbaltzakis" || \
+                      echo "WARN: crontab install failed (may need to run as root on host)"
+
+                    # 5) Verify
+                    echo ""
+                    echo "=== Installed crontab ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      crontab -u tbaltzakis -l 2>/dev/null || \
+                      echo "(verification failed)"
+
+                    echo ""
+                    echo "=== ~/logs/ ==="
+                    ls -la /host-home/logs/
+          PODEOF
+
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cron-fix -n default --timeout=90s
+          kubectl logs -n default cron-fix | tee /tmp/cron-fix.txt
+          kubectl delete pod cron-fix -n default --ignore-not-found
+
+      # -----------------------------------------------------------------------
+      # Step 5: Verify systemd timers are active
+      # -----------------------------------------------------------------------
+      - name: Verify systemd timers on omv
+        run: |
+          kubectl delete pod timer-check -n default --ignore-not-found --wait=true
+
+          cat <<'PODEOF' | kubectl create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: timer-check
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            containers:
+              - name: t
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command:
+                  - sh
+                  - -c
+                  - |
+                    apk add -q util-linux 2>/dev/null
+
+                    check_timer() {
+                      NAME=$1
+                      STATUS=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        systemctl is-active "$NAME.timer" 2>/dev/null || echo "inactive")
+                      NEXT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        systemctl show "$NAME.timer" -p NextElapseUSecRealtime 2>/dev/null | \
+                        sed 's/NextElapseUSecRealtime=//')
+                      echo "[$STATUS] $NAME.timer  next=$NEXT"
+                    }
+
+                    echo "===== SYSTEMD TIMER STATUS ====="
+                    check_timer cloudless-cleanup
+                    check_timer k3s-etcd-defrag
+
+                    echo ""
+                    echo "===== ALL CLOUDLESS TIMERS ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl list-timers --all --no-pager 2>/dev/null | \
+                      grep -E "cloudless|etcd|cleanup|health" || echo "(none found)"
+          PODEOF
+
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/timer-check -n default --timeout=60s
+          kubectl logs -n default timer-check
+          kubectl delete pod timer-check -n default --ignore-not-found
+
+      # -----------------------------------------------------------------------
+      # Step 6: Report
+      # -----------------------------------------------------------------------
+      - name: Post audit report to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Cron Audit & Fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "## Host crontab (omv)"
+            echo '```'
+            cat /tmp/cron-audit.txt | grep -A50 "HOST CRONTAB" | head -20 || echo "(empty)"
+            echo '```'
+            echo ""
+            echo "## k8s CronJobs"
+            echo '```'
+            cat /tmp/k8s-cronjobs.txt
+            echo '```'
+            echo ""
+            echo "## Fix result"
+            echo '```'
+            cat /tmp/cron-fix.txt | tail -30
+            echo '```'
+          } > /tmp/cron-report.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/cron-report.md
