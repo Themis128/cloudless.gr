@@ -367,7 +367,11 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    console.error("[langgraph]", action, msg);
+    // Sanitize for log injection: strip newlines from user-supplied action and
+    // upstream error message so neither can inject fake log lines.
+    const safeAction = String(action).replace(/[\r\n]/g, " ").slice(0, 64);
+    const safeMsg = msg.replace(/[\r\n]/g, " ");
+    console.error("[langgraph]", safeAction, safeMsg);
     return Response.json({ error: msg }, { status: 500 });
   }
 }
