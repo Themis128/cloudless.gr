@@ -36,11 +36,11 @@ const priorityClasses: Record<string, string> = {
 // EspoCRM status values map to display labels
 const stageLabels: Record<string, string> = {
   New: "New",
-  "Assigned": "Assigned",
-  "Pending": "Pending",
-  "Closed": "Closed",
-  "Rejected": "Rejected",
-  "Duplicate": "Duplicate",
+  Assigned: "Assigned",
+  Pending: "Pending",
+  Closed: "Closed",
+  Rejected: "Rejected",
+  Duplicate: "Duplicate",
   // legacy numeric HubSpot stage IDs
   "1": "New",
   "2": "Waiting on contact",
@@ -176,9 +176,7 @@ export default function AdminTicketsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 font-mono text-slate-500">
-                      {getDate(t)
-                        ? new Date(getDate(t)).toLocaleDateString("en-IE")
-                        : "—"}
+                      {getDate(t) ? new Date(getDate(t)).toLocaleDateString("en-IE") : "—"}
                     </td>
                   </tr>
                 );
