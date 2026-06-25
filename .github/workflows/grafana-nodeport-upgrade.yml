@@ -71,6 +71,43 @@ jobs:
           curl -s -o /dev/null -w "grafana.cloudless.gr: %{http_code}\n" \
             https://grafana.cloudless.gr/api/health --max-time 15 || echo "grafana.cloudless.gr: ERR"
 
+      - name: Probe Grafana → Prometheus datasource
+        run: |
+          PASS=$(kubectl get secret -n monitoring kube-prom-grafana \
+            -o jsonpath='{.data.admin-password}' | base64 -d)
+          BASE="http://192.168.1.128:30850"
+
+          echo "=== Datasources ==="
+          curl -su "admin:$PASS" "$BASE/api/datasources" | \
+            python3 -c "
+          import sys, json
+          ds = json.load(sys.stdin)
+          if isinstance(ds, list):
+            for d in ds:
+              print(d['name'], d['type'], d['url'], 'default=' + str(d.get('isDefault', False)))
+          else:
+            print(ds)
+          "
+
+          DS_ID=$(curl -su "admin:$PASS" "$BASE/api/datasources" | \
+            python3 -c "import sys,json; ds=json.load(sys.stdin); \
+            print(next((str(d['id']) for d in (ds if isinstance(ds,list) else []) \
+            if d['type']=='prometheus'), '1'))")
+
+          echo "=== Datasource $DS_ID health ==="
+          curl -su "admin:$PASS" "$BASE/api/datasources/$DS_ID/health" | python3 -m json.tool
+
+          echo "=== Prometheus 'up' metric (first 8 targets) ==="
+          curl -su "admin:$PASS" \
+            "$BASE/api/datasources/proxy/$DS_ID/api/v1/query?query=up" | \
+            python3 -c "
+          import sys, json
+          r = json.load(sys.stdin)
+          print('status:', r.get('status'))
+          for m in r.get('data', {}).get('result', [])[:8]:
+            print(' ', m['metric'].get('job','?'), '|', m['metric'].get('instance','?'), '=', m['value'][1])
+          "
+
       - name: Post result to tracking issue
         if: always()
         run: |
