@@ -541,7 +541,7 @@ async function createDraftPage(
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         parent_view_id: parentId,
-        layout: "Document",
+        layout: 0,
         name: pageName,
       }),
     }
