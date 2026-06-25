@@ -54,7 +54,11 @@ function getKumaConfig(): { baseUrl: string; slug: string } | null {
   return null;
 }
 
-async function loadKumaConfig(): Promise<{ baseUrl: string; slug: string; apiKey?: string } | null> {
+async function loadKumaConfig(): Promise<{
+  baseUrl: string;
+  slug: string;
+  apiKey?: string;
+} | null> {
   const cached = getKumaConfig();
   if (cached) return cached;
   const cfg = await getConfig();
