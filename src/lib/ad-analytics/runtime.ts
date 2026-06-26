@@ -149,6 +149,7 @@ export async function dispatchConversion(event: AdConversionEvent): Promise<Disp
           emailSha256: event.customer?.email
             ? await sha256(event.customer.email.toLowerCase().trim())
             : undefined,
+          liFatId: event.liFatId ?? undefined,
         },
         pageUrl: event.url,
       });

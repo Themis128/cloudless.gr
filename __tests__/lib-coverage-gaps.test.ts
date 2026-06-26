@@ -231,12 +231,12 @@ describe("ssm-config.ts — SSM fetch path", () => {
 
   it("builds config from SSM parameters and strips the prefix", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NOTION_API_KEY", "ntn_from_env");
     stubSsm([
       {
         Parameters: [
           { Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk_live_x" },
           { Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "whsec_y" },
-          { Name: "/cloudless/production/NOTION_API_KEY", Value: "ntn_from_ssm" },
         ],
       },
     ]);
@@ -245,7 +245,8 @@ describe("ssm-config.ts — SSM fetch path", () => {
     const cfg = await getConfig();
     expect(cfg.STRIPE_SECRET_KEY).toBe("sk_live_x");
     expect(cfg.STRIPE_WEBHOOK_SECRET).toBe("whsec_y");
-    expect(cfg.NOTION_API_KEY).toBe("ntn_from_ssm");
+    // NOTION_API_KEY is env-only (SSM keys decommissioned) — reads from process.env
+    expect(cfg.NOTION_API_KEY).toBe("ntn_from_env");
   });
 
   it("follows NextToken pagination across multiple pages", async () => {
@@ -290,12 +291,14 @@ describe("ssm-config.ts — SSM fetch path", () => {
 
   it("warns when required Stripe keys are missing but still returns config", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NOTION_API_KEY", "n_from_env");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    stubSsm([{ Parameters: [{ Name: "/cloudless/production/NOTION_API_KEY", Value: "n" }] }]);
+    stubSsm([{ Parameters: [] }]);
     const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
     resetSsmCache();
     const cfg = await getConfig();
-    expect(cfg.NOTION_API_KEY).toBe("n");
+    // NOTION_API_KEY is env-only — SSM value is ignored
+    expect(cfg.NOTION_API_KEY).toBe("n_from_env");
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("Missing required parameters"));
     warn.mockRestore();
   });

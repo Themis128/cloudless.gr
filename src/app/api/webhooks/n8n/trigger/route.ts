@@ -43,7 +43,7 @@ const NAME_TO_SSM_KEY: Record<string, keyof Awaited<ReturnType<typeof getConfig>
 
 async function verifySecret(req: NextRequest): Promise<boolean> {
   const cfg = await getConfig();
-  const expected = cfg.NOTION_WEBHOOK_SECRET;
+  const expected = cfg.CONTENT_WEBHOOK_SECRET;
   if (!expected) return false;
   const got = req.headers.get("x-n8n-trigger-secret");
   if (!got || got.length !== expected.length) return false;

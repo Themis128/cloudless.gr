@@ -63,7 +63,7 @@ spec:
                 - name: KUMA_PUSH_TOKEN
                   valueFrom:
                     secretKeyRef:
-                      name: pvc-backup-kuma
+                      name: cluster-alerts-kuma
                       key: KUMA_PUSH_BACKUP_APPFLOWY
                       optional: true
               command:

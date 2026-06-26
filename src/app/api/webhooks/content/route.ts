@@ -4,17 +4,17 @@ import { revalidatePath } from "next/cache";
 import { slackContactNotify } from "@/lib/slack-notify";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
-import { invalidateCache } from "@/lib/notion-cache";
+import { invalidateCache } from "@/lib/content-cache";
 import { escapeHtml } from "@/lib/escape-html";
 import { mapIntegrationError } from "@/lib/api-errors";
 
 const SITEMAP_PATH = "/sitemap.xml";
 
 /**
- * POST /api/webhooks/notion
+ * POST /api/webhooks/content
  *
- * Receives webhook events from Notion (via Make/Zapier/n8n or a Notion
- * automation) and performs the appropriate in-app action.
+ * Receives webhook events from the CMS (AppFlowy via n8n, or legacy Notion)
+ * and performs the appropriate in-app action.
  *
  * Supported event types:
  *   - page.updated     → Revalidate cached pages (blog, docs)
@@ -27,7 +27,7 @@ const SITEMAP_PATH = "/sitemap.xml";
  * {
  *   "type": "page.updated" | "page.created" | "submission.status",
  *   "database": "blog" | "docs" | "submissions",
- *   "page_id": "<notion page id>",
+ *   "page_id": "<page id>",
  *   "slug"?: "<page slug>",
  *   "data"?: { ...extra payload depending on event type }
  * }
@@ -59,7 +59,7 @@ interface WebhookPayload {
 
 async function verifySecret(request: NextRequest): Promise<boolean> {
   const config = await getConfig();
-  const secret = config.NOTION_WEBHOOK_SECRET;
+  const secret = config.CONTENT_WEBHOOK_SECRET;
   if (!secret) return false;
   const provided = request.headers.get("x-webhook-secret");
   if (!provided) return false;
@@ -82,11 +82,6 @@ async function handlePageUpdated(payload: WebhookPayload) {
       if (slug) revalidatePath(`/blog/${slug}`);
       revalidatePath("/api/blog/posts");
       if (slug) revalidatePath(`/api/blog/${slug}`);
-      // R1 auto-post: when the blog row's Status flips to Published, fan out
-      // to connected social channels via Postiz. Opt-in via env
-      // AUTO_POST_BLOG_TO_SOCIAL=1 (off by default — operator vets copy).
-      // Idempotency lives inside scheduleBlogShare via a `blog-<pageId>` tag
-      // check against listPosts, so a Status touch can't double-post.
       if (data?.status === "Published" && page_id) {
         const { scheduleBlogShare } = await import("@/lib/postiz-blog");
         const baseUrl = process.env.SITE_URL ?? "https://cloudless.gr";
@@ -99,14 +94,14 @@ async function handlePageUpdated(payload: WebhookPayload) {
         })
           .then((r) => {
             if (r.skipped) {
-              console.warn(`[notion webhook → postiz] skipped: ${r.skipped}`);
+              console.warn(`[content webhook → postiz] skipped: ${r.skipped}`);
             } else if (r.ok) {
-              console.warn(`[notion webhook → postiz] posted ${r.postIds.length} channel(s)`);
+              console.warn(`[content webhook → postiz] posted ${r.postIds.length} channel(s)`);
             } else {
-              console.error(`[notion webhook → postiz] failed: ${r.error}`);
+              console.error(`[content webhook → postiz] failed: ${r.error}`);
             }
           })
-          .catch((err) => console.error("[notion webhook → postiz] threw:", err));
+          .catch((err) => console.error("[content webhook → postiz] threw:", err));
       }
       break;
     case "docs":
@@ -181,7 +176,7 @@ async function handlePageCreated(payload: WebhookPayload) {
 
   if (database === "docs" && data?.title) {
     await slackContactNotify({
-      name: "Notion Docs",
+      name: "CMS",
       email: "",
       company: "",
       service: "New doc published",
@@ -199,7 +194,7 @@ async function handleProjectUpdated(payload: WebhookPayload) {
 
   if (status === "Completed" && name) {
     await slackContactNotify({
-      name: "Notion Projects",
+      name: "CMS",
       email: "",
       company: "",
       service: "Project completed",
@@ -209,7 +204,7 @@ async function handleProjectUpdated(payload: WebhookPayload) {
 
   if (status === "Blocked" && name) {
     await slackContactNotify({
-      name: "Notion Projects",
+      name: "CMS",
       email: "",
       company: "",
       service: "Project blocked",
@@ -232,7 +227,7 @@ async function handleTaskUpdated(payload: WebhookPayload) {
 
   if (status === "Blocked" && task) {
     await slackContactNotify({
-      name: "Notion Tasks",
+      name: "CMS",
       email: "",
       company: "",
       service: "Task blocked",
@@ -255,7 +250,7 @@ async function handleAnalyticsEvent(payload: WebhookPayload) {
 
   if (type === "error" && count && count >= 10) {
     await slackContactNotify({
-      name: "Notion Analytics",
+      name: "CMS",
       email: "",
       company: "",
       service: "Error spike detected",
@@ -365,8 +360,8 @@ export async function POST(request: NextRequest) {
       await import("@sentry/nextjs")
         .then(({ captureException, withScope }) =>
           withScope((scope) => {
-            scope.setTag("route", "notion.webhook");
-            scope.setTag("notion.event", body.type);
+            scope.setTag("route", "content.webhook");
+            scope.setTag("content.event", body.type);
             captureException(err);
           })
         )

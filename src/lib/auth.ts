@@ -238,8 +238,13 @@ async function handleTokenRefresh(token: JWT, env: AuthEnv, now: number): Promis
 
 function buildNextAuth(env: AuthEnv): NextAuthResult {
   const { issuer, clientId, clientSecret, cognitoDomain, authUrl } = env;
+  // Auth.js v5 beta marks state/PKCE cookies Secure by default. On http://localhost
+  // the browser silently drops them, so the state cookie is missing on the callback
+  // and Auth.js throws ?error=Configuration. Disable secure cookies for non-HTTPS origins.
+  const useSecureCookies = authUrl.startsWith("https://");
   return NextAuth({
     providers: [Cognito({ clientId, clientSecret, issuer })],
+    useSecureCookies,
     callbacks: {
       async jwt({ token, account, profile }) {
         if (account) {
