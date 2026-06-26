@@ -48,6 +48,7 @@ https://cloudless.gr/en/?utm_source=linkedin&utm_medium=social&utm_campaign=<slu
 ```
 
 Replace:
+
 - `<slug>` — your campaign name in snake_case (e.g. `shop_online_founding`)
 - `<variant>` — the creative variant (e.g. `A_EN`, `B_EL`) for A/B tracking
 
