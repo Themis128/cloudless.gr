@@ -121,8 +121,8 @@ test.describe("Public API route sweep", () => {
     // In dev: 5xx is acceptable (missing creds). We only need the route to be wired.
     expect(res.status()).toBeGreaterThanOrEqual(200);
   });
-  test("POST /api/webhooks/notion without auth returns 4xx", async ({ request }) => {
-    const res = await request.post("/api/webhooks/notion", { data: {} });
+  test("POST /api/webhooks/content without auth returns 4xx", async ({ request }) => {
+    const res = await request.post("/api/webhooks/content", { data: {} });
     // In dev: 5xx is acceptable (missing creds). We only need the route to be wired.
     expect(res.status()).toBeGreaterThanOrEqual(200);
   });

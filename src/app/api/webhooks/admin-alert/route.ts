@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   const cfg = await getConfig();
-  const expected = cfg.ADMIN_ALERT_SECRET || cfg.NOTION_WEBHOOK_SECRET || "";
+  const expected = cfg.ADMIN_ALERT_SECRET || cfg.CONTENT_WEBHOOK_SECRET || "";
   if (!expected) {
     // No secret configured anywhere — refuse rather than open up the endpoint.
     return NextResponse.json({ error: "receiver_not_configured" }, { status: 503 });

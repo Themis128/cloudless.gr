@@ -14,17 +14,6 @@ export interface IntegrationConfig {
   SLACK_WEBHOOK_URL?: string;
   SLACK_BOT_TOKEN?: string;
   SLACK_SIGNING_SECRET?: string;
-  NOTION_API_KEY?: string;
-  NOTION_BLOG_DB_ID?: string;
-  NOTION_SUBMISSIONS_DB_ID?: string;
-  NOTION_DOCS_DB_ID?: string;
-  NOTION_PROJECTS_DB_ID?: string;
-  NOTION_TASKS_DB_ID?: string;
-  NOTION_CALENDAR_DB_ID?: string;
-  NOTION_TESTIMONIALS_DB_ID?: string;
-  NOTION_CASE_STUDIES_DB_ID?: string;
-  NOTION_SERVICES_DB_ID?: string;
-  NOTION_FAQS_DB_ID?: string;
   GOOGLE_CLIENT_EMAIL?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
@@ -33,7 +22,7 @@ export interface IntegrationConfig {
   SENTRY_AUTH_TOKEN?: string;
   SENTRY_ORG?: string;
   SENTRY_PROJECT?: string;
-  NOTION_WEBHOOK_SECRET?: string;
+  CONTENT_WEBHOOK_SECRET?: string;
   // ActiveCampaign
   ACTIVECAMPAIGN_API_URL?: string;
   ACTIVECAMPAIGN_API_TOKEN?: string;
@@ -69,6 +58,20 @@ export interface IntegrationConfig {
   ESPOCRM_BASE_URL?: string;
   ESPOCRM_API_KEY?: string;
   ESPOCRM_WEBHOOK_SECRET?: string;
+  // Notion SDK (read-only legacy; SSM keys decommissioned — values come from env only)
+  NOTION_API_KEY?: string;
+  NOTION_BLOG_DB_ID?: string;
+  NOTION_SUBMISSIONS_DB_ID?: string;
+  NOTION_DOCS_DB_ID?: string;
+  NOTION_PROJECTS_DB_ID?: string;
+  NOTION_TASKS_DB_ID?: string;
+  NOTION_ANALYTICS_DB_ID?: string;
+  NOTION_CALENDAR_DB_ID?: string;
+  NOTION_REPORTS_DB_ID?: string;
+  NOTION_TESTIMONIALS_DB_ID?: string;
+  NOTION_CASE_STUDIES_DB_ID?: string;
+  NOTION_SERVICES_DB_ID?: string;
+  NOTION_FAQS_DB_ID?: string;
   // AppFlowy Cloud (Notion replacement, self-hosted on omv k3s; see skills/appflowy-operator)
   APPFLOWY_API_URL?: string;
   APPFLOWY_JWT_SECRET?: string;
@@ -89,17 +92,6 @@ export function getIntegrations(): IntegrationConfig {
     SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
     SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN,
     SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET,
-    NOTION_API_KEY: process.env.NOTION_API_KEY,
-    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
-    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID,
-    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID,
-    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID,
-    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID,
-    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID,
-    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID,
-    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID,
-    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID,
-    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID,
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL,
     GOOGLE_SERVICE_ACCOUNT_EMAIL:
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL,
@@ -109,7 +101,7 @@ export function getIntegrations(): IntegrationConfig {
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     SENTRY_ORG: process.env.SENTRY_ORG ?? DEFAULT_SENTRY_ORG,
     SENTRY_PROJECT: process.env.SENTRY_PROJECT ?? DEFAULT_SENTRY_PROJECT,
-    NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET,
+    CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || process.env.NOTION_WEBHOOK_SECRET,
     ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL,
     ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN,
     GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
@@ -137,6 +129,19 @@ export function getIntegrations(): IntegrationConfig {
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL,
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY,
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET,
+    NOTION_API_KEY: process.env.NOTION_API_KEY,
+    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
+    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID,
+    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID,
+    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID,
+    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID,
+    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID,
+    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID,
+    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID,
+    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID,
+    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID,
+    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID,
+    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID,
     APPFLOWY_API_URL: process.env.APPFLOWY_API_URL,
     APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET,
     N8N_API_URL: process.env.N8N_API_URL,
@@ -172,7 +177,6 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
 
   // If all critical keys are already present in env, skip SSM round-trip
   const criticalKeys: (keyof IntegrationConfig)[] = [
-    "NOTION_API_KEY",
     "STRIPE_SECRET_KEY",
     "SENTRY_AUTH_TOKEN",
   ];
@@ -191,20 +195,6 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       SLACK_WEBHOOK_URL: envCfg.SLACK_WEBHOOK_URL || ssm.SLACK_WEBHOOK_URL || undefined,
       SLACK_BOT_TOKEN: envCfg.SLACK_BOT_TOKEN || ssm.SLACK_BOT_TOKEN || undefined,
       SLACK_SIGNING_SECRET: envCfg.SLACK_SIGNING_SECRET || ssm.SLACK_SIGNING_SECRET || undefined,
-      NOTION_API_KEY: envCfg.NOTION_API_KEY || ssm.NOTION_API_KEY || undefined,
-      NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || ssm.NOTION_BLOG_DB_ID || undefined,
-      NOTION_SUBMISSIONS_DB_ID:
-        envCfg.NOTION_SUBMISSIONS_DB_ID || ssm.NOTION_SUBMISSIONS_DB_ID || undefined,
-      NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || ssm.NOTION_DOCS_DB_ID || undefined,
-      NOTION_PROJECTS_DB_ID: envCfg.NOTION_PROJECTS_DB_ID || ssm.NOTION_PROJECTS_DB_ID || undefined,
-      NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || ssm.NOTION_TASKS_DB_ID || undefined,
-      NOTION_CALENDAR_DB_ID: envCfg.NOTION_CALENDAR_DB_ID || ssm.NOTION_CALENDAR_DB_ID || undefined,
-      NOTION_TESTIMONIALS_DB_ID:
-        envCfg.NOTION_TESTIMONIALS_DB_ID || ssm.NOTION_TESTIMONIALS_DB_ID || undefined,
-      NOTION_CASE_STUDIES_DB_ID:
-        envCfg.NOTION_CASE_STUDIES_DB_ID || ssm.NOTION_CASE_STUDIES_DB_ID || undefined,
-      NOTION_SERVICES_DB_ID: envCfg.NOTION_SERVICES_DB_ID || ssm.NOTION_SERVICES_DB_ID || undefined,
-      NOTION_FAQS_DB_ID: envCfg.NOTION_FAQS_DB_ID || ssm.NOTION_FAQS_DB_ID || undefined,
       GOOGLE_CLIENT_EMAIL: envCfg.GOOGLE_CLIENT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
       GOOGLE_SERVICE_ACCOUNT_EMAIL:
         envCfg.GOOGLE_SERVICE_ACCOUNT_EMAIL || ssm.GOOGLE_CLIENT_EMAIL || undefined,
@@ -214,7 +204,7 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       SENTRY_AUTH_TOKEN: envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
       SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || DEFAULT_SENTRY_ORG,
       SENTRY_PROJECT: envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || DEFAULT_SENTRY_PROJECT,
-      NOTION_WEBHOOK_SECRET: envCfg.NOTION_WEBHOOK_SECRET || ssm.NOTION_WEBHOOK_SECRET || undefined,
+      CONTENT_WEBHOOK_SECRET: envCfg.CONTENT_WEBHOOK_SECRET || ssm.CONTENT_WEBHOOK_SECRET || undefined,
       ACTIVECAMPAIGN_API_URL:
         envCfg.ACTIVECAMPAIGN_API_URL || ssm.ACTIVECAMPAIGN_API_URL || undefined,
       ACTIVECAMPAIGN_API_TOKEN:
@@ -251,6 +241,19 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       ESPOCRM_API_KEY: envCfg.ESPOCRM_API_KEY || ssm.ESPOCRM_API_KEY || undefined,
       ESPOCRM_WEBHOOK_SECRET:
         envCfg.ESPOCRM_WEBHOOK_SECRET || ssm.ESPOCRM_WEBHOOK_SECRET || undefined,
+      NOTION_API_KEY: envCfg.NOTION_API_KEY || undefined,
+      NOTION_BLOG_DB_ID: envCfg.NOTION_BLOG_DB_ID || undefined,
+      NOTION_SUBMISSIONS_DB_ID: envCfg.NOTION_SUBMISSIONS_DB_ID || undefined,
+      NOTION_DOCS_DB_ID: envCfg.NOTION_DOCS_DB_ID || undefined,
+      NOTION_PROJECTS_DB_ID: envCfg.NOTION_PROJECTS_DB_ID || undefined,
+      NOTION_TASKS_DB_ID: envCfg.NOTION_TASKS_DB_ID || undefined,
+      NOTION_ANALYTICS_DB_ID: envCfg.NOTION_ANALYTICS_DB_ID || undefined,
+      NOTION_CALENDAR_DB_ID: envCfg.NOTION_CALENDAR_DB_ID || undefined,
+      NOTION_REPORTS_DB_ID: envCfg.NOTION_REPORTS_DB_ID || undefined,
+      NOTION_TESTIMONIALS_DB_ID: envCfg.NOTION_TESTIMONIALS_DB_ID || undefined,
+      NOTION_CASE_STUDIES_DB_ID: envCfg.NOTION_CASE_STUDIES_DB_ID || undefined,
+      NOTION_SERVICES_DB_ID: envCfg.NOTION_SERVICES_DB_ID || undefined,
+      NOTION_FAQS_DB_ID: envCfg.NOTION_FAQS_DB_ID || undefined,
       APPFLOWY_API_URL: envCfg.APPFLOWY_API_URL || ssm.APPFLOWY_API_URL || undefined,
       APPFLOWY_JWT_SECRET: envCfg.APPFLOWY_JWT_SECRET || ssm.APPFLOWY_JWT_SECRET || undefined,
       N8N_API_URL: envCfg.N8N_API_URL || ssm.N8N_API_URL || undefined,

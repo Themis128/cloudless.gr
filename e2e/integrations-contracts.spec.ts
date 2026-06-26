@@ -51,8 +51,8 @@ test.describe("Integrations contracts", () => {
     }
   });
 
-  test("Notion webhook requires secret header", async ({ page }) => {
-    const response = await postJson(page.request, "/api/webhooks/notion", {
+  test("Content webhook requires secret header", async ({ page }) => {
+    const response = await postJson(page.request, "/api/webhooks/content", {
       type: "page.updated",
       database: "blog",
       page_id: "fake-page-id",

@@ -33,6 +33,8 @@ type Body = {
   conversionId?: number | null;
   url?: string | null;
   userAgent?: string | null;
+  /** LinkedIn first-party click ID from `?li_fat_id=…` on the landing page. */
+  liFatId?: string | null;
   utm?: {
     source?: string;
     medium?: string;
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       undefined,
     utm: body.utm ?? undefined,
+    liFatId: body.liFatId ?? null,
     customer,
   });
 

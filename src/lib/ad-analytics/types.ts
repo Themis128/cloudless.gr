@@ -122,6 +122,10 @@ export interface AdConversionEvent {
     term?: string;
     content?: string;
   };
+  /** LinkedIn first-party click ID captured from the `?li_fat_id=…` query
+   *  param on the landing page. Used for server-side CAPI user matching so
+   *  LinkedIn can dedupe against the browser Insight Tag hit. */
+  liFatId?: string | null;
 }
 
 /** Snapshot of per-platform metrics for a campaign over a window. */

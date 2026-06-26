@@ -166,7 +166,7 @@ Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
 Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 
-- [ ] 🤖 🔵 Verify `li_fat_id` capture in client (Insight Tag injects it; check `src/components/LinkedInInsightTag.tsx`).
+- [x] ~~🤖 🔵 Verify `li_fat_id` capture in client (Insight Tag injects it; check `src/components/LinkedInInsightTag.tsx`).~~ ✅ **SHIPPED 2026-06-26** — `ThanksConversion.tsx` captures `?li_fat_id=…` from `window.location.search` and forwards it in the CAPI POST body. `AdConversionEvent.liFatId` field added; threads through `dispatchConversion()` → `adapters/linkedin.ts` `liFatId` user-matching field.
 - [ ] 👤 🔵 Provision a LinkedIn CAPI-typed conversion ID (the existing `26846068` is browser-only; CAPI needs a different conv type). Create at LinkedIn Campaign Manager → Account assets → Conversions → "Conversion API" type.
 - [ ] 🤖 🔵 Wire `eventId` dedup between Insight Tag fire + CAPI fire (same UUID, fires on both client + server within ~5 s of each other).
 
@@ -204,7 +204,7 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 - ✅ `/admin/analytics` consolidated dashboard
 - ✅ `/admin/cluster` real-time health chips (MQTT + Kuma + Grafana + AppFlowy + EspoCRM + Postiz + n8n + ntfy)
 - ✅ Grafana per-app dashboards (kube-prom + 2 custom)
-- ⬜ **Phase 1:** `/admin/cost` Athena-backed panel (R12)
+- ✅ **Phase 1:** `/admin/cost` Athena-backed panel (R12) — shipped 2026-06-21
 - ⬜ **Phase 3:** AI semantic-search funnel analytics (query → result → click → buy) — added when R21 lands
 - ⬜ **Phase 3:** AI recommendation A/B vs no-rec baseline analytics — added when R21c lands
 

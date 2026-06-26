@@ -102,25 +102,28 @@ interface AppConfig {
    *  in addition to Slack. Lives in SSM (not env) so the operator can
    *  flip it without a Lambda redeploy. Default off. */
   ADMIN_PUSH_VIA_NTFY: string;
+  /** Notion SDK — read-only legacy; not fetched from SSM (keys decommissioned).
+   *  All values come from process.env only. */
   NOTION_API_KEY: string;
   NOTION_BLOG_DB_ID: string;
-  NOTION_WEBHOOK_SECRET: string;
-  /** Optional shared secret for `/api/webhooks/admin-alert` (R8). Falls back
-   *  to NOTION_WEBHOOK_SECRET when unset so existing callers keep working. */
-  ADMIN_ALERT_SECRET: string;
-  /** Sentry internal-integration Client Secret used to HMAC-verify webhooks
-   *  at `/api/webhooks/sentry`. R8 — required for the Sentry receiver. */
-  SENTRY_WEBHOOK_SECRET: string;
-  // Notion database IDs
   NOTION_SUBMISSIONS_DB_ID: string;
   NOTION_DOCS_DB_ID: string;
   NOTION_PROJECTS_DB_ID: string;
   NOTION_TASKS_DB_ID: string;
+  NOTION_ANALYTICS_DB_ID: string;
   NOTION_CALENDAR_DB_ID: string;
+  NOTION_REPORTS_DB_ID: string;
   NOTION_TESTIMONIALS_DB_ID: string;
   NOTION_CASE_STUDIES_DB_ID: string;
   NOTION_SERVICES_DB_ID: string;
   NOTION_FAQS_DB_ID: string;
+  CONTENT_WEBHOOK_SECRET: string;
+  /** Optional shared secret for `/api/webhooks/admin-alert` (R8). Falls back
+   *  to CONTENT_WEBHOOK_SECRET when unset so existing callers keep working. */
+  ADMIN_ALERT_SECRET: string;
+  /** Sentry internal-integration Client Secret used to HMAC-verify webhooks
+   *  at `/api/webhooks/sentry`. R8 — required for the Sentry receiver. */
+  SENTRY_WEBHOOK_SECRET: string;
   GOOGLE_CLIENT_EMAIL: string;
   GOOGLE_PRIVATE_KEY: string;
   GOOGLE_CALENDAR_ID: string;
@@ -285,20 +288,22 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
     NTFY_TOKEN: params.get("NTFY_TOKEN") ?? "",
     ADMIN_PUSH_VIA_NTFY: params.get("ADMIN_PUSH_VIA_NTFY") ?? "",
-    NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
-    NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
-    NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
+    NOTION_API_KEY: process.env.NOTION_API_KEY ?? "",
+    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID ?? "",
+    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID ?? "",
+    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID ?? "",
+    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID ?? "",
+    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID ?? "",
+    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID ?? "",
+    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID ?? "",
+    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID ?? "",
+    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID ?? "",
+    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID ?? "",
+    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID ?? "",
+    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID ?? "",
+    CONTENT_WEBHOOK_SECRET: params.get("CONTENT_WEBHOOK_SECRET") ?? params.get("NOTION_WEBHOOK_SECRET") ?? "",
     ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
     SENTRY_WEBHOOK_SECRET: params.get("SENTRY_WEBHOOK_SECRET") ?? "",
-    NOTION_SUBMISSIONS_DB_ID: params.get("NOTION_SUBMISSIONS_DB_ID") ?? "",
-    NOTION_DOCS_DB_ID: params.get("NOTION_DOCS_DB_ID") ?? "",
-    NOTION_PROJECTS_DB_ID: params.get("NOTION_PROJECTS_DB_ID") ?? "",
-    NOTION_TASKS_DB_ID: params.get("NOTION_TASKS_DB_ID") ?? "",
-    NOTION_CALENDAR_DB_ID: params.get("NOTION_CALENDAR_DB_ID") ?? "",
-    NOTION_TESTIMONIALS_DB_ID: params.get("NOTION_TESTIMONIALS_DB_ID") ?? "",
-    NOTION_CASE_STUDIES_DB_ID: params.get("NOTION_CASE_STUDIES_DB_ID") ?? "",
-    NOTION_SERVICES_DB_ID: params.get("NOTION_SERVICES_DB_ID") ?? "",
-    NOTION_FAQS_DB_ID: params.get("NOTION_FAQS_DB_ID") ?? "",
     GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
     GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replaceAll(String.raw`\n`, "\n"),
     GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
@@ -392,20 +397,22 @@ function buildConfigFromEnv(): AppConfig {
     NTFY_TOPIC: process.env.NTFY_TOPIC || "",
     NTFY_TOKEN: process.env.NTFY_TOKEN || "",
     ADMIN_PUSH_VIA_NTFY: process.env.ADMIN_PUSH_VIA_NTFY || "",
-    NOTION_API_KEY: process.env.NOTION_API_KEY || "",
-    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
-    NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
+    NOTION_API_KEY: process.env.NOTION_API_KEY ?? "",
+    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID ?? "",
+    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID ?? "",
+    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID ?? "",
+    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID ?? "",
+    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID ?? "",
+    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID ?? "",
+    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID ?? "",
+    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID ?? "",
+    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID ?? "",
+    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID ?? "",
+    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID ?? "",
+    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID ?? "",
+    CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || process.env.NOTION_WEBHOOK_SECRET || "",
     ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",
     SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
-    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID || "",
-    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID || "",
-    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID || "",
-    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID || "",
-    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID || "",
-    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID || "",
-    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID || "",
-    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
-    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
     GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
