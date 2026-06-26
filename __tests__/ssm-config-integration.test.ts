@@ -45,6 +45,8 @@ describe("ssm-config integration (LocalStack)", () => {
     vi.stubEnv("SSM_DISABLED", "");
     vi.stubEnv("SSM_PREFIX", process.env.SSM_PREFIX ?? "/cloudless/test");
     vi.stubEnv("AWS_REGION", "us-east-1");
+    // NOTION_API_KEY is env-only (SSM keys decommissioned) — seed it via env
+    vi.stubEnv("NOTION_API_KEY", "secret_test_from_env");
 
     vi.resetModules();
     const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
