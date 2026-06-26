@@ -107,8 +107,7 @@ bash scripts/populate-kuma-secrets.sh \
   <BACKUP_POSTIZ_TOKEN>
 ```
 
-The script writes the Secret to 5 namespaces (monitoring + appflowy + espocrm
-+ n8n + postiz) and is idempotent — rerun on every token rotation.
+The script writes the Secret to 5 namespaces (monitoring + appflowy + espocrm + n8n + postiz) and is idempotent — rerun on every token rotation.
 
 Verify:
 
