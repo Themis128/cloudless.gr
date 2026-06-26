@@ -1,0 +1,13 @@
+[Unit]
+Description=Mirror k3s etcd snapshots to NAS backup mount
+Documentation=https://docs.k3s.io/datastore/backup-restore
+After=k3s.service
+Wants=k3s.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/k3s-snapshot-mirror.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=10min

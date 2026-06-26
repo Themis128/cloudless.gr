@@ -34,6 +34,7 @@ echo "==> Rolling out monitoring workloads to pick up new limits"
 ssh "$REMOTE" 'kubectl --request-timeout=60s -n monitoring \
   rollout restart \
     statefulset/loki \
+    daemonset/promtail \
     deployment/kube-prom-grafana \
     deployment/monitoring-operator \
     deployment/kube-prom-kube-state-metrics'

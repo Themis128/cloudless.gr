@@ -1,0 +1,13 @@
+[Unit]
+Description=Run k3s-snapshot-mirror every 30 minutes
+Documentation=https://docs.k3s.io/datastore/backup-restore
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+RandomizedDelaySec=2min
+Unit=k3s-snapshot-mirror.service
+
+[Install]
+WantedBy=timers.target

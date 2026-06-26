@@ -10,10 +10,17 @@
 # The runbook to remediate is in skills/cloudflare-tunnel-ops/SKILL.md
 # under "Sync omv-ha to match omv".
 #
-# Two CronJob instances — one per node — write `/tmp/cf-host-count-<node>`
-# on a shared hostPath, then a third "compare" job reads both and alerts
-# if they diverge. Simpler than maintaining cross-node SSH; matches the
-# existing omv-watchdogs.yaml pattern.
+# DESIGN (rewritten 2026-06-26, fix/omv-ha-ssh-reachability):
+# The previous version SSHed from a pod on omv to root@<tailnet-ip> on
+# omv-ha. That path was broken on three counts:
+#   1. The hardcoded tailnet IP 100.111.222.92 was stale — omv-ha is now
+#      192.168.1.130 on LAN, not on this tailnet at all.
+#   2. root SSH was disabled on omv-ha (only tbaltzakis allowed).
+#   3. The pod's nsenter'd host (omv) had no SSH key for omv-ha in
+#      /root/.ssh/, so even if the IP were right it would fail PubKey.
+# The fix runs TWO per-node CronJobs — one per node — each nsenters its
+# own host and writes its count to a shared ConfigMap. A third
+# comparator job reads both keys and alerts. No cross-node SSH.
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -21,6 +28,135 @@ metadata:
   name: cloudflared-drift
   namespace: monitoring
 ---
+# RBAC: ConfigMap read/write in monitoring namespace only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cloudflared-drift
+  namespace: monitoring
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cloudflared-drift
+  namespace: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cloudflared-drift
+subjects:
+  - kind: ServiceAccount
+    name: cloudflared-drift
+    namespace: monitoring
+---
+# Shared ConfigMap that holds each node's reported hostname count.
+# Keys: omv, omv-ha. Recreated/patched by the per-node CronJobs.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-drift-counts
+  namespace: monitoring
+  labels: { app: cloudflared-drift }
+data:
+  omv: "unknown"
+  omv-ha: "unknown"
+---
+# Per-node count writer — runs on omv. nsenters host, reads cloudflared
+# config, patches its key in the shared ConfigMap. No SSH.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cloudflared-drift-count-omv
+  namespace: monitoring
+  labels: { app: cloudflared-drift }
+spec:
+  # Every 6 hours; :12 — runs 5min before the comparator so the
+  # ConfigMap has fresh values when the compare job reads it.
+  schedule: "12 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels: { app: cloudflared-drift, role: count, node: omv }
+        spec:
+          serviceAccountName: cloudflared-drift
+          restartPolicy: Never
+          nodeSelector: { kubernetes.io/hostname: omv }
+          hostPID: true
+          containers:
+            - name: count
+              # alpine/k8s ships kubectl, curl, jq, nsenter — matches
+              # the rest of monitoring/ (omv-watchdogs.yaml uses the same).
+              image: alpine/k8s:1.33.0
+              securityContext: { privileged: true }
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  C=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    grep -c '^- hostname:' /etc/cloudflared/config.yml || echo 0)
+                  echo "omv count=$C"
+                  kubectl -n monitoring patch configmap cloudflared-drift-counts \
+                    --type merge -p "{\"data\":{\"omv\":\"$C\"}}"
+              resources:
+                requests: { cpu: 10m, memory: 16Mi }
+                limits:   { cpu: 200m, memory: 64Mi }
+---
+# Per-node count writer — runs on omv-ha. Identical logic, different
+# node selector + ConfigMap key.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cloudflared-drift-count-omv-ha
+  namespace: monitoring
+  labels: { app: cloudflared-drift }
+spec:
+  schedule: "12 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels: { app: cloudflared-drift, role: count, node: omv-ha }
+        spec:
+          serviceAccountName: cloudflared-drift
+          restartPolicy: Never
+          nodeSelector: { kubernetes.io/hostname: omv-ha }
+          hostPID: true
+          # omv-ha is a Pi 3 with 1 GiB RAM. Cap memory tightly so this
+          # never adds pressure to a hot node.
+          containers:
+            - name: count
+              image: alpine/k8s:1.33.0
+              securityContext: { privileged: true }
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  C=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    grep -c '^- hostname:' /etc/cloudflared/config.yml || echo 0)
+                  echo "omv-ha count=$C"
+                  kubectl -n monitoring patch configmap cloudflared-drift-counts \
+                    --type merge -p "{\"data\":{\"omv-ha\":\"$C\"}}"
+              resources:
+                requests: { cpu: 10m, memory: 16Mi }
+                limits:   { cpu: 200m, memory: 64Mi }
+---
+# Comparator — runs after both writers, reads ConfigMap, alerts on
+# drift OR on stale ("unknown") readings.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -28,8 +164,8 @@ metadata:
   namespace: monitoring
   labels: { app: cloudflared-drift }
 spec:
-  # Every 6 hours; staggered :17 to avoid colliding with other watchdogs
-  # (omv-disk-watchdog runs at :00/:15/:30/:45).
+  # :17 — 5min after the per-node writers fire. They both finish in
+  # <30s, so 5min is plenty of buffer.
   schedule: "17 */6 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
@@ -39,24 +175,19 @@ spec:
       backoffLimit: 0
       template:
         metadata:
-          labels: { app: cloudflared-drift }
+          labels: { app: cloudflared-drift, role: compare }
         spec:
           serviceAccountName: cloudflared-drift
           restartPolicy: Never
-          # Run on omv so we can read both omv's and omv-ha's configs.
-          # omv-ha's config comes in via SCP from the canonical sidecar
-          # pod (kept side-by-side in this manifest as initContainer).
-          nodeSelector: { kubernetes.io/hostname: omv }
-          hostPID: true
+          # Comparator can run anywhere; doesn't need host access.
           containers:
-            - name: drift
-              image: alpine:3
-              securityContext: { privileged: true }
+            - name: compare
+              image: alpine/k8s:1.33.0
               env:
                 - name: SLACK_BOT_TOKEN
                   valueFrom: { secretKeyRef: { name: cluster-alerts-secret, key: SLACK_BOT_TOKEN } }
                 - name: SLACK_CHANNEL_ID
-                  value: "C09AF5W3X16"   # proven working per CLAUDE.md
+                  value: "C09AF5W3X16"
                 - name: KUMA_PUSH_TOKEN
                   valueFrom:
                     secretKeyRef:
@@ -68,27 +199,12 @@ spec:
                 - -c
                 - |
                   set -e
-                  apk add --no-cache util-linux curl openssh-client jq >/dev/null 2>&1
-
-                  # Read omv's config via nsenter
-                  OMV_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                    grep -c '^- hostname:' /etc/cloudflared/config.yml || echo 0)
-
-                  # Read omv-ha's config over SSH (uses tailnet IP).
-                  # The omv-ha SSH key is mounted from the existing
-                  # cluster-alerts-secret (if it has SSH_PRIVATE_KEY)
-                  # OR we can use ssh-keyscan + tailscale tailnet trust.
-                  # Simplest: ssh from omv as root using its existing
-                  # known_hosts to omv-ha (Tailnet IP 100.111.222.92).
-                  HA_COUNT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                    ssh -o StrictHostKeyChecking=accept-new -o BatchMode=yes \
-                        -o ConnectTimeout=10 root@100.111.222.92 \
-                        "grep -c '^- hostname:' /etc/cloudflared/config.yml" 2>/dev/null || echo unreachable)
-
+                  OMV_COUNT=$(kubectl -n monitoring get configmap cloudflared-drift-counts -o jsonpath='{.data.omv}')
+                  HA_COUNT=$(kubectl -n monitoring get configmap cloudflared-drift-counts -o jsonpath='{.data.omv-ha}')
                   echo "omv=$OMV_COUNT omv-ha=$HA_COUNT"
 
-                  if [ "$HA_COUNT" = "unreachable" ]; then
-                    MSG=":warning: cloudflared-drift-check could not reach omv-ha over SSH (Tailnet 100.111.222.92). omv has $OMV_COUNT ingress hostnames; omv-ha unknown. Check tailnet + SSH config."
+                  if [ "$OMV_COUNT" = "unknown" ] || [ "$HA_COUNT" = "unknown" ]; then
+                    MSG=":warning: cloudflared-drift-check has stale counts (omv=$OMV_COUNT omv-ha=$HA_COUNT). One of the per-node CronJobs (cloudflared-drift-count-omv / -omv-ha) failed to run. Check kubectl -n monitoring get jobs."
                   elif [ "$OMV_COUNT" != "$HA_COUNT" ]; then
                     MSG=":rotating_light: cloudflared CONFIG DRIFT detected. omv has $OMV_COUNT ingress hostnames, omv-ha has $HA_COUNT. Public hostnames missing from one node will 404 ~50% of the time. Remediate: skills/cloudflare-tunnel-ops/SKILL.md \"Sync omv-ha to match omv\"."
                   else
@@ -99,12 +215,12 @@ spec:
                   fi
 
                   [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
-                    wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=cloudflared+drift+or+unreachable" >/dev/null 2>&1 || true
+                    wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=cloudflared+drift+or+stale" >/dev/null 2>&1 || true
                   curl -fsS -X POST https://slack.com/api/chat.postMessage \
                     -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
                     -H "Content-Type: application/json; charset=utf-8" \
                     --data "$(jq -nc --arg ch "$SLACK_CHANNEL_ID" --arg msg "$MSG" '{channel: $ch, text: $msg}')" \
                     | jq '{ok, error}'
               resources:
-                requests: { cpu: 10m, memory: 16Mi }
-                limits:   { cpu: 200m, memory: 64Mi }
+                requests: { cpu: 10m, memory: 32Mi }
+                limits:   { cpu: 200m, memory: 128Mi }
