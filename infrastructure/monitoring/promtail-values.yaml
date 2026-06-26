@@ -1,0 +1,29 @@
+# Helm values for promtail (chart: promtail-6.17.1 / app v3.5.1).
+#
+# Captured 2026-06-26 from `helm -n monitoring get values promtail` then
+# augmented with nodeSelector to pin to omv only — promtail is a
+# DaemonSet by default (runs on every node), but PR #1197 restricted it
+# to omv to free CPU + RAM on omv-ha (Pi 3, 1 GiB). The trade-off: no
+# omv-ha pod-logs in Loki. Host-level journald on omv-ha remains
+# available via `journalctl` over SSH (see skills/cluster-bash) when
+# debugging.
+#
+# Apply with:
+#   helm -n monitoring upgrade promtail grafana/promtail \
+#     --version 6.17.1 \
+#     --values infrastructure/monitoring/promtail-values.yaml
+
+config:
+  clients:
+  - url: http://loki:3100/loki/api/v1/push
+nodeSelector:
+  kubernetes.io/hostname: omv
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+tolerations:
+- operator: Exists
