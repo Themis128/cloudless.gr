@@ -57,6 +57,12 @@ spec:
                   valueFrom: { secretKeyRef: { name: cluster-alerts-secret, key: SLACK_BOT_TOKEN } }
                 - name: SLACK_CHANNEL_ID
                   value: "C09AF5W3X16"   # proven working per CLAUDE.md
+                - name: KUMA_PUSH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: cluster-alerts-kuma
+                      key: KUMA_PUSH_CLOUDFLARED_DRIFT
+                      optional: true
               command:
                 - sh
                 - -c
@@ -87,9 +93,13 @@ spec:
                     MSG=":rotating_light: cloudflared CONFIG DRIFT detected. omv has $OMV_COUNT ingress hostnames, omv-ha has $HA_COUNT. Public hostnames missing from one node will 404 ~50% of the time. Remediate: skills/cloudflare-tunnel-ops/SKILL.md \"Sync omv-ha to match omv\"."
                   else
                     echo "OK: omv=$OMV_COUNT omv-ha=$HA_COUNT — in sync; no alert."
+                    [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
+                      wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=cloudflared+config+in+sync" >/dev/null 2>&1 || true
                     exit 0
                   fi
 
+                  [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
+                    wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=cloudflared+drift+or+unreachable" >/dev/null 2>&1 || true
                   curl -fsS -X POST https://slack.com/api/chat.postMessage \
                     -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
                     -H "Content-Type: application/json; charset=utf-8" \
