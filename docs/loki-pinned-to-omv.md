@@ -138,3 +138,18 @@ Load averages observed:
 omv-ha load drop is the headline result. omv's modest increase is
 within its normal noise (the new loki workload requests 50m CPU,
 200Mi RAM — it doesn't materially change a Pi 5).
+
+## Permanence (post-helm-upgrade safety)
+
+The live `kubectl patch` from PR #1197 will be reverted by any
+`helm upgrade loki` or `helm upgrade promtail` that doesn't supply
+matching values.
+
+PR #1199 added two checked-in values files:
+
+- `infrastructure/monitoring/loki-values.yaml`
+- `infrastructure/monitoring/promtail-values.yaml`
+
+Always apply with `--values <path>` going forward. The pre-flight
+script `k8s/cluster-protection/apply-monitoring-resources.sh` still
+runs the live patches as a safety net.
