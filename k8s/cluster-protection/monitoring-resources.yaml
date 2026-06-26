@@ -59,14 +59,30 @@ spec:
 
 ---
 # Loki — single binary, all-in-one target. Bounded ingest.
+#
+# Also pinned to `omv` (the Pi 5) because the only other node `omv-ha`
+# is a Pi 3 with 1 GiB RAM + SD-card storage and was hitting load avg
+# 5-7 with loki + promtail + the rest of its workload. See
+# docs/loki-pinned-to-omv.md for the migration story (and the data-loss
+# disclosure — historical chunks did not survive because the chart
+# defaulted to whenScaled: Delete on the PVC retention policy).
+#
+# The PVC retention policy is patched to Retain so a future scale-to-0
+# doesn't repeat the original incident; the StatefulSet must NOT be
+# scaled to 0 without first confirming this patch is in effect.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: loki
   namespace: monitoring
 spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
   template:
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: omv
       containers:
         - name: loki
           resources:
@@ -76,6 +92,21 @@ spec:
             limits:
               memory: 400Mi
               cpu: 500m
+---
+# Promtail — log shipper DaemonSet. Pinned to omv only; omv-ha (Pi 3,
+# 1 GiB) no longer ships its own logs to keep its RAM headroom. Host
+# journald is still available on omv-ha for emergency forensics. See
+# docs/loki-pinned-to-omv.md.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: monitoring
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omv
 
 ---
 apiVersion: apps/v1
@@ -135,8 +166,8 @@ spec:
               cpu: 200m
 
 # Follow-up (separate PR):
-# - Mirror these limits and retention values into the upstream
-#   kube-prometheus-stack / loki Helm values so future `helm upgrade` runs
-#   don't revert them.
-# - Consider moving Loki off this node entirely — promtail ships logs, and
-#   the ingester can live on a sibling Pi without coupling to the data SSD.
+# - Mirror these limits, retention values, the loki/promtail nodeSelector,
+#   and the loki StatefulSet's persistentVolumeClaimRetentionPolicy into
+#   the upstream kube-prometheus-stack / loki / promtail Helm values so
+#   future `helm upgrade` runs don't revert them. See
+#   docs/loki-pinned-to-omv.md for the exact Helm-values snippets.
