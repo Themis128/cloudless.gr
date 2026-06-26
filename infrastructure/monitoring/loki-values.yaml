@@ -1,0 +1,75 @@
+# Helm values for Grafana Loki (chart: loki-7.0.0 / app v3.6.7).
+#
+# Captured 2026-06-26 from `helm -n monitoring get values loki` then
+# augmented with:
+#   - singleBinary.nodeSelector to pin to omv (Pi 5, 8 GiB) — required
+#     because omv-ha is a Pi 3 with 1 GiB and was OOM-pressured before
+#     PR #1197 migrated us off it.
+#   - singleBinary.persistence.persistentVolumeClaimRetentionPolicy
+#     set to Retain/Retain so scaling to 0 doesn't wipe the PVC again
+#     (we lost 163 MiB of log chunks during the PR #1197 migration
+#     because the chart's default is whenScaled=Delete).
+#
+# Apply with:
+#   helm -n monitoring upgrade loki grafana/loki \
+#     --version 7.0.0 \
+#     --values infrastructure/monitoring/loki-values.yaml
+#
+# The current release is in `failed` state (since 2026-05-26 — separate
+# pre-existing issue). After this values-only change, a `helm upgrade
+# --force` may be needed to recover. Do that as a separate operator
+# step, not as part of this PR.
+
+backend:
+  replicas: 0
+gateway:
+  enabled: false
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  compactor:
+    retention_enabled: true
+  limits_config:
+    retention_period: 168h
+  schemaConfig:
+    configs:
+    - from: "2024-01-01"
+      index:
+        period: 24h
+        prefix: index_
+      object_store: filesystem
+      schema: v13
+      store: tsdb
+  storage:
+    type: filesystem
+lokiCanary:
+  enabled: false
+read:
+  replicas: 0
+singleBinary:
+  # Pin to omv (Pi 5). omv-ha (Pi 3, 1 GiB RAM) cannot host Loki.
+  nodeSelector:
+    kubernetes.io/hostname: omv
+  persistence:
+    enabled: true
+    size: 5Gi
+    # Keep PVC across scale-to-0 operations. The chart default
+    # (whenScaled: Delete) caused data loss during the 2026-06-26 PR
+    # #1197 node migration. Retain semantics survive
+    # `kubectl scale statefulset loki --replicas=0`.
+    persistentVolumeClaimRetentionPolicy:
+      whenScaled: Retain
+      whenDeleted: Retain
+  replicas: 1
+  resources:
+    limits:
+      cpu: 200m
+      memory: 384Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+test:
+  enabled: false
+write:
+  replicas: 0
