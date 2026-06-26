@@ -301,7 +301,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID ?? "",
     NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID ?? "",
     NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID ?? "",
-    CONTENT_WEBHOOK_SECRET: params.get("CONTENT_WEBHOOK_SECRET") ?? params.get("NOTION_WEBHOOK_SECRET") ?? "",
+    CONTENT_WEBHOOK_SECRET:
+      params.get("CONTENT_WEBHOOK_SECRET") ?? params.get("NOTION_WEBHOOK_SECRET") ?? "",
     ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
     SENTRY_WEBHOOK_SECRET: params.get("SENTRY_WEBHOOK_SECRET") ?? "",
     GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
@@ -410,7 +411,8 @@ function buildConfigFromEnv(): AppConfig {
     NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID ?? "",
     NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID ?? "",
     NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID ?? "",
-    CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || process.env.NOTION_WEBHOOK_SECRET || "",
+    CONTENT_WEBHOOK_SECRET:
+      process.env.CONTENT_WEBHOOK_SECRET || process.env.NOTION_WEBHOOK_SECRET || "",
     ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",
     SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",

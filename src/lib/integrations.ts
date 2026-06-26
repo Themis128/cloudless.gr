@@ -176,10 +176,7 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
   const envCfg = getIntegrations();
 
   // If all critical keys are already present in env, skip SSM round-trip
-  const criticalKeys: (keyof IntegrationConfig)[] = [
-    "STRIPE_SECRET_KEY",
-    "SENTRY_AUTH_TOKEN",
-  ];
+  const criticalKeys: (keyof IntegrationConfig)[] = ["STRIPE_SECRET_KEY", "SENTRY_AUTH_TOKEN"];
   const allPresent = criticalKeys.every((k) => Boolean(envCfg[k]));
   if (allPresent) {
     cachedAsync = envCfg;
@@ -204,7 +201,8 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       SENTRY_AUTH_TOKEN: envCfg.SENTRY_AUTH_TOKEN || ssm.SENTRY_AUTH_TOKEN || undefined,
       SENTRY_ORG: envCfg.SENTRY_ORG || ssm.SENTRY_ORG || DEFAULT_SENTRY_ORG,
       SENTRY_PROJECT: envCfg.SENTRY_PROJECT || ssm.SENTRY_PROJECT || DEFAULT_SENTRY_PROJECT,
-      CONTENT_WEBHOOK_SECRET: envCfg.CONTENT_WEBHOOK_SECRET || ssm.CONTENT_WEBHOOK_SECRET || undefined,
+      CONTENT_WEBHOOK_SECRET:
+        envCfg.CONTENT_WEBHOOK_SECRET || ssm.CONTENT_WEBHOOK_SECRET || undefined,
       ACTIVECAMPAIGN_API_URL:
         envCfg.ACTIVECAMPAIGN_API_URL || ssm.ACTIVECAMPAIGN_API_URL || undefined,
       ACTIVECAMPAIGN_API_TOKEN:
