@@ -377,7 +377,10 @@ arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only
 - **Memory freed:** Home Assistant + Metabase were evicted from omv to make
   room (omv was at 97% RAM). Their deployment manifests are preserved at
   `infrastructure/espocrm/evicted-deployments/{home-assistant,metabase}.yaml`
-  for redeploy on a third Pi (omv-ha is Pi 4 1 GB — neither fits there).
+  for redeploy on a third Pi (omv-ha is **Pi 3 Model B Rev 1.2** with
+  1 GiB RAM — neither fits there; corrected 2026-06-26, the earlier
+  "Pi 4" note in this file was wrong. LAN IP: `192.168.1.130`; the Pi
+  cluster is NOT on this account's tailnet, only on LAN).
   PVCs (`ha-config-pvc`, `metabase-data`, `duckdb-data`) were NOT deleted.
 - **Status**: pods 1/1 Running, HTTP 200 from inside the cluster. Pending:
   Cloudflare tunnel append + DNS CNAME + first UI login + API key into SSM
