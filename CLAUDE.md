@@ -19,6 +19,30 @@ These require access outside GitHub and cannot be automated from a cloud session
 | Notion → AppFlowy migration      | **DONE** ✅ 2026-06-25 | 22 databases, 412 pages migrated. Script at `scripts/migrate-notion-to-appflowy.mjs` is idempotent — re-run to pick up new Notion rows. |
 | Grafana public exposure          | **PENDING operator** | Values updated: NodePort 30850 + Prometheus datasource auto-provisioned in `infrastructure/monitoring/kube-prom-stack-values.yaml`. Run `helm upgrade kube-prom prometheus-community/kube-prometheus-stack -n monitoring --values infrastructure/monitoring/kube-prom-stack-values.yaml` on omv-main. Append tunnel rule from `infrastructure/monitoring/grafana-tunnel.yaml` to `/etc/cloudflared/config.yml`, restart cloudflared, add DNS CNAME `grafana.cloudless.gr → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com`. SSM keys `GRAFANA_BASE_URL` and `PROMETHEUS_URL` already stored. |
 
+## Cluster hardware (corrected 2026-06-26)
+
+A 2026-06-21 memory note recorded `omv-ha` as a Pi 4. That is wrong. Live
+probe via privileged pod (`/proc/cpuinfo` + `/sys/firmware/devicetree/base/model`)
+on 2026-06-26 confirmed:
+
+| Node     | Board                              | CPU                         | RAM     | Page size | Network            |
+| -------- | ---------------------------------- | --------------------------- | ------- | --------- | ------------------ |
+| `omv`    | Raspberry Pi 5 (board id 2712)     | Cortex-A76 (ARMv8.2-A, LSE) | 8 GiB   | **16 KiB** | tailnet + LAN     |
+| `omv-ha` | **Raspberry Pi 3 Model B Rev 1.2** | **Cortex-A53** (no LSE/crypto/sve), part `0xd03` | **1 GiB** | 4 KiB     | LAN only `192.168.1.130` (NOT on tailnet) |
+
+**Practical consequences** that previously caught us out:
+
+- AppFlowy worker (`appflowyinc/appflowy_worker:latest`) panics on **both** nodes:
+  jemalloc 16K-page abort on `omv` (compile-time `--with-lg-page=12`),
+  SIGILL exit 132 on `omv-ha` (binary uses LSE atomics / crypto absent
+  from A53). See follow-up issue for the rebuild plan.
+- Any code that hard-codes `100.111.222.92` for omv-ha is wrong — there
+  is no tailscale IP. Reach omv-ha via LAN `192.168.1.130` from inside
+  the cluster, or via privileged probe pod from outside.
+- omv-ha at 1 GiB RAM cannot host loki + promtail + sync-webhook + the
+  AppFlowy worker simultaneously. Load avg has been seen at 6.5 on
+  4 cores. Pin chatty observability workloads to `omv`.
+
 ## omv-main Storage Layout (post-2026-06-13 migration)
 
 The omv-main Pi 5 cluster node has **two SATA-over-USB SSDs** plus the SD
@@ -377,10 +401,7 @@ arm64 image support — SuiteCRM's Bitnami image is amd64-only + commercial-only
 - **Memory freed:** Home Assistant + Metabase were evicted from omv to make
   room (omv was at 97% RAM). Their deployment manifests are preserved at
   `infrastructure/espocrm/evicted-deployments/{home-assistant,metabase}.yaml`
-  for redeploy on a third Pi (omv-ha is **Pi 3 Model B Rev 1.2** with
-  1 GiB RAM — neither fits there; corrected 2026-06-26, the earlier
-  "Pi 4" note in this file was wrong. LAN IP: `192.168.1.130`; the Pi
-  cluster is NOT on this account's tailnet, only on LAN).
+  for redeploy on a third Pi (omv-ha is Pi 3 Model B Rev 1.2 / 1 GiB RAM / Cortex-A53 / LAN 192.168.1.130; NOT on tailnet — neither fits there).
   PVCs (`ha-config-pvc`, `metabase-data`, `duckdb-data`) were NOT deleted.
 - **Status**: pods 1/1 Running, HTTP 200 from inside the cluster. Pending:
   Cloudflare tunnel append + DNS CNAME + first UI login + API key into SSM

@@ -68,8 +68,12 @@ tls-san:
 kube-apiserver-arg:
   - "service-node-port-range=1000-32767"
 
-etcd-snapshot-schedule-cron: "0 */6 * * *"
-etcd-snapshot-retention: 3
+# CLAUDE.md "k3s Tuning" requires hourly snapshots; the previous
+# "0 */6 * * *" lagged the omv-backup-verify watchdog (SLO 2h). The
+# k3s-snapshot-mirror.timer (every 30 min) under
+# infrastructure/etcd-backup/ keeps the NAS backup mount in sync.
+etcd-snapshot-schedule-cron: "0 */1 * * *"
+etcd-snapshot-retention: 24
 etcd-s3: true
 etcd-s3-bucket: ${ETCD_S3_BUCKET}
 etcd-s3-region: ${ETCD_S3_REGION}
