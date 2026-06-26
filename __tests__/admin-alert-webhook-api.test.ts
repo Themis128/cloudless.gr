@@ -100,10 +100,10 @@ describe("POST /api/webhooks/admin-alert", () => {
     expect(call.severity).toBe("high");
   });
 
-  it("falls back to NOTION_WEBHOOK_SECRET when ADMIN_ALERT_SECRET is empty", async () => {
+  it("falls back to CONTENT_WEBHOOK_SECRET when ADMIN_ALERT_SECRET is empty", async () => {
     vi.mocked(getConfig).mockResolvedValue({
       ADMIN_ALERT_SECRET: "",
-      NOTION_WEBHOOK_SECRET: SECRET,
+      CONTENT_WEBHOOK_SECRET: SECRET,
     } as never);
     const res = await POST(req({ "x-cloudless-alert-secret": SECRET }, validBody));
     expect(res.status).toBe(200);

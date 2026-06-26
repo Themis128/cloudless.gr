@@ -32,7 +32,7 @@ const ALERTABLE_SEVERITIES: readonly AdminAlertSeverity[] = ["high", "critical"]
 
 async function verifySecret(req: NextRequest): Promise<boolean> {
   const cfg = await getConfig();
-  const expected = cfg.NOTION_WEBHOOK_SECRET;
+  const expected = cfg.CONTENT_WEBHOOK_SECRET;
   if (!expected) return false;
   const got = req.headers.get("x-mqtt-publish-secret");
   if (!got || got.length !== expected.length) return false;

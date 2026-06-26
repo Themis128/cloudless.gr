@@ -16,7 +16,7 @@ vi.mock("next/cache", () => ({
   revalidatePath: revalidatePathMock,
 }));
 
-vi.mock("@/lib/notion-cache", () => ({
+vi.mock("@/lib/content-cache", () => ({
   invalidateCache: invalidateCacheMock,
 }));
 
@@ -29,12 +29,12 @@ vi.mock("@/lib/email", () => ({
 }));
 
 const DEFAULT_CONFIG = {
-  NOTION_WEBHOOK_SECRET: "test_notion_secret",
+  CONTENT_WEBHOOK_SECRET: "test_content_secret",
   SES_TO_EMAIL: "team@cloudless.gr",
 };
 
 function makeRequest(body: unknown, secret?: string) {
-  return new NextRequest("http://localhost:4000/api/webhooks/notion", {
+  return new NextRequest("http://localhost:4000/api/webhooks/content", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -44,7 +44,7 @@ function makeRequest(body: unknown, secret?: string) {
   });
 }
 
-describe("POST /api/webhooks/notion", () => {
+describe("POST /api/webhooks/content", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getConfigMock.mockResolvedValue(DEFAULT_CONFIG);
@@ -53,7 +53,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("returns 401 when x-webhook-secret header is missing", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest({ type: "page.updated", database: "blog", page_id: "p1" })
     );
@@ -64,7 +64,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("returns 401 when x-webhook-secret is wrong", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest({ type: "page.updated", database: "blog", page_id: "p1" }, "wrong_secret")
     );
@@ -73,23 +73,23 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("returns 401 when webhook secret is not configured", async () => {
-    getConfigMock.mockResolvedValueOnce({ ...DEFAULT_CONFIG, NOTION_WEBHOOK_SECRET: "" });
+    getConfigMock.mockResolvedValueOnce({ ...DEFAULT_CONFIG, CONTENT_WEBHOOK_SECRET: "" });
 
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
-      makeRequest({ type: "page.updated", database: "blog", page_id: "p1" }, "test_notion_secret")
+      makeRequest({ type: "page.updated", database: "blog", page_id: "p1" }, "test_content_secret")
     );
 
     expect(response.status).toBe(401);
   });
 
   it("returns 400 for invalid JSON body", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
-    const request = new NextRequest("http://localhost:4000/api/webhooks/notion", {
+    const { POST } = await import("@/app/api/webhooks/content/route");
+    const request = new NextRequest("http://localhost:4000/api/webhooks/content", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-webhook-secret": "test_notion_secret",
+        "x-webhook-secret": "test_content_secret",
       },
       body: "not-json{{{",
     });
@@ -101,8 +101,8 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("returns 400 when required fields are missing", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
-    const response = await POST(makeRequest({ type: "page.updated" }, "test_notion_secret"));
+    const { POST } = await import("@/app/api/webhooks/content/route");
+    const response = await POST(makeRequest({ type: "page.updated" }, "test_content_secret"));
 
     expect(response.status).toBe(400);
     const data = await response.json();
@@ -110,9 +110,9 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("returns 400 for unknown event type", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
-      makeRequest({ type: "unknown.event", database: "blog", page_id: "p1" }, "test_notion_secret")
+      makeRequest({ type: "unknown.event", database: "blog", page_id: "p1" }, "test_content_secret")
     );
 
     expect(response.status).toBe(400);
@@ -121,11 +121,11 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.updated for blog — revalidates blog paths", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "blog", page_id: "p1", slug: "my-post" },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -139,11 +139,11 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.updated for docs — revalidates docs paths", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "docs", page_id: "p2", slug: "my-doc" },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -154,9 +154,9 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.created for blog — revalidates blog and sitemap", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
-      makeRequest({ type: "page.created", database: "blog", page_id: "p3" }, "test_notion_secret")
+      makeRequest({ type: "page.created", database: "blog", page_id: "p3" }, "test_content_secret")
     );
 
     expect(response.status).toBe(200);
@@ -168,7 +168,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.created for docs — notifies Slack", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -178,7 +178,7 @@ describe("POST /api/webhooks/notion", () => {
           slug: "new-doc",
           data: { title: "New Guide" },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -188,7 +188,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles submission.status Done — sends email to submitter", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -197,7 +197,7 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p5",
           data: { email: "client@example.com", name: "Alice", status: "Done" },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -212,7 +212,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles submission.status non-Done — does NOT send email", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -221,7 +221,7 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p6",
           data: { email: "client@example.com", name: "Bob", status: "In Progress" },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -232,7 +232,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles project.updated Completed — notifies Slack", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -241,7 +241,7 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p7",
           data: { name: "Cloud Migration", status: "Completed" },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -252,7 +252,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles project.updated Blocked — notifies Slack", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -261,7 +261,7 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p8",
           data: { name: "SEO Audit", status: "Blocked" },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -271,7 +271,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles task.updated Blocked — notifies Slack", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -280,7 +280,7 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p9",
           data: { task: "Write report", status: "Blocked", assignee: "Themis" },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -291,7 +291,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles analytics.event error spike >= 10 — notifies Slack", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -300,7 +300,7 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p10",
           data: { type: "error", count: 15 },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -310,7 +310,7 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("does NOT notify Slack for analytics.event below threshold", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         {
@@ -319,7 +319,7 @@ describe("POST /api/webhooks/notion", () => {
           page_id: "p11",
           data: { type: "error", count: 5 },
         },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -328,11 +328,11 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.updated for testimonials — invalidates testimonials cache", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "testimonials", page_id: "t1" },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -345,11 +345,11 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.updated for case-studies — invalidates cache and revalidates slug path", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "case-studies", page_id: "cs1", slug: "techflow" },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -360,11 +360,11 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.updated for services — invalidates services cache", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "services", page_id: "s1" },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -374,9 +374,9 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.updated for faqs — invalidates faqs cache", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
-      makeRequest({ type: "page.updated", database: "faqs", page_id: "f1" }, "test_notion_secret")
+      makeRequest({ type: "page.updated", database: "faqs", page_id: "f1" }, "test_content_secret")
     );
 
     expect(response.status).toBe(200);
@@ -385,11 +385,11 @@ describe("POST /api/webhooks/notion", () => {
   });
 
   it("handles page.created for case-studies — revalidates sitemap", async () => {
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         { type: "page.created", database: "case-studies", page_id: "cs2", slug: "retail-plus" },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
@@ -404,11 +404,11 @@ describe("POST /api/webhooks/notion", () => {
       throw new Error("cache revalidation failed");
     });
 
-    const { POST } = await import("@/app/api/webhooks/notion/route");
+    const { POST } = await import("@/app/api/webhooks/content/route");
     const response = await POST(
       makeRequest(
         { type: "page.updated", database: "blog", page_id: "p12", slug: "boom" },
-        "test_notion_secret"
+        "test_content_secret"
       )
     );
 
