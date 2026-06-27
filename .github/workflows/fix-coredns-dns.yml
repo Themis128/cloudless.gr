@@ -1,0 +1,135 @@
+name: Fix CoreDNS — pin to omv + restore Loki service
+
+# CoreDNS pod landed on omv-ha (10.42.1.87) which cannot reach upstream
+# DNS (1.1.1.1, 1.0.0.1) — UDP 53 out of omv-ha is blocked or lost.
+# This breaks ALL external name resolution cluster-wide: AppFlowy, Postiz,
+# Loki, Slack webhooks, SSM all fail with "Temporary failure in name resolution".
+#
+# Also restores the Loki ClusterIP service that was dropped by helm upgrade
+# --force on a previously-failed release (fix-loki-cache.yml run, PR #1258).
+#
+# Fix steps:
+#   1. Patch CoreDNS Deployment to add nodeSelector kubernetes.io/hostname=omv
+#      so it always runs on the Pi 5 (which has internet access via tailnet+LAN).
+#   2. Delete the old CoreDNS pod on omv-ha — it rescheduled onto omv.
+#   3. Wait for DNS to come back up (test with nslookup in a debug pod).
+#   4. Re-run helm upgrade loki (without --force) to restore the missing
+#      loki ClusterIP service.
+#
+# Trigger: push this file to main, or workflow_dispatch.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-coredns-dns.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  fix-dns:
+    name: Pin CoreDNS to omv + restore Loki service
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Pin CoreDNS to omv (Pi 5 — has internet access)
+        run: |
+          kubectl patch deployment coredns -n kube-system --type=merge -p '{
+            "spec": {
+              "template": {
+                "spec": {
+                  "nodeSelector": {
+                    "kubernetes.io/os": "linux",
+                    "kubernetes.io/hostname": "omv"
+                  }
+                }
+              }
+            }
+          }'
+          echo "CoreDNS deployment patched — nodeSelector: hostname=omv"
+
+      - name: Delete old CoreDNS pod (forces reschedule onto omv)
+        run: |
+          kubectl delete pods -n kube-system -l k8s-app=kube-dns --force 2>/dev/null || true
+          echo "Old CoreDNS pods deleted"
+
+      - name: Wait for CoreDNS to come up on omv
+        run: |
+          kubectl rollout status deployment/coredns -n kube-system --timeout=120s
+          echo "CoreDNS rollout complete"
+          NEW_NODE=$(kubectl get pods -n kube-system -l k8s-app=kube-dns \
+            -o jsonpath='{.items[0].spec.nodeName}')
+          echo "CoreDNS now running on: $NEW_NODE"
+          if [ "$NEW_NODE" != "omv" ]; then
+            echo "::warning::CoreDNS landed on $NEW_NODE instead of omv — may still have DNS issues"
+          fi
+
+      - name: Verify DNS resolves (test pod on omv)
+        run: |
+          kubectl run dns-test --image=busybox:1.36 --restart=Never \
+            --overrides='{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}' \
+            -- nslookup google.com
+          sleep 5
+          kubectl logs dns-test || echo "(no logs yet)"
+          kubectl delete pod dns-test --ignore-not-found=true
+        continue-on-error: true
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.14.0"
+
+      - name: Add Grafana Helm repo
+        run: helm repo add grafana https://grafana.github.io/helm-charts && helm repo update
+
+      - name: Restore Loki service via helm upgrade (no --force)
+        run: |
+          helm -n monitoring upgrade loki grafana/loki \
+            --version 7.0.0 \
+            --values infrastructure/monitoring/loki-values.yaml \
+            --timeout 5m \
+            --reuse-values=false
+          echo "Loki upgraded — service should be restored"
+
+      - name: Verify Loki service exists
+        run: |
+          kubectl get svc -n monitoring loki
+          echo "Loki ClusterIP service restored"
+
+      - name: Restart Promtail (pick up new Loki service)
+        run: |
+          kubectl rollout restart daemonset/promtail -n monitoring 2>/dev/null || \
+            kubectl delete pods -n monitoring -l app.kubernetes.io/name=promtail 2>/dev/null || true
+          echo "Promtail restarted"
+
+      - name: Summary
+        run: |
+          echo "=== CoreDNS ==="
+          kubectl get pods -n kube-system -l k8s-app=kube-dns -o wide
+          echo ""
+          echo "=== Loki services ==="
+          kubectl get svc -n monitoring | grep loki
+          echo ""
+          echo "=== Monitoring pods ==="
+          kubectl get pods -n monitoring | grep -E "loki|promtail"
