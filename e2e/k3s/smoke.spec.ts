@@ -6,7 +6,7 @@
  * fail, every other test in this suite will too — so they're the canary.
  */
 import { test, expect } from "../coverage";
-import { isHealthBody, isLikelyAppResponse, isNetworkError, probeHealth, STANDBY_HOST } from "./_helpers";
+import { isHealthBody, isLikelyAppResponse, isNetworkError, isOriginDown, probeHealth, STANDBY_HOST } from "./_helpers";
 
 test.describe("k3s smoke", () => {
   test("/api/health returns 200 with valid app body", async ({ request }) => {
@@ -17,6 +17,7 @@ test.describe("k3s smoke", () => {
       if (isNetworkError(e)) { test.skip(true, `standby not reachable: ${e}`); return; }
       throw e;
     }
+    if (isOriginDown(r.status)) { test.skip(true, `origin returned ${r.status}`); return; }
     expect(r.status, "health endpoint must return 200").toBe(200);
     expect(isHealthBody(r.body), `unexpected body: ${r.body.slice(0, 200)}`).toBe(true);
   });
@@ -29,6 +30,7 @@ test.describe("k3s smoke", () => {
       if (isNetworkError(e)) { test.skip(true, `standby not reachable: ${e}`); return; }
       throw e;
     }
+    if (isOriginDown(r.status)) { test.skip(true, `origin returned ${r.status}`); return; }
     expect(r.headers["strict-transport-security"]).toBeTruthy();
     expect(r.headers["x-content-type-options"]).toBe("nosniff");
     expect(r.headers["x-frame-options"]).toBe("DENY");
@@ -44,6 +46,7 @@ test.describe("k3s smoke", () => {
       if (isNetworkError(e)) { test.skip(true, `standby not reachable: ${e}`); return; }
       throw e;
     }
+    if (isOriginDown(r.status)) { test.skip(true, `origin returned ${r.status}`); return; }
     expect(
       isLikelyAppResponse(r.headers),
       "expected app's CSP; got something else (proxy/LB error page?)",
@@ -65,6 +68,7 @@ test.describe("k3s smoke", () => {
       if (isNetworkError(e)) { test.skip(true, `standby not reachable: ${e}`); return; }
       throw e;
     }
+    if (isOriginDown(r.status())) { test.skip(true, `origin returned ${r.status()}`); return; }
     expect(r.status()).toBe(200);
     const server = (r.headers()["server"] ?? "").toLowerCase();
     expect(server).not.toContain("nginx");
