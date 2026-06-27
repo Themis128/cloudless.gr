@@ -13,19 +13,14 @@ export function TierTable({ campaign, locale }: Props) {
     <section className="cl-tiers" aria-label={locale === "el" ? "Πακέτα" : "Tiers"}>
       <div className="cl-tiers__grid">
         {campaign.tiers.map((t) => (
-          <article
-            key={t.id}
-            className={`cl-tier ${t.featured ? "cl-tier--featured" : ""}`}
-          >
+          <article key={t.id} className={`cl-tier ${t.featured ? "cl-tier--featured" : ""}`}>
             {t.badge && <span className="cl-tier__badge">{t.badge}</span>}
             <h3 className="cl-tier__name">{t.name[locale]}</h3>
             <div className="cl-tier__prices">
               {t.oneOff && <div className="cl-tier__oneoff">{t.oneOff}</div>}
               {t.monthly && <div className="cl-tier__monthly">{t.monthly}</div>}
             </div>
-            {t.savings && (
-              <div className="cl-tier__savings">{t.savings[locale]}</div>
-            )}
+            {t.savings && <div className="cl-tier__savings">{t.savings[locale]}</div>}
             <ul className="cl-tier__highlights">
               {t.highlights[locale].map((h, i) => (
                 <li key={i}>{h}</li>

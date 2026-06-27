@@ -15,4 +15,5 @@ const res = require("next/dist/server/web/spec-extension/response");
 
 export const NextRequest = req.NextRequest;
 export const NextResponse = res.NextResponse;
-export default { NextRequest, NextResponse };
+const nextServerStub = { NextRequest, NextResponse };
+export default nextServerStub;

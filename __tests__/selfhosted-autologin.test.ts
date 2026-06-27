@@ -10,8 +10,8 @@
  *  - Unknown app values are a TypeScript never (compile-time guard)
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetSsmCache } from "@/lib/ssm-config";
-import { resetIntegrationCache } from "@/lib/integrations";
+import { resetSsmCache as _resetSsmCache } from "@/lib/ssm-config";
+import { resetIntegrationCache as _resetIntegrationCache } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Mock SSM so tests never call AWS

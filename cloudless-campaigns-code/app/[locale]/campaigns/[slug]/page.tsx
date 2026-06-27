@@ -5,25 +5,17 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CampaignHero } from "@/components/CampaignHero";
 import { TierTable } from "@/components/TierTable";
-import {
-  campaigns,
-  getCampaign,
-  type Locale,
-} from "@/data/campaigns";
+import { campaigns, getCampaign, type Locale } from "@/data/campaigns";
 
 type PageProps = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
 export async function generateStaticParams() {
-  return campaigns.flatMap((c) =>
-    ["el", "en"].map((locale) => ({ locale, slug: c.slug })),
-  );
+  return campaigns.flatMap((c) => ["el", "en"].map((locale) => ({ locale, slug: c.slug })));
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const c = getCampaign(slug);
   if (!c) return { title: "Campaign not found" };

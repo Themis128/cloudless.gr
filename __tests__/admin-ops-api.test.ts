@@ -171,7 +171,9 @@ describe("GET /api/admin/notion/search", () => {
 
   it("returns users list when type=users", async () => {
     adminOk();
-    mockAppFlowyListAllUsers.mockResolvedValue([{ uid: "u1", name: "Alice", email: "alice@x.com" }]);
+    mockAppFlowyListAllUsers.mockResolvedValue([
+      { uid: "u1", name: "Alice", email: "alice@x.com" },
+    ]);
     const { GET } = await import("@/app/api/admin/notion/search/route");
     const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=users"));
     const data = await res.json();

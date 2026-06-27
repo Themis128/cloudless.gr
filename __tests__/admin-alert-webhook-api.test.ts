@@ -73,19 +73,14 @@ describe("POST /api/webhooks/admin-alert", () => {
 
   it("returns 400 on missing required fields", async () => {
     vi.mocked(getConfig).mockResolvedValue({ ADMIN_ALERT_SECRET: SECRET } as never);
-    const res = await POST(
-      req({ "x-cloudless-alert-secret": SECRET }, { severity: "high" })
-    );
+    const res = await POST(req({ "x-cloudless-alert-secret": SECRET }, { severity: "high" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 on bad severity", async () => {
     vi.mocked(getConfig).mockResolvedValue({ ADMIN_ALERT_SECRET: SECRET } as never);
     const res = await POST(
-      req(
-        { "x-cloudless-alert-secret": SECRET },
-        { ...validBody, severity: "bogus" }
-      )
+      req({ "x-cloudless-alert-secret": SECRET }, { ...validBody, severity: "bogus" })
     );
     expect(res.status).toBe(400);
   });
