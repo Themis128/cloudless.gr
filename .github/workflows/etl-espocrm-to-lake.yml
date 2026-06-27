@@ -36,7 +36,7 @@ jobs:
     # skill); this runs-on change is the immediate unblock that doesn't
     # need that rotation.
     runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
