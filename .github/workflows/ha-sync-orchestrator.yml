@@ -194,6 +194,10 @@ jobs:
             const maxAttempts = 180; // 45m at 15s intervals
             const delayMs = 15000;
             function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+            // Track how many times a cancelled run was detected with no image
+            // in ECR. After 2 such cycles the branch has advanced past deploySha
+            // and no future build will target this SHA — exit gracefully.
+            let cancelMissCount = 0;
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
               // Prefer tracking by run ID (immune to branch-tip advances).
@@ -221,7 +225,14 @@ jobs:
                     core.info(`Pi build run ${dispatchedRunId} cancelled but image is in ECR for ${deploySha} — treating as success.`);
                     return;
                   }
-                  core.warning(`Pi build run ${dispatchedRunId} was cancelled and no image in ECR yet. Searching by SHA for a replacement run.`);
+                  cancelMissCount++;
+                  if (cancelMissCount >= 2) {
+                    // Branch has advanced past deploySha. The newer commit's
+                    // HA sync will handle its own build. Exit gracefully.
+                    core.warning(`Pi build cancelled twice with no image in ECR for ${deploySha} — branch has advanced. Exiting gracefully; newer deploy's HA sync will handle it.`);
+                    return;
+                  }
+                  core.warning(`Pi build run ${dispatchedRunId} was cancelled and no image in ECR yet (miss ${cancelMissCount}/2). Searching by SHA for a replacement run.`);
                   dispatchedRunId = null;
                   await sleep(delayMs);
                   continue;
@@ -259,11 +270,16 @@ jobs:
                     core.info(`Latest pi build cancelled but image is in ECR for ${deploySha} — treating as success.`);
                     return;
                   }
+                  cancelMissCount++;
+                  if (cancelMissCount >= 2) {
+                    core.warning(`Pi build cancelled twice with no image in ECR for ${deploySha} — branch has advanced. Exiting gracefully.`);
+                    return;
+                  }
                   // Cancelled runs happen when a PR-triggered build is auto-cancelled
                   // on branch deletion after merge. Re-dispatch and switch to run-ID
                   // tracking so the next iterations use the faster id-based path.
                   core.warning(
-                    `Pi build ${latest.id} for SHA ${deploySha} was cancelled. Re-dispatching…`
+                    `Pi build ${latest.id} for SHA ${deploySha} was cancelled (miss ${cancelMissCount}/2). Re-dispatching…`
                   );
                   const deployBranch = '${{ steps.meta.outputs.branch }}';
                   const redispatchedAt = new Date().toISOString();

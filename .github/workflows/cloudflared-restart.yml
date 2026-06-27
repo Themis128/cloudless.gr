@@ -87,6 +87,15 @@ jobs:
                     echo "=== curl https://localhost:18443 (max 5s) ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       curl -ksS --max-time 5 https://localhost:18443/ -o /dev/null -w "HTTP %{http_code}\n" 2>&1 || echo "curl failed"
+                    echo "=== all HTTPS/TLS ports listening on host ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep -E ":443|:8443|:18443|:9443|:9000" || echo "(none found)"
+                    echo "=== traefik process ports (all) ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep traefik || echo "(traefik not in ss — check k3s NodePorts)"
+                    echo "=== k3s NodePort services ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      sh -c 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get svc -A --field-selector spec.type=NodePort 2>/dev/null | head -20 || echo "kubectl not available"'
                     echo "=== traefik pods ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl is-active k3s 2>&1 || true
