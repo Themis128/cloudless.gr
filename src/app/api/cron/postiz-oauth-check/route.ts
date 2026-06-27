@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
-import { isPostizConfigured, listIntegrations } from "@/lib/postiz";
+import { isPostizConfigured, listIntegrations, PostizApiError } from "@/lib/postiz";
 import { notifyOauthExpiry } from "@/lib/postiz-slack";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, reason: "postiz_not_configured" }, { status: 503 });
   }
 
-  const integrations = await listIntegrations();
+  let integrations;
+  try {
+    integrations = await listIntegrations();
+  } catch (e) {
+    const status = e instanceof PostizApiError ? e.status : 0;
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[postiz-oauth-check] listIntegrations failed:", msg);
+    return NextResponse.json(
+      { ok: false, reason: "postiz_upstream_error", detail: msg, upstreamStatus: status },
+      { status: 502 }
+    );
+  }
+
   const disabled = integrations.filter((i) => i.disabled);
 
   await Promise.all(
