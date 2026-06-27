@@ -159,12 +159,15 @@ jobs:
                     echo "18443 after kill:"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443 — port is free)"
-                    # Spawn new socat pointing to 192.168.1.128:18443 (omv-main LAN IP, bypasses dead VIP 192.168.1.200).
-                    # Write wrapper script via printf (avoids nested heredoc in YAML), then setsid so the
-                    # child is adopted by PID 1 on the host rather than reaped by the container sh.
-                    echo "spawning socat via 192.168.1.128:18443"
+                    # Spawn new socat pointing to Traefik ClusterIP 10.43.64.171:18443.
+                    # The old config pointed to 192.168.1.200 (dead keepalived VIP). We tried
+                    # 192.168.1.128 next but that also times out: the svclb DNAT rule is in
+                    # PREROUTING (ingress only) and doesn't apply to locally-originated traffic.
+                    # The ClusterIP is reachable directly from the host network namespace because
+                    # k3s installs kube-proxy / iptables rules that work for OUTPUT traffic too.
+                    echo "spawning socat via Traefik ClusterIP 10.43.64.171:18443"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'printf "%s\n" "#!/bin/sh" "exec /usr/bin/socat TCP6-LISTEN:18443,fork,reuseaddr,ipv6only=1 TCP4:192.168.1.128:18443" > /tmp/start-socat.sh && chmod +x /tmp/start-socat.sh && setsid /tmp/start-socat.sh </dev/null >/tmp/socat-18443.log 2>&1 & echo "socat spawned pid=$!"'
+                      sh -c 'printf "%s\n" "#!/bin/sh" "exec /usr/bin/socat TCP6-LISTEN:18443,fork,reuseaddr,ipv6only=1 TCP4:10.43.64.171:18443" > /tmp/start-socat.sh && chmod +x /tmp/start-socat.sh && setsid /tmp/start-socat.sh </dev/null >/tmp/socat-18443.log 2>&1 & echo "socat spawned pid=$!"'
                     sleep 3
                     echo "18443 after spawn:"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
