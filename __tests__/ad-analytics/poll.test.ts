@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { runScheduledPoll as _runScheduledPoll, _setRegistries } from "@/lib/ad-analytics/runtime";
 import { _resetBookmarkStore } from "@/lib/ad-analytics/bookmarks";
