@@ -28,6 +28,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: cluster-status-audit
@@ -36,12 +37,25 @@ concurrency:
 jobs:
   audit:
     name: Cluster Status
-    # Self-hosted Pi runner — has kubeconfig + tailscale + SSH keys.
-    runs-on: [self-hosted, omv, build]
+    # GH-hosted runner + tailscale + KUBECONFIG_B64 — same pattern as
+    # cloudflared-restart.yml. Avoids queuing behind a busy self-hosted
+    # build runner which caused runs to pile up indefinitely.
+    runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
       - name: Collect cluster + node + runner status
         id: collect
