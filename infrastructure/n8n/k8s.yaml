@@ -126,3 +126,19 @@ spec:
       port: 5678
       targetPort: 5678
       nodePort: 30900
+
+---
+# ResourceQuota: raised from 1Gi to 1536Mi 2026-06-27.
+# n8n Deployment uses limits.memory=1Gi; the daily backup CronJob
+# (cronjob-n8n.yaml) adds 256Mi, totalling 1.25Gi — this exceeded the
+# original 1Gi cap and caused FailedCreate events every night.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: n8n-quota
+  namespace: n8n
+spec:
+  hard:
+    pods: "5"
+    requests.memory: 768Mi
+    limits.memory: 1536Mi
