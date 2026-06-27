@@ -37,7 +37,7 @@ RUN git clone --depth 1 --branch "${APPFLOWY_VERSION}" \
 FROM rust:1.78-slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      pkg-config libssl-dev libpq-dev \
+      pkg-config libssl-dev libpq-dev protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=source /src /src

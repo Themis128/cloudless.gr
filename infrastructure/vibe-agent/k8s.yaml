@@ -76,12 +76,14 @@ spec:
             - name: LANGSMITH_TRACING
               value: "true"
             - name: VIBE_PROJECT_PATH
-              value: /projects/active
+              value: /home/tbaltzakis/cloudless.gr
+            - name: VIBE_PROJECT_NAME
+              value: cloudless.gr
             - name: LANGGRAPH_PORT
               value: "2024"
           volumeMounts:
             - name: projects
-              mountPath: /projects
+              mountPath: /home/tbaltzakis
           resources:
             requests:
               memory: 768Mi
@@ -103,8 +105,9 @@ spec:
             periodSeconds: 10
       volumes:
         - name: projects
-          persistentVolumeClaim:
-            claimName: vibe-projects-pvc
+          hostPath:
+            path: /home/tbaltzakis
+            type: Directory
 
 ---
 apiVersion: v1
