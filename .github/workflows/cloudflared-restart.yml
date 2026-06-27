@@ -107,26 +107,28 @@ jobs:
                   - sh
                   - -c
                   - |
-                    echo "=== network interfaces ===" >&2
-                    ip -br link show 2>/dev/null >&2
-                    echo "=== sysfs flannel ===" >&2
-                    ls /sys/class/net/ 2>/dev/null >&2
+                    echo "IFACES_BEGIN"
+                    ip -br link show 2>/dev/null
+                    echo "IFACES_END"
+                    ls /sys/class/net/ 2>/dev/null
+                    echo "SYSFS_END"
                     MAC=""
-                    for iface in flannel.1 flannel0 flannel; do
+                    for iface in flannel.1 flannel0 flannel cni0 vxlan.calico; do
                       if [ -f "/sys/class/net/$iface/address" ]; then
                         MAC=$(cat "/sys/class/net/$iface/address" 2>/dev/null)
+                        echo "FOUND_IFACE=$iface MAC=$MAC"
                         break
                       fi
-                      TRY=$(ip -br link show "$iface" 2>/dev/null | awk '{print $3}')
-                      if [ -n "$TRY" ]; then MAC="$TRY"; break; fi
                     done
-                    echo "$MAC" 
+                    echo "FINAL_MAC=$MAC" 
           MACEOF
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/ha-mac-probe \
             -n default --timeout=30s || true
-          HA_FLANNEL_MAC=$(kubectl logs ha-mac-probe -n default 2>/dev/null | tr -d '[:space:]')
+          PROBE_LOGS=$(kubectl logs ha-mac-probe -n default 2>/dev/null)
+          echo "=== omv-ha probe output ===" && echo "$PROBE_LOGS"
+          HA_FLANNEL_MAC=$(echo "$PROBE_LOGS" | grep '^FINAL_MAC=' | cut -d= -f2 | tr -d '[:space:]')
           kubectl delete pod ha-mac-probe -n default --ignore-not-found
-          echo "omv-ha flannel.1 MAC: $HA_FLANNEL_MAC"
+          echo "omv-ha flannel MAC: $HA_FLANNEL_MAC"
 
           kubectl delete pod cf-fix -n default --ignore-not-found --wait=true
           cat <<PODEOF | kubectl create -f -
