@@ -165,9 +165,12 @@ jobs:
                     # PREROUTING (ingress only) and doesn't apply to locally-originated traffic.
                     # The ClusterIP is reachable directly from the host network namespace because
                     # k3s installs kube-proxy / iptables rules that work for OUTPUT traffic too.
+                    # TCP-LISTEN (dual-stack) so both IPv4 (cloudflared → 127.0.0.1:18443)
+                    # and IPv6 clients can connect. TCP6-LISTEN+ipv6only=1 was IPv6-only;
+                    # cloudflared connects via IPv4 and its TLS handshake timed out.
                     echo "spawning socat via Traefik ClusterIP 10.43.64.171:18443"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'printf "%s\n" "#!/bin/sh" "exec /usr/bin/socat TCP6-LISTEN:18443,fork,reuseaddr,ipv6only=1 TCP4:10.43.64.171:18443" > /tmp/start-socat.sh && chmod +x /tmp/start-socat.sh && setsid /tmp/start-socat.sh </dev/null >/tmp/socat-18443.log 2>&1 & echo "socat spawned pid=$!"'
+                      sh -c 'printf "%s\n" "#!/bin/sh" "exec /usr/bin/socat TCP-LISTEN:18443,fork,reuseaddr TCP4:10.43.64.171:18443" > /tmp/start-socat.sh && chmod +x /tmp/start-socat.sh && setsid /tmp/start-socat.sh </dev/null >/tmp/socat-18443.log 2>&1 & echo "socat spawned pid=$!"'
                     sleep 3
                     echo "18443 after spawn:"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
