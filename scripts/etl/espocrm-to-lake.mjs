@@ -435,18 +435,26 @@ async function main() {
     },
   ];
 
-  // Pre-flight: if the EspoCRM host isn't reachable at all (no DNS, tunnel
-  // not wired, etc), exit 0 instead of failing 5x and paging Slack. The CRM
-  // can be deployed before the Cloudflare tunnel is set up — this keeps the
-  // hourly cron quiet during that window.
+  // Pre-flight: verify the EspoCRM host is both reachable and healthy before
+  // burning through 5 entities × 7 retries (~7 min). Exit 0 on:
+  //   - network error (DNS, tunnel not wired)
+  //   - HTTP 5xx (server down / MariaDB crashed / PHP fatal)
+  // This keeps the hourly cron quiet during outages — Athena views just see
+  // the last good partition. Kuma heartbeat naturally goes stale which is the
+  // right signal for "EspoCRM needs attention" without Slack noise every hour.
   try {
     const probe = await fetch(`${BASE}/api/v1/App/user`, {
-      method: "HEAD",
+      method: "GET",
       headers: { "X-Api-Key": KEY },
+      signal: AbortSignal.timeout(15_000),
     });
-    // Any HTTP response (200, 401, 403) means the host is reachable — proceed.
-    // Only a network-level fetch error means "not yet wired".
-    void probe;
+    if (probe.status >= 500) {
+      console.log(
+        `EspoCRM health probe returned HTTP ${probe.status}. ` +
+          "Server is down or unhealthy. Exit 0; will retry next hour."
+      );
+      process.exit(0);
+    }
   } catch (err) {
     console.log(
       `EspoCRM host ${BASE} unreachable (${err.message}). ` +
