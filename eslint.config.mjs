@@ -76,7 +76,10 @@ const eslintConfig = defineConfig([
     "coverage/**",
     ".coverage-v8-server/**",
     ".coverage-run/**",
-    "workers/**/dist/**"
+    "workers/**/dist/**",
+    // Untracked VIBE agent UI page (gitignored: src/app/**/admin/local-agent/) —
+    // not part of the cloudless.gr repo, so exclude from lint to avoid noise.
+    "src/app/**/admin/local-agent/**"
   ]),
 ]);
 
