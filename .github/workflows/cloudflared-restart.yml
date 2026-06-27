@@ -129,13 +129,18 @@ jobs:
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl list-units --type=service 2>/dev/null | grep socat || echo "(no socat systemd unit)"
                     echo "=== kill+restart socat if present ==="
-                    SOCAT_PID=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 | grep -oP '(?<=pid=)\d+' || echo "")
+                    SOCAT_LINE=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "")
+                    # busybox grep has no -P; use awk to extract pid=NNNN
+                    SOCAT_PID=$(echo "$SOCAT_LINE" | awk 'match($0, /pid=[0-9]+/) {s=substr($0,RSTART+4,RLENGTH-4); print s; exit}')
                     if [ -n "$SOCAT_PID" ]; then
+                      echo "socat PID: $SOCAT_PID"
+                      echo "socat cmdline: $(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        cat /proc/$SOCAT_PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'unknown')"
                       echo "killing socat PID $SOCAT_PID"
                       nsenter --target 1 --mount --uts --ipc --net --pid -- kill "$SOCAT_PID" || true
                       sleep 2
-                      echo "socat killed; systemd will restart if managed"
+                      echo "socat killed"
                     else
                       echo "no socat found on 18443"
                     fi
