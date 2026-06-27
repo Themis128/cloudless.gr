@@ -314,7 +314,7 @@ jobs:
             const deploySha = '${{ steps.meta.outputs.sha }}';
             const { owner, repo } = context.repo;
 
-            const maxAttempts = 40; // 10 min at 15s intervals
+            const maxAttempts = 120; // 30 min at 15s intervals (Pi runner queue can back up)
             const delayMs = 15000;
             // If the run stays queued (Pi runner offline) for this many
             // consecutive checks, exit gracefully instead of timing out.
@@ -323,7 +323,7 @@ jobs:
             // If a run stays in_progress for too long (GitHub API sometimes
             // fails to flip status to completed even when all jobs are done),
             // check job-level status to avoid infinite wait.
-            const maxInProgressMinutes = 20;
+            const maxInProgressMinutes = 35;
             function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {

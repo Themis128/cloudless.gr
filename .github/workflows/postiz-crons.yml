@@ -121,10 +121,10 @@ jobs:
           KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_POSTIZ_OAUTH }}
         run: |
           echo "Calling $BASE_URL/api/cron/postiz-oauth-check"
-          HTTP_CODE=$(curl -o /tmp/postiz-oauth-resp.txt -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -o /tmp/postiz-oauth-resp.txt -w "%{http_code}" \
             --retry 3 --retry-delay 5 --max-time 30 \
             -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-            "$BASE_URL/api/cron/postiz-oauth-check" 2>&1)
+            "$BASE_URL/api/cron/postiz-oauth-check")
           RESPONSE=$(cat /tmp/postiz-oauth-resp.txt 2>/dev/null || echo "")
           echo "HTTP $HTTP_CODE — $RESPONSE"
           echo "## Postiz OAuth check (HTTP $HTTP_CODE)" >> "$GITHUB_STEP_SUMMARY"
