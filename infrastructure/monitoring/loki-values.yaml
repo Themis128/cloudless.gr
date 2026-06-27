@@ -22,6 +22,16 @@
 
 backend:
   replicas: 0
+
+# Disable Memcached caches — they're sized for distributed Loki, not single-binary.
+# The auto-calculated limits (9830Mi chunks, 1229Mi results) exceed the monitoring
+# namespace LimitRange max (1Gi), causing FailedCreate for 24+ hours.
+# Single-binary Loki has its own in-process query result cache; these pods add no value.
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+
 gateway:
   enabled: false
 loki:
