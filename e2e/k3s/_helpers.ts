@@ -15,12 +15,18 @@ export const STANDBY_HOST = process.env.K3S_STANDBY_HOST ?? `pi-origin.${_apexHo
 export async function probeHealth(req: APIRequestContext, host = STANDBY_HOST) {
   const r = await req.get(`https://${host}/api/health`, {
     failOnStatusCode: false,
+    timeout: 20_000,
   });
   return {
     status: r.status(),
     headers: r.headers(),
     body: await r.text(),
   };
+}
+
+export function isNetworkError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|Timeout/i.test(msg);
 }
 
 /**
