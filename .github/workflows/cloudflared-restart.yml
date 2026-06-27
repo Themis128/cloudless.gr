@@ -122,22 +122,33 @@ jobs:
                   - |
                     set -e
                     apk add -q util-linux 2>/dev/null
-                    echo "=== cloudflared status before ==="
+                    echo "=== socat status on port 18443 ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl status cloudflared --no-pager 2>&1 | head -15 || true
-                    echo "=== last 30 lines of cloudflared journal before restart ==="
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
+                    echo "=== check for socat systemd unit ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      journalctl -u cloudflared --no-pager -n 30 2>&1 || true
+                      systemctl list-units --type=service 2>/dev/null | grep socat || echo "(no socat systemd unit)"
+                    echo "=== kill+restart socat if present ==="
+                    SOCAT_PID=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 | grep -oP '(?<=pid=)\d+' || echo "")
+                    if [ -n "$SOCAT_PID" ]; then
+                      echo "killing socat PID $SOCAT_PID"
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- kill "$SOCAT_PID" || true
+                      sleep 2
+                      echo "socat killed; systemd will restart if managed"
+                    else
+                      echo "no socat found on 18443"
+                    fi
                     echo "=== restarting cloudflared ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
                     sleep 5
-                    echo "=== cloudflared journal after restart ==="
+                    echo "=== 18443 after restart ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      journalctl -u cloudflared --no-pager -n 20 2>&1 || true
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(still nothing on 18443)"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl is-active cloudflared
-                    echo "cloudflared restarted OK"
+                    echo "done"
           PODEOF
           echo "=== waiting for pod to complete (up to 150s) ==="
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-restart \
