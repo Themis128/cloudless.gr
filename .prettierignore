@@ -16,3 +16,6 @@ src/lib/api-auth.ts
 # Formatters keep stripping the SERVER_EXTERNAL_PACKAGES const that holds
 # next-auth in the externalized list. Exclude entirely to prevent that.
 next.config.ts
+# Helm chart templates use Go templating syntax ({{ }}) that Prettier
+# cannot parse as valid YAML — exclude to prevent SyntaxError failures.
+infrastructure/postiz/helm/

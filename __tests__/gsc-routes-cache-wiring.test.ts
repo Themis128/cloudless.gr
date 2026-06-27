@@ -14,7 +14,7 @@
  *   - history         — single-param, different name (weeks)
  *   - seo             — multi-call composite payload (snapshot + keywords)
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const { mockRequireAdmin, mockGetConfig, mockReadThrough, mockGsc } = vi.hoisted(() => ({

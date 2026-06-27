@@ -111,8 +111,20 @@ describe("GET /api/admin/notion/tasks", () => {
 
   it("passes status/project/assignee filters to listTasks", async () => {
     listWorkspaceViewsMock.mockResolvedValue([
-      { view_id: "t1", name: "[Done] Task A", layout: "Document", created_at: "", last_edited_time: "" },
-      { view_id: "t2", name: "[To Do] Task B", layout: "Document", created_at: "", last_edited_time: "" },
+      {
+        view_id: "t1",
+        name: "[Done] Task A",
+        layout: "Document",
+        created_at: "",
+        last_edited_time: "",
+      },
+      {
+        view_id: "t2",
+        name: "[To Do] Task B",
+        layout: "Document",
+        created_at: "",
+        last_edited_time: "",
+      },
     ]);
     const { GET } = await import("@/app/api/admin/notion/tasks/route");
     const res = await GET(adminReq(`${BASE}?status=Done`));

@@ -62,6 +62,8 @@ describe("aws-cost-to-lake shapeResults", () => {
     expect(shapeResults([])).toEqual([]);
     expect(shapeResults([{ TimePeriod: { Start: "2026-06-19" }, Groups: [] }])).toEqual([]);
     expect(shapeResults([{ TimePeriod: { Start: "2026-06-19" } }])).toEqual([]);
-    expect(shapeResults([{ Groups: [{ Keys: ["X"], Metrics: { UnblendedCost: { Amount: "1" } } }] }])).toEqual([]);
+    expect(
+      shapeResults([{ Groups: [{ Keys: ["X"], Metrics: { UnblendedCost: { Amount: "1" } } }] }])
+    ).toEqual([]);
   });
 });

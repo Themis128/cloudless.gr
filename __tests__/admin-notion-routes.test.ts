@@ -324,7 +324,13 @@ describe("POST /api/admin/notion/projects", () => {
     adminOk();
     mockListAllWorkspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
     mockListWorkspaceViews.mockResolvedValue([
-      { view_id: "root-view", name: "Root", layout: "Document", created_at: "", last_edited_time: "" },
+      {
+        view_id: "root-view",
+        name: "Root",
+        layout: "Document",
+        created_at: "",
+        last_edited_time: "",
+      },
     ]);
     mockCreatePage.mockResolvedValue({ view_id: "proj-123", name: "New Project" });
     const { POST } = await import("@/app/api/admin/notion/projects/route");

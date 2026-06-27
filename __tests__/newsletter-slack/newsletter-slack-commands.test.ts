@@ -7,7 +7,7 @@
  * their own lib tests. The point is to lock the COMMAND ROUTING surface.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { createHmac } from "crypto";
 import { POST } from "@/app/api/newsletter-slack/commands/route";
 import { resetNewsletterSlackConfigCache } from "@/lib/newsletter-slack-config";
