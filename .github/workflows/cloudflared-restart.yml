@@ -62,9 +62,10 @@ jobs:
           chmod 600 ~/.kube/config
 
       - name: Check cloudless pod and pi-origin before restart
+        continue-on-error: true
         run: |
           echo "=== cloudless pods ==="
-          kubectl get pods -n cloudless
+          kubectl get pods -n cloudless || echo "(k3s API unavailable)"
           echo ""
           echo "=== kube-system pods (Traefik health) ==="
           kubectl get pods -n kube-system | grep -E "traefik|svclb" || echo "(no traefik pods found)"
@@ -79,6 +80,21 @@ jobs:
 
       - name: Fix socat + route_localnet + restart cloudflared via privileged pod
         run: |
+          # Wait for k3s API to become ready (it may be temporarily overloaded)
+          echo "=== waiting for k3s API (up to 90s) ==="
+          for i in $(seq 1 18); do
+            if kubectl get --raw /readyz >/dev/null 2>&1; then
+              echo "k3s API ready after ~$((i * 5))s"
+              break
+            fi
+            echo "  [$i/18] API not ready, waiting 5s..."
+            sleep 5
+          done
+          if ! kubectl get --raw /readyz >/dev/null 2>&1; then
+            echo "::error::k3s API still unavailable after 90s — cannot create fix pod"
+            exit 1
+          fi
+
           # Determine Traefik websecure NodePort dynamically
           TRAEFIK_NODEPORT=$(kubectl get svc traefik -n kube-system \
             -o jsonpath='{.spec.ports[?(@.name=="websecure")].nodePort}')
