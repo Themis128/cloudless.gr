@@ -181,33 +181,45 @@ jobs:
                       sysctl net.ipv4.conf.all.route_localnet net.ipv4.conf.lo.route_localnet 2>/dev/null || true
 
                     echo ""
-                    echo "=== step 1b: restore missing flannel VXLAN route for omv-ha ==="
-                    # After a k3s restart, the host routing table loses the cross-node flannel
-                    # VXLAN route. Pods still work (their own netns has flannel routes), but
-                    # socat in the host netns cannot route DNAT'd packets to 10.42.1.0/24.
-                    # HA_FLANNEL_MAC was injected by the workflow from a probe pod on omv-ha.
-                    HA_MAC="${HA_FLANNEL_MAC}"
-                    echo "omv-ha flannel.1 MAC: $HA_MAC"
-                    if [ -n "$HA_MAC" ] && [ "$HA_MAC" != "00:00:00:00:00:00" ]; then
+                    echo "=== step 1b: diagnose + restore cross-node route for omv-ha ==="
+                    # omv-ha probe found flannel-wg (WireGuard backend), NOT flannel.1 (VXLAN).
+                    # k3s flannel-wg manages its own WireGuard peers but the host routing
+                    # table may be missing the 10.42.1.0/24 route after a k3s restart.
+                    echo "=== omv host interfaces ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ip -br link show 2>/dev/null || true
+                    echo "=== full routing table ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ip route show table all 2>/dev/null | grep -E '10.42|flannel|cni' || echo "(no pod routes found)"
+                    echo "=== iptables NodePort chain ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      iptables -t nat -L KUBE-NODEPORTS 2>/dev/null | head -20 || true
+
+                    # Detect the flannel WireGuard interface (flannel-wg or flannel.1)
+                    FLANNEL_IFACE=""
+                    for candidate in flannel-wg flannel.1 flannel0; do
+                      EXISTS=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        ip link show "$candidate" 2>/dev/null | head -1)
+                      if [ -n "$EXISTS" ]; then FLANNEL_IFACE="$candidate"; break; fi
+                    done
+                    echo "flannel interface on omv: ${FLANNEL_IFACE:-(none found)}"
+
+                    # For WireGuard backend, the route should already exist but may have
+                    # been dropped. Add it via the detected flannel interface.
+                    if [ -n "$FLANNEL_IFACE" ]; then
                       nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        bridge fdb replace "$HA_MAC" dev flannel.1 dst 192.168.1.130 2>/dev/null || true
+                        ip route replace 10.42.1.0/24 dev "$FLANNEL_IFACE" onlink 2>/dev/null || \
                       nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        ip neigh replace 10.42.1.0 lladdr "$HA_MAC" dev flannel.1 2>/dev/null || true
-                      echo "FDB entry added"
+                        ip route add 10.42.1.0/24 dev "$FLANNEL_IFACE" onlink 2>/dev/null || true
                     else
-                      echo "WARNING: HA_FLANNEL_MAC empty — skipping FDB, adding direct route only"
+                      echo "WARNING: no flannel interface found on omv — route not added"
                     fi
-                    # Add/replace host-network route for omv-ha pod CIDR (idempotent via 'replace')
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ip route replace 10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink 2>/dev/null || \
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ip route add 10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink 2>/dev/null || true
                     echo "route after fix:"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       ip route show 2>/dev/null | grep 10.42.1 || echo "(still missing)"
-                    echo "reachability:"
+                    echo "reachability to omv-ha pod CIDR gateway:"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ping -c1 -W3 10.42.1.0 2>&1 | tail -2 || echo "ping skipped"
+                      ping -c1 -W3 10.42.1.1 2>&1 | tail -2 || echo "ping skipped"
 
                     echo ""
                     echo "=== step 2: rewrite traefik-ipv6-proxy.service ==="
