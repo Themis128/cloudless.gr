@@ -81,11 +81,17 @@ jobs:
                     apk add -q util-linux 2>/dev/null
                     echo "=== cloudflared status before ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl status cloudflared --no-pager 2>&1 | head -10 || true
+                      systemctl status cloudflared --no-pager 2>&1 | head -15 || true
+                    echo "=== last 30 lines of cloudflared journal before restart ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl -u cloudflared --no-pager -n 30 2>&1 || true
                     echo "=== restarting cloudflared ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
-                    sleep 3
+                    sleep 5
+                    echo "=== cloudflared journal after restart ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      journalctl -u cloudflared --no-pager -n 20 2>&1 || true
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl is-active cloudflared
                     echo "cloudflared restarted OK"
