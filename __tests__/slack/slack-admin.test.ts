@@ -232,7 +232,7 @@ describe("slack-admin.ts", () => {
       // For each channel: create + setTopic calls
       const channelKeys = Object.keys(SLACK_CHANNELS);
       let channelIdx = 0;
-      mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      mockFetch.mockImplementation(async (url: string, _init?: RequestInit) => {
         const method = (url as string).split("/").pop()?.split("?")[0];
         if (method === "conversations.list") {
           return {

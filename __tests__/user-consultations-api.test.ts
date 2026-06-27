@@ -48,7 +48,7 @@ function unauthReq(): NextRequest {
   return new NextRequest("http://localhost/api/user/consultations");
 }
 
-const BASE = "http://localhost/api/user/consultations";
+const _BASE = "http://localhost/api/user/consultations";
 
 describe("GET /api/user/consultations", () => {
   beforeEach(() => {

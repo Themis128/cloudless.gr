@@ -79,7 +79,14 @@ const eslintConfig = defineConfig([
     "workers/**/dist/**",
     // Untracked VIBE agent UI page (gitignored: src/app/**/admin/local-agent/) —
     // not part of the cloudless.gr repo, so exclude from lint to avoid noise.
-    "src/app/**/admin/local-agent/**"
+    "src/app/**/admin/local-agent/**",
+    // SST auto-generated env type declarations — eslint-disable directive is
+    // injected by SST and triggers "unused directive" when no rules fire.
+    "**/sst-env.d.ts",
+    // Skill scripts and Lambda functions are standalone utilities that legitimately
+    // use console.log for output — not app production code.
+    ".claude/skills/**",
+    "infrastructure/ses-to-espocrm/lambda/**"
   ]),
 ]);
 

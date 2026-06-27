@@ -28,7 +28,7 @@ const DRY_RUN = process.argv.includes("--dry-run");
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-async function notionGet(path, token, cursor) {
+async function _notionGet(path, token, _cursor) {
   const url = `https://api.notion.com/v1${path}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}`, "Notion-Version": "2022-06-28" },

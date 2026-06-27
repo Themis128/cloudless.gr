@@ -584,7 +584,7 @@ interface RichTextAnnotated extends NotionRichText {
   };
   href?: string;
 }
-interface NotionPage {
+interface _NotionPage {
   id: string;
   created_time?: string;
   properties: Record<string, NotionProperty>;

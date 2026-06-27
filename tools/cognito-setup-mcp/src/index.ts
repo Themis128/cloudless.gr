@@ -31,7 +31,7 @@ const server = new McpServer({
 
 const REPO_ROOT = process.cwd();
 const ENV_LOCAL = join(REPO_ROOT, ".env.local");
-const POOL_ID = "us-east-1_1Bq3Mpqer";
+const _POOL_ID = "us-east-1_1Bq3Mpqer";
 const REGION = "us-east-1";
 
 interface Result {
@@ -49,7 +49,7 @@ function run(cmd: string): { stdout: string; success: boolean } {
   try {
     const stdout = execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] });
     return { stdout, success: true };
-  } catch (e) {
+  } catch (_e) {
     return { stdout: "", success: false };
   }
 }
