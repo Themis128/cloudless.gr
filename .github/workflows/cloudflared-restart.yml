@@ -1,0 +1,106 @@
+name: cloudflared restart — restore tunnel when pi-origin returns 000
+
+# Triggered when pi-origin.cloudless.gr is unreachable (HTTP 000) despite the
+# cloudless pod being healthy. Symptom: k3s E2E timeouts against pi-origin while
+# kubectl get pods shows 1/1 Running.
+#
+# Root cause: cloudflared pod lost its connection to the Cloudflare edge and did
+# not recover on its own. Restarting the cloudflared deployment forces a fresh
+# tunnel registration.
+#
+# Trigger: push path (to fire on merge) or workflow_dispatch.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudflared-restart.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  restart-cloudflared:
+    name: Restart cloudflared tunnel
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Diagnose cloudflared before restart
+        run: |
+          echo "=== cloudflared pods ==="
+          kubectl get pods -n cloudflare -o wide 2>/dev/null || \
+            kubectl get pods -A 2>/dev/null | grep -E "cloudflared|tunnel" || \
+            echo "(no cloudflared pods found)"
+          echo ""
+          echo "=== cloudflared deployment ==="
+          kubectl get deploy -A 2>/dev/null | grep -E "cloudflared|tunnel" || echo "(none)"
+          echo ""
+          echo "=== cloudless pods ==="
+          kubectl get pods -n cloudless
+
+      - name: Restart cloudflared deployment
+        run: |
+          echo "=== rolling restart of cloudflared ==="
+          # Try common namespace/deployment name patterns
+          CF_NS=""
+          CF_DEPLOY=""
+          for ns in cloudflare default kube-system cloudless; do
+            found=$(kubectl get deploy -n "$ns" 2>/dev/null | grep -E "^cloudflared|^tunnel" | awk '{print $1}' | head -1)
+            if [ -n "$found" ]; then
+              CF_NS="$ns"
+              CF_DEPLOY="$found"
+              break
+            fi
+          done
+          if [ -z "$CF_DEPLOY" ]; then
+            echo "::error::Could not find cloudflared deployment in any namespace"
+            kubectl get deploy -A 2>/dev/null | grep -E "cloudflared|tunnel" || true
+            exit 1
+          fi
+          echo "Found: ns=$CF_NS deploy=$CF_DEPLOY"
+          kubectl rollout restart deploy/"$CF_DEPLOY" -n "$CF_NS"
+          echo "=== waiting for rollout ==="
+          kubectl rollout status deploy/"$CF_DEPLOY" -n "$CF_NS" --timeout=120s
+
+      - name: Wait for pi-origin to recover
+        run: |
+          echo "=== polling pi-origin.cloudless.gr/api/health (up to 90s) ==="
+          for i in $(seq 1 9); do
+            code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
+              https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
+            echo "  [$i/9] HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "✓ pi-origin is healthy"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::warning::pi-origin did not recover within 90s after cloudflared restart"
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# cloudflared restart — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo "Trigger: pi-origin HTTP 000 while cloudless pod healthy"
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
