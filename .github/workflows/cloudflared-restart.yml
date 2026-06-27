@@ -18,10 +18,14 @@ name: cloudflared restart — restore tunnel when pi-origin returns 000
 #
 #   Fix applied here:
 #     1. Enable net.ipv4.conf.lo.route_localnet=1 (persisted to sysctl.d).
-#     2. Rewrite traefik-ipv6-proxy.service ExecStart to:
+#     2. Restore the missing flannel VXLAN route + FDB entry for omv-ha's pod CIDR
+#        (10.42.1.0/24 via flannel.1). K3s should populate this automatically but
+#        doesn't after a k3s restart — without it, NodePort DNAT reaches KUBE-SEP
+#        but then kernel can't route the DNAT'd packet to 10.42.1.x.
+#     3. Rewrite traefik-ipv6-proxy.service ExecStart to:
 #        socat TCP-LISTEN:18443,fork,reuseaddr TCP4:127.0.0.1:16616
 #        (127.0.0.1:16616 = Traefik websecure NodePort via loopback DNAT).
-#     3. Restart cloudflared.
+#     4. Restart cloudflared.
 #
 # Trigger: push path (to fire on merge) or workflow_dispatch.
 
@@ -80,6 +84,17 @@ jobs:
             -o jsonpath='{.spec.ports[?(@.name=="websecure")].nodePort}')
           echo "Traefik websecure NodePort: $TRAEFIK_NODEPORT"
 
+          # Get omv-ha's flannel.1 MAC (needed to restore FDB entry).
+          # We read it via a one-shot pod on omv-ha — cleanest approach, no SSH.
+          kubectl delete pod ha-mac-probe -n default --ignore-not-found --wait=true
+          kubectl run ha-mac-probe --restart=Never --image=alpine:3 -n default \
+            --overrides='{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"},"containers":[{"name":"w","image":"alpine:3","command":["cat","/sys/class/net/flannel.1/address"]}]}}'
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/ha-mac-probe \
+            -n default --timeout=30s || true
+          HA_FLANNEL_MAC=$(kubectl logs ha-mac-probe -n default 2>/dev/null | tr -d '[:space:]')
+          kubectl delete pod ha-mac-probe -n default --ignore-not-found
+          echo "omv-ha flannel.1 MAC: $HA_FLANNEL_MAC"
+
           kubectl delete pod cf-fix -n default --ignore-not-found --wait=true
           cat <<PODEOF | kubectl create -f -
           apiVersion: v1
@@ -129,6 +144,35 @@ jobs:
                     echo "route_localnet (after):"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       sysctl net.ipv4.conf.all.route_localnet net.ipv4.conf.lo.route_localnet 2>/dev/null || true
+
+                    echo ""
+                    echo "=== step 1b: restore missing flannel VXLAN route for omv-ha ==="
+                    # After a k3s restart, the host routing table loses the cross-node flannel
+                    # VXLAN route. Pods still work (their own netns has flannel routes), but
+                    # socat in the host netns cannot route DNAT'd packets to 10.42.1.0/24.
+                    # HA_FLANNEL_MAC was injected by the workflow from a probe pod on omv-ha.
+                    HA_MAC="${HA_FLANNEL_MAC}"
+                    echo "omv-ha flannel.1 MAC: $HA_MAC"
+                    if [ -n "$HA_MAC" ] && [ "$HA_MAC" != "00:00:00:00:00:00" ]; then
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        bridge fdb replace "$HA_MAC" dev flannel.1 dst 192.168.1.130 2>/dev/null || true
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        ip neigh replace 10.42.1.0 lladdr "$HA_MAC" dev flannel.1 2>/dev/null || true
+                      echo "FDB entry added"
+                    else
+                      echo "WARNING: HA_FLANNEL_MAC empty — skipping FDB, adding direct route only"
+                    fi
+                    # Add/replace host-network route for omv-ha pod CIDR (idempotent via 'replace')
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ip route replace 10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink 2>/dev/null || \
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ip route add 10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink 2>/dev/null || true
+                    echo "route after fix:"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ip route show 2>/dev/null | grep 10.42.1 || echo "(still missing)"
+                    echo "reachability:"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ping -c1 -W3 10.42.1.0 2>&1 | tail -2 || echo "ping skipped"
 
                     echo ""
                     echo "=== step 2: rewrite traefik-ipv6-proxy.service ==="
