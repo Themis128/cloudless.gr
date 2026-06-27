@@ -121,22 +121,32 @@ jobs:
           KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_POSTIZ_OAUTH }}
         run: |
           echo "Calling $BASE_URL/api/cron/postiz-oauth-check"
-          if RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 30 \
+          HTTP_CODE=$(curl -o /tmp/postiz-oauth-resp.txt -w "%{http_code}" \
+            --retry 3 --retry-delay 5 --max-time 30 \
             -H "Authorization: Bearer ${{ steps.secret.outputs.value }}" \
-            "$BASE_URL/api/cron/postiz-oauth-check"); then
-            echo "Response: $RESPONSE"
-            echo "## Postiz OAuth check" >> "$GITHUB_STEP_SUMMARY"
-            echo '```json' >> "$GITHUB_STEP_SUMMARY"
-            echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            "$BASE_URL/api/cron/postiz-oauth-check" 2>&1)
+          RESPONSE=$(cat /tmp/postiz-oauth-resp.txt 2>/dev/null || echo "")
+          echo "HTTP $HTTP_CODE — $RESPONSE"
+          echo "## Postiz OAuth check (HTTP $HTTP_CODE)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HTTP_CODE" = "200" ]; then
             [ -n "$KUMA_PUSH_TOKEN" ] && \
               curl -fsS --max-time 10 --retry 3 \
                 "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=postiz-oauth-check+ok" \
                 > /dev/null || true
+          elif [ "$HTTP_CODE" = "502" ] || [ "$HTTP_CODE" = "503" ]; then
+            # Postiz unreachable / not configured — warn but don't fail CI
+            echo "::warning::Postiz upstream returned HTTP $HTTP_CODE — OAuth check skipped"
+            [ -n "$KUMA_PUSH_TOKEN" ] && \
+              curl -fsS --max-time 10 --retry 3 \
+                "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=postiz+unreachable+$HTTP_CODE" \
+                > /dev/null || true
           else
             [ -n "$KUMA_PUSH_TOKEN" ] && \
               curl -fsS --max-time 10 --retry 3 \
-                "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=postiz-oauth-check+failed" \
+                "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=postiz-oauth-check+failed+$HTTP_CODE" \
                 > /dev/null || true
             exit 1
           fi
