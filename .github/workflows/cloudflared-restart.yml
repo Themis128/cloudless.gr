@@ -85,10 +85,29 @@ jobs:
           echo "Traefik websecure NodePort: $TRAEFIK_NODEPORT"
 
           # Get omv-ha's flannel.1 MAC (needed to restore FDB entry).
-          # We read it via a one-shot pod on omv-ha — cleanest approach, no SSH.
+          # Using a manifest file avoids JSON-within-single-quoted-shell escaping issues.
           kubectl delete pod ha-mac-probe -n default --ignore-not-found --wait=true
-          kubectl run ha-mac-probe --restart=Never --image=alpine:3 -n default \
-            --overrides='{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"},"hostNetwork":true,"containers":[{"name":"w","image":"alpine:3","securityContext":{"privileged":true},"command":["sh","-c","cat /sys/class/net/flannel.1/address 2>/dev/null || ip -br link show flannel.1 | awk '\''{print $3}'\''"]}}]}'
+          cat <<'MACEOF' | kubectl apply -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: ha-mac-probe
+            namespace: default
+          spec:
+            restartPolicy: Never
+            nodeSelector:
+              kubernetes.io/hostname: omv-ha
+            hostNetwork: true
+            containers:
+              - name: w
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command:
+                  - sh
+                  - -c
+                  - cat /sys/class/net/flannel.1/address 2>/dev/null || ip -br link show flannel.1 2>/dev/null | tr -s ' ' | cut -d' ' -f3
+          MACEOF
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/ha-mac-probe \
             -n default --timeout=30s || true
           HA_FLANNEL_MAC=$(kubectl logs ha-mac-probe -n default 2>/dev/null | tr -d '[:space:]')
