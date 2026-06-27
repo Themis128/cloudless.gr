@@ -88,7 +88,7 @@ jobs:
           # We read it via a one-shot pod on omv-ha — cleanest approach, no SSH.
           kubectl delete pod ha-mac-probe -n default --ignore-not-found --wait=true
           kubectl run ha-mac-probe --restart=Never --image=alpine:3 -n default \
-            --overrides='{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"},"containers":[{"name":"w","image":"alpine:3","command":["cat","/sys/class/net/flannel.1/address"]}]}}'
+            --overrides='{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"},"hostNetwork":true,"containers":[{"name":"w","image":"alpine:3","securityContext":{"privileged":true},"command":["sh","-c","cat /sys/class/net/flannel.1/address 2>/dev/null || ip -br link show flannel.1 | awk '\''{print $3}'\''"]}}]}'
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/ha-mac-probe \
             -n default --timeout=30s || true
           HA_FLANNEL_MAC=$(kubectl logs ha-mac-probe -n default 2>/dev/null | tr -d '[:space:]')
