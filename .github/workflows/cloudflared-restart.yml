@@ -56,7 +56,7 @@ jobs:
       - name: Restart cloudflared via privileged pod (nsenter)
         run: |
           kubectl delete pod cf-restart -n default --ignore-not-found --wait=true
-          cat <<'PODEOF' | kubectl apply -f -
+          cat <<'PODEOF' | kubectl create -f -
           apiVersion: v1
           kind: Pod
           metadata:
@@ -67,6 +67,7 @@ jobs:
             nodeSelector:
               kubernetes.io/hostname: omv
             hostPID: true
+            hostNetwork: true
             containers:
               - name: w
                 image: alpine:3
@@ -89,9 +90,15 @@ jobs:
                       systemctl is-active cloudflared
                     echo "cloudflared restarted OK"
           PODEOF
-          echo "=== waiting for pod to complete (up to 120s) ==="
+          echo "=== waiting for pod to complete (up to 150s) ==="
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-restart \
-            -n default --timeout=120s
+            -n default --timeout=150s || {
+            echo "=== pod did not succeed — current state ==="
+            kubectl get pod cf-restart -n default -o wide || true
+            kubectl describe pod cf-restart -n default || true
+            kubectl logs cf-restart -n default || true
+            exit 1
+          }
           kubectl logs -n default cf-restart
           kubectl delete pod -n default cf-restart --ignore-not-found
 
