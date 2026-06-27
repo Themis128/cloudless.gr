@@ -106,7 +106,21 @@ jobs:
                 command:
                   - sh
                   - -c
-                  - cat /sys/class/net/flannel.1/address 2>/dev/null || ip -br link show flannel.1 2>/dev/null | tr -s ' ' | cut -d' ' -f3
+                  - |
+                    echo "=== network interfaces ===" >&2
+                    ip -br link show 2>/dev/null >&2
+                    echo "=== sysfs flannel ===" >&2
+                    ls /sys/class/net/ 2>/dev/null >&2
+                    MAC=""
+                    for iface in flannel.1 flannel0 flannel; do
+                      if [ -f "/sys/class/net/$iface/address" ]; then
+                        MAC=$(cat "/sys/class/net/$iface/address" 2>/dev/null)
+                        break
+                      fi
+                      TRY=$(ip -br link show "$iface" 2>/dev/null | awk '{print $3}')
+                      if [ -n "$TRY" ]; then MAC="$TRY"; break; fi
+                    done
+                    echo "$MAC" 
           MACEOF
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/ha-mac-probe \
             -n default --timeout=30s || true
