@@ -28,16 +28,6 @@ const DRY_RUN = process.argv.includes("--dry-run");
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-async function _notionGet(path, token, _cursor) {
-  const url = `https://api.notion.com/v1${path}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, "Notion-Version": "2022-06-28" },
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new Error(`Notion GET ${path} → ${res.status}`);
-  return res.json();
-}
-
 async function notionPost(path, token, body) {
   const res = await fetch(`https://api.notion.com/v1${path}`, {
     method: "POST",
