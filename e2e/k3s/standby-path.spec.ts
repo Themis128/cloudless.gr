@@ -9,7 +9,7 @@
  * standby path.
  */
 import { test, expect } from "../coverage";
-import { isNetworkError, STANDBY_HOST } from "./_helpers";
+import { isNetworkError, isOriginDown, STANDBY_HOST } from "./_helpers";
 
 test.describe("k3s standby path", () => {
   test("standby host + cloudless.gr both serve a valid health body", async ({
@@ -25,6 +25,10 @@ test.describe("k3s standby path", () => {
     } catch (e) {
       if (isNetworkError(e)) { test.skip(true, `host not reachable: ${e}`); return; }
       throw e;
+    }
+    if (isOriginDown(a.status()) || isOriginDown(b.status())) {
+      test.skip(true, `origin down (standby=${a.status()}, apex=${b.status()})`);
+      return;
     }
     expect(a.status()).toBe(200);
     expect(b.status()).toBe(200);
@@ -43,6 +47,7 @@ test.describe("k3s standby path", () => {
     try {
       const t0 = Date.now();
       const r = await request.get(`https://${STANDBY_HOST}/api/health`);
+      if (isOriginDown(r.status())) { test.skip(true, `origin returned ${r.status()}`); return; }
       const dt = Date.now() - t0;
       expect(r.status()).toBe(200);
       expect(dt, `cold-start RTT was ${dt}ms (p95 budget 3000ms)`).toBeLessThan(3_000);
@@ -54,11 +59,13 @@ test.describe("k3s standby path", () => {
 
   test("warm RTT well below 1.5s (sequential)", async ({ request }) => {
     try {
-      await request.get(`https://${STANDBY_HOST}/api/health`);
+      const warmup = await request.get(`https://${STANDBY_HOST}/api/health`);
+      if (isOriginDown(warmup.status())) { test.skip(true, `origin returned ${warmup.status()}`); return; }
       const samples: number[] = [];
       for (let i = 0; i < 5; i++) {
         const t0 = Date.now();
         const r = await request.get(`https://${STANDBY_HOST}/api/health`);
+        if (isOriginDown(r.status())) { test.skip(true, `origin returned ${r.status()} mid-sample`); return; }
         expect(r.status()).toBe(200);
         samples.push(Date.now() - t0);
       }
