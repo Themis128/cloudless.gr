@@ -18,7 +18,7 @@
  * Flow per approved post:
  *   1. Search AppFlowy for Document pages starting with "[Review]".
  *   2. Rename page to strip the "[Review]" prefix (marks as published).
- *   3. POST /api/webhooks/notion (page.updated, blog) to revalidate ISR.
+ *   3. POST /api/webhooks/content (page.updated, blog) to revalidate ISR.
  *   4. POST /api/newsletter/send with the rendered email.
  *   5. Slack-ping with subject, slug, and delivered/failed counts.
  *
@@ -129,12 +129,6 @@ async function fetchApprovedPosts(): Promise<ApprovedPost[]> {
     });
 }
 
-// AppFlowy document content is stored as rich-text delta, not block-tree.
-// Return an empty block list — the email template will use title + slug link only.
-async function fetchAllBlocks(_pageId: string): Promise<NotionBlock[]> {
-  return [];
-}
-
 // AppFlowy has no "publish" status field — renaming the page removes the [Review] prefix.
 async function markPublished(pageId: string, _today: string): Promise<void> {
   const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
@@ -156,11 +150,23 @@ async function markPublished(pageId: string, _today: string): Promise<void> {
   });
 }
 
-// ── Block → HTML/plaintext renderer ───────────────────────────────────────────
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttr(s: string): string {
+  return escapeHtml(s);
+}
 
 function richTextToString(rt: NotionRichText[] | undefined): string {
   return (rt ?? []).map((t) => t.plain_text ?? "").join("");
 }
+
 function richTextToHtml(rt: NotionRichText[] | undefined): string {
   return (rt ?? [])
     .map((t) => {
@@ -174,17 +180,6 @@ function richTextToHtml(rt: NotionRichText[] | undefined): string {
       return s;
     })
     .join("");
-}
-export function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-function escapeAttr(s: string): string {
-  return escapeHtml(s);
 }
 
 export function blocksToHtml(blocks: NotionBlock[]): {
@@ -418,15 +413,15 @@ async function postNewsletter(subject: string, html: string, text: string): Prom
 
 async function revalidate(slug: string, pageId: string): Promise<void> {
   const siteUrl = process.env.SITE_URL || SITE_URL_DEFAULT;
-  const secret = process.env.NOTION_WEBHOOK_SECRET;
+  const secret = process.env.CONTENT_WEBHOOK_SECRET;
   if (!secret) {
     console.warn(
-      "[publish-and-send-newsletter] NOTION_WEBHOOK_SECRET not set — skipping revalidate"
+      "[publish-and-send-newsletter] CONTENT_WEBHOOK_SECRET not set — skipping revalidate"
     );
     return;
   }
   try {
-    const res = await fetch(`${siteUrl}/api/webhooks/notion`, {
+    const res = await fetch(`${siteUrl}/api/webhooks/content`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -435,10 +430,6 @@ async function revalidate(slug: string, pageId: string): Promise<void> {
       body: JSON.stringify({
         type: "page.updated",
         database: "blog",
-        // The webhook handler in src/app/api/webhooks/notion/route.ts
-        // rejects requests with empty page_id (400). Passing the real id
-        // here makes the revalidate call succeed instead of silently 400'ing
-        // on every publish (which it has been since this script was written).
         page_id: pageId,
         slug,
       }),
@@ -530,14 +521,11 @@ async function main(): Promise<void> {
 
     console.log(`[publish-and-send-newsletter] processing: "${post.title}" (${post.slug})`);
     try {
-      const blocks = await fetchAllBlocks(post.id);
-      const { html: bodyHtml, text: bodyText } = blocksToHtml(blocks);
-
       await markPublished(post.id, today);
       await revalidate(post.slug, post.id);
 
-      const fullHtml = renderNewsletter(post, bodyHtml);
-      const fullText = renderPlaintext(post, bodyText);
+      const fullHtml = renderNewsletter(post, "");
+      const fullText = renderPlaintext(post, "");
       const result = await postNewsletter(post.title, fullHtml, fullText);
 
       console.log(
@@ -583,17 +571,5 @@ interface RichTextAnnotated extends NotionRichText {
     underline?: boolean;
   };
   href?: string;
-}
-interface _NotionPage {
-  id: string;
-  created_time?: string;
-  properties: Record<string, NotionProperty>;
-}
-interface NotionProperty {
-  title?: NotionRichText[];
-  rich_text?: NotionRichText[];
-  select?: { name?: string };
-  date?: { start?: string };
-  [key: string]: unknown;
 }
 type NotionBlock = Record<string, unknown>;
