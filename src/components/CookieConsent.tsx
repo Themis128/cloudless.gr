@@ -13,6 +13,19 @@ const CATEGORY_TITLE_CLASS = "text-sm font-semibold text-white";
 /* ── Cookie banner + settings modal ──────────────────────── */
 
 export default function CookieConsent() {
+  // Defer first render until after the page's initial paint so the banner is
+  // never the LCP element. Without this, Lighthouse identifies the banner's
+  // paragraph text as LCP on /en, inflating the score to ~4.7s.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (typeof requestIdleCallback !== "undefined") {
+      const id = requestIdleCallback(() => setMounted(true), { timeout: 2000 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = setTimeout(() => setMounted(true), 1000);
+    return () => clearTimeout(id);
+  }, []);
+
   const {
     bannerVisible,
     settingsVisible,
@@ -232,6 +245,8 @@ export default function CookieConsent() {
   );
 
   /* ── Banner ───────────────────────────────────────────── */
+  if (!mounted) return null;
+
   if (settingsVisible && !bannerVisible) return settingsPanel;
 
   if (!bannerVisible) return null;

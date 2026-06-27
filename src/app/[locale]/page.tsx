@@ -41,7 +41,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const localePaths: Record<string, string> = {
-    en: "https://cloudless.gr",
+    en: "https://cloudless.gr/en",
     el: "https://cloudless.gr/el",
     fr: "https://cloudless.gr/fr",
     de: "https://cloudless.gr/de",
@@ -68,7 +68,7 @@ export async function generateMetadata({
         el: localePaths.el,
         fr: localePaths.fr,
         de: localePaths.de,
-        "x-default": localePaths.en,
+        "x-default": "https://cloudless.gr/en",
       },
     },
   };
