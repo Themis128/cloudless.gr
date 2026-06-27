@@ -4,9 +4,9 @@ name: cloudflared restart — restore tunnel when pi-origin returns 000
 # cloudless pod being healthy. Symptom: k3s E2E timeouts against pi-origin while
 # kubectl get pods shows 1/1 Running.
 #
-# Root cause: cloudflared pod lost its connection to the Cloudflare edge and did
-# not recover on its own. Restarting the cloudflared deployment forces a fresh
-# tunnel registration.
+# Root cause: cloudflared runs as a systemd service on the Pi host (not in k3s).
+# When it drops its edge connection and doesn't self-heal, SSH + systemctl restart
+# forces a fresh tunnel registration.
 #
 # Trigger: push path (to fire on merge) or workflow_dispatch.
 
@@ -28,6 +28,8 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
+      PI_HOST: "100.113.41.119"
+      PI_USER: "tbaltzakis"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
@@ -36,48 +38,33 @@ jobs:
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Configure kubectl
+      - name: Install SSH key
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Diagnose cloudflared before restart
+      - name: Diagnose cloudflared status via SSH
         run: |
-          echo "=== cloudflared pods ==="
-          kubectl get pods -n cloudflare -o wide 2>/dev/null || \
-            kubectl get pods -A 2>/dev/null | grep -E "cloudflared|tunnel" || \
-            echo "(no cloudflared pods found)"
-          echo ""
-          echo "=== cloudflared deployment ==="
-          kubectl get deploy -A 2>/dev/null | grep -E "cloudflared|tunnel" || echo "(none)"
-          echo ""
-          echo "=== cloudless pods ==="
-          kubectl get pods -n cloudless
+          echo "=== cloudflared systemd status ==="
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status cloudflared --no-pager 2>&1 | head -20; \
+             echo ''; \
+             echo '=== last 20 lines of cloudflared journal ==='; \
+             sudo journalctl -u cloudflared --no-pager --lines=20 2>&1" \
+            2>&1 || true
 
-      - name: Restart cloudflared deployment
+      - name: Restart cloudflared via SSH
         run: |
-          echo "=== rolling restart of cloudflared ==="
-          # Try common namespace/deployment name patterns
-          CF_NS=""
-          CF_DEPLOY=""
-          for ns in cloudflare default kube-system cloudless; do
-            found=$(kubectl get deploy -n "$ns" 2>/dev/null | grep -E "^cloudflared|^tunnel" | awk '{print $1}' | head -1)
-            if [ -n "$found" ]; then
-              CF_NS="$ns"
-              CF_DEPLOY="$found"
-              break
-            fi
-          done
-          if [ -z "$CF_DEPLOY" ]; then
-            echo "::error::Could not find cloudflared deployment in any namespace"
-            kubectl get deploy -A 2>/dev/null | grep -E "cloudflared|tunnel" || true
-            exit 1
-          fi
-          echo "Found: ns=$CF_NS deploy=$CF_DEPLOY"
-          kubectl rollout restart deploy/"$CF_DEPLOY" -n "$CF_NS"
-          echo "=== waiting for rollout ==="
-          kubectl rollout status deploy/"$CF_DEPLOY" -n "$CF_NS" --timeout=120s
+          echo "=== restarting cloudflared ==="
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl restart cloudflared 2>&1; echo restart_exit=\$?; \
+             sleep 3; \
+             sudo systemctl status cloudflared --no-pager 2>&1 | head -10" \
+            2>&1
 
       - name: Wait for pi-origin to recover
         run: |
