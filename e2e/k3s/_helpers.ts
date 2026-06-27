@@ -29,6 +29,10 @@ export function isNetworkError(e: unknown): boolean {
   return /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|Timeout/i.test(msg);
 }
 
+export function isOriginDown(status: number): boolean {
+  return status === 502 || status === 503 || status === 504;
+}
+
 /**
  * Verifies the response carries the cloudless.gr Next.js app's own CSP
  * (rather than a generic LB / 502 page). The same app runs on PRIMARY
