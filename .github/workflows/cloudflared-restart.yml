@@ -56,7 +56,7 @@ jobs:
       - name: Restart cloudflared via privileged pod (nsenter)
         run: |
           kubectl delete pod cf-restart -n default --ignore-not-found --wait=true
-          kubectl apply -f - <<'EOF'
+          cat <<'PODEOF' | kubectl apply -f -
           apiVersion: v1
           kind: Pod
           metadata:
@@ -78,21 +78,20 @@ jobs:
                   - |
                     set -e
                     apk add -q util-linux 2>/dev/null
-                    echo "=== cloudflared status before restart ==="
+                    echo "=== cloudflared status before ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl status cloudflared --no-pager 2>&1 | head -10 || true
                     echo "=== restarting cloudflared ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
                     sleep 3
-                    echo "=== cloudflared status after restart ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl is-active cloudflared
                     echo "cloudflared restarted OK"
-          EOF
-          echo "=== waiting for pod to complete ==="
+          PODEOF
+          echo "=== waiting for pod to complete (up to 120s) ==="
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-restart \
-            -n default --timeout=60s
+            -n default --timeout=120s
           kubectl logs -n default cf-restart
           kubectl delete pod -n default cf-restart --ignore-not-found
 
