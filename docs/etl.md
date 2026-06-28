@@ -53,7 +53,7 @@ read the RFM scores written 15 min earlier (instead of yesterday's).
   parquet via `@dsnp/parquetjs`.
 - `scripts/etl/hubspot-to-lake.mjs` — pulls EspoCRM v3 (contacts,
   deals, tickets) with cursor pagination, writes 3 parquet files.
-  Drives the v_hubspot_funnel and v_lead_to_customer Athena views.
+  Drives the v_espocrm_funnel and v_lead_to_customer Athena views.
 - `scripts/etl/compute-rfm-churn.mjs` — reads
   `lake/transactions/transactions.parquet`, computes RFM (Recency,
   Frequency, Monetary) per email + simple recency-based churn risk,
@@ -88,7 +88,7 @@ read the RFM scores written 15 min earlier (instead of yesterday's).
 Plus Athena views — 6 pre-existing
 (`v_client_health`, `v_daily_events`, `v_funnel`, `v_ltv_ranking`,
 `v_project_velocity`, `v_revenue_monthly`) and 4 new from this audit
-(`v_acquisition_funnel`, `v_attribution_by_source`, `v_hubspot_funnel`,
+(`v_acquisition_funnel`, `v_attribution_by_source`, `v_espocrm_funnel`,
 `v_lead_to_customer`) — defined in `docs/analytics-athena.sql`.
 
 ## Health snapshot (2026-06-20)
