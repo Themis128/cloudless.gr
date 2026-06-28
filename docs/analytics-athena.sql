@@ -172,10 +172,10 @@ GROUP BY 1, 2, 3
 HAVING COUNT(*) > 1
 ORDER BY revenue DESC NULLS LAST, sessions DESC;
 
--- ---- v_hubspot_funnel ------------------------------------------------------
+-- ---- v_espocrm_funnel ------------------------------------------------------
 -- EspoCRM contact lifecycle stage breakdown joined to whether they have a
 -- closed-won deal in EspoCRM. Lets us see lead-source ROI by stage.
-CREATE OR REPLACE VIEW cloudless_analytics.v_hubspot_funnel AS
+CREATE OR REPLACE VIEW cloudless_analytics.v_espocrm_funnel AS
 SELECT
   COALESCE(c.lifecyclestage, 'unknown') AS lifecycle_stage,
   COALESCE(c.lead_source, '(none)')     AS lead_source,
@@ -337,7 +337,7 @@ ORDER BY sent_count DESC;
 --
 
 -- These were created previously and live in the Glue catalog already. The four
--- views above (v_acquisition_funnel, v_attribution_by_source, v_hubspot_funnel,
+-- views above (v_acquisition_funnel, v_attribution_by_source, v_espocrm_funnel,
 -- v_lead_to_customer) are new in this audit pass and need to be CREATEd once
 -- in Athena before the dashboard can query them.
 
@@ -410,3 +410,8 @@ FROM cloudless_analytics.appflowy_users;
 -- SELECT *FROM cloudless_analytics.v_selfhosted_health;
 -- SELECT* FROM cloudless_analytics.n8n_executions WHERE status = 'error' ORDER BY started_at DESC LIMIT 20;
 -- SELECT state, COUNT(*) FROM cloudless_analytics.postiz_posts GROUP BY state;
+
+-- ---- v_hubspot_funnel compatibility alias -------------------------------
+-- Backwards-compatible alias retained for old dashboards/jobs.
+CREATE OR REPLACE VIEW cloudless_analytics.v_hubspot_funnel AS
+SELECT * FROM cloudless_analytics.v_espocrm_funnel;

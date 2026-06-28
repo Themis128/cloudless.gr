@@ -105,10 +105,10 @@ const SECTION_META: Record<
       { key: "last_seen", label: "Last seen" },
     ],
   },
-  hubspot_funnel: {
+  espocrm_funnel: {
     title: "EspoCRM lifecycle funnel",
     subtitle:
-      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_hubspot_funnel.",
+      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_espocrm_funnel.",
     columns: [
       { key: "lifecycle_stage", label: "Stage" },
       { key: "lead_source", label: "Source" },
