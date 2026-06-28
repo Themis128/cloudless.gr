@@ -26,7 +26,7 @@ Sentry.init({
     "Failed to fetch",
   ],
   // Strip token-shaped values from URLs and breadcrumb data before sending.
-  beforeSend: scrubEvent,
-  beforeBreadcrumb: scrubBreadcrumb,
+  beforeSend: scrubEvent as any,
+  beforeBreadcrumb: scrubBreadcrumb as any,
   tunnel: "/monitoring",
 });
