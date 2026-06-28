@@ -2,9 +2,12 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
-import { getWikiDocs, groupDocsByCategory } from "@/lib/notion-docs";
-import type { WikiDocRecord } from "@/lib/notion-docs";
+import { getDocs, groupDocsByCategory,
+  type AppFlowyDoc,
+} from "@/lib/appflowy-docs";
+
 import JsonLd from "@/components/JsonLd";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
@@ -38,11 +41,11 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
   const filterVerification =
     typeof resolvedParams.status === "string" ? resolvedParams.status : null;
 
-  // Use wiki-aware docs for verification metadata
-  const allDocs = await getWikiDocs();
+  const useAppFlowy = await isAppFlowyConfigured();
+  const allDocs = useAppFlowy ? await getDocs() : [];
 
   // Apply search filter
-  let docs: WikiDocRecord[] = allDocs;
+  let docs = allDocs;
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     docs = docs.filter(
@@ -55,7 +58,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
     docs = docs.filter((d) => d.verificationStatus === filterVerification);
   }
 
-  const grouped = groupDocsByCategory(docs);
+  const grouped = await groupDocsByCategory(docs);
   const categories = Object.keys(grouped);
 
   // Verification stats
@@ -225,7 +228,7 @@ export default async function DocsPage({ searchParams }: { searchParams: SearchP
                 <div key={category}>
                   <h2 className="font-heading mb-6 text-xl font-semibold text-white">{category}</h2>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {(grouped[category] as WikiDocRecord[]).map((doc) => {
+                    {(grouped[category] as AppFlowyDoc[]).map((doc) => {
                       const vStyle =
                         VERIFICATION_STYLES[doc.verificationStatus] ??
                         VERIFICATION_STYLES.Unverified;

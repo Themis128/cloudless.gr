@@ -7,6 +7,6 @@ Sentry.init({
   // R14: prefer SENTRY_ENVIRONMENT (per-surface env) over NODE_ENV.
   environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
   release: process.env.NEXT_PUBLIC_APP_VERSION,
-  beforeSend: scrubEvent,
-  beforeBreadcrumb: scrubBreadcrumb,
+  beforeSend: scrubEvent as any,
+  beforeBreadcrumb: scrubBreadcrumb as any,
 });
