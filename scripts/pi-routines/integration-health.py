@@ -70,9 +70,10 @@ code, _ = api_check("https://api.stripe.com/v1/balance", {"Authorization": f"Bea
 R.append((":green_circle:" if code == 200 else ":red_circle:", "Stripe", f"HTTP {code}"))
 
 # EspoCRM
-hk = ssm("HUBSPOT_API_KEY")
+base = ssm("ESPOCRM_BASE_URL").rstrip("/")
+hk = ssm("ESPOCRM_API_KEY")
 code, _ = api_check(
-    "https://api.hubapi.com/crm/v3/objects/contacts?limit=1", {"Authorization": f"Bearer {hk}"}
+    f"{base}/api/v1/Contact?maxSize=1", {"X-Api-Key": hk}
 )
 R.append((":green_circle:" if code == 200 else ":red_circle:", "EspoCRM CRM", f"HTTP {code}"))
 
