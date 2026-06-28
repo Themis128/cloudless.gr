@@ -14,14 +14,14 @@
  *
  *   import { integrationFetch } from "@/lib/integrations/http";
  *
- *   const data = await integrationFetch<MyResponse>("hubspot", url, {
+ *   const data = await integrationFetch<MyResponse>("espocrm", url, {
  *     method: "POST",
  *     headers: { "Content-Type": "application/json" },
  *     body: JSON.stringify(payload),
  *   });
  *
  * This is phase 1 of the Integration Improvement Plan. Subsequent phases
- * migrate existing clients (notion.ts, hubspot*, sentry.ts, gsc.ts, …)
+ * migrate existing clients (notion.ts, espocrm*, sentry.ts, gsc.ts, …)
  * to use this wrapper.
  */
 

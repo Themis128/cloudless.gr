@@ -29,7 +29,7 @@ interface ApiResponse {
 const SETUP_URLS = {
   ses: "https://console.aws.amazon.com/ses",
   stripe: "https://dashboard.stripe.com/apikeys",
-  hubspot: "https://app.hubspot.com/private-apps",
+  espocrm: "https://espocrm.cloudless.gr/#User/list",
   slack: "https://api.slack.com/apps",
   notion: "https://www.notion.so/my-integrations",
   google: "https://console.cloud.google.com/iam-admin/serviceaccounts",
