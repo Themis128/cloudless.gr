@@ -38,7 +38,7 @@ function formatDate(iso: string) {
   }
 }
 
-export default function NotionSubmissionsPage() {
+export default function AppFlowySubmissionsPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

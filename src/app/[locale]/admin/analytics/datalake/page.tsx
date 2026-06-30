@@ -10,8 +10,12 @@
  *   - LinkedIn ads campaign rollup (90d)
  *   - Sentry top unresolved issues (14d)
  *   - EspoCRM lifecycle funnel
+ *   - EspoCRM pipeline (per-stage opportunity rollup)
+ *   - Lead-to-customer journey with RFM scores
+ *   - Self-hosted app health (AppFlowy, n8n, Postiz)
+ *   - n8n per-workflow success rate (30d)
  *
- * Fetches all six in parallel from /api/admin/analytics/datalake. Each card
+ * Fetches all from /api/admin/analytics/datalake. Each card
  * renders independently — a section with an error (e.g. ETL hasn't run yet)
  * shows that error inline rather than blanking the whole dashboard.
  */

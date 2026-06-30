@@ -91,7 +91,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/blog", label: "Blog", Icon: PenLine },
       { href: "/admin/docs", label: "Docs", Icon: FileText },
       { href: "/admin/projects", label: "Projects", Icon: FolderKanban },
-      { href: "/admin/notion", label: "Submissions", Icon: Inbox },
+      { href: "/admin/appflowy", label: "AppFlowy", Icon: Inbox },
     ],
   },
   {
@@ -131,6 +131,7 @@ const adminGroups: AdminGroup[] = [
         Icon: CreditCard,
       },
       { href: "/admin/ab-tests", label: "A/B Tests", Icon: FlaskConical },
+      { href: "/admin/automation", label: "Automation", Icon: GitMerge },
       { href: "/admin/integrations", label: "Integrations", Icon: Plug },
       { href: "/admin/errors", label: "Errors", Icon: AlertTriangle },
       { href: "/admin/notifications", label: "Notifications", Icon: Bell },

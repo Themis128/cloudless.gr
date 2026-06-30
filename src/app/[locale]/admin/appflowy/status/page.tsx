@@ -33,12 +33,12 @@ const DB_ICONS: Record<string, string> = {
 };
 
 const DB_LINKS: Record<string, string> = {
-  Blog: "/admin/notion",
+  Blog: "/admin/blog",
   Docs: "/docs",
-  Projects: "/admin/notion/projects",
-  Tasks: "/admin/notion/tasks",
-  Submissions: "/admin/notion",
-  Analytics: "/admin/notion/analytics",
+  Projects: "/admin/appflowy/projects",
+  Tasks: "/admin/appflowy/tasks",
+  Submissions: "/admin/appflowy",
+  Analytics: "/admin/appflowy/analytics",
 };
 
 function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
@@ -145,7 +145,7 @@ function DatabaseCard({
         <div className="px-5 pb-4">
           <div className="rounded border border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-400">
             Set{" "}
-            <code className="rounded bg-slate-700 px-1">NOTION_{db.name.toUpperCase()}_DB_ID</code>{" "}
+            <code className="rounded bg-slate-700 px-1">APPFLOWY_{db.name.toUpperCase()}_DB</code>{" "}
             in <code className="rounded bg-slate-700 px-1">.env.local</code> and share the database
             with your integration.
           </div>
@@ -205,7 +205,7 @@ function DatabaseCard({
 
 // ── Main Page ────────────────────────────────────────────────
 
-export default function NotionStatusPage() {
+export default function AppFlowyStatusPage() {
   const [data, setData] = useState<StatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -253,10 +253,10 @@ export default function NotionStatusPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent">
-            Notion Integration Status
+            AppFlowy Integration Status
           </h1>
           <p className="mt-2 text-slate-400">
-            Live connection status and content preview for all Notion databases.
+            Live connection status and content preview for all AppFlowy databases.
           </p>
         </div>
 
@@ -264,7 +264,7 @@ export default function NotionStatusPage() {
         {loading && (
           <div className="flex items-center justify-center py-20">
             <div className="border-neon-cyan h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
-            <span className="ml-3 text-slate-400">Connecting to Notion...</span>
+            <span className="ml-3 text-slate-400">Connecting to AppFlowy...</span>
           </div>
         )}
 
@@ -349,12 +349,12 @@ export default function NotionStatusPage() {
                     <span className="text-neon-cyan mr-2 font-mono">1.</span>
                     Go to{" "}
                     <a
-                      href="https://www.notion.so/my-integrations"
+                      href="https://www.appflowy.cloudless.gr"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-neon-cyan hover:underline"
                     >
-                      notion.so/my-integrations
+                      appflowy.cloudless.gr
                     </a>{" "}
                     and create an Internal Integration
                   </li>
@@ -370,12 +370,12 @@ export default function NotionStatusPage() {
                     </code>{" "}
                     and set{" "}
                     <code className="rounded bg-slate-700 px-1.5 py-0.5 text-xs">
-                      NOTION_API_KEY=your_secret_here
+                      APPFLOWY_API_URL + APPFLOWY_JWT_SECRET in SSM
                     </code>
                   </li>
                   <li>
                     <span className="text-neon-cyan mr-2 font-mono">4.</span>
-                    In Notion, open each database {"\u2192"} <strong>...</strong> {"\u2192"}{" "}
+                    In AppFlowy, the databases are auto-synced {"\u2192"} <strong>...</strong> {"\u2192"}{" "}
                     <strong>Connections</strong> {"\u2192"} add your integration
                   </li>
                   <li>

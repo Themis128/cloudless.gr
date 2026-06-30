@@ -155,7 +155,7 @@ export default function SubmissionsPage() {
       {error && (
         <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">
           {error === "Notion submissions not configured"
-            ? "Notion Submissions DB not configured. Set APPFLOWY_SUBMISSIONS_DB_ID in SSM."
+            ? "AppFlowy Submissions DB not configured. Set APPFLOWY_SUBMISSIONS_DB_ID in SSM."
             : error}
         </div>
       )}
