@@ -1,0 +1,46 @@
+{
+  "dashboard": {
+    "title": "Memory Anomaly Detection",
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "type": "timeseries",
+        "title": "Memory Usage (by Pod)",
+        "gridPos": { "x": 0, "y": 0, "w": 24, "h": 10 },
+        "targets": [
+          {
+            "expr": "sum(container_memory_usage_bytes{container!=\"\",pod!=\"\"}) by (pod)",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        }
+      },
+      {
+        "type": "timeseries",
+        "title": "Memory Growth (30m) — Leak Indicator",
+        "gridPos": { "x": 0, "y": 10, "w": 24, "h": 10 },
+        "targets": [
+          {
+            "expr": "increase(container_memory_usage_bytes{container!=\"\",pod!=\"\"}[30m])",
+            "legendFormat": "{{pod}}",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}
