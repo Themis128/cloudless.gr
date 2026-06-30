@@ -56,6 +56,26 @@ const QUERIES: Array<{ section: string; sql: string }> = [
     // Lifecycle stage breakdown
     sql: "SELECT * FROM cloudless_analytics.v_espocrm_funnel LIMIT 20",
   },
+  {
+    section: "espocrm_pipeline",
+    // Per-stage opportunity rollup
+    sql: "SELECT * FROM cloudless_analytics.v_espocrm_pipeline",
+  },
+  {
+    section: "lead_to_customer",
+    // Contact-to-customer funnel with RFM scores
+    sql: "SELECT * FROM cloudless_analytics.v_lead_to_customer LIMIT 20",
+  },
+  {
+    section: "selfhosted_health",
+    // AppFlowy + n8n + Postiz health summary
+    sql: "SELECT * FROM cloudless_analytics.v_selfhosted_health",
+  },
+  {
+    section: "n8n_workflow_health",
+    // n8n per-workflow success rate (30d)
+    sql: "SELECT * FROM cloudless_analytics.v_n8n_workflow_health_30d",
+  },
 ];
 
 export async function GET(request: NextRequest) {
