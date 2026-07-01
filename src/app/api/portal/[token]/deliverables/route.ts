@@ -6,6 +6,7 @@ import { SlackClient } from "@/lib/slack-notify";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { escapeHtml } from "@/lib/escape-html";
+import { publishPortalNotification } from "@/lib/sns-notify";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -113,6 +114,23 @@ export async function POST(
       fromLabel: "Cloudless Portal",
     });
   })().catch((err) => console.error("[Portal] deliverable notification email failed:", err));
+
+  // Publish to the SNS topic for fan-out to email/Slack (fire-and-forget).
+  publishPortalNotification({
+    eventType: "deliverable_action",
+    portalLabel: portal.label,
+    clientName: clientLabel,
+    clientEmail: portal.clientEmail,
+    title: `[Portal] ${clientLabel} ${approved ? "approved" : "requested changes"}: ${result.title}`,
+    description: `${clientLabel} ${verb} "${result.title}" (${portal.label}).${commentText ? `\n>${commentText.slice(0, 500)}` : ""}`,
+    url: `https://cloudless.gr/portal/${portal.token}`,
+    metadata: {
+      deliverableId: result.id,
+      deliverableTitle: result.title,
+      action: body.action,
+      portalToken: portal.token,
+    },
+  }).catch(() => {});
 
   return NextResponse.json({ success: true, deliverable: result });
 }

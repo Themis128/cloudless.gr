@@ -114,6 +114,7 @@
     "@aws-sdk/client-dynamodb": "^3.1075.0",
     "@aws-sdk/client-s3": "^3.1075.0",
     "@aws-sdk/client-sesv2": "^3.1075.0",
+    "@aws-sdk/client-sns": "^3.1078.0",
     "@aws-sdk/client-ssm": "^3.1075.0",
     "@langchain/langgraph-sdk": "^1.9.25",
     "@react-email/components": "1.0.12",
