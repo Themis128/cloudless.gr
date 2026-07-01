@@ -155,7 +155,7 @@
     "eslint-config-next": "16.2.9",
     "jiti": "^2.7.0",
     "jsdom": "^29.1.1",
-    "markdownlint-cli2": "^0.22.1",
+    "markdownlint-cli2": "^0.23.0",
     "monocart-coverage-reports": "^2.12.12",
     "monocart-reporter": "^2.12.1",
     "prettier": "^3.9.0",
