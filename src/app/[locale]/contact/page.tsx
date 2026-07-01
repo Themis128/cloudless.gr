@@ -16,8 +16,7 @@ export async function generateMetadata({
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
-    | Record<string, Record<string, string>>
-    | undefined;
+    Record<string, Record<string, string>> | undefined;
   return {
     title: meta?.contact?.title ?? "Contact Us",
     description: meta?.contact?.description,

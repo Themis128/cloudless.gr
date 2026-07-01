@@ -375,8 +375,8 @@ export default function AppFlowyStatusPage() {
                   </li>
                   <li>
                     <span className="text-neon-cyan mr-2 font-mono">4.</span>
-                    In AppFlowy, the databases are auto-synced {"\u2192"} <strong>...</strong> {"\u2192"}{" "}
-                    <strong>Connections</strong> {"\u2192"} add your integration
+                    In AppFlowy, the databases are auto-synced {"\u2192"} <strong>...</strong>{" "}
+                    {"\u2192"} <strong>Connections</strong> {"\u2192"} add your integration
                   </li>
                   <li>
                     <span className="text-neon-cyan mr-2 font-mono">5.</span>

@@ -12,7 +12,8 @@ import { getSlackConfigAsync } from "@/lib/integrations";
 // Types
 // ---------------------------------------------------------------------------
 
-export type BlockKitBlock = // NOSONAR — discriminated union type annotations
+export type BlockKitBlock =
+  // NOSONAR — discriminated union type annotations
   | {
       type: "section"; // NOSONAR
       text: { type: "mrkdwn" | "plain_text"; text: string }; // NOSONAR

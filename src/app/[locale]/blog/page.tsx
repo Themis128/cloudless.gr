@@ -22,8 +22,7 @@ export async function generateMetadata({
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
-    | Record<string, Record<string, string>>
-    | undefined;
+    Record<string, Record<string, string>> | undefined;
   return {
     title: meta?.blog?.title ?? "Blog",
     description:
@@ -59,7 +58,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
   const activeTag = typeof resolvedParams.tag === "string" ? resolvedParams.tag : null;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
 
-    const useAppFlowy = await isAppFlowyConfigured();
+  const useAppFlowy = await isAppFlowyConfigured();
   const appflowyPosts = useAppFlowy ? await getAppFlowyPosts() : [];
 
   const [categoryCounts, tagCounts] = useAppFlowy
@@ -82,13 +81,26 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
   const allPosts =
     appflowyPosts.length > 0
       ? appflowyPosts.map((p) => ({
-          slug: p.slug, title: p.title, excerpt: p.excerpt, date: p.date,
-          readTime: p.readTime || "5 min read", category: p.category || "Cloud",
-          author: p.author, coverImage: p.coverImage, tags: p.tags,
+          slug: p.slug,
+          title: p.title,
+          excerpt: p.excerpt,
+          date: p.date,
+          readTime: p.readTime || "5 min read",
+          category: p.category || "Cloud",
+          author: p.author,
+          coverImage: p.coverImage,
+          tags: p.tags,
         }))
       : staticPosts.map((p) => ({
-          slug: p.slug, title: p.title, excerpt: p.excerpt, date: p.date,
-          readTime: p.readTime, category: p.category, author: "", coverImage: "", tags: [] as string[],
+          slug: p.slug,
+          title: p.title,
+          excerpt: p.excerpt,
+          date: p.date,
+          readTime: p.readTime,
+          category: p.category,
+          author: "",
+          coverImage: "",
+          tags: [] as string[],
         }));
   // Apply filters
   let filteredPosts = allPosts;
@@ -116,7 +128,9 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
   const totalPages = Math.ceil(total / PER_PAGE);
   const posts = filteredPosts.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  const categories = Object.entries(categoryCounts as Record<string, number>).sort((a, b) => b[1] - a[1]);
+  const categories = Object.entries(categoryCounts as Record<string, number>).sort(
+    (a, b) => b[1] - a[1]
+  );
   const tags = Object.entries(tagCounts as Record<string, number>).sort((a, b) => b[1] - a[1]);
 
   // Build URL helper for filter links

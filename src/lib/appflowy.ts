@@ -269,18 +269,11 @@ export async function getAppFlowySummary(): Promise<{
 // ---------------------------------------------------------------------------
 
 /** Rename a page/view. */
-export async function renameView(
-  workspaceId: string,
-  viewId: string,
-  name: string
-): Promise<void> {
-  await callThrowing(
-    `/workspace/${encodeURIComponent(workspaceId)}/page-view`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ view_id: viewId, name }),
-    }
-  );
+export async function renameView(workspaceId: string, viewId: string, name: string): Promise<void> {
+  await callThrowing(`/workspace/${encodeURIComponent(workspaceId)}/page-view`, {
+    method: "PATCH",
+    body: JSON.stringify({ view_id: viewId, name }),
+  });
 }
 
 /**
@@ -303,10 +296,7 @@ export async function updateDocumentContent(
 /**
  * Deep-recursive workspace view listing.
  */
-export async function listAllViewsDeep(
-  workspaceId: string,
-  depth = 5
-): Promise<AppFlowyView[]> {
+export async function listAllViewsDeep(workspaceId: string, depth = 5): Promise<AppFlowyView[]> {
   const r = await callThrowing<{ data: Record<string, unknown> }>(
     `/workspace/${encodeURIComponent(workspaceId)}/folder?depth=${depth}`
   );
@@ -323,7 +313,8 @@ export async function listAllViewsDeep(
     if (node.view_id && node.name) {
       views.push(node as unknown as AppFlowyView);
     }
-    const children = (node.children as { views?: Array<Record<string, unknown>> } | undefined)?.views;
+    const children = (node.children as { views?: Array<Record<string, unknown>> } | undefined)
+      ?.views;
     if (children) {
       for (const child of children) walk(child);
     }
@@ -350,9 +341,10 @@ export function extractDocText(doc: AppFlowyDocument): string {
 /**
  * Simple frontmatter parser for AppFlowy document bodies.
  */
-export function parseAppFlowyFrontmatter(
-  text: string
-): { meta: Record<string, string | boolean | string[]>; body: string } {
+export function parseAppFlowyFrontmatter(text: string): {
+  meta: Record<string, string | boolean | string[]>;
+  body: string;
+} {
   const meta: Record<string, string | boolean | string[]> = {};
   const trimmed = text.trim();
 
@@ -373,7 +365,18 @@ export function parseAppFlowyFrontmatter(
     if (eq === -1) continue;
     const key = line.slice(0, eq).trim();
     const raw = line.slice(eq + 1).trim();
-    const value: string | boolean | string[] = raw === "true" ? true : raw === "false" ? false : raw.startsWith("[") && raw.endsWith("]") ? raw.slice(1, -1).split(",").map((v) => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean) : raw.replace(/^["']|["']$/g, "");
+    const value: string | boolean | string[] =
+      raw === "true"
+        ? true
+        : raw === "false"
+          ? false
+          : raw.startsWith("[") && raw.endsWith("]")
+            ? raw
+                .slice(1, -1)
+                .split(",")
+                .map((v) => v.trim().replace(/^["']|["']$/g, ""))
+                .filter(Boolean)
+            : raw.replace(/^["']|["']$/g, "");
 
     meta[key] = value as string | boolean | string[];
   }
@@ -392,11 +395,20 @@ export function markdownToHtml(md: string): string {
   let blockquote = false;
 
   const closeLists = () => {
-    if (inUl) { html.push("</ul>"); inUl = false; }
-    if (inOl) { html.push("</ol>"); inOl = false; }
+    if (inUl) {
+      html.push("</ul>");
+      inUl = false;
+    }
+    if (inOl) {
+      html.push("</ol>");
+      inOl = false;
+    }
   };
   const closeBq = () => {
-    if (blockquote) { html.push("</blockquote>"); blockquote = false; }
+    if (blockquote) {
+      html.push("</blockquote>");
+      blockquote = false;
+    }
   };
 
   for (let i = 0; i < lines.length; i++) {
@@ -419,7 +431,10 @@ export function markdownToHtml(md: string): string {
 
     if (line.startsWith("> ")) {
       closeLists();
-      if (!blockquote) { html.push("<blockquote>"); blockquote = true; }
+      if (!blockquote) {
+        html.push("<blockquote>");
+        blockquote = true;
+      }
       html.push(`<p>${inlineMd(line.slice(2))}</p>`);
       continue;
     }
@@ -434,14 +449,22 @@ export function markdownToHtml(md: string): string {
 
     if (/^[-*]\s/.test(line)) {
       closeBq();
-      if (!inUl) { closeLists(); html.push("<ul>"); inUl = true; }
+      if (!inUl) {
+        closeLists();
+        html.push("<ul>");
+        inUl = true;
+      }
       html.push(`<li>${inlineMd(line.replace(/^[-*]\s/, ""))}</li>`);
       continue;
     }
 
     if (/^\d+\.\s/.test(line)) {
       closeBq();
-      if (!inOl) { closeLists(); html.push("<ol>"); inOl = true; }
+      if (!inOl) {
+        closeLists();
+        html.push("<ol>");
+        inOl = true;
+      }
       html.push(`<li>${inlineMd(line.replace(/^\d+\.\s/, ""))}</li>`);
       continue;
     }
