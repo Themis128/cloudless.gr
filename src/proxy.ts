@@ -420,6 +420,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(httpsUrl, 308);
   }
 
+  // Let Auth.js own its complete route group. OAuth callbacks depend on
+  // Auth.js cookies/state/PKCE/nonce remaining untouched by custom API proxy logic.
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/api/")) {
     return handleApiRoute(request, pathname, nonce);
   }
