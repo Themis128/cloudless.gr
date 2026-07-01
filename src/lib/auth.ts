@@ -379,14 +379,12 @@ export const handlers: {
 } = {
   GET: (req: Request) => {
     const h = getNextAuth()?.handlers.GET as
-      | ((req: Request) => Response | Promise<Response>)
-      | undefined;
+      ((req: Request) => Response | Promise<Response>) | undefined;
     return h ? h(req) : getDisabledAuthResponse(req);
   },
   POST: (req: Request) => {
     const h = getNextAuth()?.handlers.POST as
-      | ((req: Request) => Response | Promise<Response>)
-      | undefined;
+      ((req: Request) => Response | Promise<Response>) | undefined;
     return h ? h(req) : getDisabledAuthResponse(req);
   },
 };

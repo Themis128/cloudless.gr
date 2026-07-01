@@ -263,3 +263,242 @@ export async function getAppFlowySummary(): Promise<{
     userCount: users.length,
   };
 }
+
+// ---------------------------------------------------------------------------
+// CMS helpers — page rename + document content update
+// ---------------------------------------------------------------------------
+
+/** Rename a page/view. */
+export async function renameView(workspaceId: string, viewId: string, name: string): Promise<void> {
+  await callThrowing(`/workspace/${encodeURIComponent(workspaceId)}/page-view`, {
+    method: "PATCH",
+    body: JSON.stringify({ view_id: viewId, name }),
+  });
+}
+
+/**
+ * Replace the markdown body of a document page.
+ */
+export async function updateDocumentContent(
+  workspaceId: string,
+  viewId: string,
+  markdown: string
+): Promise<void> {
+  await callThrowing(
+    `/workspace/${encodeURIComponent(workspaceId)}/doc/${encodeURIComponent(viewId)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ data: markdown }),
+    }
+  );
+}
+
+/**
+ * Deep-recursive workspace view listing.
+ */
+export async function listAllViewsDeep(workspaceId: string, depth = 5): Promise<AppFlowyView[]> {
+  const r = await callThrowing<{ data: Record<string, unknown> }>(
+    `/workspace/${encodeURIComponent(workspaceId)}/folder?depth=${depth}`
+  );
+
+  if ((r as { code?: number }).code && (r as { code?: number }).code !== 0) {
+    return [];
+  }
+
+  const root = (r as { data?: Record<string, unknown> }).data;
+  if (!root) return [];
+
+  const views: AppFlowyView[] = [];
+  function walk(node: Record<string, unknown>): void {
+    if (node.view_id && node.name) {
+      views.push(node as unknown as AppFlowyView);
+    }
+    const children = (node.children as { views?: Array<Record<string, unknown>> } | undefined)
+      ?.views;
+    if (children) {
+      for (const child of children) walk(child);
+    }
+  }
+  walk(root);
+  return views;
+}
+
+/**
+ * Extract plain-text / markdown from a document response.
+ */
+export function extractDocText(doc: AppFlowyDocument): string {
+  const d = doc.data as Record<string, unknown> | undefined;
+  if (!d) return "";
+  return (
+    (typeof d.text === "string" && d.text) ||
+    (typeof d.markdown === "string" && d.markdown) ||
+    (typeof d.content === "string" && d.content) ||
+    (typeof d === "string" && d) ||
+    ""
+  );
+}
+
+/**
+ * Simple frontmatter parser for AppFlowy document bodies.
+ */
+export function parseAppFlowyFrontmatter(text: string): {
+  meta: Record<string, string | boolean | string[]>;
+  body: string;
+} {
+  const meta: Record<string, string | boolean | string[]> = {};
+  const trimmed = text.trim();
+
+  if (!trimmed.startsWith("---")) {
+    return { meta, body: trimmed };
+  }
+
+  const endIdx = trimmed.indexOf("---", 3);
+  if (endIdx === -1) {
+    return { meta, body: trimmed };
+  }
+
+  const front = trimmed.slice(3, endIdx).trim();
+  const body = trimmed.slice(endIdx + 3).trim();
+
+  for (const line of front.split("\n")) {
+    const eq = line.indexOf(":");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    const raw = line.slice(eq + 1).trim();
+    const value: string | boolean | string[] =
+      raw === "true"
+        ? true
+        : raw === "false"
+          ? false
+          : raw.startsWith("[") && raw.endsWith("]")
+            ? raw
+                .slice(1, -1)
+                .split(",")
+                .map((v) => v.trim().replace(/^["']|["']$/g, ""))
+                .filter(Boolean)
+            : raw.replace(/^["']|["']$/g, "");
+
+    meta[key] = value as string | boolean | string[];
+  }
+
+  return { meta, body };
+}
+
+/**
+ * Very small markdown-to-HTML converter.
+ */
+export function markdownToHtml(md: string): string {
+  const lines = md.split("\n");
+  const html: string[] = [];
+  let inUl = false;
+  let inOl = false;
+  let blockquote = false;
+
+  const closeLists = () => {
+    if (inUl) {
+      html.push("</ul>");
+      inUl = false;
+    }
+    if (inOl) {
+      html.push("</ol>");
+      inOl = false;
+    }
+  };
+  const closeBq = () => {
+    if (blockquote) {
+      html.push("</blockquote>");
+      blockquote = false;
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const line = raw.trim();
+
+    if (line.startsWith("```")) {
+      closeLists();
+      closeBq();
+      const lang = line.slice(3).trim();
+      html.push(`<pre><code class="language-${lang}">`);
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        html.push(escapeHtml(lines[i]));
+        i++;
+      }
+      html.push("</code></pre>");
+      continue;
+    }
+
+    if (line.startsWith("> ")) {
+      closeLists();
+      if (!blockquote) {
+        html.push("<blockquote>");
+        blockquote = true;
+      }
+      html.push(`<p>${inlineMd(line.slice(2))}</p>`);
+      continue;
+    }
+
+    if (/^#{1,3}\s/.test(line)) {
+      closeLists();
+      closeBq();
+      const m = line.match(/^(#{1,3})\s+(.*)$/);
+      if (m) html.push(`<h${m[1].length}>${inlineMd(m[2])}</h${m[1].length}>`);
+      continue;
+    }
+
+    if (/^[-*]\s/.test(line)) {
+      closeBq();
+      if (!inUl) {
+        closeLists();
+        html.push("<ul>");
+        inUl = true;
+      }
+      html.push(`<li>${inlineMd(line.replace(/^[-*]\s/, ""))}</li>`);
+      continue;
+    }
+
+    if (/^\d+\.\s/.test(line)) {
+      closeBq();
+      if (!inOl) {
+        closeLists();
+        html.push("<ol>");
+        inOl = true;
+      }
+      html.push(`<li>${inlineMd(line.replace(/^\d+\.\s/, ""))}</li>`);
+      continue;
+    }
+
+    if (line === "---" || line === "***") {
+      closeLists();
+      closeBq();
+      html.push("<hr />");
+      continue;
+    }
+
+    closeLists();
+    closeBq();
+    if (line.length > 0) {
+      html.push(`<p>${inlineMd(line)}</p>`);
+    }
+  }
+
+  closeLists();
+  closeBq();
+  return html.join("\n");
+}
+
+function inlineMd(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}

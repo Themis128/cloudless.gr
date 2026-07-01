@@ -363,7 +363,7 @@ export default function TasksKanbanPage() {
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Task Board</h1>
           <p className="font-body mt-1 text-slate-400">
-            Kanban view of your Notion tasks database.
+            Kanban view of your AppFlowy tasks database.
           </p>
         </div>
         <div className="flex gap-2">
@@ -643,7 +643,7 @@ export default function TasksKanbanPage() {
             <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
               <p className="font-mono text-slate-500">No sprints assigned to tasks yet.</p>
               <p className="font-body mt-2 text-sm text-slate-600">
-                Add a Sprint property to your tasks in Notion.
+                Add a Sprint property to your tasks in AppFlowy.
               </p>
             </div>
           ) : (

@@ -230,9 +230,7 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
  */
 export async function runTool(name: string, input: unknown): Promise<string> {
   const safeInput = (typeof input === "object" && input !== null ? input : {}) as
-    | LookupProductInput
-    | CheckCalendarInput
-    | BookSlotInput;
+    LookupProductInput | CheckCalendarInput | BookSlotInput;
   try {
     if (name === "lookup_product") {
       return await runLookupProduct(safeInput as LookupProductInput);

@@ -216,8 +216,7 @@ function applyInsights(id: PlatformId, data: unknown, stats: PlatformStats): voi
 
   if (id === "google") {
     const m = root.metrics as
-      | { impressions?: number; clicks?: number; costMicros?: number }
-      | undefined;
+      { impressions?: number; clicks?: number; costMicros?: number } | undefined;
     if (m) {
       stats.impressions = m.impressions ?? 0;
       stats.clicks = m.clicks ?? 0;
@@ -244,8 +243,7 @@ function applyInsights(id: PlatformId, data: unknown, stats: PlatformStats): voi
     }
   } else if (id === "tiktok") {
     const i = root.insights as
-      | { impressions?: string; clicks?: string; spend?: string }
-      | undefined;
+      { impressions?: string; clicks?: string; spend?: string } | undefined;
     if (i) {
       stats.impressions = Number.parseInt(i.impressions ?? "0", 10) || 0;
       stats.clicks = Number.parseInt(i.clicks ?? "0", 10) || 0;
@@ -256,8 +254,7 @@ function applyInsights(id: PlatformId, data: unknown, stats: PlatformStats): voi
     }
   } else if (id === "x") {
     const s = root.stats as
-      | { impressions?: number; clicks?: number; spend_micro?: number }
-      | undefined;
+      { impressions?: number; clicks?: number; spend_micro?: number } | undefined;
     if (s) {
       stats.impressions = s.impressions ?? 0;
       stats.clicks = s.clicks ?? 0;

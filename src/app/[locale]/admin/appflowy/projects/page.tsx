@@ -226,7 +226,7 @@ export default function ProjectsPage() {
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Projects</h1>
           <p className="font-body mt-1 text-slate-400">
-            Manage projects from your Notion workspace.
+            Manage projects from your AppFlowy workspace.
           </p>
         </div>
         <div className="flex gap-2">
@@ -364,7 +364,7 @@ export default function ProjectsPage() {
         <div className="bg-void-light/30 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">No projects found.</p>
           <p className="font-body mt-2 text-sm text-slate-600">
-            Create your first project above or add one in Notion.
+            Create your first project above or add one in AppFlowy.
           </p>
         </div>
       )}
@@ -456,7 +456,7 @@ export default function ProjectsPage() {
                         rel="noopener noreferrer"
                         className="text-neon-cyan/60 hover:text-neon-cyan font-mono text-[10px] transition-colors"
                       >
-                        Open in Notion →
+                        Open in AppFlowy →
                       </a>
                     )}
                   </div>

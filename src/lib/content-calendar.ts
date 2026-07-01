@@ -7,21 +7,10 @@ import {
 } from "@/lib/notion-calendar";
 
 export type CalendarItemType =
-  | "social_post"
-  | "email_campaign"
-  | "blog_post"
-  | "consultation"
-  | "ad_campaign";
+  "social_post" | "email_campaign" | "blog_post" | "consultation" | "ad_campaign";
 
 export type CalendarPlatform =
-  | "meta"
-  | "linkedin"
-  | "tiktok"
-  | "x"
-  | "google"
-  | "activecampaign"
-  | "notion"
-  | "google_calendar";
+  "meta" | "linkedin" | "tiktok" | "x" | "google" | "activecampaign" | "notion" | "google_calendar";
 
 export interface CalendarItem {
   id: string;

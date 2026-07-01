@@ -14,7 +14,7 @@ interface Company {
   billingAddressCity?: string;
   billingAddressCountry?: string;
   createdAt?: string;
-  // Fallback HubSpot-style wrapper
+  // Fallback legacy CRM-style wrapper
   properties?: {
     name?: string;
     domain?: string;

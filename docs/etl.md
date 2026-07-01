@@ -1,45 +1,61 @@
 # ETLs — cloudless.gr
 
-Three GitHub-Actions-scheduled ETLs feed the datalake. All are
+Ten GitHub-Actions-scheduled ETLs feed the datalake. All are
 read-only against source systems and produce a single overwrite per
 day. Pairs with `docs/datalake.md` (target topology) and
-`docs/AUDIT-2026-06-20.md` (audit cadence).
+`docs/analytics-athena.sql` (Glue table DDL).
 
 ## Pipeline map
 
 ```
 External systems              ETL workflow                       Sink (S3 Parquet/NDJSON)
 ─────────────────────────     ──────────────────────────────     ─────────────────────────────────
-Stripe API                →   etl-stripe-to-lake.yml         →   lake/transactions/transactions.parquet
-Cognito + SSM + ML scores →   etl-clients-to-lake.yml        →   lake/clients/clients.parquet
-SSM (CLIENT_PORTALS_JSON) →   (same workflow, sibling step)  →   lake/portals/portals.parquet
-Athena Glue catalog        ←  analytics-etl.yml (MSCK REPAIR) ← s3://…/events/year=…/month=…/day=…/*.ndjson
+EspoCRM API               →   etl-espocrm-to-lake.yml         →   lake/espocrm-{contacts,accounts,opportunities,cases,campaigns}/
+Stripe API                →   etl-stripe-to-lake.yml          →   lake/transactions/transactions.parquet
+Cognito + SSM + ML scores →   etl-clients-to-lake.yml         →   lake/clients/clients.parquet
+SSM (CLIENT_PORTALS_JSON) →   (same workflow, sibling step)   →   lake/portals/portals.parquet
+AppFlowy API              →   etl-selfhosted-to-lake.yml      →   lake/appflowy-{workspaces,users}/
+n8n API                   →   (same workflow, sibling step)   →   lake/n8n-{workflows,executions}/
+Postiz API                →   (same workflow, sibling step)   →   lake/postiz-{posts,integrations}/
+GSC API                   →   etl-gsc-to-lake.yml             →   lake/gsc-keywords/keywords.parquet
+LinkedIn Ads API          →   etl-linkedin-ads-to-lake.yml    →   lake/linkedin-ads/insights.parquet
+Sentry API                →   etl-sentry-to-lake.yml          →   lake/sentry-issues/issues.parquet
+AWS Cost Explorer API     →   etl-aws-cost-to-lake.yml        →   lake/aws-cost-daily/ (Athena DDL)
+Athena Glue catalog       ←   analytics-etl.yml (MSCK REPAIR) ← s3://…/events/year=…/month=…/day=…/*.ndjson
                                                               ↑
-                              Lambda (src/lib/analytics.ts)   ──┘  (NDJSON, real-time per request)
+                            Lambda (src/lib/analytics.ts)     ──┘  (NDJSON, real-time per request)
 ```
 
 ## Workflows
 
-| Workflow | Schedule (UTC) | Source | Sink | Idempotency |
+| Workflow | Schedule (UTC) | Source | Sink | Notes |
 |---|---|---|---|---|
-| `analytics-etl.yml` | `0 2 * * *` (02:00) | Hive partitions on `events/` | Glue catalog | Yes — `MSCK REPAIR TABLE` |
-| `etl-hubspot-to-lake.yml` | `15 3 * * *` (03:15) | EspoCRM v3 API (contacts + deals + tickets) | `lake/hubspot-{contacts,deals,tickets}/` | Full refresh — overwrites |
-| `etl-stripe-to-lake.yml` | `30 3 * * *` (03:30) | Stripe API (sessions/invoices/subs) | `lake/transactions/transactions.parquet` | Full refresh — overwrites |
-| `etl-compute-rfm-churn.yml` | `45 3 * * *` (03:45) | `lake/transactions/transactions.parquet` (Stripe ETL output) | `ml-parquet/scores_{rfm,churn}.parquet` | Full refresh — replaces external ML pipeline |
-| `etl-clients-to-lake.yml` | `0 4 * * *` (04:00) | Cognito + SSM + ml-parquet | `lake/clients/clients.parquet` + `lake/portals/portals.parquet` | Full refresh — overwrites |
+| `analytics-etl.yml` | `0 2 * * *` | Hive partitions on `events/` | Glue catalog | `MSCK REPAIR TABLE` + daily event count |
+| `etl-espocrm-to-lake.yml` | `15 3 * * *` | EspoCRM v1 API (contacts, accounts, opportunities, cases, campaigns) | `lake/espocrm-*/` | Full refresh — overwrites |
+| `etl-gsc-to-lake.yml` | `20 3 * * *` | Google Search Console API | `lake/gsc-keywords/` | 90d rolling window |
+| `etl-linkedin-ads-to-lake.yml` | `25 3 * * *` | LinkedIn Marketing API v2 | `lake/linkedin-ads/` | 90d rolling window |
+| `etl-stripe-to-lake.yml` | `30 3 * * *` | Stripe API (sessions/invoices/subs) | `lake/transactions/transactions.parquet` | Full refresh |
+| `etl-compute-rfm-churn.yml` | `45 3 * * *` | `lake/transactions/` (Stripe ETL output) | `ml-parquet/scores_{rfm,churn}.parquet` | Full refresh |
+| `etl-clients-to-lake.yml` | `0 4 * * *` | Cognito + SSM + ml-parquet | `lake/clients/` + `lake/portals/` | Full refresh |
+| `etl-selfhosted-to-lake.yml` | `15 4 * * *` | AppFlowy + n8n + Postiz APIs | `lake/{appflowy,n8n,postiz}-*/` | Full refresh |
+| `etl-sentry-to-lake.yml` | `30 4 * * *` | Sentry REST API | `lake/sentry-issues/` | Full refresh |
+| `etl-aws-cost-to-lake.yml` | `0 5 * * *` | AWS Cost Explorer API | Athena DDL view | Cost & Usage Report |
 
-All five use OIDC (`AWS_DEPLOY_ROLE_ARN`) to assume the deploy role —
-no static AWS keys. Every workflow posts to `SLACK_WEBHOOK_URL` on
-failure (`if: failure() && env.SLACK_WEBHOOK_URL != ''`).
+All use OIDC (`AWS_DEPLOY_ROLE_ARN`) — no static AWS keys. Every workflow posts to Slack on failure.
 
 ### Daily ordering (UTC)
 
 ```
-02:00 analytics-etl          (registers new events partitions in Glue)
-03:15 etl-hubspot-to-lake    (CRM snapshot)
-03:30 etl-stripe-to-lake     (Stripe transactions snapshot)
-03:45 etl-compute-rfm-churn  (reads Stripe parquet, computes scores)
-04:00 etl-clients-to-lake    (joins Cognito + SSM + RFM scores)
+02:00 analytics-etl              (registers new events partitions in Glue)
+03:15 etl-espocrm-to-lake        (CRM snapshot)
+03:20 etl-gsc-to-lake            (SEO keywords)
+03:25 etl-linkedin-ads-to-lake   (LinkedIn ads performance)
+03:30 etl-stripe-to-lake         (Stripe transactions snapshot)
+03:45 etl-compute-rfm-churn      (reads Stripe parquet, computes scores)
+04:00 etl-clients-to-lake        (joins Cognito + SSM + RFM scores)
+04:15 etl-selfhosted-to-lake     (AppFlowy + n8n + Postiz)
+04:30 etl-sentry-to-lake         (error snapshot)
+05:00 etl-aws-cost-to-lake       (AWS spend)
 ```
 
 The 15-min spacing isn't strict but it keeps clients-to-lake able to
@@ -53,7 +69,7 @@ read the RFM scores written 15 min earlier (instead of yesterday's).
   parquet via `@dsnp/parquetjs`.
 - `scripts/etl/hubspot-to-lake.mjs` — pulls EspoCRM v3 (contacts,
   deals, tickets) with cursor pagination, writes 3 parquet files.
-  Drives the v_hubspot_funnel and v_lead_to_customer Athena views.
+  Drives the v_espocrm_funnel and v_lead_to_customer Athena views.
 - `scripts/etl/compute-rfm-churn.mjs` — reads
   `lake/transactions/transactions.parquet`, computes RFM (Recency,
   Frequency, Monetary) per email + simple recency-based churn risk,
@@ -88,7 +104,7 @@ read the RFM scores written 15 min earlier (instead of yesterday's).
 Plus Athena views — 6 pre-existing
 (`v_client_health`, `v_daily_events`, `v_funnel`, `v_ltv_ranking`,
 `v_project_velocity`, `v_revenue_monthly`) and 4 new from this audit
-(`v_acquisition_funnel`, `v_attribution_by_source`, `v_hubspot_funnel`,
+(`v_acquisition_funnel`, `v_attribution_by_source`, `v_espocrm_funnel`,
 `v_lead_to_customer`) — defined in `docs/analytics-athena.sql`.
 
 ## Health snapshot (2026-06-20)

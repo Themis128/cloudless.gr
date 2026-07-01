@@ -45,12 +45,15 @@ async function checkSlack() {
   if (!res.ok) throw new Error(`Slack webhook unreachable (${res.status})`);
 }
 
-async function checkHubSpot() {
-  const key = process.env.HUBSPOT_API_KEY;
-  if (!key) throw new Error('HUBSPOT_API_KEY missing');
-  const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts?limit=1', {
-    headers: { Authorization: `Bearer ${key}` },
+async function checkEspoCRM() {
+  const baseUrl = process.env.ESPOCRM_BASE_URL;
+  const key = process.env.ESPOCRM_API_KEY;
+  if (!baseUrl || !key) throw new Error('ESPOCRM_BASE_URL or ESPOCRM_API_KEY missing');
+
+  const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/v1/Contact?maxSize=1`, {
+    headers: { 'X-Api-Key': key },
   });
+
   if (!res.ok) throw new Error(`EspoCRM API unreachable (${res.status})`);
 }
 
@@ -144,7 +147,7 @@ async function main() {
   const checks = [
     [checkStripe, 'Stripe', false],
     [checkSlack, 'Slack', false],
-    [checkHubSpot, 'EspoCRM', false],
+    [checkEspoCRM, 'EspoCRM', false],
     [checkNotion, 'Notion', false],
     [checkGoogleCalendar, 'Google Calendar', false],
     [checkCognito, 'Cognito', false],

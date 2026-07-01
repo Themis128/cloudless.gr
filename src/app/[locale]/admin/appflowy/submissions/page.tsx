@@ -99,7 +99,7 @@ export default function SubmissionsPage() {
         <div>
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">NOTION_SUBMISSIONS</span>
+            <span className="text-neon-cyan font-mono text-xs">APPFLOWY_SUBMISSIONS</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Contact Submissions</h1>
           <p className="font-body mt-1 text-slate-400">
@@ -155,7 +155,7 @@ export default function SubmissionsPage() {
       {error && (
         <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 font-mono text-sm text-red-400">
           {error === "Notion submissions not configured"
-            ? "Notion Submissions DB not configured. Set NOTION_SUBMISSIONS_DB_ID in SSM."
+            ? "AppFlowy Submissions DB not configured. Set APPFLOWY_SUBMISSIONS_DB_ID in SSM."
             : error}
         </div>
       )}

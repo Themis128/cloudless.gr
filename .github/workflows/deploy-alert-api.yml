@@ -2,8 +2,8 @@ name: Build + roll out alert-api
 
 # Builds the alert-api Docker image on the omv Pi runner (the Dockerfile
 # lives outside the repo at ~/alert-api/Dockerfile per the operator's
-# pre-CI history), imports it into k3s containerd, then patches the
-# Deployment to bump the tag.
+# pre-CI history), pushes it to GHCR, then patches the Deployment to
+# use the GHCR image tag.
 #
 # Triggers:
 #   - push to main touching infrastructure/pi-alert-api/**
@@ -11,8 +11,8 @@ name: Build + roll out alert-api
 #     OR `gh workflow run deploy-alert-api.yml`)
 #
 # Why a self-hosted runner: the build step writes into the omv-local
-# `~/alert-api/` directory and calls `sudo k3s ctr images import` —
-# both require running ON omv. Per skills/gh-actions-pitfalls/SKILL.md
+# `~/alert-api/` directory and uses the local Docker daemon, then deploys
+# to the local k3s cluster. Per skills/gh-actions-pitfalls/SKILL.md
 # #3, runners are scarce, so this typically queues ~3 min behind any
 # active build.
 
@@ -31,6 +31,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 concurrency:
   group: deploy-alert-api
@@ -42,6 +43,8 @@ jobs:
     timeout-minutes: 15
     env:
       TAG: ${{ inputs.version_tag || 'v3.4' }}
+      REGISTRY: ghcr.io
+      IMAGE_NAME: themis128/alert-api
     steps:
       - uses: actions/checkout@v5
 
@@ -62,17 +65,70 @@ jobs:
             echo "paho-mqtt>=1.6" >> "${REQ}"
           fi
 
-      - name: Build image
-        working-directory: /home/tbaltzakis/alert-api
-        run: docker build -t "alert-api:${TAG}" -t alert-api:v3 .
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login "${REGISTRY}" -u "${{ github.actor }}" --password-stdin
 
-      - name: Import into k3s containerd
-        run: docker save "alert-api:${TAG}" | sudo k3s ctr images import -
+      - name: Build and push image to GHCR
+        working-directory: /home/tbaltzakis/alert-api
+        run: |
+          set -euo pipefail
+          IMAGE="${REGISTRY}/${IMAGE_NAME}:${TAG}"
+          docker build -t "${IMAGE}" .
+          docker push "${IMAGE}"
+
+      - name: Ensure GHCR pull secret in k3s
+        env:
+          GHCR_PULL_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${GHCR_PULL_TOKEN}" ]]; then
+            echo "GH_PAT secret is empty or unavailable. It must have at least read:packages for private GHCR pulls."
+            exit 1
+          fi
+
+          kubectl create secret docker-registry ghcr-pull-secret \
+            -n alert-manager \
+            --docker-server="${REGISTRY}" \
+            --docker-username="${{ github.repository_owner }}" \
+            --docker-password="${GHCR_PULL_TOKEN}" \
+            --docker-email="unused@example.com" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl patch deployment alert-api -n alert-manager \
+            --type='merge' \
+            -p='{
+              "spec": {
+                "template": {
+                  "spec": {
+                    "imagePullSecrets": [
+                      {
+                        "name": "ghcr-pull-secret"
+                      }
+                    ]
+                  }
+                }
+              }
+            }'
 
       - name: Bump Deployment image
         run: |
+          set -euo pipefail
+          IMAGE="${REGISTRY}/${IMAGE_NAME}:${TAG}"
+
           kubectl -n alert-manager set image deployment/alert-api \
-            "alert-api=docker.io/library/alert-api:${TAG}"
+            "alert-api=${IMAGE}"
+
+          kubectl -n alert-manager patch deployment alert-api \
+            --type='json' \
+            -p='[
+              {
+                "op": "replace",
+                "path": "/spec/template/spec/containers/0/imagePullPolicy",
+                "value": "IfNotPresent"
+              }
+            ]'
+
           kubectl -n alert-manager rollout status deployment/alert-api --timeout=180s
 
       - name: Verify MQTT_USERNAME + MQTT_PASSWORD are live in pod

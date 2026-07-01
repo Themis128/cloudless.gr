@@ -13,7 +13,7 @@ interface Contact {
   accountName?: string;
   createdAt?: string;
   leadSource?: string;
-  // Fallback HubSpot-style wrapper that old API responses may still carry
+  // Fallback legacy CRM-style wrapper that old API responses may still carry
   properties?: {
     email?: string;
     firstname?: string;
