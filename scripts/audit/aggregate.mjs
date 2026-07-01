@@ -227,8 +227,8 @@ for (const a of AUDITS) {
     const detail = entry.note ?? (entry.summary ? "see artifact" : "—");
     md.push(`| [${a.name}](${entry.lastRun?.url ?? "#"}) | ${icon} | ${when} | ${detail} |`);
   } catch (err) {
-    entry.note = String(err?.message ?? err);
-    md.push(`| ${a.name} | ⚠️ error | — | ${entry.note} |`);
+    entry.note = "upstream error";
+    md.push(`| ${a.name} | ⚠️ error | — | upstream error |`);
   }
   dashboard.audits[a.key] = entry;
 }
