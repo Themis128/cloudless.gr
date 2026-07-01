@@ -1,4 +1,4 @@
-]633;E;echo '# Cloudless CloudWatch Exporter';dff6e9d7-8986-4cad-8a50-399bfdda3598]633;C# Cloudless CloudWatch Exporter
+# Cloudless CloudWatch Exporter
 
 Monitors AWS CloudWatch SQS metrics for the Cloudless revalidation FIFO queue.
 
@@ -27,6 +27,18 @@ aws_sqs_approximate_number_of_messages_visible_maximum{queue_name="cloudless-pro
 - `CloudlessRevalidationQueueOldMessagesCritical`
 - `CloudlessRevalidationQueueBacklogWarning`
 - `CloudlessRevalidationQueueBacklogCritical`
+
+## Thresholds
+
+Oldest message age:
+
+- Warning: `>= 300s` for 10 minutes
+- Critical: `>= 900s` for 5 minutes
+
+Visible backlog:
+
+- Warning: `>= 10` messages for 10 minutes
+- Critical: `>= 50` messages for 5 minutes
 
 ## Kubernetes Secret
 
