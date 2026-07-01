@@ -298,7 +298,7 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
 
   // ── RP-Initiated Logout (signOut event) ───────────────────────────────────
 
-  it("signOut event is a no-op when COGNITO_DOMAIN is not configured", async () => {
+  it("signOut event calls Cognito Hosted UI logout when configured", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
     globalThis.fetch = fetchMock;
 
@@ -307,18 +307,33 @@ describe("src/lib/auth.ts — real callback behaviour", () => {
     };
     await signOutEvent({ token: { idToken: "id-tok-123" } });
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("https://cloudless-auth.auth.us-east-1.amazoncognito.com/logout"),
+      { method: "GET" }
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("client_id=test-client-id"),
+      { method: "GET" }
+    );
   });
 
-  it("signOut event is a no-op when there is no id_token", async () => {
-    const fetchMock = vi.fn();
+  it("signOut event still calls Cognito Hosted UI logout without an id_token", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true });
     globalThis.fetch = fetchMock;
 
     const { signOut: signOutEvent } = capturedConfig.events as {
       signOut: (msg: { token?: { idToken?: string } }) => Promise<void>;
     };
     await signOutEvent({ token: {} });
-    expect(fetchMock).not.toHaveBeenCalled();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("https://cloudless-auth.auth.us-east-1.amazoncognito.com/logout"),
+      { method: "GET" }
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("logout_uri=http%3A%2F%2Flocalhost%3A4000%2F"),
+      { method: "GET" }
+    );
   });
 
   it("signOut event swallows fetch errors (best-effort SSO logout)", async () => {
