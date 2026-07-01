@@ -67,7 +67,7 @@ jobs:
 
       - name: Comment on PR
         if: steps.awscreds.outcome == 'success'
-        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3
+        uses: marocchino/sticky-pull-request-comment@d4d6b0936434b21bc8345ad45a440c5f7d2c40ff # v3
         with:
           header: preview-url
           message: |
