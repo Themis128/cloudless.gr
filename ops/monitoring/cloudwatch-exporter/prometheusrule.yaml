@@ -1,8 +1,6 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  annotations:
-    prometheus-operator-validated: 'true'
   labels:
     app.kubernetes.io/name: cloudless-sqs-revalidation-alerts
     app.kubernetes.io/part-of: cloudless
