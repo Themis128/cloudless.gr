@@ -108,8 +108,7 @@ export async function getActiveWorkspace(request?: NextRequest): Promise<Workspa
 }
 
 export type WorkspaceAuthResult =
-  | { ok: true; user: DecodedToken; workspace: Workspace }
-  | { ok: false; response: NextResponse };
+  { ok: true; user: DecodedToken; workspace: Workspace } | { ok: false; response: NextResponse };
 
 /**
  * Pure authorization decision: determine if a user has access to a workspace.

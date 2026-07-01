@@ -200,7 +200,8 @@ export default function AutomationPage() {
               {health.workflows.total}
             </p>
             <p className="font-mono text-xs text-slate-600">
-              {health.workflows.active} active · {health.workflows.total - health.workflows.active} inactive
+              {health.workflows.active} active · {health.workflows.total - health.workflows.active}{" "}
+              inactive
             </p>
           </div>
 
@@ -209,9 +210,7 @@ export default function AutomationPage() {
             <p className="font-heading mt-2 text-xl font-semibold text-white">
               {health.executions.recent}
             </p>
-            <p className="font-mono text-xs text-slate-600">
-              {health.executions.running} running
-            </p>
+            <p className="font-mono text-xs text-slate-600">{health.executions.running} running</p>
           </div>
 
           <div className="bg-void-light/50 rounded-xl border border-slate-800 px-5 py-4">
@@ -232,8 +231,10 @@ export default function AutomationPage() {
         <div className="bg-void-light/30 mb-8 rounded-xl border border-slate-800 p-12 text-center">
           <p className="font-mono text-slate-500">n8n is not configured.</p>
           <p className="font-body mt-2 text-sm text-slate-600">
-            Set <code className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs">N8N_API_URL</code>{" "}
-            and <code className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs">N8N_API_KEY</code>{" "}
+            Set{" "}
+            <code className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs">N8N_API_URL</code>{" "}
+            and{" "}
+            <code className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs">N8N_API_KEY</code>{" "}
             in SSM to enable workflow automation.
           </p>
         </div>
@@ -310,7 +311,7 @@ export default function AutomationPage() {
                   className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
                     wf.active
                       ? "bg-neon-green/10 text-neon-green border-neon-green/30"
-                      : "bg-slate-700/40 text-slate-500 border-slate-600/30"
+                      : "border-slate-600/30 bg-slate-700/40 text-slate-500"
                   }`}
                 >
                   {wf.active ? "Active" : "Inactive"}
@@ -319,8 +320,12 @@ export default function AutomationPage() {
                 <button
                   onClick={() => triggerWorkflow(wf.id, wf.name)}
                   disabled={triggering === wf.id || !wf.active}
-                  className="hover:bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan rounded-lg border px-3 py-1.5 font-mono text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  title={wf.active ? "Trigger this workflow now" : "Only active workflows can be triggered"}
+                  className="hover:bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan rounded-lg border px-3 py-1.5 font-mono text-xs transition-all disabled:cursor-not-allowed disabled:opacity-30"
+                  title={
+                    wf.active
+                      ? "Trigger this workflow now"
+                      : "Only active workflows can be triggered"
+                  }
                 >
                   {triggering === wf.id ? "\u27F3 Triggering..." : "\u25B6 Trigger"}
                 </button>
@@ -351,7 +356,8 @@ export default function AutomationPage() {
           <div className="overflow-hidden rounded-xl border border-slate-800">
             <div className="divide-y divide-slate-800">
               {executions.map((exec) => {
-                const wfName = workflows.find((w) => w.id === exec.workflowId)?.name ?? exec.workflowId;
+                const wfName =
+                  workflows.find((w) => w.id === exec.workflowId)?.name ?? exec.workflowId;
                 return (
                   <div
                     key={exec.id}

@@ -111,9 +111,7 @@ export async function searchDocs(query: string): Promise<AppFlowyDoc[]> {
   const docs = await getDocs();
   const q = query.toLowerCase();
   return docs.filter(
-    (d) =>
-      d.title.toLowerCase().includes(q) ||
-      d.description.toLowerCase().includes(q)
+    (d) => d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
   );
 }
 
@@ -127,7 +125,6 @@ export async function groupDocsByCategory(
     return acc;
   }, {});
 }
-
 
 function slugifyHeading(text: string): string {
   return text

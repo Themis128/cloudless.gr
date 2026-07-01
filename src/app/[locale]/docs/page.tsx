@@ -2,9 +2,7 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
-import { getDocs, groupDocsByCategory,
-  type AppFlowyDoc,
-} from "@/lib/appflowy-docs";
+import { getDocs, groupDocsByCategory, type AppFlowyDoc } from "@/lib/appflowy-docs";
 
 import JsonLd from "@/components/JsonLd";
 import { isAppFlowyConfigured } from "@/lib/appflowy";

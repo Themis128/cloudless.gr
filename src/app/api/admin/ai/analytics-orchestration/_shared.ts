@@ -19,8 +19,7 @@ export interface PreparedOrchestration {
 }
 
 export type PrepareResult =
-  | { ok: true; data: PreparedOrchestration }
-  | { ok: false; response: NextResponse };
+  { ok: true; data: PreparedOrchestration } | { ok: false; response: NextResponse };
 
 const DEFAULT_CONNECTORS: AnalyticsConnector[] = ["quicksight", "powerbi"];
 

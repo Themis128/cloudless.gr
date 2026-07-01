@@ -122,9 +122,7 @@ export async function getPosts(): Promise<AppFlowyPost[]> {
       posts.push({ ...base, html });
     }
 
-    return posts.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch {
     return [];
   }
@@ -160,9 +158,7 @@ export async function getTags(): Promise<string[]> {
   return Array.from(set).sort();
 }
 
-export async function getPostsByCategory(
-  category: string
-): Promise<AppFlowyPost[]> {
+export async function getPostsByCategory(category: string): Promise<AppFlowyPost[]> {
   const posts = await getPosts();
   return posts.filter((p) => p.category === category);
 }
@@ -183,10 +179,7 @@ export async function searchPosts(query: string): Promise<AppFlowyPost[]> {
   );
 }
 
-export async function getRelatedPosts(
-  post: AppFlowyPost,
-  limit = 3
-): Promise<AppFlowyPost[]> {
+export async function getRelatedPosts(post: AppFlowyPost, limit = 3): Promise<AppFlowyPost[]> {
   const allPosts = await getPosts();
   const others = allPosts.filter((p) => p.id !== post.id);
   const scored = others.map((p) => {
