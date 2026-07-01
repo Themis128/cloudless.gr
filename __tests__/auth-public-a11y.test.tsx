@@ -63,18 +63,17 @@ describe("auth/public accessibility", () => {
     expect(kcButton).toBeTruthy();
   });
 
-  it("signup page exposes verification-safe fields and password constraints", () => {
+  it("signup page exposes the Cognito Hosted UI handoff", () => {
     const { container } = render(<SignUpPage />);
 
-    const email = screen.getByLabelText("Email") as HTMLInputElement;
-    const password = screen.getByLabelText("Password") as HTMLInputElement;
-    const confirm = screen.getByLabelText("Confirm Password") as HTMLInputElement;
+    expect(screen.getByRole("heading", { name: /create account/i })).toBeTruthy();
+    expect(screen.getByText(/account creation is handled securely through aws/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /continue with aws/i })).toBeTruthy();
 
-    expect(email.autocomplete).toBe("email");
-    expect(password.autocomplete).toBe("new-password");
-    expect(confirm.autocomplete).toBe("new-password");
-    expect(password.minLength).toBe(8);
-    expect(confirm.minLength).toBe(8);
+    expect(screen.queryByLabelText("Email")).toBeNull();
+    expect(screen.queryByLabelText("Password")).toBeNull();
+    expect(screen.queryByLabelText("Confirm Password")).toBeNull();
+
     expect(container.querySelector('a[href="/auth/login"]')).toBeTruthy();
   });
 
