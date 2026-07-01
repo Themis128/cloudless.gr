@@ -1,4 +1,4 @@
-# Cloudless CloudWatch Exporter
+]633;E;echo '# Cloudless CloudWatch Exporter';dff6e9d7-8986-4cad-8a50-399bfdda3598]633;C# Cloudless CloudWatch Exporter
 
 Monitors AWS CloudWatch SQS metrics for the Cloudless revalidation FIFO queue.
 
@@ -10,6 +10,16 @@ Monitors AWS CloudWatch SQS metrics for the Cloudless revalidation FIFO queue.
 
 - `AWS/SQS ApproximateAgeOfOldestMessage`
 - `AWS/SQS ApproximateNumberOfMessagesVisible`
+
+## Prometheus queries
+
+```promql
+aws_sqs_approximate_age_of_oldest_message_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
+```
+
+```promql
+aws_sqs_approximate_number_of_messages_visible_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
+```
 
 ## Alert rules
 
@@ -39,3 +49,4 @@ kubectl apply -f ops/monitoring/cloudwatch-exporter/deployment.yaml
 kubectl apply -f ops/monitoring/cloudwatch-exporter/service.yaml
 kubectl apply -f ops/monitoring/cloudwatch-exporter/servicemonitor.yaml
 kubectl apply -f ops/monitoring/cloudwatch-exporter/prometheusrule.yaml
+```
