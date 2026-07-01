@@ -68,7 +68,7 @@ describe("GET /api/admin/leads", () => {
       email: "Jane@Acme.com",
       name: "Jane Doe",
       company: "Acme",
-      sources: ["hubspot"],
+      sources: ["espocrm"],
       status: "NEW",
     });
   });
@@ -79,7 +79,7 @@ describe("GET /api/admin/leads", () => {
     const data = await res.json();
     expect(data.total).toBe(1);
     expect(data.leads[0].sources.sort((a: string, b: string) => a.localeCompare(b))).toEqual([
-      "hubspot",
+      "espocrm",
       "portal",
     ]);
     expect(data.leads[0].interest).toBe("Full-Stack Growth Engine (Bundle)");
