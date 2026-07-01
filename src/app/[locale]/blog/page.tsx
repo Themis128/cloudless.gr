@@ -3,8 +3,8 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";
 import { posts as staticPosts, formatDate } from "@/lib/blog";
-import { getPosts, getCategoryCounts, getTagCounts } from "@/lib/notion-blog";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { getPosts as getAppFlowyPosts } from "@/lib/appflowy-blog";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import ScrollReveal from "@/components/ScrollReveal";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
@@ -22,8 +22,7 @@ export async function generateMetadata({
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
-    | Record<string, Record<string, string>>
-    | undefined;
+    Record<string, Record<string, string>> | undefined;
   return {
     title: meta?.blog?.title ?? "Blog",
     description:
@@ -59,19 +58,29 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
   const activeTag = typeof resolvedParams.tag === "string" ? resolvedParams.tag : null;
   const searchQuery = typeof resolvedParams.q === "string" ? resolvedParams.q : "";
 
-  // Fetch from Notion when configured, otherwise fall back to static posts
-  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
-  const notionPosts = useNotion ? await getPosts() : [];
+  const useAppFlowy = await isAppFlowyConfigured();
+  const appflowyPosts = useAppFlowy ? await getAppFlowyPosts() : [];
 
-  // Fetch category and tag counts for sidebar
-  const [categoryCounts, tagCounts] = useNotion
-    ? await Promise.all([getCategoryCounts(), getTagCounts()])
+  const [categoryCounts, tagCounts] = useAppFlowy
+    ? await Promise.all([
+        appflowyPosts.reduce<Record<string, number>>((acc, p) => {
+          const category = p.category || "Cloud";
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        }, {}),
+        appflowyPosts
+          .flatMap((p) => p.tags)
+          .reduce<Record<string, number>>((acc, tag) => {
+            acc[tag] = (acc[tag] || 0) + 1;
+            return acc;
+          }, {}),
+      ])
     : [{} as Record<string, number>, {} as Record<string, number>];
 
-  // Normalise into a common shape for rendering
+  // Normalise into a common shape
   const allPosts =
-    notionPosts.length > 0
-      ? notionPosts.map((p) => ({
+    appflowyPosts.length > 0
+      ? appflowyPosts.map((p) => ({
           slug: p.slug,
           title: p.title,
           excerpt: p.excerpt,
@@ -93,7 +102,6 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
           coverImage: "",
           tags: [] as string[],
         }));
-
   // Apply filters
   let filteredPosts = allPosts;
 
@@ -120,8 +128,10 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
   const totalPages = Math.ceil(total / PER_PAGE);
   const posts = filteredPosts.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  const categories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
-  const tags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+  const categories = Object.entries(categoryCounts as Record<string, number>).sort(
+    (a, b) => b[1] - a[1]
+  );
+  const tags = Object.entries(tagCounts as Record<string, number>).sort((a, b) => b[1] - a[1]);
 
   // Build URL helper for filter links
   function filterUrl(params: Record<string, string | null>) {

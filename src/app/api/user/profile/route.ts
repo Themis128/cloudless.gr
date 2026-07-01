@@ -37,12 +37,30 @@ export async function GET() {
       preferences: profile.preferences,
     });
   } catch (err) {
-    if (err instanceof Error && err.message.includes("USER_PROFILE_TABLE")) {
+    const msg = err instanceof Error ? err.message : String(err);
+
+    const isProfileStoreUnavailable =
+      msg.includes("USER_PROFILE_TABLE") ||
+      msg.includes("UnrecognizedClientException") ||
+      msg.includes("The security token included in the request is invalid") ||
+      msg.includes("DynamoDB unavailable") ||
+      msg.includes("CredentialsProviderError") ||
+      msg.includes("Missing credentials");
+
+    if (isProfileStoreUnavailable) {
+      console.warn("[user/profile] Profile store unavailable; returning session fallback:", msg);
+
       return NextResponse.json({
         name: session.user.name ?? undefined,
         email: session.user.email ?? undefined,
+        company: undefined,
+        phone: undefined,
+        preferences: undefined,
+        storage: "session-fallback",
       });
     }
+
+    console.error("[user/profile] GET failed:", msg);
     return NextResponse.json({ error: "Could not read profile" }, { status: 502 });
   }
 }

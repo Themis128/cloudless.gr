@@ -100,7 +100,9 @@
     "pnpm:list": "pnpm list --depth 0",
     "pnpm:outdated": "pnpm outdated",
     "pnpm:clean": "pnpm store prune && rm -rf node_modules/.cache",
-    "pnpm:rebuild": "pnpm rebuild && pnpm run typecheck"
+    "pnpm:rebuild": "pnpm rebuild && pnpm run typecheck",
+    "dev:webpack": "next dev -p 4000 --webpack",
+    "dev:bigmem": "NODE_OPTIONS=--max-old-space-size=8192 next dev -p 4000 --webpack"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",

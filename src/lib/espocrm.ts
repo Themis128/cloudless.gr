@@ -1,6 +1,6 @@
 /**
- * EspoCRM client. Replaced the deleted src/lib/hubspot.ts on 2026-06-20
- * (EspoCRM fully decommissioned). All call-site imports use this module.
+ * EspoCRM client. Replaced the deleted legacy CRM client on  2026-06-20
+ * (HubSpot fully decommissioned). All call-site imports use this module.
  *
  * EspoCRM module mapping vs the historical EspoCRM equivalents:
  *   EspoCRM           EspoCRM
@@ -389,7 +389,7 @@ export async function searchContacts(
 }
 
 export async function isEspoCRMConfigured(): Promise<boolean> {
-  // Single canonical name (PR #1133 collapsed the legacy `isHubSpotConfigured`
+  // Single canonical name (PR #1133 collapsed the legacy configuration compatibility alias
   // alias into this one — both used to coexist, with the alias delegating here).
   try {
     await getEspoConfig();

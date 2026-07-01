@@ -19,7 +19,7 @@ interface UnifiedLead {
 }
 
 const SOURCE_BADGE: Record<string, string> = {
-  hubspot: "bg-orange-500/10 text-orange-300 border-orange-500/30",
+  espocrm: "bg-orange-500/10 text-orange-300 border-orange-500/30",
   portal: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
 };
 

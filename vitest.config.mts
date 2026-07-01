@@ -8,6 +8,7 @@ export default defineConfig({
     // node_modules/jose is missing its package.json, so Vite can't resolve it
     // via normal package resolution. Alias it to the real store location.
     alias: {
+      "@": path.resolve(__dirname, "src"),
       // jose — point to the installed package's webapi dist (works for both v5 and v6)
       jose: path.resolve(
         __dirname,

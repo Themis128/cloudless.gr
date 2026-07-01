@@ -14,7 +14,7 @@ interface Ticket {
   priority?: string;
   status?: string;
   createdAt?: string;
-  // Fallback HubSpot-style wrapper
+  // Fallback legacy CRM-style wrapper
   properties?: {
     subject?: string;
     content?: string;
@@ -41,7 +41,7 @@ const stageLabels: Record<string, string> = {
   Closed: "Closed",
   Rejected: "Rejected",
   Duplicate: "Duplicate",
-  // legacy numeric HubSpot stage IDs
+  // legacy numeric CRM stage IDs
   "1": "New",
   "2": "Waiting on contact",
   "3": "Waiting on us",

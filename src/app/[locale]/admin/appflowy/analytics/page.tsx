@@ -102,11 +102,11 @@ export default function AnalyticsDashboardPage() {
         <div>
           <div className="bg-neon-green/10 border-neon-green/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-green font-mono text-xs">NOTION_ANALYTICS</span>
+            <span className="text-neon-green font-mono text-xs">APPFLOWY_ANALYTICS</span>
           </div>
           <h1 className="font-heading text-2xl font-bold text-white">Site Analytics</h1>
           <p className="font-body mt-1 text-slate-400">
-            Event tracking and visitor insights from your Notion analytics database.
+            Event tracking and visitor insights from your AppFlowy analytics database.
           </p>
         </div>
         <div className="flex gap-2">

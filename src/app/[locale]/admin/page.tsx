@@ -145,13 +145,13 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Website — what visitors see",
     accent: "text-neon-magenta",
     cards: [
-      card("Blog", "Notion-backed posts on /blog", "✍️", "/admin/blog"),
+      card("Blog", "AppFlowy-backed posts on /blog", "✍️", "/admin/blog"),
       card("Case Studies", "CMS for /case-studies and /work", "💼", "/admin/cms/case-studies"),
       card("Services", "CMS for the /services page", "📦", "/admin/cms/services"),
       card("Testimonials", "Social proof shown across the site", "⭐", "/admin/cms/testimonials"),
       card("FAQs", "CMS for FAQ sections", "❓", "/admin/cms/faqs"),
-      card("Docs", "Notion-backed docs on /docs", "📚", "/admin/docs"),
-      card("Form Submissions", "Contact entries stored in Notion", "📝", "/admin/notion"),
+      card("Docs", "AppFlowy-backed docs on /docs", "📚", "/admin/docs"),
+      card("Form Submissions", "Contact entries stored in AppFlowy", "📝", "/admin/appflowy"),
       card("SEO", "Search Console performance and keywords", "🔍", "/admin/analytics/seo"),
     ],
   },
@@ -166,6 +166,7 @@ const NAV_GROUPS: NavGroup[] = [
         "/admin/selfhosted"
       ),
       card("Integrations", "Live status of every connected service", "🔌", "/admin/integrations"),
+      card("Automation", "n8n workflow engine — trigger and monitor", "⚡", "/admin/automation"),
       card("AWS Cost", "Per-service spend (Athena view, R9 ETL)", "💸", "/admin/cost"),
       card("Errors", "Unresolved Sentry issues", "⚠️", "/admin/errors", (s) =>
         s.errors === null ? null : `${s.errors} unresolved`

@@ -12,7 +12,8 @@ import { getSlackConfigAsync } from "@/lib/integrations";
 // Types
 // ---------------------------------------------------------------------------
 
-export type BlockKitBlock = // NOSONAR — discriminated union type annotations
+export type BlockKitBlock =
+  // NOSONAR — discriminated union type annotations
   | {
       type: "section"; // NOSONAR
       text: { type: "mrkdwn" | "plain_text"; text: string }; // NOSONAR
@@ -625,7 +626,7 @@ export async function slackTicketNotify(data: {
     blocks: [
       headerBlock("🎫 Support Ticket"),
       sectionBlock(lines.join("\n")),
-      contextBlock(slackTimestamp(), "cloudless.gr hubspot"),
+      contextBlock(slackTimestamp(), "cloudless.gr espocrm"),
     ],
     icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
