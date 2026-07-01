@@ -72,9 +72,7 @@ R.append((":green_circle:" if code == 200 else ":red_circle:", "Stripe", f"HTTP 
 # EspoCRM
 base = ssm("ESPOCRM_BASE_URL").rstrip("/")
 hk = ssm("ESPOCRM_API_KEY")
-code, _ = api_check(
-    f"{base}/api/v1/Contact?maxSize=1", {"X-Api-Key": hk}
-)
+code, _ = api_check(f"{base}/api/v1/Contact?maxSize=1", {"X-Api-Key": hk})
 R.append((":green_circle:" if code == 200 else ":red_circle:", "EspoCRM CRM", f"HTTP {code}"))
 
 # Slack bot
