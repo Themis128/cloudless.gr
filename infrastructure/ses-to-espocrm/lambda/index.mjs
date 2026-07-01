@@ -165,7 +165,14 @@ export async function handler(event) {
     // Drop bounces, auto-replies, and obvious spam at the gate. These show up
     // as MAILER-DAEMON@*, no-reply@*, postmaster@*, etc. They're not customer
     // tickets — case-creating them clutters the queue.
-    if (!fromEmail || /^(mailer-daemon|postmaster|no-?reply|do-?not-?reply)@/i.test(fromEmail)) {
+    const isAutoMail =
+      !fromEmail ||
+      /^(mailer-daemon|postmaster)(@|[-_.+])/i.test(fromEmail) ||
+      /^(no-?reply|do-?not-?reply)(@|[-_.+])/i.test(fromEmail) ||
+      /(^|[-_.+])dmarc([-_.+]|@)/i.test(fromEmail) ||
+      /report/i.test(fromEmail);
+
+    if (isAutoMail) {
       console.log(`  skipped: auto-mail from=${fromEmail || "(empty)"}`);
       continue;
     }
