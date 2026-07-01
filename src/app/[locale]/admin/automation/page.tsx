@@ -102,7 +102,9 @@ export default function AutomationPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    // Initial data load for this admin page is intentionally triggered on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
   }, [load]);
 
   const triggerWorkflow = async (id: string, name: string) => {
