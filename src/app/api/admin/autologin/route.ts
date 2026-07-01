@@ -61,9 +61,7 @@ export async function GET(request: NextRequest) {
     const raw = err instanceof Error ? err.message : String(err);
     // Remove anything that looks like a token (long alphanumeric strings)
     const safe = raw.replace(/[A-Za-z0-9_\-]{40,}/g, "[REDACTED]");
-    // Log only static text + the allowlist-validated app name (never error content)
-    // to prevent log injection via crafted upstream error messages.
-    console.error("[autologin] upstream error for app:", app);
+    console.error("[autologin] upstream error");
     return NextResponse.json({ error: `Failed to get login URL: ${safe}` }, { status: 502 });
   }
 }
