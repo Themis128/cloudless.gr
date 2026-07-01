@@ -136,7 +136,7 @@
     "react-dom": "19.2.7",
     "react-email": "^6.6.5",
     "stripe": "^22.3.0",
-    "undici": "7.28.0"
+    "undici": "8.5.0"
   },
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1077.0",
