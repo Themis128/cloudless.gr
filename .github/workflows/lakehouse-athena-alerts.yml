@@ -1,0 +1,146 @@
+# CloudWatch Alarms for Lakehouse Athena Queries
+# Creates alarms for query failures, data freshness, and cost controls
+name: Deploy Lakehouse Athena CloudWatch Alarms
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/lakehouse-athena-alerts.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ACCOUNT_ID: "278585680617"
+
+jobs:
+  deploy-alarms:
+    name: Deploy Athena Query Failure Alarms
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # =====================================================================
+      # Alarm 1: Failed Athena Queries (per-workgroup)
+      # Based on AWS best practices: alert when failed queries exceed threshold
+      # https://docs.aws.amazon.com/athena/latest/ug/workgroups-setting-control-limits-cloudwatch.html
+      # =====================================================================
+      - name: Create Athena query failure alarm
+        run: |
+          aws cloudwatch put-metric-alarm \
+            --alarm-name "Lakehouse-Athena-Queries-Failed" \
+            --alarm-description "Alert when Athena queries fail in cloudless_analytics workgroup" \
+            --namespace "AWS/Athena" \
+            --metric-name "QueryFailed" \
+            --statistic Sum \
+            --period 300 \
+            --threshold 3 \
+            --comparison-operator GreaterThanOrEqualToThreshold \
+            --evaluation-periods 3 \
+            --datapoints-to-alarm 2 \
+            --treat-missing-data notBreaching \
+            --dimensions Name=Workgroup,Value=primary \
+            --alarm-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --ok-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --no-cli-pager
+
+          echo "✓ Created alarm: Lakehouse-Athena-Queries-Failed"
+
+      # =====================================================================
+      # Alarm 2: Query Execution Time (timeout detection)
+      # Alerts if queries take longer than 25 seconds (Lambda budget concern)
+      # =====================================================================
+      - name: Create Athena query timeout alarm
+        run: |
+          aws cloudwatch put-metric-alarm \
+            --alarm-name "Lakehouse-Athena-Queries-Slow" \
+            --alarm-description "Alert when Athena queries exceed 25s execution time" \
+            --namespace "AWS/Athena" \
+            --metric-name "QueryRuntime" \
+            --statistic Maximum \
+            --period 300 \
+            --threshold 25 \
+            --comparison-operator GreaterThanOrEqualToThreshold \
+            --evaluation-periods 3 \
+            --datapoints-to-alarm 2 \
+            --treat-missing-data notBreaching \
+            --dimensions Name=Workgroup,Value=primary \
+            --alarm-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --ok-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --no-cli-pager
+
+          echo "✓ Created alarm: Lakehouse-Athena-Queries-Slow"
+
+      # =====================================================================
+      # Alarm 3: Data Scanned Per Query (cost control)
+      # Alerts if any single query exceeds 1GB (workgroup limit is 10GB)
+      # =====================================================================
+      - name: Create Athena data scanned alarm
+        run: |
+          aws cloudwatch put-metric-alarm \
+            --alarm-name "Lakehouse-Athena-DataScanned-High" \
+            --alarm-description "Alert when Athena query scans more than 1GB" \
+            --namespace "AWS/Athena" \
+            --metric-name "DataScanned" \
+            --statistic Maximum \
+            --period 300 \
+            --threshold 1073741824 \
+            --comparison-operator GreaterThanOrEqualToThreshold \
+            --evaluation-periods 1 \
+            --datapoints-to-alarm 1 \
+            --treat-missing-data notBreaching \
+            --dimensions Name=Workgroup,Value=primary \
+            --alarm-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --ok-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --no-cli-pager
+
+          echo "✓ Created alarm: Lakehouse-Athena-DataScanned-High"
+
+      # =====================================================================
+      # Alarm 4: Workgroup Data Usage (daily aggregate)
+      # Alerts if daily scanned data exceeds 5GB
+      # =====================================================================
+      - name: Create Athena workgroup daily usage alarm
+        run: |
+          aws cloudwatch put-metric-alarm \
+            --alarm-name "Lakehouse-Athena-Workgroup-DailyUsage" \
+            --alarm-description "Alert when workgroup daily data scanned exceeds 5GB" \
+            --namespace "AWS/Athena" \
+            --metric-name "DataScanned" \
+            --statistic Sum \
+            --period 86400 \
+            --threshold 5368709120 \
+            --comparison-operator GreaterThanOrEqualToThreshold \
+            --evaluation-periods 1 \
+            --datapoints-to-alarm 1 \
+            --treat-missing-data notBreaching \
+            --dimensions Name=Workgroup,Value=primary \
+            --alarm-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --ok-actions "arn:aws:sns:${AWS_REGION}:${ACCOUNT_ID}:cloudless-alerts" \
+            --no-cli-pager
+
+          echo "✓ Created alarm: Lakehouse-Athena-Workgroup-DailyUsage"
+
+      # =====================================================================
+      # Verify alarms created
+      # =====================================================================
+      - name: List deployed alarms
+        run: |
+          echo ""
+          echo "=== Deployed Lakehouse Alarms ==="
+          aws cloudwatch describe-alarms \
+            --alarm-name-prefix "Lakehouse-Athena" \
+            --query 'MetricAlarms[].{Name:AlarmName,State:StateValue,Threshold:Threshold}' \
+            --output table
