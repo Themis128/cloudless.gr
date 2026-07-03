@@ -2,7 +2,32 @@
 
 cloudless.gr uses a Slack app for two-way communication: outbound notifications (contact form submissions, new subscribers, orders, errors, deploys) and inbound commands (status checks, order lookups).
 
-> **Last verified:** 2026-05-10 — Slack unit tests pass (signed requests, unsigned rejection, webhook delivery, mrkdwn escaping, lazy SSM config resolution, brand icon assertions, per-channel routing).
+> **Last verified:** 2026-07-03 — Added Belldog self-hosted Slack webhook proxy for simplified webhook management, channel rename protection, and token rotation.
+
+---
+
+## Architecture Options
+
+### Option 1: Direct Slack Integration (Recommended for most)
+See the standard integration section below. Uses your Slack app's bot token for all outbound notifications.
+
+### Option 2: Belldog Self-Hosted Proxy (NEW!)
+**Use Belldog if you need to:**
+- Generate webhook URLs dynamically without hardcoding them in services
+- Handle channel renames gracefully
+- Rotate tokens without updating service configs
+- Centralize Slack webhook management
+
+> **Advantages over direct webhooks:**
+> - Channel-agnostic: Generate token once, use for any channel
+> - Token rotation: Easy migration without updating services
+> - Channel rename protection: Belldog tracks channel IDs
+> - Centralized management: All tokens in DynamoDB
+> - Security: Tokens not exposed in service configs
+
+---
+
+## Architecture: Direct Slack Integration
 
 ---
 
@@ -44,16 +69,110 @@ graph TB
     end
 ```
 
+```mermaid
+graph TB
+    subgraph Outbound["Outbound via Belldog"]
+        direction LR
+        Service["Any Service"] -->|POST JSON| Belldog["belldog.cloudless.gr"]
+        Belldog -->|Verify token| DynamoDB["DynamoDB"]
+        DynamoDB -->|Lookup channel ID| Belldog
+        Belldog -->|Post message| SlackAPI["Slack chat.postMessage"]
+    end
+    subgraph Management["Belldog Management"]
+        User["Slack User"] -->|/belldog-generate| BelldogSlash["Slack Slash Command"]
+        BelldogSlash -->|Generate URL| Belldog
+        Belldog -->|Store token| DynamoDB
+        User -->|/belldog-show| BelldogSlash
+        User -->|/belldog-revoke| BelldogSlash
+    end
+```
+
 **Key files:**
 
 | File | Purpose |
 |------|---------|
-| `src/lib/integrations.ts` | Config loader — reads `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_WEBHOOK_URL` from env |
-| `src/lib/slack-notify.ts` | `SlackClient` with retry/backoff; all outbound notifiers |
-| `src/lib/slack-verify.ts` | Request signature verification (HMAC-SHA256 + timestamp check) |
-| `src/app/api/slack/events/route.ts` | Events API handler |
-| `src/app/api/slack/commands/route.ts` | Slash command handler |
-| `src/app/api/slack/interactions/route.ts` | Block Kit interaction handler |
+| `belldog/namespace.yaml` | Kubernetes namespace `belldog` |
+| `belldog/configmap.yaml` | Belldog configuration |
+| `belldog/deployment.yaml` | Belldog deployment |
+| `belldog/service.yaml` | ClusterIP service |
+| `belldog/ingress.yaml` | Nginx ingress (belldog.cloudless.gr) |
+| `belldog/belldog-secrets.yaml` | Slack credentials (create with your values) |
+| `belldog/SETUP-GUIDE.md` | Complete setup instructions |
+
+---
+
+## Belldog Self-Hosted Slack Proxy
+
+**Location:** `belldog/` directory in project root
+
+### What It Does
+Belldog is a self-hosted Slack webhook proxy that:
+- Generates webhook URLs with slash commands (`/belldog-generate`)
+- Manages tokens and channels in DynamoDB
+- Proxies webhooks from any service to Slack
+- Handles channel renames and token migrations
+
+### When to Use Belldog
+- You need to share webhook URLs across multiple services
+- You want to avoid hardcoding secrets in service configs
+- You have channel renames that break webhooks
+- You want centralized Slack webhook management
+
+### Setup
+See `belldog/SETUP-GUIDE.md` for complete setup instructions.
+
+### Key Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Health check |
+| `/slash` | POST | Slash command handler (all commands) |
+| `/p/:channel/:token` | POST | Webhook proxy - posts message to channel |
+
+### Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/belldog-generate` | Generate new webhook URL for current channel |
+| `/belldog-show` | List all tokens in current channel |
+| `/belldog-regenerate` | Generate another token (old remains valid) |
+| `/belldog-revoke` | Revoke a token |
+| `/belldog-revoke-renamed` | Revoke after channel rename |
+
+### Configuration
+
+**ConfigMap values (`belldog/configmap.yaml`):**
+- `DDB_TABLE_NAME`: DynamoDB table for token storage (default: `belldog-tokens`)
+- `MODE`: Operation mode - `proxy` (default) or `standalone`
+- `OPS_NOTIFICATION_CHANNEL_NAME`: Default channel for ops alerts (default: `alerts`)
+
+**Secrets (`belldog/belldog-secrets.yaml`):**
+- `SLACK_TOKEN`: Bot OAuth token (`xoxb-...`)
+- `SLACK_SIGNING_SECRET`: Slack signing secret
+
+### Deployment
+```bash
+kubectl apply -f belldog/namespace.yaml
+kubectl apply -f belldog/belldog-secrets.yaml  # Update with your Slack creds first!
+kubectl apply -f belldog/configmap.yaml
+kubectl apply -f belldog/deployment.yaml
+kubectl apply -f belldog/service.yaml
+kubectl apply -f belldog/ingress.yaml
+```
+
+### Testing
+```bash
+# Test slash command
+/belldog-generate  # In any Slack channel
+
+# Test webhook URL
+curl -XPOST --json '{"text":"Hello from Belldog!"}' \
+  'https://belldog.cloudless.gr/p/mychannel/abc123xyz/'
+```
+
+---
+
+## Architecture: Belldog Proxy Flow
 
 ---
 

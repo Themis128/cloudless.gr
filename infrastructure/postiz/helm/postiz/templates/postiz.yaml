@@ -75,6 +75,17 @@ spec:
             - name: RESTRICT_UPLOAD_DOMAINS
               value: {{ . | quote }}
             {{- end }}
+            # AI / Copilot — points to the in-cluster LiteLLM proxy which
+            # routes to Ollama on the Office WSL machine (via Tailscale).
+            # The API key is the LiteLLM master key from postiz-openai secret.
+            - name: OPENAI_BASE_URL
+              value: {{ .Values.postiz.litellmUrl | quote }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postiz.aiSecretName }}
+                  key: OPENAI_API_KEY
+                  optional: true
           volumeMounts:
             - name: uploads
               mountPath: /uploads

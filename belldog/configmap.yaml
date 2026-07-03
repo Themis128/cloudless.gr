@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: belldog-config
+  namespace: belldog
+data:
+  DDB_TABLE_NAME: "belldog-tokens"
+  MODE: "proxy"
+  OPS_NOTIFICATION_CHANNEL_NAME: "alerts"

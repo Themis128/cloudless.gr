@@ -1,0 +1,24 @@
+# Belldog Slack App Manifest
+# Create this app at https://api.slack.com/apps/new
+
+# Required Scopes:
+# chat:write.public - Post to any channel
+# chat:write - Required by chat:write.public
+# groups:write - Post to private channels
+# commands - Slash commands
+# channels:read - List public channels
+# groups:read - List private channels
+
+# Slash Commands to register:
+# /belldog-generate - Generate token and webhook URL
+# /belldog-show - Show all tokens in this channel
+# /belldog-regenerate - Generate another token
+# /belldog-revoke - Revoke a token
+# /belldog-revoke-renamed - Revoke after channel rename
+
+# Environment Variables (set after app creation):
+# SLACK_TOKEN: xoxb-... (Bot User OAuth Token from OAuth & Permissions)
+# SLACK_SIGNING_SECRET: (from Basic Information → Signing Secret)
+# DDB_TABLE_NAME: belldog-tokens
+# MODE: proxy
+# OPS_NOTIFICATION_CHANNEL_NAME: alerts

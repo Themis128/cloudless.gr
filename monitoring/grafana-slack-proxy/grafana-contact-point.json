@@ -1,0 +1,14 @@
+{
+  "contactPoint": {
+    "name": "Slack-Alerts-Proxy",
+    "settings": {
+      "url": "https://grafana-slack-proxy.cloudless.gr/alerts",
+      "httpMethod": "POST"
+    },
+    "secureSettings": {
+      "slackWebhookUrl": "https://hooks.slack.com/services/..."
+    },
+    "type": "webhook",
+    "disableResolveMessage": false
+  }
+}
