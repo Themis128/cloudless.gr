@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Check skills directory",
+      "trigger": "SessionStart",
+      "description": "Check existing skills directory",
+      "action": {
+        "type": "command",
+        "command": "ls -la /home/tbaltzakis/cloudless.gr/.kiro/skills/ | head -20"
+      }
+    }
+  ]
+}

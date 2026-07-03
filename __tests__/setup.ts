@@ -81,10 +81,20 @@ process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PR
 process.env.GOOGLE_CALENDAR_ID = "calendar@cloudless.gr";
 process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
 
-// ── Cognito (kept for legacy fallback path in proxy.ts) ──────────────────────
+// ── Cognito (sole auth provider since the 2026-06 migration) ─────────────────
+// Mirrors production (sst.config.ts / .env.example) so that:
+//   - component tests that statically import the signup page render the
+//     Cognito Hosted UI handoff (NEXT_PUBLIC_AUTH_PROVIDER=cognito), and
+//   - auth.ts signOut event tests can perform RP-initiated logout against the
+//     Cognito /logout endpoint (COGNITO_DOMAIN + AUTH_URL).
+// Tests that need a different state (amplify-config.test.ts, auth.test.ts)
+// save/clear and restore these keys themselves, so the global default is safe.
+process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
 process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
 process.env.COGNITO_CLIENT_ID = "test-client-id";
 process.env.COGNITO_CLIENT_SECRET = "test-client-secret";
+process.env.COGNITO_DOMAIN = "https://cloudless-auth.auth.us-east-1.amazoncognito.com";
+process.env.AUTH_URL = "http://localhost:4000";
 
 // ── next-auth ─────────────────────────────────────────────────────────────────
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
