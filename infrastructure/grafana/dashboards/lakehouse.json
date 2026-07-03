@@ -1,0 +1,356 @@
+{
+  "title": "Lakehouse Analytics — Data Health & Performance",
+  "uid": "lakehouse-analytics",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["lakehouse", "athena", "cloudless", "analytics"],
+  "timezone": "browser",
+  "refresh": "5m",
+  "time": { "from": "now-7d", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Acquisition: Sessions (7d)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT COALESCE(SUM(sessions), 0) AS total_sessions FROM cloudless_analytics.v_acquisition_funnel WHERE day >= date_format(current_date - interval '7' day, '%Y-%m-%d')",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "green", "value": 500 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Acquisition: Signups (7d)",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT COALESCE(SUM(signups), 0) AS total_signups FROM cloudless_analytics.v_acquisition_funnel WHERE day >= date_format(current_date - interval '7' day, '%Y-%m-%d')",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "green", "value": 20 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Acquisition: Purchasers (7d)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT COALESCE(SUM(purchasers), 0) AS total_purchasers FROM cloudless_analytics.v_acquisition_funnel WHERE day >= date_format(current_date - interval '7' day, '%Y-%m-%d')",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "green", "value": 10 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Acquisition: Revenue (7d)",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT COALESCE(SUM(revenue), 0) AS total_revenue FROM cloudless_analytics.v_acquisition_funnel WHERE day >= date_format(current_date - interval '7' day, '%Y-%m-%d')",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "green", "value": 500 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Acquisition Funnel — Daily Trend",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT date_parse(day, '%Y-%m-%d') AS time, sessions AS 'Sessions', signups AS 'Signups', purchasers AS 'Purchasers' FROM cloudless_analytics.v_acquisition_funnel WHERE day >= date_format(current_date - interval '30' day, '%Y-%m-%d') ORDER BY 1",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "lines",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "bargauge",
+      "title": "Top UTM Sources by Revenue (90d)",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 10 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT utm_source, COALESCE(SUM(revenue), 0) AS revenue FROM cloudless_analytics.v_attribution_by_source GROUP BY utm_source ORDER BY revenue DESC LIMIT 10",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "dark-orange", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "green", "value": 1000 }
+            ]
+          }
+        }
+      },
+      "options": { "orientation": "horizontal", "displayMode": "lcd", "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "showUnfilled": true }
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "EspoCRM Funnel by Stage",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 10 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT lifecycle_stage, contact_count FROM cloudless_analytics.v_espocrm_funnel ORDER BY contact_count DESC LIMIT 10",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "green", "value": 50 }
+            ]
+          }
+        }
+      },
+      "options": { "orientation": "horizontal", "displayMode": "lcd" }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Top GSC Keywords",
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 10 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT query, clicks, impressions, ROUND(ctr * 100, 2) AS ctr_pct, avg_position FROM cloudless_analytics.v_gsc_top_keywords ORDER BY clicks DESC LIMIT 15",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "LinkedIn Ads Performance (90d)",
+      "gridPos": { "x": 12, "y": 22, "w": 12, "h": 10 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT campaign_name, impressions, clicks, ROUND(ctr * 100, 2) AS ctr_pct, ROUND(spend, 2) AS spend_eur, conversions, ROUND(cost_per_conversion, 2) AS cpc_eur FROM cloudless_analytics.v_linkedin_ads_summary ORDER BY spend DESC LIMIT 10",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Top Sentry Issues (14d)",
+      "gridPos": { "x": 0, "y": 32, "w": 6, "h": 4 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT SUM(count_14d) AS total_errors FROM cloudless_analytics.v_sentry_top_issues",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none" }
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Self-Hosted Health",
+      "gridPos": { "x": 6, "y": 32, "w": 18, "h": 8 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT * FROM cloudless_analytics.v_selfhosted_health LIMIT 20",
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "n8n Workflow Success Rate (30d)",
+      "gridPos": { "x": 0, "y": 40, "w": 24, "h": 8 },
+      "datasource": { "type": "grafana-athena-datasource", "uid": "athena" },
+      "targets": [
+        {
+          "refId": "A",
+          "rawQuery": true,
+          "queryString": "SELECT workflow_name AS metric, success_rate AS value FROM cloudless_analytics.v_n8n_workflow_health_30d ORDER BY success_rate ASC LIMIT 20",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "drawStyle": "lines",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    }
+  ]
+}

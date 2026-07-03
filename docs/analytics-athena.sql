@@ -351,7 +351,7 @@ ORDER BY sent_count DESC;
 -- ===========================================================================
 -- Self-hosted app tables + views
 -- ===========================================================================
--- Canonical DDL in infrastructure/athena/selfhosted.sql:
+-- Canonical DDL in infrastructure/athena/selfhosted.sql (APPLIED):
 --   appflowy_workspaces, appflowy_users, n8n_workflows, n8n_executions,
 --   postiz_posts, postiz_integrations, v_selfhosted_health, v_n8n_workflow_health_30d
 --
