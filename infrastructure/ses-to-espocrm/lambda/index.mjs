@@ -121,6 +121,27 @@ async function createCase({ subject, body, contactId, fromEmail }) {
  * retry will replay the entire event, which is fine: Case create is
  * idempotent by S3 object key + we tolerate duplicates).
  */
+
+function toText(value) {
+  if (value == null || value === false) return "";
+  if (typeof value === "string") return value;
+  if (Buffer.isBuffer(value)) return value.toString("utf8");
+  if (Array.isArray(value)) return value.map(toText).filter(Boolean).join("\n");
+
+  if (typeof value === "object") {
+    if (typeof value.text === "string") return value.text;
+    if (typeof value.html === "string") return value.html;
+    if (typeof value.value === "string") return value.value;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value);
+}
+
 export async function handler(event) {
   const records = event.Records ?? [];
   if (records.length === 0) {
@@ -139,12 +160,19 @@ export async function handler(event) {
 
     const subject = (parsed.subject ?? "").trim();
     const fromEmail = parsed.from?.value?.[0]?.address?.toLowerCase() ?? "";
-    const body = (parsed.text ?? parsed.html ?? "").slice(0, 65000); // EspoCRM description column limit
+    const body = (toText(parsed.text) || toText(parsed.html) || toText(parsed.textAsHtml)).slice(0, 65000); // EspoCRM description column limit
 
     // Drop bounces, auto-replies, and obvious spam at the gate. These show up
     // as MAILER-DAEMON@*, no-reply@*, postmaster@*, etc. They're not customer
     // tickets — case-creating them clutters the queue.
-    if (!fromEmail || /^(mailer-daemon|postmaster|no-?reply|do-?not-?reply)@/i.test(fromEmail)) {
+    const isAutoMail =
+      !fromEmail ||
+      /^(mailer-daemon|postmaster)(@|[-_.+])/i.test(fromEmail) ||
+      /^(no-?reply|do-?not-?reply)(@|[-_.+])/i.test(fromEmail) ||
+      /(^|[-_.+])dmarc([-_.+]|@)/i.test(fromEmail) ||
+      /report/i.test(fromEmail);
+
+    if (isAutoMail) {
       console.log(`  skipped: auto-mail from=${fromEmail || "(empty)"}`);
       continue;
     }

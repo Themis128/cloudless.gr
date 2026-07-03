@@ -39,19 +39,20 @@ TBLPROPERTIES ('has_encrypted_data'='false');
 -- Fed by scripts/etl/espocrm-to-lake.mjs (replaced HubSpot migration 2026-06-25).
 -- Deprecated hubspot_* tables removed; backward-compat alias view retained.
 CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_contacts (
-  contact_id       string,
-  email            string,
-  first_name       string,
-  last_name        string,
-  account_id       string,
-  account_name     string,
-  phone            string,
-  title            string,
-  lead_source      string,
-  status           string,
-  assigned_user_id string,
-  created_at       string,
-  modified_at      string
+  contact_id         string,
+  email              string,
+  first_name         string,
+  last_name          string,
+  account_id         string,
+  account_name       string,
+  phone              string,
+  title              string,
+  lead_source        string,
+  status             string,
+  assigned_user_name string,
+  do_not_call        boolean,
+  created_at         string,
+  modified_at        string
 )
 STORED AS PARQUET
 LOCATION 's3://cloudless-analytics-data/lake/espocrm-contacts/';
@@ -71,49 +72,53 @@ STORED AS PARQUET
 LOCATION 's3://cloudless-analytics-data/lake/espocrm-accounts/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_opportunities (
-  opportunity_id   string,
-  name             string,
-  amount           double,
-  stage            string,
-  probability      int,
-  lead_source      string,
-  contact_id       string,
-  account_id       string,
-  assigned_user_id string,
-  close_date       string,
-  created_at       string,
-  modified_at      string
+  opportunity_id     string,
+  name               string,
+  amount             double,
+  amount_currency    string,
+  stage              string,
+  probability        int,
+  lead_source        string,
+  account_id         string,
+  account_name       string,
+  assigned_user_name string,
+  close_date         string,
+  created_at         string,
+  modified_at        string
 )
 STORED AS PARQUET
 LOCATION 's3://cloudless-analytics-data/lake/espocrm-opportunities/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_cases (
-  case_id          string,
-  number           string,
-  name             string,
-  status           string,
-  priority         string,
-  type             string,
-  contact_id       string,
-  account_id       string,
-  assigned_user_id string,
-  created_at       string,
-  modified_at      string
+  case_id            string,
+  number             string,
+  name               string,
+  status             string,
+  priority           string,
+  type               string,
+  account_id         string,
+  contact_id         string,
+  assigned_user_name string,
+  created_at         string,
+  modified_at        string
 )
 STORED AS PARQUET
 LOCATION 's3://cloudless-analytics-data/lake/espocrm-cases/';
 
 CREATE EXTERNAL TABLE IF NOT EXISTS cloudless_analytics.espocrm_campaigns (
-  campaign_id      string,
-  name             string,
-  type             string,
-  status           string,
-  sent_count       int,
-  open_count       int,
-  click_count      int,
-  bounced_count    int,
-  opt_out_count    int,
-  created_at       string
+  campaign_id        string,
+  name               string,
+  status             string,
+  type               string,
+  start_date         string,
+  end_date           string,
+  budget             double,
+  budget_currency    string,
+  sent_count         int,
+  opened_count       int,
+  clicked_count      int,
+  assigned_user_name string,
+  created_at         string
 )
 STORED AS PARQUET
 LOCATION 's3://cloudless-analytics-data/lake/espocrm-campaigns/';
@@ -346,7 +351,7 @@ ORDER BY sent_count DESC;
 -- ===========================================================================
 -- Self-hosted app tables + views
 -- ===========================================================================
--- Canonical DDL in infrastructure/athena/selfhosted.sql:
+-- Canonical DDL in infrastructure/athena/selfhosted.sql (APPLIED):
 --   appflowy_workspaces, appflowy_users, n8n_workflows, n8n_executions,
 --   postiz_posts, postiz_integrations, v_selfhosted_health, v_n8n_workflow_health_30d
 --

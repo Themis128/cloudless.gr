@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { findPortalByToken, readPortals, writePortals } from "@/lib/client-portals";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { publishPortalNotification } from "@/lib/sns-notify";
 
 /**
  * POST /api/portal/[token]/comments
@@ -64,6 +65,22 @@ export async function POST(
       await writePortals(allPortals);
     }
   }
+
+  // Notify the team via SNS (fire-and-forget)
+  publishPortalNotification({
+    eventType: "comment_added",
+    portalLabel: portal.label,
+    clientName: portal.clientName || portal.clientEmail,
+    clientEmail: portal.clientEmail,
+    title: `New comment from ${portal.clientName || portal.clientEmail} on "${step.name}"`,
+    description: `Step: ${step.name}\nComment: ${comment.text.slice(0, 500)}`,
+    url: `https://cloudless.gr/portal/${portal.token}`,
+    metadata: {
+      stepId,
+      commentId: comment.id,
+      portalToken: portal.token,
+    },
+  }).catch(() => {});
 
   return NextResponse.json({ comment }, { status: 201 });
 }

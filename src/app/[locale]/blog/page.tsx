@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+// export const dynamic = "force-dynamic"; // Disabled to allow ISR (revalidate = 300)
 
 import type { Metadata } from "next";
 import { Link } from "@/i18n/navigation";

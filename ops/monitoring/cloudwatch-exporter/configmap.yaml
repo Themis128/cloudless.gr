@@ -1,0 +1,19 @@
+apiVersion: v1
+data:
+  config.yml: "region: us-east-1\nmetrics:\n  - aws_namespace: AWS/SQS\n    aws_metric_name:\
+    \ ApproximateAgeOfOldestMessage\n    aws_dimensions:\n      - QueueName\n    aws_dimension_select:\n\
+    \      QueueName:\n        - cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo\n\
+    \    aws_statistics:\n      - Maximum\n    period_seconds: 300\n    range_seconds:\
+    \ 600\n    set_timestamp: false\n\n  - aws_namespace: AWS/SQS\n    aws_metric_name:\
+    \ ApproximateNumberOfMessagesVisible\n    aws_dimensions:\n      - QueueName\n\
+    \    aws_dimension_select:\n      QueueName:\n        - cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo\n\
+    \    aws_statistics:\n      - Maximum\n    period_seconds: 300\n    range_seconds:\
+    \ 600\n    set_timestamp: false\n"
+kind: ConfigMap
+metadata:
+  annotations: {}
+  labels:
+    app.kubernetes.io/name: cloudless-cloudwatch-exporter
+    app.kubernetes.io/part-of: cloudless
+  name: cloudless-cloudwatch-exporter-config
+  namespace: monitoring
