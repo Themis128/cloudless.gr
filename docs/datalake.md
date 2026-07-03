@@ -22,6 +22,11 @@ s3://cloudless-analytics-data
                        │  Glue Catalog: cloudless_analytics
                        ▼
               Athena workgroup primary  → operator queries
+                       │
+                       ├─ SQL → CLI / IDE (DBeaver, DataGrip)
+                       ├─ Grafana → dashboards/lakehouse.json
+                       ├─ MCP Server → tools/mcp-athena-server/
+                       └─ Admin API → /api/admin/analytics/datalake
 ```
 
 | Component | Detail |
@@ -130,7 +135,7 @@ aws s3 ls s3://cloudless-analytics-data/events/ --recursive | tail
 # Should show a fresh NDJSON file under year=YYYY/month=MM/day=DD/
 ```
 
-### Query the lake
+### Query the lake via CLI
 
 ```bash
 aws athena start-query-execution \
@@ -140,6 +145,51 @@ aws athena start-query-execution \
 
 Output lands in `s3://cloudless-analytics-data/athena-results/` and is
 auto-expired after 30 days by the lifecycle rule.
+
+### Query via Grafana Dashboard
+
+1. Add Athena as a data source in Grafana with the `cloudless_analytics` database
+2. Import `infrastructure/grafana/dashboards/lakehouse.json`
+3. Dashboard shows: acquisition funnel, attribution, EspoCRM funnel, GSC keywords, LinkedIn ads, Sentry errors, self-hosted health, n8n workflow success
+
+### Query via MCP Server
+
+Start the MCP server:
+
+```bash
+cd tools/mcp-athena-server
+pnpm start
+```
+
+Available tools:
+- `athena_query` — natural language to SQL (basic keyword matching)
+- `athena_execute_sql` — raw SQL execution
+- `athena_list_databases` — list databases
+- `athena_list_tables` — list tables in a database
+- `athena_get_schema` — describe a table
+- `athena_query_history` — recent queries
+
+### Query via Admin API
+
+```http
+GET /api/admin/analytics/datalake?refresh=1
+Authorization: Bearer <admin-jwt>
+```
+
+Returns 10 pre-built dashboard sections in one JSON payload.
+
+## CloudWatch Alarms
+
+The `lakehouse-athena-alerts.yml` workflow deploys 4 alarms:
+
+| Alarm | Trigger |
+|-------|---------|
+| `Lakehouse-Athena-DataScanned-High` | Single query > 1GB |
+| `Lakehouse-Athena-Queries-Failed` | 3+ failures in 3 periods |
+| `Lakehouse-Athena-Queries-Slow` | Query > 25s |
+| `Lakehouse-Athena-Workgroup-DailyUsage` | Daily > 5GB |
+
+Deploy: `gh workflow run lakehouse-athena-alerts.yml`
 
 ### Restore a DynamoDB table to a point in time
 
