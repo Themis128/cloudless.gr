@@ -1,0 +1,25 @@
+{
+  "name": "@cloudless/mcp-athena-server",
+  "version": "1.0.0",
+  "description": "MCP Server for AWS Athena Data Lake Query Execution",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "start": "node --import tsx index.ts",
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-athena": "^3.1075.0",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

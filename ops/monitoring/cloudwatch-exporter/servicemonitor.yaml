@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/name: cloudless-cloudwatch-exporter
+    app.kubernetes.io/part-of: cloudless
+    release: monitoring
+  name: cloudless-cloudwatch-exporter
+  namespace: monitoring
+spec:
+  endpoints:
+    - interval: 60s
+      path: /metrics
+      port: http
+      scrapeTimeout: 30s
+  namespaceSelector:
+    matchNames:
+      - monitoring
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudless-cloudwatch-exporter

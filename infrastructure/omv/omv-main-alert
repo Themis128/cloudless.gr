@@ -1,0 +1,93 @@
+#!/bin/bash
+# OpenMediaVault alert wrapper - sends notifications via Slack and/or Email
+# Install: sudo cp this file to /usr/local/bin/omv-main-alert && chmod +x
+
+set -euo pipefail
+
+# Configuration - set these env vars or edit directly
+SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-}"
+SLACK_CHANNEL="${SLACK_CHANNEL:-#alerts}"
+SES_FROM="${SES_FROM:-alerts@cloudless.gr}"
+SES_TO="${SES_TO:-tbaltzakis@cloudless.gr}"
+
+# Colors for Slack
+COLOR_OK="good"
+COLOR_WARN="warning"
+COLOR_ERR="danger"
+
+send_slack() {
+    local subject="$1"
+    local body="$2"
+    local color="${3:-$COLOR_WARN}"
+    
+    if [[ -z "$SLACK_WEBHOOK_URL" ]]; then
+        echo "[Slack] WEBHOOK_URL not set, skipping"
+        return 1
+    fi
+    
+    local payload
+    payload=$(cat <<EOF
+{
+  "channel": "$SLACK_CHANNEL",
+  "username": "OMV Alert",
+  "icon_emoji": ":warning:",
+  "attachments": [{
+    "color": "$color",
+    "title": "[OMV] $subject",
+    "text": "$body",
+    "footer": "OMV Monitoring",
+    "ts": "$(date +%s)"
+  }]
+}
+EOF
+)
+    
+    curl -s -X POST \
+        -H 'Content-Type: application/json' \
+        -d "$payload" \
+        "$SLACK_WEBHOOK_URL" >/dev/null 2>&1 && echo "[Slack] Sent: $subject" || echo "[Slack] Failed to send"
+}
+
+send_email() {
+    local subject="$1"
+    local body="$2"
+    
+    if [[ -z "$SES_TO" ]]; then
+        echo "[Email] SES_TO not set, skipping"
+        return 1
+    fi
+    
+    # Use AWS SES to send
+    aws ses send-email \
+        --from "$SES_FROM" \
+        --to "$SES_TO" \
+        --subject "[OMV] $subject" \
+        --text "$body" \
+        --region us-east-1 >/dev/null 2>&1 && echo "[Email] Sent: $subject" || echo "[Email] Failed to send"
+}
+
+# Main
+main() {
+    local subject="${1:-OMV Alert}"
+    local body="${2:-No details}"
+    local severity="${3:-warning}"
+    
+    local color
+    case "$severity" in
+        ok|success) color="$COLOR_OK" ;;
+        error|critical) color="$COLOR_ERR" ;;
+        *) color="$COLOR_WARN" ;;
+    esac
+    
+    echo "[OMV Alert] $subject: $body"
+    
+    # Send to Slack
+    send_slack "$subject" "$body" "$color" || true
+    
+    # Send email for critical alerts
+    if [[ "$severity" == "critical" ]]; then
+        send_email "$subject" "$body" || true
+    fi
+}
+
+main "$@"

@@ -124,6 +124,10 @@ interface AppConfig {
   /** Sentry internal-integration Client Secret used to HMAC-verify webhooks
    *  at `/api/webhooks/sentry`. R8 — required for the Sentry receiver. */
   SENTRY_WEBHOOK_SECRET: string;
+  /** SNS topic ARN for portal notification fan-out. When set, portal events
+   *  (comments, deliverable actions) publish to this topic, which fans out to
+   *  an email subscription (team) and a Lambda that posts to Slack. */
+  SNS_PORTAL_TOPIC_ARN: string;
   GOOGLE_CLIENT_EMAIL: string;
   GOOGLE_PRIVATE_KEY: string;
   GOOGLE_CALENDAR_ID: string;
@@ -305,6 +309,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
       params.get("CONTENT_WEBHOOK_SECRET") ?? params.get("NOTION_WEBHOOK_SECRET") ?? "",
     ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
     SENTRY_WEBHOOK_SECRET: params.get("SENTRY_WEBHOOK_SECRET") ?? "",
+    SNS_PORTAL_TOPIC_ARN: params.get("SNS_PORTAL_TOPIC_ARN") ?? "",
     GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
     GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replaceAll(String.raw`\n`, "\n"),
     GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
@@ -415,6 +420,7 @@ function buildConfigFromEnv(): AppConfig {
       process.env.CONTENT_WEBHOOK_SECRET || process.env.NOTION_WEBHOOK_SECRET || "",
     ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",
     SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
+    SNS_PORTAL_TOPIC_ARN: process.env.SNS_PORTAL_TOPIC_ARN || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
     GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",

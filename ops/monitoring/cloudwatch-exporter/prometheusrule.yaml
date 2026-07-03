@@ -1,0 +1,61 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/name: cloudless-sqs-revalidation-alerts
+    app.kubernetes.io/part-of: cloudless
+    release: monitoring
+  name: cloudless-sqs-revalidation-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: cloudless.sqs.revalidation
+      rules:
+        - alert: CloudlessRevalidationQueueOldMessagesWarning
+          annotations:
+            description: Oldest message age in cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
+              is {{ $value }} seconds.
+            summary: Cloudless revalidation SQS messages are older than 5 minutes
+          expr: aws_sqs_approximate_age_of_oldest_message_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
+            >= 300
+          for: 10m
+          labels:
+            app: cloudless
+            service: revalidation
+            severity: warning
+        - alert: CloudlessRevalidationQueueOldMessagesCritical
+          annotations:
+            description: Oldest message age in cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
+              is {{ $value }} seconds.
+            summary: Cloudless revalidation SQS messages are older than 15 minutes
+          expr: aws_sqs_approximate_age_of_oldest_message_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
+            >= 900
+          for: 5m
+          labels:
+            app: cloudless
+            service: revalidation
+            severity: critical
+        - alert: CloudlessRevalidationQueueBacklogWarning
+          annotations:
+            description: cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
+              has {{ $value }} visible messages.
+            summary: Cloudless revalidation SQS backlog is growing
+          expr: aws_sqs_approximate_number_of_messages_visible_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
+            >= 10
+          for: 10m
+          labels:
+            app: cloudless
+            service: revalidation
+            severity: warning
+        - alert: CloudlessRevalidationQueueBacklogCritical
+          annotations:
+            description: cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo
+              has {{ $value }} visible messages.
+            summary: Cloudless revalidation SQS backlog is critical
+          expr: aws_sqs_approximate_number_of_messages_visible_maximum{queue_name="cloudless-production-CloudlessSiteRevalidationEventsQueue-mvunfhmd.fifo"}
+            >= 50
+          for: 5m
+          labels:
+            app: cloudless
+            service: revalidation
+            severity: critical
