@@ -250,7 +250,9 @@ spec:
             - { name: APPFLOWY_S3_PRESIGNED_URL_ENDPOINT, value: "https://appflowy.cloudless.gr/minio-api" }
             - { name: APPFLOWY_BASE_URL, value: "https://appflowy.cloudless.gr" }
             - { name: APPFLOWY_WEB_URL, value: "https://appflowy.cloudless.gr" }
-            - { name: AI_ENABLED, value: "false" }
+            - { name: AI_ENABLED, value: "true" }
+             - { name: AI_BASE_URL, value: "http://postiz-litellm.postiz.svc.cluster.local:4000/v1" }
+             - { name: AI_MODEL, value: "gpt-4.1" }
             - { name: APPFLOWY_ACCESS_CONTROL, value: "true" }
             - { name: APPFLOWY_DATABASE_MAX_CONNECTIONS, value: "20" }
           ports: [{ containerPort: 8000 }]

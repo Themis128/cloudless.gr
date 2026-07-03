@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: belldog
+  namespace: belldog
+  labels:
+    app: belldog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: belldog
+  template:
+    metadata:
+      labels:
+        app: belldog
+    spec:
+      containers:
+      - name: belldog
+        image: finatext/belldog:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DDB_TABLE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: belldog-config
+              key: DDB_TABLE_NAME
+        - name: MODE
+          valueFrom:
+            configMapKeyRef:
+              name: belldog-config
+              key: MODE
+        - name: OPS_NOTIFICATION_CHANNEL_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: belldog-config
+              key: OPS_NOTIFICATION_CHANNEL_NAME
+        - name: SLACK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: belldog-secrets
+              key: SLACK_TOKEN
+        - name: SLACK_SIGNING_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: belldog-secrets
+              key: SLACK_SIGNING_SECRET
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10

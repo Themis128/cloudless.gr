@@ -1,0 +1,83 @@
+apiVersion: 1
+groups:
+  - folder: Self-Hosted Apps
+    orgId: 1
+    name: Log-Based Alerts
+    intervals:
+      - from: 0h
+        to: 24h
+    rules:
+      # n8n workflow errors
+      - name: n8n workflow error
+        condition: A
+        no_data_state: no_data
+        for: 2m
+        annotations:
+          summary: "n8n workflow error detected"
+          description: "n8n container has recorded workflow errors in the last 5 minutes"
+          runbook_url: "https://docs.cloudless.gr/operations/n8n"
+        alerts:
+          - name: N8nWorkflowError
+            expression: |
+              count_over_time({app="n8n", container="n8n"} |~ "error|failed" [5m]) > 0
+            labels:
+              severity: critical
+              category: workflow
+              app: n8n
+            message: "n8n workflow error detected"
+
+      # EspoCRM database errors
+      - name: EspoCRM database error
+        condition: A
+        no_data_state: no_data
+        for: 2m
+        annotations:
+          summary: "EspoCRM database error detected"
+          description: "EspoCRM container has recorded database errors"
+          runbook_url: "https://docs.cloudless.gr/operations/espocrm"
+        alerts:
+          - name: EspoCRMDatabaseError
+            expression: |
+              count_over_time({app="espocrm", container="espocrm"} |~ "SQL|error|connection refused|timeout" [5m]) > 0
+            labels:
+              severity: critical
+              category: database
+              app: espocrm
+            message: "EspoCRM database error detected"
+
+      # Meilisearch indexing errors
+      - name: Meilisearch indexing error
+        condition: A
+        no_data_state: no_data
+        for: 2m
+        annotations:
+          summary: "Meilisearch indexing error detected"
+          description: "Meilisearch container has recorded indexing errors"
+          runbook_url: "https://docs.cloudless.gr/operations/meilisearch"
+        alerts:
+          - name: MeilisearchIndexingError
+            expression: |
+              count_over_time({app="meilisearch", container="meilisearch"} |~ "indexing error|timeout|failed" [5m]) > 0
+            labels:
+              severity: high
+              category: search
+              app: meilisearch
+            message: "Meilisearch indexing error detected"
+
+      # General error spike
+      - name: Application error spike
+        condition: A
+        no_data_state: no_data
+        for: 5m
+        annotations:
+          summary: "High error rate across applications"
+          description: "Detected >5 error log lines per minute across multiple applications"
+          runbook_url: "https://docs.cloudless.gr/operations/monitoring"
+        alerts:
+          - name: ApplicationErrorSpike
+            expression: |
+              sum by (namespace) (count_over_time({namespace=~"cloudless|n8n|espocrm|meilisearch|monitoring|appflowy"} |~ "error|failed|exception" [5m])) > 5
+            labels:
+              severity: warning
+              category: general
+            message: "High error rate across applications"

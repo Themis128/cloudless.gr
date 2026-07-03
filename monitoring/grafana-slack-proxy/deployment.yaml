@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-slack-proxy
+  namespace: grafana-slack-proxy
+  labels:
+    app: grafana-slack-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-slack-proxy
+  template:
+    metadata:
+      labels:
+        app: grafana-slack-proxy
+    spec:
+      containers:
+      - name: grafana-slack-proxy
+        image: grafana-slack-proxy:latest
+        ports:
+        - containerPort: 5001
+        env:
+        - name: SLACK_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-proxy-secrets
+              key: SLACK_WEBHOOK_URL
+        - name: SLACK_DEFAULT_CHANNEL
+          value: "#ads-test-scope"
+        - name: SLACK_SIGNING_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: grafana-slack-proxy-secrets
+              key: SLACK_SIGNING_SECRET
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 5
+          periodSeconds: 10

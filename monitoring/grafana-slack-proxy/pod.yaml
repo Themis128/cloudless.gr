@@ -1,0 +1,193 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: grafana-slack-proxy
+  namespace: grafana-slack-proxy
+  labels:
+    app: grafana-slack-proxy
+  annotations:
+    kubernetes.io/created-by: "grafana-slack-proxy"
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: omv
+  containers:
+  - name: grafana-slack-proxy
+    image: python:3.12-slim
+    ports:
+    - containerPort: 5001
+    command: ["sh", "-c"]
+    args:
+    - |
+      pip install requests --quiet
+      cd /app && python main.py
+    env:
+    - name: SLACK_WEBHOOK_URL
+      valueFrom:
+        secretKeyRef:
+          name: grafana-slack-proxy-secrets
+          key: SLACK_WEBHOOK_URL
+    - name: SLACK_DEFAULT_CHANNEL
+      value: "#ads-test-scope"
+    - name: SLACK_SIGNING_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: grafana-slack-proxy-secrets
+          key: SLACK_SIGNING_SECRET
+    volumeMounts:
+    - name: code
+      mountPath: /app
+      readOnly: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  volumes:
+  - name: code
+    configMap:
+      name: grafana-slack-proxy-code
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-slack-proxy-code
+  namespace: grafana-slack-proxy
+data:
+  main.py: |
+    #!/usr/bin/env python3
+    import os, hmac, hashlib, json, requests
+    from datetime import datetime
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+
+    SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
+    SLACK_DEFAULT_CHANNEL = os.environ.get("SLACK_DEFAULT_CHANNEL", "#ads-test-scope")
+    SLACK_SIGNING_SECRET = os.environ.get("SLACK_SIGNING_SECRET")
+    PORT = 5001
+
+    def verify_signature(body, timestamp, signature):
+        if not SLACK_SIGNING_SECRET or SLACK_SIGNING_SECRET == "PLACEHOLDER":
+            return True
+        req = f"v0:{timestamp}:{body.decode()}"
+        expected = "v0=" + hmac.new(SLACK_SIGNING_SECRET.encode(), req.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected, signature)
+
+    def categorize_alert(alert_data):
+        labels = alert_data.get("labels", {})
+        app = labels.get("app", "unknown")
+        category = labels.get("category", "general")
+        severity = labels.get("severity", "info").upper()
+        severity_emoji = {"CRITICAL": ":red_circle:", "HIGH": ":orange_circle:", "WARNING": ":yellow_circle:", "INFO": ":blue_circle:"}.get(severity, ":grey_question:")
+        return {"app": app, "category": category, "severity": severity, "severity_emoji": severity_emoji}
+
+    def format_alert_block(alert_data, category_info):
+        annotations = alert_data.get("annotations", {})
+        summary = annotations.get("summary", "No summary")
+        description = annotations.get("description", "No description")
+        runbook_url = annotations.get("runbook_url", "")
+        start_time = alert_data.get("startsAt", "")
+        formatted_time = "unknown"
+        if start_time:
+            try:
+                dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                formatted_time = start_time
+        blocks = [
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"{category_info['severity_emoji']} *{category_info['severity']} Alert*"}},
+            {"type": "section", "fields": [
+                {"type": "mrkdwn", "text": f"*App:*\n{category_info['app']}"},
+                {"type": "mrkdwn", "text": f"*Category:*\n{category_info['category']}"}
+            ]},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*{summary}*\n_{description}_"}}
+        ]
+        if runbook_url:
+            blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": f"<{runbook_url}|:page_with_curl: View Runbook>"}})
+        blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": f"Started: {formatted_time}"}]})
+        return blocks
+
+    def format_summary_block(category_counts, category_info):
+        blocks = [{"type": "section", "text": {"type": "mrkdwn", "text": f"{category_info['severity_emoji']} *{category_info['severity']} Alerts Summary*"}}, {"type": "section", "fields": [{"type": "mrkdwn", "text": f"*Total Alerts:*\n{category_counts['total']}"}, {"type": "mrkdwn", "text": f"*Category:*\n{category_info['category']}"}]}, {"type": "section", "text": {"type": "mrkdwn", "text": "\n".join([f":warning: *{app}* ({count} alert{'s' if count > 1 else ''})" for app, count in category_counts['by_app'].items()])}}, {"type": "context", "elements": [{"type": "mrkdwn", "text": f"Time window: Last 5 minutes"}]}]
+        return blocks
+
+    def post_to_slack(blocks, text=None):
+        payload = {"blocks": blocks}
+        if text: payload["text"] = text
+        if SLACK_DEFAULT_CHANNEL: payload["channel"] = SLACK_DEFAULT_CHANNEL
+        print(f"[{datetime.now().isoformat()}] Posting to Slack channel: {payload.get('channel', 'default')}")
+        try:
+            response = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=10)
+            print(f"[{datetime.now().isoformat()}] Slack response: {response.status_code}")
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            print(f"Failed to post to Slack: {e}")
+            return False
+
+    class GrafanaWebhookHandler(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            print(f"[{datetime.now().isoformat()}] {format % args}")
+        def do_POST(self):
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            timestamp = self.headers.get('X-Slack-Request-Timestamp', '')
+            signature = self.headers.get('X-Slack-Signature', '')
+            if not verify_signature(body, timestamp, signature):
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(b"Invalid signature")
+                return
+            try:
+                data = json.loads(body)
+            except json.JSONDecodeError as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(f"Invalid JSON: {e}".encode())
+                return
+            alerts = data.get("alerts", [])
+            if not alerts:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"No alerts")
+                return
+            category_alerts = {}
+            for alert in alerts:
+                category_info = categorize_alert(alert)
+                key = (category_info['app'], category_info['severity'])
+                if key not in category_alerts:
+                    category_alerts[key] = {"category_info": category_info, "alerts": [], "by_app": {}}
+                category_alerts[key]["alerts"].append(alert)
+                app = category_info['app']
+                category_alerts[key]["by_app"][app] = category_alerts[key]["by_app"].get(app, 0) + 1
+            posted = 0
+            for key, data in category_alerts.items():
+                category_info = data["category_info"]
+                alerts_list = data["alerts"]
+                if len(alerts_list) > 1:
+                    summary_blocks = format_summary_block({"total": len(alerts_list), "by_app": data["by_app"]}, category_info)
+                    post_to_slack(summary_blocks)
+                else:
+                    alert = alerts_list[0]
+                    alert_blocks = format_alert_block(alert, category_info)
+                    post_to_slack(alert_blocks)
+                posted += 1
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(f"Processed {posted} alerts".encode())
+
+    def main():
+        if not SLACK_WEBHOOK_URL or SLACK_WEBHOOK_URL == "PLACEHOLDER":
+            print("ERROR: SLACK_WEBHOOK_URL environment variable is required")
+            return
+        server = HTTPServer(("0.0.0.0", PORT), GrafanaWebhookHandler)
+        print(f"[{datetime.now().isoformat()}] Grafana Slack Proxy starting on port {PORT}")
+        print(f"[{datetime.now().isoformat()}] Target channel: {SLACK_DEFAULT_CHANNEL}")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print(f"[{datetime.now().isoformat()}] Shutting down...")
+            server.shutdown()
+
+    if __name__ == "__main__":
+        main()

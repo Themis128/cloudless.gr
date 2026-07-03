@@ -4,12 +4,28 @@
 
 | Doc | What it covers |
 |---|---|
+| [CLUSTER-HEALTH-CHECK-2026-07-03.md](CLUSTER-HEALTH-CHECK-2026-07-03.md) | Latest cluster health report — nodes, deployments, HA failover, storage, monitoring. Run weekly. |
 | [deploy.md](deploy.md) | Production deploy workflow, IAM perms required, troubleshooting AccessDenied on `iam:GetRole`/`TagRole`. |
 | [iam.md](iam.md) | IAM principals (deploy role, Pi-image role, `cloudless-ops` user), the managed policy hierarchy, and the no-root permission-update path. |
 | [pi-cloud-sync.md](pi-cloud-sync.md) | Contract between the Pi K3s standby and the SST cloud — what's in sync, how, and what to monitor. |
 | [security.md](security.md) | Single-source-of-truth security posture — auth, headers, CSP, rate limiting, Sentry scrubber, and what's deliberately out of scope. |
 | [ci-health-routine.md](ci-health-routine.md) | The weekly Claude Code routine that checks all 6 workflows on `main` are green. |
 | [SECURITY_ENHANCEMENTS_ROADMAP.md](SECURITY_ENHANCEMENTS_ROADMAP.md) | Standing security backlog. |
+
+## Self-Hosted Applications Status
+
+| App | Status | Uptime | Key Features |
+|-----|--------|--------|--------------|
+| [APPFLOWY-STATUS-2026-07-03.md](APPFLOWY-STATUS-2026-07-03.md) | ✅ Operational | 12d | Workspace, database, real-time collab, auth (GoTrue), MinIO storage |
+| [DUCKDB-ANALYTICS-STATUS-2026-07-03.md](DUCKDB-ANALYTICS-STATUS-2026-07-03.md) | ✅ Operational | 56d | Data lake, 8 ETL CronJobs, 7 ML models, anomaly detection (15m), S3 sync |
+| [MEILISEARCH-STATUS-2026-07-03.md](MEILISEARCH-STATUS-2026-07-03.md) | ✅ Operational | 9d | Full-text search, typo tolerance, SearXNG metasearch, 4Gi index capacity |
+| [ESPOCRM-STATUS-2026-07-03.md](ESPOCRM-STATUS-2026-07-03.md) | ✅ Operational | 12d | CRM, MariaDB, hourly + daily backups, SMTP, Slack/Calendar integration |
+| [N8N-STATUS-2026-07-03.md](N8N-STATUS-2026-07-03.md) | ✅ Operational | 56d | Workflow automation, 300+ nodes, 26 restarts (monitor memory) |
+| [POSTIZ-STATUS-2026-07-03.md](POSTIZ-STATUS-2026-07-03.md) | ✅ Operational | 21d | Social media scheduler, 6 platforms, PostgreSQL + Redis, daily backups |
+| [UPTIME-KUMA-STATUS-2026-07-03.md](UPTIME-KUMA-STATUS-2026-07-03.md) | ✅ Operational | 12d | Uptime monitoring, SSL tracking, incident alerts, status page |
+| [NTFY-STATUS-2026-07-03.md](NTFY-STATUS-2026-07-03.md) | ✅ Operational | 57d | Push notifications, webhooks, channels, multi-platform alerts |
+| [VIBE-STATUS-2026-07-03.md](VIBE-STATUS-2026-07-03.md) | ✅ Operational | 8d | Agent orchestration, project management, knowledge bases, 20Gi capacity |
+| [ALERT-MANAGER-STATUS-2026-07-03.md](ALERT-MANAGER-STATUS-2026-07-03.md) | ✅ Operational | 45d | Alert routing, grouping, deduplication, multi-channel notifications |
 
 ## Application integrations
 
