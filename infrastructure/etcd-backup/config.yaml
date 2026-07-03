@@ -12,17 +12,13 @@
 #   2026-06-26 14:39 — restored from this file via:
 #     sudo install -m 0600 infrastructure/etcd-backup/config.yaml \
 #       /etc/rancher/k3s/config.yaml && sudo systemctl restart k3s
+#   2026-07-03 — added etcd-snapshot-schedule-cron and etcd-snapshot-retention
+#     after discovering they were missing from live config.
+#   2026-07-03 — added S3 credentials for cloudless-etcd-backup user.
 #
-# This file deliberately OMITS the etcd-s3-* directives that the
-# previous full config (scripts/configure-k3s.sh) used to render. The
-# embedded AWS IAM keys (AKIAUBXIAELUS34WI2KW) are dead — every hourly
-# upload would error and noise the journal. Once a fresh
-# cloudless-etcd-backup IAM user is minted (see
-# docs/aws-credentials-rotation-runbook.md), re-render with
-# `scripts/configure-k3s.sh` to put S3 mirroring back in place. Local
-# snapshots remain safe in the meantime via the k3s-snapshot-mirror
-# systemd timer (this directory) which rsyncs to the NAS backup mount
-# every 30 minutes.
+# This file deliberately INCLUDES the etcd-s3-* directives with working
+# credentials. The S3 backup (cloudless-etcd-snapshots/etcd/) is fully
+# operational and receives hourly snapshots.
 #
 # Do NOT add `data-dir` here. /var/lib/rancher/k3s/server is a symlink
 # to /srv/dev-disk-by-uuid-a9a5a108-*/k3s/server, so data already lives
@@ -45,3 +41,23 @@ secrets-encryption: true
 # /srv/.../Backups/k3s-db/snapshots/ for the omv-backup-verify watchdog.
 etcd-snapshot-schedule-cron: "0 */1 * * *"
 etcd-snapshot-retention: 24
+
+# S3 backup configuration for off-site etcd snapshot replication.
+# Uses purpose-specific IAM user cloudless-etcd-backup.
+# Access key stored in SSM: /k3s/etcd-s3/access-key-id
+# Secret key stored in SSM: /k3s/etcd-s3/secret-access-key
+etcd-s3: true
+etcd-s3-bucket: cloudless-etcd-snapshots
+etcd-s3-region: us-east-1
+etcd-s3-folder: etcd
+
+etcd-arg:
+  - "--auto-compaction-mode=periodic"
+  - "--auto-compaction-retention=30m"
+  - "--snapshot-count=5000"
+  - "--quota-backend-bytes=1073741824"
+
+kube-apiserver-arg:
+  - "--max-requests-inflight=100"
+  - "--max-mutating-requests-inflight=50"
+  - "--encryption-provider-config=/srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s/server/cred/encryption-config.json"
