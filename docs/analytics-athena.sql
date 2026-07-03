@@ -1,6 +1,11 @@
 -- Cloudless analytics — Athena / Glue DDL.
 -- Run from the Athena `primary` workgroup (which has the result location
 -- and 10 GB scan cap enforced — see docs/datalake.md).
+--
+-- See also:
+--   - docs/datalake.md — operational guide for the data lake
+--   - infrastructure/athena/selfhosted.sql — self-hosted app tables
+--   - infrastructure/grafana/dashboards/lakehouse.json — pre-built dashboard
 
 CREATE DATABASE IF NOT EXISTS cloudless_analytics;
 
@@ -175,6 +180,12 @@ LOCATION 's3://cloudless-analytics-data/lake/linkedin-ads/';
 -- After creating the events table, run this once to load existing partitions
 -- (the analytics-etl.yml workflow runs this daily on cron):
 --   MSCK REPAIR TABLE cloudless_analytics.events;
+--
+-- To apply this DDL:
+--   1. Copy this file to your local clipboard
+--   2. Open Athena console (us-east-1, workgroup `primary`)
+--   3. Run the entire script once
+--   4. Verify: `SELECT COUNT(*) FROM cloudless_analytics.events LIMIT 1;`
 
 -- ===========================================================================
 -- Insight views — full-funnel analytics
@@ -340,20 +351,51 @@ ORDER BY sent_count DESC;
 -- views above (v_acquisition_funnel, v_attribution_by_source, v_espocrm_funnel,
 -- v_lead_to_customer) are new in this audit pass and need to be CREATEd once
 -- in Athena before the dashboard can query them.
+--
+-- To verify views exist:
+--   SHOW VIEWS FROM cloudless_analytics;
+--   DESCRIBE cloudless_analytics.v_acquisition_funnel;
 
 -- ===========================================================================
 -- Example operator queries
 -- ===========================================================================
--- SELECT *FROM cloudless_analytics.v_acquisition_funnel LIMIT 30;
--- SELECT* FROM cloudless_analytics.v_attribution_by_source LIMIT 20;
+-- SELECT * FROM cloudless_analytics.v_acquisition_funnel LIMIT 30;
+-- SELECT * FROM cloudless_analytics.v_attribution_by_source LIMIT 20;
 -- SELECT email, rfm_score, churn_risk FROM cloudless_analytics.v_lead_to_customer ORDER BY rfm_score DESC LIMIT 50;
 
+-- See also: infrastructure/grafana/dashboards/lakehouse.json for pre-built
+-- visualizations of these views in Grafana.
+
 -- ===========================================================================
--- Self-hosted app tables + views
+-- Grafana dashboard
 -- ===========================================================================
--- Canonical DDL in infrastructure/athena/selfhosted.sql (APPLIED):
---   appflowy_workspaces, appflowy_users, n8n_workflows, n8n_executions,
---   postiz_posts, postiz_integrations, v_selfhosted_health, v_n8n_workflow_health_30d
+-- Import the pre-built dashboard:
+--   1. Add Athena data source in Grafana (use `cloudless_analytics` database)
+--   2. Import from infrastructure/grafana/dashboards/lakehouse.json
+--   3. Panels cover:
+--      - Acquisition funnel (sessions → signups → purchasers → revenue)
+--      - UTM attribution (top sources by revenue)
+--      - EspoCRM funnel (lifecycle stages)
+--      - GSC keywords (top 50 by clicks)
+--      - LinkedIn Ads (90d rollup by campaign)
+--      - Sentry top issues (14d error count)
+--      - Self-hosted health (AppFlowy, n8n, Postiz)
+--      - n8n workflow success rate (30d)
+--
+-- Cost control: Each view is < 100 KB scanned; cached 60s per query.
+-- Workgroup limit: 10 GB per query, 5 GB daily aggregate.
+--
+-- ETLs:
+--   scripts/etl/appflowy-to-lake.mjs   → 2 parquet files (workspaces, users)
+--   scripts/etl/n8n-to-lake.mjs        → 2 parquet files (workflows, executions)
+--   scripts/etl/postiz-to-lake.mjs     → 2 parquet files (posts, integrations)
+--
+-- Apply once with the Athena admin role; subsequent ETL runs overwrite
+-- the underlying Parquet so SELECT works without re-running this DDL.
+--
+-- View descriptions (for /admin/analytics dashboard):
+--   v_selfhosted_health    — AppFlowy, n8n, Postiz health summary (total resources)
+--   v_n8n_workflow_health_30d — Per-workflow success rate over last 30 days
 --
 -- Daily ETL (.github/workflows/etl-selfhosted-to-lake.yml) feeds these from
 -- AppFlowy, n8n, and Postiz APIs.
