@@ -31,10 +31,28 @@ jobs:
           !contains(fromJson(steps.meta.outputs.dependency-names), 'next') &&
           !contains(fromJson(steps.meta.outputs.dependency-names), 'react') &&
           !contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom')
-        run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "PR URL: $PR_URL"
+          gh auth status || true
+          
+          # Try auto-merge with squash first
+          if gh pr merge --auto --squash "$PR_URL"; then
+            echo "✅ Auto-merge enabled/scheduled."
+            exit 0
+          fi
+          
+          echo "⚠️ Auto-merge failed, trying direct merge..."
+          if gh pr merge "$PR_URL" --squash; then
+            echo "✅ Direct squash merge succeeded."
+            exit 0
+          fi
+          
+          echo "❌ Merge failed for $PR_URL" >&2
+          exit 1
 
       - name: Require human review for framework packages
         if: |
