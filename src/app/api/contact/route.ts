@@ -12,6 +12,7 @@ import {
 } from "@/lib/espocrm";
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
+import { trackS3Event } from "@/lib/analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
@@ -205,6 +206,22 @@ export async function POST(request: Request) {
       page: "/contact",
       source: service ?? "website_contact_form",
     }).catch(() => {});
+
+    // S3 datalake event — server-side, no cookie consent required (legitimate interest)
+    trackS3Event({
+      event: "contact",
+      email,
+      service: service || undefined,
+      source: attribution?.utmSource ?? undefined,
+      campaign: attribution?.utmCampaign ?? undefined,
+      medium: attribution?.utmMedium ?? undefined,
+      ip: ip === "unknown" ? undefined : ip,
+      properties: {
+        company: company || undefined,
+        leadScore: lead.score,
+        leadBand: lead.band,
+      },
+    });
 
     // Meta CAPI — Lead event. Only read fbp/fbc marketing cookies when the
     // visitor has granted marketing consent (GDPR Art.6(1)(a)).
