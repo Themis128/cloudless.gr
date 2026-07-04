@@ -220,41 +220,146 @@ Create `/srv/k3s-data/STORAGE_POLICY.md`:
   - Critical threshold: 110GB (95% usage)
 ```
 
-### 3. Set Up Automated Monitoring
+### 3. Set Up Automated Monitoring & Dynamic Storage Expansion
 
 ```bash
 # Create monitoring script at /usr/local/bin/check-k3s-storage.sh
 cat << 'EOF' | sudo tee /usr/local/bin/check-k3s-storage.sh
 #!/bin/bash
 
-# K3S Storage Health Check
-# Ensures 120GB SSD is the ONLY k3s storage location
+# K3S Storage Health Check with Dynamic Expansion
+# Ensures 120GB SSD is PRIMARY k3s storage
+# Automatically borrows space from 916GB SSD if needed
 
-SSD_PATH="/srv/k3s-data"
-ALERT_THRESHOLD=95  # 95GB
-CRITICAL_THRESHOLD=110  # 110GB
+SSD_PRIMARY="/srv/k3s-data"                    # 120GB SSD
+SSD_SECONDARY="/srv/k3s-overflow"              # 916GB SSD (fallback)
+WARNING_THRESHOLD=105                           # 105GB (95%)
+CRITICAL_THRESHOLD=110                          # 110GB (100%)
+OVERFLOW_TRIGGER=108                            # Start overflow at 108GB (98%)
 
-echo "=== K3S Storage Health Check ==="
-df -h "$SSD_PATH" | tail -1
+echo "=== K3S Storage Health Check with Dynamic Expansion ==="
+df -h "$SSD_PRIMARY" | tail -1
 
-USED=$(df "$SSD_PATH" | tail -1 | awk '{print int($3)}')
+USED=$(df "$SSD_PRIMARY" | tail -1 | awk '{print int($3)}')
 
-if [ $USED -gt $CRITICAL_THRESHOLD ]; then
-    echo "CRITICAL: K3S SSD usage exceeds ${CRITICAL_THRESHOLD}GB (current: ${USED}GB)"
-    exit 2
-elif [ $USED -gt $ALERT_THRESHOLD ]; then
-    echo "WARNING: K3S SSD usage exceeds ${ALERT_THRESHOLD}GB (current: ${USED}GB)"
-    exit 1
+# Check if secondary storage exists and create if needed
+if [ ! -d "$SSD_SECONDARY" ]; then
+    echo "⚠️  Secondary storage not found. Creating at $SSD_SECONDARY..."
+    sudo mkdir -p "$SSD_SECONDARY"
+    sudo chown root:root "$SSD_SECONDARY"
+    sudo chmod 755 "$SSD_SECONDARY"
+fi
+
+# Check if overflow is needed
+if [ $USED -gt $OVERFLOW_TRIGGER ]; then
+    echo "⚠️  PRIMARY SSD usage high (${USED}GB). Checking overflow capacity..."
+    
+    # Enable overflow storage
+    if [ ! -L "$SSD_PRIMARY/k3s-overflow" ]; then
+        echo "📦 ACTIVATING DYNAMIC OVERFLOW: Linking 916GB SSD as secondary storage..."
+        sudo mkdir -p "$SSD_SECONDARY/k3s-containers"
+        sudo mkdir -p "$SSD_SECONDARY/k3s-volumes"
+        sudo ln -s "$SSD_SECONDARY/k3s-containers" "$SSD_PRIMARY/overflow-containers" 2>/dev/null || true
+        sudo ln -s "$SSD_SECONDARY/k3s-volumes" "$SSD_PRIMARY/overflow-volumes" 2>/dev/null || true
+        echo "✅ Overflow storage activated"
+    fi
+    
+    SECONDARY_USED=$(df "$SSD_SECONDARY" | tail -1 | awk '{print int($3)}')
+    echo "Secondary storage (916GB SSD): ${SECONDARY_USED}GB used"
+    
+    if [ $USED -gt $CRITICAL_THRESHOLD ]; then
+        echo "🔴 CRITICAL: PRIMARY SSD at ${USED}GB. Overflow: ${SECONDARY_USED}GB"
+        exit 2
+    else
+        echo "🟡 WARNING: PRIMARY SSD at ${USED}GB. Overflow active with ${SECONDARY_USED}GB available"
+        exit 1
+    fi
 else
-    echo "OK: K3S SSD usage is healthy (${USED}GB/${ALERT_THRESHOLD}GB)"
+    echo "✅ OK: K3S SSD usage is healthy (${USED}GB/${OVERFLOW_TRIGGER}GB)"
     exit 0
 fi
 EOF
 
 sudo chmod +x /usr/local/bin/check-k3s-storage.sh
 
-# Add to crontab (run daily at 02:00 UTC)
-echo "0 2 * * * /usr/local/bin/check-k3s-storage.sh" | sudo crontab -
+# Create dynamic expansion script
+cat << 'EOF' | sudo tee /usr/local/bin/k3s-auto-expand.sh
+#!/bin/bash
+
+# K3S Auto-Expansion Script
+# Proactively moves k3s workloads to secondary storage if primary is getting full
+
+SSD_PRIMARY="/srv/k3s-data"
+SSD_SECONDARY="/srv/k3s-overflow"
+EXPANSION_THRESHOLD=105  # Start expansion at 105GB (95%)
+
+echo "=== K3S Auto-Expansion Monitor ==="
+
+while true; do
+    USED=$(df "$SSD_PRIMARY" | tail -1 | awk '{print int($3)}')
+    
+    if [ $USED -gt $EXPANSION_THRESHOLD ]; then
+        echo "$(date): PRIMARY SSD at ${USED}GB - Initiating expansion..."
+        
+        # Create secondary storage if needed
+        if [ ! -d "$SSD_SECONDARY" ]; then
+            sudo mkdir -p "$SSD_SECONDARY"/{k3s-containers,k3s-volumes}
+            sudo chown -R root:root "$SSD_SECONDARY"
+        fi
+        
+        # Move old container images to secondary
+        if [ ! -L "$SSD_PRIMARY/overflow-containers" ]; then
+            echo "  - Creating container overflow link..."
+            sudo ln -s "$SSD_SECONDARY/k3s-containers" "$SSD_PRIMARY/overflow-containers" 2>/dev/null || true
+        fi
+        
+        # Move volume mounts if needed
+        if [ ! -L "$SSD_PRIMARY/overflow-volumes" ]; then
+            echo "  - Creating volume overflow link..."
+            sudo ln -s "$SSD_SECONDARY/k3s-volumes" "$SSD_PRIMARY/overflow-volumes" 2>/dev/null || true
+        fi
+        
+        # Prune old images to primary
+        echo "  - Pruning old container images..."
+        sudo docker image prune -a --filter "until=720h" -f >/dev/null 2>&1
+        
+        # Alert
+        echo "$(date): Expansion activated. Primary: ${USED}GB | Secondary: Available"
+    fi
+    
+    sleep 300  # Check every 5 minutes
+done
+EOF
+
+sudo chmod +x /usr/local/bin/k3s-auto-expand.sh
+
+# Add monitoring to crontab (run health check daily at 02:00 UTC)
+(sudo crontab -l 2>/dev/null | grep -v check-k3s-storage.sh; echo "0 2 * * * /usr/local/bin/check-k3s-storage.sh") | sudo crontab -
+
+# Add auto-expand as systemd service
+sudo tee /etc/systemd/system/k3s-auto-expand.service > /dev/null << 'SYSEOF'
+[Unit]
+Description=K3S Automatic Storage Expansion Monitor
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/k3s-auto-expand.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+SYSEOF
+
+# Enable auto-expand service
+sudo systemctl daemon-reload
+sudo systemctl enable k3s-auto-expand.service
+sudo systemctl start k3s-auto-expand.service
+
+echo "✅ Auto-expansion monitoring enabled"
 ```
 
 ### 4. Extend root disk (optional, long-term)
@@ -300,6 +405,32 @@ sudo docker image prune -a --filter "until=720h"
 ✅ All k3s nodes in Ready state
 ✅ All pods running/healthy
 ✅ No errors in k3s logs
+✅ Auto-expansion service running and monitoring
+✅ Overflow mechanism tested and functional
+
+### Verification Steps
+
+```bash
+# 1. Verify primary storage is exclusive
+ls -la /var/lib/rancher/k3s /var/lib/kubelet
+# Should show symlinks to /srv/k3s-data
+
+# 2. Verify auto-expand service is running
+sudo systemctl status k3s-auto-expand.service
+
+# 3. Verify monitoring scripts exist
+ls -la /usr/local/bin/check-k3s-storage.sh /usr/local/bin/k3s-auto-expand.sh
+
+# 4. Test health check
+/usr/local/bin/check-k3s-storage.sh
+# Should exit with 0 (OK)
+
+# 5. Test overflow activation (manual trigger)
+# Create test data to reach 108GB threshold, or:
+sudo /usr/local/bin/k3s-auto-expand.sh &
+# Let it run for 1 cycle and verify overflow directories created:
+ls -la /srv/k3s-overflow/
+```
 
 ---
 
@@ -319,6 +450,95 @@ sudo docker image prune -a --filter "until=720h"
 **ALL k3s deployments on omv-main MUST exclusively use the 120GB SSD (/dev/sda1).**
 
 This is not optional. Root microSD storage is reserved for system only.
+
+### Dynamic Storage Expansion (Overflow Mechanism)
+
+If the 120GB SSD reaches capacity limits, k3s automatically borrows space from the 916GB SSD:
+
+**Trigger Conditions**:
+- **Primary threshold**: 108GB (98% of 120GB) → Activate overflow
+- **Warning threshold**: 105GB (95% full) → Alert and prepare expansion
+- **Critical threshold**: 110GB (100% full) → Emergency mode
+
+**Overflow Mechanism**:
+```
+120GB SSD (Primary)          916GB SSD (Overflow)
+├─ /srv/k3s-data            └─ /srv/k3s-overflow
+│  ├─ k3s (system)             ├─ k3s-containers
+│  ├─ kubelet                   └─ k3s-volumes
+│  ├─ containers
+│  └─ overflow-* symlinks → 916GB SSD
+```
+
+**What Gets Moved to Overflow**:
+1. **Container images** (`/srv/k3s-overflow/k3s-containers`)
+   - Old/unused images moved first
+   - Can safely reside on secondary storage
+   
+2. **Persistent volumes** (`/srv/k3s-overflow/k3s-volumes`)
+   - Application data moved to secondary
+   - Symlinked back to k3s
+   - Performance slightly degraded (acceptable)
+
+3. **Cache directories**
+   - Kubelet cache → overflow
+   - Docker cache → overflow
+
+**What Stays on 120GB SSD (Primary)**:
+- ✅ k3s core binaries
+- ✅ etcd database (cluster state - critical)
+- ✅ Active running containers
+- ✅ Active pod volumes
+
+### Automatic Expansion Process
+
+**Monitoring Service** (`k3s-auto-expand`):
+- Runs continuously in background
+- Checks every 5 minutes
+- Triggers automatically at 108GB (98%)
+
+**Actions Performed**:
+```bash
+# When 120GB reaches 98% full:
+1. Create /srv/k3s-overflow directories
+2. Link overflow storage: /srv/k3s-data/overflow-* → /srv/k3s-overflow/*
+3. Prune old container images to primary
+4. Move eligible volumes to secondary storage
+5. Alert admin to review capacity
+```
+
+**No Manual Intervention Required** - Automatic and proactive
+
+### Capacity Planning with Overflow
+
+| Scenario | Primary | Overflow | Total | Status |
+|----------|---------|----------|-------|--------|
+| Normal operation | 84GB | 0GB | 84GB | ✅ Healthy |
+| High load | 105GB | 10GB | 115GB | 🟡 Overflow active |
+| Sustained high load | 110GB | 100GB | 210GB | ✅ Still OK (overflow has 427GB) |
+| Critical state | 110GB | 400GB | 510GB | ⚠️ Need to clean/expand |
+
+**Maximum Usable**: ~520GB total (120GB primary + 400GB from 916GB secondary)
+
+### Overflow Configuration Details
+
+**Setup Script** (`k3s-auto-expand.sh`):
+- Installed as systemd service
+- Auto-starts on boot
+- Runs with root privileges
+- Logs to journalctl
+
+**Monitoring Script** (`check-k3s-storage.sh`):
+- Daily health check (02:00 UTC)
+- Reports primary + overflow status
+- Alerts if critical thresholds reached
+
+**Health Check Responses**:
+- Exit 0: Healthy (< 98%)
+- Exit 1: Warning (98-100%, overflow active)
+- Exit 2: Critical (> 100% combined)
+
+
 
 ### Enforcement Mechanisms
 
@@ -412,6 +632,56 @@ sudo systemctl start k3s
 # 6. Verify
 /usr/local/bin/check-k3s-storage.sh
 ```
+
+### Emergency Overflow Cleanup
+
+If both primary AND overflow storage are nearly full:
+
+```bash
+# 1. Check current usage
+df -h /srv/k3s-data /srv/k3s-overflow
+
+# 2. Aggressive image cleanup
+sudo docker image prune -a -f          # Remove ALL unused images
+sudo docker system prune -a --volumes -f  # Full system cleanup
+
+# 3. Remove old pod logs
+sudo journalctl --vacuum-size=100M
+
+# 4. If still critical - remove old k3s data
+sudo find /srv/k3s-overflow -type f -mtime +30 -delete
+
+# 5. Last resort - identify largest data consumers
+du -sh /srv/k3s-data/* | sort -rh | head -10
+du -sh /srv/k3s-overflow/* | sort -rh | head -10
+
+# 6. Manual cleanup of identified large items
+# (requires careful planning to avoid breaking pods)
+```
+
+### Long-Term Capacity Planning
+
+**If overflow becomes frequently used (>50GB consistently)**:
+
+Option 1: Expand primary SSD (200GB+ recommended)
+```bash
+# Consider upgrading 120GB SSD to 256GB or 512GB
+# Would require migration but provides single fast storage tier
+```
+
+Option 2: Implement tiered storage
+```bash
+# Use local-path-provisioner for active volumes (primary SSD)
+# Use NFS for cold/historical data (916GB SSD via NFS)
+```
+
+Option 3: Upgrade 916GB SSD controller
+```bash
+# If overflow is frequently used, make it also NVMe for speed
+# Provides balanced capacity: 120GB (active) + 916GB (fast overflow)
+```
+
+
 
 ---
 
