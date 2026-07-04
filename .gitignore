@@ -217,3 +217,10 @@ DEEP_AGENTS_RESEARCH.md
 DEEP_AGENTS_TROUBLESHOOTING.md
 setup-deep-agents-env.sh
 test-deep-agents.sh
+
+# Test/debug scripts with credentials (do not commit)
+create-dns-*.sh
+init-cloudless-services.sh
+test-cloudflare-token.py
+test-services.sh
+local-apps-credentials.md
