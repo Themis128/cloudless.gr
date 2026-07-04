@@ -67,12 +67,12 @@ Started: 2026-07-03 21:45:00
 
 ## Testing
 
-```bash
-# Run locally
-python main.py
+The proxy is running on omv node. Test from within the pod:
 
-# Test with curl
-curl -XPOST --json '{"alerts":[{"labels":{"app":"test","severity":"critical","category":"test"},"annotations":{"summary":"Test alert","description":"Test description"}}]}' \
-  -H "Content-Type: application/json" \
-  http://localhost:5001/alerts
+```bash
+kubectl exec -n grafana-slack-proxy pod/grafana-slack-proxy -- python -c "import requests; print(requests.post('http://localhost:5001/alerts', json={'alerts':[{'labels':{'app':'test','severity':'critical','category':'test'},'annotations':{'summary':'Test alert','description':'Test description'},'startsAt':'2026-07-04T01:55:00Z'}]}, timeout=10).text)"
 ```
+
+**Expected response:** `Processed 1 alerts`
+
+If Slack webhook is configured correctly, you should see a message in `#ads-test-scope`.
