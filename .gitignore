@@ -224,3 +224,4 @@ init-cloudless-services.sh
 test-cloudflare-token.py
 test-services.sh
 local-apps-credentials.md
+.wrangler/
