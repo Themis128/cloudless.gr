@@ -225,3 +225,4 @@ test-cloudflare-token.py
 test-services.sh
 local-apps-credentials.md
 .wrangler/
+patches/coding-agent/

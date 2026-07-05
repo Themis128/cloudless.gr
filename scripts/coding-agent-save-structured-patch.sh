@@ -27,14 +27,16 @@ curl -fsS \
 python3 - "$TMP_RESULT" "$PATCH_DIR" <<'PY'
 from pathlib import Path
 import json
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 
 result_path = Path(sys.argv[1])
 patch_dir = Path(sys.argv[2])
+repo = Path.cwd()
 
 payload = json.loads(result_path.read_text())
-
 last_response = payload.get("lastResponse", "")
 
 if not last_response.strip():
@@ -58,7 +60,6 @@ if safe_to_apply is not True:
 if not isinstance(unified_diff, str) or not unified_diff.strip():
     raise SystemExit("Refusing to save patch because unifiedDiff is empty.")
 
-repo = Path.cwd()
 bad_paths = []
 
 for line in unified_diff.splitlines():
@@ -90,6 +91,28 @@ if bad_paths:
     for path in bad_paths:
         print(f"- {path}")
     raise SystemExit(3)
+
+with tempfile.NamedTemporaryFile("w", suffix=".patch", delete=False) as tmp:
+    tmp.write(unified_diff.rstrip() + "\n")
+    tmp_patch = Path(tmp.name)
+
+try:
+    check = subprocess.run(
+        ["git", "apply", "--check", str(tmp_patch)],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    if check.returncode != 0:
+        print("Refusing to save patch because git apply --check failed.")
+        print()
+        print("git apply --check stderr:")
+        print(check.stderr.strip())
+        raise SystemExit(4)
+finally:
+    tmp_patch.unlink(missing_ok=True)
 
 timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
 patch_file = patch_dir / f"{timestamp}.patch"
