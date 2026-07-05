@@ -66,12 +66,22 @@ Produce a structured patch proposal.
 
 Hard rules:
 - Only propose changes to files shown above.
-- If no safe patch is needed, set safeToApply=false.
-- Do not invent packages, imports, files, environment variables, or framework APIs.
+- If the requested capability is already implemented, set safeToApply=false.
+- Prefer no patch over a speculative patch.
+- Never set safeToApply=true unless unifiedDiff is non-empty, minimal, and git-apply compatible.
+- unifiedDiff must be a raw unified diff that can pass git apply --check.
+- Do not HTML-escape characters in unifiedDiff.
+- Do not use &lt;, &gt;, or &amp; in unifiedDiff.
+- Do not invent packages, imports, files, environment variables, commands, functions, classes, or framework APIs.
+- Do not propose changes that depend on symbols not shown in repository context.
 - For this project, Cloudflare Agents are imported from "agents".
 - Do not use @cloudflare/workers-sdk.
+- Do not add route handling that is already covered by routeAgentRequest() or rewriteAgentPrefix().
+- commandsToRun must use existing project scripts only.
 - Prefer pnpm commands, not npm commands.
+- If unsure whether a patch applies cleanly, set safeToApply=false.
 - The unifiedDiff must only reference existing files from the repository context.
+- Every diff hunk must match the exact quoted source context.
 """
 
 print(json.dumps({"prompt": prompt, "model": "deep"}))
