@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   let password: string | undefined;
   let fullName: string | undefined;
   try {
-    const body = (await req.json()) as { email?: string; password?: string; fullName?: string };
+    const body = (((await req.json()) as any)) as { email?: string; password?: string; fullName?: string };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     password = body.password;
     fullName = body.fullName;

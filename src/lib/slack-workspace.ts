@@ -120,7 +120,7 @@ export async function getBotInfo(token?: string): Promise<BotInfo> {
       "Content-Type": "application/json",
     },
   });
-  const data = (await res.json()) as AuthTestResponse;
+  const data = (((await res.json()) as any)) as AuthTestResponse;
   if (!data.ok) throw new Error(`[SlackWorkspace] auth.test: ${data.error}`);
 
   return {
@@ -143,7 +143,7 @@ export async function getWorkspaceInfo(token?: string): Promise<WorkspaceInfo> {
   if (!resolvedToken) throw new Error("[SlackWorkspace] SLACK_BOT_TOKEN is not configured");
 
   const res = await slackGet("team.info", {}, resolvedToken);
-  const data = (await res.json()) as TeamInfoResponse;
+  const data = (((await res.json()) as any)) as TeamInfoResponse;
   if (!data.ok || !data.team) throw new Error(`[SlackWorkspace] team.info: ${data.error}`);
 
   const icon = data.team.icon;

@@ -400,7 +400,7 @@ async function handleMemberJoinedChannel(event: SlackEvent): Promise<void> {
         signal: AbortSignal.timeout(5_000),
       }
     );
-    const infoData = (await infoRes.json()) as {
+    const infoData = (((await infoRes.json()) as any)) as {
       ok: boolean;
       channel?: { name: string };
     };
@@ -425,7 +425,7 @@ async function handleMemberJoinedChannel(event: SlackEvent): Promise<void> {
       body: JSON.stringify({ users: userId }),
       signal: AbortSignal.timeout(5_000),
     });
-    const openData = (await openRes.json()) as {
+    const openData = (((await openRes.json()) as any)) as {
       ok: boolean;
       channel?: { id: string };
     };

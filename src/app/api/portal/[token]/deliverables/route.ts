@@ -30,7 +30,7 @@ export async function POST(
 
   let body: { deliverableId?: string; action?: string; comment?: string };
   try {
-    body = await request.json();
+    body = ((await request.json()) as any);
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }

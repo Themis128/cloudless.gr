@@ -34,7 +34,7 @@ export default function NewsletterForm() {
         setMessage(translate(locale, "newsletter.success", "You're in! Check your email."));
         setEmail("");
       } else {
-        const data = await res.json().catch(() => ({}));
+        const data = ((await res.json()) as any).catch(() => ({}));
         setStatus(STATUS_ERROR);
         setMessage(
           data.error || translate(locale, "newsletter.error", "Something went wrong. Try again.")

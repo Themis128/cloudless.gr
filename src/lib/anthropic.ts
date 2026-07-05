@@ -139,6 +139,6 @@ export async function callClaude(
     throw new Error(`Anthropic API error ${res.status}: ${err}`);
   }
 
-  const data = (await res.json()) as { content?: Array<{ text?: string }> };
+  const data = (((await res.json()) as any)) as { content?: Array<{ text?: string }> };
   return data.content?.[0]?.text ?? "";
 }

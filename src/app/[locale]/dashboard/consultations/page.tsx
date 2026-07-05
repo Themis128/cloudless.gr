@@ -44,7 +44,7 @@ export default function ConsultationsPage() {
           setLoading(false);
           return;
         }
-        const data = await res.json();
+        const data = (((await res.json()) as any)) as any;
         setConsultations(data.consultations ?? []);
         setConfigured(data.configured !== false);
       } catch {

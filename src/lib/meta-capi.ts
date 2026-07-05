@@ -192,7 +192,7 @@ export async function sendCapiEvent(
       return { ok: false, status: res.status, error: safeBody };
     }
 
-    const json = (await res.json()) as { events_received?: number };
+    const json = (((await res.json()) as any)) as { events_received?: number };
     return { ok: true, eventsReceived: json.events_received ?? 1 };
   } catch (err) {
     const isAbort =

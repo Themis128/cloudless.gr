@@ -133,7 +133,7 @@ export async function getSeoSnapshot(
       console.error("[GSC] Overview error:", await totalsRes.text());
       return null;
     }
-    const totals = await totalsRes.json();
+    const totals = ((await totalsRes.json()) as any);
     const row = totals.rows?.[0] ?? {};
 
     // Count unique keywords
@@ -142,7 +142,7 @@ export async function getSeoSnapshot(
       dimensions: ["query"],
       rowLimit: 25000, // GSC max
     });
-    const kwData = kwRes.ok ? await kwRes.json() : {};
+    const kwData = kwRes.ok ? ((await kwRes.json()) as any) : {};
     const organicKeywords: number = kwData.rows?.length ?? 0;
 
     return {
@@ -176,7 +176,7 @@ export async function getTopKeywords(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       keyword: (r.keys as string[])?.[0] ?? "",
@@ -228,7 +228,7 @@ export async function getPerformanceHistory(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       date: (r.keys as string[])?.[0] ?? "",
@@ -261,7 +261,7 @@ export async function getTopPages(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       page: (r.keys as string[])?.[0] ?? "",
@@ -294,7 +294,7 @@ export async function getWebAnalytics(
       rowLimit: 1,
     });
 
-    const totalsData = totalsRes.ok ? await totalsRes.json() : {};
+    const totalsData = totalsRes.ok ? ((await totalsRes.json()) as any) : {};
     const total = totalsData.rows?.[0] ?? {};
 
     // Top pages
@@ -305,7 +305,7 @@ export async function getWebAnalytics(
       orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
-    const pagesData = pagesRes.ok ? await pagesRes.json() : {};
+    const pagesData = pagesRes.ok ? ((await pagesRes.json()) as any) : {};
     const topPages = (pagesData.rows ?? []).map((r: Record<string, unknown>) => ({
       page: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
@@ -357,7 +357,7 @@ export async function getCtrOpportunities(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     const opportunities = (data.rows ?? [])
       .filter((r: Record<string, unknown>) => {
@@ -417,7 +417,7 @@ export async function getDeviceBreakdown(siteUrl = DEFAULT_SITE): Promise<Device
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       device: (r.keys as string[])?.[0] ?? "",
@@ -474,7 +474,7 @@ export async function getProductPageMetrics(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       page: (r.keys as string[])?.[0] ?? "",
@@ -520,7 +520,7 @@ export async function getQueryPageMapping(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       query: (r.keys as string[])?.[0] ?? "",
@@ -583,7 +583,7 @@ export async function getSearchIntentBreakdown(
     });
 
     if (!res.ok) return empty;
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     const brandRe = /cloudless/i;
     const productRe =
@@ -665,7 +665,7 @@ export async function getTrafficByCountry(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       country: (r.keys as string[])?.[0] ?? "",

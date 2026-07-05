@@ -49,7 +49,7 @@ export async function PATCH(request: NextRequest) {
 
   let body: { pageId?: string; status?: string };
   try {
-    body = await request.json();
+    body = ((await request.json()) as any);
   } catch (err) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;

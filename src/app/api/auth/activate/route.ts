@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
   let otp: string | undefined;
   let token: string | undefined;
   try {
-    const body = (await req.json()) as { email?: string; otp?: string; token?: string };
+    const body = (((await req.json()) as any)) as { email?: string; otp?: string; token?: string };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     otp = body.otp;
     token = body.token;

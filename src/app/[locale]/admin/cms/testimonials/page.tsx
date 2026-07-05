@@ -34,7 +34,7 @@ export default function AdminTestimonialsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/testimonials");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { testimonials: Testimonial[] };
+      const data = (((((await res.json()) as any)) as any)) as { testimonials: Testimonial[] };
       setItems(data.testimonials ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -86,7 +86,7 @@ export default function AdminTestimonialsPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (await res.json()) as { error?: string };
+        const d = (((((await res.json()) as any)) as any)) as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);

@@ -29,7 +29,7 @@ async function fetchDashboardStats(
   let upcomingConsultations = 0;
 
   if (purchasesRes.status === "fulfilled" && purchasesRes.value.ok) {
-    const data = await purchasesRes.value.json();
+    const data = (((await purchasesRes.value.json()) as any)) as any;
     const purchases = data.purchases ?? [];
     const subs = data.subscriptions ?? [];
     totalOrders = purchases.length;
@@ -40,7 +40,7 @@ async function fetchDashboardStats(
   }
 
   if (consultationsRes.status === "fulfilled" && consultationsRes.value.ok) {
-    const data = await consultationsRes.value.json();
+    const data = (((await consultationsRes.value.json()) as any)) as any;
     upcomingConsultations = (data.consultations ?? []).filter(
       (c: { status: string }) => c.status === "upcoming"
     ).length;

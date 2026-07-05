@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
 
-  const body = await request.json().catch(() => ({}));
+  const body = ((await request.json()) as any).catch(() => ({}));
   const action = body.action as string;
   const _rawDtk = typeof body.daysToKeep === "number" ? body.daysToKeep : 30;
   const daysToKeep = Math.max(1, Math.min(isNaN(_rawDtk) ? 30 : _rawDtk, 3650));

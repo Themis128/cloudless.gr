@@ -51,7 +51,7 @@ export default function AppFlowySubmissionsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/submissions");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as {
+      const data = (((((await res.json()) as any)) as any)) as {
         submissions: Submission[];
         count: number;
       };

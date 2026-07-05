@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    body = (((await request.json()) as any)) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -137,7 +137,7 @@ export async function PATCH(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    body = (((await request.json()) as any)) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

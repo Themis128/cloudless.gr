@@ -181,7 +181,7 @@ export class SlackClient {
       signal: AbortSignal.timeout(8_000),
     });
 
-    const data = (await res.json()) as SlackApiResponse;
+    const data = (((await res.json()) as any)) as SlackApiResponse;
 
     if (!data.ok) {
       console.error(`[Slack] chat.postMessage error: ${data.error}`);

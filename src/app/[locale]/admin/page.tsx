@@ -54,7 +54,7 @@ const EMPTY_STATS: DashStats = {
 async function safeJson<T>(result: PromiseSettledResult<Response>): Promise<T | null> {
   if (result.status !== "fulfilled" || !result.value.ok) return null;
   try {
-    return (await result.value.json()) as T;
+    return (((((await result.value.json()) as any)) as any)) as T;
   } catch {
     return null;
   }

@@ -54,7 +54,7 @@ export async function listLinkedInCampaigns(): Promise<LinkedInCampaign[]> {
     if (!adAccountId) return [];
     const res = await liiFetch(`/adAccounts/${adAccountId}/adCampaigns?q=search&count=20`);
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
     return (data.elements ?? []).map(
       (el: {
         id: number;
@@ -107,7 +107,7 @@ export async function getLinkedInInsights(
       `/adAnalytics?q=analytics&pivot=ACCOUNT&dateRange.start.year=${dateStart.split("-")[0]}&dateRange.start.month=${Number(dateStart.split("-")[1])}&dateRange.start.day=${Number(dateStart.split("-")[2])}&dateRange.end.year=${dateEnd.split("-")[0]}&dateRange.end.month=${Number(dateEnd.split("-")[1])}&dateRange.end.day=${Number(dateEnd.split("-")[2])}&timeGranularity=ALL&accounts%5B0%5D=urn%3Ali%3AsponsoredAccount%3A${adAccountId}&fields=impressions,clicks,costInLocalCurrency,externalWebsiteConversions`
     );
     if (!res.ok) return empty;
-    const data = await res.json();
+    const data = ((await res.json()) as any);
     const el = data.elements?.[0] ?? {};
     return {
       impressions: el.impressions ?? 0,
@@ -199,7 +199,7 @@ export async function getLinkedInCampaignStatus(campaignId: string): Promise<{
       const text = await res.text().catch(() => "");
       return { ok: false, error: `${res.status}: ${text.slice(0, 200)}` };
     }
-    const data = await res.json();
+    const data = ((await res.json()) as any);
     return {
       ok: true,
       name: data.name,

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
 
   let email: string | undefined;
   try {
-    const body = (await req.json()) as { email?: string };
+    const body = (((await req.json()) as any)) as { email?: string };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
   } catch {
     return NextResponse.json({ ok: true });

@@ -73,7 +73,7 @@ export default function CostAdminPage() {
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
-      const payload = (await res.json()) as CostSummary;
+      const payload = (((((await res.json()) as any)) as any)) as CostSummary;
       setData(payload);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");

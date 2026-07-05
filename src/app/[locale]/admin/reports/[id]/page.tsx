@@ -21,7 +21,7 @@ export default function ReportViewPage() {
         setError("Report not found.");
         return;
       }
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       setReport(data.report);
     } catch {
       setError("Failed to load report.");

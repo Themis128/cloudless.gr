@@ -217,7 +217,7 @@ export default function AppFlowyStatusPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/status");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: StatusResponse = await res.json();
+      const json: StatusResponse = ((((await res.json()) as any)) as any);
       setData(json);
       // Auto-expand connected databases
       const connected = new Set(json.databases.filter((d) => d.connected).map((d) => d.name));

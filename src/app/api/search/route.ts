@@ -23,7 +23,7 @@ interface SearchRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SearchRequest = await request.json();
+    const body: SearchRequest = ((await request.json()) as any);
 
     if (!body.query || typeof body.query !== "string") {
       return Response.json(

@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = await request.json();
+  const body = ((await request.json()) as any);
   const { action, customerId, subscriptionId } = body as {
     action: "portal" | "cancel";
     customerId?: string;

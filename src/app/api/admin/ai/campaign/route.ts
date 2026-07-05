@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   let budget: string;
   let targetAudience: string;
   try {
-    const body = await request.json();
+    const body = ((await request.json()) as any);
     brief = String(body.brief ?? "").slice(0, 2000);
     budget = String(body.budget ?? "unspecified").slice(0, 200);
     targetAudience = String(body.targetAudience ?? "unspecified").slice(0, 500);

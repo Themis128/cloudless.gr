@@ -51,7 +51,7 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
   useEffect(() => {
     fetchWithAuth("/api/admin/workspaces")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
+      .then((data: any) => {
         if (data?.workspaces?.length) {
           setWorkspaces(data.workspaces as Workspace[]);
         }

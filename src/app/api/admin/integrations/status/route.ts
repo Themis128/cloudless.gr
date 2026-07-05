@@ -43,7 +43,7 @@ async function pingSlack(token: string): Promise<PingResult> {
       },
       signal: AbortSignal.timeout(5000),
     });
-    const data = await res.json();
+    const data = ((await res.json()) as any);
     if (!data.ok) return { status: "degraded", message: data.error ?? "auth.test failed." };
     return { status: "configured", message: `Workspace: ${data.team}` };
   } catch {

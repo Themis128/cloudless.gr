@@ -78,7 +78,7 @@ async function espoListAll<T = unknown>(
     });
     const res = await espoFetch(`/${entity}?${params.toString()}`);
     if (!res.ok) break;
-    const data = (await res.json()) as { list: T[]; total: number };
+    const data = (((await res.json()) as any)) as { list: T[]; total: number };
     all.push(...data.list);
     if (data.list.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
@@ -135,7 +135,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
         }).toString()
     );
     if (search.ok) {
-      const data = (await search.json()) as { list: { id: string }[]; total: number };
+      const data = (((await search.json()) as any)) as { list: { id: string }[]; total: number };
       const existing = data.list[0];
       if (existing) {
         await espoFetch(`/Contact/${existing.id}`, {
@@ -153,7 +153,7 @@ export async function upsertContact(contact: EspoContact): Promise<string | null
       console.error("[EspoCRM] upsertContact create failed:", create.status);
       return null;
     }
-    const created = (await create.json()) as { id: string };
+    const created = (((await create.json()) as any)) as { id: string };
     return created.id;
   } catch (err) {
     console.error("[EspoCRM] upsertContact error:", err);
@@ -194,7 +194,7 @@ export async function setNewsletterStatus(
         }).toString()
     );
     if (search.ok) {
-      const data = (await search.json()) as { list: { id: string }[] };
+      const data = (((await search.json()) as any)) as { list: { id: string }[] };
       const existing = data.list[0];
       if (existing) {
         const upd = await espoFetch(`/Contact/${existing.id}`, {
@@ -229,7 +229,7 @@ export async function listContacts(limit = 10): Promise<unknown[]> {
   try {
     const res = await espoFetch(`/Contact?maxSize=${clampLimit(limit, 10)}`);
     if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+    return (((((await res.json()) as any)) as { list: unknown[] }).list ?? []) as unknown[];
   } catch {
     return [];
   }
@@ -239,7 +239,7 @@ export async function listTickets(limit = 20): Promise<unknown[]> {
   try {
     const res = await espoFetch(`/Case?maxSize=${clampLimit(limit)}`);
     if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+    return (((((await res.json()) as any)) as { list: unknown[] }).list ?? []) as unknown[];
   } catch {
     return [];
   }
@@ -279,7 +279,7 @@ export async function createTicket(
     const err = await res.text().catch(() => "");
     throw new Error(`EspoCRM Case create failed ${res.status}: ${err.slice(0, 200)}`);
   }
-  const created = (await res.json()) as { id: string };
+  const created = (((await res.json()) as any)) as { id: string };
   return { id: created.id };
 }
 
@@ -310,7 +310,7 @@ export async function listCompanies(limit = 20): Promise<unknown[]> {
   try {
     const res = await espoFetch(`/Account?maxSize=${clampLimit(limit)}`);
     if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+    return (((((await res.json()) as any)) as { list: unknown[] }).list ?? []) as unknown[];
   } catch {
     return [];
   }
@@ -320,7 +320,7 @@ export async function listDeals(limit = 20): Promise<unknown[]> {
   try {
     const res = await espoFetch(`/Opportunity?maxSize=${clampLimit(limit)}`);
     if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+    return (((((await res.json()) as any)) as { list: unknown[] }).list ?? []) as unknown[];
   } catch {
     return [];
   }
@@ -338,7 +338,7 @@ export async function listOwners(): Promise<unknown[]> {
         }).toString()
     );
     if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+    return (((((await res.json()) as any)) as { list: unknown[] }).list ?? []) as unknown[];
   } catch {
     return [];
   }
@@ -373,7 +373,7 @@ export async function searchContacts(
   if (!res.ok) {
     throw new Error(`EspoCRM search failed ${res.status}`);
   }
-  const data = (await res.json()) as {
+  const data = (((await res.json()) as any)) as {
     list: Array<Record<string, unknown> & { id: string }>;
     total: number;
   };
@@ -463,7 +463,7 @@ export async function createLead(data: LeadData): Promise<string | null> {
       console.error("[EspoCRM] createLead failed:", res.status);
       return null;
     }
-    const created = (await res.json()) as { id: string };
+    const created = (((await res.json()) as any)) as { id: string };
     return created.id;
   } catch (err) {
     console.error("[EspoCRM] createLead error:", err);
@@ -491,7 +491,7 @@ export async function countLeadsForCampaign(campaignSlug: string): Promise<numbe
         }).toString()
     );
     if (!res.ok) return 0;
-    const data = (await res.json()) as { total: number };
+    const data = (((await res.json()) as any)) as { total: number };
     return data.total ?? 0;
   } catch {
     return 0;
@@ -538,7 +538,7 @@ export async function createDeal(data: DealData): Promise<string | null> {
       console.error("[EspoCRM] createDeal failed:", res.status);
       return null;
     }
-    const created = (await res.json()) as { id: string };
+    const created = (((await res.json()) as any)) as { id: string };
     return created.id;
   } catch (err) {
     console.error("[EspoCRM] createDeal error:", err);
@@ -567,7 +567,7 @@ export async function updateDeal(
       body: JSON.stringify(mapped),
     });
     if (!res.ok) return null;
-    const j = (await res.json()) as { id: string };
+    const j = (((await res.json()) as any)) as { id: string };
     return { id: j.id };
   } catch {
     return null;
@@ -610,7 +610,7 @@ export async function createNote(dealId: string, body: string): Promise<{ id: st
       }),
     });
     if (!res.ok) return null;
-    const j = (await res.json()) as { id: string };
+    const j = (((await res.json()) as any)) as { id: string };
     return { id: j.id };
   } catch {
     return null;
@@ -633,7 +633,7 @@ export async function createContactNote(
       }),
     });
     if (!res.ok) return null;
-    const j = (await res.json()) as { id: string };
+    const j = (((await res.json()) as any)) as { id: string };
     return { id: j.id };
   } catch {
     return null;
@@ -648,7 +648,7 @@ export async function listNotes(dealId: string): Promise<unknown[]> {
         new URLSearchParams({ maxSize: "100", select: "post,createdAt,type" }).toString()
     );
     if (!res.ok) return [];
-    return (((await res.json()) as { list: unknown[] }).list ?? []) as unknown[];
+    return (((((await res.json()) as any)) as { list: unknown[] }).list ?? []) as unknown[];
   } catch {
     return [];
   }

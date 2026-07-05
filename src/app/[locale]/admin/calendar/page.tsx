@@ -45,7 +45,7 @@ export default function CalendarPage() {
     try {
       const res = await fetchWithAuth(`/api/admin/calendar?from=${firstDay}&to=${lastDay}`);
       if (!res.ok) return;
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       setItems(data.items ?? []);
     } catch {
       /* silent */
@@ -99,7 +99,7 @@ export default function CalendarPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const data = await res.json().catch(() => null);
+      const data = ((((await res.json()) as any)) as any).catch(() => null);
       if (!res.ok) {
         window.alert(data?.error ?? `Publish failed (HTTP ${res.status}).`);
         return;

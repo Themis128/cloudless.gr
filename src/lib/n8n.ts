@@ -65,7 +65,7 @@ async function callThrowing<T>(
 ): Promise<T> {
   const r = await n8nFetch(path, init);
   if (!r.ok) throw new N8nApiError(r.status, await r.text().catch(() => ""));
-  return (await r.json()) as T;
+  return (((await r.json()) as any)) as T;
 }
 
 export async function isN8nConfigured(): Promise<boolean> {
@@ -164,7 +164,7 @@ export async function triggerWorkflowByWebhookPath(
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15_000),
     });
-    if (r.ok) return { webhook: await r.json().catch(() => ({})) };
+    if (r.ok) return { webhook: ((await r.json()) as any).catch(() => ({})) };
     // 404 here means the workflow doesn't have a Webhook node at this path;
     // fall through to Path 2 instead of treating as failure.
     if (r.status !== 404) {

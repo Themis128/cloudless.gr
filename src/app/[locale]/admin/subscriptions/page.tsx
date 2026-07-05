@@ -46,7 +46,7 @@ export default function SubscriptionsPage() {
     try {
       const res = await fetchWithAuth(`/api/admin/subscriptions?status=${status}&limit=50`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       setSubscriptions(data.subscriptions ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load subscriptions");
@@ -68,7 +68,7 @@ export default function SubscriptionsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "portal", customerId }),
       });
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       if (data.url) {
         window.open(data.url, "_blank", "noopener,noreferrer");
       } else {
@@ -90,7 +90,7 @@ export default function SubscriptionsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "cancel", subscriptionId }),
       });
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       if (data.ok) {
         setActionMessage("Subscription scheduled for cancellation at period end.");
         load(statusFilter);

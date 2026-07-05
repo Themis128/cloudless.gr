@@ -49,7 +49,7 @@ export default function AuditsPage() {
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
-      const json = (await res.json()) as Dashboard;
+      const json = (((((await res.json()) as any)) as any)) as Dashboard;
       setData(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

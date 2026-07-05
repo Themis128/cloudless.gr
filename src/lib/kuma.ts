@@ -146,8 +146,8 @@ export async function getKumaSummary(timeoutMs = 5000): Promise<KumaSummary | nu
     ]);
 
     if (!pageRes.ok) return null;
-    const page = (await pageRes.json()) as KumaStatusPageResponse;
-    const hb = hbRes.ok ? ((await hbRes.json()) as KumaHeartbeatResponse) : { heartbeatList: {} };
+    const page = (((await pageRes.json()) as any)) as KumaStatusPageResponse;
+    const hb = hbRes.ok ? ((((await hbRes.json()) as any)) as KumaHeartbeatResponse) : { heartbeatList: {} };
 
     const monitors: KumaMonitor[] = [];
     for (const group of page.publicGroupList ?? []) {

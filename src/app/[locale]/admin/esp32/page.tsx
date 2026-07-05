@@ -149,7 +149,7 @@ export default function AdminEsp32Page() {
       ]);
 
       if (!esp32Res.ok) {
-        const d = await esp32Res.json().catch(() => ({}));
+        const d = ((((await esp32Res.json()) as any)) as any).catch(() => ({}));
         if (d.offline) {
           setOffline(true);
           setLoading(false);
@@ -158,12 +158,12 @@ export default function AdminEsp32Page() {
         throw new Error(`HTTP ${esp32Res.status}`);
       }
 
-      const esp32Data: Esp32Status = await esp32Res.json();
+      const esp32Data: Esp32Status = ((((await esp32Res.json()) as any)) as any);
       setEsp32(esp32Data);
       setOffline(false);
 
       if (alertsRes.ok) {
-        const allAlerts: Alert[] = await alertsRes.json();
+        const allAlerts: Alert[] = ((((await alertsRes.json()) as any)) as any);
         // Filter to only ESP32 alerts
         const esp32Alerts = Array.isArray(allAlerts)
           ? allAlerts.filter((a) => a.host === "esp32" || a.code.startsWith("ESP32_"))

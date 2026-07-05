@@ -58,7 +58,7 @@ export async function listMetaCampaigns(): Promise<MetaCampaign[]> {
       console.error("[MetaAds] campaigns request failed:", res.status);
       return [];
     }
-    const data = (await res.json()) as { data?: MetaCampaign[] };
+    const data = (((await res.json()) as any)) as { data?: MetaCampaign[] };
     return data.data ?? [];
   } catch {
     return [];
@@ -100,7 +100,7 @@ export async function getMetaInsights(dateStart: string, dateEnd: string): Promi
       console.error("[MetaAds] insights request failed:", res.status);
       return empty;
     }
-    const data = (await res.json()) as { data?: MetaInsightsRow[] };
+    const data = (((await res.json()) as any)) as { data?: MetaInsightsRow[] };
     const row = data.data?.[0];
     if (!row) return empty;
 
