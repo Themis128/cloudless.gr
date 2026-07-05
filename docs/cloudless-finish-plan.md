@@ -21,17 +21,20 @@ Keep these as experiments for now. Do not replace the current Deep Agents workfl
   - `pi-standby` on Pi build.
 - R13 — Descoped to 24h RPO and covered by the existing R10 daily EspoCRM MariaDB backup.
 - R18 — Pi-side SSM scope assertion.
+- R22 — Stripe webhook idempotency audit — ConditionalWrite dedup verified safe at SMB volume.
+- **R21a (code)** — `infrastructure/meilisearch/k8s.yaml` + tunnel route. ⏳ Pending operator apply.
+- **R21b (code)** — `POST /api/search`, `POST /api/admin/search/reindex`, `src/lib/meilisearch.ts`, `src/lib/search-index.ts`. ⏳ Pending R21a pod live + operator DNS.
 
 ### Immediate next
 
-- R21a — Meilisearch self-host on `omv-ha`. ✅ Kafka manifests created (see `infrastructure/meilisearch/`). Pending operator actions: DNS + apply + tunnel route.
+- **R21c** — Product recommendation engine (collaborative filter over DDB orders + Bedrock embedding similarity).
 
 ### Phase 3 AI baseline
 
-- R21a — Meilisearch self-host on `omv-ha`.
-- R21b — `/api/search` with Bedrock Titan embeddings.
-- R21c — Product recommendation engine using DynamoDB + Bedrock.
-- R21d — GenAI product descriptions.
+- ~~R21a — Meilisearch self-host on `omv-ha`.~~ ✅ Manifests in `infrastructure/meilisearch/`. Pending operator: DNS + `kubectl apply` + tunnel route.
+- ~~R21b — `/api/search` with Bedrock Titan embeddings.~~ ✅ Code shipped (commits `01e26768` + `5c731b77`). Pending R21a pod live to activate.
+- **R21c** — Product recommendation engine using DynamoDB + Bedrock.
+- **R21d** — GenAI product descriptions.
 
 ### Phase 4
 
@@ -74,6 +77,7 @@ Before some roadmap rows can complete, operator actions are still needed:
 5. R13 is descoped to 24h RPO and covered by R10 daily EspoCRM backup.
 6. R18 is complete.
 7. R22 is complete (shipped 2026-06-22 — ConditionalWrite dedup is safe).
-8. **R21a in progress**: `infrastructure/meilisearch/` manifests created, pending operator apply.
-9. Start R21b (search route) after R21a pod is ready.
-10. Only after R21 is stable, decide whether any `create_agent` experiment should become production code.
+8. **R21a code shipped**: `infrastructure/meilisearch/` manifests. ⏳ Operator: `kubectl apply`, DNS, tunnel.
+9. **R21b code shipped**: `POST /api/search`, admin reindex, `src/lib/meilisearch.ts`, `src/lib/search-index.ts`. ⏳ Activated when R21a pod is live.
+10. **Next to build: R21c** — Product recommendation engine using DDB + Bedrock.
+11. Only after R21 is stable, decide whether any `create_agent` experiment should become production code.
