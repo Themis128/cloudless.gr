@@ -1,0 +1,151 @@
+---
+# Meilisearch — open-source, fast, hyper-relevant search engine
+# NodePort 30902 on omv-ha (Pi 5, 8 GB).
+# Tunnel: meili.cloudless.gr → http://192.168.1.128:30902
+#
+# Storage: local-path PVC on sda1 (the dedicated k3s SSD).
+# RAM: requests 256Mi / limit 1Gi. Meilisearch v1.48 uses ~200-400Mi at
+#      steady state with a small product catalog (<10k docs).
+#      Indexing bursts up to ~600Mi during initial product catalog import.
+# Image: pinned to getmeili/meilisearch:v1.48.3 — multi-arch image with
+#        native arm64 support (avoids QEMU/emulation overhead on Pi 5).
+# Auth: MEILI_MASTER_KEY set via the meilisearch-secret Secret.
+#       The app secret key must match what src/lib/search.ts expects
+#       (see R21b for /api/search route).
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: meilisearch
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: meilisearch-data
+  namespace: meilisearch
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: meilisearch-secret
+  namespace: meilisearch
+type: Opaque
+stringData:
+  # Generate a strong random key (64+ chars hex) and store in SSM:
+  #   openssl rand -hex 64 | tr -d '\n'
+  #   aws ssm put-parameter --name /cloudless/production/MEILI_MASTER_KEY \
+  #     --value "$(openssl rand -hex 64 | tr -d '\n')" --type SecureString
+  # Then apply this secret with the real value before deploying.
+  # Sentinel value below allows manifest to apply cleanly; pod will fail
+  # until the real key is set.
+  MEILI_MASTER_KEY: "REPLACE_WITH_SSM_VALUE"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meilisearch
+  namespace: meilisearch
+  labels:
+    app: meilisearch
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate      # Single writer — no rolling update needed
+  selector:
+    matchLabels:
+      app: meilisearch
+  template:
+    metadata:
+      labels:
+        app: meilisearch
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omv-ha
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: meilisearch
+          image: getmeili/meilisearch:v1.48.3
+          ports:
+            - containerPort: 7700
+          env:
+            - name: MEILI_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: meilisearch-secret
+                  key: MEILI_MASTER_KEY
+            - name: MEILI_ENV
+              value: "production"
+            - name: MEILI_HTTP_ADDR
+              value: "0.0.0.0:7700"
+            - name: MEILI_DB_PATH
+              value: "/meili_data"
+            - name: TZ
+              value: Europe/Athens
+          volumeMounts:
+            - name: data
+              mountPath: /meili_data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          livenessProbe:
+            tcpSocket:
+              port: 7700
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: 7700
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: meilisearch-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: meilisearch
+  namespace: meilisearch
+  labels:
+    app: meilisearch
+spec:
+  type: NodePort
+  selector:
+    app: meilisearch
+  ports:
+    - name: http
+      port: 7700
+      targetPort: 7700
+      nodePort: 30902
+
+---
+# ResourceQuota: 1.5Gi limits total (Meilisearch 1Gi + any helper pods).
+# Meilisearch alone requests 256Mi / limits 1Gi; the quota allows room
+# for backup/utility pods without hitting the cap.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: meilisearch-quota
+  namespace: meilisearch
+spec:
+  hard:
+    pods: "5"
+    requests.memory: 768Mi
+    limits.memory: 1536Mi
