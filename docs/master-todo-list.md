@@ -138,7 +138,14 @@ operator polish or unlock follow-on automation.
 Closes the "❓ MISSING — AI baseline" finding from `best-practices-audit-2026.md`.
 Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
-- [ ] 🤖 🟠 **R21a** Meilisearch self-host on omv-ha — k8s manifest + PVC + tunnel route. **EFFORT: S / RISK: LOW**
+- [~] 🤖 🟠 **R21a** Meilisearch self-host on omv-ha — k8s manifest + PVC + tunnel route. **EFFORT: S / RISK: LOW**
+  - ✅ k8s manifest: `infrastructure/meilisearch/k8s.yaml` (namespace, PVC, Secret, Deployment, Service, ResourceQuota)
+  - ✅ Tunnel route: `infrastructure/meilisearch/cloudflare-tunnel.yaml`
+  - ⬜ Operator: Create DNS `meili.cloudless.gr` CNAME in Cloudflare
+  - ⬜ Operator: Append ingress rule to `cloudflared/config.yml` on omv-main + omv-ha
+  - ⬜ Operator: `kubectl apply -f infrastructure/meilisearch/k8s.yaml`
+  - ⬜ Operator: Set real `MEILI_MASTER_KEY` in Secret + SSM
+  - ⬜ Operator: Restart cloudflared, verify pod is Running, curl https://meili.cloudless.gr/health
 - [ ] 🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings — index DDB product catalog into Meilisearch on order/edit hooks. **EFFORT: M / RISK: LOW**
 - [ ] 🤖 🔵 **R21c** Product recommendation engine — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/products/[slug]` + `/store`. **EFFORT: M / RISK: LOW**
 - [ ] 🤖 🔵 **R21d** GenAI product descriptions — one-shot script: Bedrock Nova generates description draft per product → operator approves before publish. **EFFORT: S / RISK: LOW**

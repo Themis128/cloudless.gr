@@ -24,7 +24,7 @@ Keep these as experiments for now. Do not replace the current Deep Agents workfl
 
 ### Immediate next
 
-- R22 — Stripe webhook idempotency audit and DynamoDB dedup table.
+- R21a — Meilisearch self-host on `omv-ha`. ✅ Kafka manifests created (see `infrastructure/meilisearch/`). Pending operator actions: DNS + apply + tunnel route.
 
 ### Phase 3 AI baseline
 
@@ -73,6 +73,7 @@ Before some roadmap rows can complete, operator actions are still needed:
 4. R14 is complete.
 5. R13 is descoped to 24h RPO and covered by R10 daily EspoCRM backup.
 6. R18 is complete.
-7. Finish R22 Stripe webhook idempotency audit and DynamoDB dedup.
-8. Start R21 AI baseline.
-9. Only after R21 is stable, decide whether any `create_agent` experiment should become production code.
+7. R22 is complete (shipped 2026-06-22 — ConditionalWrite dedup is safe).
+8. **R21a in progress**: `infrastructure/meilisearch/` manifests created, pending operator apply.
+9. Start R21b (search route) after R21a pod is ready.
+10. Only after R21 is stable, decide whether any `create_agent` experiment should become production code.
