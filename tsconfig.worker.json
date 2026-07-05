@@ -1,0 +1,23 @@
+{
+  "extends": "agents/tsconfig",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "worker-configuration.d.ts",
+    "src/index.ts",
+    "src/agents/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "__tests__",
+    "e2e",
+    "tools",
+    "scripts"
+  ]
+}
