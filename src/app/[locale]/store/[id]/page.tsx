@@ -14,6 +14,7 @@ import ProductIcon from "@/components/store/ProductIcon";
 import JsonLd from "@/components/JsonLd";
 import { formatPrice } from "@/lib/format-price";
 import { getProductSchema, getBreadcrumbSchema } from "@/lib/structured-data";
+import RecommendationGrid from "@/components/store/RecommendationGrid";
 
 export async function generateMetadata({
   params,
@@ -38,10 +39,6 @@ export default async function ProductPage({
   const product = getProductById(id);
 
   if (!product) notFound();
-
-  const related = getProductsByCategory(product.category)
-    .filter((p) => p.id !== product.id)
-    .slice(0, 3);
 
   const productJsonLd = getProductSchema({
     name: product.name,
@@ -139,41 +136,18 @@ export default async function ProductPage({
         </div>
       </section>
 
-      {/* Related Products */}
-      {related.length > 0 && (
-        <section className="bg-void border-t border-slate-800 py-16 md:py-20">
-          <div className="mx-auto max-w-6xl px-6">
-            <h2 className="text-neon-cyan/60 mb-8 font-mono text-xs font-medium tracking-[0.3em]">
-              YOU MAY ALSO LIKE
-            </h2>
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {related.map((rel) => (
-                <Link
-                  key={rel.id}
-                  href={`/store/${rel.id}`}
-                  className="group neon-border bg-void-light/50 overflow-hidden rounded-lg transition-all duration-300 hover:-translate-y-1 active:scale-[0.98]"
-                >
-                  <div className="bg-void-lighter relative aspect-[4/3] overflow-hidden">
-                    <ProductIcon productId={rel.id} category={rel.category} />
-                  </div>
-                  <div className="p-5">
-                    <h3 className="font-heading group-hover:text-neon-cyan text-sm font-semibold text-white transition-colors">
-                      {rel.name}
-                    </h3>
-                    <p className="mt-1 line-clamp-1 text-xs text-slate-500">{rel.description}</p>
-                    <span className="text-neon-cyan mt-2 inline-block font-mono text-sm font-bold">
-                      {formatPrice(rel.price, rel.currency)}
-                      {rel.recurring && (
-                        <span className="ml-1 font-normal text-slate-500">/{rel.interval}</span>
-                      )}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Recommendations */}
+      <section className="bg-void border-t border-slate-800 py-16 md:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <RecommendationGrid
+            type="similar"
+            productIds={[product.id]}
+            limit={4}
+            title="Recommended for you"
+            subtitle="AI SIMILARITY"
+          />
+        </div>
+      </section>
     </>
   );
 }
