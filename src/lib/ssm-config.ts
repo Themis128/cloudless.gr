@@ -183,6 +183,13 @@ interface AppConfig {
   POSTIZ_API_KEY: string;
   /** HMAC secret shared with Postiz webhook config — verifies inbound events. */
   POSTIZ_WEBHOOK_SECRET: string;
+  // Meilisearch (self-hosted search engine on omv-ha, see infrastructure/meilisearch/)
+  /** Base URL of the Meilisearch instance, e.g. https://meili.cloudless.gr */
+  MEILI_HOST: string;
+  /** Master key for Meilisearch admin operations (index/create/delete docs). */
+  MEILI_MASTER_KEY: string;
+  /** Meilisearch search-only API key (read-only, safe for client usage). */
+  MEILI_SEARCH_KEY: string;
   /** Optional Slack channel override for Postiz publish/error/oauth events. */
   POSTIZ_SLACK_CHANNEL: string;
   // Cron auth
@@ -348,6 +355,9 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
     POSTIZ_WEBHOOK_SECRET: params.get("POSTIZ_WEBHOOK_SECRET") ?? "",
     POSTIZ_SLACK_CHANNEL: params.get("POSTIZ_SLACK_CHANNEL") ?? "",
+    MEILI_HOST: params.get("MEILI_HOST") ?? "",
+    MEILI_MASTER_KEY: params.get("MEILI_MASTER_KEY") ?? "",
+    MEILI_SEARCH_KEY: params.get("MEILI_SEARCH_KEY") ?? "",
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
@@ -459,6 +469,9 @@ function buildConfigFromEnv(): AppConfig {
     POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
     POSTIZ_WEBHOOK_SECRET: process.env.POSTIZ_WEBHOOK_SECRET || "",
     POSTIZ_SLACK_CHANNEL: process.env.POSTIZ_SLACK_CHANNEL || "",
+    MEILI_HOST: process.env.MEILI_HOST || "",
+    MEILI_MASTER_KEY: process.env.MEILI_MASTER_KEY || "",
+    MEILI_SEARCH_KEY: process.env.MEILI_SEARCH_KEY || "",
     CRON_SECRET: process.env.CRON_SECRET || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",

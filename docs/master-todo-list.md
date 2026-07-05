@@ -146,7 +146,14 @@ Reuses existing Bedrock Nova IAM (no new SaaS bills).
   - ⬜ Operator: `kubectl apply -f infrastructure/meilisearch/k8s.yaml`
   - ⬜ Operator: Set real `MEILI_MASTER_KEY` in Secret + SSM
   - ⬜ Operator: Restart cloudflared, verify pod is Running, curl https://meili.cloudless.gr/health
-- [ ] 🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings — index DDB product catalog into Meilisearch on order/edit hooks. **EFFORT: M / RISK: LOW**
+- [~] 🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings — index DDB product catalog into Meilisearch on order/edit hooks. **EFFORT: M / RISK: LOW**
+  - ✅ `src/lib/meilisearch.ts` — Meilisearch client with search + index management
+  - ✅ `src/lib/search-index.ts` — Product sync (full reindex + incremental)
+  - ✅ `POST /api/search` — Public search endpoint (validates, queries, returns results)
+  - ✅ `POST /api/admin/search/reindex` — Admin-only full reindex
+  - ✅ Meilisearch keys in SSM config (`MEILI_HOST`, `MEILI_MASTER_KEY`, `MEILI_SEARCH_KEY`)
+  - ⬜ Add Bedrock Titan embeddings for semantic/hybrid search (future enhancement)
+  - ⬜ Wire Stripe webhooks to auto-index on product create/update (after R21a pod is live)
 - [ ] 🤖 🔵 **R21c** Product recommendation engine — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/products/[slug]` + `/store`. **EFFORT: M / RISK: LOW**
 - [ ] 🤖 🔵 **R21d** GenAI product descriptions — one-shot script: Bedrock Nova generates description draft per product → operator approves before publish. **EFFORT: S / RISK: LOW**
 
