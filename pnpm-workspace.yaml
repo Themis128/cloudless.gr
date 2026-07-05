@@ -9,7 +9,11 @@ allowBuilds:
   '@parcel/watcher': true
   '@sentry/cli': true
   '@swc/core': true
+  core-js-pure: true
   esbuild: true
+  sharp: true
+  unrs-resolver: true
+  workerd: true
 
 # Disable unnecessary native builds for faster installs
 sharp: false
