@@ -1,4 +1,5 @@
 import { Agent, callable } from "agents";
+import { generateStructuredPatch } from "./structured-patch";
 
 export type CodingStatus = "idle" | "running" | "done" | "failed";
 export type CodingMode = "review" | "patch";
@@ -451,6 +452,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
         status: "/api/agents/coding-agent/default/status",
         task: "/api/agents/coding-agent/default/task?prompt=Review%20my%20Worker%20routing&model=review",
         patch: "/api/agents/coding-agent/default/patch?prompt=Propose%20a%20safe%20patch&model=deep",
+        structuredPatch: "/api/agents/coding-agent/default/structured-patch",
         result: "/api/agents/coding-agent/default/result",
         reset: "/api/agents/coding-agent/default/reset",
       },
