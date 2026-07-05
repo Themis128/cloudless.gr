@@ -31,13 +31,21 @@ Keep these as experiments for now. Do not replace the current Deep Agents workfl
 
 ### Immediate next
 
-- **R21c** — Product recommendation engine (collaborative filter over DDB orders + Bedrock embedding similarity).
+- **R21c (shipped)** — Product recommendation engine (collaborative filter over DDB orders + Bedrock embedding similarity).
 
 ### Phase 3 AI baseline
 
 - ~~R21a — Meilisearch self-host on `omv-ha`.~~ ✅ Manifests in `infrastructure/meilisearch/`. Pending operator: DNS + `kubectl apply` + tunnel route.
 - ~~R21b — `/api/search` with Bedrock Titan embeddings.~~ ✅ Code shipped (commits `01e26768` + `5c731b77`). Pending R21a pod live to activate.
-- **R21c** — Product recommendation engine using DynamoDB + Bedrock.
+- ~~R21c — Product recommendation engine using DynamoDB + Bedrock.~~ ✅ Shipped.
+  - **Implementation summary:**
+    1. `src/lib/recommendations.ts` — Core engine (collaborative + embedding similarity)
+    2. `src/app/api/recommendations/route.ts` — Public API endpoint
+    3. `src/components/store/RecommendationGrid.tsx` — UI component (HolographicCard style)
+    4. Wired into `src/app/[locale]/store/[id]/page.tsx` + `/store/page.tsx`
+    5. Embedding pipeline: Bedrock Titan `amazon.titan-embed-text-v2:0` for product similarity
+    6. Collaborative filter: query DDB `stripe-transactions` for co-occurrence patterns (infrastructure ready)
+    7. Tests in `__tests__/recommendations.test.ts` verified green.
 - **R21d** — GenAI product descriptions.
 
 ### Phase 4

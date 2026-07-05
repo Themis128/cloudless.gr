@@ -4,6 +4,7 @@ import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
+import RecommendationGrid from "@/components/store/RecommendationGrid";
 
 // Lighthouse Win — let Next.js statically generate the shell + ISR-refresh
 // every hour. The product grid is client-side (StoreGrid uses defaultProducts),
@@ -117,6 +118,10 @@ export default function StorePage() {
       <section className="bg-void dot-matrix py-16">
         <div className="mx-auto max-w-6xl px-6">
           <StoreGrid />
+
+          <div className="mt-20 border-t border-slate-800 pt-16">
+            <RecommendationGrid type="trending" limit={4} title="Trending now" subtitle="POPULAR" />
+          </div>
         </div>
       </section>
 
