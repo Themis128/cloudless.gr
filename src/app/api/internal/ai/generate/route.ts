@@ -117,7 +117,7 @@ async function callCloudflare(
     },
     body: JSON.stringify({ messages: cfMessages, max_tokens: maxTokens }),
   });
-  const data = (await res.json()) as {
+  const data = (((await res.json()) as any)) as {
     result?: { response?: unknown };
     errors?: { message?: string }[];
   };
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   let body: GenerateBody;
   try {
-    body = (await request.json()) as GenerateBody;
+    body = (((await request.json()) as any)) as GenerateBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }

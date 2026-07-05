@@ -57,8 +57,8 @@ export default function PipelinePage() {
       ]);
       if (!boardRes.ok) throw new Error("Failed to load board");
       if (!statsRes.ok) throw new Error("Failed to load stats");
-      const boardData = await boardRes.json();
-      const statsData = await statsRes.json();
+      const boardData = (((((await boardRes.json()) as any)) as any)) as any;
+      const statsData = (((((await statsRes.json()) as any)) as any)) as any;
       setDealsByStage(boardData.dealsByStage ?? {});
       setPipelines(boardData.pipelines ?? []);
       setStats(statsData);

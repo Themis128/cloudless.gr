@@ -45,11 +45,11 @@ export default function ServicesPage() {
       try {
         const res = await fetchWithAuth("/api/portal/me");
         if (res.ok) {
-          const data: PortalStatus = await res.json();
+          const data: PortalStatus = ((await res.json()) as any);
           setPortalStatus(data);
           if (data.status === "approved" && data.portalToken) {
             const portalRes = await fetch(`/api/portal/${data.portalToken}`);
-            if (portalRes.ok) setPortalData(await portalRes.json());
+            if (portalRes.ok) setPortalData(((await portalRes.json()) as any));
           }
         }
       } catch {

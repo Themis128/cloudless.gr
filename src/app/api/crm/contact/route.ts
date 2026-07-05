@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   try {
     const { email, firstname, lastname, company, service_interest, message, lead_source } =
-      await request.json();
+      ((await request.json()) as any);
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ error: "Valid email is required." }, { status: 400 });

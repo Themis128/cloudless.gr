@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         { status: 503 },
       );
     }
-    status = (await res.json()) as Esp32Status;
+    status = (((await res.json()) as any)) as Esp32Status;
   } catch (err) {
     console.error("[esp32/notion-sync] Alert API unreachable:", err);
     return NextResponse.json({ error: "Alert API unreachable", offline: true }, { status: 503 });

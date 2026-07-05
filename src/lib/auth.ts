@@ -142,7 +142,7 @@ async function refreshAccessToken(
     body: body.toString(),
   });
   if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
-  return (await res.json()) as {
+  return (((await res.json()) as any)) as {
     access_token: string;
     refresh_token?: string;
     id_token?: string;

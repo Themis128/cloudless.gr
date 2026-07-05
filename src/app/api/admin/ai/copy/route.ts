@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   let objective: string;
   let language: string;
   try {
-    const body = await request.json();
+    const body = ((await request.json()) as any);
     service = String(body.service ?? "").slice(0, 2000);
     platform = String(body.platform ?? "Meta").slice(0, 50);
     objective = String(body.objective ?? "awareness").slice(0, 200);

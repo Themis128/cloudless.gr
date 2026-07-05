@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = (await request.json()) as Partial<Workspace> & { name?: string };
+  const body = (((await request.json()) as any)) as Partial<Workspace> & { name?: string };
   if (!body.name?.trim()) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
@@ -90,7 +90,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = (await request.json()) as Partial<Workspace>;
+  const body = (((await request.json()) as any)) as Partial<Workspace>;
   if (!body.id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const workspaces = await readWorkspaces();
@@ -131,7 +131,7 @@ export async function DELETE(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const { id } = (await request.json()) as { id?: string };
+  const { id } = (((await request.json()) as any)) as { id?: string };
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
 
   const workspaces = await readWorkspaces();

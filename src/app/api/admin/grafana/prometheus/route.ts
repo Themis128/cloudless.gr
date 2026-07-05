@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   let body: { query?: string };
   try {
-    body = (await req.json()) as { query?: string };
+    body = (((await req.json()) as any)) as { query?: string };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

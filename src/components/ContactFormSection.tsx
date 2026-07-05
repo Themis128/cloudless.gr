@@ -78,11 +78,11 @@ export default function ContactFormSection() {
 
     const form = e.currentTarget;
     const payload = {
-      name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
-      email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
-      company: (form.elements.namedItem(FIELD_COMPANY) as HTMLInputElement).value,
-      service: (form.elements.namedItem(FIELD_SERVICE) as HTMLSelectElement).value,
-      message: (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value,
+      name: (form.elements.namedItem(FIELD_NAME) as unknown as HTMLInputElement).value,
+      email: (form.elements.namedItem(FIELD_EMAIL) as unknown as HTMLInputElement).value,
+      company: (form.elements.namedItem(FIELD_COMPANY) as unknown as HTMLInputElement).value,
+      service: (form.elements.namedItem(FIELD_SERVICE) as unknown as HTMLSelectElement).value,
+      message: (form.elements.namedItem(FIELD_MESSAGE) as unknown as HTMLTextAreaElement).value,
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,
     };
@@ -94,7 +94,7 @@ export default function ContactFormSection() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        const data = (await res.json().catch(() => null)) as {
+        const data = (((await res.json()) as any).catch(() => null)) as {
           eventId?: string;
         } | null;
         // Browser-side Lead event with the same eventId the server sent to CAPI.

@@ -50,10 +50,10 @@ export default function SubmissionsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/submissions?limit=100");
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = ((((await res.json()) as any)) as any).catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       }
-      const data = (await res.json()) as { submissions: Submission[] };
+      const data = (((((await res.json()) as any)) as any)) as { submissions: Submission[] };
       setSubmissions(data.submissions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load submissions");

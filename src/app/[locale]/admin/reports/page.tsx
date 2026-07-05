@@ -27,7 +27,7 @@ export default function ReportsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/reports");
       if (!res.ok) return;
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       setReports(data.reports ?? []);
     } catch {
       /* silent */

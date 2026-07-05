@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   let body: GenerateRequest;
   try {
-    body = (await request.json()) as GenerateRequest;
+    body = (((await request.json()) as any)) as GenerateRequest;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const data = (await response.json()) as {
+    const data = (((await response.json()) as any)) as {
       result?: { response?: string; input_tokens?: number; output_tokens?: number };
       errors?: { message?: string }[];
     };

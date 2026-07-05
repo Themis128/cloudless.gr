@@ -80,15 +80,15 @@ export default function AutomationPage() {
 
       const healthData =
         healthRes.status === "fulfilled" && healthRes.value.ok
-          ? ((await healthRes.value.json()) as N8nHealth)
+          ? ((((((await healthRes.value.json()) as any)) as any)) as N8nHealth)
           : null;
       const workflowsData =
         workflowsRes.status === "fulfilled" && workflowsRes.value.ok
-          ? ((await workflowsRes.value.json()) as { workflows: N8nWorkflow[] })
+          ? ((((((await workflowsRes.value.json()) as any)) as any)) as { workflows: N8nWorkflow[] })
           : null;
       const execsData =
         execsRes.status === "fulfilled" && execsRes.value.ok
-          ? ((await execsRes.value.json()) as { executions: N8nExecution[] })
+          ? ((((((await execsRes.value.json()) as any)) as any)) as { executions: N8nExecution[] })
           : null;
 
       setHealth(healthData);
@@ -117,7 +117,7 @@ export default function AutomationPage() {
         body: JSON.stringify({ source: "admin-automation", triggeredBy: "operator" }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data = ((((await res.json()) as any)) as any).catch(() => ({}));
         throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       }
       setTriggerResult(`\u2705 "${name}" triggered successfully`);

@@ -125,7 +125,7 @@ async function handleFinalResponse<T>(
   if (!res.ok) {
     if (passthroughErrors) {
       return {
-        data: (await res.json().catch(() => null)) as T,
+        data: (((await res.json()) as any).catch(() => null)) as T,
         status: res.status,
         latencyMs,
         retries,
@@ -139,7 +139,7 @@ async function handleFinalResponse<T>(
   }
   const contentType = res.headers.get("content-type") ?? "";
   const data: T = contentType.includes("application/json")
-    ? ((await res.json()) as T)
+    ? ((((await res.json()) as any)) as T)
     : ((await res.text()) as unknown as T);
   return { data, status: res.status, latencyMs, retries };
 }

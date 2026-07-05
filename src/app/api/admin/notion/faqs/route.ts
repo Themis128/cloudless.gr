@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   let body: FaqInput;
   try {
-    body = await request.json();
+    body = ((await request.json()) as any);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -55,7 +55,7 @@ export async function PATCH(request: NextRequest) {
 
   let body: { pageId: string } & Partial<FaqInput>;
   try {
-    body = await request.json();
+    body = ((await request.json()) as any);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

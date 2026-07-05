@@ -89,7 +89,7 @@ export async function PATCH(request: NextRequest) {
 
   let body: { id?: string; ids?: string[]; markAllRead?: boolean };
   try {
-    body = (await request.json()) as typeof body;
+    body = (((await request.json()) as any)) as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }

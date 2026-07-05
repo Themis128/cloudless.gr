@@ -1,3 +1,32 @@
+import { Meilisearch } from "meilisearch";
+import { getConfig } from "./ssm-config";
+
+const PRODUCTS_INDEX = "products";
+const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let _client: Meilisearch | null = null;
+let _lastConfigCheck = 0;
+
+export interface SearchHit {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  category: string;
+  image: string;
+  features?: string[];
+  _formatted?: Record<string, string>;
+}
+
+export interface SearchResult {
+  hits: SearchHit[];
+  total: number;
+  limit: number;
+  offset: number;
+  query: string;
+  configured: boolean;
+}
 
 /** Create or return the cached Meilisearch client. Returns null when not configured. */
 export async function getMeiliClient(): Promise<Meilisearch | null> {
@@ -146,7 +175,10 @@ export async function indexProducts(documents: ProductDocument[]): Promise<void>
   try {
     const index = writeClient.index(PRODUCTS_INDEX);
     await index.updateSearchableAttributes([
-      "name", "description", "featuresText", "categoryLabel",
+      "name",
+      "description",
+      "featuresText",
+      "categoryLabel",
     ]);
     await index.updateFilterableAttributes(["category", "currency", "price"]);
     await index.addDocuments(documents);
@@ -208,7 +240,10 @@ export async function resetIndex(documents: ProductDocument[]): Promise<void> {
     await writeClient.createIndex(PRODUCTS_INDEX, { primaryKey: "id" });
     const index = writeClient.index(PRODUCTS_INDEX);
     await index.updateSearchableAttributes([
-      "name", "description", "featuresText", "categoryLabel",
+      "name",
+      "description",
+      "featuresText",
+      "categoryLabel",
     ]);
     await index.updateFilterableAttributes(["category", "currency", "price"]);
     if (documents.length > 0) {

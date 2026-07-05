@@ -37,7 +37,7 @@ export default function AdminServicesPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/services");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { services: CloudlessService[] };
+      const data = (((((await res.json()) as any)) as any)) as { services: CloudlessService[] };
       setItems(data.services ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -95,7 +95,7 @@ export default function AdminServicesPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (await res.json()) as { error?: string };
+        const d = (((((await res.json()) as any)) as any)) as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);

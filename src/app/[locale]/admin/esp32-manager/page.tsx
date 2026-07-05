@@ -234,7 +234,7 @@ export default function Esp32ManagerPage() {
   const call = useCallback(async (path: string, opts?: RequestInit) => {
     try {
       const res = await fetchWithAuth(path, opts);
-      const json = await res.json();
+      const json = (((((await res.json()) as any)) as any)) as any;
       if (json?.offline) {
         setOffline(true);
         return null;

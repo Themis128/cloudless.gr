@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   const cfg = await getConfig();
   let prometheusUrl = cfg.PROMETHEUS_URL || DEFAULT_PROMETHEUS_URL;
   try {
-    const body = (await req.json()) as { prometheusUrl?: string };
+    const body = (((await req.json()) as any)) as { prometheusUrl?: string };
     if (body.prometheusUrl) prometheusUrl = body.prometheusUrl;
   } catch {
     // body is optional

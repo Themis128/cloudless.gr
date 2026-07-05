@@ -138,7 +138,7 @@ async function sentryFetch<T>(path: string, options?: RequestInit): Promise<T | 
       return null;
     }
 
-    return (await res.json()) as T;
+    return (((await res.json()) as any)) as T;
   } catch (err) {
     console.error("[Sentry] Fetch error:", err);
     return null;

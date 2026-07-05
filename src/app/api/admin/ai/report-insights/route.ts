@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   let metrics: Record<string, unknown>;
   let period: string;
   try {
-    const body = await request.json();
+    const body = ((await request.json()) as any);
     metrics = body.metrics;
     period = String(body.period ?? "last 30 days").slice(0, 100);
     if (!metrics || typeof metrics !== "object") throw new Error("metrics is required");

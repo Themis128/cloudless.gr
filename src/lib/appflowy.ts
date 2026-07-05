@@ -107,7 +107,7 @@ async function callThrowing<T>(
 ): Promise<T> {
   const res = await appflowyFetch(path, init);
   if (!res.ok) throw new AppFlowyApiError(res.status, await res.text().catch(() => ""));
-  return (await res.json()) as T;
+  return (((await res.json()) as any)) as T;
 }
 
 // ---------------------------------------------------------------------------

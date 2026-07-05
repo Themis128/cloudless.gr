@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
       setError(null);
       const res = await fetchWithAuth("/api/admin/users?limit=60");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       setUsers(data.users ?? []);
       if (data.provider) setProvider(data.provider);
     } catch (err) {
@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, username }),
       });
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
 
       setActionMsg(data.message);

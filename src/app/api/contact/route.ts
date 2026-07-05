@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   // or reported to Sentry as an exception (CLOUDLESS-GR-3).
   let parsed;
   try {
-    parsed = await request.json();
+    parsed = ((await request.json()) as any);
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   let payload: unknown = {};
   try {
-    payload = await req.json();
+    payload = ((await req.json()) as any);
   } catch {
     // empty body is fine — workflow may not need input
   }

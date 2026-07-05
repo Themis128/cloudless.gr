@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const { action, username } = (await request.json()) as { action: string; username: string };
+  const { action, username } = (((await request.json()) as any)) as { action: string; username: string };
   if (!action || !username) {
     return NextResponse.json({ error: "action and username required" }, { status: 400 });
   }

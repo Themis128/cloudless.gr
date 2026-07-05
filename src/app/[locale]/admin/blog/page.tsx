@@ -37,7 +37,7 @@ export default function AdminBlogPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/blog");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = (((((await res.json()) as any)) as any)) as any;
       setPosts(data.posts ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load posts");

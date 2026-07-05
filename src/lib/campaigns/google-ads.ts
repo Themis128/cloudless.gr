@@ -116,7 +116,7 @@ async function getServiceAccountAccessToken(): Promise<string> {
     }),
   });
 
-  const data = (await res.json()) as { access_token?: string; error?: string };
+  const data = (((await res.json()) as any)) as { access_token?: string; error?: string };
   if (!data.access_token) throw new Error(`Google token exchange failed: ${data.error}`);
 
   cachedToken = { value: data.access_token, expiresAt: now + 3600 };
@@ -191,7 +191,7 @@ export async function listGoogleCampaigns(): Promise<GoogleCampaign[]> {
       body: JSON.stringify({ query }),
     });
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = ((await res.json()) as any);
     return (data.results ?? []).map((r: GoogleCampaignRow) => mapCampaignRow(r));
   } catch {
     return [];
@@ -220,7 +220,7 @@ export async function getGoogleMetrics(dateStart: string, dateEnd: string): Prom
       body: JSON.stringify({ query }),
     });
     if (!res.ok) return emptyMetrics();
-    const data = await res.json();
+    const data = ((await res.json()) as any);
     return parseMetricsRow(data.results?.[0]?.metrics);
   } catch {
     return emptyMetrics();
