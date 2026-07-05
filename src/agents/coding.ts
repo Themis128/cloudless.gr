@@ -365,6 +365,77 @@ export class CodingAgent extends Agent<Env, CodingState> {
       });
     }
 
+    if (url.pathname.endsWith("/structured-patch")) {
+      let prompt = url.searchParams.get("prompt") ?? "";
+      let modelProfile = normalizeModelProfile(url.searchParams.get("model"), "patch");
+
+      if (request.method === "POST") {
+        try {
+          const body = await request.json() as { prompt?: string; model?: string; modelProfile?: string };
+          prompt = body.prompt ?? prompt;
+          modelProfile = normalizeModelProfile(body.modelProfile ?? body.model ?? modelProfile, "patch");
+        } catch {
+          // Ignore malformed JSON and fall back to query string.
+        }
+      }
+
+      if (!prompt.trim()) {
+        return Response.json(
+          {
+            ok: false,
+            error: "Missing prompt",
+            example: "/api/agents/coding-agent/default/structured-patch",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      const route = getModelRoute(modelProfile, "patch");
+
+      this.setRunning(prompt, "patch", route);
+
+      try {
+        const structuredPatch = await generateStructuredPatch(
+          this.env,
+          route.model,
+          [
+            buildSystemPrompt("patch"),
+            "",
+            "Return ONLY a structured patch object matching the schema.",
+            "Use only the repository context below.",
+            "",
+            prompt,
+          ].join("\n")
+        );
+
+        const responseText = JSON.stringify(structuredPatch, null, 2);
+        const gatewayLogId =
+          typeof this.env.AI.aiGatewayLogId === "string" ? this.env.AI.aiGatewayLogId : "";
+
+        const result = this.setDone(prompt, "patch", route, responseText, gatewayLogId);
+
+        return Response.json({
+          ok: true,
+          structuredPatch,
+          ...result,
+        });
+      } catch (error) {
+        const result = this.setFailed(prompt, "patch", route, error);
+
+        return Response.json(
+          {
+            ok: false,
+            ...result,
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+    }
+
     if (url.pathname.endsWith("/patch")) {
       let prompt = url.searchParams.get("prompt") ?? "";
       let modelProfile = normalizeModelProfile(url.searchParams.get("model"), "patch");
