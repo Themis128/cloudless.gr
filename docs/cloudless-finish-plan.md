@@ -24,6 +24,10 @@ Keep these as experiments for now. Do not replace the current Deep Agents workfl
 - R22 — Stripe webhook idempotency audit — ConditionalWrite dedup verified safe at SMB volume.
 - **R21a (code)** — `infrastructure/meilisearch/k8s.yaml` + tunnel route. ⏳ Pending operator apply.
 - **R21b (code)** — `POST /api/search`, `POST /api/admin/search/reindex`, `src/lib/meilisearch.ts`, `src/lib/search-index.ts`. ⏳ Pending R21a pod live + operator DNS.
+- **Workflow fixes** — Fixed 3 known-broken workflows:
+  - `selfhosted-healthchecks.yml` — removed hard `exit 1` on app down; Kuma alerting is the signal, not the workflow conclusion.
+  - `cluster-healthcheck.yml` — replaced `nc` reachability check with bash `/dev/tcp` to remove the netcat dependency from GitHub-hosted runners.
+  - `restart-pi-runners.yml` — replaced stale tailnet IP `100.113.41.119` with current LAN address `192.168.1.128` and added context comment.
 
 ### Immediate next
 

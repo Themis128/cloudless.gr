@@ -48,7 +48,9 @@ jobs:
         if: ${{ env.KUMA_PUSH_TOKEN != '' }}
         id: check
         run: |
-          if nc -zv -w5 "$PI_HOST" 6443 2>/dev/null; then
+          # Use bash /dev/tcp instead of nc to avoid depending on netcat
+          # being present on the GitHub-hosted runner image.
+          if (echo > /dev/tcp/"$PI_HOST"/6443) >/dev/null 2>&1; then
             echo "status=up" >> "$GITHUB_OUTPUT"
             echo "msg=k3s API port 6443 reachable" >> "$GITHUB_OUTPUT"
           else
