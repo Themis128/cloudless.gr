@@ -18,7 +18,13 @@
 - ✅ **Meilisearch Activation**: Patched Meilisearch service to NodePort 30902 and added to Cloudflare Tunnel (`meili.cloudless.gr`).
 - ✅ **System Stability**: Verified system load average stabilized at **<1.0** (was 24.64 during the crisis).
 
-### 2. Monitoring & Documentation
+### 2. R21 AI Baseline — All Three Phases Shipped
+
+- ✅ **R21a** — Meilisearch self-host on omv-ha: `infrastructure/meilisearch/k8s.yaml` applied, NodePort 30902, DNS `meili.cloudless.gr` live, health endpoint verified.
+- ✅ **R21b** — Search API: `src/lib/meilisearch.ts` + `src/lib/search-index.ts` + `POST /api/search` + `POST /api/admin/search/reindex`. SSM keys (`MEILI_HOST`, `MEILI_MASTER_KEY`, `MEILI_SEARCH_KEY`) configured.
+- ✅ **R21c** — Recommendation engine: `src/lib/recommendations.ts` + `GET /api/recommendations`. Collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/store/[id]` + `/store`.
+
+### 3. Monitoring & Documentation
 
 - ✅ **Log Aggregation**: Verified all self-hosted app logs are gathered via Promtail into Loki/Grafana.
 - ✅ **AGENTS.md**: Updated with a new **OMV Node Operations** section and **CloudWatch Alarms** context.
@@ -27,21 +33,24 @@
 
 ## 📊 System Status (2026-07-06)
 
-| Component       | Status        | Notes                            |
-| --------------- | ------------- | -------------------------------- |
-| Root Disk (/)   | ✅ 75%        | 15G free, cleaned.               |
-| Memory (RAM)    | ✅ Stable     | Promtail OOM resolved.           |
-| Monit           | ✅ Healthy    | Queue cleared.                   |
-| Meilisearch     | ✅ Active     | Reachable via meili.cloudless.gr |
-| Log Aggregation | ✅ Active     | Gathering logs in Loki/Grafana   |
-| Lambda p99      | 🟡 Monitoring | Post-deploy spikes observed.     |
-| k3s Cluster     | ✅ Ready      | All nodes/pods stable.           |
+| Component       | Status        | Notes                                          |
+| --------------- | ------------- | ---------------------------------------------- |
+| Root Disk (/)   | ✅ 75%        | 15G free, cleaned.                             |
+| Memory (RAM)    | ✅ Stable     | Promtail OOM resolved.                         |
+| Monit           | ✅ Healthy    | Queue cleared.                                 |
+| Meilisearch     | ✅ Active     | Reachable via meili.cloudless.gr (R21a)        |
+| Search API      | ✅ Live       | `POST /api/search` (R21b)                      |
+| Recommendations | ✅ Live       | `GET /api/recommendations` (R21c)              |
+| Log Aggregation | ✅ Active     | Gathering logs in Loki/Grafana                 |
+| Lambda p99      | 🟡 Monitoring | Post-deploy spikes observed.                   |
+| k3s Cluster     | ✅ Ready      | All nodes/pods stable.                         |
 
 ## 🚀 Next Steps
 
 - Monitor Lambda p99 duration to ensure it returns to OK state.
 - Verify nightly cleanup (`k3s-cleanup.timer`) continues to maintain disk headroom.
 - Review k3s port allocation errors (traefik) if they persist.
+- **R21d**: GenAI product descriptions — one-shot Bedrock Nova script, operator-approved before publish.
 
 ---
 
