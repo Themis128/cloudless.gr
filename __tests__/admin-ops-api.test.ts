@@ -58,14 +58,73 @@ describe("GET /api/admin/ops/monitor", () => {
   });
 });
 
-// ── /api/admin/ops/errors/[id] ────────────────────────────────────────────────
+// ── /api/admin/ops/errors ─────────────────────────────────────────────────────
 
 const mockIsSentryConfigured = vi.fn();
+const mockGetUnresolvedIssues = vi.fn();
+const mockVerifySentryToken = vi.fn();
 const mockUpdateIssueStatus = vi.fn();
 vi.mock("@/lib/sentry", () => ({
   isSentryConfigured: (...a: unknown[]) => mockIsSentryConfigured(...a),
+  getUnresolvedIssues: (...a: unknown[]) => mockGetUnresolvedIssues(...a),
+  verifySentryToken: (...a: unknown[]) => mockVerifySentryToken(...a),
   updateIssueStatus: (...a: unknown[]) => mockUpdateIssueStatus(...a),
 }));
+
+describe("GET /api/admin/ops/errors", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+  });
+
+  it("returns 401 when not admin", async () => {
+    adminFail();
+    const { GET } = await import("@/app/api/admin/ops/errors/route");
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 503 when Sentry not configured", async () => {
+    adminOk();
+    mockIsSentryConfigured.mockResolvedValue(false);
+    const { GET } = await import("@/app/api/admin/ops/errors/route");
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
+    expect(res.status).toBe(503);
+  });
+
+  it("returns 503 with auth_rejected when token is rejected", async () => {
+    adminOk();
+    mockIsSentryConfigured.mockResolvedValue(true);
+    mockGetUnresolvedIssues.mockResolvedValue(null);
+    mockVerifySentryToken.mockResolvedValue({
+      status: "rejected",
+      message: "Token rejected (401) — check SENTRY_AUTH_TOKEN scopes (project:read required).",
+    });
+    const { GET } = await import("@/app/api/admin/ops/errors/route");
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
+    expect(res.status).toBe(503);
+    const data = await res.json();
+    expect(data.code).toBe("auth_rejected");
+  });
+
+  it("returns issues list when configured", async () => {
+    adminOk();
+    mockIsSentryConfigured.mockResolvedValue(true);
+    mockGetUnresolvedIssues.mockResolvedValue({
+      issues: [{ id: "1", title: "Error 1", level: "error", count: "10", userCount: 2, firstSeen: "2026-01-01", lastSeen: "2026-01-02", status: "unresolved", permalink: "https://sentry.io/1", shortId: "CLOUDLESS-GR-1", metadata: {} }],
+      total: 1,
+      fetchedAt: "2026-01-02T00:00:00.000Z",
+    });
+    const { GET } = await import("@/app/api/admin/ops/errors/route");
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.issues).toHaveLength(1);
+    expect(data.total).toBe(1);
+  });
+});
+
+// ── /api/admin/ops/errors/[id] ────────────────────────────────────────────────
 
 describe("PUT /api/admin/ops/errors/[id]", () => {
   beforeEach(() => {

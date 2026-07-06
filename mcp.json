@@ -1,5 +1,18 @@
 {
   "mcpServers": {
+    "ollama": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "tools/mcp-ollama-server/src/index.ts"
+      ],
+      "env": {
+        "OLLAMA_URL": "http://localhost:11434",
+        "OLLAMA_MODEL": "qwen2.5-coder",
+        "OLLAMA_TIMEOUT_MS": "120000"
+      },
+      "autoStart": true
+    },
     "cloudless-infra": {
       "command": "npx",
       "args": [
@@ -13,23 +26,34 @@
         "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
       }
     },
+    "cognito-setup": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "tools/cognito-setup-mcp/src/index.ts"
+      ],
+      "autoStart": false
+    },
+    "athena": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "tools/mcp-athena-server/index.ts"
+      ],
+      "env": {
+        "AWS_REGION": "us-east-1",
+        "ATHENA_WORKGROUP": "primary",
+        "ATHENA_DATABASE": "cloudless_analytics",
+        "ATHENA_S3_OUTPUT_BUCKET": "cloudless-athena-results"
+      },
+      "autoStart": false
+    },
     "project": {
       "command": "npx",
       "args": [
         "-y",
         "project-mcp"
       ],
-      "autoStart": true
-    },
-    "notion": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@notionhq/notion-mcp-server"
-      ],
-      "env": {
-        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
-      },
       "autoStart": true
     },
     "langsmith": {

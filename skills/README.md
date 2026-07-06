@@ -31,6 +31,7 @@ This README is the entry table to find the right one fast.
 | [linkedin-campaigns](linkedin-campaigns/SKILL.md) | linkedin campaign, paid acquisition, /campaigns/<slug>, insight tag, CAPI | Add a new LinkedIn campaign — landing page + checkout + dual-fire conversion. |
 | [linkedin-insight-doctor](linkedin-insight-doctor/SKILL.md) | linkedin pixel, insight tag, partner id, conversion-id mismatch | Diagnose silent LinkedIn pixel failures (CSP, conversion-id type mismatch, sync vs async fire). |
 | [mqtt-auth-rollout](mqtt-auth-rollout/SKILL.md) | mosquitto auth, allow_anonymous, password_file, ESP32 mqtt creds | 3-phase no-downtime credential rollout for the cluster Mosquitto broker. |
+| [ollama-operator](ollama-operator/SKILL.md) | ollama, local model, qwen2.5-coder, local inference, ask the local model, pull model | Use local Ollama from Amazon Q via the mcp-ollama-server bridge. Covers chat, generate, model management, and service ops. |
 | [postiz](postiz/SKILL.md) | postiz, social media scheduling, postiz auth | Postiz API + admin operations. |
 | [postiz-doctor](postiz-doctor/SKILL.md) | postiz crashloop, postiz oom, postiz down | Postiz-specific incident diagnosis. |
 | [selfhosted-admin-bootstrap](selfhosted-admin-bootstrap/SKILL.md) | new self-hosted admin, unified admin password, admin user bootstrap | Per-app recipe for creating the unified `tbaltzakis@cloudless.gr` admin. |
