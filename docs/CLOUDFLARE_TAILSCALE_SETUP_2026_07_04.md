@@ -11,6 +11,7 @@ All services are now accessible via Cloudflare Tunnel with proper DNS records, f
 ### 1. OMV Services (192.168.1.128)
 
 #### FTP Service ✅
+
 - **Status**: Running
 - **Port**: 21/TCP
 - **Access**: `ftp.cloudless.gr`
@@ -19,6 +20,7 @@ All services are now accessible via Cloudflare Tunnel with proper DNS records, f
 - **Web Access**: `https://ftp.cloudless.gr` (proxied to OMV UI)
 
 #### TFTP Service ✅
+
 - **Status**: Running
 - **Port**: 69/UDP
 - **Service**: tftpd-hpa
@@ -30,6 +32,7 @@ All services are now accessible via Cloudflare Tunnel with proper DNS records, f
 ### 2. Cloudflare Tunnel
 
 #### Tunnel Details
+
 - **ID**: `75f644ea-4f45-4cb6-a992-6173dbc9ea93`
 - **Name**: cloudless-services
 - **Origin**: `75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com`
@@ -42,16 +45,16 @@ All services are now accessible via Cloudflare Tunnel with proper DNS records, f
 ingress:
   - hostname: omv.cloudless.gr
     service: http://127.0.0.1:80
-  
+
   - hostname: docs.cloudless.gr
     service: http://127.0.0.1:30900
-  
+
   - hostname: ftp.cloudless.gr
     service: http://127.0.0.1:80
-  
+
   - hostname: tftp.cloudless.gr
-    service: http_status:404  # UDP not supported via HTTP tunnel
-  
+    service: http_status:404 # UDP not supported via HTTP tunnel
+
   - service: http_status:404
 ```
 
@@ -59,13 +62,13 @@ ingress:
 
 All records point to the Cloudflare Tunnel and are Cloudflare-proxied:
 
-| Record | Target | Status | Notes |
-|--------|--------|--------|-------|
-| omv.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Working | HTTP/2 200 |
-| ftp.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Working | HTTP/2 200 |
-| docs.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Resolved | Fixed 502 → HTTP/2 301 (redirect) |
-| tftp.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Record | UDP only |
-| test-omv.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Working | Test domain |
+| Record                | Target                       | Status      | Notes                             |
+| --------------------- | ---------------------------- | ----------- | --------------------------------- |
+| omv.cloudless.gr      | 75f644ea-...cfargotunnel.com | ✅ Working  | HTTP/2 200                        |
+| ftp.cloudless.gr      | 75f644ea-...cfargotunnel.com | ✅ Working  | HTTP/2 200                        |
+| docs.cloudless.gr     | 75f644ea-...cfargotunnel.com | ✅ Resolved | Fixed 502 → HTTP/2 301 (redirect) |
+| tftp.cloudless.gr     | 75f644ea-...cfargotunnel.com | ✅ Record   | UDP only                          |
+| test-omv.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Working  | Test domain                       |
 
 ## Cloudflare API Token
 
@@ -79,6 +82,7 @@ All records point to the Cloudflare Tunnel and are Cloudflare-proxied:
 Do NOT commit tokens to git.
 
 The token was tested and verified with the Cloudflare API endpoint:
+
 ```bash
 curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
   -H "Authorization: Bearer <YOUR_TOKEN_HERE>"
@@ -120,6 +124,7 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 ## Known Issues & Notes
 
 ### 1. docs.cloudless.gr Returns 502
+
 - **Symptom**: HTTP/2 502 Bad Gateway
 - **Root Cause**: Tunnel ingress configured for port 30900, but service may be on different port
 - **Pod Status**: docs-server pod is running (`docs-server-74964685cf-l9tfz`)
@@ -127,12 +132,14 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 - **Fix**: Update tunnel config to route to correct k3s service port
 
 ### 2. TFTP via HTTP Tunnel
+
 - **Limitation**: TFTP is UDP-only; Cloudflare Tunnel uses HTTP/QUIC
 - **Solution**: Access via Tailscale or direct LAN IP
   - **Tailscale**: `tftp-service.default.tail4ecae1.ts.net:69` (requires DNS resolution)
   - **LAN**: `tftp 192.168.1.128` from same network
 
 ### 3. TFTP `--secure` Mode
+
 - **Behavior**: Only allows writes to existing files
 - **Reason**: Security restriction
 - **Workaround**: Pre-create files with proper permissions:
@@ -219,13 +226,16 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 ## Next Steps
 
 1. ~~Fix docs.cloudless.gr Issue~~ ✅ **RESOLVED** (2026-07-05)
+
    ```bash
    # Root cause: docs-service was ClusterIP only, not exposed as NodePort
    # Fix: Patched to NodePort(30901) + updated tunnel config + restarted cloudflared
    ```
+
    See: `docs/DOCS_SERVICE_FIX_2026_07_05.md` for full details.
 
 2. ~~Merge Configuration to Production~~ ✅ **DONE** (commit `ed505a6b`)
+
    ```bash
    git add docs/CLOUDFLARE_TAILSCALE_SETUP_2026_07_04.md
    git commit -m "docs: Add Cloudflare Tunnel and OMV services configuration"
@@ -233,13 +243,13 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
    ```
 
 3. **Monitor Services**
-   - Check cloudflared logs: `sudo journalctl -u cloudflared -f`
-   - Monitor FTP connections: `sudo netstat -tulpn | grep 21`
-   - Monitor TFTP connections: `sudo netstat -tulpn | grep 69`
+   - Check cloudflared logs: `sudo journalctl -u cloudflared -f` ✅ **VERIFIED** (2026-07-06) - Stable with occasional QUIC timeouts.
+   - Monitor FTP connections: `sudo netstat -tulpn | grep 21` ✅ **VERIFIED** (2026-07-06) - Listening on all interfaces.
+   - Monitor TFTP connections: `sudo netstat -tulpn | grep 69` ✅ **VERIFIED** (2026-07-06) - Listening on all interfaces.
 
-4. **Test Tailscale Access** (optional)
-   - TFTP via Tailscale: `tftp <tailscale-ip>`
-   - Update Tailscale ACLs if needed
+4. **Test Tailscale Access**
+   - TFTP via Tailscale: `tftp <tailscale-ip>` ✅ **VERIFIED** (2026-07-06) - Service reachable via `100.74.191.58`.
+   - Update Tailscale ACLs if needed - Current ACLs allow necessary traffic.
 
 ---
 
@@ -249,7 +259,7 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 
 ## Revision History
 
-| Date | Author | Change |
-|------|--------|--------|
-| 2026-07-04 | Kiro CLI | Initial comprehensive setup documentation |
+| Date       | Author     | Change                                              |
+| ---------- | ---------- | --------------------------------------------------- |
+| 2026-07-04 | Kiro CLI   | Initial comprehensive setup documentation           |
 | 2026-07-05 | tbaltzakis | Updated: docs.cloudless.gr 502 fix, all services ✅ |
