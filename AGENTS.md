@@ -178,7 +178,6 @@ src/locales/
 ├── en.json                      # 195 translation keys
 ├── el.json                      # Greek (195 keys)
 └── fr.json                      # French (195 keys)
-└── fr.json                  # French translations (195 keys)
 
 public/
 ├── sw.js                    # Service worker (versioned caches, cache-first static, network-first nav)
