@@ -693,7 +693,7 @@ function TokenLifecycle({
         body: JSON.stringify({ token: portal.token, action: "rotate-token" }),
       });
       if (res.ok) {
-        const data = ((((await res.json()) as any)) as any).catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as any;
         if (data?.portal?.token) {
           setNewTokenHint(data.portal.token);
         }
@@ -783,7 +783,7 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
         body: JSON.stringify({ email: client.email }),
       });
       if (!res.ok) {
-        const data = ((((await res.json()) as any)) as any).catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as any;
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
       // Reload both pending list and portal list

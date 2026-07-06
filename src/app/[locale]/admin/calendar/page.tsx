@@ -99,7 +99,7 @@ export default function CalendarPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const data = ((((await res.json()) as any)) as any).catch(() => null);
+      const data = (await res.json().catch(() => null)) as any;
       if (!res.ok) {
         window.alert(data?.error ?? `Publish failed (HTTP ${res.status}).`);
         return;

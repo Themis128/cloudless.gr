@@ -117,7 +117,7 @@ export default function AutomationPage() {
         body: JSON.stringify({ source: "admin-automation", triggeredBy: "operator" }),
       });
       if (!res.ok) {
-        const data = ((((await res.json()) as any)) as any).catch(() => ({}));
+        const data = (await res.json().catch(() => ({}))) as any;
         throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       }
       setTriggerResult(`\u2705 "${name}" triggered successfully`);

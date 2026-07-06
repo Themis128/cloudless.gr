@@ -167,7 +167,7 @@ function AppCard({ app, health, pingMs }: AppCardProps) {
     try {
       const res = await fetchWithAuth(`/api/admin/autologin?app=${encodeURIComponent(app.key)}`);
       if (!res.ok) {
-        const j = ((((await res.json()) as any)) as any).catch(() => ({}));
+        const j = (await res.json().catch(() => ({}))) as any;
         setErr((j as { error?: string }).error ?? `HTTP ${res.status}`);
         return;
       }

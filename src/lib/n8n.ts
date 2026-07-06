@@ -164,7 +164,7 @@ export async function triggerWorkflowByWebhookPath(
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(15_000),
     });
-    if (r.ok) return { webhook: ((await r.json()) as any).catch(() => ({})) };
+    if (r.ok) return { webhook: (await r.json().catch(() => ({}))) as any };
     // 404 here means the workflow doesn't have a Webhook node at this path;
     // fall through to Path 2 instead of treating as failure.
     if (r.status !== 404) {
