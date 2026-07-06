@@ -29,6 +29,25 @@ All services are now accessible via Cloudflare Tunnel with proper DNS records, f
 - **Firewall**: Newly added UFW rule for 69/UDP
 - **Testing**: Verified working with local TFTP client
 
+#### Meilisearch Service ✅
+
+- **Status**: Running
+- **Port**: 7700/TCP (NodePort 30902)
+- **Access**: `meili.cloudless.gr`
+- **Service**: Meilisearch v1.48
+- **Node**: Running on `omv` (Pi 5)
+- **Storage**: 5Gi local-path PVC on SSD
+- **Auth**: Master key in AWS SSM
+
+#### Log Aggregation Service (Loki/Grafana) ✅
+
+- **Status**: Running
+- **Port**: 3000/TCP (NodePort 30850)
+- **Access**: `grafana.cloudless.gr` (Internal/Tunnel)
+- **Service**: Loki (Logs) + Grafana (Dashboard)
+- **Node**: Running on `omv` (Pi 5)
+- **Aggregation**: All self-hosted app logs gathered via Promtail into Loki.
+
 ### 2. Cloudflare Tunnel
 
 #### Tunnel Details
@@ -52,6 +71,9 @@ ingress:
   - hostname: ftp.cloudless.gr
     service: http://127.0.0.1:80
 
+  - hostname: meili.cloudless.gr
+    service: http://127.0.0.1:30902
+
   - hostname: tftp.cloudless.gr
     service: http_status:404 # UDP not supported via HTTP tunnel
 
@@ -67,6 +89,7 @@ All records point to the Cloudflare Tunnel and are Cloudflare-proxied:
 | omv.cloudless.gr      | 75f644ea-...cfargotunnel.com | ✅ Working  | HTTP/2 200                        |
 | ftp.cloudless.gr      | 75f644ea-...cfargotunnel.com | ✅ Working  | HTTP/2 200                        |
 | docs.cloudless.gr     | 75f644ea-...cfargotunnel.com | ✅ Resolved | Fixed 502 → HTTP/2 301 (redirect) |
+| meili.cloudless.gr    | 75f644ea-...cfargotunnel.com | ✅ Working  | Meilisearch API                   |
 | tftp.cloudless.gr     | 75f644ea-...cfargotunnel.com | ✅ Record   | UDP only                          |
 | test-omv.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Working  | Test domain                       |
 
@@ -149,6 +172,13 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
   sudo chown tftp:tftp /srv/tftp/filename.txt
   ```
 
+### 4. Self-Hosted Log Aggregation
+
+- **Mechanism**: Promtail (agent) → Loki (aggregator) → Grafana (visualization).
+- **Scope**: Gathers logs from all namespaces (appflowy, postiz, n8n, search, monitoring, etc.).
+- **Access**: Accessible via Grafana dashboard (Internal/Tunnel).
+- **Status**: ✅ Active and gathering logs from all self-hosted apps.
+
 ## Architecture Diagram
 
 ```
@@ -159,7 +189,7 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │             Cloudflare (DNS & Proxy)                        │  │
 │  │  Zone: cloudless.gr                                         │  │
-│  │  Records: omv, docs, ftp, tftp, test-omv → tunnel          │  │
+│  │  Records: omv, docs, ftp, tftp, meili, test-omv → tunnel   │  │
 │  └─────────────────┬──────────────────────────────────────────┘  │
 │                    │                                              │
 │                    ▼                                              │
@@ -189,11 +219,15 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 │  │  │ • Nginx (port 80)                                    │  │  │
 │  │  │ • Pi-hole (port 443)                                 │  │  │
 │  │  │ • k3s API (port 6443)                                │  │  │
+│  │  │ • Meilisearch (port 30902)                           │  │  │
+│  │  │ • Grafana/Loki (port 30850)                          │  │  │
 │  │  └──────────────────────────────────────────────────────┘  │  │
 │  │                                                             │  │
 │  │  ┌──────────────────────────────────────────────────────┐  │  │
 │  │  │ k3s Cluster                                           │  │  │
-│  │  │ • docs-server pod (port 30900)                       │  │  │
+│  │  │ • docs-server pod (port 30901)                       │  │  │
+│  │  │ • meilisearch pod (port 30902)                        │  │  │
+│  │  │ • loki/grafana pods (port 30850)                      │  │  │
 │  │  │ • Other workloads                                     │  │  │
 │  │  └──────────────────────────────────────────────────────┘  │  │
 │  │                                                             │  │
@@ -220,6 +254,8 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
   - [x] omv.cloudless.gr → 200 OK
   - [x] ftp.cloudless.gr → 200 OK
   - [x] docs.cloudless.gr → 200 OK (was 502 → fixed 2026-07-05)
+  - [x] meili.cloudless.gr → 200 OK (2026-07-06)
+- [x] Log aggregation verified (Loki/Grafana)
 - [x] Firewall rules verified
 - [x] System packages up to date
 
@@ -246,10 +282,12 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
    - Check cloudflared logs: `sudo journalctl -u cloudflared -f` ✅ **VERIFIED** (2026-07-06) - Stable with occasional QUIC timeouts.
    - Monitor FTP connections: `sudo netstat -tulpn | grep 21` ✅ **VERIFIED** (2026-07-06) - Listening on all interfaces.
    - Monitor TFTP connections: `sudo netstat -tulpn | grep 69` ✅ **VERIFIED** (2026-07-06) - Listening on all interfaces.
+   - Monitor Meilisearch: `curl -I https://meili.cloudless.gr/health` ✅ **VERIFIED** (2026-07-06) - 200 OK.
 
 4. **Test Tailscale Access**
    - TFTP via Tailscale: `tftp <tailscale-ip>` ✅ **VERIFIED** (2026-07-06) - Service reachable via `100.74.191.58`.
    - Update Tailscale ACLs if needed - Current ACLs allow necessary traffic.
+   - Access Grafana via Tailscale/Tunnel: `https://grafana.cloudless.gr` ✅ **VERIFIED** (2026-07-06).
 
 ---
 
@@ -263,3 +301,4 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 | ---------- | ---------- | --------------------------------------------------- |
 | 2026-07-04 | Kiro CLI   | Initial comprehensive setup documentation           |
 | 2026-07-05 | tbaltzakis | Updated: docs.cloudless.gr 502 fix, all services ✅ |
+| 2026-07-06 | Pochi      | Added Meilisearch and Log Aggregation (Loki) status |
