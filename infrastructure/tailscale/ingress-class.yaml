@@ -1,0 +1,8 @@
+# Tailscale Ingress Class
+# Allows services to be exposed via Tailscale using Ingress resources
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: tailscale
+spec:
+  controller: tailscale.com/tsl0

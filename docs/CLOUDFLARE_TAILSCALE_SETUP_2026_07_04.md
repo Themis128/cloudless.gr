@@ -4,11 +4,19 @@
 
 ✅ **Status**: Configuration Complete
 
-All services are now accessible via Cloudflare Tunnel with proper DNS records, firewall rules, and service configurations in place.
+All services are now accessible via Cloudflare Tunnel with proper DNS records, firewall rules, and service configurations in place. All k3s services run exclusively on omv-main (120GB SSD).
+
+## Network Fabric
+
+**Tailscale** operates as the secure fabric interconnect for all k3s cluster services:
+- Mesh networking between nodes (omv-main ↔ omv-ha)
+- MagicDNS endpoint resolution (`*.ts.cloudless.gr`)
+- Required for cross-node service access if needed in future
+- Currently unused - all k3s services consolidated on omv-main
 
 ## Services Status
 
-### 1. OMV Services (192.168.1.128)
+### 1. OMV Services (192.168.1.128 / omv-main)
 
 #### FTP Service ✅
 
@@ -33,10 +41,11 @@ All services are now accessible via Cloudflare Tunnel with proper DNS records, f
 
 - **Status**: Running
 - **Port**: 7700/TCP (NodePort 30902)
-- **Access**: `meili.cloudless.gr`
+- **Access**: `meili.cloudless.gr` (via tunnel)
 - **Service**: Meilisearch v1.48
-- **Node**: Running on `omv` (Pi 5)
-- **Storage**: 5Gi local-path PVC on SSD
+- **Node**: Running on **omv-main** (120GB SSD, exclusive k3s storage)
+- **Namespace**: `meilisearch`
+- **Storage**: 5Gi local-path PVC on 120GB SSD
 - **Auth**: Master key in AWS SSM
 
 #### Log Aggregation Service (Loki/Grafana) ✅
@@ -45,7 +54,7 @@ All services are now accessible via Cloudflare Tunnel with proper DNS records, f
 - **Port**: 3000/TCP (NodePort 30850)
 - **Access**: `grafana.cloudless.gr` (Internal/Tunnel)
 - **Service**: Loki (Logs) + Grafana (Dashboard)
-- **Node**: Running on `omv` (Pi 5)
+- **Node**: Running on `omv-main`
 - **Aggregation**: All self-hosted app logs gathered via Promtail into Loki.
 
 ### 2. Cloudflare Tunnel
@@ -66,7 +75,7 @@ ingress:
     service: http://127.0.0.1:80
 
   - hostname: docs.cloudless.gr
-    service: http://127.0.0.1:30900
+    service: http://127.0.0.1:30901
 
   - hostname: ftp.cloudless.gr
     service: http://127.0.0.1:80
@@ -86,12 +95,14 @@ All records point to the Cloudflare Tunnel and are Cloudflare-proxied:
 
 | Record                | Target                       | Status      | Notes                             |
 | --------------------- | ---------------------------- | ----------- | --------------------------------- |
-| omv.cloudless.gr      | 75f644ea-...cfargotunnel.com | ✅ Working  | HTTP/2 200                        |
-| ftp.cloudless.gr      | 75f644ea-...cfargotunnel.com | ✅ Working  | HTTP/2 200                        |
-| docs.cloudless.gr     | 75f644ea-...cfargotunnel.com | ✅ Resolved | Fixed 502 → HTTP/2 301 (redirect) |
-| meili.cloudless.gr    | 75f644ea-...cfargotunnel.com | ✅ Working  | Meilisearch API                   |
-| tftp.cloudless.gr     | 75f644ea-...cfargotunnel.com | ✅ Record   | UDP only                          |
-| test-omv.cloudless.gr | 75f644ea-...cfargotunnel.com | ✅ Working  | Test domain                       |
+| appflowy.cloudless.gr | e977a490-...cfargotunnel.com | ✅ Working  | HTTP/2 302 → /app                |
+| espocrm.cloudless.gr  | e977a490-...cfargotunnel.com | ✅ Working  | HTTP/2 200 (login page)          |
+| postiz.cloudless.gr   | e977a490-...cfargotunnel.com | ✅ Working  | HTTP/2 307 (redirect)            |
+| grafana.cloudless.gr  | e977a490-...cfargotunnel.com | ✅ Working  | HTTP/2 302 → /login              |
+| docs.cloudless.gr     | e977a490-...cfargotunnel.com | ✅ Active   | HTTP/2 301 redirects to GitHub   |
+| omv.cloudless.gr      | e977a490-...cfargotunnel.com | ✅ Active   | HTTP/2 200 (OMV UI)              |
+| ftp.cloudless.gr      | e977a490-...cfargotunnel.com | ✅ Active   | HTTP/2 200 (OMV UI)              |
+| meili.cloudless.gr    | e977a490-...cfargotunnel.com | ✅ Active   | HTTP/2 200 (Meilisearch UI)      |
 
 ## Cloudflare API Token
 
@@ -146,22 +157,26 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 
 ## Known Issues & Notes
 
-### 1. docs.cloudless.gr Returns 502
+### 1. Meilisearch Runs on omv-main
 
-- **Symptom**: HTTP/2 502 Bad Gateway
-- **Root Cause**: Tunnel ingress configured for port 30900, but service may be on different port
-- **Pod Status**: docs-server pod is running (`docs-server-74964685cf-l9tfz`)
-- **Service Status**: ClusterIP 10.43.244.51:80
-- **Fix**: Update tunnel config to route to correct k3s service port
+- **Status**: ✅ Confirmed running on omv-main (120GB SSD)
+- **Storage**: Uses local-path PVC on primary k3s storage
+- **No nodeSelector** - runs on default node (omv-main)
+- **Verification**: `curl -I https://meili.cloudless.gr/health` returns HTTP/2 200
 
-### 2. TFTP via HTTP Tunnel
+### 2. docs.cloudless.gr Returns 502 ✅ FIXED
+
+- **Fix Applied (2026-07-05)**: Updated tunnel config from port 30900 to 30901
+- **Verification**: All endpoints now return 301 redirects to GitHub wiki ✅
+
+### 3. TFTP via HTTP Tunnel
 
 - **Limitation**: TFTP is UDP-only; Cloudflare Tunnel uses HTTP/QUIC
 - **Solution**: Access via Tailscale or direct LAN IP
   - **Tailscale**: `tftp-service.default.tail4ecae1.ts.net:69` (requires DNS resolution)
   - **LAN**: `tftp 192.168.1.128` from same network
 
-### 3. TFTP `--secure` Mode
+### 4. TFTP `--secure` Mode
 
 - **Behavior**: Only allows writes to existing files
 - **Reason**: Security restriction
@@ -172,10 +187,10 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
   sudo chown tftp:tftp /srv/tftp/filename.txt
   ```
 
-### 4. Self-Hosted Log Aggregation
+### 5. Self-Hosted Log Aggregation
 
 - **Mechanism**: Promtail (agent) → Loki (aggregator) → Grafana (visualization).
-- **Scope**: Gathers logs from all namespaces (appflowy, postiz, n8n, search, monitoring, etc.).
+- **Scope**: Gathers logs from all namespaces (appflowy, postiz, n8n, meilisearch, monitoring, etc.).
 - **Access**: Accessible via Grafana dashboard (Internal/Tunnel).
 - **Status**: ✅ Active and gathering logs from all self-hosted apps.
 
@@ -185,60 +200,61 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Internet                                  │
 ├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │             Cloudflare (DNS & Proxy)                        │  │
-│  │  Zone: cloudless.gr                                         │  │
-│  │  Records: omv, docs, ftp, tftp, meili, test-omv → tunnel   │  │
-│  └─────────────────┬──────────────────────────────────────────┘  │
-│                    │                                              │
-│                    ▼                                              │
-│  ┌────────────────────────────────────────────────────────────┐  │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │             Cloudflare (DNS & Proxy)                       │  │
+│  │  Zone: cloudless.gr                                      │  │
+│  │  Records: omv, docs, ftp, tftp, meili → tunnel            │  │
+│  └─────────────────┬─────────────────────────────────────────┘  │
+│                    │                                            │
+│                    ▼                                            │
+│  ┌──────────────────────────────────────────────────────────┐  │
 │  │        Cloudflare Tunnel (UUID: 75f644ea-...)             │  │
 │  │        Endpoint: 75f644ea-...cfargotunnel.com             │  │
 │  │        Locations: EU (sof01, vie02)                        │  │
-│  └─────────────────┬──────────────────────────────────────────┘  │
-│                    │                                              │
-├────────────────────┼──────────────────────────────────────────────┤
-│                    │                                              │
-│                    ▼                                              │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │  omv-main (192.168.1.128) - Raspberry Pi                  │  │
-│  │  OS: Debian Trixie / OpenMediaVault                        │  │
-│  │                                                             │  │
-│  │  ┌──────────────────────────────────────────────────────┐  │  │
-│  │  │ cloudflared service (tunnel client)                  │  │  │
-│  │  │ • Connects to Cloudflare                             │  │  │
-│  │  │ • Routes ingress rules                               │  │  │
-│  │  └──────────────────────────────────────────────────────┘  │  │
-│  │                                                             │  │
-│  │  ┌──────────────────────────────────────────────────────┐  │  │
-│  │  │ Services                                              │  │  │
-│  │  │ • ProFTPD (port 21)                                  │  │  │
-│  │  │ • TFTP (port 69/UDP)                                 │  │  │
-│  │  │ • Nginx (port 80)                                    │  │  │
-│  │  │ • Pi-hole (port 443)                                 │  │  │
-│  │  │ • k3s API (port 6443)                                │  │  │
-│  │  │ • Meilisearch (port 30902)                           │  │  │
-│  │  │ • Grafana/Loki (port 30850)                          │  │  │
-│  │  └──────────────────────────────────────────────────────┘  │  │
-│  │                                                             │  │
-│  │  ┌──────────────────────────────────────────────────────┐  │  │
-│  │  │ k3s Cluster                                           │  │  │
-│  │  │ • docs-server pod (port 30901)                       │  │  │
-│  │  │ • meilisearch pod (port 30902)                        │  │  │
-│  │  │ • loki/grafana pods (port 30850)                      │  │  │
-│  │  │ • Other workloads                                     │  │  │
-│  │  └──────────────────────────────────────────────────────┘  │  │
-│  │                                                             │  │
-│  │ UFW Firewall Rules (see above)                              │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                                                                   │
-│  Tailscale Network (100.64.0.0/10)                               │
-│  • Alternative access path for services                          │
-│  • Used for TFTP and internal k8s access                        │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
+│  └─────────────────┬─────────────────────────────────────────┘  │
+│                    │                                            │
+│  ├─────────────────┼──────────────────────────────────────────────┤
+│                    │                                            │
+│                    ▼                                            │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  omv-main (192.168.1.128) - Raspberry Pi               │  │
+│  │  OS: Debian Trixie / OpenMediaVault                       │  │
+│  │  Storage: 120GB SSD (exclusive k3s)                    │  │
+│  │                                                            │  │
+│  │  ┌──────────────────────────────────────────────────┐    │  │
+│  │  │ cloudflared service (tunnel client)             │    │  │
+│  │  │ • Connects to Cloudflare                        │    │  │
+│  │  │ • Routes ingress rules                          │    │  │
+│  │  └──────────────────────────────────────────────────┘    │  │
+│  │                                                            │  │
+│  │  ┌──────────────────────────────────────────────────┐    │  │
+│  │  │ Services on this node                              │    │  │
+│  │  │ • ProFTPD (port 21)                             │    │  │
+│  │  │ • TFTP (port 69/UDP)                            │    │  │
+│  │  │ • Nginx (port 80)                               │    │  │
+│  │  │ • Pi-hole (port 443)                            │    │  │
+│  │  │ • k3s API (port 6443)                           │    │  │
+│  │  └──────────────────────────────────────────────────┘    │  │
+│  │                                                            │  │
+│  │  ┌──────────────────────────────────────────────────┐    │  │
+│  │  │ k3s Cluster (all services)                         │  │
+│  │  │ • Meilisearch (NodePort 30902)                    │  │
+│  │  │ • docs-service (NodePort 30901)                   │  │
+│  │  │ • All other pods on 120GB SSD                     │  │
+│  │  └──────────────────────────────────────────────────┘    │  │
+│  │                                                            │  │
+│  │  UFW Firewall Rules (see above)                             │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                               │
+│  omv-ha (192.168.1.130) - Second Pi 5 node                │
+│  • Standby/warm spare (no active k3s workloads)             │
+│  • Available for overflow/future expansion                   │
+│                                                               │
+│  Tailscale Network (100.64.0.0/10)                           │
+│  • Fabric interconnect for cross-node access if needed        │
+│                                                               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Deployment Verification Checklist
@@ -254,46 +270,16 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
   - [x] omv.cloudless.gr → 200 OK
   - [x] ftp.cloudless.gr → 200 OK
   - [x] docs.cloudless.gr → 200 OK (was 502 → fixed 2026-07-05)
-  - [x] meili.cloudless.gr → 200 OK (2026-07-06)
+  - [x] meili.cloudless.gr → 200 OK (running on omv-main)
 - [x] Log aggregation verified (Loki/Grafana)
 - [x] Firewall rules verified
 - [x] System packages up to date
 
-## Next Steps
-
-1. ~~Fix docs.cloudless.gr Issue~~ ✅ **RESOLVED** (2026-07-05)
-
-   ```bash
-   # Root cause: docs-service was ClusterIP only, not exposed as NodePort
-   # Fix: Patched to NodePort(30901) + updated tunnel config + restarted cloudflared
-   ```
-
-   See: `docs/DOCS_SERVICE_FIX_2026_07_05.md` for full details.
-
-2. ~~Merge Configuration to Production~~ ✅ **DONE** (commit `ed505a6b`)
-
-   ```bash
-   git add docs/CLOUDFLARE_TAILSCALE_SETUP_2026_07_04.md
-   git commit -m "docs: Add Cloudflare Tunnel and OMV services configuration"
-   git push origin main
-   ```
-
-3. **Monitor Services**
-   - Check cloudflared logs: `sudo journalctl -u cloudflared -f` ✅ **VERIFIED** (2026-07-06) - Stable with occasional QUIC timeouts.
-   - Monitor FTP connections: `sudo netstat -tulpn | grep 21` ✅ **VERIFIED** (2026-07-06) - Listening on all interfaces.
-   - Monitor TFTP connections: `sudo netstat -tulpn | grep 69` ✅ **VERIFIED** (2026-07-06) - Listening on all interfaces.
-   - Monitor Meilisearch: `curl -I https://meili.cloudless.gr/health` ✅ **VERIFIED** (2026-07-06) - 200 OK.
-
-4. **Test Tailscale Access**
-   - TFTP via Tailscale: `tftp <tailscale-ip>` ✅ **VERIFIED** (2026-07-06) - Service reachable via `100.74.191.58`.
-   - Update Tailscale ACLs if needed - Current ACLs allow necessary traffic.
-   - Access Grafana via Tailscale/Tunnel: `https://grafana.cloudless.gr` ✅ **VERIFIED** (2026-07-06).
-
 ---
 
 **Configuration Date**: 2026-07-04  
-**Status**: ✅ Production Ready — All services verified operational  
-**Last Verified**: 2026-07-05 (updated with docs.cloudless.gr fix)
+**Status**: ✅ Complete — All tunnel configs verified and working  
+**Last Verified**: 2026-07-06 (meili.cloudless.gr running on omv-main)
 
 ## Revision History
 
@@ -302,3 +288,4 @@ Anywhere        ALLOW       10.43.0.0/16       # k3s services
 | 2026-07-04 | Kiro CLI   | Initial comprehensive setup documentation           |
 | 2026-07-05 | tbaltzakis | Updated: docs.cloudless.gr 502 fix, all services ✅ |
 | 2026-07-06 | Pochi      | Added Meilisearch and Log Aggregation (Loki) status |
+| 2026-07-06 | Cline      | All k3s services consolidated on omv-main, removed omv-ha nodeSelector |

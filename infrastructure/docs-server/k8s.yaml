@@ -1,0 +1,67 @@
+# docs-server - Cloudless Documentation Portal
+# Nginx-based redirector to GitHub Wiki
+#
+# Runs on omv-main (120GB SSD) with NodePort 30901 for Cloudflare Tunnel access
+# Tunnel config: https://docs.cloudless.gr → http://localhost:30901
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docs-server
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docs-server
+  template:
+    metadata:
+      labels:
+        app: docs-server
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: omv  # Must run on omv-main for tunnel
+      containers:
+      - env:
+        - name: GITHUB_WIKI_URL
+          value: https://github.com/Themis128/cloudless.gr/wiki
+        image: nginx:alpine
+        imagePullPolicy: IfNotPresent
+        name: docs-server
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        volumeMounts:
+        - mountPath: /etc/nginx/conf.d
+          name: config
+          readOnly: true
+        - mountPath: /usr/share/nginx/html
+          name: html
+      volumes:
+      - configMap:
+          name: docs-config
+        name: config
+      - configMap:
+          name: docs-html
+        name: html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docs-service
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: docs-server
+  ports:
+  - port: 80
+    targetPort: 8080
+    nodePort: 30901

@@ -1,6 +1,6 @@
 # Cloudflare Configuration & Architecture
 
-**Last Updated:** July 4, 2026  
+**Last Updated:** July 6, 2026  
 **Status:** ✅ Production Ready  
 **Maintainer:** DevOps / Infrastructure Team
 
@@ -34,29 +34,29 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 ### Service Architecture
 
 ```
-                    ┌─────────────────────────────┐
-                    │   Cloudflare Zone (global)  │
-                    │   cloudless.gr              │
-                    └──────────────┬──────────────┘
-                                   │
-                    ┌──────────────┴──────────────┐
-                    │                             │
+                      ┌─────────────────────────────┐
+                      │   Cloudflare Zone (global)  │
+                      │   cloudless.gr              │
+                      └──────────────┬──────────────┘
+                                     │
+                      ┌──────────────┴──────────────┐
+                      │                             │
         ┌───────────▼─────────────┐  ┌──────────▼──────────────┐
         │  DNS Records            │  │  Failover Worker       │
         │  • cloudless.gr         │  │  • cloudless-failover  │
         │  • *.cloudless.gr       │  │  • Routes to Pi/AWS    │
         │  • Tunnel endpoints     │  └──────────┬─────────────┘
         └────────────────────────┘             │
-                                               │
-              ┌────────────────────────────────┼────────────────────────────────┐
-              │                                │                                │
-        ┌─────▼──────────────────┐    ┌────────▼─────────────┐    ┌──────────▼──────────┐
-        │  Cloudflare Tunnel     │    │  AWS CloudFront      │    │  DNS Failover       │
-        │  (Pi k3s origin)       │    │  (Lambda fallback)   │    │  (Watchdog)         │
-        │  • piorigin-tunnel     │    │  • d3k7muo3c6lw6s    │    │  • Swaps CNAME      │
-        │  • HTTP/QUIC           │    │  • d9c1d2e3f4g5h6i7  │    │  • Per-minute check │
-        │  • Egress from Pi      │    │  • Primary: 2xx-3xx  │    │  • DNS-level HA     │
-        └────────────────────────┘    └────────────────────┘    └─────────────────────┘
+                                                 │
+               ┌────────────────────────────────┼────────────────────────────────┐
+               │                                │                                │
+         ┌─────▼──────────────────┐    ┌────────▼─────────────┐    ┌──────────▼──────────┐
+         │  Cloudflare Tunnel     │    │  AWS CloudFront      │    │  DNS Failover       │
+         │  (Pi k3s origin)       │    │  (Lambda fallback)   │    │  (Watchdog)         │
+         │  • piorigin-tunnel     │    │  • d3k7muo3c6lw6s    │    │  • Swaps CNAME      │
+         │  • HTTP/QUIC           │    │  • d9c1d2e3f4g5h6i7  │    │  • Per-minute check │
+         │  • Egress from Pi      │    │  • Primary: 2xx-3xx  │    │  • DNS-level HA     │
+         └────────────────────────┘    └────────────────────┘    └─────────────────────┘
 ```
 
 ---
@@ -108,7 +108,8 @@ All production records point to Cloudflare Tunnel with orange cloud (proxied).
 | CNAME | pi-origin | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
 | CNAME | omv | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
 | CNAME | ftp | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
-| CNAME | docs | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🟠 Investigating | Auto | ✅ Yes |
+| CNAME | docs | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | ✅ Active | Auto | ✅ Yes |
+| CNAME | meili | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | ✅ Active | Auto | ✅ Yes |
 | CNAME | tftp | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
 | CNAME | api | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
 | TXT | _acme-challenge | (Letsencrypt cert validation) | 🔵 Active | Auto | ❌ No |
@@ -183,8 +184,6 @@ The tunnel uses a credentials file stored on the Pi:
 
 **Location:** `/home/tbaltzakis/.cloudflared/config.yml`
 
-
-
 ```yaml
 tunnel: 75f644ea-4f45-4cb6-a992-6173dbc9ea93
 credentials-file: /root/.cloudflared/75f644ea-4f45-4cb6-a992-6173dbc9ea93.json
@@ -198,7 +197,7 @@ ingress:
 
   # Documentation Server (k3s)
   - hostname: docs.cloudless.gr
-    service: http://127.0.0.1:30900
+    service: http://127.0.0.1:30901
     originRequest:
       noTLSVerify: true
 
@@ -207,6 +206,13 @@ ingress:
     service: http://127.0.0.1:80
     originRequest:
       noTLSVerify: true
+
+  # Meilisearch Search Engine
+  - hostname: meili.cloudless.gr
+    service: http://127.0.0.1:30902
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 15s
 
   # TFTP (UDP) - Returns 404 via HTTP tunnel
   - hostname: tftp.cloudless.gr
@@ -276,8 +282,9 @@ Each ingress rule maps a hostname to an origin service:
 | Hostname | Service | Port | Notes |
 |----------|---------|------|-------|
 | omv.cloudless.gr | OMV Web UI | 80 | ProFTPD + TFTP management |
-| docs.cloudless.gr | k3s docs service | 30900 | Currently returning 502 |
+| docs.cloudless.gr | k3s docs service | 30901 | Returns 301 redirects to GitHub wiki |
 | ftp.cloudless.gr | FTP Web UI | 80 | Same as OMV |
+| meili.cloudless.gr | Meilisearch search engine | 30902 | Runs on omv-main (120GB SSD) |
 | tftp.cloudless.gr | N/A | 404 | UDP not supported via HTTP tunnel |
 | api.cloudless.gr | API Gateway | 80 | Fallback service |
 
@@ -588,7 +595,8 @@ ssh tbaltzakis@192.168.1.128
 # Check k3s service
 kubectl get svc docs-service -o wide -n cloudless
 
-# Expected output: docs-service ClusterIP 10.43.xxx.xxx 80/TCP
+# Expected output: docs-service NodePort 10.43.xxx.xxx:80/TCP
+# Note: Port changed from 30900 to 30901 on 2026-07-05
 
 # Check if pod is running
 kubectl get pods -n cloudless | grep docs
@@ -597,7 +605,7 @@ kubectl get pods -n cloudless | grep docs
 kubectl describe pod docs-server-* -n cloudless
 
 # Test connectivity directly from Pi
-curl http://127.0.0.1:30900 -v
+curl http://127.0.0.1:30901 -v
 ```
 
 **Solutions:**
@@ -605,7 +613,7 @@ curl http://127.0.0.1:30900 -v
 1. **Update tunnel config to correct port:**
    ```bash
    sudo nano /home/tbaltzakis/.cloudflared/config.yml
-   # Change service port from 30900 to actual service port
+   # Change service port from 30900 to 30901
    sudo systemctl restart cloudflared
    ```
 
@@ -618,6 +626,30 @@ curl http://127.0.0.1:30900 -v
    ```bash
    kubectl logs -f deployment/docs-server -n cloudless
    ```
+
+### Issue: meili.cloudless.gr Returns 302 Redirect
+
+**Symptoms:**
+- Returns 302 redirect instead of Meilisearch UI
+- Response headers show wrong origin
+
+**Root Cause:**
+- Tunnel ingress configured for `127.0.0.1:30902`
+- Meilisearch pod may not be running or service port misconfigured
+
+**Diagnosis:**
+
+```bash
+# SSH to Pi
+ssh tbaltzakis@192.168.1.128
+
+# Check Meilisearch pod
+kubectl get pods -n meilisearch
+kubectl get svc meilisearch -n meilisearch
+
+# Test local connectivity
+curl http://127.0.0.1:30902 -v
+```
 
 ### Issue: "cert not yet valid" Error
 
@@ -651,6 +683,7 @@ sudo systemctl restart cloudflared
 # 1. Check tunnel status
 curl -s https://omv.cloudless.gr -I | head -1
 curl -s https://ftp.cloudless.gr -I | head -1
+curl -s https://meili.cloudless.gr -I | head -1
 
 # 2. Check for errors in logs
 ssh tbaltzakis@192.168.1.128 "sudo journalctl -u cloudflared --since '10 minutes ago' | tail -20"
@@ -745,10 +778,11 @@ dig omv.cloudless.gr +short
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-07-04 | Kiro CLI | Initial comprehensive documentation |
-| (pending) | (team) | To be updated |
+| 2026-07-05 | tbaltzakis | Fixed docs.cloudless.gr port (30900 → 30901), updated DNS status table |
+| 2026-07-06 | Cline | Updated meili.cloudless.gr to omv-main (127.0.0.1), removed omv-ha nodeSelector |
 
 ---
 
 **Status:** ✅ Production Ready  
-**Last Reviewed:** 2026-07-04  
+**Last Reviewed:** 2026-07-06  
 **Next Review:** 2026-08-04 (monthly)
