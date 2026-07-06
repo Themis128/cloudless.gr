@@ -94,7 +94,7 @@ export default function StorePage() {
       {/* Header */}
       <section className="bg-void scanlines relative overflow-hidden py-16 text-white md:py-20">
         <div className="cyber-grid absolute inset-0 opacity-30" />
-        <div className="bg-neon-magenta/5 animate-float-slow absolute top-0 right-0 h-[400px] w-[400px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
+        <div className="bg-neon-magenta/5 animate-float-slow absolute top-0 right-0 h-100 w-100 translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
           <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ STORE ]
@@ -103,7 +103,7 @@ export default function StorePage() {
               animation, which would delay LCP past Lighthouse's measurement. */}
           <h1 className="font-heading text-3xl leading-tight font-bold md:text-5xl">
             Tools, templates &amp;{" "}
-            <span className="from-neon-cyan to-neon-magenta bg-gradient-to-r bg-clip-text text-transparent">
+            <span className="from-neon-cyan to-neon-magenta bg-linear-to-r bg-clip-text text-transparent">
               expert services.
             </span>
           </h1>

@@ -37,7 +37,7 @@ export default function RecommendationGrid({
         const res = await fetch(`/api/recommendations?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch recommendations");
 
-        const data = ((await res.json()) as any);
+        const data = (await res.json()) as any;
         setRecommendations(data.recommendations);
       } catch (err) {
         console.error("[RecommendationGrid] Error:", err);
@@ -82,7 +82,7 @@ export default function RecommendationGrid({
               <HolographicCard className="bg-void-light/50 hover:border-neon-cyan/50 h-full rounded-xl border border-slate-800 transition-colors">
                 <div className="bg-void-lighter relative aspect-square overflow-hidden rounded-t-xl">
                   <ProductIcon productId={product.id} category={product.category} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
                 <div className="p-5">
                   <h3 className="font-heading group-hover:text-neon-cyan mb-1 line-clamp-1 text-sm font-semibold text-white transition-colors">
