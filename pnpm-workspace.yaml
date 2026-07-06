@@ -19,5 +19,5 @@ allowBuilds:
 sharp: false
 unrs-resolver: false
 
-# Note: overrides are defined in package.json under "pnpm.overrides"
-# to keep workspace config minimal and avoid duplication
+# Note: overrides are now defined in .npmrc for pnpm v10+ compatibility
+# See: https://pnpm.io/settings#overrides

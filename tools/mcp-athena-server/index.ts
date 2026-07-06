@@ -22,7 +22,7 @@ import {
   GetQueryExecutionCommand,
   GetQueryResultsCommand,
   ListDatabasesCommand,
-  ListTablesCommand,
+  ListTableMetadataCommand,
 } from "@aws-sdk/client-athena";
 
 // ============================================================================
@@ -305,16 +305,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     case "athena_list_tables": {
       const { database = DATABASE } = args as { database?: string };
-      const result = await athenaClient.send(new ListTablesCommand({
+      const result = await athenaClient.send(new ListTableMetadataCommand({
         CatalogName: "AwsDataCatalog",
         DatabaseName: database,
       }));
       
+      const tableNames = result.TableMetadataList?.map(t => t.Name || t.name || "unknown") || [];
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(result.TableNames, null, 2),
+            text: JSON.stringify(tableNames, null, 2),
           },
         ],
       };

@@ -1,0 +1,56 @@
+{
+  "provider": "ollama",
+  "model": "qwen2.5-coder",
+  "baseUrl": "http://localhost:11434",
+  "apiKey": "dummy",
+  "models": [
+    {
+      "name": "ollama-local",
+      "provider": "ollama",
+      "baseUrl": "http://localhost:11434",
+      "model": "qwen2.5-coder",
+      "supports": ["functions", "streaming"]
+    },
+    {
+      "name": "ollama-llama3",
+      "provider": "ollama",
+      "baseUrl": "http://localhost:11434",
+      "model": "llama3.1",
+      "supports": ["functions", "streaming"]
+    },
+    {
+      "name": "ollama-mistral",
+      "provider": "ollama",
+      "baseUrl": "http://localhost:11434",
+      "model": "mistral",
+      "supports": ["functions", "streaming"]
+    }
+  ],
+  "tools": {
+    "include": ["ollama-tools"],
+    "configs": [
+      {
+        "name": "ollama-tools",
+        "type": "python-module",
+        "module": "integrations.cline_adapter",
+        "available_tools": [
+          "list_files",
+          "read_file",
+          "write_file",
+          "run_command",
+          "ask_agent",
+          "list_models",
+          "pull_model",
+          "check_ollama",
+          "search_files",
+          "get_file_info",
+          "analyze_code",
+          "generate_test"
+        ],
+        "default_context": {
+          "project_path": "/home/tbaltzakis/cloudless.gr"
+        }
+      }
+    ]
+  }
+}
