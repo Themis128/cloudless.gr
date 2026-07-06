@@ -1,0 +1,10 @@
+{
+  "name": "github-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server wrapper for GitHub MCP Server (Docker-based)",
+  "scripts": {
+    "dev": "node index.js"
+  }
+}
