@@ -147,7 +147,7 @@ export async function getSeoSnapshot(
       return null;
     }
     const totals = (await totalsRes.json()) as GscSearchAnalyticsResponse;
-    const row = totals.rows?.[0] ?? {};
+    const row = totals.rows?.[0] ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 };
 
     // Count unique keywords
     const kwRes = await gscQuery(siteUrl, {
@@ -155,7 +155,7 @@ export async function getSeoSnapshot(
       dimensions: ["query"],
       rowLimit: 25000, // GSC max
     });
-    const kwData = kwRes.ok ? ((await kwRes.json()) as GscSearchAnalyticsResponse) : {};
+    const kwData = kwRes.ok ? ((await kwRes.json()) as GscSearchAnalyticsResponse) : { rows: [] };
     const organicKeywords: number = kwData.rows?.length ?? 0;
 
     return {
