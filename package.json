@@ -130,7 +130,7 @@
     "@sentry/core": "10.63.0",
     "@sentry/nextjs": "^10.63.0",
     "agents": "^0.17.3",
-    "ai": "^6.0.219",
+    "ai": "^7.0.16",
     "cmdk": "^1.1.1",
     "countup.js": "^2.10.0",
     "hono-agents": "^3.0.11",
@@ -157,7 +157,7 @@
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1077.0",
     "@axe-core/playwright": "^4.12.1",
-    "@cloudflare/workers-types": "^4.20260701.1",
+    "@cloudflare/workers-types": "^5.20260706.1",
     "@next/bundle-analyzer": "^16.2.9",
     "@parcel/watcher": "^2.5.6",
     "@playwright/test": "^1.61.1",
