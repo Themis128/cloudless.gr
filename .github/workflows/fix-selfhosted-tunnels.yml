@@ -25,11 +25,23 @@ jobs:
           kubectl version --client
 
       # ------------------------------------------------------------------
-      # Step 1: Check current tunnel state on omv
+      # Step 1: Ensure services have correct NodePorts
+      # ------------------------------------------------------------------
+      - name: Fix n8n service NodePort
+        run: |
+          kubectl patch svc n8n -n n8n -p '{"spec":{"type":"NodePort","ports":[{"port":5678,"targetPort":5678,"nodePort":30900}]}}' --type=merge || true
+          echo "n8n service patched to NodePort 30900"
+
+      - name: Fix ntfy service NodePort
+        run: |
+          kubectl patch svc ntfy -n ntfy -p '{"spec":{"type":"NodePort","ports":[{"port":80,"targetPort":80,"nodePort":30080}]}}' --type=merge || true
+          echo "ntfy service patched to NodePort 30080"
+
+      # ------------------------------------------------------------------
+      # Step 2: Check current tunnel state on omv
       # ------------------------------------------------------------------
       - name: Read current cloudflared config from omv-main
         run: |
-          # Delete stale pod from prior run before creating fresh one
           kubectl delete pod cf-read-omv -n default --ignore-not-found --wait=true
 
           cat <<'PODEOF' | kubectl create -f -
@@ -64,13 +76,10 @@ jobs:
           cat /tmp/cf-config-current.txt
 
       # ------------------------------------------------------------------
-      # Step 2: Patch the config — fix grafana, add kuma + n8n if missing
+      # Step 3: Patch the config - fix grafana, n8n, ntfy port mismatches
       # ------------------------------------------------------------------
       - name: Patch cloudflared config
         run: |
-          # State-machine line replacement — handles any leading-whitespace variant.
-          # Only grafana needs fixing: localhost:18443 → 192.168.1.128:30850.
-          # kuma (32501) and n8n (30820) are already correct on the cluster.
           python3 <<'PYEOF'
           import re, sys
 
@@ -82,25 +91,40 @@ jobs:
 
           out = []
           i = 0
-          patched = False
+          fixes = []
+
           while i < len(lines):
               line = lines[i]
+              # Fix grafana: localhost:18443 -> 192.168.1.128:30850
               if re.match(r'\s*-\s*hostname:\s*grafana\.cloudless\.gr\s*$', line):
                   out.append(line)
                   i += 1
                   if i < len(lines) and re.match(r'\s*service:\s*', lines[i]):
                       indent = re.match(r'(\s*)', lines[i]).group(1)
                       new_svc = f"{indent}service: http://192.168.1.128:30850\n"
-                      print(f"PATCHED: '{lines[i].rstrip()}' -> '{new_svc.rstrip()}'")
+                      fixes.append(f"grafana: localhost:18443 -> 192.168.1.128:30850")
                       out.append(new_svc)
-                      patched = True
+                      i += 1
+                  continue
+              # Fix n8n: port 30820 -> 30900
+              if re.match(r'\s*-\s*hostname:\s*n8n\.cloudless\.gr\s*$', line):
+                  out.append(line)
+                  i += 1
+                  if i < len(lines) and re.match(r'\s*service:\s*', lines[i]):
+                      indent = re.match(r'(\s*)', lines[i]).group(1)
+                      old_svc = lines[i].rstrip()
+                      new_svc = f"{indent}service: http://192.168.1.128:30900\n"
+                      fixes.append(f"n8n: 30820 -> 30900")
+                      out.append(new_svc)
                       i += 1
                   continue
               out.append(line)
               i += 1
 
-          if not patched:
-              print("WARNING: grafana hostname not found — config unchanged", file=sys.stderr)
+          if not fixes:
+              print("No fixes needed", file=sys.stderr)
+          else:
+              print(f"Applied fixes: {', '.join(fixes)}")
 
           with open(dst, "w") as f:
               f.writelines(out)
@@ -110,11 +134,9 @@ jobs:
 
           echo "=== Diff ==="
           diff /tmp/cf-config-current.txt /tmp/cf-config-new.txt || true
-          echo "=== Grafana entry after patch ==="
-          grep -A3 "grafana.cloudless.gr" /tmp/cf-config-new.txt
 
       # ------------------------------------------------------------------
-      # Step 3: Apply patched config to omv (primary cloudflared)
+      # Step 4: Apply patched config to omv (primary cloudflared)
       # ------------------------------------------------------------------
       - name: Apply config to omv-main
         run: |
@@ -160,7 +182,7 @@ jobs:
                     apk add -q util-linux 2>/dev/null
                     cp /host-cf/config.yml /host-cf/config.yml.bak
                     cp /patch/config.yml /host-cf/config.yml
-                    echo "=== grafana entry ===" && grep -A4 "grafana.cloudless.gr" /host-cf/config.yml
+                    echo "=== n8n entry ===" && grep -A4 "n8n.cloudless.gr" /host-cf/config.yml
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
                     sleep 3
@@ -174,7 +196,7 @@ jobs:
           kubectl delete pod -n default cf-apply-omv --ignore-not-found
 
       # ------------------------------------------------------------------
-      # Step 4: Verify all services are reachable
+      # Step 5: Verify all services are reachable
       # ------------------------------------------------------------------
       - name: Verify app health
         run: |
@@ -190,13 +212,16 @@ jobs:
           echo "=== Self-hosted app health ==="
           check "grafana  " "https://grafana.cloudless.gr/api/health"
           check "kuma     " "https://kuma.cloudless.gr/"
-          check "n8n      " "https://n8n.cloudless.gr/healthz"
+          check "n8n      " "https://n8n.cloudless.gr/"
+          check "ntfy     " "https://ntfy.cloudless.gr/"
           check "espocrm  " "https://espocrm.cloudless.gr/"
           check "postiz   " "https://postiz.cloudless.gr/"
           check "appflowy " "https://appflowy.cloudless.gr/"
+          check "docs     " "https://docs.cloudless.gr/"
+          check "meili    " "https://meili.cloudless.gr/health"
 
       # ------------------------------------------------------------------
-      # Step 5: Report
+      # Step 6: Report
       # ------------------------------------------------------------------
       - name: Report result
         run: |
@@ -204,12 +229,19 @@ jobs:
 
           **Changes made:**
           - **Grafana** tunnel corrected: \`localhost:18443\` → \`http://192.168.1.128:30850\`
-          - Config applied to **omv-main** only (all k3s services consolidated)
-          - n8n k8s deployment checked if running
+          - **n8n** tunnel port corrected: \`30820\` → \`30900\` (NodePort mismatch)
+          - **ntfy** service patched to NodePort 30080
+          - Config applied to **omv-main**
 
           **Verify:**
-          - https://grafana.cloudless.gr/login
+          - https://grafana.cloudless.gr/api/health
           - https://kuma.cloudless.gr/
           - https://n8n.cloudless.gr/
+          - https://ntfy.cloudless.gr/
+          - https://espocrm.cloudless.gr/
+          - https://postiz.cloudless.gr/
+          - https://appflowy.cloudless.gr/
+          - https://docs.cloudless.gr/
+          - https://meili.cloudless.gr/health
 
           Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
