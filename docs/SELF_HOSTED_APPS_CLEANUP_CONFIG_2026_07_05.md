@@ -8,17 +8,17 @@ Configure self-hosted applications to participate in nightly cleanup strategy. T
 
 ## Apps Running on omv-main
 
-| App | Type | Namespace | Cleanup Opportunity | Priority |
-|-----|------|-----------|---------------------|----------|
-| **PostgreSQL** (AppFlowy, Postiz) | Database | appflowy, postiz | Vacuum, temp cleanup | HIGH |
-| **Redis** (AppFlowy, Postiz) | Cache | appflowy, postiz | Memory flush, expiry | HIGH |
-| **DuckDB** | Analytics DB | analytics | Vacuum, compaction | MEDIUM |
-| **Meilisearch** | Search engine | search | Cache flush, temp cleanup | MEDIUM |
-| **n8n** | Workflow engine | n8n | Cache, temp files cleanup | MEDIUM |
-| **Ntfy** | Push notifications | ntfy | Old message cleanup | MEDIUM |
-| **Prometheus** | Metrics | monitoring | Old data cleanup | MEDIUM |
-| **Grafana** | Dashboards | monitoring | Cache flush | LOW |
-| **MariaDB** (EspoCRM) | Database | espocrm | Optimize tables, temp cleanup | HIGH |
+| App                               | Type               | Namespace        | Cleanup Opportunity           | Priority |
+| --------------------------------- | ------------------ | ---------------- | ----------------------------- | -------- |
+| **PostgreSQL** (AppFlowy, Postiz) | Database           | appflowy, postiz | Vacuum, temp cleanup          | HIGH     |
+| **Redis** (AppFlowy, Postiz)      | Cache              | appflowy, postiz | Memory flush, expiry          | HIGH     |
+| **DuckDB**                        | Analytics DB       | analytics        | Vacuum, compaction            | MEDIUM   |
+| **Meilisearch**                   | Search engine      | search           | Cache flush, temp cleanup     | MEDIUM   |
+| **n8n**                           | Workflow engine    | n8n              | Cache, temp files cleanup     | MEDIUM   |
+| **Ntfy**                          | Push notifications | ntfy             | Old message cleanup           | MEDIUM   |
+| **Prometheus**                    | Metrics            | monitoring       | Old data cleanup              | MEDIUM   |
+| **Grafana**                       | Dashboards         | monitoring       | Cache flush                   | LOW      |
+| **MariaDB** (EspoCRM)             | Database           | espocrm          | Optimize tables, temp cleanup | HIGH     |
 
 ---
 
@@ -27,6 +27,7 @@ Configure self-hosted applications to participate in nightly cleanup strategy. T
 ### 1. PostgreSQL Databases (AppFlowy, Postiz)
 
 **Cleanup tasks**:
+
 - VACUUM (reclaim unused space)
 - ANALYZE (update table statistics)
 - Clean temporary files
@@ -60,6 +61,7 @@ chmod +x /usr/local/bin/k3s-cleanup-postgres.sh
 ```
 
 **Add to nightly cleanup** (append to `k3s-nightly-cleanup.sh`):
+
 ```bash
 echo "[$TIMESTAMP] [PostgreSQL] Database maintenance..." >> "$LOG_FILE"
 /usr/local/bin/k3s-cleanup-postgres.sh
@@ -72,6 +74,7 @@ echo "[$TIMESTAMP] [PostgreSQL] Database maintenance..." >> "$LOG_FILE"
 ### 2. Redis Caches (AppFlowy, Postiz)
 
 **Cleanup tasks**:
+
 - FLUSHDB (clear expired keys)
 - Memory optimization
 - Rewrite AOF (Append-Only File)
@@ -109,6 +112,7 @@ chmod +x /usr/local/bin/k3s-cleanup-redis.sh
 ```
 
 **Add to nightly cleanup**:
+
 ```bash
 echo "[$TIMESTAMP] [Redis] Cache cleanup..." >> "$LOG_FILE"
 /usr/local/bin/k3s-cleanup-redis.sh
@@ -121,6 +125,7 @@ echo "[$TIMESTAMP] [Redis] Cache cleanup..." >> "$LOG_FILE"
 ### 3. MariaDB (EspoCRM)
 
 **Cleanup tasks**:
+
 - OPTIMIZE TABLE (reclaim unused space)
 - Flush query cache
 - Clean temporary files
@@ -156,6 +161,7 @@ chmod +x /usr/local/bin/k3s-cleanup-mariadb.sh
 ```
 
 **Add to nightly cleanup**:
+
 ```bash
 echo "[$TIMESTAMP] [MariaDB] Table optimization..." >> "$LOG_FILE"
 /usr/local/bin/k3s-cleanup-mariadb.sh
@@ -168,6 +174,7 @@ echo "[$TIMESTAMP] [MariaDB] Table optimization..." >> "$LOG_FILE"
 ### 4. DuckDB Analytics
 
 **Cleanup tasks**:
+
 - Vacuum (compact database file)
 - Remove temporary files
 - Optimize indexes
@@ -187,6 +194,7 @@ kubectl exec -n analytics duckdb-api-<pod-id> -- \
 ### 5. Meilisearch (Search Index)
 
 **Cleanup tasks**:
+
 - Compact indexes
 - Remove stale data
 - Flush cache
@@ -206,6 +214,7 @@ kubectl exec -n search meilisearch-<pod-id> -- \
 ### 6. Prometheus (Metrics Storage)
 
 **Cleanup tasks**:
+
 - Remove old metrics (>30 days)
 - Compact TSDB blocks
 - Clean temporary files
@@ -226,6 +235,7 @@ kubectl exec -n monitoring prometheus-monitoring-prometheus-0 -- \
 ### 7. n8n Workflow Engine
 
 **Cleanup tasks**:
+
 - Remove old execution logs
 - Clean temporary files
 - Clear cache
@@ -249,6 +259,7 @@ kubectl exec -n n8n n8n-<pod-id> -- \
 ### 8. Ntfy Push Notifications
 
 **Cleanup tasks**:
+
 - Remove old messages (>30 days)
 - Clean cache
 - Compact database
@@ -295,20 +306,21 @@ echo "[$TIMESTAMP] [MariaDB] Table optimization..." >> "$LOG_FILE"
 
 **Expected total cleanup per night**:
 
-| Layer | Freed | Time | Impact |
-|-------|-------|------|--------|
-| System (Docker/Kubelet) | 6-10GB | 5 min | HIGH |
-| Databases (VACUUM/OPTIMIZE) | 100-300MB | 10 min | MEDIUM |
-| Caches (Redis, Meilisearch) | 50-100MB | 2 min | LOW |
-| Temp files (all apps) | 50-100MB | 2 min | LOW |
-| Metrics/Logs (Prometheus, n8n) | 100-500MB | 3 min | MEDIUM |
-| **TOTAL** | **~7-11GB per night** | **~25 min** | **HIGH** |
+| Layer                          | Freed                 | Time        | Impact   |
+| ------------------------------ | --------------------- | ----------- | -------- |
+| System (Docker/Kubelet)        | 6-10GB                | 5 min       | HIGH     |
+| Databases (VACUUM/OPTIMIZE)    | 100-300MB             | 10 min      | MEDIUM   |
+| Caches (Redis, Meilisearch)    | 50-100MB              | 2 min       | LOW      |
+| Temp files (all apps)          | 50-100MB              | 2 min       | LOW      |
+| Metrics/Logs (Prometheus, n8n) | 100-500MB             | 3 min       | MEDIUM   |
+| **TOTAL**                      | **~7-11GB per night** | **~25 min** | **HIGH** |
 
 ---
 
 ## Monitoring App Cleanup
 
 **Check individual app cleanup**:
+
 ```bash
 # View logs per app
 sudo journalctl -u k3s-cleanup.service | grep -i "postgresql\|redis\|mariadb"
@@ -325,31 +337,37 @@ kubectl exec -n appflowy redis-pod -- redis-cli INFO memory
 ## App-Specific Notes
 
 ### PostgreSQL
+
 - VACUUM ANALYZE reclaims unused space
 - Safe to run while database is online
 - Run daily to maintain performance
 
 ### Redis
+
 - BGSAVE creates background snapshot
 - Non-blocking operation
 - Can run while cache is active
 
 ### MariaDB
+
 - OPTIMIZE TABLE locks table briefly (<1 sec)
 - Run during low-traffic hours
 - Can significantly reduce fragmentation
 
 ### DuckDB
+
 - VACUUM compacts single-file database
 - Very efficient for analytics workloads
 - Run daily to maintain query performance
 
 ### Prometheus
+
 - Old blocks are immutable, safe to remove
 - WAL directory grows over time
 - Safe to purge files >30 days old
 
 ### n8n
+
 - Execution logs can grow large
 - Database cleanup removes old records
 - Cache cleanup frees memory
@@ -372,16 +390,19 @@ Each phase can be deployed independently without affecting others.
 ## Safety Considerations
 
 ✅ **All safe to run during operation**:
+
 - VACUUM ANALYZE (PostgreSQL)
 - BGSAVE (Redis)
 - Table optimization (MariaDB)
 - Database cleanup (all)
 
 ⚠️ **Minor brief lockups** (<1 sec):
+
 - OPTIMIZE TABLE (MariaDB)
 - Some VACUUM operations (PostgreSQL)
 
 🔴 **Avoid during**:
+
 - Active workload peaks
 - Scheduled migrations
 - Backup operations
@@ -391,12 +412,14 @@ Each phase can be deployed independently without affecting others.
 ## Expected Storage Savings After App Cleanup
 
 **Current state** (all apps combined):
+
 - Total k3s data: 84GB
 - Database data: ~20GB
 - Cache data: ~5GB
 - Other: ~59GB
 
 **After weekly app cleanups** (combined with system cleanup):
+
 - Database data: ~18GB (-2GB from optimization)
 - Cache data: ~3GB (-2GB from flushing)
 - Other: ~55GB (-4GB from temp cleanup)
@@ -406,10 +429,13 @@ Each phase can be deployed independently without affecting others.
 
 ---
 
-**Status**: READY FOR IMPLEMENTATION
-**Complexity**: MEDIUM (requires app-specific scripts)
-**Safety**: HIGH (all operations are safe/non-disruptive)
-**Benefit**: 10-15% additional storage reclamation
+**Status**: ✅ **PARTIALLY IMPLEMENTED (2026-07-06)**
+
+- **System Cleanup**: Integrated via `pi-disk-cleanup.sh` and `k3s-nightly-cleanup.sh`.
+- **App Cleanup**: Pending deployment of individual app scripts (Postgres, Redis, MariaDB).
+- **Complexity**: MEDIUM
+- **Safety**: HIGH
+- **Benefit**: 10-15% additional storage reclamation
 
 ---
 
