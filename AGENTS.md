@@ -85,6 +85,7 @@ src/
 │       ├── unsubscribe/         # POST → SES suppression list
 │       ├── health/              # GET → status + version
 │       ├── blog/posts/          # GET → Notion blog (fallback: static)
+│       ├── recommendations/     # GET → AI-powered product recommendations (Bedrock + DynamoDB)
 │       ├── calendar/
 │       │   ├── availability/    # GET → open slots (Google Calendar, 5min cache)
 │       │   └── book/            # POST → create event + Slack notify
@@ -122,6 +123,7 @@ src/
 │   ├── KonamiEasterEgg.tsx · JsonLd.tsx
 │   └── store/
 │       ├── StoreGrid.tsx · CartSlideOver.tsx
+│       ├── RecommendationGrid.tsx # R21c: AI-powered product recommendations
 │       ├── CartButton.tsx · AddToCartButton.tsx · ProductIcon.tsx
 │
 ├── context/
