@@ -1,24 +1,22 @@
-# Cloudflare Tunnel route: meili.cloudless.gr → Meilisearch NodePort on omv-ha
+# Cloudflare Tunnel route: meili.cloudless.gr → Meilisearch NodePort on omv-main
 #
 # Same tunnel as other self-hosted services (ID e977a490-58c5-4fdb-9155-86832e3e636a).
 #
-# DNS record to add in Cloudflare (cloudless.gr zone):
-#   meili.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+# DNS record: meili.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
 #   (proxied=true, TTL=auto)
 #
 # NodePort: 30902 (see infrastructure/meilisearch/k8s.yaml)
-# Pod runs on omv-ha (Pi 5 — second node, dedicated to AI workload).
+# Pod runs on omv-main (120GB SSD, exclusive k3s storage).
 #
 # To activate on omv-main:
-#   1. Append the ingress rule below to /etc/cloudflared/config.yml
+#   1. Append the ingress rule below to /home/tbaltzakis/.cloudflared/config.yml
 #      BEFORE the catch-all `service: http_status:404` rule.
-#   2. Copy updated config to omv-ha (/etc/cloudflared/config.yml).
-#   3. sudo systemctl restart cloudflared  (on both nodes)
-#   4. Verify: curl -I https://meili.cloudless.gr/health
+#   2. Restart cloudflared: sudo systemctl restart cloudflared
+#   3. Verify: curl -I https://meili.cloudless.gr/health
 ---
 ingress_rule:
   hostname: meili.cloudless.gr
-  service: http://192.168.1.128:30902
+  service: http://127.0.0.1:30902
   originRequest:
     connectTimeout: 15s
     tcpKeepAlive: 30s

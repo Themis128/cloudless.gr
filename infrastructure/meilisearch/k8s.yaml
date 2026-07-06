@@ -1,9 +1,9 @@
 ---
 # Meilisearch — open-source, fast, hyper-relevant search engine
-# NodePort 30902 on omv-ha (Pi 5, 8 GB).
-# Tunnel: meili.cloudless.gr → http://192.168.1.128:30902
+# NodePort 30902 on omv-main (120GB SSD, exclusive k3s storage).
+# Tunnel: meili.cloudless.gr → http://127.0.0.1:30902
 #
-# Storage: local-path PVC on sda1 (the dedicated k3s SSD).
+# Storage: local-path PVC on 120GB SSD (sda1).
 # RAM: requests 256Mi / limit 1Gi. Meilisearch v1.48 uses ~200-400Mi at
 #      steady state with a small product catalog (<10k docs).
 #      Indexing bursts up to ~600Mi during initial product catalog import.
@@ -68,8 +68,6 @@ spec:
       labels:
         app: meilisearch
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: omv-ha
       securityContext:
         fsGroup: 1000
       containers:

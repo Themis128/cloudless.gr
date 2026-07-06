@@ -1,0 +1,52 @@
+# Cloudflare Tunnel Configuration Updates for omv-main
+# 
+# Tunnel ID: e977a490-58c5-4fdb-9155-86832e3e636a
+# DNS: *.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+#
+# These ingress rules should be added to /etc/cloudflared/config.yml on omv-main (192.168.1.128)
+# Insert BEFORE the catch-all "http_status:404" rule.
+
+# omv.cloudless.gr - OMV Web UI (OpenMediaVault admin panel)
+# Currently returning 502 - needs reload after config update
+- hostname: omv.cloudless.gr
+  service: http://localhost:80
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    httpHostHeader: omv.cloudless.gr
+
+# ftp.cloudless.gr - OMV FTP server (FTP/FTPS access)
+- hostname: ftp.cloudless.gr
+  service: http://localhost:21
+  originRequest:
+    connectTimeout: 30s
+    tcpKeepAlive: 60s
+
+# docs.cloudless.gr - Cloudless documentation portal
+# Note: docs-server pod MUST run on omv-main (the 120GB SSD node)
+# Tunnel expects: http://localhost:30901
+- hostname: docs.cloudless.gr
+  service: http://localhost:30901
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
+# meili.cloudless.gr - Meilisearch search engine
+# Runs on omv-main NodePort 30902 in the search namespace
+- hostname: meili.cloudless.gr
+  service: http://localhost:30902
+  originRequest:
+    connectTimeout: 10s
+    tcpKeepAlive: 30s
+
+# Apply these changes:
+#   1. ssh tbaltzakis@192.168.1.128
+#   2. sudo vi /etc/cloudflared/config.yml
+#   3. Add the above rules to the ingress section (before http_status:404)
+#   4. sudo systemctl reload cloudflared
+#
+# Verify:
+#   curl -I https://omv.cloudless.gr
+#   curl -I https://ftp.cloudless.gr
+#   curl -I https://docs.cloudless.gr
+#   curl -I https://meili.cloudless.gr

@@ -1,0 +1,69 @@
+# Tailscale Ingress Rules for Self-Hosted Services
+# These Ingress resources make services accessible via Tailscale MagicDNS
+# After applying, services will be reachable at: https://<hostname>.ts.cloudless.gr
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-tailscale
+  namespace: monitoring
+  annotations:
+    tailscale.com/hostname: "grafana"
+    tailscale.com/allowlist: "tag:developers"  # Only developers can access
+spec:
+  ingressClassName: tailscale
+  rules:
+    - host: grafana.ts.cloudless.gr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loki-tailscale
+  namespace: monitoring
+  annotations:
+    tailscale.com/hostname: "loki"
+    tailscale.com/allowlist: "tag:developers"
+spec:
+  ingressClassName: tailscale
+  rules:
+    - host: loki.ts.cloudless.gr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: loki
+                port:
+                  number: 3100
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: meilisearch-tailscale
+  namespace: search
+  annotations:
+    tailscale.com/hostname: "meilisearch"
+    tailscale.com/allowlist: "tag:developers"
+spec:
+  ingressClassName: tailscale
+  rules:
+    - host: meilisearch.ts.cloudless.gr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: meilisearch
+                port:
+                  number: 7700

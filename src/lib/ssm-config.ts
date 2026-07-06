@@ -183,7 +183,7 @@ interface AppConfig {
   POSTIZ_API_KEY: string;
   /** HMAC secret shared with Postiz webhook config — verifies inbound events. */
   POSTIZ_WEBHOOK_SECRET: string;
-  // Meilisearch (self-hosted search engine on omv-ha, see infrastructure/meilisearch/)
+  // Meilisearch (self-hosted search engine on omv-main, see infrastructure/meilisearch/)
   /** Base URL of the Meilisearch instance, e.g. https://meili.cloudless.gr */
   MEILI_HOST: string;
   /** Master key for Meilisearch admin operations (index/create/delete docs). */

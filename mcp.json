@@ -79,6 +79,20 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
       },
       "autoStart": false
+    },
+    "github.com/Flux159/mcp-server-kubernetes": {
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"],
+      "autoStart": false
+    },
+    "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "autoStart": false
     }
   }
 }
+```

@@ -5,7 +5,7 @@
 - Investigate and resolve OMV resource exhaustion (`omv-main`).
 - Resolve `monit` queue flooding (470+ system errors).
 - Address `promtail` OOM kills.
-- Update July documentation to reflect current system state.
+- Consolidate all k3s services on omv-main (120GB SSD).
 - Analyze Lambda p99 duration alarm.
 
 ## 🛠 Actions Taken
@@ -15,20 +15,26 @@
 - ✅ **Monit Cleanup**: Purged stale event files in `/var/lib/monit/events/` on `omv-main`. This resolved the 470+ "Aborting queued event" errors in the system journal.
 - ✅ **Disk Cleanup**: Executed `scripts/pi-disk-cleanup.sh`. Root disk usage reduced from **87% → 75%** (15G free).
 - ✅ **Promtail Tuning**: Bumped `promtail` memory limit from **128Mi → 256Mi** in both Helm values (`infrastructure/monitoring/promtail-values.yaml`) and the live cluster to prevent repeated cgroup OOM kills.
-- ✅ **Meilisearch Activation**: Patched Meilisearch service to NodePort 30902 and added to Cloudflare Tunnel (`meili.cloudless.gr`).
+- ✅ **Meilisearch Activation**: Deployed Meilisearch service to NodePort 30902 on **omv-main** (120GB SSD) and added to Cloudflare Tunnel (`meili.cloudless.gr`).
 - ✅ **System Stability**: Verified system load average stabilized at **<1.0** (was 24.64 during the crisis).
 
 ### 2. R21 AI Baseline — All Three Phases Shipped
 
-- ✅ **R21a** — Meilisearch self-host on omv-ha: `infrastructure/meilisearch/k8s.yaml` applied, NodePort 30902, DNS `meili.cloudless.gr` live, health endpoint verified.
+- ✅ **R21a** — Meilisearch self-host on **omv-main**: `infrastructure/meilisearch/k8s.yaml` (no nodeSelector) applied, NodePort 30902, DNS `meili.cloudless.gr` live, health endpoint verified.
 - ✅ **R21b** — Search API: `src/lib/meilisearch.ts` + `src/lib/search-index.ts` + `POST /api/search` + `POST /api/admin/search/reindex`. SSM keys (`MEILI_HOST`, `MEILI_MASTER_KEY`, `MEILI_SEARCH_KEY`) configured.
 - ✅ **R21c** — Recommendation engine: `src/lib/recommendations.ts` + `GET /api/recommendations`. Collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/store/[id]` + `/store`.
 
-### 3. Monitoring & Documentation
+### 3. Consolidation: All k3s on omv-main
+
+- ✅ **Meilisearch**: Removed nodeSelector from k8s.yaml - now runs on omv-main (120GB SSD).
+- ✅ **Tunnel Config**: Updated `infrastructure/meilisearch/cloudflare-tunnel.yaml` to point to `127.0.0.1:30902`.
+- ✅ **Documentation**: Updated CLOUDFLARE.md, CLOUDFLARE_TAILSCALE_SETUP_2026_07_04.md, and DEPLOYMENT_PLAYBOOK.md to reflect consolidated architecture.
+
+### 4. Monitoring & Documentation
 
 - ✅ **Log Aggregation**: Verified all self-hosted app logs are gathered via Promtail into Loki/Grafana.
 - ✅ **AGENTS.md**: Updated with a new **OMV Node Operations** section and **CloudWatch Alarms** context.
-- ✅ **July Docs Update**: Refreshed `OMV_HEALTH_CHECK_2026_07_05.md`, `OMV_COMPLETE_IMPLEMENTATION_SUMMARY_2026_07_05.md`, `OMV_STORAGE_STRATEGY_SUMMARY_2026_07_05.md`, and `CLOUDFLARE_TAILSCALE_SETUP_2026_07_04.md` to show issues as **RESOLVED** and status as **DEPLOYED**.
+- ✅ **July Docs Update**: Refreshed all July docs to show issues as **RESOLVED** and Meilisearch on **omv-main**.
 - ✅ **Lambda Alarm**: Analyzed `cloudless-server-p99-duration` alarm. Spikes (up to 9.5s) likely due to post-deploy cold starts or latency in downstream services (Bedrock/SSM).
 
 ## 📊 System Status (2026-07-06)
@@ -38,7 +44,7 @@
 | Root Disk (/)   | ✅ 75%        | 15G free, cleaned.                             |
 | Memory (RAM)    | ✅ Stable     | Promtail OOM resolved.                         |
 | Monit           | ✅ Healthy    | Queue cleared.                                 |
-| Meilisearch     | ✅ Active     | Reachable via meili.cloudless.gr (R21a)        |
+| Meilisearch     | ✅ Active     | Reachable via meili.cloudless.gr on omv-main (120GB SSD) |
 | Search API      | ✅ Live       | `POST /api/search` (R21b)                      |
 | Recommendations | ✅ Live       | `GET /api/recommendations` (R21c)              |
 | Log Aggregation | ✅ Active     | Gathering logs in Loki/Grafana                 |
