@@ -84,6 +84,7 @@ src/
 │       ├── subscribe/           # POST → SES + Slack
 │       ├── unsubscribe/         # POST → SES suppression list
 │       ├── health/              # GET → status + version
+│       ├── search/              # GET → Meilisearch product search
 │       ├── blog/posts/          # GET → Notion blog (fallback: static)
 │       ├── recommendations/     # GET → AI-powered product recommendations (Bedrock + DynamoDB)
 │       ├── calendar/
@@ -150,6 +151,8 @@ src/
 │   ├── notion-comments.ts       # Comment threads
 │   ├── notion-analytics.ts      # Analytics DB: trackEvent, getAnalyticsSummary
 │   ├── notion-cache.ts          # In-memory TTL cache + invalidateCache()
+│   ├── recommendations.ts       # AI engine: Bedrock Titan similarity + DynamoDB trending
+│   ├── meilisearch.ts           # Search client + product indexing
 │   ├── hubspot.ts               # CRM: upsertContact, createTicket, listContacts/Deals/Companies
 │   ├── slack-notify.ts          # SlackClient with retry: contact/subscriber/order/error/deploy
 │   ├── slack-verify.ts          # HMAC-SHA256 inbound verification
@@ -191,6 +194,7 @@ __tests__/
 ├── i18n.test.ts             # i18n utility tests
 ├── locale-switcher.test.tsx # LocaleSwitcher component tests
 ├── store-products.test.ts   # Product catalog tests
+├── recommendations.test.ts  # R21c: Similarity + trending engine tests
 ├── structured-data.test.ts  # JSON-LD schema generator tests
 ├── components.test.tsx      # Component render tests (JsonLd, HolographicCard, ScrollReveal, Navbar)
 ├── store-components.test.tsx # Store UI tests (ProductIcon, AddToCartButton, CartSlideOver, StoreGrid)
