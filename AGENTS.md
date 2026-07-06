@@ -415,3 +415,20 @@ Email sending is handled by `src/lib/email.ts` which provides:
 - Path aliases resolve via `resolve.tsconfigPaths` in vitest config
 - Mock AWS services (SES, SSM) in API tests
 - **React 19 compatibility:** `define: { "process.env.NODE_ENV": "development" }` in vitest config ensures React's CJS build exports `act`, which `@testing-library/react` requires
+
+## OMV Node Operations (Pi 5)
+
+- **Node:** `omv` (192.168.1.128), Raspberry Pi 5, 8GB RAM, NVMe boot.
+- **Resource Constraints:** High system load (>20) or memory pressure (>90%) usually indicates `kswapd` activity or I/O wait.
+- **Diagnostics:** Use `scripts/cluster-doctor.sh` to check disk/RAM/errors.
+- **Cleanup:** Run `scripts/pi-disk-cleanup.sh` to prune Docker images, journal logs, and caches.
+- **Known Issues:**
+  - `monit` queue flooding: If `monit` reports "Aborting queued event" for missing services, purge the queue with `rm -f /var/lib/monit/events/*`.
+  - `promtail` OOM: Requires at least 256Mi memory limit to handle log spikes; virtual memory often hits 4GB due to Go/mmap.
+- **Host Access:** Use `kubectl run debug-pi --image=alpine:3.20 --privileged --overrides='{"spec":{"hostPID":true}}' -- nsenter --target 1 --mount --uts --ipc --net --pid` to access the host shell.
+
+## CloudWatch Alarms & Performance
+
+- **Alarm:** `cloudless-server-p99-duration` (Threshold: 3000ms p95).
+- **Context:** Spikes to 9s+ during/after deployments are typically cold starts (even with `warm: 5`) or SSM/Bedrock latency.
+- **Tracing:** `tracing: "active"` is enabled in `sst.config.ts`. Use AWS X-Ray to diagnose slow segments.

@@ -97,6 +97,11 @@ spec:
 # 1 GiB) no longer ships its own logs to keep its RAM headroom. Host
 # journald is still available on omv-ha for emergency forensics. See
 # docs/loki-pinned-to-omv.md.
+#
+# Memory limit bumped from 128Mi → 256Mi (2026-07-06) after repeated
+# cgroup OOM kills at ~125MB RSS. Promtail's virtual memory is ~4GB
+# (Go runtime + mmap'd log files) but RSS stays ~70-125MB. The old
+# 128Mi limit was too tight for scrape spikes.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -107,6 +112,11 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/hostname: omv
+      containers:
+        - name: promtail
+          resources:
+            limits:
+              memory: 256Mi
 
 ---
 apiVersion: apps/v1
