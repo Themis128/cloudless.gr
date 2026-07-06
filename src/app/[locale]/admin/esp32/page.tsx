@@ -149,7 +149,7 @@ export default function AdminEsp32Page() {
       ]);
 
       if (!esp32Res.ok) {
-        const d = ((((await esp32Res.json()) as any)) as any).catch(() => ({}));
+        const d = (await esp32Res.json().catch(() => ({}))) as any;
         if (d.offline) {
           setOffline(true);
           setLoading(false);

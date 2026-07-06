@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = (((await request.json()) as any).catch(() => ({}))) as {
+  const body = ((await request.json().catch(() => ({}))) as any) as {
     email?: string;
     label?: string;
     stepNames?: string[];
@@ -139,7 +139,7 @@ export async function DELETE(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const { email } = (((await request.json()) as any).catch(() => ({}))) as {
+  const { email } = ((await request.json().catch(() => ({}))) as any) as {
     email?: string;
   };
   if (!email) {

@@ -53,7 +53,7 @@ export default function EmailCampaignsPage() {
       }
       if (autoRes.ok) setAutomations((((((await autoRes.json()) as any)) as any)).automations ?? []);
       if (!campRes.ok) {
-        const body = (((((await campRes.json()) as any)) as any).catch(() => null)) as {
+        const body = ((await campRes.json().catch(() => null)) as any) as {
           error?: string;
           instructions?: string;
           setupUrl?: string;

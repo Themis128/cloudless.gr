@@ -170,7 +170,7 @@ export default function AdminMonitorPage() {
       ]);
 
       if (!statusRes.ok) {
-        const d = ((((await statusRes.json()) as any)) as any).catch(() => ({}));
+        const d = (await statusRes.json().catch(() => ({}))) as any;
         if (d.offline) {
           setOffline(true);
           setLoading(false);
