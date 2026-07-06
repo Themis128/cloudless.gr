@@ -1,5 +1,11 @@
 # OMV Storage Strategy - Complete Summary - 2026-07-05
 
+> **STATUS (2026-07-06)**: ✅ **DEPLOYED & ACTIVE**
+>
+> - **Primary SSD**: 120GB SSD (/dev/sda1) is the exclusive k3s data store.
+> - **Root SD**: MicroSD usage reduced to 75% (15G free) after log/image pruning.
+> - **Maintenance**: Nightly cleanup and auto-expand services are active.
+
 ## Executive Summary
 
 **Complete storage strategy for omv-main with 3-tier architecture and automatic overflow capability.**
@@ -31,29 +37,34 @@ TIER 3: System (59GB microSD)
 ## Key Features
 
 ### ✅ **Primary: 120GB SSD Exclusive**
+
 - **Mandatory policy**: All k3s must use 120GB SSD
 - **Enforcement**: Symlinks + systemd service override
 - **Verification**: Deployment checklist required
 - **Monitoring**: Daily health checks
 
 ### ✅ **Dynamic Overflow from 916GB SSD**
+
 - **Trigger**: Automatic at 108GB (98% full)
 - **What moves**: Images, volumes, cache
 - **Process**: Fully automatic, no manual steps
 - **Monitoring**: Every 5 minutes via systemd service
 
 ### ✅ **Redundancy & Fallback**
+
 - **No single failure**: Can use up to 520GB total (120 + 400GB from 916GB)
 - **Performance tiered**: Active on primary SSD, cold on secondary
 - **Emergency procedures**: Documented and automated
 
 ### ✅ **Monitoring & Alerts**
+
 - **Health check**: Daily at 02:00 UTC
 - **Auto-expand monitor**: Every 5 minutes (systemd service)
 - **Alert thresholds**: 95% warning, 100% critical
 - **Logs**: All captured in journalctl
 
 ### ✅ **High Availability (99.9% Uptime SLA)**
+
 - **Mandatory requirement**: All apps must always be up
 - **Zero-downtime operations**: Storage changes transparent to pods
 - **Automatic failover**: Overflow activates without manual intervention
@@ -80,14 +91,15 @@ TIER 3: System (59GB microSD)
 #### Pod Uptime Guarantees
 
 **Pod Disruption Budget** (mandatory for all apps):
+
 ```yaml
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: app-pdb
 spec:
-  minAvailable: 50%           # Keep 50% running always
-  maxUnavailable: 1           # Max 1 pod down at a time
+  minAvailable: 50% # Keep 50% running always
+  maxUnavailable: 1 # Max 1 pod down at a time
   unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels:
@@ -95,23 +107,25 @@ spec:
 ```
 
 **Graceful Shutdown**:
+
 - terminationGracePeriodSeconds: 30
 - preStop hooks for connection draining
 - No force-kill during storage operations
 
 #### Uptime SLA Targets
 
-| Service | Target | Max Downtime | Notes |
-|---------|--------|--------------|-------|
-| k3s cluster | 99.9% | 43 min/month | Auto-expand, no manual |
-| Apps (pods) | 99.95% | 22 min/month | Rolling updates only |
-| Primary SSD | 99.99% | 4 min/month | No RAID (SSD durability) |
-| Overflow pool | 99.5% | 3.6 hrs/month | Secondary tier |
-| DNS/routing | 99.99% | 4 min/month | Cloudflare + tunnel |
+| Service       | Target | Max Downtime  | Notes                    |
+| ------------- | ------ | ------------- | ------------------------ |
+| k3s cluster   | 99.9%  | 43 min/month  | Auto-expand, no manual   |
+| Apps (pods)   | 99.95% | 22 min/month  | Rolling updates only     |
+| Primary SSD   | 99.99% | 4 min/month   | No RAID (SSD durability) |
+| Overflow pool | 99.5%  | 3.6 hrs/month | Secondary tier           |
+| DNS/routing   | 99.99% | 4 min/month   | Cloudflare + tunnel      |
 
 #### Monitoring for Availability
 
 **Real-time checks** (automated):
+
 ```bash
 # All pods running
 kubectl get pods -A | grep -v Running | grep -v Completed
@@ -127,6 +141,7 @@ kubectl get endpoints -A | grep none
 ```
 
 **Alerts triggered if**:
+
 - Pod CrashLoopBackOff detected
 - Node status NotReady
 - PVC pending/failed
@@ -138,6 +153,7 @@ kubectl get endpoints -A | grep none
 **Preferred: ZERO maintenance windows** (all operations automated)
 
 **If manual work required** (rare):
+
 - Day: Saturdays only
 - Time: 02:00-03:00 UTC (low traffic)
 - Max duration: 60 minutes
@@ -152,6 +168,7 @@ kubectl get endpoints -A | grep none
 ### Phase 1: Migration (Minimal Downtime, ~15 min actual, 1 hr total window)
 
 **Pre-migration**:
+
 ```bash
 # 1. Drain non-critical pods to secondary nodes (if multi-node)
 # 2. Take backup of /var/lib/rancher/k3s
@@ -163,6 +180,7 @@ kubectl get pods -A | wc -l
 ```
 
 **Migration**:
+
 ```bash
 # 1. Create directories
 sudo mkdir -p /srv/k3s-data
@@ -194,6 +212,7 @@ sleep 60  # Let etcd sync and nodes rejoin
 ```
 
 **Post-migration** (verify all pods recover):
+
 ```bash
 # 1. Check node status (wait until Ready)
 kubectl get nodes -w
@@ -212,6 +231,7 @@ ls -la /var/lib/rancher/k3s /var/lib/kubelet  # Should be symlinks
 ```
 
 **Expected timeline**:
+
 - Stop k3s: 1 min
 - Move data: 5-10 min
 - Symlinks: <1 min
@@ -220,13 +240,15 @@ ls -la /var/lib/rancher/k3s /var/lib/kubelet  # Should be symlinks
 - **Total**: 10-20 minutes
 - **Pods down**: 10-15 minutes (acceptable SLA break, one-time)
 
-**Apps experience**: 
+**Apps experience**:
+
 - ~15 min of pod restarts (rolling, not bulk)
 - Services brief interruption while pods recover
 - No data loss
 - Automatic recovery once k3s starts
 
 ### Phase 2: Auto-Monitoring Setup (Minimal downtime)
+
 ```bash
 # 1. Deploy monitoring scripts
 sudo cp check-k3s-storage.sh /usr/local/bin/
@@ -243,6 +265,7 @@ echo "0 2 * * * /usr/local/bin/check-k3s-storage.sh" | sudo crontab -
 ```
 
 ### Phase 3: Verification
+
 ```bash
 # 1. Verify primary storage
 ls -la /var/lib/rancher/k3s /var/lib/kubelet  # Should show symlinks
@@ -263,21 +286,24 @@ kubectl get pods -A | grep -i error  # Should be empty
 ## Capacity Planning
 
 ### Current State
-| Storage | Total | Used | Free | % Full | Notes |
-|---------|-------|------|------|--------|-------|
-| 120GB SSD | 120G | 84G | 36G | 70% | Primary k3s |
-| 916GB SSD | 916G | 481G | 435G | 53% | Overflow available |
-| Root microSD | 59G | 46G | 11G | 78% | System only (cleaned) |
-| **TOTAL** | **1.1T** | **611G** | **482G** | **55%** | Healthy state |
+
+| Storage      | Total    | Used     | Free     | % Full  | Notes                 |
+| ------------ | -------- | -------- | -------- | ------- | --------------------- |
+| 120GB SSD    | 120G     | 84G      | 36G      | 70%     | Primary k3s           |
+| 916GB SSD    | 916G     | 481G     | 435G     | 53%     | Overflow available    |
+| Root microSD | 59G      | 46G      | 11G      | 78%     | System only (cleaned) |
+| **TOTAL**    | **1.1T** | **611G** | **482G** | **55%** | Healthy state         |
 
 ### Alert Thresholds
-| Threshold | Primary | Overflow | Total | Action |
-|-----------|---------|----------|-------|--------|
-| Normal | <105GB | 0GB | <105GB | ✅ Monitor weekly |
-| Warning | 105-108GB | >0GB | 105-200GB | 🟡 Overflow active |
-| Critical | >108GB | >100GB | >200GB | 🔴 Cleanup required |
+
+| Threshold | Primary   | Overflow | Total     | Action              |
+| --------- | --------- | -------- | --------- | ------------------- |
+| Normal    | <105GB    | 0GB      | <105GB    | ✅ Monitor weekly   |
+| Warning   | 105-108GB | >0GB     | 105-200GB | 🟡 Overflow active  |
+| Critical  | >108GB    | >100GB   | >200GB    | 🔴 Cleanup required |
 
 ### Headroom Calculation
+
 - **Safe operating range**: 60-80GB used on primary (50-67%)
 - **Current headroom**: 36GB (24% free)
 - **Projected burnout**: 2-3 months at current growth rate
@@ -288,11 +314,13 @@ kubectl get pods -A | grep -i error  # Should be empty
 ## Monitoring & Maintenance
 
 ### Daily (Automated)
+
 - ✅ Health check runs at 02:00 UTC
 - ✅ Auto-expand monitor runs continuously (5-min intervals)
 - ✅ Logs captured in journalctl
 
 ### Weekly (Manual)
+
 ```bash
 # Check storage status
 df -h /srv/k3s-data /srv/k3s-overflow
@@ -305,6 +333,7 @@ du -sh /var/lib/rancher* /var/lib/kubelet 2>/dev/null
 ```
 
 ### Monthly (Maintenance)
+
 ```bash
 # Prune old images
 sudo docker image prune -a --filter "until=720h" -f
@@ -317,6 +346,7 @@ df -h /srv/k3s-* | tee /tmp/storage-report-$(date +%Y%m%d).txt
 ```
 
 ### Quarterly (Planning)
+
 - Review capacity trends
 - Plan for expansion if >80% used
 - Document any issues
@@ -327,7 +357,9 @@ df -h /srv/k3s-* | tee /tmp/storage-report-$(date +%Y%m%d).txt
 ## Emergency Procedures
 
 ### Scenario 1: Primary SSD Approaching Full (>108GB)
+
 **Expected behavior**: Overflow automatically activates
+
 ```bash
 # Verify overflow activated
 ls -la /srv/k3s-data/overflow-* /srv/k3s-overflow/
@@ -338,7 +370,9 @@ sudo docker system prune -a --volumes -f
 ```
 
 ### Scenario 2: Both Primary & Overflow Full (>210GB combined)
+
 **Immediate action required**:
+
 ```bash
 # 1. Stop non-critical pods
 kubectl scale deployment <app> --replicas=0 -n <namespace>
@@ -359,7 +393,9 @@ sudo systemctl restart k3s
 ```
 
 ### Scenario 3: k3s Data Found on Root MicroSD
+
 **Data leakage - must remediate**:
+
 ```bash
 # 1. Check what leaked
 du -sh /var/lib/rancher* /var/lib/kubelet* /var/lib/containerd* 2>/dev/null
@@ -387,16 +423,19 @@ kubectl get nodes
 ## Long-Term Improvements
 
 ### 6 Months (Q4 2026)
+
 - [ ] Evaluate current usage trends
 - [ ] Plan primary SSD expansion if needed (256GB+ recommended)
 - [ ] Consider tiered storage architecture
 
 ### 12 Months (Q2 2027)
+
 - [ ] Review if overflow storage is used frequently
 - [ ] If yes, upgrade 916GB SSD or add fast tier
 - [ ] Implement local-path-provisioner for volumes
 
 ### 24 Months (Q2 2028)
+
 - [ ] Full storage audit
 - [ ] Performance baseline analysis
 - [ ] Architecture re-assessment
@@ -406,18 +445,21 @@ kubectl get nodes
 ## Success Criteria
 
 ✅ **Migration Phase**:
+
 - All k3s data on 120GB SSD
 - Root disk usage <20GB
 - All nodes in Ready state
 - All pods running
 
 ✅ **Monitoring Phase**:
+
 - Auto-expand service running
 - Daily health checks executing
 - Overflow directories created
 - No manual warnings
 
 ✅ **Long-term**:
+
 - 120GB SSD never exceeds 110GB (100%)
 - Overflow used <50% of time
 - Root disk remains clean (<15GB)
@@ -428,6 +470,7 @@ kubectl get nodes
 ## Documentation Location
 
 Primary plan: `docs/K3S_STORAGE_MIGRATION_PLAN_2026_07_05.md`
+
 - Step-by-step migration
 - Service configurations
 - Monitoring scripts (bash)
@@ -435,6 +478,7 @@ Primary plan: `docs/K3S_STORAGE_MIGRATION_PLAN_2026_07_05.md`
 - Disaster recovery procedures
 
 Related documents:
+
 - `docs/OMV_HEALTH_CHECK_2026_07_05.md` - Current system state
 - `docs/K3S_STORAGE_MIGRATION_PLAN_2026_07_05.md` - Detailed implementation
 
@@ -443,14 +487,17 @@ Related documents:
 ## Contact & Escalation
 
 **For monitoring alerts**:
+
 - Check: `sudo journalctl -u k3s-auto-expand.service`
 - Run health check: `/usr/local/bin/check-k3s-storage.sh`
 
 **For emergency overflow**:
+
 - See "Emergency Procedures" section above
 - Follows: automated → alert → manual cleanup → expansion
 
 **For long-term planning**:
+
 - Review quarterly trends
 - Plan expansion if >80% utilized
 - Consider architecture changes if overflow used frequently
