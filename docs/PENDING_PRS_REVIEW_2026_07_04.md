@@ -8,28 +8,29 @@ Reviewed 44 remote branches and created/verified PRs for waiting changes.
 
 ### Tier 1: Major Features (High Priority)
 
-| PR | Branch | Commits | Status | Created |
-|----|----|---------|--------|---------|
-| #1272 | agentic/r21c-langsmith-observability | 67 | Draft | ✅ This session |
-| #1273 | claude/cleanup-dead-code | 26 | Draft | ✅ This session |
-| #1274 | agentic/dcode-local-setup | 15 | Draft | ✅ This session |
-| #1276 | claude/auth-trust-host | 6 | Draft | ✅ This session |
-| #1277 | feat/weekly-newsletter | 2 | Draft | ✅ This session |
+| PR    | Branch                               | Commits | Status        | Created         |
+| ----- | ------------------------------------ | ------- | ------------- | --------------- |
+| #1272 | agentic/r21c-langsmith-observability | 67      | ✅ **MERGED** | ✅ This session |
+| #1273 | claude/cleanup-dead-code             | 26      | ✅ **MERGED** | ✅ This session |
+| #1274 | agentic/dcode-local-setup            | 15      | ✅ **MERGED** | ✅ This session |
+| #1276 | claude/auth-trust-host               | 6       | ✅ **MERGED** | ✅ This session |
+| #1277 | feat/weekly-newsletter               | 2       | 🟡 **OPEN**   | ✅ This session |
 
 ### Pre-Existing PRs (Already Had PRs)
 
-| Branch | Commits | Status |
-|--------|---------|--------|
-| chore/keycloak-to-cognito | 12 | Existing PR |
-| feat/checkout-to-contact-and-pi-fixes | ~4 | Existing PR |
-| claude/docs-appflowy-workflows | 2 | Existing PR |
-| claude/campaign-launch-fixes | 5 | Existing PR |
+| Branch                                | Commits | Status      |
+| ------------------------------------- | ------- | ----------- |
+| chore/keycloak-to-cognito             | 12      | Existing PR |
+| feat/checkout-to-contact-and-pi-fixes | ~4      | Existing PR |
+| claude/docs-appflowy-workflows        | 2       | Existing PR |
+| claude/campaign-launch-fixes          | 5       | Existing PR |
 
 ## Pending Branches Analysis
 
 ### By Category
 
 #### Agent/Agentic Branches (3)
+
 1. **agentic/r21c-langsmith-observability** - 67 commits
    - Last commit: 2026-06-24
    - Status: ✅ PR #1272 created
@@ -41,6 +42,7 @@ Reviewed 44 remote branches and created/verified PRs for waiting changes.
    - Description: Local dcode development setup and Meilisearch fixes
 
 #### Claude/Feature Branches (20+)
+
 1. **claude/cleanup-dead-code** - 26 commits
    - Last commit: 2026-05-20
    - Status: ✅ PR #1273 created
@@ -60,6 +62,7 @@ Reviewed 44 remote branches and created/verified PRs for waiting changes.
    - Status: ❌ Needs PR or deletion review
 
 #### Fix/Hotfix Branches (15+)
+
 - **fix/cloudflared-socat-*** (v3, v5, v6) - Already merged to main
 - **fix/cluster-issues** - Already merged to main
 - **fix/traefik-proxy-systemd** - Already merged to main
@@ -68,6 +71,7 @@ Reviewed 44 remote branches and created/verified PRs for waiting changes.
 - **fix/auth-providers-resolve** - 3 commits, needs PR
 
 #### Feature Branches (2)
+
 1. **feat/weekly-newsletter** - 2 commits
    - Status: ✅ PR #1277 created
    - Description: Weekly newsletter functionality
@@ -79,6 +83,7 @@ Reviewed 44 remote branches and created/verified PRs for waiting changes.
 ## Recommendations
 
 ### ✅ For Active Branches (PR Created)
+
 1. **agentic/r21c-langsmith-observability** (#1272)
    - Action: Request review
    - Timeline: Important observability feature
@@ -96,6 +101,7 @@ Reviewed 44 remote branches and created/verified PRs for waiting changes.
 These branches are 1-2 months old with no active development:
 
 **Branches to Delete (if no longer needed):**
+
 - claude/fix-apollo-stale-doc-2026-06-21 (June 21)
 - claude/slack-manifest-add-draft (June 14)
 - pr-141-prettier-format-fix (May 12)
@@ -107,6 +113,7 @@ These branches are 1-2 months old with no active development:
 - claude/campaign-launch-fixes (June 19)
 
 **Branches to Review for PR:**
+
 - fix/malformed-mcp-json
 - fix/ruff-lint-duplicates
 - fix/auth-providers-resolve
@@ -115,6 +122,7 @@ These branches are 1-2 months old with no active development:
 ## Action Items
 
 ### Immediate (This Week)
+
 - [ ] Review PR #1272 (LangSmith observability)
 - [ ] Review PR #1273 (Cleanup dead code)
 - [ ] Review PR #1274 (dcode local setup)
@@ -122,29 +130,31 @@ These branches are 1-2 months old with no active development:
 - [ ] Review PR #1277 (Weekly newsletter)
 
 ### Short Term (Next Week)
+
 - [ ] Decide on stale branches (delete or PR)
 - [ ] Create PRs for remaining fix/* branches if needed
 - [ ] Merge approved PRs to main
 
 ### Cleanup
+
 - [ ] Delete branches marked for deletion (after confirmation)
 - [ ] Archive decision about old feature branches
 
 ## Branch Status Summary
 
-| Category | Total | With PR | Merged | Stale | Action Needed |
-|----------|-------|---------|--------|-------|---------------|
-| Agentic | 2 | 2 | 0 | 0 | Review PRs |
-| Claude | 20+ | 5+ | 0 | 10+ | Review/Delete |
-| Feature | 2 | 2 | 0 | 0 | Review PRs |
-| Fix | 15+ | 2 | 10+ | 3 | Review stale |
-| Chore | 5 | 1 | 0 | 1 | Review/Delete |
-| **Total** | **44** | **12+** | **10+** | **14+** | **26** |
+| Category  | Total  | With PR | Merged  | Stale   | Action Needed |
+| --------- | ------ | ------- | ------- | ------- | ------------- |
+| Agentic   | 2      | 2       | 0       | 0       | Review PRs    |
+| Claude    | 20+    | 5+      | 0       | 10+     | Review/Delete |
+| Feature   | 2      | 2       | 0       | 0       | Review PRs    |
+| Fix       | 15+    | 2       | 10+     | 3       | Review stale  |
+| Chore     | 5      | 1       | 0       | 1       | Review/Delete |
+| **Total** | **44** | **12+** | **10+** | **14+** | **26**        |
 
 ## Timeline Context
 
-- **Recent (June 24-27)**: agentic/*, fix/cloudflared-* - Ready for review
-- **Medium (June 10-23)**: claude/campaign-*, fix/ruff-*, etc. - Should review soon
+- **Recent (June 24-27)**: agentic/_, fix/cloudflared-_ - Ready for review
+- **Medium (June 10-23)**: claude/campaign-_, fix/ruff-_, etc. - Should review soon
 - **Old (May 12-30)**: claude/fix-apollo, pr-141, etc. - Consider deletion
 
 ## Notes
