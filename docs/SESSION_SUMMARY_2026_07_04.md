@@ -100,11 +100,12 @@ Successfully completed comprehensive infrastructure configuration, Cloudflare AP
 
 ## Issues Found & Status
 
-### docs.cloudless.gr 502 Error
-- **Status**: ⚠️ Investigation needed
-- **Root cause**: Tunnel ingress configured for port 30900, service may be on different port
-- **Solution**: Update tunnel config or k8s service port mapping
-- **Impact**: Minor - omv and ftp working normally
+ ### docs.cloudless.gr 502 Error
+ - **Status**: ✅ **RESOLVED** (2026-07-05)
+ - **Root cause**: Tunnel ingress configured for port 30900, but docs-service was ClusterIP only (not exposed as NodePort)
+ - **Solution**: Patched docs-service to NodePort(30901) and updated tunnel config
+ - **Impact**: None - all services now operational
+ - **Reference**: See `docs/DOCS_SERVICE_FIX_2026_07_05.md` for full details
 
 ### TFTP UDP-Only Limitation
 - **Status**: ✅ Documented

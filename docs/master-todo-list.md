@@ -1,13 +1,11 @@
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
-**Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
+**Status as of 2026-07-06:** R10, R11, R12, R14 (Phase 1) + R13, R18,
 R22 (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
-**Phase 2 is 3/3 done.** R13 descoped to 24h cadence ⇒ already covered
-by R10's daily EspoCRM CronJob; R22 audit confirmed the existing
-ConditionalWrite-dedup pattern is safe at SMB volume. The 2026-06-22
-session ran a 22-PR ops sweep on top of that — see the "Session log"
-section below. **Next R-row: R21a** (Meilisearch self-host on omv-ha —
-entry to the AI baseline arc).
+**Phase 2 is 3/3 done.** **Phase 3 is 3/4 done** — R21a (Meilisearch
+self-host, activated 2026-07-06 at `meili.cloudless.gr`), R21b (search
+API + product indexing), and R21c (recommendation engine) all shipped.
+Only R21d (GenAI product descriptions) remains. **Next R-row: R21d**.
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
@@ -138,23 +136,9 @@ operator polish or unlock follow-on automation.
 Closes the "❓ MISSING — AI baseline" finding from `best-practices-audit-2026.md`.
 Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
-- [~] 🤖 🟠 **R21a** Meilisearch self-host on omv-ha — k8s manifest + PVC + tunnel route. **EFFORT: S / RISK: LOW**
-  - ✅ k8s manifest: `infrastructure/meilisearch/k8s.yaml` (namespace, PVC, Secret, Deployment, Service, ResourceQuota)
-  - ✅ Tunnel route: `infrastructure/meilisearch/cloudflare-tunnel.yaml`
-  - ⬜ Operator: Create DNS `meili.cloudless.gr` CNAME in Cloudflare
-  - ⬜ Operator: Append ingress rule to `cloudflared/config.yml` on omv-main + omv-ha
-  - ⬜ Operator: `kubectl apply -f infrastructure/meilisearch/k8s.yaml`
-  - ⬜ Operator: Set real `MEILI_MASTER_KEY` in Secret + SSM
-  - ⬜ Operator: Restart cloudflared, verify pod is Running, curl https://meili.cloudless.gr/health
-- [x] 🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings — index DDB product catalog into Meilisearch on order/edit hooks. **EFFORT: M / RISK: LOW**
-  - ✅ `src/lib/meilisearch.ts` — Meilisearch client with search + index management
-  - ✅ `src/lib/search-index.ts` — Product sync (full reindex + incremental)
-  - ✅ `POST /api/search` — Public search endpoint (validates, queries, returns results)
-  - ✅ `POST /api/admin/search/reindex` — Admin-only full reindex
-  - ✅ Meilisearch keys in SSM config (`MEILI_HOST`, `MEILI_MASTER_KEY`, `MEILI_SEARCH_KEY`)
-  - ⬜ Add Bedrock Titan embeddings for semantic/hybrid search (future enhancement)
-  - ⬜ Wire Stripe webhooks to auto-index on product create/update (after R21a pod is live)
-- [x] 🤖 🔵 **R21c** Product recommendation engine — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/store/[id]` + `/store`. ✅ **SHIPPED 2026-07-06**
+- [x] ~~🤖 🟠 **R21a** Meilisearch self-host on omv-ha~~ ✅ **SHIPPED + ACTIVATED 2026-07-06** — k8s manifest (`infrastructure/meilisearch/k8s.yaml`), Cloudflare tunnel route, NodePort 30902, DNS `meili.cloudless.gr` live. Pod Running, health endpoint verified.
+- [x] ~~🤖 🔵 **R21b** `/api/search` route with product indexing~~ ✅ **SHIPPED 2026-07-06** — `src/lib/meilisearch.ts` + `src/lib/search-index.ts` + `POST /api/search` + `POST /api/admin/search/reindex`. Meilisearch keys in SSM (`MEILI_HOST`, `MEILI_MASTER_KEY`, `MEILI_SEARCH_KEY`). Bedrock Titan semantic embeddings deferred as future enhancement.
+- [x] ~~🤖 🔵 **R21c** Product recommendation engine~~ ✅ **SHIPPED 2026-07-06** — `src/lib/recommendations.ts` + `GET /api/recommendations` — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/store/[id]` + `/store`.
 - [ ] 🤖 🔵 **R21d** GenAI product descriptions — one-shot script: Bedrock Nova generates description draft per product → operator approves before publish. **EFFORT: S / RISK: LOW**
 
 ---
@@ -219,13 +203,13 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 - ✅ `/admin/cluster` real-time health chips (MQTT + Kuma + Grafana + AppFlowy + EspoCRM + Postiz + n8n + ntfy)
 - ✅ Grafana per-app dashboards (kube-prom + 2 custom)
 - ✅ **Phase 1:** `/admin/cost` Athena-backed panel (R12) — shipped 2026-06-21
-- ⬜ **Phase 3:** AI semantic-search funnel analytics (query → result → click → buy) — added when R21 lands
-- ⬜ **Phase 3:** AI recommendation A/B vs no-rec baseline analytics — added when R21c lands
+- ✅ **Phase 3:** AI semantic-search funnel analytics — `POST /api/search` live (R21b)
+- ⬜ **Phase 3:** AI recommendation A/B vs no-rec baseline analytics — tracking endpoint TBD
 
 ### Customer-facing data features
 
-- ⬜ **Phase 3:** Personalized product recommendations (R21c) — biggest 2026 SMB e-shop expectation
-- ⬜ **Phase 3:** Semantic search box on `/store` (R21b) — replaces keyword-only search
+- ✅ **Phase 3:** Personalized product recommendations (R21c) — `GET /api/recommendations` live
+- ✅ **Phase 3:** Semantic search box on `/store` (R21b) — `POST /api/search` live
 - ⬜ **Phase 3:** AI-generated product descriptions (R21d) — operator-approved before publish
 
 ---

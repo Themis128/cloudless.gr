@@ -22,6 +22,15 @@
 | [DOCS_SERVICE_FIX_2026_07_05.md](DOCS_SERVICE_FIX_2026_07_05.md)                                       | ✅ Fixed     | Resolution of the docs.cloudless.gr 502 error.              |
 | [K3S_STORAGE_MIGRATION_PLAN_2026_07_05.md](K3S_STORAGE_MIGRATION_PLAN_2026_07_05.md)                   | ✅ Completed | Step-by-step guide for k3s root relocation to SSD.          |
 
+## AI & Search
+
+| Doc | Service |
+| --- | ------- |
+| [ANTHROPIC.md](ANTHROPIC.md) | Anthropic SDK / Claude API usage. |
+| [AI_ANALYTICS_ORCHESTRATION.md](AI_ANALYTICS_ORCHESTRATION.md) | Stripe analytics orchestration pipeline. |
+| [AGENTS_ROADMAP.md](AGENTS_ROADMAP.md) | AI agents roadmap (dev, runtime, CI). |
+| [LANGSMITH-EVALS.md](LANGSMITH-EVALS.md) | LangSmith evaluation suite. |
+
 ## Application integrations
 
 | Doc                                      | Service                            |
@@ -62,6 +71,6 @@
 
 ## Session Summaries
 
-- [SESSION_SUMMARY_2026_07_06.md](SESSION_SUMMARY_2026_07_06.md) — OMV remediation, Meilisearch activation.
+- [SESSION_SUMMARY_2026_07_06.md](SESSION_SUMMARY_2026_07_06.md) — OMV remediation, Meilisearch activation, R21b/R21c shipped.
 - [SESSION_SUMMARY_2026_07_04.md](SESSION_SUMMARY_2026_07_04.md) — Infrastructure setup, branch cleanup.
 - [session-summary-2026-06-21.md](session-summary-2026-06-21.md) — R7-R14 implementation.
