@@ -1,0 +1,18 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: cloudless-manager
+  namespace: cloudless
+  annotations:
+    traefik.io/v1alpha1: "true"
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - kind: Rule
+    match: Host(`manage.cloudless.gr`) || Host(`manage.cloudless.online`)
+    services:
+    - name: cloudless-app
+      port: 80
+  tls:
+    certResolver: letsencrypt-cloudflare
