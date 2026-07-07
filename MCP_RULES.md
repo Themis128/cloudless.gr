@@ -87,6 +87,15 @@ If an MCP server returns errors:
 
 ## Current Available MCPs (from mcp.json)
 
-- **Kubernetes**: Full cluster access via kubeconfig
-- **Sequential Thinking**: Multi-step reasoning engine
-- **Cloudflare**: Tunnel and DNS management (requires CLOUDFLARE_API_TOKEN)
+- **ollama**: Local LLM inference (qwen2.5-coder) via Ollama
+- **cloudless-infra**: SSH access to OMV Pi host (k3s cluster)
+- **kubernetes**: Full cluster access via kubeconfig
+- **cloudflare**: Tunnel, Workers, DNS management (requires CLOUDFLARE_API_TOKEN)
+- **github**: GitHub repos, issues, PRs, workflows (requires GITHUB_PERSONAL_ACCESS_TOKEN)
+- **sequentialthinking**: Multi-step reasoning engine for complex debugging
+- **filesystem**: File operations within project workspace
+- **athena**: AWS Athena analytics queries
+- **cognito-setup**: Automated Cognito configuration
+- **markdownify**: Document conversion (PDF, DOCX, etc. to Markdown)
+- **aws-knowledge**: AWS Knowledge MCP for AWS documentation lookup
+
