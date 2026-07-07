@@ -1,0 +1,95 @@
+# Cloudflare Tunnel Routes Registry
+# Single source of truth for all tunnel routes
+# This file is used by tunnel:sync to configure cloudflared
+
+routes:
+  # Main application
+  - hostname: cloudless.gr
+    service: traefik-lb
+    port: 80
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Main cloudless.gr application
+
+  - hostname: manage.cloudless.gr
+    service: traefik-lb
+    port: 80
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Management interface (same as main app)
+
+  - hostname: *.cloudless.gr
+    service: traefik-lb
+    port: 80
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Wildcard catch-all for all subdomains
+
+  # Infrastructure services
+  - hostname: omv.cloudless.gr
+    service: omv-webui
+    port: 80
+    healthPath: /
+    node: omv
+    status: active
+    description: OpenMediaVault admin panel
+
+  - hostname: ftp.cloudless.gr
+    service: omv-ftp
+    port: 21
+    healthPath: null
+    node: omv
+    status: active
+    description: FTP server (TCP, no HTTP health)
+
+  # Documentation
+  - hostname: docs.cloudless.gr
+    service: docs-server
+    port: 30901
+    healthPath: /
+    node: omv
+    status: pending
+    description: Documentation portal (NodePort)
+
+  # Search
+  - hostname: meili.cloudless.gr
+    service: meilisearch
+    port: 30902
+    healthPath: /health
+    node: omv
+    status: pending
+    description: Meilisearch search engine (NodePort)
+
+  # Monitoring
+  - hostname: grafana.cloudless.gr
+    service: grafana
+    port: 30850
+    healthPath: /api/health
+    node: omv
+    status: active
+    description: Grafana monitoring dashboard
+
+  - hostname: n8n.cloudless.gr
+    service: n8n
+    port: 80
+    healthPath: /rest/health
+    node: omv
+    status: active
+    description: n8n workflow automation
+
+# Tunnel configuration
+tunnel:
+  id: e977a490-58c5-4fdb-9155-86832e3e636a
+  name: omv-main-tunnel
+  account: fb7dc7b69b662480cd5961a4d1913c78
+
+# Node information
+nodes:
+  omv:
+    ip: 192.168.1.128
+    tailscaleIp: 100.113.41.119
+    role: primary
+    storage: ssd

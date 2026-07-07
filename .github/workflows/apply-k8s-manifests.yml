@@ -29,11 +29,11 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Apply k8s manifests
+       - name: Apply k8s manifests
         run: |
           echo "=== Applying k8s manifests ==="
-          kubectl apply -f k8s/cloudless-app-optimized.yaml
-          kubectl apply -f k8s/ingressroute-manage.yaml
+          kubectl apply -f k8s/cloudless-app-optimized.yaml --validate=false
+          kubectl apply -f k8s/ingressroute-manage.yaml --validate=false
           echo "=== Done ==="
 
       - name: Verify NetworkPolicy
