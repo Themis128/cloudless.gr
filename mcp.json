@@ -91,6 +91,14 @@
       "command": "npx",
       "args": ["mcp-remote", "https://knowledge-mcp.global.api.aws"],
       "autoStart": false
+    },
+    "github.com/cloudflare/mcp-server-cloudflare": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
     }
   }
 }
