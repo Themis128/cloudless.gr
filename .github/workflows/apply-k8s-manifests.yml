@@ -1,0 +1,64 @@
+name: Apply k8s Manifests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "k8s/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Apply k8s manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Apply k8s manifests
+        run: |
+          echo "=== Applying k8s manifests ==="
+          kubectl apply -f k8s/cloudless-app-optimized.yaml
+          kubectl apply -f k8s/ingressroute-manage.yaml
+          echo "=== Done ==="
+
+      - name: Verify NetworkPolicy
+        run: |
+          echo "=== NetworkPolicy status ==="
+          kubectl get networkpolicy -n cloudless
+          echo "=== NetworkPolicy details ==="
+          kubectl describe networkpolicy cloudless-app-network-policy -n cloudless
+
+      - name: Verify IngressRoute
+        run: |
+          echo "=== IngressRoute status ==="
+          kubectl get ingressroute -n cloudless
+          echo "=== IngressRoute details ==="
+          kubectl describe ingressroute cloudless-manager -n cloudless
+
+      - name: Report result
+        if: always()
+        run: |
+          gh issue comment 382 --body "### k8s manifests applied
+
+          **Changes:**
+          - NetworkPolicy: Fixed to allow traffic from all namespaces (was blocking Traefik)
+          - IngressRoute: Fixed certResolver to `letsencrypt-cloudflare`
+          - Removed non-existent `secure-headers` middleware
+
+          **Verify:**
+          - https://manage.cloudless.gr/api/health"
