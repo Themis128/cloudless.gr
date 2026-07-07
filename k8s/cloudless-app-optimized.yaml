@@ -38,7 +38,7 @@ metadata:
     app: cloudless-app
     version: v1
 spec:
-  replicas: 3  # Minimum 3 for HA; HPA scales up under load
+  replicas: 1  # Run single pod on omv (main node with 120GB SSD)
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -59,24 +59,14 @@ spec:
         prometheus.io/path: "/metrics"
 
     spec:
-      # Affinity: Spread pods across nodes for HA
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - cloudless-app
-              topologyKey: kubernetes.io/hostname
+      # ECR authentication - pull images from AWS ECR
+      imagePullSecrets:
+      - name: regcred-ecr
 
       # Container Configuration
       containers:
       - name: app
-        image: 278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest
+        image: 278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:f4470f73af40
         imagePullPolicy: Always
 
         # Port Configuration
@@ -85,62 +75,48 @@ spec:
           name: http
           protocol: TCP
 
-        # Environment Variables for Performance
+        # AWS credentials for SSM access at runtime
         envFrom:
+        - secretRef:
+            name: pi-standby-aws-creds
         - configMapRef:
             name: app-performance-config
 
-        # Environment Secrets (auth, DB credentials)
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: database-url
-        - name: AUTH_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: auth-secret
-        - name: COGNITO_ISSUER
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: cognito-issuer
         # R14: tag Pi-served Sentry events so they're distinguishable from
         # AWS Lambda's "production" environment. Operator can filter by env
         # in the Sentry dashboard to see which surface produced an error
         # during failover, instead of both showing as "production".
+        env:
         - name: SENTRY_ENVIRONMENT
           value: "pi-standby"
 
-        # Resource Requests & Limits
-        # Problem: Underpowered pods cause slow TTFB and TBT
-        # Solution: 512Mi memory minimum (was 256Mi), 500m CPU (was 250m)
-        requests:
-          cpu: 500m              # Request 0.5 CPU cores
-          memory: 512Mi          # Request 512MB RAM
-        limits:
-          cpu: 1000m             # Allow burst to 1.0 CPU
-          memory: 1Gi            # Hard limit 1GB (prevent OOM)
+        # Resource Requests & Limits - Reduced for single-node operation
+        resources:
+          requests:
+            cpu: 100m              # Request 0.1 CPU cores
+            memory: 128Mi          # Request 128MB RAM (minimal for omv)
+          limits:
+            cpu: 500m              # Allow burst to 0.5 CPU
+            memory: 256Mi          # Hard limit 256MB (prevent OOM)
 
         # Startup Probe (wait for app to be ready)
-        # Prevents traffic before app is ready, reducing 502 errors
+        # Next.js standalone shows "Ready in 0ms" but HTTP server needs time to bind.
+        # Give 2 minutes to accommodate Pi startup + cold SSM/cache latency.
         startupProbe:
           httpGet:
-            path: /health
+            path: /api/health
             port: 3000
             scheme: HTTP
-          initialDelaySeconds: 5
-          periodSeconds: 2
-          timeoutSeconds: 3
-          failureThreshold: 15  # 30s total before failure
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 24  # 2 minutes total before failure
 
         # Readiness Probe (detect when app can handle traffic)
         # Removes pods from load balancer if slow
         readinessProbe:
           httpGet:
-            path: /health
+            path: /api/health
             port: 3000
             scheme: HTTP
           initialDelaySeconds: 3
@@ -152,7 +128,7 @@ spec:
         # Recover from hangs/deadlocks
         livenessProbe:
           httpGet:
-            path: /health
+            path: /api/health
             port: 3000
             scheme: HTTP
           initialDelaySeconds: 30
@@ -206,8 +182,8 @@ spec:
     kind: Deployment
     name: cloudless-app
 
-  minReplicas: 3      # Minimum 3 pods always running
-  maxReplicas: 10     # Scale up to 10 under heavy load
+  minReplicas: 1      # Minimum 1 pod on omv
+  maxReplicas: 3      # Scale up to 3 under heavy load
 
   metrics:
   # CPU-based autoscaling (scale when CPU > 70%)
@@ -253,7 +229,7 @@ metadata:
   name: cloudless-app-pdb
   namespace: cloudless
 spec:
-  minAvailable: 2
+  minAvailable: 1
   selector:
     matchLabels:
       app: cloudless-app

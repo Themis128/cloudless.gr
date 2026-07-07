@@ -1,0 +1,10 @@
+{
+  "name": "aws-knowledge-mcp-server",
+  "version": "1.0.0",
+  "description": "Remote MCP server for AWS Knowledge - uses mcp-remote",
+  "type": "module",
+  "scripts": {
+    "start": "npx mcp-remote https://knowledge-mcp.global.api.aws"
+  },
+  "dependencies": {}
+}

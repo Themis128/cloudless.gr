@@ -2,10 +2,7 @@
   "mcpServers": {
     "ollama": {
       "command": "npx",
-      "args": [
-        "tsx",
-        "src/index.ts"
-      ],
+      "args": ["tsx", "src/index.ts"],
       "env": {
         "OLLAMA_URL": "http://localhost:11434",
         "OLLAMA_MODEL": "qwen2.5-coder",
@@ -16,33 +13,57 @@
     },
     "cloudless-infra": {
       "command": "npx",
-      "args": [
-        "tsx",
-        "src/index.ts"
-      ],
+      "args": ["tsx", "src/index.ts"],
       "env": {
-        "OMV_SSH_HOST_TAILSCALE": "100.113.41.119",
-        "OMV_SSH_USER": "omv",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
-        "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
+        "OMV_SSH_HOST": "192.168.1.128",
+        "OMV_SSH_HA_HOST": "192.168.1.130",
+        "OMV_SSH_USER": "tbaltzakis",
+        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519"
       },
+      "autoStart": true,
       "cwd": "tools/ssh-mcp"
     },
-    "cognito-setup": {
+    "kubernetes": {
       "command": "npx",
+      "args": ["mcp-server-kubernetes"],
+      "autoStart": false
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "github": {
+      "command": "docker",
       "args": [
-        "tsx",
-        "src/index.ts"
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
       ],
-      "autoStart": false,
-      "cwd": "tools/cognito-setup-mcp"
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "sequentialthinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "autoStart": false
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/tbaltzakis/cloudless.gr"],
+      "autoStart": false
     },
     "athena": {
       "command": "npx",
-      "args": [
-        "tsx",
-        "index.ts"
-      ],
+      "args": ["tsx", "index.ts"],
       "env": {
         "AWS_REGION": "us-east-1",
         "ATHENA_WORKGROUP": "primary",
@@ -52,45 +73,23 @@
       "autoStart": false,
       "cwd": "tools/mcp-athena-server"
     },
-    "project": {
+    "cognito-setup": {
       "command": "npx",
-      "args": [
-        "-y",
-        "project-mcp"
-      ],
-      "autoStart": true
+      "args": ["tsx", "src/index.ts"],
+      "autoStart": false,
+      "cwd": "tools/cognito-setup-mcp"
     },
-    "langsmith": {
-      "command": "uvx",
-      "args": [
-        "langsmith-mcp"
-      ],
-      "env": {
-        "LANGSMITH_API_KEY": "${LANGSMITH_API_KEY}"
-      },
-      "autoStart": true
-    },
-    "github.com/github-mcp-server": {
+    "markdownify": {
       "command": "node",
-      "args": [
-        "tools/github-mcp-server/index.js"
-      ],
+      "args": ["/home/tbaltzakis/Cline/MCP/markdownify-mcp/dist/index.js"],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+        "MARKITDOWN_PATH": "/home/tbaltzakis/Cline/MCP/markdownify-mcp/.venv/bin/markitdown"
       },
       "autoStart": false
     },
-    "github.com/Flux159/mcp-server-kubernetes": {
+    "aws-knowledge": {
       "command": "npx",
-      "args": ["mcp-server-kubernetes"],
-      "autoStart": false
-    },
-    "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ],
+      "args": ["mcp-remote", "https://knowledge-mcp.global.api.aws"],
       "autoStart": false
     }
   }
