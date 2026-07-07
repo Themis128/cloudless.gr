@@ -1,15 +1,5 @@
 {
   "mcpServers": {
-    "cloudless-infra": {
-      "command": "npx",
-      "args": ["tsx", "tools/ssh-mcp/src/index.ts"],
-      "env": {
-        "OMV_SSH_HOST_TAILSCALE": "100.113.41.119",
-        "OMV_SSH_USER": "omv",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
-        "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
-      }
-    },
     "project": {
       "command": "npx",
       "args": ["-y", "project-mcp"],
@@ -29,7 +19,16 @@
       "autoStart": true
     },
     "cloudflare": {
-      "url": "https://mcp.cloudflare.com/mcp"
+      "url": "https://mcp.cloudflare.com/mcp",
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": true,
+      "autoApprove": [
+        "deploy",
+        "kv_get",
+        "kv_put"
+      ]
     },
     "cloudflare-docs": {
       "url": "https://docs.mcp.cloudflare.com/mcp"
