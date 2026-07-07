@@ -39,6 +39,15 @@
     connectTimeout: 10s
     tcpKeepAlive: 30s
 
+# manage.cloudless.gr - Cloudless app management interface
+# Routes to the main cloudless app (Traefik LB on omv-main)
+- hostname: manage.cloudless.gr
+  service: http://localhost:80
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    httpHostHeader: manage.cloudless.gr
+
 # Apply these changes:
 #   1. ssh tbaltzakis@192.168.1.128
 #   2. sudo vi /etc/cloudflared/config.yml
@@ -50,3 +59,4 @@
 #   curl -I https://ftp.cloudless.gr
 #   curl -I https://docs.cloudless.gr
 #   curl -I https://meili.cloudless.gr
+#   curl -I https://manage.cloudless.gr

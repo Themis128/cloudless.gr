@@ -1,0 +1,32 @@
+# Traefik IngressRoute: grafana.cloudless.gr → kube-prom-grafana:80
+# Exposes Grafana publicly via the same letsencrypt certResolver as the
+# other cloudless.gr routes (postiz, n8n, etc.).
+#
+# Grafana is exposed as NodePort 30850 (see kube-prom-stack-values.yaml),
+# but Traefik routes to the in-cluster Service on port 80 (the chart's
+# `service.port`), so we point at kube-prom-grafana:80 here.
+#
+# Apply:
+#   kubectl apply -f infrastructure/monitoring/grafana-ingressroute.yaml
+#
+# DNS (Cloudflare, cloudless.gr zone):
+#   grafana.cloudless.gr  CNAME → cloudless.gr (proxied=true, TTL=auto)
+#
+# Verify:
+#   curl -I https://grafana.cloudless.gr/login   # → 200
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`grafana.cloudless.gr`)
+      services:
+        - name: kube-prom-grafana
+          port: 80
+  tls:
+    certResolver: letsencrypt-cloudflare
