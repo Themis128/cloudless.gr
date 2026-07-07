@@ -143,3 +143,4 @@ jobs:
           } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
 # re-triggered 2026-06-05 — API server down since 2026-06-04; added journal + disk checks
 # re-triggered 2026-06-05T07:00Z — k3s crash-looped again 16min after restart; adding fuser+reset-failed+30s stability check
+# re-triggered 2026-07-07T06:09Z — manage.cloudless.gr 502 Bad Gateway; both nodes unreachable; SSH restart attempt
