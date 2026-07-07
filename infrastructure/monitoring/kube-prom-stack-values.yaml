@@ -29,6 +29,31 @@
 #   - 4 grafana-dashboard-cloudflare-* dashboards (we removed Cloudflare
 #     analytics monitoring from the scope per the 2026-06-21 cleanup)
 
+# Node selector for all monitoring workloads — required because omv-ha has
+# node-type=standby:NoSchedule taint. All StatefulSet/Deployment templates
+# in this chart inherit nodeSelector from prometheus.prometheusSpec and
+# alertmanager.alertmanagerSpec sections.
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      kubernetes.io/hostname: omv
+    # Memory tuned for Pi 5 (avoids OOMKills)
+    resources:
+      limits:
+        memory: 750Mi
+      requests:
+        memory: 512Mi
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      kubernetes.io/hostname: omv
+    resources:
+      limits:
+        memory: 128Mi
+      requests:
+        memory: 64Mi
+
 grafana:
   # Expose Grafana as NodePort 30850 so the Cloudflare tunnel can reach it.
   # omv-main LAN IP is 192.168.1.128 — same pattern as postiz/espocrm/appflowy.
@@ -67,3 +92,13 @@ grafana:
         foldersFromFilesStructure: true
         disableDelete: false
         allowUiUpdates: false
+
+kube-state-metrics:
+  # Pin kube-state-metrics to omv node (same reason: omv-ha taint)
+  nodeSelector:
+    kubernetes.io/hostname: omv
+  resources:
+    limits:
+      memory: 128Mi
+    requests:
+      memory: 64Mi
