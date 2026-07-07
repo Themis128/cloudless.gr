@@ -13,6 +13,7 @@ name: Monitoring Node Selector Fix (Prometheus/Alertmanager stuck Pending)
 # Trigger: push to this file or the values file.
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
