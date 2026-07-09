@@ -7,6 +7,7 @@ name: Cluster doctor (read-only diagnostics)
 # re-triggered 2026-06-05 — k3s crash-looped on omv 2026-06-04; checking current state
 # re-triggered 2026-06-05T06:40Z — k3s recovered via restart workflow; full pod health check
 # re-triggered 2026-06-12 — DISKPRESSUREHIGH (88.59%); running alongside pi-disk-cleanup
+# re-triggered 2026-07-09T13:46Z — investigating deployment oscillation (coredns/traefik/local-path flip-flopping)
 
 # Read-only visibility into the omv k3s cluster from CI. Runs scripts/cluster-
 # doctor.sh over Tailscale + KUBECONFIG_B64 and posts the snapshot as a comment
