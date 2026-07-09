@@ -49,5 +49,22 @@
   },
   "ai": {
     "binding": "AI"
+  },
+  "routes": [
+    {
+      "pattern": "cloudless.gr/api/agents/*",
+      "custom_domain": false
+    },
+    {
+      "pattern": "cloudless.gr/agents/*",
+      "custom_domain": false
+    },
+    {
+      "pattern": "cloudless.gr/api/server/counter/*",
+      "custom_domain": false
+    }
+  ],
+  "vars": {
+    "AGENT_AUTH_TOKEN": ""
   }
 }
