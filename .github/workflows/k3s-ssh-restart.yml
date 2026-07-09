@@ -27,12 +27,15 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # on port 22 despite TCP connection accepted; port 6443 never came back after 90s.
 # Pi may be under extreme load; retrying. If same failure, Pi needs power cycle.
 # re-triggered 2026-07-09T14:01Z — k3s unstable: deployments oscillating (coredns/traefik flipping), kubectl unreachable
+# re-triggered 2026-07-09T14:20Z — triggering to stabilize cluster after version flip-flops
+#
 
 on:
   push:
     branches: [main]
     paths:
       - ".github/workflows/k3s-ssh-restart.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
