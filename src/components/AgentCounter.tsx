@@ -23,7 +23,7 @@ export default function AgentCounter() {
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
       }
-      const data = await response.json();
+      const data = (await response.json()) as CounterAgentResponse;
       return data;
     } catch (err) {
       return { error: (err as Error).message };
