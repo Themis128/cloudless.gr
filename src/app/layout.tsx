@@ -15,7 +15,7 @@ const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
   subsets: ["latin"],
   display: "swap",
-  preload: true,
+  preload: false,
   fallback: ["system-ui", "Arial"],
   adjustFontFallback: false,
 });
@@ -33,7 +33,7 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
-  preload: true,
+  preload: false,
 });
 
 export const metadata: Metadata = {
