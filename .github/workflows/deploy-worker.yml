@@ -52,6 +52,12 @@ jobs:
           echo "::add-mask::$TOKEN"
           echo "value=$TOKEN" >> "$GITHUB_OUTPUT"
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Install wrangler
         run: npm install -g wrangler
 
