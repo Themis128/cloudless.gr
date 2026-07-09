@@ -1,5 +1,5 @@
 {
-  "name": "fully-migrated-serverless-stack",
+  "name": "cloudless",
   "main": "src/index-cloudflare-free.js",
   "compatibility_date": "2026-07-09",
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
