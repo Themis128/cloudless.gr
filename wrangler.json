@@ -1,0 +1,17 @@
+{
+  "name": "fully-migrated-serverless-stack",
+  "main": "src/index-cloudflare-free.js",
+  "compatibility_date": "2026-07-09",
+  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "vars": {
+    "ENVIRONMENT": "production",
+    "API_VERSION": "v1.0"
+  },
+  "r2_buckets": [
+    { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
+    { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
+  ],
+  "d1_databases": [
+    { "binding": "AUTH_DB", "database_name": "cloudless-auth" }
+  ]
+}
