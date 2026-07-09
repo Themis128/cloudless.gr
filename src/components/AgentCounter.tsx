@@ -14,11 +14,10 @@ export default function AgentCounter() {
 
   const agentUrl = "/api/agents/counter-agent/default";
 
-  async function callAgent(method: string): Promise<CounterAgentResponse> {
+  async function callAgent(action: string): Promise<CounterAgentResponse> {
     try {
-      const response = await fetch(`${agentUrl}?method=${method}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch(`${agentUrl}/${action}`, {
+        method: "GET",
       });
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -33,7 +32,7 @@ export default function AgentCounter() {
   async function refresh() {
     setLoading(true);
     setError(null);
-    const result = await callAgent("getCount");
+    const result = await callAgent("status");
     if (result.error) {
       setError(result.error);
     } else {
