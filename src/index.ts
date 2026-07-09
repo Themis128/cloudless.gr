@@ -127,7 +127,9 @@ export default {
     const isDefaultAgentRoute = url.pathname.startsWith(DEFAULT_AGENT_PATH_PREFIX + "/");
     const isServerCounterRoute = url.pathname.startsWith(SERVER_COUNTER_PREFIX + "/");
 
-    if ((isCustomAgentRoute || isServerCounterRoute) && !isAuthorized(request, env)) {
+    // Public demo route - no auth required
+    const isPublicDemo = url.pathname.startsWith("/api/agents/counter-agent/default");
+    if ((isCustomAgentRoute || isServerCounterRoute) && !isPublicDemo && !isAuthorized(request, env)) {
       return unauthorized();
     }
 
