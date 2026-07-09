@@ -1,5 +1,8 @@
 name: Apply k8s Manifests
 
+# Purpose: Apply k8s manifests for the Pi standby cluster via Tailscale tunnel.
+# Trigger: push to main on k8s/** paths, manual dispatch.
+# Paging: posts result to issue #382.
 on:
   push:
     branches: [main]
@@ -8,12 +11,19 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write  # OIDC for Tailscale auth
   contents: read
+  issues: write
+
+concurrency:
+  group: k8s-manifests
+  cancel-in-progress: true
 
 jobs:
   apply:
     name: Apply k8s manifests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
@@ -29,7 +39,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-       - name: Apply k8s manifests
+      - name: Apply k8s manifests
         run: |
           echo "=== Applying k8s manifests ==="
           kubectl apply -f k8s/cloudless-app-optimized.yaml --validate=false
@@ -57,8 +67,8 @@ jobs:
 
           **Changes:**
           - NetworkPolicy: Fixed to allow traffic from all namespaces (was blocking Traefik)
-          - IngressRoute: Fixed certResolver to `letsencrypt-cloudflare`
-          - Removed non-existent `secure-headers` middleware
+          - IngressRoute: Fixed certResolver to \`letsencrypt-cloudflare\`
+          - Removed non-existent \`secure-headers\` middleware
 
           **Verify:**
           - https://manage.cloudless.gr/api/health"
