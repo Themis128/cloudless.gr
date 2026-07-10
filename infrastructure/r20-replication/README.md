@@ -1,4 +1,5 @@
 # R20: Postgres Logical Replication Subscriber on AWS
+
 # Streams AppFlowy/Postiz/Postgres changes → DDB for cross-region DR
 
 ## Architecture
