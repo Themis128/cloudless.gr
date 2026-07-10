@@ -1,8 +1,12 @@
 name: Switch to k3s cluster
 
-# Forces www.cloudless.gr to point to Pi k3s cluster (omv.tail8eb71.ts.net)
+# Forces cloudless.gr and www.cloudless.gr to point to Pi k3s cluster (omv.tail8eb71.ts.net)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/switch-to-k3s.yml"
   workflow_dispatch:
 
 permissions:
@@ -13,8 +17,6 @@ permissions:
 jobs:
   switch:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -33,17 +35,16 @@ jobs:
 
       - name: Switch DNS to k3s
         run: |
+          set -e
           ZONE_ID=$(curl -sS \
             -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
             "https://api.cloudflare.com/client/v4/zones?name=cloudless.gr" \
             | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['id'])")
 
-          # Get all DNS records
           RECS=$(curl -sS \
             -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
             "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records")
 
-          # Update cloudless.gr and www.cloudless.gr to point to Pi
           for HOST in cloudless.gr www.cloudless.gr; do
             REC=$(echo "$RECS" | python3 -c "
 import sys,json
@@ -54,19 +55,19 @@ for r in json.load(sys.stdin)['result']:
 ")
             if [ -n "$REC" ]; then
               REC_ID=$(echo "$REC" | cut -d'|' -f1)
-              REC_TYPE=$(echo "$REC" | cut -d'|' -f2)
-              echo "Updating $HOST ($REC_TYPE) -> omv.tail8eb71.ts.net"
+              echo "→ Switching $HOST -> omv.tail8eb71.ts.net"
               curl -sS -X PATCH \
                 -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
                 -H "Content-Type: application/json" \
                 "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$REC_ID" \
-                -d '{"content":"omv.tail8eb71.ts.net","proxied":true}' | jq -r '.success'
+                -d '{"content":"omv.tail8eb71.ts.net","proxied":true}'
             else
-              echo "No A/CNAME record found for $HOST"
+              echo "No A/CNAME record for $HOST"
             fi
           done
 
-      - name: Report
+      - name: Post result to tracking issue
+        if: always()
         run: |
-          echo "DNS switched to: omv.tail8eb71.ts.net"
-          echo "Verify: curl -sI https://www.cloudless.gr/api/health"
+          echo "# Switch to k3s — $(date -u '+%Y-%m-%d %H:%M:%SZ')" | \
+            gh issue comment 382 --repo "${{ github.repository }}" --body-file -
