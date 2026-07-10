@@ -1,12 +1,12 @@
 # cloudless.gr — Architecture Map
 
-> Generated: 2026-06-23 (read-only inspection)
+> Updated: 2026-07-10 (reflects k3s primary + Cloudflare HA failover)
 
 ---
 
 ## 1. Framework & App Structure
 
-- **Framework:** Next.js 16.2.9 (App Router), deployed via SST v4.15.2
+- **Framework:** Next.js 16.2.1 (App Router), deployed via SST v4
 - **Runtime:** Node.js >=20, pnpm >=10 (lock: pnpm-lock.yaml)
 - **Package manager:** pnpm 10.33.2 (workspaces defined in `pnpm-workspace.yaml`)
 - **Language:** TypeScript 6.0.3 (strict mode via tsconfig.json)
@@ -98,7 +98,6 @@
 | `/auth/signup` | Registration |
 | `/auth/forgot-password` | Password reset |
 | `/auth/post-login` | Post-authentication redirect |
-
 
 ### Dashboard Pages (`src/app/[locale]/dashboard/`)
 | Route | Description |
@@ -195,20 +194,33 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 
 ---
 
-## 7. Deployment & Build Assumptions
+## 7. Deployment & Build Assumptions & HA Architecture
 
-- **Production deploy:** SST v4 (`sst deploy --stage production`) → AWS Lambda + CloudFront
-- **Pi cluster (k3s):** Docker-based with `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
+- **Primary runtime:** Pi k3s cluster (self-hosted on OMV-MAIN, exposed via Tailscale Funnel: omv.tail8eb71.ts.net)
+- **HA failover:** Cloudflare Workers (`cloudless-gr.baltzakis-themis.workers.dev`) via Load Balancer
+- **Docker build (Pi):** `Dockerfile` + `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
 - **WSL dev:** `NEXT_DIST_DIR` env var to avoid NTFS slow benchmarks; `allowedDevOrigins` for LAN access
 - **SSM hydration:** Secrets loaded via `instrumentation.ts` → SST SSM parameter store (`/cloudless/production/*`)
 - **Server external packages:** AWS SDK clients externalized (Turbopack resolver workaround for pnpm hoisting)
 - **next-auth** is transpiled (not externalized) — avoids ESM import errors
 - **Coverage mode:** E2E coverage via V8 native coverage (server `NODE_V8_COVERAGE` + browser CDP), forced `source-map` devtool
 - **Source maps:** Only in coverage mode (production maps uploaded to Sentry via SST)
-- **Docker build:** `Dockerfile` present, `.dockerignore` configured
 - **K8s manifests:** `k8s/` directory for Pi cluster deployments
-- **Workers (Cloudflare):** `workers/` directory present
-- **Infrastructure:** `infrastructure/` directory with IaC
+  - Persistent workloads use dedicated 120GB SSD on OMV-MAIN (nodeSelector constraint)
+  - Meilisearch (R21) at `k8s/search/meilisearch.yaml` with 4Gi PVC
+- **Workers (Cloudflare):** `workers/` directory for HA failover Worker
+- **Infrastructure:** `infrastructure/` directory with IaC (Terraform/SST)
+
+### Cloudflare Load Balancer Failover
+
+- **DNS provider:** Cloudflare (delegated nameservers own cloudless.gr zone)
+- **Setup workflow:** `.github/workflows/cloudflare-lb.yml` provisions:
+  - Monitors: `cloudless-health-<host>` checking `/api/health` every 60s (expect 200)
+  - Pools: `cl-worker-<host>` (Cloudflare Worker) + `cl-pi-<host>` (Pi/k3s)
+  - Steering: `off` — serves first healthy pool in default_pools
+- **Failover:** `.github/workflows/switch-to-k3s.yml` flips LB to Pi during AWS outages
+- **Revert:** Same workflow with `revert: true` restores AWS primary
+- **Token required:** `CLOUDFLARE_API_TOKEN` with scopes: Zone:Read, Load Balancing Pools/Monitors/Pools:Edit, DNS:Edit
 
 ---
 
@@ -238,11 +250,12 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 7. **Coverage config:** `next.config.ts` has conditional webpack overrides when `COVERAGE=1` — editing next.config.ts could break the coverage pipeline
 8. **Secrets in .env.local:** Contains real credentials — never commit, never expose in logs
 9. **pnpm overrides:** Version pinning for security advisories — removing/altering overrides could reintroduce vulnerabilities
-10. **Next.js 16 edge:** Using `next@16.2.9` — some APIs may have changed from v14/v15 patterns
+10. **Next.js 16 edge:** Using `next@16.2.1` — some APIs may have changed from v14/v15 patterns
+11. **LB failover:** Requires `CLOUDFLARE_API_TOKEN` with Load Balancing scopes in SSM
 
 ---
 
-## File Reference
+## 10. File Reference
 
 | File | Purpose |
 |---|---|
@@ -261,3 +274,6 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 | `instrumentation.ts` | SSM hydration on cold start |
 | `.env.example` | All environment variables |
 | `Dockerfile` | Self-hosted Docker build (Pi/k3s) |
+| `.github/workflows/cloudflare-lb.yml` | Cloudflare HA failover setup |
+| `.github/workflows/switch-to-k3s.yml` | Manual failover/increase script |
+| `k8s/search/meilisearch.yaml` | R21 search backend (4Gi PVC on OMV-MAIN SSD) |
