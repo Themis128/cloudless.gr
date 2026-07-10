@@ -1,0 +1,72 @@
+name: Switch to k3s cluster
+
+# Forces www.cloudless.gr to point to Pi k3s cluster (omv.tail8eb71.ts.net)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  switch:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Get Cloudflare token
+        id: token
+        run: |
+          TOKEN=$(aws ssm get-parameter \
+            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+            --with-decryption --region us-east-1 \
+            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Switch DNS to k3s
+        run: |
+          ZONE_ID=$(curl -sS \
+            -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
+            "https://api.cloudflare.com/client/v4/zones?name=cloudless.gr" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['id'])")
+
+          # Get all DNS records
+          RECS=$(curl -sS \
+            -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
+            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records")
+
+          # Update cloudless.gr and www.cloudless.gr to point to Pi
+          for HOST in cloudless.gr www.cloudless.gr; do
+            REC=$(echo "$RECS" | python3 -c "
+import sys,json
+for r in json.load(sys.stdin)['result']:
+    if r['name'] == '$HOST' and r['type'] in ['A', 'CNAME']:
+        print(f\"{r['id']}|{r['type']}|{r.get('content','')}\")
+        break
+")
+            if [ -n "$REC" ]; then
+              REC_ID=$(echo "$REC" | cut -d'|' -f1)
+              REC_TYPE=$(echo "$REC" | cut -d'|' -f2)
+              echo "Updating $HOST ($REC_TYPE) -> omv.tail8eb71.ts.net"
+              curl -sS -X PATCH \
+                -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
+                -H "Content-Type: application/json" \
+                "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$REC_ID" \
+                -d '{"content":"omv.tail8eb71.ts.net","proxied":true}' | jq -r '.success'
+            else
+              echo "No A/CNAME record found for $HOST"
+            fi
+          done
+
+      - name: Report
+        run: |
+          echo "DNS switched to: omv.tail8eb71.ts.net"
+          echo "Verify: curl -sI https://www.cloudless.gr/api/health"
