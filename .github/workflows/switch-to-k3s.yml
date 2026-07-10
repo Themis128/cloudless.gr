@@ -18,6 +18,8 @@ jobs:
   switch:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -35,38 +37,29 @@ jobs:
 
       - name: Switch DNS to k3s
         run: |
-          set -e
           ZONE_ID=$(curl -sS \
             -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
             "https://api.cloudflare.com/client/v4/zones?name=cloudless.gr" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['id'])")
-
-          RECS=$(curl -sS \
-            -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
-            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records")
+            | jq -r '.result[0].id')
 
           for HOST in cloudless.gr www.cloudless.gr; do
-            REC=$(echo "$RECS" | python3 -c "
-import sys,json
-for r in json.load(sys.stdin)['result']:
-    if r['name'] == '$HOST' and r['type'] in ['A', 'CNAME']:
-        print(f\"{r['id']}|{r['type']}|{r.get('content','')}\")
-        break
-")
-            if [ -n "$REC" ]; then
-              REC_ID=$(echo "$REC" | cut -d'|' -f1)
+            REC_ID=$(curl -sS \
+              -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
+              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=A&name=$HOST" \
+              | jq -r '.result[0].id // empty')
+            if [ -n "$REC_ID" ]; then
               echo "→ Switching $HOST -> omv.tail8eb71.ts.net"
               curl -sS -X PATCH \
                 -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
                 -H "Content-Type: application/json" \
                 "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$REC_ID" \
-                -d '{"content":"omv.tail8eb71.ts.net","proxied":true}'
+                -d '{"content":"omv.tail8eb71.ts.net","proxied":true}' | jq -r '.success'
             else
-              echo "No A/CNAME record for $HOST"
+              echo "No A record for $HOST"
             fi
           done
 
-      - name: Post result to tracking issue
+      - name: Report
         if: always()
         run: |
           echo "# Switch to k3s — $(date -u '+%Y-%m-%d %H:%M:%SZ')" | \
