@@ -168,6 +168,7 @@ export default {
       return agentResponse;
     }
 
-    return env.ASSETS.fetch(request);
+    // Worker doesn't serve static assets - return 404 for unmatched routes
+    return new Response("Not found", { status: 404 });
   },
 };

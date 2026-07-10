@@ -1,16 +1,10 @@
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "cloudless-gr",
-	"main": "src/index.ts",
+	"main": "src/index-cloudflare-free.js",
 	"compatibility_date": "2026-07-01",
-	"compatibility_flags": [
-		"nodejs_compat"
-	],
-	// ─── Static Assets ───────────────────────────────────────────────
-	"assets": {
-		"binding": "ASSETS",
-		"directory": "./out"
-	},
+	"account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+	// Note: assets binding removed - Worker uses ASSETS_BUCKET (R2) directly for static
 	// ─── Workers AI ──────────────────────────────────────────────────
 	"ai": {
 		"binding": "AI",
@@ -30,7 +24,6 @@
 			{
 				"name": "CodingAgent",
 				"class_name": "CodingAgent"
-			}
 		]
 	},
 	// ─── Workflows ───────────────────────────────────────────────────
@@ -58,10 +51,16 @@
 		"head_sampling_rate": 1
 	},
 	// ─── Routes ───────────────────────────────────────────────────────
+	// Main site served by this Worker - decommissions CloudFront
 	"routes": [
-		{ "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
-		{ "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
-		{ "pattern": "api.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" }
+		{
+			"pattern": "cloudless.gr",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.cloudless.gr",
+			"custom_domain": true
+		}
 	],
 	// ─── R2 Buckets (Cloudflare Free Tier) ───────────────────────────
 	"r2_buckets": [
@@ -74,13 +73,13 @@
 			"bucket_name": "cloudless-analytics"
 		},
 		{
+			"binding": "MEDIA_BUCKET",
 			"bucket_name": "app-media-bucket",
-			"binding": "app_media_bucket",
 			"remote": true
 		},
 		{
+			"binding": "DATALAKE_BUCKET",
 			"bucket_name": "datalake-bucket",
-			"binding": "datalake_bucket",
 			"remote": true
 		}
 	],
@@ -105,7 +104,7 @@
 	],
 	// ─── Environment Variables (non-secret) ──────────────────────────
 	"vars": {
-		"NEXT_PUBLIC_AUTH_PROVIDER": "d1", // Migration complete
+		"NEXT_PUBLIC_AUTH_PROVIDER": "d1",
 		"NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
 		"NEXT_PUBLIC_APP_URL": "https://cloudless.gr",
 		"NEXT_PUBLIC_COGNITO_USER_POOL_ID": "",
@@ -119,10 +118,25 @@
 		"ANALYTICS_CACHE_TABLE": "cloudless-analytics-cache",
 		"APP_VERSION": "local-dev"
 	},
+	// ─── Required Secrets ─────────────────────────────────────────────
+	"secrets": {
+		"required": [
+			"SESSION_SECRET",
+			"STRIPE_SECRET_KEY",
+			"STRIPE_WEBHOOK_SECRET",
+			"AUTH_SECRET"
+		]
+	},
 	// ─── Environments ────────────────────────────────────────────────
 	"env": {
 		"staging": {
 			"name": "cloudless-gr-staging",
+			"routes": [
+				{
+					"pattern": "staging.cloudless.gr",
+					"custom_domain": true
+				}
+			],
 			"workflows": [
 				{
 					"binding": "HelloWorkflow",
@@ -130,13 +144,58 @@
 					"class_name": "HelloWorkflow"
 				}
 			],
+			"r2_buckets": [
+				{
+					"binding": "ASSETS_BUCKET",
+					"bucket_name": "cloudless-assets"
+				},
+				{
+					"binding": "MEDIA_BUCKET",
+					"bucket_name": "app-media-bucket",
+					"remote": true
+				},
+				{
+					"binding": "ANALYTICS_BUCKET",
+					"bucket_name": "cloudless-analytics"
+				},
+				{
+					"binding": "DATALAKE_BUCKET",
+					"bucket_name": "datalake-bucket",
+					"remote": true
+				}
+			],
+			"d1_databases": [
+				{
+					"binding": "AUTH_DB",
+					"database_name": "user-auth-db",
+					"database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
+				}
+			],
+			"send_email": [
+				{ "name": "EMAIL" }
+			],
+			"ai": {
+				"binding": "AI",
+				"remote": true
+			},
 			"vars": {
+				"NEXT_PUBLIC_AUTH_PROVIDER": "d1",
 				"NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
 				"NEXT_PUBLIC_APP_URL": "https://staging.cloudless.gr"
 			}
 		},
 		"production": {
 			"name": "cloudless-gr",
+			"routes": [
+				{
+					"pattern": "cloudless.gr",
+					"custom_domain": true
+				},
+				{
+					"pattern": "www.cloudless.gr",
+					"custom_domain": true
+				}
+			],
 			"workflows": [
 				{
 					"binding": "HelloWorkflow",
@@ -144,7 +203,42 @@
 					"class_name": "HelloWorkflow"
 				}
 			],
+			"r2_buckets": [
+				{
+					"binding": "ASSETS_BUCKET",
+					"bucket_name": "cloudless-assets"
+				},
+				{
+					"binding": "MEDIA_BUCKET",
+					"bucket_name": "app-media-bucket",
+					"remote": true
+				},
+				{
+					"binding": "ANALYTICS_BUCKET",
+					"bucket_name": "cloudless-analytics"
+				},
+				{
+					"binding": "DATALAKE_BUCKET",
+					"bucket_name": "datalake-bucket",
+					"remote": true
+				}
+			],
+			"d1_databases": [
+				{
+					"binding": "AUTH_DB",
+					"database_name": "user-auth-db",
+					"database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
+				}
+			],
+			"send_email": [
+				{ "name": "EMAIL" }
+			],
+			"ai": {
+				"binding": "AI",
+				"remote": true
+			},
 			"vars": {
+				"NEXT_PUBLIC_AUTH_PROVIDER": "d1",
 				"NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
 				"NEXT_PUBLIC_APP_URL": "https://cloudless.gr"
 			}

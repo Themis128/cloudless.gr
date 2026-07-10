@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { runVoiceBriefAgent } from "@/lib/agent-voice-brief";
-import { readVoiceBrief } from "@/lib/voice-brief-store";
+import { readVoiceBrief, persistVoiceBrief } from "@/lib/voice-brief-store";
 
 interface VoiceBrief {
   text: string;
@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
     };
     // Best-effort persist — failure should not fail the user-facing response.
     // persistVoiceBrief is now handled inside agent-voice-brief via voice-brief-store
-    import { persistVoiceBrief } from "@/lib/voice-brief-store";
     await persistVoiceBrief(brief).catch((err) =>
       console.warn(
         "[admin/voice-brief] persist failed:",

@@ -35,10 +35,12 @@ MODE="${MODE:-report}"                 # report | apply
 CONFIRM="${CONFIRM:-0}"                 # apply requires CONFIRM=1
 HOSTS=("cloudless.gr" "www.cloudless.gr")
 
-# Origins (public, Cloudflare-independent endpoints).
-CF_APEX_ORIGIN="d3k7muo3c6lw6s.cloudfront.net"   # CloudFront distro for apex
-CF_WWW_ORIGIN="dgrxxatzrgxfi.cloudfront.net"     # CloudFront distro for www
+# Origins for Cloudflare-only deployment (no CloudFront)
+# Worker endpoints - the Worker itself handles all routing
+WORKER_ORIGIN="cloudless-gr.baltzakis-themis.workers.dev"  # Cloudflare Worker endpoint
 PI_ORIGIN="omv.tail8eb71.ts.net"                 # Pi/k3s via Tailscale Funnel (443)
+# For pure Cloudflare mode, we use the Worker directly (no AWS CloudFront)
+# The LB will have: AWS primary -> Pi standby (both served by Worker/Pi respectively)
 HEALTH_PATH="/api/health"
 
 log() { printf '%s\n' "$*"; }
@@ -115,19 +117,16 @@ MON_IDS=(); POOL_AWS=(); POOL_PI=()
 # ===================== MONITORS + POOLS (account scope) =====================
 i=0
 for host in "${HOSTS[@]}"; do
-  case "$host" in
-    "$DOMAIN") aws_origin="$CF_APEX_ORIGIN" ;;
-    *)         aws_origin="$CF_WWW_ORIGIN"  ;;
-  esac
+  aws_origin="$WORKER_ORIGIN"
   pi_origin="$PI_ORIGIN"
   mon_desc="cloudless-health-${host}"
-  pool_aws_name="cl-aws-${host//./-}"
+  pool_aws_name="cl-worker-${host//./-}"
   pool_pi_name="cl-pi-${host//./-}"
 
   log ""
   log "--- ${host} ---"
-  log "  primary origin (AWS): ${aws_origin}  (Host: ${host}${HEALTH_PATH})"
-  log "  standby origin (Pi):  ${pi_origin}   (Host: ${host}${HEALTH_PATH})"
+  log "  primary origin (Worker): ${aws_origin}  (Host: ${host}${HEALTH_PATH})"
+  log "  standby origin (Pi):      ${pi_origin}   (Host: ${host}${HEALTH_PATH})"
 
   # ---- monitor ----
   MLIST="$(cf GET "${API}/accounts/${ACCT_ID}/load_balancers/monitors")"
@@ -155,7 +154,7 @@ for host in "${HOSTS[@]}"; do
   # ---- pools ----
   PLIST="$(cf GET "${API}/accounts/${ACCT_ID}/load_balancers/pools")"
   for kind in aws pi; do
-    if [ "$kind" = aws ]; then pname="$pool_aws_name"; porigin="$aws_origin"; oname="cloudfront"; else pname="$pool_pi_name"; porigin="$pi_origin"; oname="pi-k3s-funnel"; fi
+    if [ "$kind" = aws ]; then pname="$pool_aws_name"; porigin="$aws_origin"; oname="cf-worker"; else pname="$pool_pi_name"; porigin="$pi_origin"; oname="pi-k3s-funnel"; fi
     pool_id="$(find_id "$PLIST" ".result[] | select(.name==\"${pname}\") | .id")"
     pool_body="$(jq -n --arg name "$pname" --arg oname "$oname" --arg addr "$porigin" \
                        --arg host "$host" --arg mon "$mon_id" '{

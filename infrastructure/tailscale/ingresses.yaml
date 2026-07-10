@@ -67,3 +67,27 @@ spec:
                 name: meilisearch
                 port:
                   number: 7700
+---
+# Tailscale Funnel Ingress for cloudless app (Pi k3s)
+# Access via: https://pi-origin.cloudless.gr
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloudless-pi-origin
+  namespace: cloudless
+  annotations:
+    tailscale.com/hostname: "pi-origin"
+    tailscale.com/allowlist: "tag:developers"
+spec:
+  ingressClassName: tailscale
+  rules:
+    - host: pi-origin.cloudless.gr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cloudless-app
+                port:
+                  number: 80

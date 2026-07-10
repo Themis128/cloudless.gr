@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUser, createPasswordResetToken, type AuthDatabase } from "@/lib/auth-d1";
 import { sendActivationEmail, notifyTeam, slackRegistrationNotify } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { createHmac as nodeCreateHmac } from "crypto";
 
 interface Env {
   AUTH_DB: AuthDatabase;
@@ -64,13 +65,13 @@ export async function POST(req: NextRequest) {
     const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
     const exp = Date.now() + 5 * 60 * 1000; // 5-minute window
     const nonce = crypto.randomUUID().replace(/-/g, "");
-    const sig = createHmac("sha256", secret)
+    const sig = nodeCreateHmac("sha256", secret)
       .update(`${email}:${exp}:${nonce}`)
       .digest("base64url");
     const token = `${nonce}.${exp}.${sig}`;
     const otp = (
       parseInt(
-        createHmac("sha256", secret)
+        nodeCreateHmac("sha256", secret)
           .update(`otp:${email}:${exp}:${nonce}`)
           .digest("hex")
           .slice(0, 8),
@@ -98,17 +99,4 @@ export async function POST(req: NextRequest) {
     console.error("[auth/register-d1] error:", err);
     return NextResponse.json({ error: "Sign up failed" }, { status: 500 });
   }
-}
-
-function createHmac(algorithm: string, secret: string): CryptoKey {
-  // Use Web Crypto API for HMAC
-  const encoder = new TextEncoder();
-  const keyMaterial = crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: algorithm === "sha256" ? "SHA-256" : "SHA-1" },
-    false,
-    ["sign", "verify"]
-  );
-  return keyMaterial as unknown as CryptoKey;
 }
