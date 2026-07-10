@@ -20,6 +20,10 @@ export async function generateStructuredPatch(
   model: string,
   prompt: string,
 ): Promise<StructuredPatch> {
+  if (!env.AI) {
+    throw new Error("AI binding not configured");
+  }
+
   const workersai = createWorkersAI({
     binding: env.AI,
   });

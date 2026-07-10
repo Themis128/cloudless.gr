@@ -299,6 +299,10 @@ export class CodingAgent extends Agent<Env, CodingState> {
     try {
       const systemPrompt = buildSystemPrompt(mode);
 
+      if (!this.env.AI) {
+        throw new Error("AI binding not configured");
+      }
+
       const result = await this.env.AI.run(
         route.model,
         {
@@ -321,8 +325,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
       );
 
       const responseText = extractText(result);
-      const gatewayLogId =
-        typeof this.env.AI.aiGatewayLogId === "string" ? this.env.AI.aiGatewayLogId : "";
+      const gatewayLogId = this.env.AI?.aiGatewayLogId ?? "";
 
       return this.setDone(prompt, mode, route, responseText, gatewayLogId);
     } catch (error) {
@@ -411,8 +414,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
         );
 
         const responseText = JSON.stringify(structuredPatch, null, 2);
-        const gatewayLogId =
-          typeof this.env.AI.aiGatewayLogId === "string" ? this.env.AI.aiGatewayLogId : "";
+        const gatewayLogId = this.env.AI?.aiGatewayLogId ?? "";
 
         const result = this.setDone(prompt, "patch", route, responseText, gatewayLogId);
 

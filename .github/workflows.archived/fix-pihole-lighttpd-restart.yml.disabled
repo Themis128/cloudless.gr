@@ -1,0 +1,155 @@
+name: Fix Pi-hole lighttpd restart (free port 80 for nginx)
+
+# external.conf already has port 8080, but lighttpd was never restarted.
+# pihole-FTL runs as "no-daemon" — it's the DNS process, NOT the web server.
+# The web server is lighttpd. Kill the old lighttpd (port 80), restart it on 8080.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-pihole-lighttpd-restart.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Write fix pod manifest
+        run: |
+          cat > /tmp/lighttpd-fix-pod.yaml << 'EOF'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: lighttpd-fix
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            containers:
+              - name: f
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command: [sh, -c]
+                args:
+                  - |
+                    apk add -q util-linux 2>/dev/null
+
+                    echo "===== What holds port 80? ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp sport = :80 2>/dev/null
+
+                    echo ""
+                    echo "===== lighttpd service status ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl status lighttpd --no-pager 2>/dev/null | head -15 || \
+                      echo "(lighttpd not a systemd service)"
+
+                    echo ""
+                    echo "===== lighttpd process ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ps aux 2>/dev/null | grep -i "lighttpd\|lighty" | grep -v grep || \
+                      echo "(no lighttpd process)"
+
+                    echo ""
+                    echo "===== current external.conf ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /etc/lighttpd/external.conf 2>/dev/null || echo "(not found)"
+
+                    echo ""
+                    echo "===== FIX: restart lighttpd on new port ====="
+                    # Try systemctl first
+                    if nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl restart lighttpd 2>/dev/null; then
+                      echo "lighttpd restarted via systemctl"
+                    else
+                      echo "systemctl failed — trying pihole-lighttpd service name"
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        systemctl restart pihole-lighttpd 2>/dev/null && \
+                        echo "pihole-lighttpd restarted" || echo "WARN: also failed"
+                    fi
+                    sleep 3
+
+                    echo ""
+                    echo "===== Port 80 after lighttpd restart ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp sport = :80 2>/dev/null || true
+
+                    echo ""
+                    echo "===== Port 8080 after lighttpd restart ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp sport = :8080 2>/dev/null || true
+
+                    echo ""
+                    echo "===== Restart nginx ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl restart nginx 2>/dev/null && echo "nginx OK" || \
+                      echo "WARN: nginx still failing"
+                    sleep 2
+                    NGINX=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active nginx 2>/dev/null || echo "failed")
+                    echo "nginx: $NGINX"
+
+                    if [ "$NGINX" != "active" ]; then
+                      echo ""
+                      echo "===== nginx journal (why still failing?) ====="
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        journalctl -u nginx -n 10 --no-pager 2>/dev/null | tail -10
+                      echo ""
+                      echo "===== All processes on port 80 ====="
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        ss -tlnp sport = :80 2>/dev/null || true
+                    fi
+
+                    echo ""
+                    echo "===== Final port map (80, 8080, 443) ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep -E ":(80|8080|443) " | head -10 || true
+          EOF
+
+      - name: Run fix pod
+        run: |
+          kubectl delete pod lighttpd-fix -n default --ignore-not-found --wait=true
+          kubectl create -f /tmp/lighttpd-fix-pod.yaml
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+            pod/lighttpd-fix -n default --timeout=120s
+          kubectl logs -n default lighttpd-fix | tee /tmp/lighttpd-fix.txt
+          kubectl delete pod lighttpd-fix -n default --ignore-not-found
+
+      - name: Post report
+        if: always()
+        run: |
+          NGINX=$(grep "^nginx:" /tmp/lighttpd-fix.txt | tail -1 || echo "unknown")
+          {
+            echo "# lighttpd restart fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "nginx status: **$NGINX**"
+            echo '```'
+            cat /tmp/lighttpd-fix.txt
+            echo '```'
+          } > /tmp/lighttpd-report.md
+          gh issue comment 382 --repo "${{ github.repository }}" \
+            --body-file /tmp/lighttpd-report.md

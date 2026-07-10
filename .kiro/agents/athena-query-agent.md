@@ -5,6 +5,7 @@
 **Description:** Specialized agent for querying and analyzing data in the AWS Athena-based data lake. Converts natural language questions to SQL, executes queries, and formats results.
 
 **Capabilities:**
+
 - Natural language to SQL translation
 - Data lake schema exploration
 - Query optimization and caching
@@ -41,6 +42,7 @@ When a user asks a question:
 ```
 
 **Workflow:**
+
 1. User asks a data-related question
 2. Agent identifies relevant tables and columns
 3. SQL query is generated and executed via MCP

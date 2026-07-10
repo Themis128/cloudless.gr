@@ -7,6 +7,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 **Use when:** Working with Cloudflare resources including Workers, Pages, KV, R2, D1, Containers, DNS, Load Balancer, Tunnel, or any Cloudflare platform feature.
 
 **Specific triggers:**
+
 - Cloudflare Tunnel configuration (`/etc/cloudflared/config.yml`)
 - DNS record management
 - Worker deployments
@@ -16,6 +17,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 - Turnstile/CAPTCHA
 
 **Example commands:**
+
 - `update cloudflare tunnel` - Configure ingress rules
 - `check DNS records` - Verify tunnel routing
 - `deploy worker` - Update edge functions
@@ -25,6 +27,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 **Use when:** Inspecting k3s cluster state, pods, deployments, services, or troubleshooting container workloads.
 
 **Specific triggers:**
+
 - k3s pod status checks
 - Deployment health verification
 - Service endpoints
@@ -33,6 +36,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 - Log retrieval from pods
 
 **Example commands:**
+
 - `get pods -A` - List all pods cluster-wide
 - `describe pod <name>` - Troubleshoot pod issues
 - `get deployments -n monitoring` - Check monitoring stack
@@ -42,6 +46,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 **Use when:** Complex multi-step problem solving, debugging cascading failures, or architectural analysis that requires step-by-step reasoning.
 
 **Specific triggers:**
+
 - Root cause analysis
 - Multi-system troubleshooting
 - Architecture planning
@@ -49,6 +54,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 - Performance optimization investigations
 
 **Example use cases:**
+
 - Diagnosing why tunnel → origin → app chain fails
 - Planning service consolidation
 - Analyzing audit failures to find underlying causes
@@ -58,6 +64,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 **Use when:** Managing repositories, issues, pull requests, workflows, or any GitHub operations.
 
 **Specific triggers:**
+
 - Workflow dispatch/runs
 - Issue creation/comments
 - PR management
@@ -65,6 +72,7 @@ This document defines when and how to use available MCP (Model Context Protocol)
 - Deployment status checks
 
 **Example commands:**
+
 - `gh workflow run` - Trigger CI/CD
 - `gh issue comment` - Update tracking issues
 - `gh pr create` - Submit changes
@@ -80,6 +88,7 @@ When multiple MCP servers could apply, choose in this order:
 ## Error Recovery Pattern
 
 If an MCP server returns errors:
+
 1. Check the error type (connection timeout, auth failure, resource not found)
 2. Use sequential thinking to plan next steps
 3. Fall back to GitHub workflow triggers if direct access fails
@@ -98,4 +107,3 @@ If an MCP server returns errors:
 - **cognito-setup**: Automated Cognito configuration
 - **markdownify**: Document conversion (PDF, DOCX, etc. to Markdown)
 - **aws-knowledge**: AWS Knowledge MCP for AWS documentation lookup
-

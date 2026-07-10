@@ -1,0 +1,173 @@
+name: Fix Pi-hole port via nsenter (no volume mounts)
+
+# Previous attempt failed: hostPath mounts for /etc/pihole and /etc/lighttpd were empty
+# in the container namespace. Pi-hole FTL v6 config lives on the host only.
+# This version uses nsenter directly for all file reads and writes.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-pihole-port-nsenter.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Write fix pod manifest
+        run: |
+          cat > /tmp/pihole-nsenter-pod.yaml << 'EOF'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: pihole-nsenter
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            containers:
+              - name: f
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command: [sh, -c]
+                args:
+                  - |
+                    apk add -q util-linux 2>/dev/null
+
+                    echo "===== Pi-hole config discovery ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      find /etc/pihole /etc/lighttpd /opt/pihole -maxdepth 2 \
+                      -name "*.toml" -o -name "*.conf" -o -name "setupVars.conf" \
+                      2>/dev/null | head -20 || echo "(no pihole config found)"
+
+                    echo ""
+                    echo "===== pihole.toml (if exists) ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /etc/pihole/pihole.toml 2>/dev/null | \
+                      grep -A3 -i "port\|webserver\|listen" | head -20 || \
+                      echo "(pihole.toml not found)"
+
+                    echo ""
+                    echo "===== lighttpd external.conf (if exists) ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /etc/lighttpd/external.conf 2>/dev/null || \
+                      echo "(not found)"
+
+                    echo ""
+                    echo "===== pihole-FTL process info ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /proc/2841/cmdline 2>/dev/null | tr '\0' ' ' || \
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        ps aux 2>/dev/null | grep pihole | head -5
+
+                    echo ""
+                    echo "===== FIX: patch pihole.toml port to 8080 ====="
+                    if nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      test -f /etc/pihole/pihole.toml; then
+
+                      # Check current port setting
+                      CURRENT=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        grep -i "port" /etc/pihole/pihole.toml 2>/dev/null | head -5)
+                      echo "Current port settings: $CURRENT"
+
+                      # Pi-hole v6 toml: webserver.port = "0.0.0.0:80,[::]:80"
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        sed -i \
+                          's|"0\.0\.0\.0:80,\[::\]:80"|"0.0.0.0:8080,[::]:8080"|g' \
+                          /etc/pihole/pihole.toml 2>/dev/null && echo "PATCHED v6 toml (ipv4+ipv6)"
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        sed -i 's/^\(\s*port\s*=\s*\)80$/\18080/' \
+                          /etc/pihole/pihole.toml 2>/dev/null && echo "PATCHED v6 toml (simple port)"
+
+                      echo "=== port lines after patch ==="
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        grep -i "port" /etc/pihole/pihole.toml 2>/dev/null | head -10
+
+                    else
+                      echo "No pihole.toml — trying lighttpd"
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        sh -c 'echo "server.port := 8080" > /etc/lighttpd/external.conf' && \
+                        echo "PATCHED lighttpd external.conf"
+                    fi
+
+                    echo ""
+                    echo "===== Restart pihole-FTL ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl restart pihole-FTL 2>/dev/null && echo "pihole-FTL restarted" || \
+                      echo "WARN: pihole-FTL restart failed"
+                    sleep 4
+
+                    echo ""
+                    echo "===== Port 80 after restart ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp sport = :80 2>/dev/null || true
+
+                    echo ""
+                    echo "===== Port 8080 after restart ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp sport = :8080 2>/dev/null || true
+
+                    echo ""
+                    echo "===== Restart nginx ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl restart nginx 2>/dev/null && echo "nginx restarted OK" || \
+                      echo "WARN: nginx still failing"
+                    sleep 2
+                    NGINX=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active nginx 2>/dev/null || echo "failed")
+                    echo "nginx: $NGINX"
+
+                    echo ""
+                    echo "===== Final listening ports (80, 8080, 443) ====="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep -E ":80 |:8080 |:443 " | head -10 || true
+          EOF
+
+      - name: Run fix pod
+        run: |
+          kubectl delete pod pihole-nsenter -n default --ignore-not-found --wait=true
+          kubectl create -f /tmp/pihole-nsenter-pod.yaml
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+            pod/pihole-nsenter -n default --timeout=120s
+          kubectl logs -n default pihole-nsenter | tee /tmp/pihole-nsenter.txt
+          kubectl delete pod pihole-nsenter -n default --ignore-not-found
+
+      - name: Post report
+        if: always()
+        run: |
+          NGINX_STATUS=$(grep "^nginx:" /tmp/pihole-nsenter.txt | tail -1 || echo "unknown")
+          {
+            echo "# Pi-hole Port Fix (nsenter) — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "nginx status: **$NGINX_STATUS**"
+            echo ""
+            echo '```'
+            cat /tmp/pihole-nsenter.txt
+            echo '```'
+          } > /tmp/pihole-nsenter-report.md
+          gh issue comment 382 --repo "${{ github.repository }}" \
+            --body-file /tmp/pihole-nsenter-report.md

@@ -1,0 +1,149 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "cloudless-gr",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// ─── Static Assets ───────────────────────────────────────────────
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./out"
+	},
+	// ─── Workers AI ──────────────────────────────────────────────────
+	"ai": {
+		"binding": "AI",
+		"remote": true
+	},
+	// ─── Durable Objects ─────────────────────────────────────────────
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "CounterAgent",
+				"class_name": "CounterAgent"
+			},
+			{
+				"name": "EchoAgent",
+				"class_name": "EchoAgent"
+			},
+			{
+				"name": "CodingAgent",
+				"class_name": "CodingAgent"
+			}
+		]
+	},
+	// ─── Workflows ───────────────────────────────────────────────────
+	"workflows": [
+		{
+			"binding": "HelloWorkflow",
+			"name": "hello-workflow",
+			"class_name": "HelloWorkflow"
+		}
+	],
+	// ─── Migrations ──────────────────────────────────────────────────
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"CounterAgent",
+				"EchoAgent",
+				"CodingAgent"
+			]
+		}
+	],
+	// ─── Observability ───────────────────────────────────────────────
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	// ─── Routes ───────────────────────────────────────────────────────
+	"routes": [
+		{ "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
+		{ "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
+		{ "pattern": "api.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" }
+	],
+	// ─── R2 Buckets (Cloudflare Free Tier) ───────────────────────────
+	"r2_buckets": [
+		{
+			"binding": "ASSETS_BUCKET",
+			"bucket_name": "cloudless-assets"
+		},
+		{
+			"binding": "ANALYTICS_BUCKET",
+			"bucket_name": "cloudless-analytics"
+		},
+		{
+			"bucket_name": "app-media-bucket",
+			"binding": "app_media_bucket",
+			"remote": true
+		},
+		{
+			"bucket_name": "datalake-bucket",
+			"binding": "datalake_bucket",
+			"remote": true
+		}
+	],
+	// ─── D1 Database (Cloudflare Free Tier) ──────────────────────────
+	"d1_databases": [
+		{
+			"binding": "AUTH_DB",
+			"database_name": "user-auth-db",
+			"database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
+		}
+	],
+	// ─── Analytics Engine (Time-series Database) ───────────────────────
+	"analytics_engine_datasets": [
+		{
+			"binding": "ANALYTICS",
+			"dataset": "cloudless-analytics"
+		}
+	],
+	// ─── Environment Variables (non-secret) ──────────────────────────
+	"vars": {
+		"NEXT_PUBLIC_AUTH_PROVIDER": "d1", // Migration complete
+		"NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
+		"NEXT_PUBLIC_APP_URL": "https://cloudless.gr",
+		"NEXT_PUBLIC_COGNITO_USER_POOL_ID": "",
+		"NEXT_PUBLIC_COGNITO_CLIENT_ID": "",
+		"AWS_REGION": "us-east-1",
+		"AWS_DEFAULT_REGION": "us-east-1",
+		"SESSION_TOKEN_STORE_TABLE": "cloudless-session-tokens",
+		"USER_PROFILE_TABLE": "cloudless-user-profiles",
+		"STRIPE_TRANSACTIONS_TABLE": "cloudless-stripe-transactions",
+		"ADMIN_NOTIFICATIONS_TABLE": "cloudless-admin-notifications",
+		"ANALYTICS_CACHE_TABLE": "cloudless-analytics-cache",
+		"APP_VERSION": "local-dev"
+	},
+	// ─── Environments ────────────────────────────────────────────────
+	"env": {
+		"staging": {
+			"name": "cloudless-gr-staging",
+			"workflows": [
+				{
+					"binding": "HelloWorkflow",
+					"name": "hello-workflow",
+					"class_name": "HelloWorkflow"
+				}
+			],
+			"vars": {
+				"NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
+				"NEXT_PUBLIC_APP_URL": "https://staging.cloudless.gr"
+			}
+		},
+		"production": {
+			"name": "cloudless-gr",
+			"workflows": [
+				{
+					"binding": "HelloWorkflow",
+					"name": "hello-workflow",
+					"class_name": "HelloWorkflow"
+				}
+			],
+			"vars": {
+				"NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
+				"NEXT_PUBLIC_APP_URL": "https://cloudless.gr"
+			}
+		}
+	}
+}

@@ -62,6 +62,10 @@ async function handleServerCounterRoute(request: Request, env: Env): Promise<Res
   const instanceName = parts[3] || "default";
   const action = parts[4] || "status";
 
+  if (!env.CounterAgent) {
+    return Response.json({ ok: false, error: "CounterAgent not configured" }, { status: 500 });
+  }
+
   const counter = await getAgentByName(env.CounterAgent, instanceName);
 
   if (action === "status") {

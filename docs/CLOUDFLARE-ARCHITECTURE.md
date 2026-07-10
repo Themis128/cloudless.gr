@@ -55,11 +55,13 @@ This document describes the Cloudflare infrastructure for cloudless.gr, includin
 ## DNS Configuration
 
 ### Primary Domain
+
 - **cloudless.gr** - Main application
   - CNAME → CloudFront distribution (primary)
   - A → Tunnel endpoint (failover via Cloudflare Load Balancer)
 
 ### Subdomains
+
 | Hostname | Service | Type | Target |
 |----------|---------|------|--------|
 | manage.cloudless.gr | Traefik LB | A | Tunnel |
@@ -74,17 +76,20 @@ This document describes the Cloudflare infrastructure for cloudless.gr, includin
 ## Cloudflare Tunnel
 
 ### Tunnel Details
+
 - **ID:** `e977a490-58c5-4fdb-9155-86832e3e636a`
 - **Name:** `omv-main-tunnel`
 - **Account:** `fb7dc7b69b662480cd5961a4d1913c78`
 - **Node:** omv-main (192.168.1.128)
 
 ### Configuration Files
+
 - `infrastructure/cloudflare-tunnels/routes.yaml` - Single source of truth for all routes
 - `infrastructure/cloudflare-tunnels/ingress-rules.yaml` - Ingress rules for cloudflared
 - `/etc/cloudflared/config.yml` on omv-main - Live tunnel configuration
 
 ### Route Registry
+
 All tunnel routes are defined in `infrastructure/cloudflare-tunnels/routes.yaml`:
 
 ```yaml
@@ -128,17 +133,20 @@ routes:
 ## Load Balancer (HA Failover)
 
 ### Configuration
+
 - **Pool:** `cloudless-gr-pool`
 - **Origin 1:** CloudFront (primary) - `d1234567890.cloudfront.net`
 - **Origin 2:** Pi Tunnel (standby) - `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com`
 
 ### Health Checks
+
 - **Endpoint:** `/api/health`
 - **Interval:** 30s
 - **Timeout:** 10s
 - **Expected:** HTTP 200
 
 ### Failover Logic
+
 1. CloudFront is primary (proxied, cached)
 2. If CloudFront fails health check, traffic routes to Pi Tunnel
 3. Pi Tunnel serves directly from k3s cluster
@@ -146,16 +154,20 @@ routes:
 ## Traefik Ingress
 
 ### Entry Points
+
 - `web` (port 80) - HTTP redirect to HTTPS
 - `websecure` (port 443) - HTTPS with Let's Encrypt
 
 ### CertResolver
+
 - `letsencrypt-cloudflare` - DNS-01 challenge via Cloudflare API
 
 ### Middleware
+
 - `secure-headers` - Security headers (X-Frame-Options, CSP, etc.)
 
 ### IngressRoutes
+
 | Name | Host | Service | Port |
 |------|------|---------|------|
 | cloudless-manager | manage.cloudless.gr | cloudless-app | 80 |
@@ -164,12 +176,14 @@ routes:
 ## Network Policies
 
 ### cloudless-app-network-policy
+
 - **Ingress:** Allow from all namespaces (fixed to allow Traefik)
 - **Egress:** Allow DNS, HTTP, HTTPS
 
 ## Troubleshooting
 
 ### Check Tunnel Status
+
 ```bash
 # On omv-main
 sudo systemctl status cloudflared
@@ -177,6 +191,7 @@ sudo journalctl -u cloudflared -f
 ```
 
 ### Check Traefik Status
+
 ```bash
 # Via kubectl
 kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik
@@ -184,6 +199,7 @@ kubectl logs -n kube-system -l app.kubernetes.io/name=traefik
 ```
 
 ### Check IngressRoute
+
 ```bash
 kubectl get ingressroute -n cloudless
 kubectl describe ingressroute cloudless-manager -n cloudless
@@ -192,14 +208,17 @@ kubectl describe ingressroute cloudless-manager -n cloudless
 ### Common Issues
 
 #### 502 Bad Gateway
+
 - **Cause:** Traefik cannot connect to backend service
 - **Fix:** Check NetworkPolicy allows traffic from kube-system
 
 #### Certificate Issues
+
 - **Cause:** Wrong certResolver name
 - **Fix:** Use `letsencrypt-cloudflare` (not `letsencrypt`)
 
 #### Missing Middleware
+
 - **Cause:** Referenced middleware doesn't exist
 - **Fix:** Remove middleware reference or create the middleware
 

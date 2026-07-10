@@ -1,0 +1,8 @@
+{
+  "name": "cloudless-assets",
+  "pages": {
+    "bucket": "cloudless-assets",
+    "include": ["_next/**", "static/**", "images/**", "*.{css,js,woff2,woff,png,jpg,jpeg,gif,svg,webp}"],
+    "exclude": ["*"]
+  }
+}

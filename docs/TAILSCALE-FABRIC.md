@@ -48,6 +48,7 @@ Tailscale operates as the **fabric interconnect** for the k3s cluster, providing
 ## Tailscale Operator
 
 ### Deployment
+
 ```bash
 kubectl apply -f infrastructure/tailscale/namespace.yaml
 kubectl apply -f infrastructure/tailscale/ingress-class.yaml
@@ -56,6 +57,7 @@ kubectl apply -f infrastructure/tailscale/ingresses.yaml
 ```
 
 ### Configuration Files
+
 - `infrastructure/tailscale/namespace.yaml` - Namespace and RBAC
 - `infrastructure/tailscale/ingress-class.yaml` - IngressClass definition
 - `infrastructure/tailscale/proxygroup-monitoring.yaml` - ProxyGroup for monitoring
@@ -64,23 +66,28 @@ kubectl apply -f infrastructure/tailscale/ingresses.yaml
 ## Tailscale Funnel
 
 ### Public Endpoints
+
 - `grafana.ts.cloudless.gr` - Grafana monitoring
 - `loki.ts.cloudless.gr` - Loki log aggregation
 
 ### Funnel Configuration
+
 Funnel is configured via Ingress resources with the `tailscale` ingress class.
 
 ## Cross-Node Access
 
 ### From omv to omv-ha
+
 Services on omv-ha (like Meilisearch) can be accessed from omv via Tailscale network.
 
 ### From omv-ha to omv
+
 All services on omv are accessible via Tailscale.
 
 ## Troubleshooting
 
 ### Check Tailscale Status
+
 ```bash
 # On omv
 sudo systemctl status tailscaled
@@ -89,12 +96,14 @@ tailscale ping omv-ha
 ```
 
 ### Check Tailscale Operator
+
 ```bash
 kubectl get pods -n tailscale-system
 kubectl logs -n tailscale-system -l app=tailscale-operator
 ```
 
 ### Check Tailscale Ingress
+
 ```bash
 kubectl get ingress -A
 kubectl describe ingress <name> -n <namespace>

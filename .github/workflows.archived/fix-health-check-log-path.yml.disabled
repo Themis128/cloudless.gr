@@ -1,0 +1,105 @@
+name: Fix health-check log path (permission denied)
+
+# The health-check cron job on omv writes to /var/log/health-check-cloudless.log
+# but tbaltzakis doesn't own that file → "Permission denied".
+# Fix: rewrite the script to use ~/logs/ (no sudo needed, survives reboots).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-health-check-log-path.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Write pod manifest
+        run: |
+          cat > /tmp/fix-pod.yaml << 'EOF'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: fix-health-log
+            namespace: default
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            restartPolicy: Never
+            volumes:
+              - name: home
+                hostPath:
+                  path: /home/tbaltzakis
+              - name: scripts
+                hostPath:
+                  path: /usr/local/bin
+            containers:
+              - name: w
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: home
+                    mountPath: /host-home
+                  - name: scripts
+                    mountPath: /host-bin
+                command: [sh, -c]
+                args:
+                  - |
+                    set -e
+                    SCRIPT=/host-bin/health-check-cloudless.sh
+                    USERLOG=/host-home/logs/health-check-cloudless.log
+                    mkdir -p /host-home/logs
+                    touch "$USERLOG"
+                    if [ -f "$SCRIPT" ]; then
+                      if grep -q '/var/log/health-check-cloudless' "$SCRIPT"; then
+                        sed -i 's|/var/log/health-check-cloudless\.log|/home/tbaltzakis/logs/health-check-cloudless.log|g' "$SCRIPT"
+                        echo "PATCHED: log path updated to ~/logs/"
+                      else
+                        echo "INFO: script already uses correct path"
+                        grep "health-check-cloudless.log" "$SCRIPT" | head -3
+                      fi
+                    else
+                      echo "WARN: $SCRIPT not found"
+                    fi
+                    echo "=== Log file ===" && ls -la "$USERLOG"
+                    echo "DONE"
+          EOF
+
+      - name: Fix log path on omv
+        run: |
+          kubectl delete pod fix-health-log -n default --ignore-not-found --wait=true
+          kubectl create -f /tmp/fix-pod.yaml
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
+            pod/fix-health-log -n default --timeout=60s
+          kubectl logs -n default fix-health-log
+          kubectl delete pod fix-health-log -n default --ignore-not-found
+
+      - name: Report result
+        if: always()
+        run: |
+          gh issue comment 382 --repo "${{ github.repository }}" \
+            --body "### Health-check log path fix — $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          Patched \`/usr/local/bin/health-check-cloudless.sh\` on omv: log path moved from \`/var/log/\` to \`~/logs/\`."

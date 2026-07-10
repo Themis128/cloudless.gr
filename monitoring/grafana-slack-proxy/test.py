@@ -2,6 +2,7 @@
 """Test script for Grafana Slack Proxy."""
 
 import json
+
 import requests
 
 # Test payload matching your log-based alerts

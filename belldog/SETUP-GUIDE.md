@@ -1,13 +1,16 @@
 # Belldog Setup Guide for www.cloudless.gr
 
 ## Overview
+
 Belldog is a self-hosted Slack webhook proxy that allows you to:
+
 - Generate webhook URLs with slash commands (`/belldog-generate`)
 - Manage tokens and channels
 - Proxy webhooks from any service to Slack
 - Handle channel renames and token migrations
 
 ## Prerequisites
+
 1. Access to create a Slack app at https://api.slack.com/apps
 2. Your K3S cluster with kubectl access
 
@@ -23,7 +26,9 @@ Belldog is a self-hosted Slack webhook proxy that allows you to:
 6. Click **Create App**
 
 ### Add Required Scopes
+
 Go to **OAuth & Permissions → Scopes → Bot Token Scopes** and add:
+
 - `chat:write.public` - Post to any channel
 - `chat:write` - Required by chat:write.public
 - `groups:write` - Post to private channels
@@ -32,10 +37,12 @@ Go to **OAuth & Permissions → Scopes → Bot Token Scopes** and add:
 - `groups:read` - List private channels
 
 ### Install App to Workspace
+
 1. Go to **OAuth & Permissions**
 2. Click **Install to Workspace** (or **Reinstall to Workspace** if updating)
 
 ### Copy Required Values
+
 1. **Bot User OAuth Token**: Starts with `xoxb-...`
 2. **Signing Secret**: Found in **Basic Information → App Credentials**
 
@@ -46,11 +53,13 @@ Go to **OAuth & Permissions → Scopes → Bot Token Scopes** and add:
 Belldog requires DynamoDB for token storage. You have two options:
 
 ### Option A: Use AWS DynamoDB (Recommended)
+
 1. Create a DynamoDB table named `belldog-tokens`
 2. Partition key: `channel_name` (string)
 3. Enable TTL for automatic cleanup
 
 ### Option B: Use Local DynamoDB (Development only)
+
 - Belldog can run with DynamoDB local, but not recommended for production
 
 ---
@@ -58,6 +67,7 @@ Belldog requires DynamoDB for token storage. You have two options:
 ## Step 3: Deploy Belldog to K3S
 
 ### Update Environment Variables
+
 Edit `/home/tbaltzakis/cloudless.gr/belldog/belldog-secrets.yaml` with your values:
 
 ```yaml
@@ -73,6 +83,7 @@ stringData:
 ```
 
 ### Apply the Configuration
+
 ```bash
 # Create the namespace
 kubectl apply -f namespace.yaml
@@ -112,6 +123,7 @@ Go to **Slack App → Interactivity & Shortcuts → Slash Commands** and add:
 3. **Response**: Belldog will generate a webhook URL and send it to the channel
 
 Example response:
+
 ```
 ✓ Token generated! Your webhook URL is:
 https://belldog.cloudless.gr/p/mychannel/abc123xyz/
@@ -120,6 +132,7 @@ Use this URL to post messages to this channel.
 ```
 
 4. **Test posting**:
+
 ```bash
 curl -XPOST --json '{"text":"Hello from Belldog!"}' \
   'https://belldog.cloudless.gr/p/mychannel/abc123xyz/'
@@ -132,33 +145,43 @@ curl -XPOST --json '{"text":"Hello from Belldog!"}' \
 ## Usage
 
 ### Generate a Webhook URL
+
 ```
 /belldog-generate
 ```
+
 Response: Webhook URL for the current channel
 
 ### Show Tokens in Current Channel
+
 ```
 /belldog-show
 ```
+
 Response: List of all active tokens in this channel
 
 ### Regenerate Token
+
 ```
 /belldog-regenerate
 ```
+
 Response: New webhook URL (old token remains valid for migration)
 
 ### Revoke Token
+
 ```
 /belldog-revoke
 ```
+
 Response: Token revoked successfully
 
 ### Revoke After Channel Rename
+
 ```
 /belldog-revoke-renamed
 ```
+
 Use after renaming a channel to revoke the old token
 
 ---
@@ -210,17 +233,20 @@ curl http://localhost:8080/
 ## Troubleshooting
 
 ### Pod Crashing
+
 ```bash
 kubectl logs -n belldog deployment/belldog
 kubectl describe pod -n belldog deployment/belldog
 ```
 
 ### Slash Commands Not Working
+
 - Verify Request URL in Slack app settings points to `https://belldog.cloudless.gr/slash`
 - Ensure `/` suffix is included
 - Check ingress/LoadBalancer is accessible from Slack
 
 ### Token Not Generated
+
 - Verify DynamoDB table `belldog-tokens` exists and is accessible
 - Check SLACK_TOKEN and SLACK_SIGNING_SECRET are correct
 

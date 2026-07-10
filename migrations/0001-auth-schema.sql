@@ -51,7 +51,7 @@ CREATE TABLE stripe_transaction (
 -- Stripe transaction indexes for querying
 CREATE INDEX idx_stripe_event_type ON stripe_transaction(event_type);
 CREATE INDEX idx_stripe_received_at ON stripe_transaction(received_at);
-CREATE stripe_customer_idx ON stripe_transaction(customer_id);
+CREATE INDEX idx_stripe_customer ON stripe_transaction(customer_id);
 
 -- Admin notifications (replaces AdminNotifications DynamoDB table)
 -- Events log for all client-facing interactions
