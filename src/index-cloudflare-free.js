@@ -211,23 +211,26 @@ export default {
       // Build reset URL
       const resetUrl = `${url.origin}/auth/reset-confirm?token=${encodeURIComponent(token)}`;
 
-      // Send email via notification (fire-and-forget)
+      // Send email via Cloudflare Email Service (fire-and-forget)
       try {
-        const emailHtml = `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #00fff5;">Reset your password</h2>
-            <p>Click the link below to set a new password:</p>
-            <p><a href="${resetUrl}" style="color: #00fff5;">${resetUrl}</a></p>
-            <p style="color: #888; font-size: 12px;">Link expires in 24 hours.</p>
-          </div>
-        `;
-        await fetch("https://cloudless.gr/api/admin/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ to: email, subject: "Reset your Cloudless password", html: emailHtml }),
-        }).catch(() => {});
+        if (env.EMAIL) {
+          await env.EMAIL.send({
+            to: email,
+            from: { email: "noreply@cloudless.gr", name: "Cloudless" },
+            subject: "Reset your Cloudless password",
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #00fff5;">Reset your password</h2>
+                <p>Click the link below to set a new password:</p>
+                <p><a href="${resetUrl}" style="color: #00fff5;">${resetUrl}</a></p>
+                <p style="color: #888; font-size: 12px;">Link expires in 24 hours.</p>
+              </div>
+            `,
+            text: `Reset your password: ${resetUrl}\nLink expires in 24 hours.`,
+          });
+        }
       } catch {
-        // Ignore email errors
+        // Ignore email errors — password reset still works, user just won't get email
       }
 
       return jsonResponse({ ok: true });

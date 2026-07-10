@@ -14,7 +14,7 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 let testCounter = 0;
 function uniqueIp() {
   testCounter += 1;
-  return `203.0.113.${testCounter % 254}`;
+  return `203.0.113.${(testCounter % 200) + 10}`;
 }
 
 async function postJson(

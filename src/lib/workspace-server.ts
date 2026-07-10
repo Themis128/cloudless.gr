@@ -1,20 +1,15 @@
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
-import { isAdmin, requireAuth, type AuthResult, type DecodedToken } from "@/lib/api-auth";
-
 /**
  * Multi-tenant workspace plumbing.
  *
- * Canonical home for:
- *   - the `Workspace` shape (persisted as JSON in SSM)
- *   - SSM read/write with a 30s cache
- *   - cookie/localStorage active-workspace plumbing
- *   - `requireWorkspaceAdmin` — admin gate scoped to a workspace's adminEmails
- *
- * The `/api/admin/workspaces` route imports from here so the type + helpers
- * are not duplicated.
+ * D1 primary (Cloudflare Workers) + SSM fallback (AWS Lambda).
+ * D1: config table with key "WORKSPACES_JSON"
+ * SSM legacy: /cloudless/WORKSPACES_JSON
  */
+
+import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
+import type { AuthDatabase } from "@/lib/auth-d1";
 
 /** Cookie key that carries the active workspace id between client/server.
  *  Mirrors `localStorage[cloudless_workspace_id]` set by WorkspaceContext.
@@ -23,9 +18,20 @@ export const WORKSPACE_COOKIE = "cloudless_workspace_id";
 
 /** SSM parameter that stores the entire workspaces list as a JSON array. */
 export const SSM_KEY = "/cloudless/WORKSPACES_JSON";
+const D1_KEY = "WORKSPACES_JSON";
 
 const REGION = process.env.AWS_REGION ?? "eu-central-1";
 const CACHE_TTL_MS = 30_000;
+
+// D1 binding interface - provided by Worker context
+interface Env {
+  AUTH_DB: AuthDatabase;
+}
+
+function getAuthDb(): AuthDatabase | null {
+  const env = process.env as unknown as Env;
+  return env.AUTH_DB ?? null;
+}
 
 export interface Workspace {
   id: string;
@@ -57,20 +63,52 @@ export function resetWorkspaceCache(): void {
   cached = null;
 }
 
-export async function readWorkspaces(): Promise<Workspace[]> {
-  if (cached && Date.now() < cached.expiresAt) return cached.data;
+async function readFromD1(): Promise<Workspace[] | null> {
+  const db = getAuthDb();
+  if (!db) return null;
+  try {
+    const row = await db
+      .prepare("SELECT value FROM config WHERE key = ?")
+      .bind(D1_KEY)
+      .first<{ value: string }>();
+    if (row?.value) {
+      const data = JSON.parse(row.value) as Workspace[];
+      if (Array.isArray(data)) {
+        cached = { data, expiresAt: Date.now() + CACHE_TTL_MS };
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn("[workspace-server] D1 read failed:", err instanceof Error ? err.message : err);
+  }
+  return null;
+}
+
+async function writeToD1(workspaces: Workspace[]): Promise<void> {
+  const db = getAuthDb();
+  if (!db) throw new Error("D1 not available");
+  await db
+    .prepare(
+      "INSERT INTO config (key, value, updated_at) VALUES (?, ?, ?) " +
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
+    )
+    .bind(D1_KEY, JSON.stringify(workspaces), Math.floor(Date.now() / 1000))
+    .run();
+}
+
+async function readFromSSM(): Promise<Workspace[]> {
   try {
     const client = new SSMClient({ region: REGION });
     const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
     const data = JSON.parse(res.Parameter?.Value ?? "[]") as Workspace[];
-    cached = { data, expiresAt: Date.now() + CACHE_TTL_MS };
-    return data;
+    cached = { data: Array.isArray(data) ? data : [], expiresAt: Date.now() + CACHE_TTL_MS };
+    return cached.data;
   } catch {
     return cached?.data ?? [];
   }
 }
 
-export async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
+async function writeToSSM(workspaces: Workspace[]): Promise<void> {
   const client = new SSMClient({ region: REGION });
   await client.send(
     new PutParameterCommand({
@@ -80,6 +118,38 @@ export async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
       Overwrite: true,
     })
   );
+}
+
+export async function readWorkspaces(): Promise<Workspace[]> {
+  // Try D1 first (Cloudflare Workers)
+  const db = getAuthDb();
+  if (db) {
+    const d1Result = await readFromD1();
+    if (d1Result) return d1Result;
+  }
+
+  // Fall back to SSM
+  return readFromSSM();
+}
+
+export async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
+  // Try D1 first (Cloudflare Workers)
+  const db = getAuthDb();
+  if (db) {
+    try {
+      await writeToD1(workspaces);
+      cached = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
+      return;
+    } catch (err) {
+      console.warn(
+        "[workspace-server] D1 write failed, falling back to SSM:",
+        err instanceof Error ? err.message : err
+      );
+      // Fall through to SSM
+    }
+  }
+
+  await writeToSSM(workspaces);
   cached = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
 }
 
@@ -98,7 +168,7 @@ export async function getActiveWorkspaceId(request?: NextRequest): Promise<strin
   }
 }
 
-/** Resolve the full active workspace (cookie id + SSM lookup). Returns `null`
+/** Resolve the full active workspace (cookie id + D1/SSM lookup). Returns `null`
  *  when the cookie is missing OR the id no longer exists. */
 export async function getActiveWorkspace(request?: NextRequest): Promise<Workspace | null> {
   const id = await getActiveWorkspaceId(request);
@@ -108,7 +178,8 @@ export async function getActiveWorkspace(request?: NextRequest): Promise<Workspa
 }
 
 export type WorkspaceAuthResult =
-  { ok: true; user: DecodedToken; workspace: Workspace } | { ok: false; response: NextResponse };
+  | { ok: true; user: DecodedToken; workspace: Workspace }
+  | { ok: false; response: NextResponse };
 
 /**
  * Pure authorization decision: determine if a user has access to a workspace.
@@ -167,3 +238,6 @@ export async function requireWorkspaceAdmin(request: NextRequest): Promise<Works
 
   return { ok: true, user: authResult.user, workspace: workspace! };
 }
+
+// Import for DecodedToken and AuthResult types
+import { isAdmin, requireAuth, type AuthResult, type DecodedToken } from "@/lib/api-auth";

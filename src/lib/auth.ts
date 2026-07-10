@@ -15,7 +15,7 @@
 import NextAuth, { type DefaultSession, type Account } from "next-auth";
 import Cognito from "next-auth/providers/cognito";
 import type { JWT } from "next-auth/jwt";
-import { getTokens, putTokens, deleteTokens } from "@/lib/session-token-store";
+import { getTokens, putTokens, deleteTokens } from "@/lib/session-token-store-d1";
 
 const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
 type RefreshTokenError = typeof REFRESH_TOKEN_ERROR;

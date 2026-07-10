@@ -11,12 +11,11 @@
  *   (Stripe metadata update is fire-and-forget when STRIPE_SECRET_KEY is set).
  *   Returns: { applied: number }
  *
- * Both endpoints require admin JWT.
+ * Workers AI primary (free, fast), Bedrock fallback (configured).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getBedrockClient } from "@/lib/bedrock-shared";
 import { getProducts } from "@/lib/store-products";
 import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import type { StoreProduct } from "@/lib/store-products";
@@ -28,6 +27,21 @@ import type { StoreProduct } from "@/lib/store-products";
 const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "us.amazon.nova-micro-v1:0";
 const MAX_TOKENS = 300;
 const MAX_PRODUCT_IDS = 20;
+
+// Workers AI binding interface
+interface AiBinding {
+  run(model: string, inputs: Record<string, unknown>): Promise<unknown>;
+}
+
+interface AiEnv {
+  AI: AiBinding;
+}
+
+function getAiBinding(): AiBinding | null {
+  return (process.env as unknown as AiEnv).AI ?? null;
+}
+
+const WORKERS_AI_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -72,10 +86,29 @@ function buildPrompt(product: StoreProduct): string {
 }
 
 // ---------------------------------------------------------------------------
-// Single-product generation
+// Single-product generation via Workers AI (primary) + Bedrock (fallback)
 // ---------------------------------------------------------------------------
 
-async function generateOne(product: StoreProduct): Promise<string> {
+async function generateOneWorkersAI(product: StoreProduct): Promise<string | null> {
+  const ai = getAiBinding();
+  if (!ai) return null;
+
+  try {
+    const result = (await ai.run(WORKERS_AI_CHAT_MODEL, {
+      messages: [{ role: "user", content: buildPrompt(product) }],
+    })) as { response?: string };
+    return result.response ?? null;
+  } catch (err) {
+    console.warn(
+      "[ai/product-descriptions] Workers AI failed, falling back to Bedrock:",
+      err instanceof Error ? err.message : err
+    );
+    return null;
+  }
+}
+
+async function generateOneBedrock(product: StoreProduct): Promise<string> {
+  const { getBedrockClient } = await import("@/lib/bedrock-shared");
   const client = getBedrockClient();
   const cmd = new ConverseCommand({
     modelId: MODEL_ID,
@@ -93,6 +126,15 @@ async function generateOne(product: StoreProduct): Promise<string> {
 
   if (!text) throw new Error("Empty response from Bedrock");
   return text;
+}
+
+async function generateOne(product: StoreProduct): Promise<string> {
+  // Try Workers AI first
+  const workersResult = await generateOneWorkersAI(product);
+  if (workersResult) return workersResult;
+
+  // Fall back to Bedrock
+  return generateOneBedrock(product);
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +169,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const results: GeneratedDescription[] = [];
   const errors: ErrorEntry[] = [];
 
-  // Generate sequentially to avoid Bedrock throttling
+  // Generate sequentially to avoid rate limiting
   for (const product of targets) {
     try {
       const description = await generateOne(product);

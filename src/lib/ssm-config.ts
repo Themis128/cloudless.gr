@@ -478,18 +478,35 @@ function buildConfigFromEnv(): AppConfig {
   };
 }
 
+/** Detect Cloudflare Workers runtime (no Node.js, no AWS SDK). */
+function isCloudflareWorkers(): boolean {
+  return (
+    typeof (globalThis as any).caches !== "undefined" &&
+    typeof process === "undefined"
+  );
+}
+
 /**
  * Fetches all /cloudless/production/* parameters from SSM.
  * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
  * In test environments (NODE_ENV=test), reads from process.env directly.
  * When SSM_DISABLED=1 (e.g. K3s Pi deployment where all config is injected
  * via Kubernetes secret), skips SSM entirely and reads from process.env.
+ * In Cloudflare Workers, skips SSM entirely — secrets come from Wrangler.
  */
 export async function getConfig(): Promise<AppConfig> {
   // In tests, skip SSM entirely and read from process.env. Still cache the
   // result so successive getConfig() calls return the same object reference;
   // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.
   if (process.env.NODE_ENV === "test" || process.env.SSM_DISABLED === "1") {
+    if (cached) return cached;
+    cached = buildConfigFromEnv();
+    cachedAt = Date.now();
+    return cached;
+  }
+
+  // Cloudflare Workers — no AWS SSM available, use env vars (populated by Wrangler)
+  if (isCloudflareWorkers()) {
     if (cached) return cached;
     cached = buildConfigFromEnv();
     cachedAt = Date.now();

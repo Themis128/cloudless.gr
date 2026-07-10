@@ -1,5 +1,6 @@
 import { getAgentByName, routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
+import { setEmailBinding } from "./lib/email-sender";
 
 export { CounterAgent };
 export { EchoAgent } from "./agents/echo";
@@ -125,6 +126,12 @@ async function handleServerCounterRoute(request: Request, env: Env): Promise<Res
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Inject Cloudflare Email binding for the unified email sender
+    if (env.EMAIL) {
+      setEmailBinding(env.EMAIL);
+      (globalThis as any).__EMAIL_BINDING__ = env.EMAIL;
+    }
+
     const url = new URL(request.url);
 
     const isCustomAgentRoute = url.pathname.startsWith(AGENT_PATH_PREFIX + "/");

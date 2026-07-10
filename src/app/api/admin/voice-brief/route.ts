@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { runVoiceBriefAgent } from "@/lib/agent-voice-brief";
-import { persistVoiceBrief, VOICE_BRIEF_SSM_NAME } from "@/lib/voice-brief-store";
+import { readVoiceBrief } from "@/lib/voice-brief-store";
 
 interface VoiceBrief {
   text: string;
@@ -14,24 +13,12 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // Region defaults to us-east-1 (where all production SSM lives). Lambda's
-  // runtime auto-sets AWS_REGION; we read it but fall back to the prod region.
-  const region = process.env.AWS_REGION || "us-east-1";
-
-  try {
-    const client = new SSMClient({ region });
-    const res = await client.send(
-      new GetParameterCommand({ Name: VOICE_BRIEF_SSM_NAME }),
-    );
-    const raw = res.Parameter?.Value;
-    if (!raw) {
-      return NextResponse.json({ brief: null });
-    }
-    const brief: VoiceBrief = JSON.parse(raw);
-    return NextResponse.json({ brief });
-  } catch {
-    return NextResponse.json({ brief: null });
+  // Try D1 first via readVoiceBrief (Cloudflare Workers)
+  const brief = await readVoiceBrief();
+  if (brief) {
+    return NextResponse.json({ brief: { text: brief.text, generatedAt: brief.generatedAt, week: brief.week } });
   }
+  return NextResponse.json({ brief: null });
 }
 
 export async function POST(request: NextRequest) {
@@ -53,6 +40,8 @@ export async function POST(request: NextRequest) {
       week: "on-demand",
     };
     // Best-effort persist — failure should not fail the user-facing response.
+    // persistVoiceBrief is now handled inside agent-voice-brief via voice-brief-store
+    import { persistVoiceBrief } from "@/lib/voice-brief-store";
     await persistVoiceBrief(brief).catch((err) =>
       console.warn(
         "[admin/voice-brief] persist failed:",

@@ -131,6 +131,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!res.ok) {
         setUser(null);
         setIsAdmin(false);
+        setIsLoading(false);
         return;
       }
       const data = (await res.json()) as {
@@ -149,6 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await nextAuthSignOut({ redirect: false });
         setUser(null);
         setIsAdmin(false);
+        setIsLoading(false);
         return;
       }
 

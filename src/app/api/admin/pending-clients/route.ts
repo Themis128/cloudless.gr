@@ -7,12 +7,8 @@ import {
 } from "@/lib/pending-clients";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
+import { readPortals, writePortals, computePortalExpiry, type ClientPortal, type PortalStep } from "@/lib/client-portals";
 import { randomUUID } from "node:crypto";
-import type { ClientPortal, PortalStep } from "@/app/api/admin/client-portals/route";
-
-const PORTALS_SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
 
 const DEFAULT_STEP_NAMES = [
   "Free Audit",
@@ -30,28 +26,6 @@ function makeDefaultSteps(): PortalStep[] {
     status: "pending",
     comments: [],
   }));
-}
-
-async function readPortals(): Promise<ClientPortal[]> {
-  try {
-    const client = new SSMClient({ region: REGION });
-    const res = await client.send(new GetParameterCommand({ Name: PORTALS_SSM_KEY }));
-    return JSON.parse(res.Parameter?.Value ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-async function writePortals(portals: ClientPortal[]): Promise<void> {
-  const client = new SSMClient({ region: REGION });
-  await client.send(
-    new PutParameterCommand({
-      Name: PORTALS_SSM_KEY,
-      Value: JSON.stringify(portals),
-      Type: "String",
-      Overwrite: true,
-    })
-  );
 }
 
 /** GET — list all pending clients for admin review */
@@ -111,6 +85,7 @@ export async function POST(request: NextRequest) {
     clientEmail: pending.email,
     clientName: pending.name ?? "",
     createdAt: new Date().toISOString(),
+    expiresAt: computePortalExpiry(),
     steps: body.stepNames?.length
       ? body.stepNames.slice(0, 12).map((name) => ({
           id: randomUUID(),
@@ -119,6 +94,8 @@ export async function POST(request: NextRequest) {
           comments: [],
         }))
       : makeDefaultSteps(),
+    deliverables: [],
+    paymentLinks: [],
   };
   portals.push(portal);
   await writePortals(portals);

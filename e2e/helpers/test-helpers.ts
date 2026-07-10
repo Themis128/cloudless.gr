@@ -26,8 +26,7 @@ export async function loginAsUser(
   await passwordLocator.fill(password);
   await page.click('button[type="submit"]');
 
-  const escapedRedirect = expectedRedirect.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  await page.waitForURL(new RegExp(escapedRedirect), { timeout: 30000 })
+  await page.waitForURL(expectedRedirect, { timeout: 30000 })
     .catch(async () => {
       await page.waitForLoadState("networkidle");
     });
