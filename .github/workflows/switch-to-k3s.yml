@@ -37,22 +37,27 @@ jobs:
 
       - name: Switch DNS to k3s
         run: |
+          set -e
           ZONE_ID=$(curl -sS \
             -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
             "https://api.cloudflare.com/client/v4/zones?name=cloudless.gr" \
             | jq -r '.result[0].id')
 
           for HOST in cloudless.gr www.cloudless.gr; do
-            # Get ALL record types (A, CNAME, and Load Balancer records)
-            REC=$(curl -sS \
+            # List all records to see what type they are
+            curl -sS \
               -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
               "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?name=$HOST" \
-              | jq -r '.result[0] | "\(.id)|\(.type)|\(.content // "")" // empty')
-            if [ -n "$REC" ]; then
-              REC_ID=$(echo "$REC" | cut -d'|' -f1)
-              REC_TYPE=$(echo "$REC" | cut -d'|' -f2)
-              CURRENT=$(echo "$REC" | cut -d'|' -f3)
-              echo "→ Switching $HOST ($REC_TYPE): $CURRENT -> omv.tail8eb71.ts.net"
+              | jq '.result[] | {id, type, name, content}'
+            
+            # Get first record (any type)
+            REC_ID=$(curl -sS \
+              -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
+              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?name=$HOST" \
+              | jq -r '.result[0].id // empty')
+            
+            if [ -n "$REC_ID" ]; then
+              echo "→ Switching $HOST -> omv.tail8eb71.ts.net (record: $REC_ID)"
               curl -sS -X PATCH \
                 -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
                 -H "Content-Type: application/json" \
