@@ -2,26 +2,31 @@
 # Copy this file to .dev.vars and fill in the values
 # .dev.vars is gitignored and never committed
 
-# ─── Authentication ────────────────────────────────────────────────
+# ─── Cloudflare Workers ───────────────────────────────────────────────
+# SESSION_SECRET is required for D1 password hashing
+SESSION_SECRET=your-random-secret-for-password-hashing
+
+# ─── Authentication (for local dev) ───────────────────────────────────
 AUTH_SECRET=your-next-auth-secret-here
 AUTH_URL=http://localhost:8787
 AUTH_TRUST_HOST=false
 
-# ─── AWS Cognito ───────────────────────────────────────────────────
+# ─── AWS Cognito (CLOUD AUTH PROVIDER - optional) ───────────────────────
+# When NEXT_PUBLIC_AUTH_PROVIDER=d1 is set, D1 auth is used instead of Cognito
 COGNITO_ISSUER=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_XXXXXXXXX
 COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
 COGNITO_DOMAIN=your-domain.auth.us-east-1.amazoncognito.com
 COGNITO_CLIENT_ID=your-cognito-client-id
 COGNITO_CLIENT_SECRET=your-cognito-client-secret
 
-# ─── AWS Credentials ───────────────────────────────────────────────
-AWS_ACCESS_KEY_ID=your-aws-access-key-id
-AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+# ─── Stripe (for checkout) ───────────────────────────────────────────────
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
 
-# ─── Agent Authentication ──────────────────────────────────────────
+# ─── Agent Authentication ─────────────────────────────────────────────
 AGENT_AUTH_TOKEN=your-agent-auth-token-here
 
-# ─── Optional: External Services ───────────────────────────────────
+# ─── Optional: External Services ───────────────────────────────────────────
 # LOCAL_LLM_BASE_URL=http://localhost:11434
 # LANGGRAPH_URL=http://localhost:8123
 # LANGSMITH_API_KEY=your-langsmith-api-key

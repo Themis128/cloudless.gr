@@ -10,7 +10,7 @@ if [ ! -d "$OUT_DIR" ]; then
   exit 1
 fi
 
-echo "Uploading files from $OUT_DIR to R2 bucket: $BUCKET"
+echo "Uploading files from $OUT_DIR to R2 bucket: $BUCKET (remote)"
 
 find "$OUT_DIR" -type f | while read -r file; do
   # Get relative path from out directory
@@ -22,7 +22,7 @@ find "$OUT_DIR" -type f | while read -r file; do
   fi
   
   echo "Uploading: $rel_path"
-  npx wrangler r2 object put "$BUCKET" --file "$file" "$rel_path" 2>/dev/null || true
+  npx wrangler r2 object put "$BUCKET/$rel_path" --file="$file" --remote 2>/dev/null || true
 done
 
-echo "Done uploading to $BUCKET"
+echo "Done uploading to $BUCKET (remote)"

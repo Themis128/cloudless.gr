@@ -1,91 +1,83 @@
-#!/usr/bin/env npx tsx
-/**
- * Sync AWS SSM parameters to Wrangler secrets
- * 
- * This script reads parameters from AWS SSM and pushes them to
- * Cloudflare Wrangler secrets. Run this before/during migration
- * to keep secrets in sync.
- * 
- * Usage:
- *   AWS_PROFILE=default CLOUDFLARE_API_TOKEN=xxx npx tsx scripts/sync-ssm-to-wrangler.ts
- */
+// Sync secrets from AWS SSM Parameter Store to Wrangler secrets
+// Usage: pnpm tsx scripts/sync-ssm-to-wrangler.ts --env=production
 
-import { GetParametersByPathCommand, SSMClient } from "@aws-sdk/client-ssm";
-import { execSync } from "child_process";
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 
-const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
-const REGION = process.env.AWS_REGION || "us-east-1";
+const ENV = process.argv.includes("--env=staging") ? "staging" : "production";
+const SSM_PREFIX = ENV === "production" ? "/cloudless/production" : "/cloudless/staging";
 
-// Secrets to migrate from SSM to Wrangler
-const SECRETS_MAPPING: Record<string, string> = {
-  // Stripe
+const ssm = new SSMClient({ region: "us-east-1" });
+
+// Secrets that need to be synced from SSM to Wrangler
+const SECRET_MAPPING: Record<string, string> = {
+  // SSM parameter name -> Wrangler secret binding name
   "STRIPE_SECRET_KEY": "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET": "STRIPE_WEBHOOK_SECRET",
-  // Auth
   "AUTH_SECRET": "AUTH_SECRET",
-  // Slack
   "SLACK_WEBHOOK_URL": "SLACK_WEBHOOK_URL",
   "SLACK_BOT_TOKEN": "SLACK_BOT_TOKEN",
   "SLACK_SIGNING_SECRET": "SLACK_SIGNING_SECRET",
-  // AI
   "ANTHROPIC_API_KEY": "ANTHROPIC_API_KEY",
-  // Social APIs
-  "META_ACCESS_TOKEN": "META_ACCESS_TOKEN",
-  "LINKEDIN_ACCESS_TOKEN": "LINKEDIN_ACCESS_TOKEN",
-  "X_ACCESS_TOKEN": "X_ACCESS_TOKEN",
-  "TIKTOK_ACCESS_TOKEN": "TIKTOK_ACCESS_TOKEN",
-  // Optional (may not exist)
-  "GITHUB_TOKEN": "GITHUB_TOKEN",
-  "SENTRY_AUTH_TOKEN": "SENTRY_AUTH_TOKEN",
+  "SESSION_SECRET": "SESSION_SECRET",
+  "AGENT_AUTH_TOKEN": "AGENT_AUTH_TOKEN",
 };
 
-function mapSecretName(name: string): string | null {
-  // SSM: /cloudless/production/STRIPE_SECRET_KEY -> STRIPE_SECRET_KEY
-  const cleanName = name.replace(`${SSM_PREFIX}/`, "");
-  return SECRETS_MAPPING[cleanName] || null;
+async function getSecret(ssmName: string): Promise<string | undefined> {
+  try {
+    const cmd = new GetParameterCommand({
+      Name: `${SSM_PREFIX}/${ssmName}`,
+      WithDecryption: true,
+    });
+    const response = await ssm.send(cmd);
+    return response.Parameter?.Value;
+  } catch (err) {
+    if (err instanceof Error && err.name !== "ParameterNotFound") {
+      console.error(`  Error fetching ${ssmName}: ${err.message}`);
+    }
+    return undefined;
+  }
 }
 
 async function main() {
-  console.log("Syncing SSM parameters to Wrangler secrets...\n");
-  
-  const ssm = new SSMClient({ region: REGION });
-  const params = await ssm.send(
-    new GetParametersByPathCommand({
-      Path: SSM_PREFIX,
-      WithDecryption: true,
-    })
-  );
-  
-  let synced = 0;
-  let skipped = 0;
-  
-  for (const param of params.Parameters || []) {
-    const ssName = param.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
-    const wranglerName = mapSecretName(param.Name || "");
-    
-    if (!wranglerName) {
-      skipped++;
+  console.log(`Syncing secrets from SSM ${SSM_PREFIX} to Wrangler secrets...\n`);
+
+  for (const [ssmName, wranglerSecret] of Object.entries(SECRET_MAPPING)) {
+    const value = await getSecret(ssmName);
+
+    if (!value) {
+      console.log(`  ⚠️  ${wranglerSecret} - not found in SSM (skipping)`);
       continue;
     }
-    
-    if (!param.Value) {
-      console.log(`  ⚠️  ${ssName}: no value, skipping`);
-      continue;
-    }
-    
-    console.log(`  Syncing ${ssName} -> ${wranglerName}`);
-    try {
-      execSync(
-        `echo '${param.Value}' | npx wrangler secret put ${wranglerName}`,
-        { stdio: ["pipe", "pipe", "pipe"] }
-      );
-      synced++;
-    } catch (err) {
-      console.error(`  ❌ Failed to sync ${wranglerName}`);
-    }
+
+    // Use wrangler CLI to set the secret via child_process
+    const proc = require("child_process").spawn(
+      "npx",
+      ["wrangler", "secret", "put", wranglerSecret, "--env=production"],
+      {
+        env: {
+          ...process.env,
+          CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN || "",
+        },
+        stdio: ["pipe", "pipe", "pipe"],
+      }
+    );
+
+    proc.stdin.write(value);
+    proc.stdin.end();
+
+    await new Promise<void>((resolve) => {
+      proc.on("close", resolve);
+      proc.on("error", () => resolve());
+    });
+
+    console.log(`  ✅ ${wranglerSecret} - synced`);
   }
-  
-  console.log(`\nSynced: ${synced}, Skipped: ${skipped}`);
+
+  console.log("\nDone! Secrets are now available in Wrangler.");
+  console.log("\nTo verify, run: npx wrangler secret list");
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error("Error:", err);
+  process.exit(1);
+});

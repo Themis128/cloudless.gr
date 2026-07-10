@@ -48,11 +48,27 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const method = request.method;
+    const host = url.hostname;
 
     // Handle CORS preflight
     if (method === "OPTIONS") {
       return new Response(null, {
         headers: corsHeaders(request.headers.get("Origin") || ""),
+      });
+    }
+
+    // ==========================================
+    // WWW REDIRECT - canonical domain handling
+    // Redirect www.cloudless.gr to cloudless.gr
+    // ==========================================
+    if (host === "www.cloudless.gr") {
+      const canonicalUrl = url.origin.replace("www.cloudless.gr", "cloudless.gr") + url.pathname + url.search;
+      return new Response(null, {
+        status: 301,
+        headers: {
+          Location: canonicalUrl,
+          "Cache-Control": "public, max-age=3600",
+        },
       });
     }
 
@@ -73,27 +89,24 @@ export default {
         return jsonResponse({ error: "Authentication not configured" }, 503);
       }
 
-      // Check if user exists
       const { results: existing } = await env.AUTH_DB.prepare(
-        "SELECT id FROM user WHERE email = ?"
+        "SELECT id FROM user WHERE email = ?",
       ).bind(email.toLowerCase().trim()).all();
 
       if (existing.length > 0) {
         return jsonResponse({ error: "User already exists" }, 400);
       }
 
-      // Create user
       const id = crypto.randomUUID();
       const passwordHash = await hashPassword(password, SESSION_SECRET);
       const now = Math.floor(Date.now() / 1000);
 
       await env.AUTH_DB.prepare(
-        "INSERT INTO user (id, email, name, username, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO user (id, email, name, username, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       ).bind(id, email.toLowerCase().trim(), name || null, email.toLowerCase().trim(), passwordHash, now, now).run();
 
-      // Default to 'user' role
       await env.AUTH_DB.prepare(
-        "INSERT INTO user_role (user_id, role) VALUES (?, ?)"
+        "INSERT INTO user_role (user_id, role) VALUES (?, ?)",
       ).bind(id, "user").run();
 
       return jsonResponse({
@@ -115,9 +128,8 @@ export default {
         return jsonResponse({ error: "Authentication not configured" }, 503);
       }
 
-      // Look up user by email
       const { results } = await env.AUTH_DB.prepare(
-        "SELECT * FROM user WHERE email = ?"
+        "SELECT * FROM user WHERE email = ?",
       ).bind(email.toLowerCase().trim()).all();
 
       const user = results[0];
@@ -125,24 +137,21 @@ export default {
         return jsonResponse({ error: "Invalid credentials" }, 401);
       }
 
-      // Verify password hash
       const passwordHash = await hashPassword(password, SESSION_SECRET);
       if (passwordHash !== user.password_hash) {
         return jsonResponse({ error: "Invalid credentials" }, 401);
       }
 
-      // Check admin status
       const { results: roleResults } = await env.AUTH_DB.prepare(
-        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'"
+        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'",
       ).bind(user.id).all();
       const isAdmin = roleResults.length > 0;
 
-      // Create session
       const sessionId = crypto.randomUUID();
       const expiresAt = Math.floor(Date.now() / 1000) + SESSION_EXPIRY_SECONDS;
 
       await env.AUTH_DB.prepare(
-        "INSERT INTO session (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)"
+        "INSERT INTO session (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
       ).bind(sessionId, user.id, expiresAt, Math.floor(Date.now() / 1000)).run();
 
       return new Response(JSON.stringify({
@@ -174,7 +183,7 @@ export default {
       const response = jsonResponse({ ok: true });
       response.headers.append(
         "Set-Cookie",
-        "session_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0"
+        "session_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0",
       );
       return response;
     }
@@ -187,31 +196,26 @@ export default {
         return jsonResponse({ error: "Email required" }, 400);
       }
 
-      // Look up user (don't reveal if exists)
       const { results } = await env.AUTH_DB.prepare(
-        "SELECT id, preferences_json FROM user WHERE email = ?"
+        "SELECT id, preferences_json FROM user WHERE email = ?",
       ).bind(email.toLowerCase().trim()).all();
 
       if (results.length === 0) {
-        // Return success to prevent enumeration
         return jsonResponse({ ok: true });
       }
 
       const user = results[0];
-      // Generate reset token
       const bytes = new Uint8Array(32);
       crypto.getRandomValues(bytes);
       const token = btoa(String.fromCharCode(...Array.from(bytes)));
       const expiresAt = Math.floor(Date.now() / 1000) + RESET_TOKEN_EXPIRY_SECONDS;
 
       await env.AUTH_DB.prepare(
-        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.reset_token', ?, '$.reset_expires', ?) WHERE id = ?"
+        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.reset_token', ?, '$.reset_expires', ?) WHERE id = ?",
       ).bind(token, expiresAt, user.id).run();
 
-      // Build reset URL
       const resetUrl = `${url.origin}/auth/reset-confirm?token=${encodeURIComponent(token)}`;
 
-      // Send email via Cloudflare Email Service (fire-and-forget)
       try {
         if (env.EMAIL) {
           await env.EMAIL.send({
@@ -230,7 +234,7 @@ export default {
           });
         }
       } catch {
-        // Ignore email errors — password reset still works, user just won't get email
+        // Ignore email errors
       }
 
       return jsonResponse({ ok: true });
@@ -254,7 +258,7 @@ export default {
 
       const now = Math.floor(Date.now() / 1000);
       const { results } = await env.AUTH_DB.prepare(
-        "SELECT id, preferences_json FROM user WHERE json_extract(preferences_json, '$.reset_token') = ? AND json_extract(preferences_json, '$.reset_expires') > ?"
+        "SELECT id, preferences_json FROM user WHERE json_extract(preferences_json, '$.reset_token') = ? AND json_extract(preferences_json, '$.reset_expires') > ?",
       ).bind(token, now).all();
 
       if (results.length === 0) {
@@ -265,16 +269,14 @@ export default {
       const SESSION_SECRET = env.SESSION_SECRET || "";
       const passwordHash = await hashPassword(newPassword, SESSION_SECRET);
 
-      // Clear reset token from preferences
       const prefs = JSON.parse(user.preferences_json || "{}");
       delete prefs.reset_token;
       delete prefs.reset_expires;
 
       await env.AUTH_DB.prepare(
-        "UPDATE user SET password_hash = ?, preferences_json = ? WHERE id = ?"
+        "UPDATE user SET password_hash = ?, preferences_json = ? WHERE id = ?",
       ).bind(passwordHash, JSON.stringify(prefs), user.id).run();
 
-      // Invalidate all sessions
       await env.AUTH_DB.prepare("DELETE FROM session WHERE user_id = ?").bind(user.id).run();
 
       return jsonResponse({ ok: true });
@@ -290,7 +292,7 @@ export default {
 
       const now = Math.floor(Date.now() / 1000);
       const { results: sessionResults } = await env.AUTH_DB.prepare(
-        "SELECT * FROM session WHERE id = ? AND expires_at > ?"
+        "SELECT * FROM session WHERE id = ? AND expires_at > ?",
       ).bind(sessionId, now).all();
 
       if (sessionResults.length === 0) {
@@ -301,7 +303,7 @@ export default {
 
       const session = sessionResults[0];
       const { results: userResults } = await env.AUTH_DB.prepare(
-        "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE id = ?"
+        "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE id = ?",
       ).bind(session.user_id).all();
 
       if (userResults.length === 0) {
@@ -310,7 +312,7 @@ export default {
 
       const user = userResults[0];
       const { results: roleResults } = await env.AUTH_DB.prepare(
-        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'"
+        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'",
       ).bind(user.id).all();
 
       return jsonResponse({
@@ -355,12 +357,10 @@ export default {
         return new Response("Missing file parameter", { status: 400 });
       }
 
-      // Security: validate filename
       if (!/^[a-zA-Z0-9_\-./]+\.parquet$/.test(file)) {
         return new Response("Invalid filename", { status: 400 });
       }
 
-      // Handle Range requests
       const rangeHeader = request.headers.get("range");
       const options = {};
 
@@ -372,7 +372,7 @@ export default {
           if (end) {
             options.range = { offset: start, length: end - start + 1 };
           } else {
-            options.range = { offset: start, length: 1024 * 1024 }; // 1MB chunks
+            options.range = { offset: start, length: 1024 * 1024 };
           }
         }
       }
@@ -396,12 +396,10 @@ export default {
       return new Response(object.body, { headers });
     }
 
-    // GET /api/analytics/query - DuckDB-Wasm query endpoint
-    // Returns metadata about available parquet files for client-side DuckDB-Wasm queries
+    // GET /api/analytics/query
     if (url.pathname === "/api/analytics/query" && method === "GET") {
       const prefix = url.searchParams.get("prefix") || "";
 
-      // List available parquet files in the analytics bucket
       const objects = await env.ANALYTICS_BUCKET.list({
         prefix: `lake/${prefix}`,
         limit: 100,
@@ -434,7 +432,7 @@ export default {
       }
 
       const { results } = await env.AUTH_DB.prepare(
-        "SELECT id FROM user WHERE email = ?"
+        "SELECT id FROM user WHERE email = ?",
       ).bind(email.toLowerCase().trim()).all();
 
       if (results.length === 0) {
@@ -443,7 +441,7 @@ export default {
 
       const user = results[0];
       await env.AUTH_DB.prepare(
-        "INSERT OR REPLACE INTO user_role (user_id, role) VALUES (?, ?)"
+        "INSERT OR REPLACE INTO user_role (user_id, role) VALUES (?, ?)",
       ).bind(user.id, "admin").run();
 
       return jsonResponse({ ok: true, message: `User ${email} promoted to admin` });
@@ -453,7 +451,6 @@ export default {
     // HEALTH CHECK
     // ==========================================
     if (url.pathname === "/api/health" && method === "GET") {
-      // Verify D1 connectivity
       let dbOk = false;
       try {
         const { results } = await env.AUTH_DB.prepare("SELECT 1 as ok").all();
@@ -472,17 +469,32 @@ export default {
     }
 
     // ==========================================
-    // FALLBACK: Serve static assets
+    // FALLBACK: Serve index.html for SPA routes
     // ==========================================
-    const asset = await env.ASSETS.get(url.pathname);
-    if (asset) {
-      const headers = new Headers();
-      asset.writeHttpMetadata(headers);
-      headers.set("Cache-Control", "public, max-age=31536000, immutable");
-      return new Response(asset.body, { headers });
+    // For any unknown route on cloudless.gr, serve the index.html (SPA fallback)
+    // The ASSETS_BUCKET contains pre-built static files from the Next.js build
+    if (host === "cloudless.gr" || host.endsWith(".cloudless.gr")) {
+      // Try to serve static file from R2
+      const assetPath = url.pathname === "/" ? "/index.html" : url.pathname;
+      const asset = await env.ASSETS_BUCKET.get(assetPath);
+
+      if (asset) {
+        const headers = new Headers();
+        asset.writeHttpMetadata(headers);
+        headers.set("Cache-Control", "public, max-age=3600");
+        headers.set("Access-Control-Allow-Origin", "https://cloudless.gr");
+        return new Response(asset.body, { headers });
+      }
+
+      // For SPA routes, serve index.html (client-side routing)
+      const indexAsset = await env.ASSETS_BUCKET.get("index.html");
+      if (indexAsset) {
+        return new Response(indexAsset.body, {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
     }
 
-    // Fall back to 404
     return new Response("Not found", { status: 404 });
   },
 };

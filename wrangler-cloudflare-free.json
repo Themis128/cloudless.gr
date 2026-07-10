@@ -15,7 +15,6 @@
   },
   "r2_buckets": [
     { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
-    { "binding": "ASSETS", "bucket_name": "cloudless-assets" },
     { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
     { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
     { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
@@ -38,7 +37,6 @@
       },
       "r2_buckets": [
         { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
-        { "binding": "ASSETS", "bucket_name": "cloudless-assets" },
         { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
         { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
         { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
@@ -60,7 +58,6 @@
       },
       "r2_buckets": [
         { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
-        { "binding": "ASSETS", "bucket_name": "cloudless-assets" },
         { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
         { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
         { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }

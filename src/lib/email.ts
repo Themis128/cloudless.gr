@@ -5,6 +5,9 @@ import { sendEmail as sendEmailUnified } from "@/lib/email-sender";
 
 export { setEmailBinding } from "@/lib/email-sender";
 
+/** Notify when a new user registers. Re-exported from slack-notify for auth routes. */
+export { slackRegistrationNotify } from "@/lib/slack-notify";
+
 interface SendEmailOptions {
   to: string;
   subject: string;

@@ -1,4 +1,5 @@
-name: Deploy to Cloudflare Workers (Free Tier)
+name: Deploy to Cloudflare Workers (Cloudflare-only)
+# Replaces CloudFront/SST deployment - full migration to Cloudflare
 on:
   push:
     branches: [main]
@@ -8,38 +9,47 @@ on:
       - '**.jpg'
 
 jobs:
-  # Deploy main Worker
-  deploy-worker:
+  # Build static assets for the Worker
+  build-assets:
     runs-on: ubuntu-latest
+    outputs:
+      assets_ready: true
     steps:
       - uses: actions/checkout@v4
-      
-       - uses: actions/setup-node@v4
-         with:
-           node-version: 22
-           cache: 'pnpm'
-      
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
       - run: pnpm install --frozen-lockfile
-      
-      # Build for Workers (standalone)
-      - run: pnpm run cf:build
+
+      # Build Next.js
+      - run: pnpm cf:build
         env:
           NEXT_PUBLIC_AUTH_PROVIDER: d1
           NEXT_PUBLIC_SITE_URL: https://cloudless.gr
-      
-      # Set secrets for the Worker
-      - run: |
-          echo "${{ secrets.STRIPE_SECRET_KEY }}" | npx wrangler secret put STRIPE_SECRET_KEY --env=production
-          echo "${{ secrets.STRIPE_WEBHOOK_SECRET }}" | npx wrangler secret put STRIPE_WEBHOOK_SECRET --env=production
-          echo "${{ secrets.AUTH_SECRET }}" | npx wrangler secret put AUTH_SECRET --env=production
-          echo "${{ secrets.SLACK_WEBHOOK_URL }}" | npx wrangler secret put SLACK_WEBHOOK_URL --env=production
-          echo "${{ secrets.SLACK_BOT_TOKEN }}" | npx wrangler secret put SLACK_BOT_TOKEN --env=production
-          echo "${{ secrets.SLACK_SIGNING_SECRET }}" | npx wrangler secret put SLACK_SIGNING_SECRET --env=production
-          echo "${{ secrets.ANTHROPIC_API_KEY }}" | npx wrangler secret put ANTHROPIC_API_KEY --env=production
+
+      # Deploy assets to R2 (requires CLOUDFLARE_API_TOKEN)
+      - run: pnpm cf:r2:upload-dir
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      
-      # Deploy to Workers
+
+  # Deploy main Worker with both domains
+  deploy-worker:
+    runs-on: ubuntu-latest
+    needs: build-assets
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Deploy to Workers (handles both cloudless.gr and www.cloudless.gr)
       - uses: cloudflare/wrangler-action@v3
         id: deploy
         with:
@@ -60,33 +70,20 @@ jobs:
             --type String \
             --overwrite
 
-  # Migrate SSM -> Wrangler secrets weekly
-  sync-secrets:
-    runs-on: ubuntu-latest
-    needs: deploy-worker
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      
-      # Run secret sync script
-      - run: pnpm tsx scripts/sync-ssm-to-wrangler.ts
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-  # D1 migrations
+  # D1 migrations (only on scheduled runs or manual dispatch)
   d1-migrate:
     runs-on: ubuntu-latest
-    needs: deploy-worker
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
-      
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
       # Apply migrations to D1
       - run: |
           for migration in migrations/*.sql; do
@@ -95,18 +92,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-  # R2 backup (daily)
-  r2-backup:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      
-      - run: pnpm tsx scripts/r2-backup.ts
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+# To set secrets for the first time, run locally:
+# npx wrangler secret put SESSION_SECRET
+# npx wrangler secret put STRIPE_SECRET_KEY
+# npx wrangler secret put STRIPE_WEBHOOK_SECRET
+# npx wrangler secret put AUTH_SECRET
+# npx wrangler secret put SLACK_WEBHOOK_URL
+# npx wrangler secret put SLACK_BOT_TOKEN
+# npx wrangler secret put SLACK_SIGNING_SECRET
+# npx wrangler secret put ANTHROPIC_API_KEY

@@ -1,13 +1,14 @@
 name: Apply k8s Manifests
 
 # Purpose: Apply k8s manifests for the Pi standby cluster via Tailscale tunnel.
-# Trigger: push to main on k8s/** paths, manual dispatch.
+# Trigger: push to main on k8s/** paths, or push to infrastructure/tailscale/**, manual dispatch.
 # Paging: posts result to issue #382.
 on:
   push:
     branches: [main]
     paths:
       - "k8s/**"
+      - "infrastructure/tailscale/**"
   workflow_dispatch:
 
 permissions:
@@ -44,6 +45,7 @@ jobs:
           echo "=== Applying k8s manifests ==="
           kubectl apply -f k8s/cloudless-app-optimized.yaml --validate=false
           kubectl apply -f k8s/ingressroute-manage.yaml --validate=false
+          kubectl apply -f infrastructure/tailscale/ingresses.yaml --validate=false
           echo "=== Done ==="
 
       - name: Verify NetworkPolicy
@@ -60,6 +62,13 @@ jobs:
           echo "=== IngressRoute details ==="
           kubectl describe ingressroute cloudless-manager -n cloudless
 
+      - name: Verify Tailscale Ingress
+        run: |
+          echo "=== Tailscale Ingress status ==="
+          kubectl get ingress -n cloudless
+          kubectl get ingress -n monitoring
+          kubectl get ingress -n search
+
       - name: Report result
         if: always()
         env:
@@ -71,6 +80,8 @@ jobs:
           - NetworkPolicy: Fixed to allow traffic from all namespaces (was blocking Traefik)
           - IngressRoute: Fixed certResolver to \`letsencrypt-cloudflare\`
           - Removed non-existent \`secure-headers\` middleware
+          - Tailscale Ingress: Added pi-origin.cloudless.gr for k3s app access
 
           **Verify:**
-          - https://manage.cloudless.gr/api/health"
+          - https://manage.cloudless.gr/api/health
+          - https://pi-origin.cloudless.gr/api/health"
