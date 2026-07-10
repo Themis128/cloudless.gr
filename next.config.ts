@@ -106,6 +106,17 @@ const nextConfig: NextConfig = {
     // Tree-shake heavy barrel packages — reduces client bundle for GSAP, cmdk, etc.
     optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
   },
+  // Permissions-Policy header to allow unload event (used by Microsoft Clarity)
+  // and suppress browser console warnings. Also hardens privacy by restricting
+  // other features. Edge already handles this via Cloudflare; included for dev builds.
+  headers: async () => [
+    {
+      source: "/:path*",
+      headers: [
+        { key: "Permissions-Policy", value: "unload=*; geolocation=(), microphone=(), camera=()" },
+      ],
+    },
+  ],
 };
 
 // next-intl middleware (localePrefix: "always") intercepts every unprefixed
