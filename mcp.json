@@ -120,6 +120,11 @@
       "command": "npx",
       "args": ["mcp-remote", "https://knowledge-mcp.global.api.aws"],
       "autoStart": false
+    },
+    "playwright": {
+      "command": "playwright-mcp",
+      "args": ["--headless", "--viewport-size", "1280x720", "--port", "3001"],
+      "autoStart": false
     }
   }
 }

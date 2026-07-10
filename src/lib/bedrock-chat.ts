@@ -33,6 +33,51 @@ const MAX_TOOL_ITERATIONS = 4;
 
 const BEDROCK_TOOL_CONFIG = buildBedrockToolConfig(CHAT_TOOLS);
 
+// Workers AI binding (provided by wrangler)
+interface AiBinding {
+  run(model: string, inputs: Record<string, unknown>): Promise<unknown>;
+}
+
+interface AiEnv {
+  AI: AiBinding;
+}
+
+function getAiBinding(): AiBinding | null {
+  return (process.env as unknown as AiEnv).AI ?? null;
+}
+
+const WORKERS_AI_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+
+async function runWorkersAiChat(
+  systemPrompt: string,
+  messages: BedrockMessage[]
+): Promise<string | null> {
+  const ai = getAiBinding();
+  if (!ai) return null;
+
+  // Convert Bedrock content-array messages to plain strings for Workers AI
+  const workersAiMessages = messages.map((m) => ({
+    role: m.role,
+    content: (m.content as TextBlock[])
+      .filter((b): b is TextBlock => "text" in b && typeof b.text === "string")
+      .map((b) => b.text)
+      .join(""),
+  }));
+
+  try {
+    const result = (await ai.run(WORKERS_AI_CHAT_MODEL, {
+      messages: [{ role: "system", content: systemPrompt }, ...workersAiMessages],
+    })) as { response?: string };
+    return result.response ?? null;
+  } catch (err) {
+    console.warn(
+      "[chat] Workers AI chat failed, falling back to Bedrock:",
+      err instanceof Error ? err.message : err
+    );
+    return null;
+  }
+}
+
 // Nova models occasionally emit internal reasoning wrapped in
 // <thinking>…</thinking> tags. The system prompt asks them not to, but we
 // strip defensively in case they slip through (the alternative is the user
@@ -47,7 +92,7 @@ function stripThinkingTags(text: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Run the chat-tool loop against Bedrock Converse API.
+ * Run the chat loop — Workers AI primary (no tools), Bedrock fallback (with tools).
  * Returns the final assistant text (after any tool calls).
  * Never throws on tool errors — those become tool_result strings.
  * May throw on Bedrock API errors; caller maps them to HTTP status codes.
@@ -56,6 +101,17 @@ export async function runBedrockChatLoop(
   systemPrompt: string,
   initialMessages: { role: "user" | "assistant"; content: string }[]
 ): Promise<string> {
+  // 1. Try Workers AI first (fast, free, no tool support yet)
+  const workersAiMessages: BedrockMessage[] = initialMessages.map((m) => ({
+    role: m.role,
+    content: [{ text: m.content }],
+  }));
+  const workersAiResponse = await runWorkersAiChat(systemPrompt, workersAiMessages);
+  if (workersAiResponse) {
+    return workersAiResponse;
+  }
+
+  // 2. Fall back to Bedrock Converse with tool-use loop
   const client = getBedrockClient();
 
   // Convert plain-string messages to Bedrock content arrays.

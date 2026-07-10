@@ -164,6 +164,91 @@ async function runPendingTool(block: ToolUseBlock): Promise<ToolResultBlock> {
 }
 
 // ---------------------------------------------------------------------------
+// Workers AI fast path (no tool loop — fetches slots directly)
+// ---------------------------------------------------------------------------
+
+// Workers AI binding (provided by wrangler)
+interface AiBinding {
+  run(model: string, inputs: Record<string, unknown>): Promise<unknown>;
+}
+
+interface AiEnv {
+  AI: AiBinding;
+}
+
+function getAiBinding(): AiBinding | null {
+  return (process.env as unknown as AiEnv).AI ?? null;
+}
+
+const WORKERS_AI_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+
+const WORKERS_AI_PROMPT = (intent: string, slots: string): string =>
+  `You are the Cloudless scheduling agent. Your job is to read the visitor's intent and pick ONE slot from the available list.
+
+Visitor intent: "${intent}"
+
+Available slots:
+${slots}
+
+Pick the SINGLE slot that best matches the intent (preferred day of week, time of day, urgency).
+Rules:
+- Athens local time. Business hours are 09:00–17:00 weekdays.
+- Only propose slots from the list above. Do not invent times.
+- If no slot matches the intent, explain why and leave the slot fields empty.
+
+Respond in this exact JSON format (no markdown, no code blocks, just raw JSON):
+{"start":"YYYY-MM-DDTHH:mm:ss","end":"YYYY-MM-DDTHH:mm:ss","reasoning":"short explanation"}
+If no slot matches: {"start":"","end":"","reasoning":"why no slot matches"}`;
+
+function parseWorkersAiPropose(raw: string): ProposeResult | null {
+  try {
+    const parsed = JSON.parse(raw.trim()) as { start?: string; end?: string; reasoning?: string };
+    const start = parsed.start ?? "";
+    const end = parsed.end ?? "";
+    const reasoning = parsed.reasoning ?? "";
+    if (!start || !end) {
+      return { status: STATUS_NO_MATCH, reasoning: reasoning.length > 0 ? reasoning : "No matching slot." };
+    }
+    return {
+      status: STATUS_PROPOSED,
+      proposed: { start, end, formatted: formatAthensSlot(start, end) },
+      reasoning,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function runWorkersAiBooking(intent: string): Promise<ProposeResult | null> {
+  const ai = getAiBinding();
+  if (!ai) return null;
+
+  const days = clampDaysAhead(7);
+  try {
+    const slots = (await getAvailableSlots(days)).slice(0, MAX_SLOT_RESULTS);
+    if (slots.length === 0) {
+      return { status: STATUS_NO_MATCH, reasoning: `No open slots in the next ${days} day(s).` };
+    }
+    const lines = slots.map(
+      (s) => `- ${formatAthensSlot(s.start, s.end)} [start=${s.start} end=${s.end}]`
+    );
+    const prompt = WORKERS_AI_PROMPT(intent, lines.join("\n"));
+
+    const result = (await ai.run(WORKERS_AI_CHAT_MODEL, { messages: [{ role: "user", content: prompt }] })) as {
+      response?: string;
+    };
+    if (!result.response) return null;
+    return parseWorkersAiPropose(result.response);
+  } catch (err) {
+    console.warn(
+      "[agent-book] Workers AI booking failed, falling back to Bedrock:",
+      err instanceof Error ? err.message : err
+    );
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -182,7 +267,7 @@ export type ProposeResult =
   | { status: typeof STATUS_NO_MATCH; reasoning: string };
 
 /**
- * Returns true when the slot lib + Bedrock are wired up.
+ * Returns true when the slot lib + AI are wired up.
  * Calendar credentials are checked first to fail fast in unconfigured envs.
  */
 export async function isAgentBookConfigured(): Promise<boolean> {
@@ -191,10 +276,16 @@ export async function isAgentBookConfigured(): Promise<boolean> {
 
 /**
  * Run the booking agent against a natural-language intent.
+ * Workers AI primary (fast, free) → Bedrock fallback (tool-use loop).
  * Returns the proposed slot (or no_match) — never books on its own.
  * May throw on Bedrock API errors; caller maps to HTTP status.
  */
 export async function proposeBookingSlot(intent: string): Promise<ProposeResult> {
+  // 1. Try Workers AI fast path
+  const workersAiResult = await runWorkersAiBooking(intent);
+  if (workersAiResult) return workersAiResult;
+
+  // 2. Fall back to Bedrock Converse tool-use loop
   const client = getBedrockClient();
   const messages: BedrockMessage[] = [{ role: "user", content: [{ text: intent }] }];
 

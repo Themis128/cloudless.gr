@@ -1,16 +1,9 @@
-import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
 import { escapeHtml } from "@/lib/escape-html";
 import { DEFAULT_LOCALE } from "@/lib/locale-defaults";
+import { sendEmail as sendEmailUnified } from "@/lib/email-sender";
 
-let sesClient: SESv2Client | null = null;
-
-async function getSES(): Promise<SESv2Client> {
-  if (sesClient) return sesClient;
-  const config = await getConfig();
-  sesClient = new SESv2Client({ region: config.AWS_SES_REGION });
-  return sesClient;
-}
+export { setEmailBinding } from "@/lib/email-sender";
 
 interface SendEmailOptions {
   to: string;
@@ -24,48 +17,15 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
-  const config = await getConfig();
-  const ses = await getSES();
-
-  const fromAddress = options.fromLabel
-    ? `${options.fromLabel} <${config.SES_FROM_EMAIL}>`
-    : config.SES_FROM_EMAIL;
-
-  const extraHeaders = options.listUnsubscribeUrl
-    ? [
-        {
-          Name: "List-Unsubscribe",
-          Value: `<${options.listUnsubscribeUrl}>`,
-        },
-        { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
-      ]
-    : [];
-
-  try {
-    await ses.send(
-      new SendEmailCommand({
-        FromEmailAddress: fromAddress,
-        Destination: { ToAddresses: [options.to] },
-        ...(options.replyTo ? { ReplyToAddresses: options.replyTo } : {}),
-        Content: {
-          Simple: {
-            Subject: { Data: options.subject, Charset: "UTF-8" },
-            Body: {
-              Html: { Data: options.html, Charset: "UTF-8" },
-              Text: { Data: options.text, Charset: "UTF-8" },
-            },
-            ...(extraHeaders.length ? { Headers: extraHeaders } : {}),
-          },
-        },
-      })
-    );
-  } catch (err: unknown) {
-    // AWS SDK v3 XML parser throws a deserialization error on SES success responses
-    // that contain &#xD; entities. If HTTP status is 200 the email was delivered —
-    // swallow the parse error and continue.
-    const meta = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata;
-    if (meta?.httpStatusCode !== 200) throw err;
-  }
+  await sendEmailUnified({
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    text: options.text,
+    replyTo: options.replyTo,
+    fromLabel: options.fromLabel,
+    listUnsubscribeUrl: options.listUnsubscribeUrl,
+  });
 }
 
 export async function sendOrderConfirmation(

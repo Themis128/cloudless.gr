@@ -7,12 +7,21 @@ import {
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import type { AuthDatabase } from "@/lib/auth-d1";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
 /**
- * Durable admin notifications store on DynamoDB.
+ * Durable admin notifications store — D1 primary (Cloudflare Workers) +
+ * DynamoDB fallback (AWS Lambda).
  *
- * Schema:
+ * D1 Schema (admin_notification table):
+ *   pk = "NOTIF"
+ *   sk = "<createdAt-ISO8601>#<id>"
+ *   category = "<category>"
+ *   payload_json = JSON.stringify({ id, type, title, message, actor, route, metadata, read, archivedAt })
+ *   created_at = epoch seconds
+ *
+ * DynamoDB Schema (legacy fallback):
  *   - pk = "NOTIF"  (single partition — small scale, simpler queries)
  *   - sk = "<createdAt-ISO8601>#<id>"  (sortable, unique)
  *   - GSI categoryIndex: pk = "CAT#<category>", sk = "<createdAt-ISO8601>#<id>"
@@ -26,8 +35,8 @@ import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
  *   auth      — sign-up / sign-in / password reset
  *   portal    — client-portal action
  *
- * Retention policy: 90 days hot in Dynamo. After 90 days, the daily archive
- * cron job sets `archivedAt` and exports the row to S3 (see PR B). Rows with
+ * Retention policy: 90 days hot in D1/Dynamo. After 90 days, the daily archive
+ * cron job sets `archivedAt` and exports the row to R2/S3. Rows with
  * `archivedAt` set are excluded from the admin UI by default.
  */
 
@@ -56,6 +65,16 @@ export interface AdminNotification {
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
+// D1 binding interface - provided by Worker context
+interface Env {
+  AUTH_DB: AuthDatabase;
+}
+
+function getAuthDb(): AuthDatabase | null {
+  const env = process.env as unknown as Env;
+  return env.AUTH_DB ?? null;
+}
+
 let dynamoClient: DynamoDBClient | null = null;
 function getDynamoClient(): DynamoDBClient {
   dynamoClient ??= new DynamoDBClient({
@@ -65,10 +84,8 @@ function getDynamoClient(): DynamoDBClient {
   return dynamoClient;
 }
 
-function getTableName(): string {
-  const name = process.env.ADMIN_NOTIFICATIONS_TABLE?.trim();
-  if (!name) throw new Error("ADMIN_NOTIFICATIONS_TABLE is not configured");
-  return name;
+function getTableName(): string | null {
+  return process.env.ADMIN_NOTIFICATIONS_TABLE?.trim() || null;
 }
 
 const PK_ALL = "NOTIF";
@@ -80,6 +97,50 @@ function randomId(): string {
 
 function buildSk(createdAt: string, id: string): string {
   return `${createdAt}#${id}`;
+}
+
+function buildPayload(notif: AdminNotification): string {
+  return JSON.stringify({
+    id: notif.id,
+    type: notif.type,
+    title: notif.title,
+    message: notif.message,
+    actor: notif.actor,
+    route: notif.route,
+    metadata: notif.metadata,
+    read: notif.read,
+    archivedAt: notif.archivedAt,
+  });
+}
+
+function parsePayload(row: Record<string, unknown>): AdminNotification {
+  const payload = JSON.parse((row.payload_json as string) || "{}") as {
+    id?: string;
+    type?: NotificationType;
+    title?: string;
+    message?: string;
+    actor?: string;
+    route?: string;
+    metadata?: Record<string, unknown>;
+    read?: boolean;
+    archivedAt?: string;
+  };
+  const createdAt = row.sk
+    ? String(row.sk).split("#")[0] ?? new Date((row.created_at as number) * 1000).toISOString()
+    : new Date((row.created_at as number) * 1000).toISOString();
+  return {
+    id: payload.id ?? String(row.sk).split("#")[1] ?? "",
+    createdAt,
+    category: (row.category as NotificationCategory) ?? "error",
+    type: payload.type ?? "info",
+    title: payload.title ?? "",
+    message: payload.message ?? "",
+    actor: payload.actor,
+    route: payload.route,
+    metadata: payload.metadata,
+    read: payload.read ?? false,
+    archivedAt: payload.archivedAt,
+  };
 }
 
 function toItem(notif: AdminNotification): Record<string, AttributeValue> {
@@ -131,6 +192,8 @@ function fromItem(item: Record<string, AttributeValue>): AdminNotification {
 /**
  * Append a notification. Failures are returned (not thrown) so producer paths
  * can keep serving the user-facing response. Callers should log but not abort.
+ *
+ * D1 primary; DynamoDB fallback.
  */
 export async function recordNotification(input: {
   category: NotificationCategory;
@@ -154,24 +217,42 @@ export async function recordNotification(input: {
     read: false,
   };
 
-  // Always write to data lake (S3) for analytics — fire and forget.
+  // Always write to data lake (R2/S3) for analytics — fire and forget.
   sinkToLake(notif).catch(() => {});
 
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    // DynamoDB table not configured — lake-only mode.
-    return notif;
+  const db = getAuthDb();
+  if (db) {
+    try {
+      const sk = buildSk(notif.createdAt, notif.id);
+      await db
+        .prepare(
+          "INSERT INTO admin_notification (pk, sk, category, payload_json, created_at) VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(PK_ALL, sk, notif.category, buildPayload(notif), Math.floor(Date.now() / 1000))
+        .run();
+      return notif;
+    } catch (err) {
+      console.warn(
+        "[admin-notifications] D1 recordNotification failed, falling back to DynamoDB:",
+        err instanceof Error ? err.message : err
+      );
+      // Fall through to DynamoDB
+    }
   }
+
+  const table = getTableName();
+  if (!table) return notif; // lake-only mode
   try {
     await getDynamoClient().send(
       new PutItemCommand({
-        TableName: getTableName(),
+        TableName: table,
         Item: toItem(notif),
       })
     );
     return notif;
   } catch (err) {
     console.warn(
-      "[admin-notifications] recordNotification failed:",
+      "[admin-notifications] DynamoDB recordNotification failed:",
       err instanceof Error ? err.message : err
     );
     return null;
@@ -188,13 +269,63 @@ export interface ListFilters {
 }
 
 /**
- * Read recent notifications, newest first. Defaults to 50 most recent
- * un-archived entries.
+ * Read recent notifications from D1 or DynamoDB, newest first.
+ * Defaults to 50 most recent un-archived entries.
  */
 export async function listNotifications(filters: ListFilters = {}): Promise<AdminNotification[]> {
   const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
-  const useCategoryIndex = Boolean(filters.category);
 
+  // Try D1 first (Cloudflare Workers)
+  const db = getAuthDb();
+  if (db) {
+    try {
+      let sql = "SELECT pk, sk, category, payload_json, created_at FROM admin_notification WHERE pk = ?";
+      const binds: (string | number)[] = [PK_ALL];
+      if (filters.category) {
+        sql += " AND category = ?";
+        binds.push(filters.category);
+      }
+      if (filters.since) {
+        sql += " AND sk >= ?";
+        binds.push(`${filters.since}#`);
+      }
+      if (filters.until) {
+        sql += " AND sk <= ?";
+        binds.push(`${filters.until}~`);
+      }
+      if (!filters.includeArchived) {
+        // In D1 we store archivedAt inside payload_json; skip filtering for now
+        // (complex JSON filter in SQLite is expensive; rely on app-level filter)
+      }
+      sql += " ORDER BY sk DESC LIMIT ?";
+      binds.push(limit);
+
+      const result = await db.prepare(sql).bind(...binds).all<{
+        pk: string;
+        sk: string;
+        category: string;
+        payload_json: string;
+        created_at: number;
+      }>();
+      const rows = result.results ?? [];
+      let items = rows.map((row) => parsePayload(row));
+      if (!filters.includeArchived) {
+        items = items.filter((n) => !n.archivedAt);
+      }
+      return items;
+    } catch (err) {
+      console.warn(
+        "[admin-notifications] D1 listNotifications failed, falling back to DynamoDB:",
+        err instanceof Error ? err.message : err
+      );
+      // Fall through to DynamoDB
+    }
+  }
+
+  const table = getTableName() ?? undefined;
+  if (!table) return [];
+
+  const useCategoryIndex = Boolean(filters.category);
   const keyConditionParts: string[] = [];
   const exprNames: Record<string, string> = {};
   const exprValues: Record<string, AttributeValue> = {};
@@ -209,13 +340,10 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
     exprValues[":pk"] = { S: PK_ALL };
   }
 
-  // Range condition on the sort key (which encodes createdAt).
   if (filters.since && filters.until) {
     keyConditionParts.push("#sk BETWEEN :since AND :until");
     exprNames["#sk"] = useCategoryIndex ? "catSk" : "sk";
     exprValues[":since"] = { S: `${filters.since}#` };
-    // End-of-range trick: append "~" so we capture every id with the
-    // until timestamp prefix.
     exprValues[":until"] = { S: `${filters.until}~` };
   } else if (filters.since) {
     keyConditionParts.push("#sk >= :since");
@@ -228,13 +356,10 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
     filterExpressions.push("attribute_not_exists(#archivedAt)");
     exprNames["#archivedAt"] = "archivedAt";
   }
-  if (!filters.includeRead) {
-    // Keep this opt-in too — by default the UI shows everything.
-  }
 
   const out = await getDynamoClient().send(
     new QueryCommand({
-      TableName: getTableName(),
+      TableName: table,
       IndexName: useCategoryIndex ? CAT_INDEX : undefined,
       KeyConditionExpression: keyConditionParts.join(" AND "),
       ...(filterExpressions.length ? { FilterExpression: filterExpressions.join(" AND ") } : {}),
@@ -252,13 +377,46 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
  * Mark a set of notifications as read.
  */
 export async function markNotificationsRead(ids: string[]): Promise<void> {
-  if (!ids.length || !process.env.ADMIN_NOTIFICATIONS_TABLE) return;
+  if (!ids.length) return;
+
+  // Try D1 first (Cloudflare Workers)
+  const db = getAuthDb();
+  if (db) {
+    try {
+      for (const id of ids) {
+        // Find the row by extracting id from payload_json and update it
+        const row = await db
+          .prepare(
+            "SELECT sk FROM admin_notification WHERE pk = ? AND json_extract(payload_json, '$.id') = ? LIMIT 1"
+          )
+          .bind(PK_ALL, id)
+          .first<{ sk: string }>();
+        if (!row) continue;
+        await db
+          .prepare(
+            "UPDATE admin_notification SET payload_json = json_set(payload_json, '$.read', true) WHERE pk = ? AND sk = ?"
+          )
+          .bind(PK_ALL, row.sk)
+          .run();
+      }
+      return;
+    } catch (err) {
+      console.warn(
+        "[admin-notifications] D1 markNotificationsRead failed, falling back to DynamoDB:",
+        err instanceof Error ? err.message : err
+      );
+      // Fall through to DynamoDB
+    }
+  }
+
+  const table = getTableName();
+  if (!table) return;
   // We can't UpdateItem without the full sort key, so fetch + update.
   // For small batches this is fine. (Optimization: store an idIndex GSI.)
   for (const id of ids) {
     const matches = await getDynamoClient().send(
       new QueryCommand({
-        TableName: getTableName(),
+        TableName: table,
         KeyConditionExpression: "#pk = :pk",
         FilterExpression: "#id = :id",
         ExpressionAttributeNames: { "#pk": "pk", "#id": "id" },
@@ -273,7 +431,7 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
     if (!item) continue;
     await getDynamoClient().send(
       new UpdateItemCommand({
-        TableName: getTableName(),
+        TableName: table,
         Key: { pk: item.pk, sk: item.sk },
         UpdateExpression: "SET #read = :true",
         ExpressionAttributeNames: { "#read": "read" },
@@ -329,12 +487,15 @@ export async function notificationAnalytics(
  * Returns the number of rows deleted.
  */
 export async function purgeArchivedOlderThan(olderThan: string): Promise<number> {
+  const table = getTableName() ?? undefined;
+  if (!table) return 0;
+
   let purged = 0;
   // Walk in batches of 25 (BatchWriteItem max).
   let lastKey: Record<string, AttributeValue> | undefined;
   do {
     const page: QueryCommand = new QueryCommand({
-      TableName: getTableName(),
+      TableName: table,
       KeyConditionExpression: "#pk = :pk AND #sk < :until",
       FilterExpression: "attribute_exists(#archivedAt) AND #archivedAt < :until",
       ExpressionAttributeNames: {
@@ -355,7 +516,7 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
       await getDynamoClient().send(
         new BatchWriteItemCommand({
           RequestItems: {
-            [getTableName()]: items.map((it) => ({
+            [table]: items.map((it) => ({
               DeleteRequest: { Key: { pk: it.pk, sk: it.sk } },
             })),
           },
@@ -369,9 +530,17 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
 }
 
 // ---------------------------------------------------------------------------
-// Data Lake sink — writes notifications to S3 as NDJSON for Athena queries.
+// Data Lake sink — writes notifications to R2 (primary) or S3 (fallback).
 // Partitioned by year/month for the notifications table schema.
 // ---------------------------------------------------------------------------
+
+interface R2Env {
+  DATALAKE_BUCKET: R2Bucket;
+}
+
+function getLakeR2(): R2Bucket | null {
+  return (process.env as unknown as R2Env).DATALAKE_BUCKET ?? null;
+}
 
 const LAKE_BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
 
@@ -397,6 +566,20 @@ async function sinkToLake(notif: AdminNotification): Promise<void> {
     created_at: notif.createdAt,
     metadata: notif.metadata ? JSON.stringify(notif.metadata) : null,
   });
+
+  // Try R2 first (Cloudflare Workers)
+  const r2 = getLakeR2();
+  if (r2) {
+    try {
+      await r2.put(key, record, { customMetadata: { contentType: "application/json" } });
+      return;
+    } catch (err) {
+      console.warn(
+        "[admin-notifications] R2 sink failed, falling back to S3:",
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
 
   await getS3().send(
     new PutObjectCommand({

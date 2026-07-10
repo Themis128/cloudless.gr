@@ -99,6 +99,10 @@
 			"dataset": "cloudless-analytics"
 		}
 	],
+	// ─── Email Service (Cloudflare Email) ────────────────────────────
+	"send_email": [
+		{ "name": "EMAIL" }
+	],
 	// ─── Environment Variables (non-secret) ──────────────────────────
 	"vars": {
 		"NEXT_PUBLIC_AUTH_PROVIDER": "d1", // Migration complete

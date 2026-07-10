@@ -66,3 +66,51 @@ CREATE TABLE user_role (
     PRIMARY KEY (user_id, role),
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 );
+
+-- User token store (replaces DynamoDB SessionTokenStore for next-auth)
+-- Stores id_token + refresh_token keyed by user_id (OIDC sub)
+CREATE TABLE user_token (
+    user_id TEXT NOT NULL PRIMARY KEY,
+    id_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_user_token_expires ON user_token(expires_at);
+
+-- Config table (replaces SSM for simple key-value settings)
+-- Used for AB flags, portal data, and other small JSON config
+CREATE TABLE config (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+
+-- Pending clients (replaces SSM PENDING_CLIENTS_JSON)
+CREATE TABLE pending_client (
+    email TEXT NOT NULL PRIMARY KEY,
+    name TEXT,
+    plan TEXT NOT NULL,
+    plan_label TEXT,
+    submitted_at TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('waiting', 'approved', 'declined')),
+    portal_token TEXT,
+    approved_at TEXT,
+    notes TEXT,
+    updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+
+CREATE INDEX idx_pending_client_status ON pending_client(status);
+
+-- Voice brief store (replaces SSM VOICE_BRIEF_LATEST)
+CREATE TABLE voice_brief (
+    id TEXT NOT NULL PRIMARY KEY,
+    text TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    week TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+);
+
+-- Client portals (stored in config table as JSON)
+-- The config table handles both AB_FLAGS_JSON and CLIENT_PORTALS_JSON
