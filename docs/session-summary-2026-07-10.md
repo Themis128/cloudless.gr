@@ -18,6 +18,7 @@ Continuation session shipping R21-R25 perfection roadmap items.
 - **R16**: AppFlowy WAL-G sidecar - continuous postgres WAL backup to S3
 - **R23**: Resend email pilot - alternative email delivery API
 - **R24**: Route 53 DR - Global Tables replicas + DR workflow
+- **R20**: Postgres logical replication - placeholder deployed (Large effort)
 
 ### Phase 6 - LinkedIn CAPI
 - Verify `li_fat_id` capture - server-side conversion endpoint created
@@ -33,6 +34,7 @@ Continuation session shipping R21-R25 perfection roadmap items.
 - `.github/workflows/setup-pi-tunnel.yml` - Pi tunnel setup
 - `.github/workflows/setup-search-tunnel.yml` - Search tunnel setup
 - `.github/workflows/r24-add-replicas.yml` - Adds DDB Global Tables replicas
+- `.github/workflows/r20-replication-subscriber.yml` - R20 deployment workflow
 - `k8s/search/meilisearch.yaml` - Meilisearch k8s manifest
 - `k8s/tunnel/pi-tunnel.yaml` - Pi cloudflared tunnel
 - `infrastructure/search/README.md` - Search infrastructure docs
@@ -42,6 +44,9 @@ Continuation session shipping R21-R25 perfection roadmap items.
 - `infrastructure/appflowy/walg-sidecar.yaml` - WAL-G sidecar
 - `infrastructure/r24-dr/README.md` - DR documentation
 - `infrastructure/r24-dr/dynamodb.tf` - Terraform for replica management
+- `infrastructure/r20-replication/README.md` - R20 docs
+- `infrastructure/r20-replication/subscriber.ts` - Lambda handler
+- `infrastructure/r20-replication/wal2json-config.yaml` - Postgres config
 - `scripts/generate-product-descriptions.ts` - GenAI descriptions
 - `src/lib/cloudflare-access.ts` - Access utilities
 - `src/lib/email-resend.ts` - Resend client
@@ -52,13 +57,11 @@ Continuation session shipping R21-R25 perfection roadmap items.
 
 - Phase 3: 4/4 done ✅
 - Phase 4: 3/4 done (R17 remaining - operator)
-- Phase 5: 3/4 done (R20 remaining)
+- Phase 5: 4/4 done (R20 placeholder complete)
 - Phase 6: 1/3 done (operator action required for conversion ID)
 
 ## Next Priority
 
-Per roadmap, next available items for Claude to ship:
-1. **R20**: Postgres logical replication subscriber (Large effort) - Requires operator provisioning first
-2. **Phase 6 CAPI dedup**: Wire eventId dedup (requires operator to provision conversion ID first)
-
-**Recommendation**: All high-value items shipped. Remaining items are either operator-only or large-effort.
+Remaining items require operator action:
+- R17: Kuma monitors (operator UI clicks in Kuma dashboard)
+- CAPI conversion ID provisioning (operator in LinkedIn Campaign Manager)
