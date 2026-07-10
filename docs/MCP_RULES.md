@@ -1,6 +1,7 @@
 # MCP Server Usage Rules
 
 ## Purpose
+
 Rules for MCP server activation and usage patterns based on task categories.
 
 ## Server Rules Matrix
@@ -20,13 +21,17 @@ Rules for MCP server activation and usage patterns based on task categories.
 ## Activation Patterns
 
 ### GitHub Operations
+
 Use when: PR creation, issue management, CI status checks, repository ops
 
 ### Kubernetes/Cluster
+
 Use when: k3s diagnostics, pod/service troubleshooting, node inspection
 
 ### Sequential Thinking
+
 Use when: Complex investigation, multi-step analysis, architecture planning
 
 ### SSH/Infra
+
 Use when: Direct host access, system logs, configuration changes

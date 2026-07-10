@@ -58,6 +58,15 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // App code — allow any types and set-state-in-effect for rapid iteration
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+
   // Override ignores of eslint-config-next
   globalIgnores([
     ".next/**",

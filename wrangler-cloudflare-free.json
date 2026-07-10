@@ -2,19 +2,72 @@
   "name": "fully-migrated-serverless-stack",
   "main": "src/index-cloudflare-free.js",
   "compatibility_date": "2026-07-09",
+  "assets": { "directory": "./out" },
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "vars": {
     "ENVIRONMENT": "production",
-    "API_VERSION": "v1.0"
+    "API_VERSION": "v1.0",
+    "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
+    "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
+  },
+  "ai": {
+    "binding": "AI"
   },
   "r2_buckets": [
+    { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
+    { "binding": "ASSETS", "bucket_name": "cloudless-assets" },
     { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
+    { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
     { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
   ],
   "d1_databases": [
     { "binding": "AUTH_DB", "database_name": "user-auth-db", "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d" }
   ],
-  "analytics_engine_datasets": [
-    { "binding": "ANALYTICS", "dataset": "cloudless-analytics" }
-  ]
+  "env": {
+    "staging": {
+      "name": "cloudless-gr-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "API_VERSION": "v1.0",
+        "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
+        "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
+        "APP_VERSION": "staging"
+      },
+      "ai": {
+        "binding": "AI"
+      },
+      "r2_buckets": [
+        { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
+        { "binding": "ASSETS", "bucket_name": "cloudless-assets" },
+        { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
+        { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
+        { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
+      ],
+      "d1_databases": [
+        { "binding": "AUTH_DB", "database_name": "user-auth-db", "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d" }
+      ]
+    },
+    "production": {
+      "name": "fully-migrated-serverless-stack",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "API_VERSION": "v1.0",
+        "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
+        "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
+      },
+      "ai": {
+        "binding": "AI"
+      },
+      "r2_buckets": [
+        { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
+        { "binding": "ASSETS", "bucket_name": "cloudless-assets" },
+        { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
+        { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
+        { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
+      ],
+      "d1_databases": [
+        { "binding": "AUTH_DB", "database_name": "user-auth-db", "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d" }
+      ]
+    }
+  }
 }

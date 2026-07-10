@@ -69,7 +69,8 @@ export default function AgentCounter() {
   }
 
   useEffect(() => {
-    void refresh();
+    // Intentionally fire-and-forget: initial data load on mount
+    refresh().catch(() => {});
   }, []);
 
   return (

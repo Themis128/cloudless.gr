@@ -1,0 +1,114 @@
+name: Fix Loki Cache — disable oversized Memcached pods
+
+# The loki-chunks-cache and loki-results-cache StatefulSets have been
+# FailedCreate since 2026-06-27 because the Helm chart auto-sizes their
+# Memcached containers to 9830Mi (chunks) and 1229Mi (results), exceeding
+# the monitoring namespace LimitRange max of 1Gi.
+#
+# Fix: disable both caches in loki-values.yaml (chunksCache.enabled: false,
+# resultsCache.enabled: false). Single-binary Loki has its own in-process
+# cache; the external Memcached pods are only useful in distributed mode.
+#
+# Also raises the monitoring LimitRange max to 2Gi so future Helm chart
+# defaults don't hit this ceiling again.
+#
+# Trigger: push this file to main, or workflow_dispatch.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/fix-loki-cache.yml"
+      - "infrastructure/monitoring/loki-values.yaml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  fix-loki-cache:
+    name: Patch Loki — disable oversized cache pods
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Raise monitoring LimitRange max to 2Gi
+        run: |
+          kubectl apply -f - <<'EOF'
+          apiVersion: v1
+          kind: LimitRange
+          metadata:
+            name: default-container-limits
+            namespace: monitoring
+          spec:
+            limits:
+            - type: Container
+              default:
+                cpu: 500m
+                memory: 256Mi
+              defaultRequest:
+                cpu: 50m
+                memory: 64Mi
+              max:
+                cpu: "2"
+                memory: 2Gi
+          EOF
+          echo "LimitRange max raised to 2Gi"
+
+      - name: Delete stuck Loki cache StatefulSets
+        run: |
+          kubectl delete statefulset loki-chunks-cache loki-results-cache \
+            -n monitoring --ignore-not-found=true
+          echo "Deleted loki-chunks-cache and loki-results-cache StatefulSets"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.14.0"
+
+      - name: Add Grafana Helm repo
+        run: helm repo add grafana https://grafana.github.io/helm-charts && helm repo update
+
+      - name: Apply Loki values (disable caches)
+        run: |
+          helm -n monitoring upgrade loki grafana/loki \
+            --version 7.0.0 \
+            --values infrastructure/monitoring/loki-values.yaml \
+            --atomic \
+            --timeout 5m \
+            --force
+          echo "Loki upgraded with caches disabled"
+
+      - name: Verify no cache StatefulSets remain
+        run: |
+          sleep 10
+          if kubectl get statefulset loki-chunks-cache loki-results-cache \
+              -n monitoring 2>/dev/null | grep -q "chunks-cache\|results-cache"; then
+            echo "::warning::Cache StatefulSets still present — may need manual cleanup"
+            kubectl get statefulset -n monitoring
+          else
+            echo "OK: No loki cache StatefulSets"
+          fi
+
+      - name: Check Loki pod status
+        run: |
+          kubectl get pods -n monitoring -l app.kubernetes.io/name=loki
+          kubectl rollout status statefulset/loki -n monitoring --timeout=120s || true

@@ -48,6 +48,7 @@ const nextConfig: NextConfig = {
     : {}),
   // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
   // bundle. SST/Vercel deploys leave this unset.
+  // For Cloudflare Workers hybrid deployment: no output export - Worker handles API routes
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
   // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
   // through pnpm's hoisted layout on Windows. Externalize the AWS SDK

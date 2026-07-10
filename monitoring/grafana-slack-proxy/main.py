@@ -3,12 +3,12 @@
 Grafana Slack Proxy - Collects and categorizes alerts before posting to Slack.
 """
 
-import os
-import hmac
 import hashlib
+import hmac
 import json
+import os
 from datetime import datetime
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import requests
 
@@ -25,30 +25,30 @@ def verify_signature(body, timestamp, signature):
     """Verify Slack request signature (HMAC-SHA256)."""
     if not SLACK_SIGNING_SECRET:
         return True
-    
+
     req = f"v0:{timestamp}:{body.decode()}"
     expected = "v0=" + hmac.new(
         SLACK_SIGNING_SECRET.encode(), req.encode(), hashlib.sha256
     ).hexdigest()
-    
+
     return hmac.compare_digest(expected, signature)
 
 
 def categorize_alert(alert_data):
     """Categorize alert by app and severity."""
     labels = alert_data.get("labels", {})
-    
+
     app = labels.get("app", "unknown")
     category = labels.get("category", "general")
     severity = labels.get("severity", "info").upper()
-    
+
     severity_emoji = {
         "CRITICAL": ":red_circle:",
         "HIGH": ":orange_circle:",
         "WARNING": ":yellow_circle:",
         "INFO": ":blue_circle:",
     }.get(severity, ":grey_question:")
-    
+
     return {
         "app": app,
         "category": category,
@@ -63,17 +63,17 @@ def format_alert_block(alert_data, category_info):
     summary = annotations.get("summary", "No summary")
     description = annotations.get("description", "No description")
     runbook_url = annotations.get("runbook_url", "")
-    
+
     start_time = alert_data.get("startsAt", "")
     if start_time:
         try:
             dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
             formatted_time = dt.strftime("%Y-%m-%d %H:%M:%S")
-        except:
+        except (ValueError, TypeError):
             formatted_time = start_time
     else:
         formatted_time = "unknown"
-    
+
     blocks = [
         {
             "type": "section",
@@ -103,7 +103,7 @@ def format_alert_block(alert_data, category_info):
             ]
         },
     ]
-    
+
     if runbook_url:
         blocks.append({
             "type": "actions",
@@ -115,7 +115,7 @@ def format_alert_block(alert_data, category_info):
                 }
             ],
         })
-    
+
     return blocks
 
 
@@ -149,11 +149,11 @@ def format_summary_block(category_counts, category_info):
         {
             "type": "context",
             "elements": [
-                {"type": "mrkdwn", "text": f"Time window: Last 5 minutes"},
+                {"type": "mrkdwn", "text": "Time window: Last 5 minutes"},
             ]
         },
     ]
-    
+
     return blocks
 
 
@@ -164,7 +164,7 @@ def post_to_slack(blocks, text=None):
         payload["text"] = text
     if SLACK_DEFAULT_CHANNEL:
         payload["channel"] = SLACK_DEFAULT_CHANNEL
-    
+
     try:
         response = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=10)
         response.raise_for_status()
@@ -176,25 +176,25 @@ def post_to_slack(blocks, text=None):
 
 class GrafanaWebhookHandler(BaseHTTPRequestHandler):
     """Handle Grafana webhook alerts."""
-    
+
     def log_message(self, format, *args):
         """Log to stdout."""
         print(f"[{datetime.now().isoformat()}] {format % args}")
-    
+
     def do_POST(self):
         """Handle POST request."""
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length)
-        
+
         timestamp = self.headers.get('X-Slack-Request-Timestamp', '')
         signature = self.headers.get('X-Slack-Signature', '')
-        
+
         if not verify_signature(body, timestamp, signature):
             self.send_response(401)
             self.end_headers()
             self.wfile.write(b"Invalid signature")
             return
-        
+
         try:
             data = json.loads(body)
         except json.JSONDecodeError as e:
@@ -202,37 +202,37 @@ class GrafanaWebhookHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(f"Invalid JSON: {e}".encode())
             return
-        
+
         alerts = data.get("alerts", [])
         if not alerts:
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"No alerts")
             return
-        
+
         category_alerts = {}
-        
+
         for alert in alerts:
             category_info = categorize_alert(alert)
             key = (category_info['app'], category_info['severity'])
-            
+
             if key not in category_alerts:
                 category_alerts[key] = {
                     "category_info": category_info,
                     "alerts": [],
                     "by_app": {},
                 }
-            
+
             category_alerts[key]["alerts"].append(alert)
-            
+
             app = category_info['app']
             category_alerts[key]["by_app"][app] = category_alerts[key]["by_app"].get(app, 0) + 1
-        
+
         posted = 0
-        for key, data in category_alerts.items():
+        for _key, data in category_alerts.items():
             category_info = data["category_info"]
             alerts_list = data["alerts"]
-            
+
             if len(alerts_list) > 1:
                 summary_blocks = format_summary_block({
                     "total": len(alerts_list),
@@ -243,9 +243,9 @@ class GrafanaWebhookHandler(BaseHTTPRequestHandler):
                 alert = alerts_list[0]
                 alert_blocks = format_alert_block(alert, category_info)
                 post_to_slack(alert_blocks)
-            
+
             posted += 1
-        
+
         self.send_response(200)
         self.end_headers()
         self.wfile.write(f"Processed {posted} alerts".encode())
@@ -257,11 +257,11 @@ def main():
         print("ERROR: SLACK_WEBHOOK_URL environment variable is required")
         print("Set it to your Slack webhook URL")
         return
-    
+
     server = HTTPServer(("0.0.0.0", PORT), GrafanaWebhookHandler)
     print(f"[{datetime.now().isoformat()}] Grafana Slack Proxy starting on port {PORT}")
     print(f"[{datetime.now().isoformat()}] Target channel: {SLACK_DEFAULT_CHANNEL}")
-    
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:

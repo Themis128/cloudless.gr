@@ -21,17 +21,21 @@ The Lakehouse Operator skill provides tools for querying and managing the AWS At
 ## Key Commands
 
 ### `/analytics help`
+
 Show available analytics commands and syntax.
 
 ### `/analytics query <natural-language>`
+
 Execute a natural language query against the data lake.
 
 Example: `/analytics query monthly revenue by service`
 
 ### `/analytics schema <table>`
+
 Show schema for a specific table.
 
 ### `/analytics runs`
+
 List recent query runs.
 
 ## Key Concepts
@@ -61,7 +65,7 @@ s3://cloudless-data-lake/
 - **Slack**: `/analytics` slash commands
 - **Notion**: Dashboard reports
 - **Grafana**: Visualization dashboards
-- ** SES**: Scheduled report emails
+- **SES**: Scheduled report emails
 
 ## Typical Workflows
 

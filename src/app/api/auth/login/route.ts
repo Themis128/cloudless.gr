@@ -1,0 +1,117 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  authenticateUser,
+  getUserBySession,
+  isAdmin,
+  type AuthDatabase,
+} from "@/lib/auth-d1";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
+
+// D1 binding interface - provided by Worker context
+interface Env {
+  AUTH_DB: AuthDatabase;
+}
+
+function getDb(request: NextRequest): AuthDatabase | null {
+  // In Workers, AUTH_DB is provided as a binding
+  // In Next.js serverless, we need to check if it's configured
+  const env = process.env as unknown as Env;
+  if (!env.AUTH_DB) {
+    return null;
+  }
+  return env.AUTH_DB;
+}
+
+export async function POST(req: NextRequest) {
+  const db = getDb(req);
+  if (!db) {
+    // Fallback to Cognito when D1 not configured (AWS deployment)
+    return NextResponse.redirect(new URL("/api/auth/login/cognito", req.url));
+  }
+
+  const ipRl = rateLimit(`auth-login:ip:${getClientIp(req)}`, 10, 60_000);
+  if (!ipRl.ok) return ipRl.response;
+
+  let email: string | undefined;
+  let password: string | undefined;
+  try {
+    const body = (await req.json()) as { email?: string; password?: string };
+    email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
+    password = body.password;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  if (!email || !password) {
+    return NextResponse.json({ error: "Email and password required" }, { status: 400 });
+  }
+
+  const result = await authenticateUser(db, email, password);
+
+  if (result.error) {
+    return NextResponse.json({ error: result.error }, { status: 401 });
+  }
+
+  if (!result.session) {
+    return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
+  }
+
+  // Check admin status
+  const userIsAdmin = await isAdmin(db, result.user!.id);
+
+  // Set session cookie
+  const response = NextResponse.json({
+    ok: true,
+    user: {
+      id: result.user!.id,
+      email: result.user!.email,
+      name: result.user!.name,
+      company: result.user!.company,
+      phone: result.user!.phone,
+    },
+    isAdmin: userIsAdmin,
+  });
+
+  response.cookies.set("session_token", result.session!.id, {
+    httpOnly: true,
+    secure: process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://"),
+    sameSite: "strict",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  });
+
+  return response;
+}
+
+// GET check endpoint for session validation
+export async function GET(req: NextRequest) {
+  const db = getDb(req);
+  if (!db) {
+    return NextResponse.json({ user: null });
+  }
+
+  const sessionId = req.cookies.get("session_token")?.value;
+  if (!sessionId) {
+    return NextResponse.json({ user: null });
+  }
+
+  const user = await getUserBySession(db, sessionId);
+  if (!user) {
+    const response = NextResponse.json({ user: null });
+    response.cookies.delete("session_token");
+    return response;
+  }
+
+  const isAdminUser = await isAdmin(db, user.id);
+
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      company: user.company,
+      phone: user.phone,
+    },
+    isAdmin: isAdminUser,
+  });
+}

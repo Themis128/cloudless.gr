@@ -128,6 +128,7 @@ All production records point to Cloudflare Tunnel with orange cloud (proxied).
    - Save
 
 2. **Update via API** (Terraform/CLI)
+
    ```bash
    # Example: Create CNAME record
    curl -X POST https://api.cloudflare.com/client/v4/zones/ZONE_ID/dns_records \
@@ -175,6 +176,7 @@ The tunnel uses a credentials file stored on the Pi:
 **File:** `/root/.cloudflared/75f644ea-4f45-4cb6-a992-6173dbc9ea93.json`
 
 ⚠️ **SECURITY**: This file is:
+
 - Private to root user (600 permissions)
 - NOT committed to git
 - Rotated automatically by Cloudflare
@@ -427,7 +429,7 @@ AND
 |----------|-------|
 | Token Name | cloudless2 |
 | Type | User API Token |
-| Prefix | cfut_ (vs cfat_ for API keys) |
+| Prefix | cfut_(vs cfat_ for API keys) |
 | Permissions | Zone.Zone:Read + Zone.DNS:Edit |
 | Scopes | cloudless.gr zone only |
 | Status | ✅ Active |
@@ -519,6 +521,7 @@ When rotating (e.g., quarterly):
 **Cloudflare Analytics:** cloudless.gr → Analytics
 
 Displays:
+
 - Requests over time
 - Cache performance
 - Bandwidth usage
@@ -532,6 +535,7 @@ Displays:
 ### Issue: Tunnel Status Shows "Disconnected"
 
 **Symptoms:**
+
 - `curl https://omv.cloudless.gr` → Connection timeout or 522 error
 - Cloudflare Dashboard shows "No Connectors"
 
@@ -554,6 +558,7 @@ ls -la /root/.cloudflared/75f644ea-*.json
 **Solutions:**
 
 1. **Restart cloudflared:**
+
    ```bash
    sudo systemctl restart cloudflared
    sleep 10
@@ -561,6 +566,7 @@ ls -la /root/.cloudflared/75f644ea-*.json
    ```
 
 2. **Check network connectivity:**
+
    ```bash
    ping 1.1.1.1        # Cloudflare DNS
    ping 8.8.8.8        # Google DNS
@@ -568,6 +574,7 @@ ls -la /root/.cloudflared/75f644ea-*.json
    ```
 
 3. **Regenerate credentials (if corrupted):**
+
    ```bash
    sudo rm /root/.cloudflared/75f644ea-*.json
    cloudflared tunnel login
@@ -577,11 +584,13 @@ ls -la /root/.cloudflared/75f644ea-*.json
 ### Issue: docs.cloudless.gr Returns 502 Bad Gateway
 
 **Symptoms:**
+
 - Other services (omv, ftp) return 200
 - Only docs.cloudless.gr returns 502
 - Tunnel logs show no connection errors
 
 **Root Causes:**
+
 - K3s service on wrong port
 - Pod not running
 - Service misconfigured
@@ -611,6 +620,7 @@ curl http://127.0.0.1:30901 -v
 **Solutions:**
 
 1. **Update tunnel config to correct port:**
+
    ```bash
    sudo nano /home/tbaltzakis/.cloudflared/config.yml
    # Change service port from 30900 to 30901
@@ -618,11 +628,13 @@ curl http://127.0.0.1:30901 -v
    ```
 
 2. **Restart the docs pod:**
+
    ```bash
    kubectl rollout restart deployment/docs-server -n cloudless
    ```
 
 3. **Check pod logs:**
+
    ```bash
    kubectl logs -f deployment/docs-server -n cloudless
    ```
@@ -630,10 +642,12 @@ curl http://127.0.0.1:30901 -v
 ### Issue: meili.cloudless.gr Returns 302 Redirect
 
 **Symptoms:**
+
 - Returns 302 redirect instead of Meilisearch UI
 - Response headers show wrong origin
 
 **Root Cause:**
+
 - Tunnel ingress configured for `127.0.0.1:30902`
 - Meilisearch pod may not be running or service port misconfigured
 
@@ -654,6 +668,7 @@ curl http://127.0.0.1:30902 -v
 ### Issue: "cert not yet valid" Error
 
 **Symptoms:**
+
 - Tunnel logs show certificate validation error
 - Tunnel keeps restarting
 

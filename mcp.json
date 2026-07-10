@@ -36,6 +36,35 @@
       },
       "autoStart": false
     },
+    "cloudflare-docs": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://docs.mcp.cloudflare.com/mcp"],
+      "autoStart": false
+    },
+    "cloudflare-bindings": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://bindings.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "cloudflare-builds": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://builds.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
+    "cloudflare-observability": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://observability.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false
+    },
     "github": {
       "command": "docker",
       "args": [
@@ -90,14 +119,6 @@
     "aws-knowledge": {
       "command": "npx",
       "args": ["mcp-remote", "https://knowledge-mcp.global.api.aws"],
-      "autoStart": false
-    },
-    "github.com/cloudflare/mcp-server-cloudflare": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
       "autoStart": false
     }
   }

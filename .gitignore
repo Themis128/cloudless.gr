@@ -44,6 +44,9 @@ build
 .env.*
 !.env.example
 
+# Wrangler CLI
+.dev.vars
+
 # OS files
 .DS_Store
 

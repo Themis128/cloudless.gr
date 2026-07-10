@@ -55,6 +55,7 @@ If automatic registration doesn't work:
 ## Project Context
 
 The integration automatically provides context for:
+
 - `/home/tbaltzakis/cloudless.gr` (Next.js 16 + Typescript)
 - 8 DeepAgents skills
 - 4 specialized subagents

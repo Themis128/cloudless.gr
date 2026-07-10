@@ -97,6 +97,7 @@
 | `192.168.1.128:31883` | Mosquitto (MQTT) | - | NodePort 1883 |
 
 ### Monitoring Endpoints (NodePort/Tailscale - pending pods)
+
 - **Prometheus:** Port 9090 (ClusterIP - accessible via Traefik when pods ready)
 - **Grafana:** `grafana.cloudless.gr` (Traefik) or `192.168.1.128:30850` (NodePort)
 - **Loki:** `loki.ts.cloudless.gr` (Tailscale Funnel) or port 3100 (ClusterIP)
@@ -105,13 +106,16 @@
 ## Scheduling Policies
 
 ### Node Labels
+
 - `omv`: `node-type=primary`, `storage-type=ssd`
 - `omv-ha`: No special labels
 
 ### Node Taints
+
 - `omv-ha`: `node-type=standby:NoSchedule`
 
 ### Workload Scheduling
+
 - Traefik deployment: Uses `nodeSelector: kubernetes.io/hostname=omv`
 - All DaemonSets: Have `nodeSelector` pointing to omv
 - Monitoring stack: Expected to run on omv (via node selector)

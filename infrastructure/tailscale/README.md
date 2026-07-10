@@ -1,9 +1,11 @@
 # Tailscale Operator Deployment for K3S Cluster
+
 # Generated: 2026-07-06
 
 ## Overview
 
 Tailscale operates as the **fabric interconnect** for the k3s cluster, providing:
+
 - Secure mesh networking between omv-main (192.168.1.128) and omv-ha (192.168.1.130)
 - MagicDNS endpoint resolution (`*.ts.cloudless.gr`)
 - Cross-node service access (services on omv-ha accessible from omv-main's Cloudflare tunnel)
