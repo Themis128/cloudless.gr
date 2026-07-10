@@ -41,9 +41,24 @@ jobs:
       
       # Deploy to Workers
       - uses: cloudflare/wrangler-action@v3
+        id: deploy
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: deploy --env=production
+
+      # Write deploy SHA to SSM for drift detection
+      - name: record deploy sha
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
+          aws-region: us-east-1
+      - name: put cloud-sha ssm param
+        run: |
+          aws ssm put-parameter \
+            --name /cloudless/production/cloud-sha \
+            --value "${{ github.sha }}" \
+            --type String \
+            --overwrite
 
   # Migrate SSM -> Wrangler secrets weekly
   sync-secrets:
