@@ -43,19 +43,23 @@ jobs:
             | jq -r '.result[0].id')
 
           for HOST in cloudless.gr www.cloudless.gr; do
-            REC_ID=$(curl -sS \
+            # Get ALL record types (A, CNAME, and Load Balancer records)
+            REC=$(curl -sS \
               -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
-              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=A&name=$HOST" \
-              | jq -r '.result[0].id // empty')
-            if [ -n "$REC_ID" ]; then
-              echo "→ Switching $HOST -> omv.tail8eb71.ts.net"
+              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?name=$HOST" \
+              | jq -r '.result[0] | "\(.id)|\(.type)|\(.content // "")" // empty')
+            if [ -n "$REC" ]; then
+              REC_ID=$(echo "$REC" | cut -d'|' -f1)
+              REC_TYPE=$(echo "$REC" | cut -d'|' -f2)
+              CURRENT=$(echo "$REC" | cut -d'|' -f3)
+              echo "→ Switching $HOST ($REC_TYPE): $CURRENT -> omv.tail8eb71.ts.net"
               curl -sS -X PATCH \
                 -H "Authorization: Bearer ${{ steps.token.outputs.token }}" \
                 -H "Content-Type: application/json" \
                 "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$REC_ID" \
                 -d '{"content":"omv.tail8eb71.ts.net","proxied":true}' | jq -r '.success'
             else
-              echo "No A record for $HOST"
+              echo "No record found for $HOST"
             fi
           done
 
