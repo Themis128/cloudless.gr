@@ -1,0 +1,88 @@
+# R16: AppFlowy WAL-G sidecar for continuous PostgreSQL backup
+# Streams WAL to S3 ~5min RPO for the knowledge base
+
+---
+# Add to the appflowy/k8s/appflowy.yaml postgres deployment:
+#
+# Sidecar container for WAL-G
+#   - Runs on omv (same node as postgres)
+#   - Uses existing AWS credentials via IRSA or env vars
+#   - Streams WAL to S3 every 60 seconds
+#
+
+AWSSecret:
+  # IAM user credentials with S3 write access
+  # Store in SSM: /cloudless/production/APPFLOWY_WALG_AWS_ACCESS_KEY_ID
+  #                /cloudless/production/APPFLOWY_WALG_AWS_SECRET_ACCESS_KEY
+  kind: Secret
+  metadata:
+    name: appflowy-walg-aws
+    namespace: appflowy
+  stringData:
+    AWS_ACCESS_KEY_ID: "${APPFLOWY_WALG_AWS_ACCESS_KEY_ID}"
+    AWS_SECRET_ACCESS_KEY: "${APPFLOWY_WALG_AWS_SECRET_ACCESS_KEY}"
+
+# Add to postgres deployment spec:
+#
+#   initContainers:
+#   - name: walg-init
+#     image: vSTM/wal-g:latest
+#     command: ["/bin/sh", "-c"]
+#     args:
+#       - |
+#         mkdir -p /var/lib/postgresql/wal-g && chown -R 999:999 /var/lib/postgresql/wal-g
+#     volumeMounts:
+#       - name: data
+#         mountPath: /var/lib/postgresql/data
+#       - name: walg
+#         mountPath: /var/lib/postgresql/wal-g
+#
+#   containers:
+#   - name: postgres
+#     # ... existing postgres config ...
+#
+#   - name: walg
+#     image: vSTM/wal-g:latest
+#     command: ["/bin/sh", "-c"]
+#     args:
+#       - |
+#         export WALG_S3_PREFIX=s3://cloudless-analytics-data/appflowy-wal/wal/
+#         export WALG_UPLOAD_CONCURRENCY=2
+#         export WALG_SENTINEL_NAME="appflowy-postgres-production"
+#         wal-g postgres-push-wal
+#     env:
+#       - name: AWS_REGION
+#         value: us-east-1
+#       - name: AWS_ACCESS_KEY_ID
+#         valueFrom:
+#           secretKeyRef:
+#             name: appflowy-walg-aws
+#             key: AWS_ACCESS_KEY_ID
+#       - name: AWS_SECRET_ACCESS_KEY
+#         valueFrom:
+#           secretKeyRef:
+#             name: appflowy-walg-aws
+#             key: AWS_SECRET_ACCESS_KEY
+#       - name: WALG_S3_PREFIX
+#         value: s3://cloudless-analytics-data/appflowy-wal/wal/
+#     volumeMounts:
+#       - name: data
+#         mountPath: /var/lib/postgresql/data
+#         readOnly: true
+#       - name: walg
+#         mountPath: /var/lib/postgresql/wal-g
+#     resources:
+#       requests:
+#         cpu: 10m
+#         memory: 32Mi
+#       limits:
+#         cpu: 100m
+#         memory: 64Mi
+
+# Also add to postgres container env to enable archive_mode:
+#   - name: POSTGRES_INITDB_ARGS
+#     value: "--auth-host=scram-sha-256 --auth-local=peer"
+
+volumes:
+- name: walg
+  emptyDir: {}

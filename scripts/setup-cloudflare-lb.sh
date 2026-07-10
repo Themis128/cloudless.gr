@@ -1,23 +1,20 @@
 #!/usr/bin/env bash
 #
-# setup-cloudflare-lb.sh — provision / reconcile the cloudless.gr HA failover
-# at the layer that actually owns the domain's DNS: Cloudflare.
+# setup-cloudflare-lb.sh — provision / reconcile the cloudless.gr Cloudflare Tunnel
+# + Workers failover at the layer that owns the DNS: Cloudflare.
 #
 # WHY: cloudless.gr is delegated to Cloudflare (ns fay/jihoon.ns.cloudflare.com),
-# NOT Route 53. The old Route 53 PRIMARY/SECONDARY records never served real
-# traffic and their hosted zone was deleted on 2026-06-02. This script builds a
-# Cloudflare Load Balancer that health-checks /api/health and steers each
-# hostname AWS(primary) -> Pi(secondary) automatically.
+# NOT Route 53. After AWS decommission, Pi/k3s is PRIMARY via Cloudflare Tunnel,
+# with Workers as a lightweight fallback during Pi maintenance.
 #
 # Topology built (per hostname: cloudless.gr, www.cloudless.gr):
 #   monitor  cloudless-health-<host>   GET https://.../api/health, expect 200
-#   pool     cl-aws-<host>             origin = CloudFront distro  (Host: <host>)
-#   pool     cl-pi-<host>              origin = omv.tail8eb71.ts.net (Host: <host>)
-#   lb       <host>                    default_pools [aws, pi], fallback pi
+#   pool     cl-pi-<host>              origin = Pi Tunnel (cloudflared on Pi)
+#   pool     cl-worker-<host>          origin = cloudless-failover Worker
+#   lb       <host>                    default_pools [pi, worker], fallback worker
 #
-#   steering_policy "off" => Cloudflare serves the first HEALTHY pool in
-#   default_pools (aws), and flips to pi the moment the aws monitor goes
-#   unhealthy. Steady state is identical to today (all traffic -> AWS).
+#   steering_policy "off" => Cloudflare serves the first HEALTHY pool (pi),
+#   and flips to worker when Pi's monitor fails. Steady state: all traffic -> Pi.
 #
 # SAFE BY DEFAULT: MODE=report (the default) writes NOTHING — it validates the
 # token + LB entitlement, prints the live account/zone/DNS/LB state and the
@@ -36,9 +33,10 @@ CONFIRM="${CONFIRM:-0}"                 # apply requires CONFIRM=1
 HOSTS=("cloudless.gr" "www.cloudless.gr")
 
 # Origins (public, Cloudflare-independent endpoints).
-CF_APEX_ORIGIN="d3k7muo3c6lw6s.cloudfront.net"   # CloudFront distro for apex
-CF_WWW_ORIGIN="dgrxxatzrgxfi.cloudfront.net"     # CloudFront distro for www
-PI_ORIGIN="omv.tail8eb71.ts.net"                 # Pi/k3s via Tailscale Funnel (443)
+# Pi Tunnel hostname - exposed via cloudflared on the Pi (runs HTTPS internally)
+PI_TUNNEL_HOST="pi-origin.cloudless.gr"   # Pi/k3s via Cloudflare Tunnel
+# Worker fallback - the cloudless-failover Worker
+WORKER_FALLBACK="cloudless-failover.baltzakis-themis.workers.dev"
 HEALTH_PATH="/api/health"
 
 log() { printf '%s\n' "$*"; }
@@ -110,26 +108,23 @@ find_id() { # list-json  jq-match
   printf '%s' "$1" | jq -r "$2 // empty" | head -n1
 }
 
-MON_IDS=(); POOL_AWS=(); POOL_PI=()
+MON_IDS=(); POOL_PI=(); POOL_WORKER=()
 
 # ===================== MONITORS + POOLS (account scope) =====================
 i=0
 for host in "${HOSTS[@]}"; do
-  case "$host" in
-    "$DOMAIN") aws_origin="$CF_APEX_ORIGIN" ;;
-    *)         aws_origin="$CF_WWW_ORIGIN"  ;;
-  esac
-  pi_origin="$PI_ORIGIN"
+  pi_origin="$PI_TUNNEL_HOST"
+  worker_origin="$WORKER_FALLBACK"
   mon_desc="cloudless-health-${host}"
-  pool_aws_name="cl-aws-${host//./-}"
   pool_pi_name="cl-pi-${host//./-}"
+  pool_worker_name="cl-worker-${host//./-}"
 
   log ""
   log "--- ${host} ---"
-  log "  primary origin (AWS): ${aws_origin}  (Host: ${host}${HEALTH_PATH})"
-  log "  standby origin (Pi):  ${pi_origin}   (Host: ${host}${HEALTH_PATH})"
+  log "  primary origin (Pi Tunnel):  ${pi_origin}   (Host: ${host}${HEALTH_PATH})"
+  log "  secondary origin (Worker):   ${worker_origin} (fallback)"
 
-  # ---- monitor ----
+  # ---- monitor (points to Pi Tunnel) ----
   MLIST="$(cf GET "${API}/accounts/${ACCT_ID}/load_balancers/monitors")"
   mon_id="$(find_id "$MLIST" ".result[] | select(.description==\"${mon_desc}\") | .id")"
   mon_body="$(jq -n --arg desc "$mon_desc" --arg path "$HEALTH_PATH" --arg host "$host" '{
@@ -154,8 +149,16 @@ for host in "${HOSTS[@]}"; do
 
   # ---- pools ----
   PLIST="$(cf GET "${API}/accounts/${ACCT_ID}/load_balancers/pools")"
-  for kind in aws pi; do
-    if [ "$kind" = aws ]; then pname="$pool_aws_name"; porigin="$aws_origin"; oname="cloudfront"; else pname="$pool_pi_name"; porigin="$pi_origin"; oname="pi-k3s-funnel"; fi
+  for kind in pi worker; do
+    if [ "$kind" = pi ]; then
+      pname="$pool_pi_name"
+      porigin="$pi_origin"
+      oname="pi-k3s-tunnel"
+    else
+      pname="$pool_worker_name"
+      porigin="$worker_origin"
+      oname="cloudflare-worker"
+    fi
     pool_id="$(find_id "$PLIST" ".result[] | select(.name==\"${pname}\") | .id")"
     pool_body="$(jq -n --arg name "$pname" --arg oname "$oname" --arg addr "$porigin" \
                        --arg host "$host" --arg mon "$mon_id" '{
@@ -177,7 +180,7 @@ for host in "${HOSTS[@]}"; do
     else
       log "  pool ${kind}:  $( [ -n "$pool_id" ] && echo "exists ${pool_id}" || echo "MISSING (would create '${pname}' -> ${porigin})" )"
     fi
-    if [ "$kind" = aws ]; then POOL_AWS+=("$pool_id"); else POOL_PI+=("$pool_id"); fi
+    if [ "$kind" = pi ]; then POOL_PI+=("$pool_id"); else POOL_WORKER+=("$pool_id"); fi
   done
   i=$((i+1))
 done
@@ -185,7 +188,7 @@ done
 # ===================== LOAD BALANCERS (zone scope) =========================
 i=0
 for host in "${HOSTS[@]}"; do
-  aws_pool="${POOL_AWS[$i]}"; pi_pool="${POOL_PI[$i]}"
+  pi_pool="${POOL_PI[$i]}"; worker_pool="${POOL_WORKER[$i]}"
   LLIST="$(cf GET "${API}/zones/${ZONE_ID}/load_balancers")"
   lb_id="$(find_id "$LLIST" ".result[] | select(.name==\"${host}\") | .id")"
 
@@ -196,18 +199,18 @@ for host in "${HOSTS[@]}"; do
     DREC="$(cf GET "${API}/zones/${ZONE_ID}/dns_records?name=${host}")"
     printf '%s' "$DREC" | jq -r '.result[]? | "  current DNS: \(.type) \(.name) -> \(.content) (proxied=\(.proxied))"'
     if [ -n "$lb_id" ]; then
-      log "  LB: exists ${lb_id} (would update default_pools=[aws,pi], fallback=pi)"
+      log "  LB: exists ${lb_id} (would update default_pools=[pi,worker], fallback=worker)"
     else
       log "  LB: MISSING (would create; replaces the proxied DNS record above)"
     fi
     i=$((i+1)); continue
   fi
 
-  [ -n "$aws_pool" ] && [ -n "$pi_pool" ] || die "missing pool ids for ${host}"
-  lb_body="$(jq -n --arg name "$host" --arg aws "$aws_pool" --arg pi "$pi_pool" '{
+  [ -n "$pi_pool" ] && [ -n "$worker_pool" ] || die "missing pool ids for ${host}"
+  lb_body="$(jq -n --arg name "$host" --arg pi "$pi_pool" --arg worker "$worker_pool" '{
     name:$name, proxied:true, enabled:true, steering_policy:"off",
-    default_pools:[$aws,$pi], fallback_pool:$pi,
-    description:"cloudless HA: AWS primary -> Pi standby (auto-failover on /api/health)"
+    default_pools:[$pi,$worker], fallback_pool:$worker,
+    description:"cloudless HA: Pi Tunnel primary -> Workers fallback (auto-failover on /api/health)"
   }')"
 
   if [ -n "$lb_id" ]; then
@@ -233,9 +236,9 @@ done
 
 log ""
 if [ "$APPLY" = "1" ]; then
-  log "== DONE — Cloudflare LB failover is live. Steady state: AWS primary."
+  log "== DONE — Cloudflare LB failover is live. Steady state: Pi primary."
   log "   Verify: curl -sI https://${DOMAIN}/api/health  (200), then watch a"
-  log "   forced-AWS-5xx flip to the Pi standby in the LB Analytics tab."
+  log "   Pi-triggered failover in the LB Analytics tab."
 else
   log "== REPORT ONLY — nothing changed."
   log "   To apply the plan above (creates the LB + cuts apex/www DNS over):"

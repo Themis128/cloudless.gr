@@ -1,0 +1,86 @@
+# Pi Cloudflare Tunnel Configuration
+# This manifest runs cloudflared as a Kubernetes deployment on the Pi cluster
+# to expose the Next.js app via Cloudflare Tunnel (HTTPS handled at edge)
+#
+# Prerequisites:
+# 1. Cloudflare API token with Tunnel permissions (stored in SSM: /cloudless/production/TUNNEL_TOKEN)
+# 2. Tunnel created via: cloudflare tunnel create cloudless-pi
+# 3. DNS record: pi-origin.cloudless.gr -> CNAME to the tunnel endpoint
+#
+# After deployment:
+# - Tunnel provides automatic HTTPS certificate (no Pi cert management)
+# - Health checks hit the Pi k3s service
+# - LB automatically routes cloudless.gr -> pi-origin.cloudless.gr
+
+---
+# Secret for the Cloudflare Tunnel token (from SSM: /cloudless/production/TUNNEL_TOKEN)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-tunnel-token
+  namespace: cloudless
+type: Opaque
+stringData:
+  token: "PLACEHOLDER" # Replace via: kubectl create secret generic cloudflare-tunnel-token --from-literal=token=$(aws ssm get-parameter --name /cloudless/production/TUNNEL_TOKEN --with-decryption --query Parameter.Value --output text)
+
+---
+# Cloudflare Tunnel deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflare-tunnel
+  namespace: cloudless
+  labels:
+    app: cloudflare-tunnel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflare-tunnel
+  template:
+    metadata:
+      labels:
+        app: cloudflare-tunnel
+    spec:
+      containers:
+      - name: tunnel
+        image: cloudflare/cloudflared:2024.12.0
+        args:
+        - tunnel
+        - --no-autoupdate
+        - --hostname
+        - pi-origin.cloudless.gr
+        - --url
+        - http://cloudless-app.cloudless.svc.cluster.local:80
+        - run
+        - --credentials-file
+        - /etc/cloudflared/creds/token
+        env:
+        - name: TZ
+          value: "Europe/Athens"
+        volumeMounts:
+        - name: tunnel-token
+          mountPath: /etc/cloudflared/creds
+          readOnly: true
+      volumes:
+      - name: tunnel-token
+        secret:
+          secretName: cloudflare-tunnel-token
+      # Restart policy for reliability
+      restartPolicy: Always
+
+---
+# Health check for the tunnel itself
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudflare-tunnel-health
+  namespace: cloudless
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: health
+  selector:
+    app: cloudflare-tunnel

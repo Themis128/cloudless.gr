@@ -1,0 +1,90 @@
+# R15: Deploy Cloudflare Access for admin tunnel hosts
+# Protects grafana.cloudless.gr, kuma.cloudless.gr, appflowy.cloudless.gr, n8n.cloudless.gr
+# Prerequisite: CLOUDFLARE_API_TOKEN in SSM with Account.Access: Apps (edit) + Account.Access: Tokens (edit) scopes
+
+name: Deploy Cloudflare Access
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply Terraform changes'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VERSION: "1.9.0"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Get Cloudflare API token from SSM
+        id: cf
+        run: |
+          CF_TOKEN=$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN --with-decryption --query Parameter.Value --output text 2>/dev/null || true)
+          if [ -z "$CF_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN not found in SSM. See docs/USE-CASES.md for token rotation steps."
+            exit 1
+          fi
+          echo "CF_TOKEN=${CF_TOKEN}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform init
+        working-directory: infrastructure/cloudflare-access
+        run: terraform init -backend=false
+
+      - name: Terraform plan
+        working-directory: infrastructure/cloudflare-access
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.CF_TOKEN }}
+        run: terraform plan -out tfplan
+
+      - name: Terraform apply
+        if: ${{ github.event.inputs.apply == 'true' }}
+        working-directory: infrastructure/cloudflare-access
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf.outputs.CF_TOKEN }}
+        run: |
+          terraform apply -auto-approve tfplan
+          
+          # Store Service Tokens in SSM for programmatic access
+          terraform output -json service_tokens | jq -r 'to_entries[] | "\(.key):\( .value.client_id),\(.value.client_secret)"' | while IFS=':' read -r app ids; do
+            id=$(echo "$ids" | cut -d',' -f1)
+            secret=$(echo "$ids" | cut -d',' -f2)
+            
+            echo "Storing Service Token for $app in SSM..."
+            aws ssm put-parameter --name "/cloudless/production/CLOUDFLARE_ACCESS_CLIENT_ID_${app}" --value "$id" --type SecureString --description "Cloudflare Access Service Token Client ID for $app (R15)" --overwrite
+            aws ssm put-parameter --name "/cloudless/production/CLOUDFLARE_ACCESS_CLIENT_SECRET_${app}" --value "$secret" --type SecureString --description "Cloudflare Access Service Token Secret for $app (R15)" --overwrite
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Cloudflare Access Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Access applications created/updated" >> $GITHUB_STEP_SUMMARY
+          echo "- **Protected hosts:** grafana.cloudless.gr, kuma.cloudless.gr, appflowy.cloudless.gr, n8n.cloudless.gr" >> $GITHUB_STEP_SUMMARY
+          echo "- **Auth method:** Cloudflare Access (email-based)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Session duration:** 1 hour with auto-redirect to login" >> $GITHUB_STEP_SUMMARY
+          echo "- **Allowed identity:** tbaltzakis@cloudless.gr" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service Tokens:** Stored in SSM for /admin/cluster integration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next step:** Users accessing admin hosts will be redirected to Cloudflare Access login. Service Tokens can be used for programmatic access from cloudless.gr." >> $GITHUB_STEP_SUMMARY
