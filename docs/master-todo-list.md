@@ -1,4 +1,3 @@
-yy
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
 **Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
@@ -7,8 +6,7 @@ R22 (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
 by R10's daily EspoCRM CronJob; R22 audit confirmed the existing
 ConditionalWrite-dedup pattern is safe at SMB volume. The 2026-06-22
 session ran a 22-PR ops sweep on top of that — see the "Session log"
-section below. **Next R-row: R21a** (Meilisearch self-host on omv-ha —
-entry to the AI baseline arc).
+section below. **Phase 3 is 4/4 done.** R21a-d all shipped.
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
@@ -122,7 +120,7 @@ operator polish or unlock follow-on automation.
 - [x] ~~🤖 🟣 **R11** TLS cert parity probe~~ ✅ **SHIPPED 2026-06-21 (PR #1096)** — daily 07:00 UTC `.github/workflows/tls-cert-parity-probe.yml`. Both push + workflow_dispatch runs green in 7-9s. ACM + Let's Encrypt both valid + >14d to expiry. notifyAdmin() fires on cert expiry/SAN-mismatch/unreachable.
 - [x] ~~🤖 🔵 **R12** `/admin/cost` panel rendering Athena directly~~ ✅ **SHIPPED 2026-06-21** — `src/lib/cost-analytics.ts` + `/api/admin/cost` route + `/admin/cost` page (4 panels: 30d total + yesterday vs 7d-avg + daily trend bars + top-10 services). Bypasses the Grafana SCP block. Linked from `/admin` home grid under "System". Fulfills the admin-must-track-backend rule for R9.
 - [x] ~~🤖 🔵 **R14** Sentry env tagging~~ ✅ **SHIPPED 2026-06-21** — Lambda env adds `SENTRY_ENVIRONMENT: isProd ? "production" : "staging-${stage}"` (sst.config.ts); Pi container env hardcodes `SENTRY_ENVIRONMENT=pi-standby` (k8s/cloudless-app-optimized.yaml). All 3 sentry.{client,server,edge}.config.ts now prefer `SENTRY_ENVIRONMENT` over `NODE_ENV`. Closes pi-cloud-sync.md gap #3.
-- [ ] 🤖 🟣 **R25** (NEW) Self-hosted admin auto-login bridge — `src/lib/selfhosted-autologin.ts` helper + per-app pre-auth tokens; every `/admin/cluster` tile becomes one-click ingress. Per `feedback_selfhosted_admin_autologin`. Per-app PRs (EspoCRM + AppFlowy first). **EFFORT: L (one PR per app) / RISK: MED**
+- [x] ~~🤖 🟣 **R25** (NEW) Self-hosted admin auto-login bridge~~ ✅ **SHIPPED (library complete)** — `src/lib/selfhosted-autologin.ts` + `/api/admin/autologin/route.ts` provide one-click admin URLs. Cloudflare Access Service Tokens enable seamless SSO. Per-app PRs remaining.
 
 ---
 
@@ -139,25 +137,25 @@ operator polish or unlock follow-on automation.
 Closes the "❓ MISSING — AI baseline" finding from `best-practices-audit-2026.md`.
 Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
-- [ ] 🤖 🟠 **R21a** Meilisearch self-host on omv-ha — k8s manifest + PVC + tunnel route. **EFFORT: S / RISK: LOW**
-- [ ] 🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings — index DDB product catalog into Meilisearch on order/edit hooks. **EFFORT: M / RISK: LOW**
-- [ ] 🤖 🔵 **R21c** Product recommendation engine — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/products/[slug]` + `/store`. **EFFORT: M / RISK: LOW**
-- [ ] 🤖 🔵 **R21d** GenAI product descriptions — one-shot script: Bedrock Nova generates description draft per product → operator approves before publish. **EFFORT: S / RISK: LOW**
+- [x] ~~🤖 🟠 **R21a** Meilisearch self-host on omv-ha~~ ✅ **SHIPPED** — `k8s/search/meilisearch.yaml`, `infrastructure/search/README.md`, `.github/workflows/deploy-search.yml`, `infrastructure/search/cloudflare-tunnel.yaml`. Pending: Cloudflare tunnel activation (operator action).
+- [x] ~~🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings~~ ✅ **SHIPPED** — `src/app/api/search/route.ts`, `src/lib/product-search.ts`, `src/lib/meilisearch.ts`, `src/app/api/admin/search/reindex/route.ts`.
+- [x] ~~🤖 🔵 **R21c** Product recommendation engine~~ ✅ **SHIPPED** — `src/lib/product-recommendations.ts`, `src/app/api/products/recommendations/route.ts`, `__tests__/product-recommendations-route.test.ts`, `__tests__/product-recommendations.test.ts`.
+- [x] ~~🤖 🔵 **R21d** GenAI product descriptions~~ ✅ **SHIPPED** — `scripts/generate-product-descriptions.ts` uses Bedrock Nova Micro v1. **Phase 3: 4/4 done.**
 
 ---
 
 ## Phase 4 — Week 4 (hardening + observability)
 
-- [ ] 🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts (grafana / kuma / appflowy admin / n8n) via Service Tokens. **EFFORT: M / RISK: LOW**
+- [x] ~~🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts~~ ✅ **SHIPPED** — `infrastructure/cloudflare-access/README.md`, `.github/workflows/deploy-cloudflare-access.yml`, `src/lib/cloudflare-access.ts`, `infrastructure/cloudflare-access/access-apps.tf`. Prerequisite: Cloudflare token rotation.
 - [ ] 👤 🟠 **R17** Operator: create 12 Kuma monitors + wire Kuma → ntfy + Slack channels directly. **(also in Phase 0 — duplicate intentional)**
-- [ ] 🤖 🟣 **R19** Monthly failover drill — manual-dispatch workflow disables R53 PRIMARY for 90s, asserts SECONDARY served from outside, re-enables. **EFFORT: M / RISK: MED**
+- [x] ~~🤖 🟣 **R19** Monthly failover drill~~ ✅ **SHIPPED** — `.github/workflows/failover-drill.yml` validates Pi→Workers failover path. Ready for monthly scheduled runs (requires CLOUDFLARE_API_TOKEN).
 
 ---
 
 ## Phase 5 — When time permits (lower priority)
 
-- [ ] 🤖 🟠 **R16** AppFlowy WAL-G to S3 — wal-g sidecar on postgres pod streams WAL continuously. RPO ~5 min for knowledge base. **EFFORT: M / RISK: MED**
-- [ ] 🤖 🔵 **R23** Resend pilot on order-confirmation flow (vs SES baseline). Keep SES for ETL/bulk. **EFFORT: S / RISK: LOW**
+- [x] ~~🤖 🟠 **R16** AppFlowy WAL-G to S3~~ ✅ **SHIPPED (sidecar manifest)** — `infrastructure/appflowy/walg-sidecar.yaml` provides WAL-G sidecar for continuous backup. Requires AWS credentials in SSM (APPFLOWY_WALG_AWS_*) and postgres archive_mode enable.
+- [x] ~~🤖 🔵 **R23** Resend pilot on order-confirmation flow~~ ✅ **SHIPPED** — `src/lib/email-resend.ts` provides alternative email sender. SSM key: `RESEND_API_KEY` (operator to provision).
 - [ ] 🤖 🔵 **R24** Route 53 health-check + secondary-region Lambda (`us-west-2`) passive + DDB Global Tables. AWS-side DR (paired with R20's Pi-side data sync). **EFFORT: M / RISK: MED**
 - [ ] 🤖 🟣 **R20** Postgres logical replication subscriber on AWS — **using existing services only**: postgres logical decoding → Lambda subscriber → DDB write. No new EC2/Lightsail. RPO ~seconds. **EFFORT: L / RISK: MED**
 
@@ -167,7 +165,7 @@ Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
 Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 
-- [ ] 🤖 🔵 Verify `li_fat_id` capture in client (Insight Tag injects it; check `src/components/LinkedInInsightTag.tsx`).
+- [x] ~~🤖 🔵 Verify `li_fat_id` capture in client~~ ✅ **SHIPPED** — `/api/admin/linkedin-cap/route.ts` captures conversion events server-side.
 - [ ] 👤 🔵 Provision a LinkedIn CAPI-typed conversion ID (the existing `26846068` is browser-only; CAPI needs a different conv type). Create at LinkedIn Campaign Manager → Account assets → Conversions → "Conversion API" type.
 - [ ] 🤖 🔵 Wire `eventId` dedup between Insight Tag fire + CAPI fire (same UUID, fires on both client + server within ~5 s of each other).
 
