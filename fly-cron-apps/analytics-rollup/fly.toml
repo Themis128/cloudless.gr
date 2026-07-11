@@ -1,0 +1,25 @@
+# Fly.io Cron App: Analytics Rollup
+# Replaces AWS Lambda: CronAnalyticsRollup
+
+app = "cloudless-cron-analytics"
+
+[build]
+  image = "node:20-alpine"
+
+[env]
+  CRON_ROUTE = "/api/cron/analytics-rollup"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+[[services.ports]]
+  port = 80
+
+[experimental]
+  cmd = ["node", "cron-runner.js"]
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "256mb"

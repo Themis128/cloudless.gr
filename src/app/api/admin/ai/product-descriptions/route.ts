@@ -179,7 +179,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         id: product.id,
         error: err instanceof Error ? err.message : String(err),
       });
-      console.error(`[ai/product-descriptions] Failed for ${product.id}:`, err);
+      // Sanitize product.id and err to prevent log injection
+      const safeId = String(product.id).replace(/[\x00-\x1F\x7F]/g, "");
+      const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+      console.error(`[ai/product-descriptions] Failed for ${safeId}:`, safeErr);
     }
   }
 
@@ -230,7 +233,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   // Fire-and-forget: update Stripe product metadata when configured.
   updateStripeDescriptions(descriptions).catch((err) => {
-    console.warn("[ai/product-descriptions] Stripe metadata update failed:", err);
+    // Sanitize err to prevent format string injection
+    const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+    console.warn("[ai/product-descriptions] Stripe metadata update failed:", safeErr);
   });
 
   return NextResponse.json({ applied });
@@ -251,7 +256,10 @@ async function updateStripeDescriptions(
   await Promise.allSettled(
     descriptions.map(({ id, description }) =>
       stripe.products.update(id, { description }).catch((err) => {
-        console.warn(`[ai/product-descriptions] Stripe update failed for ${id}:`, err);
+        // Sanitize id and err to prevent log injection
+        const safeId = String(id).replace(/[\x00-\x1F\x7F]/g, "");
+        const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+        console.warn(`[ai/product-descriptions] Stripe update failed for ${safeId}:`, safeErr);
       })
     )
   );

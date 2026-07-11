@@ -6,7 +6,8 @@
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { writeFile, unlink } from "fs/promises";
+import { writeFile, unlink, mkdtemp } from "fs/promises";
+import { tmpdir } from "os";
 
 const execAsync = promisify(exec);
 
@@ -14,7 +15,7 @@ const REGION = "us-east-1";
 const s3 = new S3Client({ region: REGION });
 
 // MIME type mapping
-const mimeTypes: Record<string, string> = {
+const mimeTypes = {
   css: "text/css",
   js: "application/javascript",
   json: "application/json",
@@ -30,9 +31,9 @@ const mimeTypes: Record<string, string> = {
   ico: "image/x-icon",
 };
 
-async function listS3Objects(bucket: string, prefix: string = ""): Promise<string[]> {
-  const keys: string[] = [];
-  let continuationToken: string | undefined;
+async function listS3Objects(bucket, prefix = "") {
+  const keys = [];
+  let continuationToken;
 
   do {
     const command = new ListObjectsV2Command({
@@ -55,15 +56,15 @@ async function listS3Objects(bucket: string, prefix: string = ""): Promise<strin
   return keys;
 }
 
-async function streamToBuffer(stream: any): Promise<Buffer> {
-  const chunks: Buffer[] = [];
+async function streamToBuffer(stream) {
+  const chunks = [];
   for await (const chunk of stream) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
   }
   return Buffer.concat(chunks);
 }
 
-async function migrateBucket(s3Bucket: string, r2Bucket: string, prefixes: string | string[]) {
+async function migrateBucket(s3Bucket, r2Bucket, prefixes) {
   const prefixArray = Array.isArray(prefixes) ? prefixes : [prefixes];
   
   for (const prefix of prefixArray) {
@@ -93,15 +94,18 @@ async function migrateBucket(s3Bucket: string, r2Bucket: string, prefixes: strin
         const ext = key.split(".").pop()?.toLowerCase() || "";
         const contentType = mimeTypes[ext] || "application/octet-stream";
         
-        const tempFile = `/tmp/migrate-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        // Create a unique temp directory to avoid race conditions and symlink attacks
+        const tempDir = await mkdtemp(`${tmpdir()}/migrate-s3-to-r2-`);
+        const safeKey = key.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const tempFile = `${tempDir}/${safeKey}`;
         await writeFile(tempFile, buffer);
         
         try {
           await execAsync(
             `npx wrangler r2 object put "${r2Bucket}/${key}" --file "${tempFile}" --content-type "${contentType}" --cache-control "public, max-age=31536000, immutable" --remote`
           );
-        } catch (e: any) {
-          console.error(`   Error uploading ${key}:`, e.message);
+        } catch (e) {
+          console.error(`   Error uploading key:`, e.message);
         } finally {
           await unlink(tempFile).catch(() => {});
         }
