@@ -151,11 +151,14 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
       await sendViaSES(payload, fromAddress);
       return;
     } catch (err) {
-      console.warn("[email-sender] SES failed, logging only:", err);
+      // Sanitize err to prevent format string injection (% specifiers)
+      const safeErr = err instanceof Error ? err.message.replace(/%/g, "") : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+      console.warn("[email-sender] SES failed, logging only:", safeErr);
     }
   }
 
   // 4. Log mode — no transport available (tests, unconfigured environments)
   console.log("[email-sender] No email transport configured. Skipping send.");
-  console.log("  To:", payload.to, "Subject:", payload.subject);
+  // Sanitize email fields to prevent log injection attacks
+  console.log("  To:", String(payload.to).replace(/[\x00-\x1F\x7F]/g, ""), "Subject:", String(payload.subject).replace(/[\x00-\x1F\x7F]/g, ""));
 }
