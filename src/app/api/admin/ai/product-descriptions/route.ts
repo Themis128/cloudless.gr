@@ -99,10 +99,9 @@ async function generateOneWorkersAI(product: StoreProduct): Promise<string | nul
     })) as { response?: string };
     return result.response ?? null;
   } catch (err) {
-    console.warn(
-      "[ai/product-descriptions] Workers AI failed, falling back to Bedrock:",
-      err instanceof Error ? err.message : err
-    );
+    // Sanitize err to prevent format string injection (% specifiers)
+    const safeErr = err instanceof Error ? err.message.replace(/%/g, "") : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+    console.warn("[ai/product-descriptions] Workers AI failed, falling back to Bedrock:", safeErr);
     return null;
   }
 }
