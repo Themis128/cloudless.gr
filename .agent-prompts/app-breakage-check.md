@@ -4,6 +4,7 @@ Goal:
 Run a read-only app breakage scan and summarize what is broken.
 
 Rules:
+
 - Do not modify files except generated transient build output from commands.
 - Do not run git add, git commit, git push.
 - Do not run kubectl apply/delete/restart.
@@ -13,6 +14,7 @@ Rules:
 - If a command fails, continue to the next check and summarize all failures.
 
 Checks to run:
+
 1. git status --short
 2. rm -rf .next
 3. pnpm run typecheck
@@ -30,6 +32,7 @@ Checks to run:
 15. if scripts/check_app_completion_basics.sh exists, run: bash scripts/check_app_completion_basics.sh || true
 
 Return:
+
 - pass/fail summary
 - exact failing commands
 - likely root cause

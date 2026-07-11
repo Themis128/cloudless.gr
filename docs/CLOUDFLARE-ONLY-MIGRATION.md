@@ -33,9 +33,11 @@ cloudless.gr / www.cloudless.gr
 ### Cloudflare Token (SSM)
 
 A Cloudflare API token with these permissions is required in SSM:
+
 - `/cloudless/production/CLOUDFLARE_API_TOKEN` (SecureString)
 
 Token scopes:
+
 | Permission | Type |
 |---|---|
 | Zone → Zone → **Read** | cloudless.gr zone |
@@ -60,6 +62,7 @@ gh workflow run setup-pi-tunnel.yml
 ```
 
 This creates:
+
 - Tunnel: `cloudless-pi` (in Cloudflare dashboard)
 - DNS: `pi-origin.cloudless.gr` → CNAME to tunnel
 - SSM secret: `/cloudless/production/TUNNEL_TOKEN` (for k8s)
