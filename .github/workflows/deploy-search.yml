@@ -37,6 +37,7 @@ env:
 jobs:
   deploy:
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
