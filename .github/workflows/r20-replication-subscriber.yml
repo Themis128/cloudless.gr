@@ -15,9 +15,14 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: r20-replication
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 

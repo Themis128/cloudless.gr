@@ -23,9 +23,14 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: failover-drill
+  cancel-in-progress: false
+
 jobs:
   failover_drill:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 

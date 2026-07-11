@@ -15,10 +15,15 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: r24-add-replicas
+  cancel-in-progress: false
+
 jobs:
   add-replicas:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.add_replicas == 'true' }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
