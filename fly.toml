@@ -8,9 +8,10 @@ app = "cloudless-proxy"
 
 primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
 
-[build]
-  # Build the proxy app from fly-proxy-app directory
-  context = "fly-proxy-app"
+ [build]
+   # Build the proxy app from fly-proxy-app directory
+   context = "fly-proxy-app"
+   dockerfile = "Dockerfile"
 
 [[services]]
   internal_port = 8080
