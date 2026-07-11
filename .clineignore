@@ -1,0 +1,88 @@
+# .clineignore - Exclude large/binary/generated files from Cline context
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+/build/
+/dist/
+/.next/
+/.open-next/
+/out/
+*.tsbuildinfo
+
+# Testing artifacts
+/coverage/
+/test-results/
+/playwright-report/
+
+# Environment variables (keep examples for reference)
+.env
+.env.*
+!.env.example
+
+# Lock files (keep pnpm-lock.yaml as it's committed)
+package-lock.json
+yarn.lock
+
+# Large data files
+*.csv
+*.xlsx
+*.sqlite
+*.parquet
+
+# Generated/minified code
+*.min.js
+*.min.css
+*.map
+
+# OS and IDE files
+.DS_Store
+.idea/
+*.swp
+*.swo
+
+# Debug logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build artifacts
+build-output*.txt
+
+# Local tooling and working state
+/.wrangler/
+/.pnpm-store/
+/.sst/
+/.playwright-cache/
+/.coverage-*
+/.monocart/
+/.agent_work/
+/.agent-memory/
+/.deepagents/
+/.pochi/
+
+# Test/debug scripts with credentials (source control already ignores these)
+create-dns-*.sh
+init-cloudless-services.sh
+test-cloudflare-token.py
+test-services.sh
+# Additional patterns from .gitignore
+/.dev.vars
+.ruff_cache/
+/__pycache__/
+/*.py[co]
+/*.pyo
+/kubectl
+/.env.local
+/.env.local.bak-*
+/recovery*.sh
+/ship-*.sh
+/.git-rewrite/
+/.agent_knowledge/
+/patches/coding-agent/
+/reports/
+/infrastructure/esp32-watchdog/esphome/secrets.yaml
