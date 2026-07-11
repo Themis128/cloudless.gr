@@ -30,6 +30,7 @@ Use this skill whenever answering architecture, deployment, failover, or infrast
 ## Recommended reasoning
 
 When suggesting changes:
+
 1. Identify whether the change affects AWS primary, Pi standby, self-hosted apps, or both.
 2. Check if the change touches persistent k3s storage.
 3. Check if the change requires secret rotation or new environment variables.

@@ -85,4 +85,3 @@ The manifest must document that persistent data uses the dedicated 120GB SSD on 
 Validate with:
 
     bash scripts/check_r21_meilisearch_k3s_storage.sh
-

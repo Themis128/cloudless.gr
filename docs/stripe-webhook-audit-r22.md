@@ -72,10 +72,12 @@ before the route returns 200.
 
 **Why this is OK today:** every handler currently runs in <3s. Adding
 a queue would buy us:
+
 - Sub-100ms 200 responses
 - Decoupling so a slow handler can't ever hit the 10s Stripe timeout
 
 But would cost:
+
 - A new AWS service (SQS) — banned by the same-hardware constraint
   in master-todo-list.md
 - A second Lambda for the queue consumer
