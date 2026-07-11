@@ -5,34 +5,44 @@
  *
  * Usage:
  *   AWS_PROFILE=default npx tsx scripts/migrate-dynamodb-to-d1.ts
- *
- * This script reads all data from DynamoDB and inserts it into D1.
  */
 
-import { DynamoDBClient, ScanCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { execSync } from "child_process";
+import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
+import { exec } from "child_process";
+import { writeFile, unlink } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
 const TABLES = [
-  { dynamo: "cloudless-user-profiles", d1: "user" },
-  { dynamo: "cloudless-session-tokens", d1: "session" },
-  { dynamo: "cloudless-stripe-transactions", d1: "stripe_transaction" },
-  { dynamo: "cloudless-admin-notifications", d1: "admin_notification" },
-  { dynamo: "cloudless-analytics-cache", d1: "analytics_cache" },
+  { dynamo: "cloudless-production-UserProfileTable-bctubzrn", d1: "user" },
+  { dynamo: "cloudless-production-SessionTokenStoreTable-mrbwcwzt", d1: "session" },
+  { dynamo: "cloudless-production-StripeTransactionsTable-nhtvnuew", d1: "stripe_transaction" },
+  { dynamo: "cloudless-production-AdminNotificationsTable-uuhacatu", d1: "admin_notification" },
+  { dynamo: "cloudless-production-AnalyticsCacheTable-fneaemkr", d1: "analytics_cache" },
 ];
 
 function getDynamoClient(): DynamoDBClient {
   return new DynamoDBClient({ region: REGION });
 }
 
+async function executeSql(sql: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    exec(
+      `echo "${sql}" | npx wrangler d1 execute user-auth-db --remote`,
+      { stdio: "inherit" },
+      (error) => (error ? reject(error) : resolve())
+    );
+  });
+}
+
 async function migrateTable(dynamoTable: string, d1Table: string): Promise<number> {
   const client = getDynamoClient();
   let count = 0;
 
-  // Scan all items (for large tables, use pagination)
   let ExclusiveStartKey: Record<string, unknown> | undefined;
-  
+
   do {
     const result = await client.send(
       new ScanCommand({
@@ -44,7 +54,6 @@ async function migrateTable(dynamoTable: string, d1Table: string): Promise<numbe
     const items = result.Items || [];
 
     for (const item of items) {
-      // Convert DynamoDB format to SQL
       const columns = Object.keys(item);
       const values = columns.map((col) => {
         const attr = item[col];
@@ -60,23 +69,17 @@ async function migrateTable(dynamoTable: string, d1Table: string): Promise<numbe
       });
 
       const sql = `INSERT OR REPLACE INTO ${d1Table} (${columns.join(", ")}) VALUES (${values.join(", ")})`;
-      
+
       try {
-        execSync(
-          `echo "${sql}" | npx wrangler d1 execute user-auth-db --command - --remote`,
-          { stdio: "inherit" }
-        );
+        await executeSql(sql);
         count++;
       } catch (err) {
-        console.error(`[migrate] Failed to insert item into ${d1Table}:`, err);
+        console.error(`[migrate] Failed to insert into ${d1Table}:`, err);
       }
     }
 
     ExclusiveStartKey = result.LastEvaluatedKey;
-    
-    // Rate limit to avoid throttling
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    
+    await new Promise((r) => setTimeout(r, 100));
   } while (ExclusiveStartKey);
 
   console.log(`[migrate] Migrated ${count} items from ${dynamoTable} to ${d1Table}`);
@@ -84,8 +87,7 @@ async function migrateTable(dynamoTable: string, d1Table: string): Promise<numbe
 }
 
 async function main() {
-  console.log("[migrate] Starting DynamoDB to D1 migration...");
-  console.log("[migrate] Make sure wrangler is configured with correct account and D1 database exists.\n");
+  console.log("[migrate] Starting DynamoDB to D1 migration...\n");
 
   let totalMigrated = 0;
 

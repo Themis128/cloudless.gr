@@ -1,0 +1,21 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["dynamodb:Scan", "dynamodb:Query", "dynamodb:GetItem"],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-UserProfileTable-bctubzrn",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-UserProfileTable-bctubzrn/index/*",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-SessionTokenStoreTable-mrbwcwzt",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-SessionTokenStoreTable-mrbwcwzt/index/*",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-StripeTransactionsTable-nhtvnuew",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-StripeTransactionsTable-nhtvnuew/index/*",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-AdminNotificationsTable-uuhacatu",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-AdminNotificationsTable-uuhacatu/index/*",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-AnalyticsCacheTable-fneaemkr",
+        "arn:aws:dynamodb:us-east-1:278585680617:table/cloudless-production-AnalyticsCacheTable-fneaemkr/index/*"
+      ]
+    }
+  ]
+}

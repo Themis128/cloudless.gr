@@ -167,6 +167,9 @@ async function fetchArtifact(runId, prefix, fileName) {
   if (!ct.includes("zip") && !ct.includes("octet-stream")) {
     throw new Error(`Unexpected artifact content-type: ${ct}`);
   }
+  // CodeQL #1802: Intermediate ZIP archive from trusted GitHub artifact sources only
+  // (validated by assertSafeFetchUrl + content-type check + magic header).
+  // The JSON content is sanitized via stripCtrl before writing to dashboard files.
   const buf = await readBoundedBody(zipRes, MAX_ARTIFACT_BYTES);
   if (buf.length < 4 || buf[0] !== 0x50 || buf[1] !== 0x4b) {
     throw new Error(`Artifact does not have a ZIP magic header`);
