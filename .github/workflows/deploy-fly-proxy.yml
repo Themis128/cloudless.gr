@@ -34,11 +34,11 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          cd fly-proxy-app
-          flyctl deploy --remote-only --app cloudless-proxy
+          flyctl deploy --app cloudless-proxy
         if: ${{ github.event.inputs.apply == 'true' }}
 
       - name: Show deployment status
         if: ${{ github.event.inputs.apply == 'true' }}
         run: |
           flyctl status --app cloudless-proxy
+          flyctl ips list --app cloudless-proxy
