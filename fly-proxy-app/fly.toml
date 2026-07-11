@@ -1,5 +1,5 @@
 # Fly.io Proxy Configuration for cloudless.gr
-# Free Tier: Automatic HA Failover (AWS CloudFront → Pi/k3s)
+# Free Tier: Automatic HA Failover (Cloudflare Workers → Pi/k3s)
 #
 # This config deploys a reverse proxy app that handles failover.
 # FastAPI proxy with automatic failover to Pi backup.
@@ -22,7 +22,8 @@ primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
 
 [env]
   # Backends to proxy to
-  PRIMARY_HOST = "d3k7muo3c6lw6s.cloudfront.net"
+  # Cloudflare Workers (free tier) - primary
+  PRIMARY_HOST = "cloudless.gr"
   FALLBACK_HOST = "omv.tail8eb71.ts.net"
 
 [[vm]]
