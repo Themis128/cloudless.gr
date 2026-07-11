@@ -146,6 +146,10 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"]
     },
+    "agent-deploy-dashboard": {
+      "type": "http",
+      "url": "https://agent-deploy-dashboard-mcp.onrender.com/mcp"
+    },
     "brave-search": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-brave-search"],
