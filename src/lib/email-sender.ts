@@ -157,5 +157,6 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
 
   // 4. Log mode — no transport available (tests, unconfigured environments)
   console.log("[email-sender] No email transport configured. Skipping send.");
-  console.log("  To:", payload.to, "Subject:", payload.subject);
+  // Sanitize email fields to prevent log injection attacks
+  console.log("  To:", String(payload.to).replace(/[\x00-\x1F\x7F]/g, ""), "Subject:", String(payload.subject).replace(/[\x00-\x1F\x7F]/g, ""));
 }

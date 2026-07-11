@@ -1,6 +1,6 @@
 """Fly.io HA Failover Proxy for cloudless.gr.
 
-Primary: AWS CloudFront (d3k7muo3c6lw6s.cloudfront.net)
+Primary: Cloudflare Workers (cloudless.gr)
 Fallback: Pi k3s via Tailscale (omv.tail8eb71.ts.net)
 """
 import os
@@ -11,7 +11,7 @@ import asyncio
 app = FastAPI()
 
 # Backend configuration
-PRIMARY_HOST = os.getenv("PRIMARY_HOST", "d3k7muo3c6lw6s.cloudfront.net")
+PRIMARY_HOST = os.getenv("PRIMARY_HOST", "cloudless.gr")
 FALLBACK_HOST = os.getenv("FALLBACK_HOST", "omv.tail8eb71.ts.net")
 
 # Health cache with 30s TTL
