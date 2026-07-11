@@ -125,6 +125,33 @@
       "command": "playwright-mcp",
       "args": ["--headless", "--viewport-size", "1280x720", "--port", "3001"],
       "autoStart": false
+    },
+    "brand-system": {
+      "command": "npx",
+      "args": ["-y", "@brandsystem/mcp"],
+      "env": {
+        "BRAND_SYSTEM_API_KEY": "${BRAND_SYSTEM_API_KEY}",
+        "BRAND_SYSTEM_SITE": "https://cloudless.gr"
+      }
+    },
+    "postiz": {
+      "command": "npx",
+      "args": ["-y", "@postiz/mcp"],
+      "env": {
+        "POSTIZ_API_URL": "https://postiz.cloudless.gr",
+        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}"
+      }
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
     }
   }
 }
