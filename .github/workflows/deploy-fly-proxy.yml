@@ -23,14 +23,22 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Create Fly.io app (if not exists)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl apps create --name cloudless-proxy --org personal || true
+        if: ${{ github.event.inputs.apply == 'true' }}
+
       - name: Deploy Fly.io proxy
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           cd fly-proxy-app
           flyctl deploy --remote-only --app cloudless-proxy
-        if: ${{ github.event.inputs.apply != 'false' }}
+        if: ${{ github.event.inputs.apply == 'true' }}
 
       - name: Show deployment status
+        if: ${{ github.event.inputs.apply == 'true' }}
         run: |
-          flyctl status --app cloudless-proxy || echo "App not yet deployed"
+          flyctl status --app cloudless-proxy
