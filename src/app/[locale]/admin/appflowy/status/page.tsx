@@ -215,7 +215,7 @@ export default function AppFlowyStatusPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/status");
+      const res = await fetchWithAuth("/api/admin/appflowy/status");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: StatusResponse = ((((await res.json()) as any)) as any);
       setData(json);

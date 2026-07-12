@@ -35,7 +35,7 @@ export default function AdminServicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/services");
+      const res = await fetchWithAuth("/api/admin/appflowy/services");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as { services: CloudlessService[] };
       setItems(data.services ?? []);
@@ -89,7 +89,7 @@ export default function AdminServicesPage() {
         .filter(Boolean);
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/notion/services", {
+      const res = await fetchWithAuth("/api/admin/appflowy/services", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -112,7 +112,7 @@ export default function AdminServicesPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/notion/services?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/appflowy/services?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

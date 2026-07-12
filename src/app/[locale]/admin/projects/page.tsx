@@ -66,7 +66,7 @@ export default function AdminProjectsPage() {
     setLoadingProjects(true);
     setErrorProjects(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects");
+      const res = await fetchWithAuth("/api/admin/appflowy/projects");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as any;
       setProjects(data.projects ?? []);
@@ -81,7 +81,7 @@ export default function AdminProjectsPage() {
     setLoadingTasks(true);
     setErrorTasks(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/tasks");
+      const res = await fetchWithAuth("/api/admin/appflowy/tasks");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as any;
       setTasks(data.tasks ?? []);
@@ -108,7 +108,7 @@ export default function AdminProjectsPage() {
   async function updateProjectStatus(id: string, status: ProjectStatus) {
     setUpdatingId(id);
     try {
-      await fetchWithAuth("/api/admin/notion/projects", {
+      await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),
@@ -122,7 +122,7 @@ export default function AdminProjectsPage() {
   async function updateTaskStatus(id: string, status: TaskStatus) {
     setUpdatingId(id);
     try {
-      await fetchWithAuth("/api/admin/notion/tasks", {
+      await fetchWithAuth("/api/admin/appflowy/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),

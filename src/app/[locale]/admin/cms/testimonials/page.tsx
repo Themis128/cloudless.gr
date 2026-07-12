@@ -32,7 +32,7 @@ export default function AdminTestimonialsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/testimonials");
+      const res = await fetchWithAuth("/api/admin/appflowy/testimonials");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as { testimonials: Testimonial[] };
       setItems(data.testimonials ?? []);
@@ -80,7 +80,7 @@ export default function AdminTestimonialsPage() {
       const { pageId, ...input } = form;
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/notion/testimonials", {
+      const res = await fetchWithAuth("/api/admin/appflowy/testimonials", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -103,7 +103,7 @@ export default function AdminTestimonialsPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/notion/testimonials?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/appflowy/testimonials?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

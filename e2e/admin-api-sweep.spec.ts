@@ -490,90 +490,80 @@ test.describe("Admin API route sweep (authenticated)", () => {
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/analytics", async ({ request }) => {
+  test("GET /api/admin/appflowy/analytics", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/analytics");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/analytics");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/blog", async ({ request }) => {
+  test("GET /api/admin/appflowy/blog", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/blog");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/blog");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/comments", async ({ request }) => {
+  test("GET /api/admin/appflowy/docs", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/comments");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/docs");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/docs", async ({ request }) => {
+  test("GET /api/admin/appflowy/projects", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/docs");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/projects");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/projects", async ({ request }) => {
+  test("GET /api/admin/appflowy/search", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/projects");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/search");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/search", async ({ request }) => {
+  test("GET /api/admin/appflowy/status", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/search");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/status");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/status", async ({ request }) => {
+  test("GET /api/admin/appflowy/submissions", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/status");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/submissions");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired
     // 5xx = handler crash
     expect(r.status()).toBeLessThan(500);
   });
-  test("GET /api/admin/notion/submissions", async ({ request }) => {
+  test("GET /api/admin/appflowy/tasks", async ({ request }) => {
     const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/submissions");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
-    // We're proving auth is being enforced (401) or the route is wired (non-5xx).
-    // 401/403 = auth gate working correctly with mock token
-    // 2xx/4xx = route wired
-    // 5xx = handler crash
-    expect(r.status()).toBeLessThan(500);
-  });
-  test("GET /api/admin/notion/tasks", async ({ request }) => {
-    const a = await adminRequest(request);
-    const r = await a.get("/api/admin/notion/tasks");
-    // In dev without AWS/Notion creds, many handlers 500 — that's fine.
+    const r = await a.get("/api/admin/appflowy/tasks");
+    // In dev without AppFlowy creds, many handlers 500 — that's fine.
     // We're proving auth is being enforced (401) or the route is wired (non-5xx).
     // 401/403 = auth gate working correctly with mock token
     // 2xx/4xx = route wired

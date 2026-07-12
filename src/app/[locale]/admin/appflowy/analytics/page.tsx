@@ -69,7 +69,7 @@ export default function AnalyticsDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`/api/admin/notion/analytics?days=${days}`);
+      const res = await fetchWithAuth(`/api/admin/appflowy/analytics?days=${days}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as AnalyticsSummary;
       setSummary(data);

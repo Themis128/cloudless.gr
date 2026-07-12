@@ -49,7 +49,7 @@ export default function AppFlowySubmissionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/submissions");
+      const res = await fetchWithAuth("/api/admin/appflowy/submissions");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as {
         submissions: Submission[];
@@ -71,7 +71,7 @@ export default function AppFlowySubmissionsPage() {
   const updateStatus = async (pageId: string, status: StatusValue) => {
     setUpdating(pageId);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/submissions", {
+      const res = await fetchWithAuth("/api/admin/appflowy/submissions", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId, status }),

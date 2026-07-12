@@ -126,8 +126,8 @@ export default function ProjectsPage() {
     try {
       const url =
         filterStatus === "all"
-          ? "/api/admin/notion/projects"
-          : `/api/admin/notion/projects?status=${encodeURIComponent(filterStatus)}`;
+          ? "/api/admin/appflowy/projects"
+          : `/api/admin/appflowy/projects?status=${encodeURIComponent(filterStatus)}`;
       const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as { projects: Project[] };
@@ -147,7 +147,7 @@ export default function ProjectsPage() {
   const updateStatus = async (pageId: string, status: ProjectStatus) => {
     setUpdating(pageId);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects", {
+      const res = await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId, status }),
@@ -164,7 +164,7 @@ export default function ProjectsPage() {
   const updateProgress = async (pageId: string, progress: number) => {
     setUpdating(pageId);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects", {
+      const res = await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId, progress }),
@@ -182,7 +182,7 @@ export default function ProjectsPage() {
     if (!newName.trim()) return;
     setCreating(true);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/projects", {
+      const res = await fetchWithAuth("/api/admin/appflowy/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

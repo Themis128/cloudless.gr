@@ -48,7 +48,7 @@ export default function SubmissionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/submissions?limit=100");
+      const res = await fetchWithAuth("/api/admin/appflowy/submissions?limit=100");
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as any;
         throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
@@ -70,7 +70,7 @@ export default function SubmissionsPage() {
   const updateStatus = async (pageId: string, status: "New" | "In Review" | "Done") => {
     setUpdating(pageId);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/submissions", {
+      const res = await fetchWithAuth("/api/admin/appflowy/submissions", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId, status }),

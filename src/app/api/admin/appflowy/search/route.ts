@@ -1,6 +1,5 @@
 /**
- * GET /api/admin/notion/search?q=...&limit=20
- * Backed by AppFlowy workspace search (self-hosted Notion replacement).
+ * /api/admin/appflowy/search — backed by AppFlowy
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
