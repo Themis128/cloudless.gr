@@ -25,8 +25,8 @@
 # the apex/www DNS cutover (replacing the existing proxied record with the LB).
 #
 # Auth: CLOUDFLARE_API_TOKEN env, else SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
-#   Token scopes required: Zone:Read, Load Balancing\:Monitors and Pools\:Edit,
-#   Load Balancing\:Load Balancers\:Edit, DNS\:Edit (for the cutover).
+#   Token scopes required: Zone:Read, Load Balancing\Monitors and Pools\Edit,
+#   Load Balancing\Load Balancers\Edit, DNS\Edit (for the cutover).
 #
 set -uo pipefail
 
@@ -38,7 +38,7 @@ HOSTS=("cloudless.gr" "www.cloudless.gr")
 # Origins for Cloudflare-only deployment (no CloudFront)
 # Worker endpoints - the Worker itself handles all routing
 WORKER_ORIGIN="cloudless-gr.baltzakis-themis.workers.dev"  # Cloudflare Worker endpoint
-PI_ORIGIN="omv.tail8eb71.ts.net"                 # Pi/k3s via Tailscale Funnel (443)
+PI_ORIGIN="github-omv.tail4ecae1.ts.net"   # Pi/k3s via Tailscale Funnel (443)
 # For pure Cloudflare mode, we use the Worker directly (no AWS CloudFront)
 # The LB will have: AWS primary -> Pi standby (both served by Worker/Pi respectively)
 HEALTH_PATH="/api/health"
