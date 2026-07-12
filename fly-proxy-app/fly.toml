@@ -25,7 +25,7 @@ primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
   # Cloudflare Workers (free tier) - primary
   PRIMARY_HOST = "cloudless.gr"
   # Tailscale Funnel endpoint on omv-ha standby node
-  FALLBACK_HOST = "omv-ha.tail8eb71.ts.net"
+  FALLBACK_HOST = "github-omv.tail4ecae1.ts.net"
 
 [[vm]]
   cpu_kind = "shared"
