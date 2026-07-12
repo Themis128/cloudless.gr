@@ -9,9 +9,7 @@ import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client } from "./_r2-config.mjs";
-
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
+import { getS3Client, BUCKET } from "./_r2-config.mjs";
 const ssm = new SSMClient({ region: process.env.AWS_REGION || "us-east-1" });
 // R2 S3-compatible client (uses shared config helper)
 const s3 = getS3Client();

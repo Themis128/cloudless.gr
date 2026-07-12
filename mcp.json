@@ -122,8 +122,8 @@
       "autoStart": false
     },
     "playwright": {
-      "command": "playwright-mcp",
-      "args": ["--headless", "--viewport-size", "1280x720", "--port", "3001"],
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp"],
       "autoStart": false
     },
     "brand-system": {

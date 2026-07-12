@@ -36,6 +36,13 @@ Worker deployed to: `https://fully-migrated-serverless-stack.baltzakis-themis.wo
 | cloudless-analytics | EEUR | - | - |
 | datalake-bucket | EEUR | - | - |
 
+## 📊 ETL Migration Status (Fixed)
+All 12 `-to-r2.mjs` ETL scripts now correctly target `datalake-bucket`:
+- `stripe-to-r2.mjs`, `sentry-to-r2.mjs`, `gsc-to-r2.mjs`, `appflowy-to-r2.mjs`
+- `clients-to-r2.mjs`, `espocrm-to-r2.mjs`, `postiz-to-r2.mjs`
+- `compute-rfm-churn-to-r2.mjs`, `n8n-to-r2.mjs`, `portals-to-r2.mjs`
+- `aws-cost-to-r2.mjs`, `linkedin-ads-to-r2.mjs`
+
 ## 📝 Next Steps
 
 1. **Enable Email Routing** in Cloudflare Dashboard:

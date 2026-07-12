@@ -1,34 +1,44 @@
-# Fly.io Proxy Configuration for cloudless.gr
-# Free Tier: Automatic HA Failover (Cloudflare → Pi/k3s)
+# fly.toml app configuration file generated for cloudless-proxy on 2026-07-12T03:57:30+03:00
 #
-# This config deploys a reverse proxy app that handles failover.
-# See fly-proxy-app/ directory for the proxy implementation.
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
 app = "cloudless-proxy"
+primary_region = "fra"
 
-primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
+# Auto-start/stop and HTTPS settings for HA failover
+auto_start_machines = true
+auto_stop_machines = true
+min_machines_running = 0
+force_https = true
 
-[build]
-  # Build the proxy app from fly-proxy-app directory
-  context = "fly-proxy-app"
-  dockerfile = "Dockerfile"
+[env]
+FALLBACK_HOST = "omv.tail8eb71.ts.net"
+PRIMARY_HOST = "cloudless.gr"
 
 [[services]]
   internal_port = 8080
   protocol = "tcp"
-  
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    
-  [[services.http_options]]
-    health_check_path = "/health"
-    health_check_interval = "30s"
 
-[env]
-  # Backends to proxy to
-  PRIMARY_HOST = "cloudless.gr"
-  FALLBACK_HOST = "omv.tail8eb71.ts.net"
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    x_forwarded_for = true
+    xfp = true
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    restart_limit = 0
+    timeout = "2s"
+    port = 8080
+    type = "http"
+    method = "GET"
+    path = "/health"
 
 [[vm]]
   cpu_kind = "shared"

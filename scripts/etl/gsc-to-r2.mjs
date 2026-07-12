@@ -9,9 +9,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { SignJWT, importPKCS8 } from "jose";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client } from "./_r2-config.mjs";
-
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
+import { getS3Client, BUCKET } from "./_r2-config.mjs";
 const SITE = process.env.GSC_SITE_URL || "https://cloudless.gr/";
 const EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");

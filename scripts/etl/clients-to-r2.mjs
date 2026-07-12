@@ -12,10 +12,9 @@ import { ParquetWriter, ParquetReader, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync, writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { getS3Client } from "./_r2-config.mjs";
+import { getS3Client, BUCKET } from "./_r2-config.mjs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID || "us-east-1_1Bq3Mpqer";
 
 const cognito = new CognitoIdentityProviderClient({ region: REGION });
