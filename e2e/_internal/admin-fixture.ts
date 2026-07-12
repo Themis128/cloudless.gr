@@ -14,6 +14,11 @@ export async function adminRequest(request: APIRequestContext) {
       }),
     delete: (url: string) =>
       request.delete(url, { headers: { authorization: `Bearer ${ADMIN_TOKEN}` } }),
+    put: (url: string, data?: unknown) =>
+      request.put(url, {
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
+        data: data ?? {},
+      }),
     patch: (url: string, data?: unknown) =>
       request.patch(url, {
         headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
