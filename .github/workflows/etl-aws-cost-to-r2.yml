@@ -22,7 +22,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   AWS_REGION: us-east-1
-  BUCKET: cloudless-analytics
+  BUCKET: datalake-bucket
 
 jobs:
   etl:
