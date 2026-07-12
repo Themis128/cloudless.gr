@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+
 const VOICE_BRIEF_URL = "http://localhost/api/admin/voice-brief";
 
 // ---------------------------------------------------------------------------
@@ -30,10 +31,15 @@ vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
 vi.mock("@/lib/agent-voice-brief", () => ({
   runVoiceBriefAgent: (...a: unknown[]) => mockRunAgent(...a),
 }));
+
+const mockReadVoiceBrief = vi.fn();
+
 vi.mock("@/lib/voice-brief-store", () => ({
   VOICE_BRIEF_SSM_NAME: "/cloudless/production/VOICE_BRIEF_LATEST",
+  readVoiceBrief: (...a: unknown[]) => mockReadVoiceBrief(...a),
   persistVoiceBrief: (...a: unknown[]) => mockPersist(...a),
 }));
+
 vi.stubGlobal("fetch", mockFetch);
 
 vi.mock("@aws-sdk/client-ssm", async () => {
@@ -114,9 +120,11 @@ describe("GET /api/admin/voice-brief", () => {
     mockSSMSend.mockResolvedValue({
       Parameter: { Value: JSON.stringify(MOCK_BRIEF) },
     });
-  });
+    // Read from D1 returns the brief (so we don't fall through to SSM mock)
+    mockReadVoiceBrief.mockResolvedValue(MOCK_BRIEF);
+   });
 
-  it("returns 401 without token", async () => {
+   it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(new NextRequest(VOICE_BRIEF_URL));
     expect(res.status).toBe(401);
@@ -128,10 +136,9 @@ describe("GET /api/admin/voice-brief", () => {
     expect(res.status).toBe(403);
   });
 
-  it("returns brief from SSM when present", async () => {
-    mockSSMSend.mockResolvedValue({
-      Parameter: { Value: JSON.stringify(MOCK_BRIEF) },
-    });
+  it("returns brief from readVoiceBrief when present", async () => {
+    // readVoiceBrief returns the brief (could be from D1 or SSM internally)
+    mockReadVoiceBrief.mockResolvedValue(MOCK_BRIEF);
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(adminReq(VOICE_BRIEF_URL));
     expect(res.status).toBe(200);
@@ -142,8 +149,9 @@ describe("GET /api/admin/voice-brief", () => {
     });
   });
 
-  it("returns null brief when SSM parameter missing", async () => {
-    mockSSMSend.mockRejectedValue(new Error("ParameterNotFound"));
+  it("returns null brief when readVoiceBrief returns null", async () => {
+    // readVoiceBrief returns null (no brief available)
+    mockReadVoiceBrief.mockResolvedValue(null);
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(adminReq(VOICE_BRIEF_URL));
     expect(res.status).toBe(200);
