@@ -10,9 +10,8 @@ import { ParquetWriter, ParquetReader, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync, writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { getS3Client } from "./_r2-config.mjs";
+import { getS3Client, BUCKET } from "./_r2-config.mjs";
 
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 // R2 S3-compatible client (uses shared config helper)
 const s3 = getS3Client();
 

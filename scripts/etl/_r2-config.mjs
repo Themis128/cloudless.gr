@@ -20,4 +20,4 @@ export function getS3Client() {
 	return new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
 }
 
-export const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics";
+export const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";

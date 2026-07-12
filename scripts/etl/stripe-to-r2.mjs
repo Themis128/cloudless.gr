@@ -9,12 +9,11 @@ import Stripe from "stripe";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client } from "./_r2-config.mjs";
+import { getS3Client, BUCKET } from "./_r2-config.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // R2 S3-compatible client (uses shared config helper)
 const s3 = getS3Client();
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const OUTPUT_KEY = "lake/transactions/transactions.parquet";
 const TMP_FILE = "/tmp/transactions.parquet";
 

@@ -26,6 +26,12 @@ STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
 # ─── Agent Authentication ─────────────────────────────────────────────
 AGENT_AUTH_TOKEN=your-agent-auth-token-here
 
+# ─── Cloudflare R2 (for ETL scripts) ─────────────────────────────────────
+CLOUDFLARE_ACCOUNT_ID=your-cloudflare-account-id
+CF_R2_ACCESS_KEY_ID=your-r2-access-key-id
+CF_R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+ANALYTICS_BUCKET=datalake-bucket
+
 # ─── Optional: External Services ───────────────────────────────────────────
 # LOCAL_LLM_BASE_URL=http://localhost:11434
 # LANGGRAPH_URL=http://localhost:8123
