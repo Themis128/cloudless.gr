@@ -11,7 +11,7 @@ import { readFileSync, unlinkSync } from "fs";
 import { getS3Client } from "./_r2-config.mjs";
 
 const PAGE_SIZE = 100;
-const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";
+const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const BASE = (process.env.ESPOCRM_BASE_URL || "").replace(/\/$/, "");
 const KEY = process.env.ESPOCRM_API_KEY;
 

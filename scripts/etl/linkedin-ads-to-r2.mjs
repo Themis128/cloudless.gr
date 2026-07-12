@@ -11,7 +11,7 @@ import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 import { getS3Client } from "./_r2-config.mjs";
 
-const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";
+const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const ACCOUNT = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
 const REGION = process.env.AWS_REGION || "us-east-1";
 const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
