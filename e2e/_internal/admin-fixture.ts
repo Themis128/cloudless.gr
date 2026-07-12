@@ -1,6 +1,7 @@
 import { test as base, expect, type APIRequestContext } from "@playwright/test";
 
-export const ADMIN_TOKEN = "e2e-admin-token-do-not-use-in-prod";
+// Use environment variable for admin token in production, fallback to mock token for local dev
+export const ADMIN_TOKEN = process.env.E2E_ADMIN_TOKEN ?? "e2e-admin-token-do-not-use-in-prod";
 
 /** Returns request context that always sends the E2E admin Bearer token. */
 export async function adminRequest(request: APIRequestContext) {
