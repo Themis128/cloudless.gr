@@ -1,0 +1,79 @@
+name: ETL — LinkedIn Ads to R2 Data Lake
+
+# Migrated version using R2 S3-compatible endpoint.
+# Set CLOUDFLARE_ACCOUNT_ID and CF_R2_ACCESS_KEY_ID/CF_R2_SECRET_ACCESS_KEY secrets
+# to enable R2 target. Otherwise falls back to AWS S3.
+
+on:
+  schedule:
+    - cron: '50 3 * * *'  # daily 03:50 UTC (between Stripe + clients)
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/etl-linkedin-ads-to-r2.yml"
+      - "scripts/etl/linkedin-ads-to-r2.mjs"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: us-east-1
+  BUCKET: datalake-bucket
+  LINKEDIN_AD_ACCOUNT_ID: "512642510"
+
+jobs:
+  linkedin-sync:
+    name: Sync LinkedIn campaign insights → R2 Parquet
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: scripts/etl
+
+      - name: Run LinkedIn Ads ETL to R2
+        run: node scripts/etl/linkedin-ads-to-r2.mjs
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_AD_ACCOUNT_ID: ${{ env.LINKEDIN_AD_ACCOUNT_ID }}
+          ANALYTICS_BUCKET: ${{ env.BUCKET }}
+
+      - name: Ping Kuma on success
+        if: success()
+        env:
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_ETL_LINKEDIN }}
+        run: |
+          [ -z "$KUMA_PUSH_TOKEN" ] && exit 0
+          curl -fsS --max-time 10 --retry 3 \
+            "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=etl-linkedin+r2+ok" \
+            > /dev/null || true
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          KUMA_PUSH_TOKEN: ${{ secrets.KUMA_PUSH_ETL_LINKEDIN }}
+        run: |
+          [ -n "$KUMA_PUSH_TOKEN" ] && \
+            curl -fsS --max-time 10 --retry 3 \
+              "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=etl-linkedin+r2+failed" \
+              > /dev/null || true
+          [ -n "$SLACK_WEBHOOK_URL" ] && \
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "text": ":x: ETL — LinkedIn Ads to R2 failed See https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+              }' || true
