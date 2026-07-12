@@ -27,11 +27,11 @@ const schema = new ParquetSchema({
 	currency: { type: "UTF8" },
 });
 
-function isoDate(d: Date): string {
+function isoDate(d) {
 	return d.toISOString().slice(0, 10);
 }
 
-function shapeResults(results: any[]): any[] {
+function shapeResults(results) {
 	const rows = [];
 	for (const day of results) {
 		const cost_date = day.TimePeriod?.Start;
@@ -53,7 +53,7 @@ function shapeResults(results: any[]): any[] {
 	return rows;
 }
 
-async function fetchDailyCost(): Promise<any[]> {
+async function fetchDailyCost() {
 	const end = new Date();
 	const start = new Date();
 	start.setUTCDate(start.getUTCDate() - LOOKBACK_DAYS);
@@ -67,7 +67,7 @@ async function fetchDailyCost(): Promise<any[]> {
 	return out.ResultsByTime || [];
 }
 
-async function main(): Promise<void> {
+async function main() {
 	console.log(`Fetching ${LOOKBACK_DAYS}d of AWS Cost Explorer data...`);
 	const results = await fetchDailyCost();
 	const rows = shapeResults(results);
