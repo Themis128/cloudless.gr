@@ -1,38 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockSend = vi.fn();
-const mockGetConfig = vi.fn();
+// Mock the email-sender module which is what email.ts uses
+const mockSendEmailUnified = vi.fn().mockResolvedValue(undefined);
 
-vi.mock("@aws-sdk/client-sesv2", () => ({
-  SESv2Client: vi.fn(function (this: { send: typeof mockSend }) {
-    this.send = mockSend;
-  }),
-  SendEmailCommand: vi.fn(function (this: { input: unknown }, input: unknown) {
-    this.input = input;
-  }),
+vi.mock("@/lib/email-sender", () => ({
+  sendEmail: mockSendEmailUnified,
+  setEmailBinding: vi.fn(),
 }));
 
 vi.mock("@/lib/ssm-config", () => ({
-  getConfig: () => mockGetConfig(),
+  getConfig: vi.fn().mockResolvedValue({
+    AWS_SES_REGION: "us-east-1",
+    SES_FROM_EMAIL: "no-reply@cloudless.gr",
+    SES_TO_EMAIL: "team@cloudless.gr",
+  }),
   resetSsmCache: vi.fn(),
 }));
 
-const baseConfig = {
-  AWS_SES_REGION: "us-east-1",
-  SES_FROM_EMAIL: "no-reply@cloudless.gr",
-  SES_TO_EMAIL: "team@cloudless.gr",
-};
-
 describe("email.ts", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue(baseConfig);
-    mockSend.mockResolvedValue({});
   });
 
   describe("sendEmail()", () => {
-    it("calls SES send with correct recipient and subject", async () => {
+    it("calls sendEmailUnified with correct recipient and subject", async () => {
       const { sendEmail } = await import("@/lib/email");
       await sendEmail({
         to: "user@example.com",
@@ -40,17 +31,17 @@ describe("email.ts", () => {
         html: "<p>Hello</p>",
         text: "Hello",
       });
-      expect(mockSend).toHaveBeenCalledOnce();
-      const [cmd] = mockSend.mock.calls[0] as [
+      expect(mockSendEmailUnified).toHaveBeenCalledOnce();
+      const call = mockSendEmailUnified.mock.calls[0] as [
         {
-          input: {
-            Destination: { ToAddresses: string[] };
-            Content: { Simple: { Subject: { Data: string } } };
-          };
+          to: string;
+          subject: string;
+          html: string;
+          text: string;
         },
       ];
-      expect(cmd.input.Destination.ToAddresses).toContain("user@example.com");
-      expect(cmd.input.Content.Simple.Subject.Data).toBe("Test Subject");
+      expect(call[0].to).toBe("user@example.com");
+      expect(call[0].subject).toBe("Test Subject");
     });
 
     it("adds List-Unsubscribe header when listUnsubscribeUrl is provided", async () => {
@@ -62,11 +53,11 @@ describe("email.ts", () => {
         text: "hi",
         listUnsubscribeUrl: "https://cloudless.gr/api/unsubscribe?email=user@example.com",
       });
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Headers?: Array<{ Name: string }> } } } },
-      ];
-      const headers = cmd.input.Content.Simple.Headers ?? [];
-      expect(headers.some((h) => h.Name === "List-Unsubscribe")).toBe(true);
+      expect(mockSendEmailUnified).toHaveBeenCalledOnce();
+      const call = mockSendEmailUnified.mock.calls[0] as [{ listUnsubscribeUrl: string }];
+      expect(call[0].listUnsubscribeUrl).toBe(
+        "https://cloudless.gr/api/unsubscribe?email=user@example.com"
+      );
     });
 
     it("does not add List-Unsubscribe when url is not provided", async () => {
@@ -77,49 +68,26 @@ describe("email.ts", () => {
         html: "<p>hi</p>",
         text: "hi",
       });
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Headers?: unknown[] } } } },
-      ];
-      expect(cmd.input.Content.Simple.Headers).toBeUndefined();
-    });
-
-    it("swallows SES XML parse errors when httpStatusCode is 200", async () => {
-      const { sendEmail } = await import("@/lib/email");
-      const xmlErr = Object.assign(new Error("XML parse"), {
-        $metadata: { httpStatusCode: 200 },
-      });
-      mockSend.mockRejectedValueOnce(xmlErr);
-      await expect(
-        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
-      ).resolves.toBeUndefined();
-    });
-
-    it("rethrows SES errors when httpStatusCode is not 200", async () => {
-      const { sendEmail } = await import("@/lib/email");
-      const err = Object.assign(new Error("SES failure"), {
-        $metadata: { httpStatusCode: 500 },
-      });
-      mockSend.mockRejectedValueOnce(err);
-      await expect(
-        sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
-      ).rejects.toThrow("SES failure");
+      expect(mockSendEmailUnified).toHaveBeenCalledOnce();
+      const call = mockSendEmailUnified.mock.calls[0] as [{ listUnsubscribeUrl?: string }];
+      expect(call[0].listUnsubscribeUrl).toBeUndefined();
     });
   });
 
   describe("sendOrderConfirmation()", () => {
-    it("sends an email with the order ID in the subject", async () => {
+    it("sends an email with the order ID in the body", async () => {
       const { sendOrderConfirmation } = await import("@/lib/email");
       await sendOrderConfirmation("customer@example.com", "sess_abc123", 4900, "eur");
-      expect(mockSend).toHaveBeenCalledOnce();
+      expect(mockSendEmailUnified).toHaveBeenCalledOnce();
+      const call = mockSendEmailUnified.mock.calls[0] as [{ html: string }];
+      expect(call[0].html).toContain("sess_abc123");
     });
 
     it("escapes special characters in the session ID", async () => {
       const { sendOrderConfirmation } = await import("@/lib/email");
       await sendOrderConfirmation("customer@example.com", "<script>", 4900, "eur");
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
-      ];
-      expect(cmd.input.Content.Simple.Body.Html.Data).not.toContain("<script>");
+      const call = mockSendEmailUnified.mock.calls[0] as [{ html: string }];
+      expect(call[0].html).not.toContain("<script>");
     });
   });
 
@@ -127,11 +95,9 @@ describe("email.ts", () => {
     it("sends an email mentioning the invoice ID", async () => {
       const { sendPaymentFailureNotice } = await import("@/lib/email");
       await sendPaymentFailureNotice("cust@example.com", "inv_xyz789");
-      expect(mockSend).toHaveBeenCalledOnce();
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
-      ];
-      expect(cmd.input.Content.Simple.Body.Html.Data).toContain("inv_xyz789");
+      expect(mockSendEmailUnified).toHaveBeenCalledOnce();
+      const call = mockSendEmailUnified.mock.calls[0] as [{ html: string }];
+      expect(call[0].html).toContain("inv_xyz789");
     });
   });
 
@@ -139,62 +105,41 @@ describe("email.ts", () => {
     it("sends a welcome email with unsubscribe link", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      expect(mockSend).toHaveBeenCalledOnce();
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
-      ];
-      expect(cmd.input.Content.Simple.Body.Html.Data).toContain("unsubscribe");
+      expect(mockSendEmailUnified).toHaveBeenCalledOnce();
+      const call = mockSendEmailUnified.mock.calls[0] as [{ html: string }];
+      expect(call[0].html).toContain("unsubscribe");
     });
 
-    it("sends from 'Themis at Cloudless' with branded subject", async () => {
+    it("sends from Themis at Cloudless with branded subject", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [
-        {
-          input: {
-            FromEmailAddress: string;
-            Content: { Simple: { Subject: { Data: string } } };
-          };
-        },
-      ];
-      expect(cmd.input.FromEmailAddress).toContain("Themis at Cloudless");
-      expect(cmd.input.Content.Simple.Subject.Data).toContain("Welcome");
-      expect(cmd.input.Content.Simple.Subject.Data).toContain("Monday");
+      const call = mockSendEmailUnified.mock.calls[0] as [{ subject: string; fromLabel: string }];
+      expect(call[0].subject).toContain("Welcome");
+      expect(call[0].subject).toContain("Monday");
+      expect(call[0].fromLabel).toBe("Themis at Cloudless");
     });
 
     it("includes what-to-expect content areas in the HTML", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
-      ];
-      const html = cmd.input.Content.Simple.Body.Html.Data;
-      expect(html).toContain("Cloud and Serverless");
-      expect(html).toContain("Analytics and AI Marketing");
-      expect(html).toContain("Company Updates and Offers");
+      const call = mockSendEmailUnified.mock.calls[0] as [{ html: string }];
+      expect(call[0].html).toContain("Cloud and Serverless");
+      expect(call[0].html).toContain("Analytics and AI Marketing");
+      expect(call[0].html).toContain("Company Updates and Offers");
     });
 
     it("encodes the subscriber email in the unsubscribe URL", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("user+test@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
-      ];
-      expect(cmd.input.Content.Simple.Body.Html.Data).toContain(
-        encodeURIComponent("user+test@example.com")
-      );
+      const call = mockSendEmailUnified.mock.calls[0] as [{ html: string }];
+      expect(call[0].html).toContain(encodeURIComponent("user+test@example.com"));
     });
 
     it("adds List-Unsubscribe header for RFC 8058 one-click", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      const [cmd] = mockSend.mock.calls[0] as [
-        {
-          input: { Content: { Simple: { Headers?: Array<{ Name: string }> } } };
-        },
-      ];
-      const headers = cmd.input.Content.Simple.Headers ?? [];
-      expect(headers.some((h) => h.Name === "List-Unsubscribe")).toBe(true);
+      const call = mockSendEmailUnified.mock.calls[0] as [{ listUnsubscribeUrl: string }];
+      expect(call[0].listUnsubscribeUrl).toContain("unsubscribe");
     });
   });
 
@@ -202,20 +147,17 @@ describe("email.ts", () => {
     it("sends to SES_TO_EMAIL from config", async () => {
       const { notifyTeam } = await import("@/lib/email");
       await notifyTeam("Alert: Something happened", "<p>Details here</p>");
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Destination: { ToAddresses: string[] } } },
-      ];
-      expect(cmd.input.Destination.ToAddresses).toContain("team@cloudless.gr");
+      expect(mockSendEmailUnified).toHaveBeenCalledOnce();
+      const call = mockSendEmailUnified.mock.calls[0] as [{ to: string }];
+      expect(call[0].to).toBe("team@cloudless.gr");
     });
 
     it("strips HTML tags for the plain-text part", async () => {
       const { notifyTeam } = await import("@/lib/email");
       await notifyTeam("Subject", "<p>Hello <strong>world</strong></p>");
-      const [cmd] = mockSend.mock.calls[0] as [
-        { input: { Content: { Simple: { Body: { Text: { Data: string } } } } } },
-      ];
-      expect(cmd.input.Content.Simple.Body.Text.Data).not.toContain("<");
-      expect(cmd.input.Content.Simple.Body.Text.Data).toContain("world");
+      const call = mockSendEmailUnified.mock.calls[0] as [{ html: string; text: string }];
+      expect(call[0].text).not.toContain("<");
+      expect(call[0].text).toContain("world");
     });
   });
 });

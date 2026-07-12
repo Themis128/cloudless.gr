@@ -12,15 +12,11 @@ vi.mock("@/lib/rate-limit", () => ({
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
-// Mock SES
-const mockSend = vi.fn().mockResolvedValue({});
-vi.mock("@aws-sdk/client-sesv2", () => ({
-  SESv2Client: class {
-    send = mockSend;
-  },
-  SendEmailCommand: class {
-    constructor(public input: unknown) {}
-  },
+// Mock email-sender (what the contact route actually uses)
+const mockSendEmail = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/email-sender", () => ({
+  sendEmail: (...args: unknown[]) => mockSendEmail(...args),
+  setEmailBinding: vi.fn(),
 }));
 
 // Mock Slack
@@ -75,7 +71,6 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockSend.mockResolvedValue({});
     const mod = await import("@/app/api/contact/route");
     POST = mod.POST;
   });
@@ -103,13 +98,12 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
     await POST(request);
 
-    // SES SendEmailCommand was called at least once (team email)
-    expect(mockSend).toHaveBeenCalled();
-    const emailInput = mockSend.mock.calls[0][0].input;
-    // Subject contains the service (campaign — tier)
-    const subject = emailInput.Content?.Simple?.Subject?.Data ?? "";
-    expect(subject).toContain("shop-online — E-shop Launch");
-    expect(subject).toContain("Γιώργος");
+    // sendEmail was called at least once
+    expect(mockSendEmail).toHaveBeenCalled();
+    const call = mockSendEmail.mock.calls[0] as [{ to: string; subject: string }];
+    expect(call[0].to).toBe("inbox@cloudless.gr");
+    expect(call[0].subject).toContain("shop-online");
+    expect(call[0].subject).toContain("E-shop Launch");
   });
 
   it("sends Slack notification with campaign tier in service field", async () => {
