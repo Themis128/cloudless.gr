@@ -80,6 +80,15 @@ routes:
     status: active
     description: n8n workflow automation
 
+  # HA Failover - Tailscale Funnel endpoint on omv-ha
+  - hostname: omv-ha.tail8eb71.ts.net
+    service: tailscale-funnel
+    port: 443
+    healthPath: /api/health
+    node: omv-ha
+    status: pending
+    description: HA failover gateway (must be configured manually - see infrastructure/omv-ha/tailscale-funnel-setup.md)
+
 # Tunnel configuration
 tunnel:
   id: e977a490-58c5-4fdb-9155-86832e3e636a
@@ -93,3 +102,10 @@ nodes:
     tailscaleIp: 100.113.41.119
     role: primary
     storage: ssd
+  # Note: omv-ha is a k3s agent only (not control-plane)
+  # Traffic to omv-ha.tail8eb71.ts.net is served via Tailscale Funnel on the standby
+  omv-ha:
+    ip: 192.168.1.130
+    tailscaleIp: 100.125.175.60  # From CLUSTER-MAP (tailscale IP for monitoring)
+    role: standby-agent
+    storage: null

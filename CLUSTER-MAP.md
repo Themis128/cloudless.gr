@@ -181,3 +181,17 @@
 - **kube-prom-stack-values.yaml:** Updated with nodeSelector settings for Prometheus, Alertmanager, and kube-state-metrics to persist through future Helm upgrades
 
 **Generated:** `kubectl get pods -A -o wide` + `kubectl get svc -A` + `helm list -A`
+
+## Tailscale Funnel Failover
+
+omv-ha serves as a Tailscale Funnel gateway for HA failover:
+- **Funnel endpoint:** `omv-ha.tail8eb71.ts.net` (HTTPS 443)
+- **Proxies to:** omv's Traefik (192.168.1.128:80) when primary is down
+- **Configuration:** See `infrastructure/omv-ha/tailscale-funnel-setup.md`
+- **Current state:** Funnel not yet configured on omv-ha - needs manual setup
+
+**Failover flow:**
+1. Primary: Cloudflare Worker (`cloudless.gr`) - always serves if healthy
+2. Worker failure: HA watchdog detects unhealthy `/api/health` on primary
+3. DNS switch: Cloudflare DNS records point to `omv-ha.tail8eb71.ts.net`
+4. Traffic: Requests → omv-ha Funnel → omv Traefik → cloudless app (if omv is up)
