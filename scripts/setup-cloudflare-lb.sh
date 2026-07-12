@@ -135,7 +135,7 @@ for host in "${HOSTS[@]}"; do
     type:"https", method:"GET", path:$path, description:$desc,
     expected_codes:"200", interval:60, retries:2, timeout:5,
     follow_redirects:false, allow_insecure:false,
-    header:[{ "Name":"Host", "Value":$host }]
+    header:{ Host:[$host] }
   }')"
   if [ "$APPLY" = "1" ]; then
     if [ -n "$mon_id" ]; then
