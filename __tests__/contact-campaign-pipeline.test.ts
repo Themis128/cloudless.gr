@@ -2,7 +2,7 @@
 /**
  * Tests the full /api/contact pipeline with campaign tier context
  * (the payload shape produced by the inline TierTable form).
- * Verifies SES, Slack, EspoCRM, and Notion all receive the tier data.
+ * Verifies email, Slack, EspoCRM, and Notion all receive the tier data.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -17,6 +17,10 @@ const mockSendEmail = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/email-sender", () => ({
   sendEmail: (...args: unknown[]) => mockSendEmail(...args),
   setEmailBinding: vi.fn(),
+}));
+vi.mock("@/lib/email", () => ({
+  sendEmail: (...args: unknown[]) => mockSendEmail(...args),
+  sendContactAcknowledgment: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock Slack
@@ -56,6 +60,9 @@ vi.mock("@/lib/meta-capi", () => ({
 vi.mock("@/lib/activecampaign", () => ({
   enrollLeadInAutomation: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/analytics", () => ({
+  trackS3Event: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Campaign tier payload (matches what TierTable inline form submits)
 const CAMPAIGN_PAYLOAD = {
@@ -89,7 +96,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     expect(data.eventId).toBeTruthy();
   });
 
-  it("sends SES email with campaign/tier context in subject and body", async () => {
+  it("sends email with campaign/tier context in subject and body", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -158,7 +165,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
     expect(mockCreateDeal).toHaveBeenCalledWith(
       expect.objectContaining({
-        dealname: expect.stringContaining("Γιώργος Παπαδόπουλος"),
+        dealname: expect.stringContaining("Γιώργος Παπαδόπουllος"),
         dealstage: "Prospecting",
         lead_source: "contact_form",
         description: expect.stringContaining("E-shop Launch"),

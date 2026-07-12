@@ -120,11 +120,10 @@ describe("GET /api/admin/voice-brief", () => {
     mockSSMSend.mockResolvedValue({
       Parameter: { Value: JSON.stringify(MOCK_BRIEF) },
     });
-    // Read from D1 returns the brief (so we don't fall through to SSM mock)
     mockReadVoiceBrief.mockResolvedValue(MOCK_BRIEF);
-   });
+  });
 
-   it("returns 401 without token", async () => {
+  it("returns 401 without token", async () => {
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(new NextRequest(VOICE_BRIEF_URL));
     expect(res.status).toBe(401);
@@ -137,7 +136,6 @@ describe("GET /api/admin/voice-brief", () => {
   });
 
   it("returns brief from readVoiceBrief when present", async () => {
-    // readVoiceBrief returns the brief (could be from D1 or SSM internally)
     mockReadVoiceBrief.mockResolvedValue(MOCK_BRIEF);
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(adminReq(VOICE_BRIEF_URL));
@@ -150,7 +148,6 @@ describe("GET /api/admin/voice-brief", () => {
   });
 
   it("returns null brief when readVoiceBrief returns null", async () => {
-    // readVoiceBrief returns null (no brief available)
     mockReadVoiceBrief.mockResolvedValue(null);
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(adminReq(VOICE_BRIEF_URL));
