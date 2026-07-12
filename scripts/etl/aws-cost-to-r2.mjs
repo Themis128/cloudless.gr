@@ -12,7 +12,7 @@ import { readFileSync, unlinkSync } from "fs";
 import { getS3Client } from "./_r2-config.mjs";
 
 const LOOKBACK_DAYS = Number.parseInt(process.env.AWS_COST_LOOKBACK_DAYS || "60", 10);
-const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";
+const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 
 // Cost Explorer is a global service — uses us-east-1
 const ce = new CostExplorerClient({ region: "us-east-1" });

@@ -10,7 +10,7 @@ import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 import { getS3Client } from "./_r2-config.mjs";
 
-const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";
+const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const TOKEN = process.env.SENTRY_AUTH_TOKEN;
 const ORG = process.env.SENTRY_ORG || "baltzakisthemiscom";
 const PROJECT = process.env.SENTRY_PROJECT || "cloudless-gr";
