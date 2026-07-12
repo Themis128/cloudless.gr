@@ -1,24 +1,40 @@
 /**
- * /api/admin/notion/projects — backed by AppFlowy (self-hosted Notion replacement).
- *
- * AppFlowy doesn't have a typed "Projects database" — projects are Document
- * pages inside a workspace. The route maps AppFlowy views to the existing
- * Project shape so the admin UI keeps working unchanged.
- *
- * Falls back to 503 when AppFlowy is not configured rather than crashing.
+ * /api/admin/appflowy/projects — backed by AppFlowy (self-hosted Notion replacement).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
   listAllWorkspaces,
   listWorkspaceViews,
-  createPage,
   AppFlowyNotConfiguredError,
 } from "@/lib/appflowy";
-import type { AppFlowyView } from "@/lib/appflowy";
-import type { Project, ProjectStatus } from "@/lib/notion-projects";
+export type { AppFlowyView } from "@/lib/appflowy";
 
-function viewToProject(v: AppFlowyView): Project {
+type ProjectStatus = "Planning" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
+
+interface Project {
+  id: string;
+  name: string;
+  status: ProjectStatus;
+  priority: string;
+  type: string;
+  owner: string;
+  startDate: string;
+  dueDate: string;
+  description: string;
+  budget: number | null;
+  progress: number;
+  tags: string[];
+  url: string;
+}
+
+function viewToProject(v: {
+  view_id: string;
+  name: string;
+  layout: string;
+  created_at: string;
+  last_edited_time: string;
+}): Project {
   return {
     id: v.view_id,
     name: v.name,
@@ -71,7 +87,7 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = (((await request.json()) as any)) as Record<string, unknown>;
+    body = ((await request.json()) as any);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -84,32 +100,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  try {
-    const workspaceId = await getPrimaryWorkspaceId();
-    if (!workspaceId) {
-      return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 503 });
-    }
-
-    const views = await listWorkspaceViews(workspaceId);
-    const rootId = views[0]?.view_id;
-    if (!rootId) {
-      return NextResponse.json({ error: "Workspace has no root view" }, { status: 503 });
-    }
-
-    const view = await createPage(workspaceId, rootId, name);
-    return NextResponse.json({ id: view.view_id }, { status: 201 });
-  } catch (err) {
-    if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 503 });
-    }
-    return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
-  }
+  return NextResponse.json({ error: "Create via AppFlowy UI" }, { status: 501 });
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (!auth.ok) return auth.response;
-
   // AppFlowy doesn't have a status field on pages — acknowledge the call gracefully.
   return NextResponse.json({
     ok: true,

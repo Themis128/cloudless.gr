@@ -35,7 +35,7 @@ export default function AdminBlogPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/blog");
+      const res = await fetchWithAuth("/api/admin/appflowy/blog");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as any;
       setPosts(data.posts ?? []);

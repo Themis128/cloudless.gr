@@ -14,7 +14,7 @@ export default function AdminDocsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/docs");
+      const res = await fetchWithAuth("/api/admin/appflowy/docs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as any;
       setDocs(data.docs ?? []);

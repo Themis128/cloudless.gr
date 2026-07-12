@@ -5,9 +5,9 @@
  *   /admin/cms/services
  *   /admin/cms/testimonials
  *
- * These admin pages depend on the matching /api/admin/notion/{...} routes
+ * These admin pages depend on the matching /api/admin/appflowy/{...} routes
  * (which now have unit tests). This spec exercises the page render path
- * and graceful-error behavior when the Notion DB env vars are missing —
+ * and graceful-error behavior when the AppFlowy env vars are missing —
  * common in CI when admin credentials aren't injected.
  *
  * Tests skip when E2E admin credentials aren't configured.

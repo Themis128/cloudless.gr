@@ -113,7 +113,7 @@ export default function TasksKanbanPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/tasks");
+      const res = await fetchWithAuth("/api/admin/appflowy/tasks");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (((((await res.json()) as any)) as any)) as { tasks: Task[] };
       setTasks(data.tasks ?? []);
@@ -132,7 +132,7 @@ export default function TasksKanbanPage() {
   const updateStatus = async (pageId: string, status: TaskStatus) => {
     setUpdating(pageId);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/tasks", {
+      const res = await fetchWithAuth("/api/admin/appflowy/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId, status }),
@@ -151,7 +151,7 @@ export default function TasksKanbanPage() {
     setUpdating("bulk");
     try {
       const promises = Array.from(bulkSelected).map((id) =>
-        fetchWithAuth("/api/admin/notion/tasks", {
+        fetchWithAuth("/api/admin/appflowy/tasks", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pageId: id, status: bulkStatus }),
@@ -173,7 +173,7 @@ export default function TasksKanbanPage() {
     if (!newTask.trim()) return;
     setCreating(true);
     try {
-      const res = await fetchWithAuth("/api/admin/notion/tasks", {
+      const res = await fetchWithAuth("/api/admin/appflowy/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

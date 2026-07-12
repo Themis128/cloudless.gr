@@ -1,12 +1,12 @@
 /**
- * Notion-backed CMS coverage.
+ * AppFlowy-backed CMS coverage.
  *
- * Covers all 8 Notion databases surfaced by the app:
+ * Covers all CMS databases surfaced by the app:
  *   blog, docs, testimonials, services, faqs, case-studies
  *   (analytics, calendar, comments, reports, forms — admin-only, not tested here)
  *
- * When Notion env vars are unset (default in CI / local dev) every database
- * falls back to its static array. Both modes (Notion + fallback) pass because
+ * When AppFlowy env vars are unset (default in CI / local dev) every database
+ * falls back to its static array. Both modes (AppFlowy + fallback) pass because
  * tests assert on structural shape, not exact content.
  *
  * API contract tests hit the public JSON endpoints directly via `request`
@@ -35,7 +35,7 @@ const FIRST_STATIC_CASE_SLUG = staticCaseStudies[0]?.slug;
 // Blog
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /blog", () => {
+test.describe("AppFlowy CMS — /blog", () => {
   test("renders the blog header and search input", async ({ page }) => {
     await page.goto("/blog");
     await expect(
@@ -64,7 +64,7 @@ test.describe("Notion CMS — /blog", () => {
   });
 });
 
-test.describe("Notion CMS — /blog/[slug]", () => {
+test.describe("AppFlowy CMS — /blog/[slug]", () => {
   test.skip(!FIRST_STATIC_POST_SLUG, "no static posts configured");
 
   test("static fallback post renders an article heading", async ({ page }) => {
@@ -81,12 +81,12 @@ test.describe("Notion CMS — /blog/[slug]", () => {
   });
 });
 
-test.describe("Notion CMS — /api/blog/posts contract", () => {
+test.describe("AppFlowy CMS — /api/blog/posts contract", () => {
   test("returns a non-empty array of posts with required fields", async ({ request }) => {
     const res = await request.get("/api/blog/posts");
     expect(res.status()).toBe(200);
     const body = await res.json();
-    // API wraps posts in { posts: [...] } when Notion is configured or in static fallback
+    // API wraps posts in { posts: [...] } when AppFlowy is configured or in static fallback
     const posts = Array.isArray(body) ? body : body.posts;
     expect(Array.isArray(posts)).toBe(true);
     expect(posts.length).toBeGreaterThan(0);
@@ -100,7 +100,7 @@ test.describe("Notion CMS — /api/blog/posts contract", () => {
 // Docs
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /docs", () => {
+test.describe("AppFlowy CMS — /docs", () => {
   test("renders the docs header and search input", async ({ page }) => {
     await page.goto("/docs");
     await page.waitForLoadState("networkidle");
@@ -126,7 +126,7 @@ test.describe("Notion CMS — /docs", () => {
   });
 });
 
-test.describe("Notion CMS — /api/docs contract", () => {
+test.describe("AppFlowy CMS — /api/docs contract", () => {
   test("returns an array (empty or populated) with required fields", async ({ request }) => {
     const res = await request.get("/api/docs");
     expect(res.status()).toBe(200);
@@ -146,15 +146,15 @@ test.describe("Notion CMS — /api/docs contract", () => {
 // Testimonials
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /api/testimonials contract", () => {
+test.describe("AppFlowy CMS — /api/testimonials contract", () => {
   test("returns an array with required fields", async ({ request }) => {
     const res = await request.get("/api/testimonials");
     expect(res.status()).toBe(200);
     const body = await res.json();
     const items = Array.isArray(body) ? body : body.testimonials;
     expect(Array.isArray(items)).toBe(true);
-    // When Notion is unreachable, static fallback may be empty if the
-    // route fell through to a notion-error branch; check structure only.
+    // When AppFlowy is unreachable, static fallback may be empty if the
+    // route fell through to an error branch; check structure only.
     if (items.length > 0) {
       const t = items[0];
       expect(typeof t.id).toBe("string");
@@ -176,7 +176,7 @@ test.describe("Notion CMS — /api/testimonials contract", () => {
   });
 });
 
-test.describe("Notion CMS — testimonials on homepage", () => {
+test.describe("AppFlowy CMS — testimonials on homepage", () => {
   test("homepage renders at least one testimonial quote", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
@@ -194,7 +194,7 @@ test.describe("Notion CMS — testimonials on homepage", () => {
 // Services
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /services page", () => {
+test.describe("AppFlowy CMS — /services page", () => {
   test("renders the services heading", async ({ page }) => {
     await page.goto("/services");
     await page.waitForLoadState("networkidle");
@@ -206,7 +206,7 @@ test.describe("Notion CMS — /services page", () => {
   test("lists service cards on the services page", async ({ page }) => {
     await page.goto("/services");
     await page.waitForLoadState("networkidle");
-    // When Notion is unreachable, the page renders static fallback data.
+    // When AppFlowy is unreachable, the page renders static fallback data.
     // Assert the page has rendered service-related content.
     const heading = page.getByRole("heading", { level: 1 });
     await expect(heading).toBeVisible({ timeout: 10000 });
@@ -216,7 +216,7 @@ test.describe("Notion CMS — /services page", () => {
   });
 });
 
-test.describe("Notion CMS — /api/services contract", () => {
+test.describe("AppFlowy CMS — /api/services contract", () => {
   test("returns a non-empty array with required fields", async ({ request }) => {
     const res = await request.get("/api/services");
     expect(res.status()).toBe(200);
@@ -248,7 +248,7 @@ test.describe("Notion CMS — /api/services contract", () => {
 // FAQs
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /api/faqs contract", () => {
+test.describe("AppFlowy CMS — /api/faqs contract", () => {
   test("returns a non-empty array with required fields", async ({ request }) => {
     const res = await request.get("/api/faqs");
     expect(res.status()).toBe(200);
@@ -287,7 +287,7 @@ test.describe("Notion CMS — /api/faqs contract", () => {
 // Case Studies
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /case-studies page", () => {
+test.describe("AppFlowy CMS — /case-studies page", () => {
   test("renders the case studies heading", async ({ page }) => {
     await page.goto("/case-studies");
     await page.waitForLoadState("networkidle");
@@ -297,14 +297,14 @@ test.describe("Notion CMS — /case-studies page", () => {
   test("lists case studies on the case-studies page", async ({ page }) => {
     await page.goto("/case-studies");
     await page.waitForLoadState("networkidle");
-    // When Notion is unreachable, the page may show static fallback or
+    // When AppFlowy is unreachable, the page may show static fallback or
     // an empty state. Assert the page has rendered without crashing.
     const heading = page.getByRole("heading", { level: 1 });
     await expect(heading).toBeVisible({ timeout: 10000 });
   });
 });
 
-test.describe("Notion CMS — /case-studies/[slug]", () => {
+test.describe("AppFlowy CMS — /case-studies/[slug]", () => {
   test.skip(!FIRST_STATIC_CASE_SLUG, "no static case studies configured");
 
   test("static fallback case study renders an article heading", async ({ page }) => {
@@ -321,7 +321,7 @@ test.describe("Notion CMS — /case-studies/[slug]", () => {
   });
 });
 
-test.describe("Notion CMS — /api/case-studies contract", () => {
+test.describe("AppFlowy CMS — /api/case-studies contract", () => {
   test("returns an array with required fields", async ({ request }) => {
     const res = await request.get("/api/case-studies");
     expect(res.status()).toBe(200);
@@ -352,7 +352,7 @@ test.describe("Notion CMS — /api/case-studies contract", () => {
 
   test("slug endpoint returns a case study or 404 when not found", async ({ request }) => {
     const res = await request.get(`/api/case-studies/${FIRST_STATIC_CASE_SLUG}`);
-    // When Notion is configured but unreachable, the endpoint may return 404.
+    // When AppFlowy is configured but unreachable, the endpoint may return 404.
     // When static fallback is available, returns 200 with content.
     if (res.status() === 200) {
       const body = await res.json();
