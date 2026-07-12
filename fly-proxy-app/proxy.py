@@ -12,7 +12,7 @@ app = FastAPI()
 
 # Backend configuration
 PRIMARY_HOST = os.getenv("PRIMARY_HOST", "cloudless.gr")
-FALLBACK_HOST = os.getenv("FALLBACK_HOST", "omv.tail8eb71.ts.net")
+FALLBACK_HOST = os.getenv("FALLBACK_HOST", "github-omv.tail4ecae1.ts.net")
 
 # Health cache with 30s TTL
 health_cache = {"healthy": True, "timestamp": 0}

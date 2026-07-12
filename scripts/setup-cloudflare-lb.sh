@@ -12,7 +12,7 @@
 # Topology built (per hostname: cloudless.gr, www.cloudless.gr):
 #   monitor  cloudless-health-<host>   GET https://.../api/health, expect 200
 #   pool     cl-aws-<host>             origin = CloudFront distro  (Host: <host>)
-#   pool     cl-pi-<host>              origin = omv.tail8eb71.ts.net (Host: <host>)
+#   pool     cl-pi-<host>              origin = github-omv.tail4ecae1.ts.net (Host: <host>)
 #   lb       <host>                    default_pools [aws, pi], fallback pi
 #
 #   steering_policy "off" => Cloudflare serves the first HEALTHY pool in
@@ -135,7 +135,7 @@ for host in "${HOSTS[@]}"; do
     type:"https", method:"GET", path:$path, description:$desc,
     expected_codes:"200", interval:60, retries:2, timeout:5,
     follow_redirects:false, allow_insecure:false,
-    header:{ Host:[$host] }
+    header:[{ "Name":"Host", "Value":$host }]
   }')"
   if [ "$APPLY" = "1" ]; then
     if [ -n "$mon_id" ]; then
@@ -161,7 +161,7 @@ for host in "${HOSTS[@]}"; do
       name:$name, enabled:true, minimum_origins:1,
       monitor: ($mon | select(length>0)),
       origins:[ { name:$oname, address:$addr, enabled:true, weight:1,
-                  header:{ Host:[$host] } } ]
+                  header:[{ "Name":"Host", "Value":$host }] } ]
     } | with_entries(select(.value!=null and .value!=""))')"
     if [ "$APPLY" = "1" ]; then
       [ -n "$mon_id" ] || die "no monitor id for ${host}; cannot create pool ${pname}"

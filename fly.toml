@@ -13,7 +13,7 @@ min_machines_running = 0
 force_https = true
 
 [env]
-FALLBACK_HOST = "omv.tail8eb71.ts.net"
+FALLBACK_HOST = "github-omv.tail4ecae1.ts.net"
 PRIMARY_HOST = "cloudless.gr"
 
 [[services]]
