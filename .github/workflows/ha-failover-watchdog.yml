@@ -7,12 +7,13 @@ name: HA failover watchdog
 #
 # Endpoints:
 #   Primary: cloudless-gr.baltzakis-themis.workers.dev (Cloudflare Worker)
-#   Standby: omv.tail8eb71.ts.net (Pi via Tailscale Funnel)
+#   Standby: omv-ha.tail8eb71.ts.net (omv-ha via Tailscale Funnel)
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   PRIMARY_TARGET: "cloudless-gr.baltzakis-themis.workers.dev"
-  STANDBY_TARGET: "omv.tail8eb71.ts.net"
+  # Tailscale Funnel endpoint on omv-ha standby node
+  STANDBY_TARGET: "omv-ha.tail8eb71.ts.net"
   HEALTH_URL: "https://cloudless-gr.baltzakis-themis.workers.dev/api/health"
   HEALTH_HOST_HEADER: "cloudless.gr"
   HEALTH_TIMEOUT_SEC: "15"
