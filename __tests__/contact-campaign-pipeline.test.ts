@@ -165,7 +165,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
     expect(mockCreateDeal).toHaveBeenCalledWith(
       expect.objectContaining({
-        dealname: expect.stringContaining("Γιώργος Παπαδόπουllος"),
+        dealname: expect.stringContaining("Γιώργος Παπαδόπουλος"),
         dealstage: "Prospecting",
         lead_source: "contact_form",
         description: expect.stringContaining("E-shop Launch"),
