@@ -287,6 +287,9 @@ spec:
 
   ingress:
   - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
     - namespaceSelector: {}
     ports:
     - protocol: TCP

@@ -1,7 +1,7 @@
 """Fly.io HA Failover Proxy for cloudless.gr.
 
 Primary: Cloudflare Workers (cloudless.gr)
-Fallback: Pi k3s via Tailscale (omv.tail8eb71.ts.net)
+Fallback: Pi k3s via Tailscale (github-omv.tail4ecae1.ts.net)
 """
 import os
 

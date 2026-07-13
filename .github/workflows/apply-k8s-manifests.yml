@@ -1,6 +1,8 @@
 name: Apply k8s Manifests
-
-# Purpose: Apply k8s manifests for the Pi standby cluster via Tailscale tunnel.
+ 
+# Purpose: Apply k8s manifests for the Pi standby cluster via Tailscale SSH.
+# Uses SSH to run kubectl commands directly on the Pi, avoiding network timeouts
+# when GitHub Actions runners try to reach the k3s API over Tailscale.
 # Trigger: push to main on k8s/** paths, or push to infrastructure/tailscale/**, manual dispatch.
 # Paging: posts result to issue #382.
 on:
@@ -10,65 +12,109 @@ on:
       - "k8s/**"
       - "infrastructure/tailscale/**"
   workflow_dispatch:
-
+ 
 permissions:
-  id-token: write  # OIDC for Tailscale auth
   contents: read
   issues: write
-
+  id-token: write
+ 
 concurrency:
   group: k8s-manifests
   cancel-in-progress: true
-
+ 
 jobs:
   apply:
     name: Apply k8s manifests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      PI_HOST: "100.74.191.58"
+      PI_USER: "tbaltzakis"
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
-
+ 
       - name: Connect to tailnet
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Configure kubectl
+ 
+      - name: Check OMV_SSH_KEY secret is set
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-
-      - name: Apply k8s manifests
+          if [ -z "${{ secrets.OMV_SSH_KEY }}" ]; then
+            echo "::error::OMV_SSH_KEY secret is not set."
+            echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
+            echo "  GitHub → Settings → Secrets → Actions → New repository secret"
+            echo "  Name: OMV_SSH_KEY"
+            echo "  Value: cat ~/.ssh/id_ed25519 (on the Pi)"
+            exit 1
+          fi
+          echo "OMV_SSH_KEY is set — proceeding"
+ 
+      - name: Install SSH key and apply manifests
         run: |
-          echo "=== Applying k8s manifests ==="
-          kubectl apply -f k8s/cloudless-app-optimized.yaml --validate=false
-          kubectl apply -f k8s/ingressroute-manage.yaml --validate=false
-          kubectl apply -f infrastructure/tailscale/ingresses.yaml --validate=false
-          echo "=== Done ==="
-
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+ 
+          echo "=== Applying k8s manifests via SSH ==="
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" \
+            "cd /home/$PI_USER/cloudless.gr && \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml apply -f k8s/cloudless-app-optimized.yaml --validate=false && \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml apply -f k8s/ingressroute-manage.yaml --validate=false && \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml apply -f infrastructure/tailscale/ingresses.yaml --validate=false && \
+             echo '=== Done ==='"
+ 
       - name: Verify NetworkPolicy
         run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+ 
           echo "=== NetworkPolicy status ==="
-          kubectl get networkpolicy -n cloudless
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get networkpolicy -n cloudless"
+ 
           echo "=== NetworkPolicy details ==="
-          kubectl describe networkpolicy cloudless-app-network-policy -n cloudless
-
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml describe networkpolicy cloudless-app-network-policy -n cloudless"
+ 
       - name: Verify IngressRoute
         run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+ 
           echo "=== IngressRoute status ==="
-          kubectl get ingressroute -n cloudless
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get ingressroute -n cloudless"
+ 
           echo "=== IngressRoute details ==="
-          kubectl describe ingressroute cloudless-manager -n cloudless
-
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml describe ingressroute cloudless-manager -n cloudless"
+ 
       - name: Verify Tailscale Ingress
         run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+ 
           echo "=== Tailscale Ingress status ==="
-          kubectl get ingress -n cloudless
-          kubectl get ingress -n monitoring
-          kubectl get ingress -n search
-
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get ingress -n cloudless && \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get ingress -n monitoring && \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get ingress -n search"
+ 
       - name: Report result
         if: always()
         env:
