@@ -1,0 +1,79 @@
+name: CloudFront decommission
+
+# Disable CloudFront distribution for cloudless.gr (fully migrated to Cloudflare Workers)
+
+on:
+  workflow_dispatch:
+    inputs:
+      distribution_id:
+        description: "CloudFront distribution ID to disable"
+        required: false
+        default: "ELGQBR8109MTM"
+      operation:
+        description: "Operation: disable or delete"
+        required: false
+        default: "disable"
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  disable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Disable/Delete CloudFront
+        env:
+          DISTRIBUTION_ID: ${{ github.event.inputs.distribution_id }}
+          OPERATION: ${{ github.event.inputs.operation }}
+        run: |
+          set -euo pipefail
+          
+          echo "=== CloudFront $OPERATION operation ==="
+          echo "Distribution ID: $DISTRIBUTION_ID"
+          
+          # Get current config - extract ETag and DistributionConfig separately
+          ETAG=$(aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID" --query 'ETag' --output text)
+          CONFIG=$(aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID" --query 'DistributionConfig' --output json)
+          ENABLED=$(jq -r '.Enabled' <<< "$CONFIG")
+          ALIASES=$(jq -r '.Aliases.Items[]' <<< "$CONFIG" 2>/dev/null || echo "none")
+          
+          echo "Current aliases: $ALIASES"
+          echo "Currently enabled: $ENABLED"
+          
+          if [ "$OPERATION" = "disable" ] && [ "$ENABLED" = "false" ]; then
+            echo "Already disabled - skipping"
+          elif [ "$OPERATION" = "disable" ]; then
+            echo "Disabling distribution..."
+            aws cloudfront update-distribution \
+              --id "$DISTRIBUTION_ID" \
+              --if-match "$ETAG" \
+              --distribution-config "$(echo "$CONFIG" | jq '.Enabled = false')"
+            echo "Disable initiated - distribution will go to Deployed status in ~15 minutes"
+          fi
+          
+          if [ "$OPERATION" = "delete" ]; then
+            echo "Deleting distribution..."
+            ETAG=$(aws cloudfront get-distribution-config --id "$DISTRIBUTION_ID" --query 'ETag' --output text)
+            aws cloudfront delete-distribution --id "$DISTRIBUTION_ID" --if-match "$ETAG"
+            echo "Delete initiated"
+          fi
+
+      - name: Post result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        if: always()
+        run: |
+          gh issue comment 382 --repo "${{ github.repository }}" --body "## CloudFront decommission
+          **Distribution:** ${{ github.event.inputs.distribution_id }}
+          **Operation:** ${{ github.event.inputs.operation }}
+          **Status:** ${{ job.status }}"
