@@ -90,14 +90,15 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const body = await request.json();
+    const body: { task?: string } = await request.json();
     const { task } = body;
 
     if (!task) {
       return NextResponse.json({ error: "task required" }, { status: 400 });
     }
 
-    if (task.length > 500) {
+    const taskName = task;
+    if (typeof taskName !== "string" || taskName.length > 500) {
       return NextResponse.json({ error: "Task exceeds 500 characters" }, { status: 400 });
     }
 
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 503 });
     }
 
-    const result = await createPage(workspaceId, "root-view", task);
+    const result = await createPage(workspaceId, "root-view", taskName);
 
     return NextResponse.json({ id: result.view_id }, { status: 201 });
   } catch (err) {
@@ -122,7 +123,7 @@ export async function PATCH(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const body = await request.json();
+    const body: { pageId?: string; status?: string } = await request.json();
     const { pageId, status } = body;
 
     if (!pageId || !status) {

@@ -47,13 +47,13 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const body = await request.json();
-    const { action } = body;
+    const body: { action?: string; daysToKeep?: number } = await request.json();
 
-    if (!action) {
+    if (!body.action) {
       return NextResponse.json({ error: "action required" }, { status: 400 });
     }
 
+    const { action } = body;
     if (action === "rollup") {
       const rollupId = await createWeeklyRollup();
       return NextResponse.json({ ok: true, rollupId });

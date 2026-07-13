@@ -79,14 +79,14 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const body = await request.json();
-    const { name } = body;
+    const body: { name?: string } = await request.json();
 
-    if (!name) {
+    if (!body.name) {
       return NextResponse.json({ error: "name required" }, { status: 400 });
     }
 
-    if (name.length > 200) {
+    const name = body.name;
+    if (typeof name !== "string" || name.length > 200) {
       return NextResponse.json({ error: "name must be a non-empty string no longer than 200 characters" }, { status: 400 });
     }
 

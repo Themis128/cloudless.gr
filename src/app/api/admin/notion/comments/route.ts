@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const body = await request.json();
-    const { page_id, text } = body;
+    const body: { page_id?: string; text?: string } = await request.json();
 
-    if (!page_id || !text) {
+    if (!body.page_id || !body.text) {
       return NextResponse.json({ error: "page_id and text required" }, { status: 400 });
     }
 
+    const { page_id, text } = body;
     if (text.length > 5000) {
       return NextResponse.json({ error: "Text exceeds 5000 characters" }, { status: 400 });
     }
