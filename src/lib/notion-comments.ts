@@ -30,7 +30,7 @@ export interface NotionComment {
 // Mapper
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 function mapComment(comment: any): NotionComment {
   return {
     id: comment.id,
@@ -42,7 +42,7 @@ function mapComment(comment: any): NotionComment {
     text: extractText(comment.rich_text),
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -56,10 +56,10 @@ export async function listComments(blockId: string): Promise<NotionComment[]> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     const results = await notionListAll<any>(`/comments?block_id=${blockId}`);
     return results.map(mapComment);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Comments] Failed to list comments:", msg); // codeql[js/log-injection]
@@ -77,7 +77,7 @@ export async function addComment(pageId: string, text: string): Promise<NotionCo
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     const result = await notionFetch<any>("/comments", {
       method: "POST",
       body: JSON.stringify({
@@ -86,7 +86,7 @@ export async function addComment(pageId: string, text: string): Promise<NotionCo
       }),
     });
     return mapComment(result);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Comments] Failed to add comment:", msg); // codeql[js/log-injection]
@@ -104,7 +104,7 @@ export async function replyToDiscussion(
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     const result = await notionFetch<any>("/comments", {
       method: "POST",
       body: JSON.stringify({
@@ -113,7 +113,7 @@ export async function replyToDiscussion(
       }),
     });
     return mapComment(result);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Comments] Failed to reply to discussion:", msg); // codeql[js/log-injection]
