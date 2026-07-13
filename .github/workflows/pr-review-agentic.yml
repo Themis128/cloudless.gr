@@ -39,9 +39,9 @@ jobs:
       !startsWith(github.head_ref, 'revert/')
 
     steps:
-       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-         with:
-           fetch-depth: 0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
@@ -118,7 +118,7 @@ jobs:
       github.event_name == 'pull_request' &&
       needs.review.outputs.fixable_issues == 'true'
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: false
