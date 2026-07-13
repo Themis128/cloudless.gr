@@ -38,7 +38,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    const body = await request.json();
+    const body: { pageId?: string; status?: string } = await request.json();
     const { pageId, status } = body;
 
     if (!pageId || !status) {
