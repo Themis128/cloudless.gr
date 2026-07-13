@@ -132,7 +132,7 @@ export const staticServices: CloudlessService[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 function mapPage(page: any): CloudlessService {
   const p = page.properties ?? {};
   const featuresRaw = extractText(p.Features?.rich_text) || "";
@@ -154,7 +154,7 @@ function mapPage(page: any): CloudlessService {
     stripePriceId: extractText(p.StripePriceId?.rich_text) || undefined,
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // ---------------------------------------------------------------------------
 // Public API

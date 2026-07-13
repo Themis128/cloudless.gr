@@ -51,7 +51,7 @@ export type AnyBlock = TextBlock | ToolUseBlock | ToolResultBlock;
 
 export interface BedrockMessage {
   role: "user" | "assistant";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   content: any[];
 }
 
@@ -87,7 +87,7 @@ export function buildBedrockToolConfig(
         name: t.name,
         description: t.description,
         inputSchema: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           
           json: t.input_schema as unknown as Record<string, any>,
         },
       },

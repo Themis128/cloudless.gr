@@ -811,7 +811,7 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     load();
   }, []);
 
@@ -984,7 +984,7 @@ export default function ClientPortalsPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     load();
   }, []);
 

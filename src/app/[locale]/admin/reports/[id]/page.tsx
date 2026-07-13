@@ -32,7 +32,7 @@ export default function ReportViewPage() {
 
   useEffect(() => {
     if (!id) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);

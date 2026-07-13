@@ -56,7 +56,7 @@ export default function SubscriptionsPage() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     load(statusFilter);
   }, [statusFilter]);
 

@@ -135,7 +135,7 @@ export const staticCaseStudies: CaseStudy[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 function mapPage(page: any): CaseStudy {
   const p = page.properties ?? {};
 
@@ -167,7 +167,7 @@ function mapPage(page: any): CaseStudy {
     date: p.Date?.date?.start ?? page.created_time ?? "",
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // ---------------------------------------------------------------------------
 // Public API

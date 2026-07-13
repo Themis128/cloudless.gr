@@ -210,7 +210,7 @@ export default function AdminLayoutClient({ children }: { readonly children: Rea
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setDrawerOpen(false);
   }, [pathname]);
 

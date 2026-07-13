@@ -265,7 +265,7 @@ function RunsPanel({ threadId }: { threadId: string | null }) {
   }, [threadId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void load();
   }, [load]);
 

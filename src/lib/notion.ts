@@ -134,7 +134,7 @@ function richTextToHtml(richText: RichTextItem[]): string {
 
 type ListTag = "ul" | "ol" | null;
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 function renderMediaBlock(block: any, type: string, data: any): string | null {
   switch (type) {
     case "image": {
@@ -253,7 +253,7 @@ export function blocksToHtml(blocks: any[]): string {
   flushListBuffer(listBuffer, listTypeRef, lines);
   return lines.join("\n");
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // ---------------------------------------------------------------------------
 // Pagination helper — fetches ALL pages of a paginated Notion response
@@ -461,7 +461,7 @@ export async function restorePage(pageId: string): Promise<boolean> {
 // Block helpers — append, delete
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 
 /**
  * Append child blocks to a page or block.
@@ -507,13 +507,13 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
   }
 }
 
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // ---------------------------------------------------------------------------
 // Block builder helpers — construct Notion block objects
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 
 export function textBlock(type: string, content: string): any {
   return {
@@ -577,7 +577,7 @@ export function calloutBlock(content: string, emoji = "💡"): any {
   };
 }
 
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // ---------------------------------------------------------------------------
 // Table of Contents extractor

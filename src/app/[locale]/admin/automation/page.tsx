@@ -103,7 +103,7 @@ export default function AutomationPage() {
 
   useEffect(() => {
     // Initial data load for this admin page is intentionally triggered on mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     void load();
   }, [load]);
 

@@ -61,7 +61,7 @@ export interface DocContent extends DocRecord {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 function mapPage(page: any): DocRecord {
   const p = page.properties ?? {};
   return {
@@ -75,7 +75,7 @@ function mapPage(page: any): DocRecord {
     url: page.url,
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -94,9 +94,9 @@ export async function getAllDocs(): Promise<DocRecord[]> {
     const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
       sorts: DOCS_SORT,
     });
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     return (results as any[]).map(mapPage);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
   } catch (err) {
     console.error("[Notion] Failed to fetch all docs:", err);
     return [];
@@ -120,9 +120,9 @@ export async function getDocs(): Promise<DocRecord[]> {
         sorts: DOCS_SORT,
       });
 
-      /* eslint-disable @typescript-eslint/no-explicit-any */
+       
       return (results as any[]).map(mapPage);
-      /* eslint-enable @typescript-eslint/no-explicit-any */
+       
     });
   } catch (err) {
     console.error("[Notion] Failed to fetch docs:", err);
@@ -154,9 +154,9 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
       }
     );
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     const page = (data.results as any[])?.[0];
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
     if (!page) return null;
 
     return mapPage(page);
@@ -180,10 +180,10 @@ export async function getDocContent(pageId: string): Promise<DocContent | null> 
     // Fetch all blocks (handles pagination via GET)
     const blocks = await fetchBlocksDeep(pageId);
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     const record = mapPage(page as any);
     const html = blocksToHtml(blocks as any[]);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
 
     return { ...record, html };
   } catch (err) {
@@ -219,7 +219,7 @@ export interface WikiDocRecord extends DocRecord {
   lastEdited: string;
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 function mapWikiPage(page: any): WikiDocRecord {
   const base = mapPage(page);
   const p = page.properties ?? {};
@@ -234,7 +234,7 @@ function mapWikiPage(page: any): WikiDocRecord {
     lastEdited: page.last_edited_time ?? "",
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
+ 
 
 /**
  * List docs with wiki metadata (verification, ownership).
@@ -252,9 +252,9 @@ export async function getWikiDocs(): Promise<WikiDocRecord[]> {
       sorts: DOCS_SORT,
     });
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     return (results as any[]).map(mapWikiPage);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
   } catch (err) {
     console.error("[Notion Wiki] Failed to fetch wiki docs:", err);
     return [];
@@ -303,13 +303,13 @@ export async function getDocContentWithToc(
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
     const blocks = await fetchBlocksDeep(pageId);
 
-    /* eslint-disable @typescript-eslint/no-explicit-any */
+     
     const record = mapPage(page as any);
     const html = blocksToHtml(blocks as any[]);
 
     const { extractToc } = await import("@/lib/notion");
     const toc = extractToc(blocks as any[]);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
+     
 
     return { ...record, html, toc };
   } catch (err) {
