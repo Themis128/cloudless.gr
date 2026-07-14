@@ -2,6 +2,7 @@
 import { spawn } from 'child_process';
 
 // GitHub MCP Server wrapper - runs the official Docker image
+// Server name: github.com/github-mcp-server
 const docker = spawn('docker', [
   'run',
   '-i',

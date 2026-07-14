@@ -65,7 +65,7 @@
       },
       "autoStart": false
     },
-    "github": {
+    "github.com/github-mcp-server": {
       "command": "docker",
       "args": [
         "run",
@@ -97,7 +97,7 @@
         "AWS_REGION": "us-east-1",
         "ATHENA_WORKGROUP": "primary",
         "ATHENA_DATABASE": "cloudless_analytics",
-        "ATHENA_S3_OUTPUT_BUCKET": "cloudless-athena-results"
+        "ATHENA_S3_OUTPUT_BUCKET": "cloudless_athena_results"
       },
       "autoStart": false,
       "cwd": "tools/mcp-athena-server"
