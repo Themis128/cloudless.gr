@@ -764,7 +764,7 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
     try {
       const res = await fetchWithAuth("/api/admin/pending-clients");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setClients((data.clients ?? []).filter((c: PendingClient) => c.status === "waiting"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load pending clients");
@@ -811,7 +811,6 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
   }
 
   useEffect(() => {
-     
     load();
   }, []);
 
@@ -924,7 +923,7 @@ export default function ClientPortalsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/client-portals");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setPortals(data.portals ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load portals");
@@ -948,10 +947,10 @@ export default function ClientPortalsPage() {
         body: JSON.stringify(form),
       });
       if (!res.ok) {
-        const data = (((((await res.json()) as any)) as any)) as any;
+        const data = (await res.json()) as any as any as any;
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-      const { portal } = ((((await res.json()) as any)) as any);
+      const { portal } = (await res.json()) as any as any;
       setForm({ label: "", clientEmail: "", clientName: "" });
       setExpanded(portal.token);
       load();
@@ -984,7 +983,6 @@ export default function ClientPortalsPage() {
   }
 
   useEffect(() => {
-     
     load();
   }, []);
 

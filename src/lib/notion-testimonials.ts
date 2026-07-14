@@ -86,7 +86,6 @@ export const staticTestimonials: Testimonial[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
- 
 function mapPage(page: any): Testimonial {
   const p = page.properties ?? {};
   const rating = p.Rating?.number;
@@ -102,7 +101,6 @@ function mapPage(page: any): Testimonial {
     featured: p.Featured?.checkbox ?? false,
   };
 }
- 
 
 // ---------------------------------------------------------------------------
 // Public API

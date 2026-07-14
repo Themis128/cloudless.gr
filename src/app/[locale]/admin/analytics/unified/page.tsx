@@ -218,10 +218,10 @@ export default function UnifiedAnalyticsPage() {
           fetchWithAuth("/api/admin/analytics/roi"),
         ]);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json: UnifiedData = ((((await res.json()) as any)) as any);
+        const json: UnifiedData = (await res.json()) as any as any;
         if (!cancelled) setData(json);
         if (roiRes.ok) {
-          const roiJson: RoiData = ((((await roiRes.json()) as any)) as any);
+          const roiJson: RoiData = (await roiRes.json()) as any as any;
           if (!cancelled) setRoi(roiJson);
         }
       } catch (e) {

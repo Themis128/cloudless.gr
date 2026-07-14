@@ -64,7 +64,7 @@ export default function AdminTicketsPage() {
         if (res.status === 503) throw new Error("EspoCRM not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setTickets(data.tickets ?? []);
       setFetchedAt(new Date().toISOString());
       setError(null);
@@ -77,7 +77,6 @@ export default function AdminTicketsPage() {
   }, []);
 
   useEffect(() => {
-     
     fetchTickets().catch(() => {});
     const interval = setInterval(() => {
       fetchTickets().catch(() => {});

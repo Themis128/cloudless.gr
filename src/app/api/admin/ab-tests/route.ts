@@ -27,7 +27,7 @@ export async function PATCH(request: NextRequest) {
 
   let updates: Partial<ABFlag> & { id: string };
   try {
-    updates = ((await request.json()) as any);
+    updates = (await request.json()) as any;
     if (!updates.id) throw new Error("id required");
   } catch (e) {
     return NextResponse.json(
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   let body: { action: "reset" };
   try {
-    body = ((await request.json()) as any);
+    body = (await request.json()) as any;
   } catch {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }

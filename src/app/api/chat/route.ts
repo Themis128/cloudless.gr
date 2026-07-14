@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
   let messages: { role: "user" | "assistant"; content: string }[];
   try {
-    const body = ((await request.json()) as any);
+    const body = (await request.json()) as any;
     messages = parseMessages(body);
   } catch {
     return Response.json({ error: "Invalid request" }, { status: 400 });

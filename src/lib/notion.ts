@@ -134,7 +134,6 @@ function richTextToHtml(richText: RichTextItem[]): string {
 
 type ListTag = "ul" | "ol" | null;
 
- 
 function renderMediaBlock(block: any, type: string, data: any): string | null {
   switch (type) {
     case "image": {
@@ -253,7 +252,6 @@ export function blocksToHtml(blocks: any[]): string {
   flushListBuffer(listBuffer, listTypeRef, lines);
   return lines.join("\n");
 }
- 
 
 // ---------------------------------------------------------------------------
 // Pagination helper — fetches ALL pages of a paginated Notion response
@@ -461,8 +459,6 @@ export async function restorePage(pageId: string): Promise<boolean> {
 // Block helpers — append, delete
 // ---------------------------------------------------------------------------
 
- 
-
 /**
  * Append child blocks to a page or block.
  * Max 100 blocks per call (Notion API limit).
@@ -507,13 +503,9 @@ export async function deleteBlock(blockId: string): Promise<boolean> {
   }
 }
 
- 
-
 // ---------------------------------------------------------------------------
 // Block builder helpers — construct Notion block objects
 // ---------------------------------------------------------------------------
-
- 
 
 export function textBlock(type: string, content: string): any {
   return {
@@ -576,8 +568,6 @@ export function calloutBlock(content: string, emoji = "💡"): any {
     },
   };
 }
-
- 
 
 // ---------------------------------------------------------------------------
 // Table of Contents extractor

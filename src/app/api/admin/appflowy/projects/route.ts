@@ -3,11 +3,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  listAllWorkspaces,
-  listWorkspaceViews,
-  AppFlowyNotConfiguredError,
-} from "@/lib/appflowy";
+import { listAllWorkspaces, listWorkspaceViews, AppFlowyNotConfiguredError } from "@/lib/appflowy";
 export type { AppFlowyView } from "@/lib/appflowy";
 
 type ProjectStatus = "Planning" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
@@ -87,7 +83,7 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = ((await request.json()) as any);
+    body = (await request.json()) as any;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

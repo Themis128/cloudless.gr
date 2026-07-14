@@ -53,10 +53,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const success = await updateSubmissionStatus(
-      pageId,
-      status as "New" | "In Review" | "Done"
-    );
+    const success = await updateSubmissionStatus(pageId, status as "New" | "In Review" | "Done");
 
     if (!success) {
       return NextResponse.json({ error: "Failed to update status" }, { status: 500 });

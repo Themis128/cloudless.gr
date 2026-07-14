@@ -40,7 +40,7 @@ export default function AdminCompaniesPage() {
         if (res.status === 503) throw new Error("EspoCRM not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setCompanies(data.companies ?? []);
       setFetchedAt(new Date().toISOString());
       setError(null);
@@ -53,7 +53,6 @@ export default function AdminCompaniesPage() {
   }, []);
 
   useEffect(() => {
-     
     fetchCompanies().catch(() => {});
     const interval = setInterval(() => {
       fetchCompanies().catch(() => {});

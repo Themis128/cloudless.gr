@@ -89,7 +89,7 @@ export async function listDashboards(query = ""): Promise<GrafanaDashboardSummar
   if (query) qs.set("query", query);
   const res = await grafanaFetch(`/search?${qs.toString()}`);
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
-  return (((await res.json()) as any)) as GrafanaDashboardSummary[];
+  return (await res.json()) as any as GrafanaDashboardSummary[];
 }
 
 export interface GrafanaDashboardResponse {
@@ -104,7 +104,7 @@ export interface GrafanaDashboardResponse {
 export async function getDashboard(uid: string): Promise<GrafanaDashboardResponse> {
   const res = await grafanaFetch(`/dashboards/uid/${encodeURIComponent(uid)}`);
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
-  return (((await res.json()) as any)) as GrafanaDashboardResponse;
+  return (await res.json()) as any as GrafanaDashboardResponse;
 }
 
 /**
@@ -127,7 +127,7 @@ export async function upsertDashboard(
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
-  const data = (((await res.json()) as any)) as { uid: string; url: string; version: number };
+  const data = (await res.json()) as any as { uid: string; url: string; version: number };
   return data;
 }
 
@@ -148,7 +148,7 @@ export interface GrafanaDatasource {
 export async function listDatasources(): Promise<GrafanaDatasource[]> {
   const res = await grafanaFetch("/datasources");
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
-  return (((await res.json()) as any)) as GrafanaDatasource[];
+  return (await res.json()) as any as GrafanaDatasource[];
 }
 
 export async function getDatasourceByName(name: string): Promise<GrafanaDatasource | null> {
@@ -182,7 +182,7 @@ export async function syncPrometheusDatasource(
       body: JSON.stringify({ ...payload, id: existing.id, uid: existing.uid }),
     });
     if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
-    return (((await res.json()) as any)) as GrafanaDatasource;
+    return (await res.json()) as any as GrafanaDatasource;
   }
 
   const res = await grafanaFetch("/datasources", {
@@ -190,7 +190,7 @@ export async function syncPrometheusDatasource(
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
-  const created = (((await res.json()) as any)) as { datasource: GrafanaDatasource };
+  const created = (await res.json()) as any as { datasource: GrafanaDatasource };
   return created.datasource;
 }
 
@@ -215,7 +215,7 @@ export async function prometheusQuery(query: string): Promise<PrometheusQueryRes
     `/datasources/proxy/uid/${encodeURIComponent(ds.uid)}/api/v1/query?${qs.toString()}`
   );
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
-  const body = (((await res.json()) as any)) as {
+  const body = (await res.json()) as any as {
     status: string;
     data: { resultType: string; result: PrometheusQueryResult[] };
   };

@@ -135,7 +135,6 @@ export const staticCaseStudies: CaseStudy[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
- 
 function mapPage(page: any): CaseStudy {
   const p = page.properties ?? {};
 
@@ -167,7 +166,6 @@ function mapPage(page: any): CaseStudy {
     date: p.Date?.date?.start ?? page.created_time ?? "",
   };
 }
- 
 
 // ---------------------------------------------------------------------------
 // Public API

@@ -84,7 +84,7 @@ function SignUpForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, fullName: fullName || undefined }),
       });
-      const data = (((await res.json()) as any)) as { ok?: boolean; error?: string; token?: string };
+      const data = (await res.json()) as any as { ok?: boolean; error?: string; token?: string };
       if (!res.ok) {
         setError(data.error ?? t("auth.signupFailed", "Sign up failed"));
         return;
@@ -110,7 +110,7 @@ function SignUpForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: code, token: activationToken }),
       });
-      const data = (((await res.json()) as any)) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as any as { ok?: boolean; error?: string };
       if (!res.ok) {
         setError(data.error ?? t("auth.confirmFailed", "Confirmation failed"));
         return;
@@ -134,7 +134,7 @@ function SignUpForm() {
         body: JSON.stringify({ email }),
       });
       // resend-verification returns a new token so the OTP stays in sync
-      const data = (((await res.json()) as any)) as { ok?: boolean; token?: string };
+      const data = (await res.json()) as any as { ok?: boolean; token?: string };
       if (data.token) setActivationToken(data.token);
       setResent(true);
       setSecondsLeft(5 * 60);

@@ -3,11 +3,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  listAllWorkspaces,
-  listWorkspaceViews,
-  AppFlowyNotConfiguredError,
-} from "@/lib/appflowy";
+import { listAllWorkspaces, listWorkspaceViews, AppFlowyNotConfiguredError } from "@/lib/appflowy";
 
 interface ServiceItem {
   id: string;

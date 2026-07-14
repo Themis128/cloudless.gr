@@ -48,11 +48,11 @@ export default function LinkedInPage() {
         return;
       }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
-      setCampaigns((((((await camRes.json()) as any)) as any)).campaigns ?? []);
-      if (insRes.ok) setInsights((((((await insRes.json()) as any)) as any)).insights ?? null);
+      setCampaigns(((await camRes.json()) as any as any).campaigns ?? []);
+      if (insRes.ok) setInsights(((await insRes.json()) as any as any).insights ?? null);
       // CRM rollup is best-effort — 503 (EspoCRM not configured) just hides
       // the panel; we don't fail the whole page on it.
-      if (crmRes.ok) setCrmRollups((((((await crmRes.json()) as any)) as any)).rollups ?? []);
+      if (crmRes.ok) setCrmRollups(((await crmRes.json()) as any as any).rollups ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -61,7 +61,6 @@ export default function LinkedInPage() {
   }
 
   useEffect(() => {
-     
     load();
   }, []);
 

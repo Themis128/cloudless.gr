@@ -27,9 +27,9 @@ def verify_signature(body, timestamp, signature):
         return True
 
     req = f"v0:{timestamp}:{body.decode()}"
-    expected = "v0=" + hmac.new(
-        SLACK_SIGNING_SECRET.encode(), req.encode(), hashlib.sha256
-    ).hexdigest()
+    expected = (
+        "v0=" + hmac.new(SLACK_SIGNING_SECRET.encode(), req.encode(), hashlib.sha256).hexdigest()
+    )
 
     return hmac.compare_digest(expected, signature)
 
@@ -79,42 +79,38 @@ def format_alert_block(alert_data, category_info):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"{category_info['severity_emoji']} *{category_info['severity']} Alert*"
-            }
+                "text": f"{category_info['severity_emoji']} *{category_info['severity']} Alert*",
+            },
         },
         {
             "type": "section",
             "fields": [
                 {"type": "mrkdwn", "text": f"*App:*\n{category_info['app']}"},
                 {"type": "mrkdwn", "text": f"*Category:*\n{category_info['category']}"},
-            ]
+            ],
         },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*{summary}*\n_{description}_"
-            }
-        },
+        {"type": "section", "text": {"type": "mrkdwn", "text": f"*{summary}*\n_{description}_"}},
         {
             "type": "context",
             "elements": [
                 {"type": "mrkdwn", "text": f"Started: {formatted_time}"},
-            ]
+            ],
         },
     ]
 
     if runbook_url:
-        blocks.append({
-            "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "View Runbook"},
-                    "url": runbook_url,
-                }
-            ],
-        })
+        blocks.append(
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "View Runbook"},
+                        "url": runbook_url,
+                    }
+                ],
+            }
+        )
 
     return blocks
 
@@ -126,31 +122,33 @@ def format_summary_block(category_counts, category_info):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"{category_info['severity_emoji']} *{category_info['severity']} Alerts Summary*"
-            }
+                "text": f"{category_info['severity_emoji']} *{category_info['severity']} Alerts Summary*",
+            },
         },
         {
             "type": "section",
             "fields": [
                 {"type": "mrkdwn", "text": f"*Total Alerts:*\n{category_counts['total']}"},
                 {"type": "mrkdwn", "text": f"*Category:*\n{category_info['category']}"},
-            ]
+            ],
         },
         {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": "\n".join([
-                    f":warning: *{app}* ({count} alert{'s' if count > 1 else ''})"
-                    for app, count in category_counts['by_app'].items()
-                ])
-            }
+                "text": "\n".join(
+                    [
+                        f":warning: *{app}* ({count} alert{'s' if count > 1 else ''})"
+                        for app, count in category_counts["by_app"].items()
+                    ]
+                ),
+            },
         },
         {
             "type": "context",
             "elements": [
                 {"type": "mrkdwn", "text": "Time window: Last 5 minutes"},
-            ]
+            ],
         },
     ]
 
@@ -183,11 +181,11 @@ class GrafanaWebhookHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Handle POST request."""
-        content_length = int(self.headers.get('Content-Length', 0))
+        content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length)
 
-        timestamp = self.headers.get('X-Slack-Request-Timestamp', '')
-        signature = self.headers.get('X-Slack-Signature', '')
+        timestamp = self.headers.get("X-Slack-Request-Timestamp", "")
+        signature = self.headers.get("X-Slack-Signature", "")
 
         if not verify_signature(body, timestamp, signature):
             self.send_response(401)
@@ -214,7 +212,7 @@ class GrafanaWebhookHandler(BaseHTTPRequestHandler):
 
         for alert in alerts:
             category_info = categorize_alert(alert)
-            key = (category_info['app'], category_info['severity'])
+            key = (category_info["app"], category_info["severity"])
 
             if key not in category_alerts:
                 category_alerts[key] = {
@@ -225,7 +223,7 @@ class GrafanaWebhookHandler(BaseHTTPRequestHandler):
 
             category_alerts[key]["alerts"].append(alert)
 
-            app = category_info['app']
+            app = category_info["app"]
             category_alerts[key]["by_app"][app] = category_alerts[key]["by_app"].get(app, 0) + 1
 
         posted = 0
@@ -234,10 +232,13 @@ class GrafanaWebhookHandler(BaseHTTPRequestHandler):
             alerts_list = data["alerts"]
 
             if len(alerts_list) > 1:
-                summary_blocks = format_summary_block({
-                    "total": len(alerts_list),
-                    "by_app": data["by_app"],
-                }, category_info)
+                summary_blocks = format_summary_block(
+                    {
+                        "total": len(alerts_list),
+                        "by_app": data["by_app"],
+                    },
+                    category_info,
+                )
                 post_to_slack(summary_blocks)
             else:
                 alert = alerts_list[0]

@@ -33,7 +33,7 @@ export default function WorkspacesPage() {
     try {
       const res = await fetchWithAuth("/api/admin/workspaces");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((await res.json()) as any)) as any as any;
+      const data = (await res.json()) as any as any as any;
       setWorkspaces(data.workspaces ?? []);
       setCtxWorkspaces(data.workspaces ?? []);
     } catch (e) {
@@ -66,7 +66,7 @@ export default function WorkspacesPage() {
           notionTag: form.notionTag.trim() || undefined,
         }),
       });
-      const data = (((await res.json()) as any)) as any as any;
+      const data = (await res.json()) as any as any as any;
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       setForm(EMPTY_FORM);
       load();
@@ -97,7 +97,7 @@ export default function WorkspacesPage() {
         }),
       });
       if (!res.ok) {
-        const d = (((await res.json()) as any)) as any as any;
+        const d = (await res.json()) as any as any as any;
         throw new Error(d.error);
       }
       setEditingId(null);
@@ -133,7 +133,6 @@ export default function WorkspacesPage() {
   }
 
   useEffect(() => {
-     
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

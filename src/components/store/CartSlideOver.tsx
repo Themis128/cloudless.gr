@@ -42,7 +42,7 @@ export default function CartSlideOver() {
           })),
         }),
       });
-      const data = ((await res.json().catch(() => ({}))) as any) as { url?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as any as { url?: string; error?: string };
       if (res.ok && data.url) {
         clearCart();
         window.location.href = data.url;

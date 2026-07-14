@@ -64,7 +64,7 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Assistant request failed");
-      const data = (((((await res.json()) as any)) as any)) as { response: string; toolsUsed: string[] };
+      const data = (await res.json()) as any as any as { response: string; toolsUsed: string[] };
       setChatMessages((prev) => [
         ...prev,
         { role: "assistant", content: data.response, toolsUsed: data.toolsUsed },
@@ -93,7 +93,7 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to generate strategy");
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setStrategy(data.strategy);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
@@ -118,7 +118,7 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to generate copy");
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setCopyVariants(data.variants?.variants ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");

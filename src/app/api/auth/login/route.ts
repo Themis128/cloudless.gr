@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  authenticateUser,
-  getUserBySession,
-  isAdmin,
-  type AuthDatabase,
-} from "@/lib/auth-d1";
+import { authenticateUser, getUserBySession, isAdmin, type AuthDatabase } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 // D1 binding interface - provided by Worker context

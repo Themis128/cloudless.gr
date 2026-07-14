@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = (((await request.json()) as any)) as {
+  const body = (await request.json()) as any as {
     label?: string;
     clientEmail?: string;
     clientName?: string;
@@ -395,7 +395,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = (((await request.json()) as any)) as PatchAction;
+  const body = (await request.json()) as any as PatchAction;
   if (!body.token || !body.action) {
     return NextResponse.json({ error: "token and action are required" }, { status: 400 });
   }
@@ -420,7 +420,7 @@ export async function DELETE(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const { token } = (((await request.json()) as any)) as { token?: string };
+  const { token } = (await request.json()) as any as { token?: string };
   if (!token) return NextResponse.json({ error: "token is required" }, { status: 400 });
 
   const portals = await readPortals();

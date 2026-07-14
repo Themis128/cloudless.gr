@@ -23,10 +23,7 @@ function getD1Binding(): AuthDatabase | null {
 
 /** Detect Cloudflare Workers runtime. */
 function isWorkers(): boolean {
-  return (
-    typeof (globalThis as any).caches !== "undefined" &&
-    typeof process === "undefined"
-  );
+  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
 }
 
 /** Detect if D1 is available (Workers with AUTH_DB binding). */

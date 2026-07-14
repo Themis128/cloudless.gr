@@ -7,7 +7,13 @@ import {
 } from "@/lib/pending-clients";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import { readPortals, writePortals, computePortalExpiry, type ClientPortal, type PortalStep } from "@/lib/client-portals";
+import {
+  readPortals,
+  writePortals,
+  computePortalExpiry,
+  type ClientPortal,
+  type PortalStep,
+} from "@/lib/client-portals";
 import { randomUUID } from "node:crypto";
 
 const DEFAULT_STEP_NAMES = [
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = ((await request.json().catch(() => ({}))) as any) as {
+  const body = (await request.json().catch(() => ({}))) as any as {
     email?: string;
     label?: string;
     stepNames?: string[];
@@ -116,7 +122,7 @@ export async function DELETE(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const { email } = ((await request.json().catch(() => ({}))) as any) as {
+  const { email } = (await request.json().catch(() => ({}))) as any as {
     email?: string;
   };
   if (!email) {

@@ -156,9 +156,7 @@ export async function getCached<T = unknown>(
   if (db) {
     try {
       const result = await db
-        .prepare(
-          "SELECT result_json, cached_at FROM analytics_cache WHERE pk = ? AND sk = ?"
-        )
+        .prepare("SELECT result_json, cached_at FROM analytics_cache WHERE pk = ? AND sk = ?")
         .bind(route, hash)
         .first<{ result_json: string; cached_at: number }>();
       if (!result) return null;

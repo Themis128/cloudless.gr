@@ -44,7 +44,7 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY);
-     
+
     if (stored) setCurrentId(stored);
   }, []);
 
@@ -68,7 +68,6 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
     const stored = localStorage.getItem(LS_KEY);
     const valid = workspaces.some((w) => w.id === stored) ? stored : (workspaces[0]?.id ?? null);
     if (valid) {
-       
       setCurrentId(valid);
       localStorage.setItem(LS_KEY, valid);
       writeCookie(valid);

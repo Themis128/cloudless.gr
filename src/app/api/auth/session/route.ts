@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserBySession,
-  deleteSession,
-  isAdmin,
-  type AuthDatabase,
-} from "@/lib/auth-d1";
+import { getUserBySession, deleteSession, isAdmin, type AuthDatabase } from "@/lib/auth-d1";
 
 interface Env {
   AUTH_DB: AuthDatabase;
@@ -58,7 +53,9 @@ export async function DELETE(req: NextRequest) {
   if (!db) {
     try {
       const { handlers } = await import("@/lib/auth");
-      const signOut = (handlers as unknown as { signOut?: (...args: unknown[]) => Promise<unknown> }).signOut;
+      const signOut = (
+        handlers as unknown as { signOut?: (...args: unknown[]) => Promise<unknown> }
+      ).signOut;
       if (signOut) return signOut(req) as Promise<Response>;
     } catch {
       // fall through to response

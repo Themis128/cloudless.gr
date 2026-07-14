@@ -136,7 +136,7 @@ export default function IntegrationsPage() {
       try {
         const res = await fetchWithAuth("/api/admin/integrations/status");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: ApiResponse = ((((await res.json()) as any)) as any);
+        const data: ApiResponse = (await res.json()) as any as any;
         if (!cancelled) {
           setApiMap(new Map(data.integrations.map((i) => [i.id, i])));
           setSummary(data.summary);

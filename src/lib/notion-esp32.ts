@@ -255,7 +255,6 @@ const PROP_LAST_HEARTBEAT = "Last Heartbeat";
 const PROP_FIRST_SEEN = "First seen";
 const PROP_LAST_SEEN = "Last seen";
 
- 
 function mapDevicePage(page: any): Esp32Status {
   const p = page.properties ?? {};
   const richText = (v: unknown): string | null => {

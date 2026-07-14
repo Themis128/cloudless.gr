@@ -53,7 +53,7 @@ export default function SubmissionsPage() {
         const data = (await res.json().catch(() => ({}))) as any;
         throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
       }
-      const data = (((((await res.json()) as any)) as any)) as { submissions: Submission[] };
+      const data = (await res.json()) as any as any as { submissions: Submission[] };
       setSubmissions(data.submissions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load submissions");
@@ -63,7 +63,6 @@ export default function SubmissionsPage() {
   }, []);
 
   useEffect(() => {
-     
     load();
   }, [load]);
 

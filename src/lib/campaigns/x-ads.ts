@@ -104,7 +104,7 @@ export async function listXCampaigns(): Promise<XCampaign[]> {
     if (!adAccountId) return [];
     const res = await xFetch(`/accounts/${adAccountId}/campaigns?count=20&sort_by=created_at-desc`);
     if (!res.ok) return [];
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
     return data.data ?? [];
   } catch {
     return [];
@@ -132,7 +132,7 @@ export async function getXStats(dateStart: string, dateEnd: string): Promise<XSt
       `/stats/accounts/${adAccountId}?granularity=DAY&metric_groups=ENGAGEMENT,BILLING&start_time=${dateStart}T00:00:00Z&end_time=${dateEnd}T23:59:59Z`
     );
     if (!res.ok) return empty;
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
     const metrics = data.data?.id_data?.[0]?.id_data ?? {};
     return {
       impressions: metrics.impressions ?? 0,

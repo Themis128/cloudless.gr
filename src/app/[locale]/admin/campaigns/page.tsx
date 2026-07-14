@@ -160,7 +160,7 @@ async function fetchStatusMap(): Promise<
   try {
     const res = await fetchWithAuth("/api/admin/integrations/status");
     if (!res.ok) return {};
-    const data = (((((await res.json()) as any)) as any)) as {
+    const data = (await res.json()) as any as any as {
       integrations?: Array<{
         id: string;
         status: ConnectionStatus;
@@ -191,7 +191,7 @@ async function fetchPlatformStats(
 
   if (campaignsRes.status === "fulfilled" && campaignsRes.value.ok) {
     try {
-      const data = (((((await campaignsRes.value.json()) as any)) as any)) as any;
+      const data = (await campaignsRes.value.json()) as any as any as any;
       stats.activeCampaigns = countActive(pickCount(data, "campaigns"));
     } catch {
       stats.error = "Failed to parse campaigns";
@@ -200,7 +200,7 @@ async function fetchPlatformStats(
 
   if (insightsRes.status === "fulfilled" && insightsRes.value.ok) {
     try {
-      const data = (((((await insightsRes.value.json()) as any)) as any)) as any;
+      const data = (await insightsRes.value.json()) as any as any as any;
       applyInsights(platform.id, data, stats);
     } catch {
       stats.error = "Failed to parse insights";
@@ -326,7 +326,6 @@ function useCampaignsHub() {
   }, []);
 
   useEffect(() => {
-     
     fetchAll().catch(() => {});
     const interval = setInterval(() => {
       fetchAll().catch(() => {});

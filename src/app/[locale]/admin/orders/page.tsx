@@ -49,7 +49,7 @@ export default function AdminOrdersPage() {
       try {
         const res = await fetchWithAuth("/api/admin/orders?limit=20");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (((((await res.json()) as any)) as any)) as any;
+        const data = (await res.json()) as any as any as any;
         setOrders(data.orders ?? []);
         setSubscriptions(data.subscriptions ?? []);
       } catch (err) {

@@ -171,7 +171,7 @@ function AppCard({ app, health, pingMs }: AppCardProps) {
         setErr((j as { error?: string }).error ?? `HTTP ${res.status}`);
         return;
       }
-      const { url } = (((((await res.json()) as any)) as any)) as { url: string };
+      const { url } = (await res.json()) as any as any as { url: string };
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -270,7 +270,7 @@ export default function SelfhostedPortalPage() {
       try {
         const res = await fetchWithAuth("/api/admin/cluster/kuma-status");
         if (!res.ok) return;
-        const json = (((((await res.json()) as any)) as any)) as any;
+        const json = (await res.json()) as any as any as any;
         const summary = json.summary as KumaSummary | null;
         if (!summary) return;
 

@@ -108,7 +108,7 @@ export async function listTikTokCampaigns(): Promise<TikTokCampaign[]> {
     const { advertiserId } = await getTikTokConfig();
     const res = await ttFetch(`/campaign/get/?advertiser_id=${advertiserId}&page_size=20`);
     if (!res.ok) return [];
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
     return data.data?.list ?? [];
   } catch {
     return [];
@@ -127,7 +127,7 @@ export async function getTikTokInsights(
       body: JSON.stringify(body),
     });
     if (!res.ok) return emptyInsights();
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
     const rows: TikTokReportRow[] = data.data?.list ?? [];
     if (rows.length === 0) return emptyInsights();
     return parseInsightsRow(rows[0]);

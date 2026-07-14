@@ -98,7 +98,6 @@ export const staticFaqs: Faq[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
- 
 function mapPage(page: any): Faq {
   const p = page.properties ?? {};
   return {
@@ -109,7 +108,6 @@ function mapPage(page: any): Faq {
     locales: (p.Locale?.multi_select ?? []).map((l: any) => l.name),
   };
 }
- 
 
 // ---------------------------------------------------------------------------
 // Public API

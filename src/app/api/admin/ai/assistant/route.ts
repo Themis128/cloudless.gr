@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   let messages: AssistantMessage[];
   try {
-    const body = (((await req.json()) as any)) as { messages: AssistantMessage[] };
+    const body = (await req.json()) as any as { messages: AssistantMessage[] };
     messages = body.messages;
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "messages array is required" }, { status: 400 });
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI service error" }, { status: 502 });
     }
 
-    const data = (((await res.json()) as any)) as AnthropicResponse;
+    const data = (await res.json()) as any as AnthropicResponse;
 
     if (data.stop_reason === "end_turn") {
       const text =

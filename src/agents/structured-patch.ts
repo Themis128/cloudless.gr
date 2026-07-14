@@ -18,7 +18,7 @@ export type StructuredPatch = z.infer<typeof StructuredPatchSchema>;
 export async function generateStructuredPatch(
   env: Env,
   model: string,
-  prompt: string,
+  prompt: string
 ): Promise<StructuredPatch> {
   if (!env.AI) {
     throw new Error("AI binding not configured");

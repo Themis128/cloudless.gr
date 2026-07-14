@@ -94,7 +94,9 @@ function LoginContent() {
       // Redirect on success
       window.location.href = isSafeRedirectPath(nextParam)
         ? normalizeRedirectPath(nextParam)
-        : (data.isAdmin ? "/admin" : "/dashboard");
+        : data.isAdmin
+          ? "/admin"
+          : "/dashboard";
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -140,9 +142,18 @@ function LoginContent() {
 
           {USE_COGNITO ? (
             // Cognito Hosted UI
-            <form onSubmit={(e) => { e.preventDefault(); handleCognitoLogin(); }} className="space-y-5">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCognitoLogin();
+              }}
+              className="space-y-5"
+            >
               <p className="font-mono text-sm text-slate-400">
-                {t("auth.cognitoLoginDesc", "Account sign-in is handled securely through AWS. Click below to continue.")}
+                {t(
+                  "auth.cognitoLoginDesc",
+                  "Account sign-in is handled securely through AWS. Click below to continue."
+                )}
               </p>
               <button
                 type="submit"
@@ -158,7 +169,10 @@ function LoginContent() {
             // D1-native email/password
             <form onSubmit={handleD1Login} className="space-y-5">
               <div>
-                <label htmlFor="login-email" className="mb-2 block font-mono text-sm text-slate-400">
+                <label
+                  htmlFor="login-email"
+                  className="mb-2 block font-mono text-sm text-slate-400"
+                >
                   {t("auth.email", "Email")}
                 </label>
                 <input
@@ -173,7 +187,10 @@ function LoginContent() {
                 />
               </div>
               <div>
-                <label htmlFor="login-password" className="mb-2 block font-mono text-sm text-slate-400">
+                <label
+                  htmlFor="login-password"
+                  className="mb-2 block font-mono text-sm text-slate-400"
+                >
                   {t("auth.password", "Password")}
                 </label>
                 <input
@@ -192,9 +209,7 @@ function LoginContent() {
                 disabled={submitting}
                 className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
               >
-                {submitting
-                  ? t("auth.signingIn", "Signing In...")
-                  : t("auth.signIn", "Sign In")}
+                {submitting ? t("auth.signingIn", "Signing In...") : t("auth.signIn", "Sign In")}
               </button>
               <p className="text-center font-mono text-sm">
                 <Link href="/auth/reset-password" className="text-neon-blue hover:underline">

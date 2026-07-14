@@ -7,7 +7,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const updates = ((await request.json()) as any);
+  const updates = (await request.json()) as any;
   let item;
   try {
     item = await updateCalendarItem(id, updates);

@@ -45,7 +45,7 @@ export default function AdminLeadsPage() {
         if (res.status === 503) throw new Error("No lead source configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setLeads(data.leads ?? []);
       setFetchedAt(data.fetchedAt ?? new Date().toISOString());
       setError(null);
@@ -58,7 +58,6 @@ export default function AdminLeadsPage() {
   }, []);
 
   useEffect(() => {
-     
     fetchLeads().catch(() => {});
     const interval = setInterval(() => {
       fetchLeads().catch(() => {});

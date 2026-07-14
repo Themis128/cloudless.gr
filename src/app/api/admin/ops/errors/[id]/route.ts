@@ -22,7 +22,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
   let status: IssueStatus;
   try {
-    const body = ((await request.json()) as any);
+    const body = (await request.json()) as any;
     status = body.status;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });

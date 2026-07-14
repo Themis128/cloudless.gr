@@ -338,7 +338,13 @@ export async function approvePendingClient(
         .prepare(
           "UPDATE pending_client SET status = ?, portal_token = ?, approved_at = ?, updated_at = ? WHERE email = ?"
         )
-        .bind("approved", portalToken, approvedAt, Math.floor(Date.now() / 1000), email.toLowerCase())
+        .bind(
+          "approved",
+          portalToken,
+          approvedAt,
+          Math.floor(Date.now() / 1000),
+          email.toLowerCase()
+        )
         .run();
 
       return {

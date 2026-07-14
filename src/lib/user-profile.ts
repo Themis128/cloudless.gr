@@ -33,7 +33,10 @@ function getAuthDb(): AuthDatabase | null {
 // DynamoDB client (fallback)
 let dynamoClient: DynamoDBClient | null = null;
 function getDynamoClient(): DynamoDBClient {
-  dynamoClient ??= new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1", endpoint: getDynamoEndpoint() });
+  dynamoClient ??= new DynamoDBClient({
+    region: process.env.AWS_REGION || "us-east-1",
+    endpoint: getDynamoEndpoint(),
+  });
   return dynamoClient;
 }
 
@@ -58,7 +61,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     try {
       const result = await db
         .prepare(
-          "SELECT name, company, phone, preferences_json as preferences FROM user WHERE id = ?",
+          "SELECT name, company, phone, preferences_json as preferences FROM user WHERE id = ?"
         )
         .bind(userId)
         .first<{ name: string; company: string; phone: string; preferences: string }>();
@@ -127,7 +130,7 @@ export async function putUserProfile(userId: string, fields: UserProfile): Promi
       const now = Math.floor(Date.now() / 1000);
       await db
         .prepare(
-          "UPDATE user SET name = ?, company = ?, phone = ?, preferences_json = ?, updated_at = ? WHERE id = ?",
+          "UPDATE user SET name = ?, company = ?, phone = ?, preferences_json = ?, updated_at = ? WHERE id = ?"
         )
         .bind(
           fields.name || null,
@@ -135,7 +138,7 @@ export async function putUserProfile(userId: string, fields: UserProfile): Promi
           fields.phone || null,
           fields.preferences ? JSON.stringify(fields.preferences) : null,
           now,
-          userId,
+          userId
         )
         .run();
       return;

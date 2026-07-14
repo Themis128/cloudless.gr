@@ -71,7 +71,7 @@ export default function AnalyticsDashboardPage() {
     try {
       const res = await fetchWithAuth(`/api/admin/appflowy/analytics?days=${days}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as AnalyticsSummary;
+      const data = (await res.json()) as any as any as AnalyticsSummary;
       setSummary(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load analytics");
@@ -81,7 +81,6 @@ export default function AnalyticsDashboardPage() {
   }, [days]);
 
   useEffect(() => {
-     
     load();
   }, [load]);
 

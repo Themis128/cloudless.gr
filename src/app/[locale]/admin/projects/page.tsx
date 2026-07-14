@@ -68,7 +68,7 @@ export default function AdminProjectsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/projects");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setProjects(data.projects ?? []);
     } catch (err) {
       setErrorProjects(err instanceof Error ? err.message : "Failed to load projects");
@@ -83,7 +83,7 @@ export default function AdminProjectsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/tasks");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setTasks(data.tasks ?? []);
       setFetchedTasks(true);
     } catch (err) {
@@ -94,13 +94,11 @@ export default function AdminProjectsPage() {
   }
 
   useEffect(() => {
-     
     loadProjects();
   }, []);
 
   useEffect(() => {
     if (tab === "tasks" && !fetchedTasks) {
-       
       loadTasks();
     }
   }, [tab, fetchedTasks]);

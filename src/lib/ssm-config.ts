@@ -480,10 +480,7 @@ function buildConfigFromEnv(): AppConfig {
 
 /** Detect Cloudflare Workers runtime (no Node.js, no AWS SDK). */
 function isCloudflareWorkers(): boolean {
-  return (
-    typeof (globalThis as any).caches !== "undefined" &&
-    typeof process === "undefined"
-  );
+  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
 }
 
 /**

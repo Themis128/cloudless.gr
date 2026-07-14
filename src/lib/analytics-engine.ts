@@ -1,9 +1,9 @@
 /**
  * Cloudflare Analytics Engine Integration
- * 
+ *
  * Send unlimited-cardinality data from Worker to time-series database.
  * Query with SQL for analytics insights.
- * 
+ *
  * Free tier: 10M records/month, 100K queries/day
  * Docs: https://developers.cloudflare.com/analytics-engine/
  */
@@ -11,14 +11,14 @@
 interface AnalyticsEvent {
   // Required: timestamp (defaults to now)
   timestamp?: Date;
-  
+
   // Index fields (up to 20)
-  index1?: string;  // endpoint
-  index2?: string;  // status
-  index3?: string;  // user_id
-  index4?: string;  // method
-  index5?: string;  // path
-  
+  index1?: string; // endpoint
+  index2?: string; // status
+  index3?: string; // user_id
+  index4?: string; // method
+  index5?: string; // path
+
   // Metrics (up to 10 doubles)
   metric1?: number; // latency_ms
   metric2?: number; // duration_ms
@@ -30,8 +30,16 @@ interface AnalyticsEvent {
 export function writeAnalyticsEvent(env: any, event: AnalyticsEvent): Promise<void> {
   const {
     timestamp = new Date(),
-    index1, index2, index3, index4, index5,
-    metric1, metric2, metric3, metric4, metric5
+    index1,
+    index2,
+    index3,
+    index4,
+    index5,
+    metric1,
+    metric2,
+    metric3,
+    metric4,
+    metric5,
   } = event;
 
   // Analytics Engine uses prepared statements with INGEST
@@ -46,18 +54,28 @@ export function writeAnalyticsEvent(env: any, event: AnalyticsEvent): Promise<vo
   return env.ANALYTICS.prepare(sql)
     .bind(
       timestamp.toISOString(),
-      index1, index2, index3, index4, index5,
-      metric1, metric2, metric3, metric4, metric5
+      index1,
+      index2,
+      index3,
+      index4,
+      index5,
+      metric1,
+      metric2,
+      metric3,
+      metric4,
+      metric5
     )
     .run();
 }
 
 export async function queryAnalyticsEngine(
-  env: any, 
+  env: any,
   sql: string,
   binds: any[] = []
 ): Promise<any[]> {
-  const { results } = await env.ANALYTICS.prepare(sql).bind(...binds).all();
+  const { results } = await env.ANALYTICS.prepare(sql)
+    .bind(...binds)
+    .all();
   return results;
 }
 
@@ -74,7 +92,7 @@ export const ANALYTICS_QUERIES = {
     ORDER BY day DESC
     LIMIT 30
   `,
-  
+
   statusBreakdown: `
     SELECT 
       index2 as status,
@@ -83,7 +101,7 @@ export const ANALYTICS_QUERIES = {
     FROM analytics_events
     GROUP BY index2
   `,
-  
+
   topEndpoints: `
     SELECT 
       index1 as endpoint,
@@ -94,7 +112,7 @@ export const ANALYTICS_QUERIES = {
     ORDER BY hits DESC
     LIMIT 100
   `,
-  
+
   latencyHeatmap: `
     SELECT 
       index4 as method,
@@ -105,5 +123,5 @@ export const ANALYTICS_QUERIES = {
     FROM analytics_events
     WHERE timestamp > now() - interval '1d'
     GROUP BY index4, index1
-  `
+  `,
 };

@@ -22,10 +22,10 @@ interface GeminiResponse {
 // Gemini free model
 const GEMINI_MODEL = "gemini-1.5-flash";
 
-function convertToGeminiHistory(messages: Array<{role: string; content: string}>) {
-  return messages.map(m => ({
+function convertToGeminiHistory(messages: Array<{ role: string; content: string }>) {
+  return messages.map((m) => ({
     role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content }]
+    parts: [{ text: m.content }],
   }));
 }
 
@@ -71,18 +71,20 @@ export async function POST(request: Request) {
       model = GEMINI_MODEL;
     } else {
       // Workers AI not available in Next.js export - redirect to Worker endpoint
-      return new Response(JSON.stringify({
-        error: "Workers AI requires Cloudflare Worker deployment"
-      }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Workers AI requires Cloudflare Worker deployment",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    return new Response(
-      JSON.stringify({ response, model }),
-      { headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" } }
-    );
+    return new Response(JSON.stringify({ response, model }), {
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({

@@ -87,7 +87,7 @@ export async function POST(request: Request): Promise<Response> {
 
   let rawBody: unknown;
   try {
-    rawBody = ((await request.json()) as any);
+    rawBody = (await request.json()) as any;
   } catch {
     return Response.json({ error: "Invalid JSON body." }, { status: 400 });
   }

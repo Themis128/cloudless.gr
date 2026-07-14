@@ -87,7 +87,10 @@ export async function POST(request: NextRequest) {
 
     const name = body.name;
     if (typeof name !== "string" || name.length > 200) {
-      return NextResponse.json({ error: "name must be a non-empty string no longer than 200 characters" }, { status: 400 });
+      return NextResponse.json(
+        { error: "name must be a non-empty string no longer than 200 characters" },
+        { status: 400 }
+      );
     }
 
     const workspaceId = await getPrimaryWorkspaceId();

@@ -31,10 +31,7 @@ export function setEmailBinding(binding: any): void {
 
 /** Detect if running in Cloudflare Workers (not Lambda, not Node.js). */
 function isWorkers(): boolean {
-  return (
-    typeof (globalThis as any).caches !== "undefined" &&
-    typeof process === "undefined"
-  );
+  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
 }
 
 /** Detect if running in a Node.js environment (Lambda, local dev). */
@@ -132,7 +129,10 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
     SES_TO_EMAIL: "tbaltzakis@cloudless.gr",
   }));
 
-  const fromAddress = getFromAddress(payload.fromLabel, cfg.SES_FROM_EMAIL || "noreply@cloudless.gr");
+  const fromAddress = getFromAddress(
+    payload.fromLabel,
+    cfg.SES_FROM_EMAIL || "noreply@cloudless.gr"
+  );
 
   // 1. Workers binding — primary
   if (_emailBinding) {

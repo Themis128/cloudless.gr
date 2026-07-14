@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
   let body: ProfileBody;
   try {
-    body = (((await req.json()) as any)) as ProfileBody;
+    body = (await req.json()) as any as ProfileBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }

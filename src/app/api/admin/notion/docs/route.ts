@@ -17,12 +17,14 @@ export async function GET(request: NextRequest) {
 
     const workspaceId = workspaces[0].workspace_id;
     const views = await listWorkspaceViews(workspaceId);
-    const docs = views.filter((v) => v.layout === "Document").map((v) => ({
-      id: v.view_id,
-      title: v.name,
-      created: v.created_at,
-      lastEdited: v.last_edited_time,
-    }));
+    const docs = views
+      .filter((v) => v.layout === "Document")
+      .map((v) => ({
+        id: v.view_id,
+        title: v.name,
+        created: v.created_at,
+        lastEdited: v.last_edited_time,
+      }));
 
     return NextResponse.json({ docs, count: docs.length });
   } catch (err) {

@@ -80,15 +80,15 @@ export default function AutomationPage() {
 
       const healthData =
         healthRes.status === "fulfilled" && healthRes.value.ok
-          ? ((((((await healthRes.value.json()) as any)) as any)) as N8nHealth)
+          ? ((await healthRes.value.json()) as any as any as N8nHealth)
           : null;
       const workflowsData =
         workflowsRes.status === "fulfilled" && workflowsRes.value.ok
-          ? ((((((await workflowsRes.value.json()) as any)) as any)) as { workflows: N8nWorkflow[] })
+          ? ((await workflowsRes.value.json()) as any as any as { workflows: N8nWorkflow[] })
           : null;
       const execsData =
         execsRes.status === "fulfilled" && execsRes.value.ok
-          ? ((((((await execsRes.value.json()) as any)) as any)) as { executions: N8nExecution[] })
+          ? ((await execsRes.value.json()) as any as any as { executions: N8nExecution[] })
           : null;
 
       setHealth(healthData);
@@ -103,7 +103,7 @@ export default function AutomationPage() {
 
   useEffect(() => {
     // Initial data load for this admin page is intentionally triggered on mount.
-     
+
     void load();
   }, [load]);
 

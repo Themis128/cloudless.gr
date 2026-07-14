@@ -17,10 +17,10 @@ import { getConfig } from "@/lib/ssm-config";
 // ---------------------------------------------------------------------------
 
 export type PortalEventType =
-  | "comment_added"       // Client posted a comment on a step
-  | "deliverable_action"  // Client approved / requested changes on a deliverable
-  | "step_updated"        // (reserved) Admin updates a step status
-  | "portal_created";     // (reserved) New portal approved
+  | "comment_added" // Client posted a comment on a step
+  | "deliverable_action" // Client approved / requested changes on a deliverable
+  | "step_updated" // (reserved) Admin updates a step status
+  | "portal_created"; // (reserved) New portal approved
 
 export interface PortalEventPayload {
   eventType: PortalEventType;
@@ -57,9 +57,7 @@ function getSNS(): SNSClient {
  * Returns true when published, false when the topic ARN is not configured
  * (silent skip — the caller should not treat this as an error).
  */
-export async function publishPortalNotification(
-  payload: PortalEventPayload
-): Promise<boolean> {
+export async function publishPortalNotification(payload: PortalEventPayload): Promise<boolean> {
   let topicArn: string;
   try {
     const cfg = await getConfig();

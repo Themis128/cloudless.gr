@@ -80,7 +80,7 @@ export interface PageAnalytics {
  */
 export async function queryAnalytics<T = Record<string, unknown>>(
   sql: string,
-  parquetFile?: string,
+  parquetFile?: string
 ): Promise<T[]> {
   try {
     const db = await getDuckDB();
@@ -102,9 +102,7 @@ export async function queryAnalytics<T = Record<string, unknown>>(
 /**
  * Get performance history (clicks, impressions, CTR, position by date).
  */
-export async function getPerformanceHistory(
-  weeks = 12,
-): Promise<AnalyticsRow[]> {
+export async function getPerformanceHistory(weeks = 12): Promise<AnalyticsRow[]> {
   const sql = `
     SELECT 
       date,
@@ -122,9 +120,7 @@ export async function getPerformanceHistory(
 /**
  * Get top keywords by clicks.
  */
-export async function getTopKeywords(
-  limit = 20,
-): Promise<KeywordAnalytics[]> {
+export async function getTopKeywords(limit = 20): Promise<KeywordAnalytics[]> {
   const sql = `
     SELECT 
       keys[1] as keyword,
@@ -143,9 +139,7 @@ export async function getTopKeywords(
 /**
  * Get top pages by clicks.
  */
-export async function getTopPages(
-  limit = 25,
-): Promise<PageAnalytics[]> {
+export async function getTopPages(limit = 25): Promise<PageAnalytics[]> {
   const sql = `
     SELECT 
       keys[1] as page,

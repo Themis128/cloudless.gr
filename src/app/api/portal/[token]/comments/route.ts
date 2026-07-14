@@ -31,7 +31,7 @@ export async function POST(
 
   let body: { stepId?: string; text?: string };
   try {
-    body = ((await request.json()) as any);
+    body = (await request.json()) as any;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

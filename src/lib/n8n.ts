@@ -65,7 +65,7 @@ async function callThrowing<T>(
 ): Promise<T> {
   const r = await n8nFetch(path, init);
   if (!r.ok) throw new N8nApiError(r.status, await r.text().catch(() => ""));
-  return (((await r.json()) as any)) as T;
+  return (await r.json()) as any as T;
 }
 
 export async function isN8nConfigured(): Promise<boolean> {

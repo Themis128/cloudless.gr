@@ -3,6 +3,7 @@
 Primary: Cloudflare Workers (cloudless.gr)
 Fallback: Pi k3s via Tailscale (github-omv.tail4ecae1.ts.net)
 """
+
 import os
 
 import httpx
@@ -22,6 +23,7 @@ CACHE_TTL = 30  # seconds
 async def check_primary_health() -> bool:
     """Check if primary backend is healthy."""
     import time
+
     now = time.time()
 
     if now - health_cache["timestamp"] < CACHE_TTL:
@@ -47,25 +49,30 @@ async def proxy_to_backend(request: Request, backend_host: str) -> Response:
 
     headers = dict(request.headers)
     # Remove hop-by-hop headers
-    for h in ["host", "connection", "keep-alive", "proxy-authenticate",
-              "proxy-authorization", "te", "trailers", "transfer-encoding", "upgrade"]:
+    for h in [
+        "host",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "transfer-encoding",
+        "upgrade",
+    ]:
         headers.pop(h, None)
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         body = await request.body()
         resp = await client.request(
-            request.method,
-            url,
-            headers=headers,
-            content=body,
-            params=request.query_params
+            request.method, url, headers=headers, content=body, params=request.query_params
         )
 
     return Response(
         content=resp.content,
         status_code=resp.status_code,
         headers=dict(resp.headers),
-        media_type=resp.headers.get("content-type")
+        media_type=resp.headers.get("content-type"),
     )
 
 
@@ -79,7 +86,7 @@ async def health():
         "status": status,
         "primary": PRIMARY_HOST,
         "fallback": FALLBACK_HOST,
-        "primary_healthy": healthy
+        "primary_healthy": healthy,
     }
 
 

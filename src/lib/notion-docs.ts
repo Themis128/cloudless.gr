@@ -61,7 +61,6 @@ export interface DocContent extends DocRecord {
 // Helpers
 // ---------------------------------------------------------------------------
 
- 
 function mapPage(page: any): DocRecord {
   const p = page.properties ?? {};
   return {
@@ -75,7 +74,6 @@ function mapPage(page: any): DocRecord {
     url: page.url,
   };
 }
- 
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -94,9 +92,8 @@ export async function getAllDocs(): Promise<DocRecord[]> {
     const results = await notionFetchAll<unknown>(`/databases/${NOTION_DOCS_DB_ID}/query`, {
       sorts: DOCS_SORT,
     });
-     
+
     return (results as any[]).map(mapPage);
-     
   } catch (err) {
     console.error("[Notion] Failed to fetch all docs:", err);
     return [];
@@ -120,9 +117,7 @@ export async function getDocs(): Promise<DocRecord[]> {
         sorts: DOCS_SORT,
       });
 
-       
       return (results as any[]).map(mapPage);
-       
     });
   } catch (err) {
     console.error("[Notion] Failed to fetch docs:", err);
@@ -154,9 +149,8 @@ export async function getDocBySlug(slug: string): Promise<DocRecord | null> {
       }
     );
 
-     
     const page = (data.results as any[])?.[0];
-     
+
     if (!page) return null;
 
     return mapPage(page);
@@ -180,10 +174,8 @@ export async function getDocContent(pageId: string): Promise<DocContent | null> 
     // Fetch all blocks (handles pagination via GET)
     const blocks = await fetchBlocksDeep(pageId);
 
-     
     const record = mapPage(page as any);
     const html = blocksToHtml(blocks as any[]);
-     
 
     return { ...record, html };
   } catch (err) {
@@ -219,7 +211,6 @@ export interface WikiDocRecord extends DocRecord {
   lastEdited: string;
 }
 
- 
 function mapWikiPage(page: any): WikiDocRecord {
   const base = mapPage(page);
   const p = page.properties ?? {};
@@ -234,7 +225,6 @@ function mapWikiPage(page: any): WikiDocRecord {
     lastEdited: page.last_edited_time ?? "",
   };
 }
- 
 
 /**
  * List docs with wiki metadata (verification, ownership).
@@ -252,9 +242,7 @@ export async function getWikiDocs(): Promise<WikiDocRecord[]> {
       sorts: DOCS_SORT,
     });
 
-     
     return (results as any[]).map(mapWikiPage);
-     
   } catch (err) {
     console.error("[Notion Wiki] Failed to fetch wiki docs:", err);
     return [];
@@ -303,13 +291,11 @@ export async function getDocContentWithToc(
     const page = await notionFetch<unknown>(`/pages/${pageId}`);
     const blocks = await fetchBlocksDeep(pageId);
 
-     
     const record = mapPage(page as any);
     const html = blocksToHtml(blocks as any[]);
 
     const { extractToc } = await import("@/lib/notion");
     const toc = extractToc(blocks as any[]);
-     
 
     return { ...record, html, toc };
   } catch (err) {

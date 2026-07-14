@@ -1,9 +1,9 @@
 /**
  * DuckDB-Wasm Client for Analytics
- * 
+ *
  * Replaces AWS Athena with client-side parquet queries.
  * Queries run in the browser against R2-hosted data.
- * 
+ *
  * Usage per Step 5 of the blueprint.
  */
 
@@ -28,14 +28,14 @@ export const ANALYTICS_QUERIES = {
     ORDER BY day DESC
     LIMIT 30
   `,
-  
+
   // Status breakdown - replaces Athena status analysis
   statusBreakdown: `
     SELECT status, COUNT(*), AVG(latency) 
     FROM daily_logs 
     GROUP BY status
   `,
-  
+
   // Top endpoints
   topEndpoints: `
     SELECT endpoint, COUNT(*) as hits, AVG(duration) as avg_duration
@@ -43,14 +43,11 @@ export const ANALYTICS_QUERIES = {
     GROUP BY endpoint 
     ORDER BY hits DESC 
     LIMIT 100
-  `
+  `,
 };
 
 // Placeholder - actual DuckDB is loaded client-side
-export async function queryAthenaDataLake(
-  parquetUrl: string,
-  sql: string
-): Promise<any[]> {
+export async function queryAthenaDataLake(parquetUrl: string, sql: string): Promise<any[]> {
   // This is used in static export - client-side DuckDB loads via CDN
   throw new Error("DuckDB queries run client-side. Use useAnalytics hook in browser.");
 }
@@ -58,6 +55,6 @@ export async function queryAthenaDataLake(
 export function useAnalytics(parquetUrl: string) {
   return {
     query: (sql: string) => queryAthenaDataLake(parquetUrl, sql),
-    queries: ANALYTICS_QUERIES
+    queries: ANALYTICS_QUERIES,
   };
 }

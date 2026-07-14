@@ -51,7 +51,7 @@ export type AnyBlock = TextBlock | ToolUseBlock | ToolResultBlock;
 
 export interface BedrockMessage {
   role: "user" | "assistant";
-   
+
   content: any[];
 }
 
@@ -87,7 +87,6 @@ export function buildBedrockToolConfig(
         name: t.name,
         description: t.description,
         inputSchema: {
-           
           json: t.input_schema as unknown as Record<string, any>,
         },
       },

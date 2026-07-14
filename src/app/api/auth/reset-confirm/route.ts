@@ -27,7 +27,11 @@ export async function POST(req: NextRequest) {
   let newPassword: string | undefined;
   let confirmPassword: string | undefined;
   try {
-    const body = (await req.json()) as { token?: string; newPassword?: string; confirmPassword?: string };
+    const body = (await req.json()) as {
+      token?: string;
+      newPassword?: string;
+      confirmPassword?: string;
+    };
     token = body.token;
     newPassword = body.newPassword;
     confirmPassword = body.confirmPassword;
@@ -36,10 +40,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!token || !newPassword || !confirmPassword) {
-    return NextResponse.json(
-      { error: "Token and passwords required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Token and passwords required" }, { status: 400 });
   }
 
   if (newPassword !== confirmPassword) {
@@ -47,10 +48,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (newPassword.length < 8) {
-    return NextResponse.json(
-      { error: "Password must be at least 8 characters" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   }
 
   const result = await consumePasswordResetToken(db, token, newPassword);

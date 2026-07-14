@@ -196,7 +196,7 @@ export async function getTopKeywords(
       clicks: Math.round(r.clicks ?? 0),
       impressions: Math.round(r.impressions ?? 0),
       ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      position: parseFloat(((r.position ?? 0).toFixed(1))),
+      position: parseFloat((r.position ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getTopKeywords error:", err);
@@ -248,7 +248,7 @@ export async function getPerformanceHistory(
       clicks: Math.round(r.clicks ?? 0),
       impressions: Math.round(r.impressions ?? 0),
       ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      avgPosition: parseFloat(((r.position ?? 0).toFixed(1))),
+      avgPosition: parseFloat((r.position ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getPerformanceHistory error:", err);
@@ -281,7 +281,7 @@ export async function getTopPages(
       clicks: Math.round(r.clicks ?? 0),
       impressions: Math.round(r.impressions ?? 0),
       ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      position: parseFloat(((r.position ?? 0).toFixed(1))),
+      position: parseFloat((r.position ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getTopPages error:", err);
@@ -370,7 +370,7 @@ export async function getCtrOpportunities(
     });
 
     if (!res.ok) return [];
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
 
     const opportunities = (data.rows ?? [])
       .filter((r: Record<string, unknown>) => {
@@ -430,7 +430,7 @@ export async function getDeviceBreakdown(siteUrl = DEFAULT_SITE): Promise<Device
     });
 
     if (!res.ok) return [];
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       device: (r.keys as string[])?.[0] ?? "",
@@ -487,7 +487,7 @@ export async function getProductPageMetrics(
     });
 
     if (!res.ok) return [];
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       page: (r.keys as string[])?.[0] ?? "",
@@ -533,7 +533,7 @@ export async function getQueryPageMapping(
     });
 
     if (!res.ok) return [];
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       query: (r.keys as string[])?.[0] ?? "",
@@ -609,7 +609,7 @@ export async function getSearchIntentBreakdown(
       clicks: Math.round(r.clicks ?? 0),
       impressions: Math.round(r.impressions ?? 0),
       ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      position: parseFloat(((r.position ?? 0).toFixed(1))),
+      position: parseFloat((r.position ?? 0).toFixed(1)),
     });
 
     const result: SearchIntentBreakdown = {
@@ -685,7 +685,7 @@ export async function getTrafficByCountry(
       clicks: Math.round(r.clicks ?? 0),
       impressions: Math.round(r.impressions ?? 0),
       ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      avgPosition: parseFloat(((r.position ?? 0).toFixed(1))),
+      avgPosition: parseFloat((r.position ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getTrafficByCountry error:", err);

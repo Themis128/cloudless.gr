@@ -140,7 +140,11 @@ export default {
 
     // Public demo route - no auth required
     const isPublicDemo = url.pathname.startsWith("/api/agents/counter-agent/default");
-    if ((isCustomAgentRoute || isServerCounterRoute) && !isPublicDemo && !isAuthorized(request, env)) {
+    if (
+      (isCustomAgentRoute || isServerCounterRoute) &&
+      !isPublicDemo &&
+      !isAuthorized(request, env)
+    ) {
       return unauthorized();
     }
 
