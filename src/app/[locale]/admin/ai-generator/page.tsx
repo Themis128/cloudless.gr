@@ -45,7 +45,9 @@ export default function AiGeneratorPage() {
         setNotConfigured(true);
         return;
       }
-      const data = (((((await res.json()) as any)) as any)) as Partial<GenerateResponse> & { error?: string };
+      const data = (await res.json()) as any as any as Partial<GenerateResponse> & {
+        error?: string;
+      };
       if (!res.ok || !data.success) {
         throw new Error(data.error ?? "Failed to generate");
       }

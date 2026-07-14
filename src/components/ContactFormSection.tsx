@@ -94,7 +94,7 @@ export default function ContactFormSection() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        const data = (((await res.json()) as any).catch(() => null)) as {
+        const data = ((await res.json()) as any).catch(() => null) as {
           eventId?: string;
         } | null;
         // Browser-side Lead event with the same eventId the server sent to CAPI.

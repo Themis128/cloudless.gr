@@ -130,7 +130,7 @@ export default function ProjectsPage() {
           : `/api/admin/appflowy/projects?status=${encodeURIComponent(filterStatus)}`;
       const res = await fetchWithAuth(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as { projects: Project[] };
+      const data = (await res.json()) as any as any as { projects: Project[] };
       setProjects(data.projects ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load projects");
@@ -140,7 +140,6 @@ export default function ProjectsPage() {
   }, [filterStatus]);
 
   useEffect(() => {
-     
     load();
   }, [load]);
 

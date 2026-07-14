@@ -60,7 +60,6 @@ export interface Task {
 // Mappers
 // ---------------------------------------------------------------------------
 
- 
 function mapProject(page: any): Project {
   const p = page.properties ?? {};
   return {
@@ -103,7 +102,6 @@ function mapTask(page: any): Task {
     url: page.url,
   };
 }
- 
 
 // ---------------------------------------------------------------------------
 // Projects API

@@ -80,7 +80,6 @@ export interface NotionPostWithContent extends NotionPost {
 // Helpers
 // ---------------------------------------------------------------------------
 
- 
 function mapPage(page: any): NotionPost {
   const p = page.properties ?? {};
   return {
@@ -109,7 +108,6 @@ function mapPage(page: any): NotionPost {
     generatedBy: (p.GeneratedBy?.select?.name ?? "") as NotionPost["generatedBy"],
   };
 }
- 
 
 // ---------------------------------------------------------------------------
 // Public API

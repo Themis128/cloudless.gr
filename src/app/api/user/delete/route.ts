@@ -29,7 +29,10 @@ function getAuthDb(): AuthDatabase | null {
  */
 async function deleteD1User(db: AuthDatabase, userId: string, email: string): Promise<void> {
   // Find user by id first (most reliable)
-  const user = await db.prepare("SELECT id FROM user WHERE id = ?").bind(userId).first<{ id: string }>();
+  const user = await db
+    .prepare("SELECT id FROM user WHERE id = ?")
+    .bind(userId)
+    .first<{ id: string }>();
 
   if (!user) {
     // Fallback: find by email

@@ -376,7 +376,7 @@ async function publishAppHome(event: SlackEvent): Promise<void> {
     },
     body: JSON.stringify({ user_id: userId, view }),
   });
-  const json = (((await resp.json()) as any)) as { ok: boolean; error?: string };
+  const json = (await resp.json()) as any as { ok: boolean; error?: string };
   if (!json.ok) {
     console.warn(`[NewsletterSlack Home] views.publish failed: ${json.error}`);
   }

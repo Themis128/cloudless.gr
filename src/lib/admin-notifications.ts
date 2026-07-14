@@ -126,7 +126,7 @@ function parsePayload(row: Record<string, unknown>): AdminNotification {
     archivedAt?: string;
   };
   const createdAt = row.sk
-    ? String(row.sk).split("#")[0] ?? new Date((row.created_at as number) * 1000).toISOString()
+    ? (String(row.sk).split("#")[0] ?? new Date((row.created_at as number) * 1000).toISOString())
     : new Date((row.created_at as number) * 1000).toISOString();
   return {
     id: payload.id ?? String(row.sk).split("#")[1] ?? "",
@@ -279,7 +279,8 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
   const db = getAuthDb();
   if (db) {
     try {
-      let sql = "SELECT pk, sk, category, payload_json, created_at FROM admin_notification WHERE pk = ?";
+      let sql =
+        "SELECT pk, sk, category, payload_json, created_at FROM admin_notification WHERE pk = ?";
       const binds: (string | number)[] = [PK_ALL];
       if (filters.category) {
         sql += " AND category = ?";
@@ -300,13 +301,16 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
       sql += " ORDER BY sk DESC LIMIT ?";
       binds.push(limit);
 
-      const result = await db.prepare(sql).bind(...binds).all<{
-        pk: string;
-        sk: string;
-        category: string;
-        payload_json: string;
-        created_at: number;
-      }>();
+      const result = await db
+        .prepare(sql)
+        .bind(...binds)
+        .all<{
+          pk: string;
+          sk: string;
+          category: string;
+          payload_json: string;
+          created_at: number;
+        }>();
       const rows = result.results ?? [];
       let items = rows.map((row) => parsePayload(row));
       if (!filters.includeArchived) {

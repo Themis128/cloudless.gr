@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   let platforms: string[];
   let objective: string;
   try {
-    const body = ((await request.json()) as any);
+    const body = (await request.json()) as any;
     description = String(body.description ?? "").slice(0, 2000);
     platforms = Array.isArray(body.platforms) ? body.platforms : ["Meta", "LinkedIn", "Google"];
     objective = String(body.objective ?? "LEAD_GENERATION").slice(0, 200);

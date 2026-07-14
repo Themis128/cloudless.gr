@@ -156,10 +156,7 @@ async function readFromD1(): Promise<ClientPortal[]> {
       }
     }
   } catch (err) {
-    console.warn(
-      "[client-portals] D1 read failed:",
-      err instanceof Error ? err.message : err
-    );
+    console.warn("[client-portals] D1 read failed:", err instanceof Error ? err.message : err);
   }
   return [];
 }

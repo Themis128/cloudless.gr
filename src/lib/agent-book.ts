@@ -207,7 +207,10 @@ function parseWorkersAiPropose(raw: string): ProposeResult | null {
     const end = parsed.end ?? "";
     const reasoning = parsed.reasoning ?? "";
     if (!start || !end) {
-      return { status: STATUS_NO_MATCH, reasoning: reasoning.length > 0 ? reasoning : "No matching slot." };
+      return {
+        status: STATUS_NO_MATCH,
+        reasoning: reasoning.length > 0 ? reasoning : "No matching slot.",
+      };
     }
     return {
       status: STATUS_PROPOSED,
@@ -234,7 +237,9 @@ async function runWorkersAiBooking(intent: string): Promise<ProposeResult | null
     );
     const prompt = WORKERS_AI_PROMPT(intent, lines.join("\n"));
 
-    const result = (await ai.run(WORKERS_AI_CHAT_MODEL, { messages: [{ role: "user", content: prompt }] })) as {
+    const result = (await ai.run(WORKERS_AI_CHAT_MODEL, {
+      messages: [{ role: "user", content: prompt }],
+    })) as {
       response?: string;
     };
     if (!result.response) return null;

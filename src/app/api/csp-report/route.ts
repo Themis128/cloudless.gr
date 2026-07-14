@@ -77,7 +77,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   // Both content types end up as JSON; just parse and dispatch by shape.
   let payload: unknown;
   try {
-    payload = ((await request.json()) as any);
+    payload = (await request.json()) as any;
   } catch {
     return new Response(null, { status: 204 });
   }

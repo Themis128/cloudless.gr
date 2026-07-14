@@ -39,7 +39,7 @@ export default function ABTestsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/ab-tests");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as { flags?: ABFlag[] };
+      const data = (await res.json()) as any as any as { flags?: ABFlag[] };
       setFlags(data.flags ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -49,7 +49,6 @@ export default function ABTestsPage() {
   }
 
   useEffect(() => {
-     
     load();
   }, []);
 
@@ -64,7 +63,7 @@ export default function ABTestsPage() {
         body: JSON.stringify({ id, ...patch }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as { flags?: ABFlag[]; warning?: string };
+      const data = (await res.json()) as any as any as { flags?: ABFlag[]; warning?: string };
       setFlags(data.flags ?? flags);
       if (data.warning) setWarning(data.warning);
     } catch (e) {
@@ -88,7 +87,7 @@ export default function ABTestsPage() {
         body: JSON.stringify({ action: "reset" }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as { flags?: ABFlag[] };
+      const data = (await res.json()) as any as any as { flags?: ABFlag[] };
       setFlags(data.flags ?? flags);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Reset failed");

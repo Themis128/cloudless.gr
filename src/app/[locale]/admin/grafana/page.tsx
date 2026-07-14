@@ -57,10 +57,10 @@ export default function GrafanaAdminPage() {
       if (!dRes.ok && dRes.status !== 503) {
         throw new Error(`dashboards HTTP ${dRes.status}`);
       }
-      const d = (((((await dRes.json()) as any)) as any)) as any;
+      const d = (await dRes.json()) as any as any as any;
       setDashboards(d.dashboards ?? []);
       setConfigured(Boolean(d.configured));
-      if (hRes.ok) setHealth(((((await hRes.json()) as any)) as any));
+      if (hRes.ok) setHealth((await hRes.json()) as any as any);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -69,7 +69,6 @@ export default function GrafanaAdminPage() {
   }
 
   useEffect(() => {
-     
     load();
   }, []);
 

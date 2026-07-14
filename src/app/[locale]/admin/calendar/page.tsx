@@ -45,7 +45,7 @@ export default function CalendarPage() {
     try {
       const res = await fetchWithAuth(`/api/admin/calendar?from=${firstDay}&to=${lastDay}`);
       if (!res.ok) return;
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setItems(data.items ?? []);
     } catch {
       /* silent */
@@ -55,7 +55,6 @@ export default function CalendarPage() {
   }
 
   useEffect(() => {
-     
     loadItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);

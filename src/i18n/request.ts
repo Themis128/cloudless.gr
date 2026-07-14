@@ -13,7 +13,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
   // AbstractIntlMessages was removed in next-intl v4; cast through unknown
   // since JSON arrays (e.g. typingTexts: string[]) don't satisfy the index
   // signature expected by getRequestConfig.
-   
+
   let messages: any;
   if (locale === "el") {
     messages = (await import("../locales/el.json")).default;

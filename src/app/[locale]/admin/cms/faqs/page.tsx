@@ -32,7 +32,7 @@ export default function AdminFaqsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/faqs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as { faqs: Faq[] };
+      const data = (await res.json()) as any as any as { faqs: Faq[] };
       setItems(data.faqs ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -42,7 +42,7 @@ export default function AdminFaqsPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});  
+    load().catch(() => {});
   }, [load]);
 
   const openCreate = () => {
@@ -80,7 +80,7 @@ export default function AdminFaqsPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (((((await res.json()) as any)) as any)) as { error?: string };
+        const d = (await res.json()) as any as any as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);

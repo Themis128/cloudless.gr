@@ -87,7 +87,7 @@ export default function PostizAdminPage() {
       setError(`integrations: ${res.status}`);
       return;
     }
-    const data = (((((await res.json()) as any)) as any)) as { integrations: PostizIntegration[] };
+    const data = (await res.json()) as any as any as { integrations: PostizIntegration[] };
     setIntegrations(data.integrations ?? []);
     setError(null);
   }, [markConfigured]);
@@ -103,7 +103,7 @@ export default function PostizAdminPage() {
       setError(`posts: ${res.status}`);
       return;
     }
-    const data = (((((await res.json()) as any)) as any)) as { posts: PostizPost[] };
+    const data = (await res.json()) as any as any as { posts: PostizPost[] };
     setPosts(data.posts ?? []);
     setError(null);
   }, [markConfigured]);
@@ -113,7 +113,7 @@ export default function PostizAdminPage() {
     // them happen after the fetch resolves, not synchronously in the effect
     // body. The new react-hooks/set-state-in-effect rule can't tell the
     // difference. Matches the existing pattern in AuthContext.tsx:199.
-     
+
     void reloadIntegrations();
     void reloadPosts();
   }, [reloadIntegrations, reloadPosts]);
@@ -315,7 +315,7 @@ function ComposeTab({
       setFeedback(`Upload failed: ${up.status}`);
       return;
     }
-    const uploaded = (((((await up.json()) as any)) as any)) as ImageRef;
+    const uploaded = (await up.json()) as any as any as ImageRef;
     setDraft({ images: [...draft.images, { id: uploaded.id, path: uploaded.path }] });
     setImageUrlInput("");
   };
@@ -328,7 +328,7 @@ function ComposeTab({
       setFeedback(`File upload failed: ${up.status}`);
       return;
     }
-    const uploaded = (((((await up.json()) as any)) as any)) as ImageRef;
+    const uploaded = (await up.json()) as any as any as ImageRef;
     setDraft({ images: [...draft.images, { id: uploaded.id, path: uploaded.path }] });
   };
 
@@ -345,7 +345,7 @@ function ComposeTab({
       setFeedback(`Slot lookup failed: ${res.status}`);
       return;
     }
-    const { date } = (((((await res.json()) as any)) as any)) as { date: string };
+    const { date } = (await res.json()) as any as any as { date: string };
     // datetime-local input wants local time, no seconds/zone.
     setDraft({ scheduleAt: new Date(date).toISOString().slice(0, 16) });
     setFeedback(`Next free slot: ${new Date(date).toLocaleString()}`);
@@ -370,7 +370,7 @@ function ComposeTab({
         setFeedback(`AI draft failed: ${res.status}`);
         return;
       }
-      const data = (((((await res.json()) as any)) as any)) as { result?: string };
+      const data = (await res.json()) as any as any as { result?: string };
       if (data.result) setDraft({ content: data.result.trim() });
     } finally {
       setAiBusy(false);

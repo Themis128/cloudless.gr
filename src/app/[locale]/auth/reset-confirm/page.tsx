@@ -47,7 +47,10 @@ function ResetConfirmForm() {
       <div className="bg-void flex min-h-screen items-center justify-center px-4 py-20">
         <div className="w-full max-w-md text-center">
           <p className="font-mono text-slate-400">Invalid or missing reset token.</p>
-          <Link href="/auth/reset-password" className="text-neon-cyan font-mono text-sm hover:underline">
+          <Link
+            href="/auth/reset-password"
+            className="text-neon-cyan font-mono text-sm hover:underline"
+          >
             Request a new reset link
           </Link>
         </div>
@@ -103,14 +106,20 @@ function ResetConfirmForm() {
               <p className="font-mono text-sm text-slate-300">
                 {t("auth.passwordUpdated", "Your password has been reset successfully.")}
               </p>
-              <Link href="/auth/login" className="text-neon-cyan block font-mono text-sm hover:underline">
+              <Link
+                href="/auth/login"
+                className="text-neon-cyan block font-mono text-sm hover:underline"
+              >
                 {t("auth.goToSignIn", "Go to Sign In →")}
               </Link>
             </div>
           ) : (
             <form onSubmit={handleReset} className="space-y-5">
               <div>
-                <label htmlFor="new-password" className="mb-2 block font-mono text-sm text-slate-400">
+                <label
+                  htmlFor="new-password"
+                  className="mb-2 block font-mono text-sm text-slate-400"
+                >
                   {t("auth.newPassword", "New Password")}
                 </label>
                 <input
@@ -127,7 +136,10 @@ function ResetConfirmForm() {
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className="mb-2 block font-mono text-sm text-slate-400">
+                <label
+                  htmlFor="confirm-password"
+                  className="mb-2 block font-mono text-sm text-slate-400"
+                >
                   {t("auth.confirmPassword", "Confirm Password")}
                 </label>
                 <input

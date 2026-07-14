@@ -116,7 +116,7 @@ export async function listEditorialPosts(): Promise<NotionBlogDraft[]> {
       );
       return [];
     }
-    const data = (((await res.json()) as any)) as { results: NotionPageRaw[] };
+    const data = (await res.json()) as any as { results: NotionPageRaw[] };
     return data.results.map(mapPage);
   } catch (err) {
     console.error("[notion-blog-admin] listEditorialPosts error:", err);
@@ -144,7 +144,7 @@ export async function findEditorialPost(idOrSlug: string): Promise<NotionBlogDra
       const cleanId = trimmed.replace(/[^0-9a-f-]/gi, "");
       const res = await notionFetch(`/pages/${cleanId}`);
       if (res.ok) {
-        const page = (((await res.json()) as any)) as NotionPageRaw;
+        const page = (await res.json()) as any as NotionPageRaw;
         return mapPage(page);
       }
     } catch (err) {
@@ -164,7 +164,7 @@ export async function findEditorialPost(idOrSlug: string): Promise<NotionBlogDra
       }),
     });
     if (!res.ok) return null;
-    const data = (((await res.json()) as any)) as { results: NotionPageRaw[] };
+    const data = (await res.json()) as any as { results: NotionPageRaw[] };
     return data.results[0] ? mapPage(data.results[0]) : null;
   } catch (err) {
     console.error("[notion-blog-admin] findEditorialPost error:", err);

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
   let prefix: string | undefined;
   try {
-    const body = ((await request.json()) as any);
+    const body = (await request.json()) as any;
     prefix = typeof body.prefix === "string" ? body.prefix : undefined;
   } catch (err) {
     const _r = mapIntegrationError(err);

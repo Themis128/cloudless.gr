@@ -92,7 +92,7 @@ export async function createUser(
   db: AuthDatabase,
   email: string,
   password: string,
-  name?: string,
+  name?: string
 ): Promise<AuthResult> {
   // Check if user exists
   const existing = await db
@@ -111,18 +111,17 @@ export async function createUser(
   try {
     await db
       .prepare(
-        "INSERT INTO user (id, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO user (id, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
       )
       .bind(id, email, name || null, passwordHash, now, now)
       .run();
 
     // Default to 'user' role
-    await db
-      .prepare("INSERT INTO user_role (user_id, role) VALUES (?, ?)")
-      .bind(id, "user")
-      .run();
+    await db.prepare("INSERT INTO user_role (user_id, role) VALUES (?, ?)").bind(id, "user").run();
 
-    return { user: { id, email, name, password_hash: passwordHash, created_at: now, updated_at: now } };
+    return {
+      user: { id, email, name, password_hash: passwordHash, created_at: now, updated_at: now },
+    };
   } catch {
     return { error: "Failed to create user" };
   }
@@ -131,17 +130,14 @@ export async function createUser(
 export async function authenticateUser(
   db: AuthDatabase,
   email: string,
-  password: string,
+  password: string
 ): Promise<AuthResult> {
   // Check if SESSION_SECRET is configured
   if (!SESSION_SECRET) {
     return { error: "Authentication not configured" };
   }
 
-  const user = await db
-    .prepare("SELECT * FROM user WHERE email = ?")
-    .bind(email)
-    .first<D1User>();
+  const user = await db.prepare("SELECT * FROM user WHERE email = ?").bind(email).first<D1User>();
 
   if (!user) {
     return { error: "Invalid credentials" };
@@ -163,13 +159,18 @@ export async function authenticateUser(
 
   return {
     user,
-    session: { id: sessionId, user_id: user.id, expires_at: expiresAt, created_at: Math.floor(Date.now() / 1000) },
+    session: {
+      id: sessionId,
+      user_id: user.id,
+      expires_at: expiresAt,
+      created_at: Math.floor(Date.now() / 1000),
+    },
   };
 }
 
 export async function getUserBySession(
   db: AuthDatabase,
-  sessionId: string,
+  sessionId: string
 ): Promise<D1User | null> {
   const now = Math.floor(Date.now() / 1000);
 
@@ -184,7 +185,7 @@ export async function getUserBySession(
 
   const user = await db
     .prepare(
-      "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE id = ?",
+      "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE id = ?"
     )
     .bind(session.user_id)
     .first<D1User>();
@@ -199,16 +200,23 @@ export async function deleteSession(db: AuthDatabase, sessionId: string): Promis
 export async function updateUser(
   db: AuthDatabase,
   userId: string,
-  attrs: { name?: string; company?: string; phone?: string; preferences?: Record<string, unknown> },
+  attrs: { name?: string; company?: string; phone?: string; preferences?: Record<string, unknown> }
 ): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   const { name, company, phone, preferences } = attrs;
 
   await db
     .prepare(
-      "UPDATE user SET name = ?, company = ?, phone = ?, preferences_json = ?, updated_at = ? WHERE id = ?",
+      "UPDATE user SET name = ?, company = ?, phone = ?, preferences_json = ?, updated_at = ? WHERE id = ?"
     )
-    .bind(name || null, company || null, phone || null, preferences ? JSON.stringify(preferences) : null, now, userId)
+    .bind(
+      name || null,
+      company || null,
+      phone || null,
+      preferences ? JSON.stringify(preferences) : null,
+      now,
+      userId
+    )
     .run();
 }
 
@@ -223,7 +231,7 @@ export async function isAdmin(db: AuthDatabase, userId: string): Promise<boolean
 
 export async function createAdminUser(
   db: AuthDatabase,
-  email: string,
+  email: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!SESSION_SECRET) {
     return { success: false, error: "Authentication not configured" };
@@ -249,7 +257,7 @@ export async function createAdminUser(
 // Password reset flow
 export async function createPasswordResetToken(
   db: AuthDatabase,
-  email: string,
+  email: string
 ): Promise<{ token?: string; error?: string }> {
   if (!SESSION_SECRET) {
     return { error: "Authentication not configured" };
@@ -271,7 +279,7 @@ export async function createPasswordResetToken(
   // Store reset token in user table (overwriting previous)
   await db
     .prepare(
-      "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.reset_token', ?, '$.reset_expires', ?)",
+      "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.reset_token', ?, '$.reset_expires', ?)"
     )
     .bind(token, expiresAt)
     .run();
@@ -282,7 +290,7 @@ export async function createPasswordResetToken(
 export async function consumePasswordResetToken(
   db: AuthDatabase,
   token: string,
-  newPassword: string,
+  newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!SESSION_SECRET) {
     return { success: false, error: "Authentication not configured" };
@@ -293,7 +301,7 @@ export async function consumePasswordResetToken(
   // Find user with valid reset token
   const users = await db
     .prepare(
-      "SELECT id, preferences_json FROM user WHERE json_extract(preferences_json, '$.reset_token') = ? AND json_extract(preferences_json, '$.reset_expires') > ?",
+      "SELECT id, preferences_json FROM user WHERE json_extract(preferences_json, '$.reset_token') = ? AND json_extract(preferences_json, '$.reset_expires') > ?"
     )
     .bind(token, now)
     .all<{ id: string; preferences_json: string }>();

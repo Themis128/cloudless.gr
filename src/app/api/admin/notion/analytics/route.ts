@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check if type param provided for filtered events
-    const type = searchParams.get("type") as "page_view" | "form_submit" | "blog_view" | "doc_view" | "signup" | "order" | "error" | null;
+    const type = searchParams.get("type") as
+      "page_view" | "form_submit" | "blog_view" | "doc_view" | "signup" | "order" | "error" | null;
 
     if (type) {
       const events = await getRecentEvents(type);

@@ -40,7 +40,7 @@ export function cacheKey(prefix: string, params: Record<string, unknown>): strin
 export async function getCachedAnalytics<T = Record<string, unknown>>(
   db: AnalyticsDatabase,
   endpointKey: string,
-  params: Record<string, unknown>,
+  params: Record<string, unknown>
 ): Promise<T | null> {
   const sk = cacheKey(endpointKey, params);
   const now = Math.floor(Date.now() / 1000);
@@ -67,14 +67,14 @@ export async function setCachedAnalytics(
   endpointKey: string,
   params: Record<string, unknown>,
   result: unknown,
-  ttlSeconds = DEFAULT_CACHE_TTL_SECONDS,
+  ttlSeconds = DEFAULT_CACHE_TTL_SECONDS
 ): Promise<void> {
   const sk = cacheKey(endpointKey, params);
   const now = Math.floor(Date.now() / 1000);
 
   await db
     .prepare(
-      "INSERT OR REPLACE INTO analytics_cache (pk, sk, result_json, cached_at, expires_at) VALUES (?, ?, ?, ?, ?)",
+      "INSERT OR REPLACE INTO analytics_cache (pk, sk, result_json, cached_at, expires_at) VALUES (?, ?, ?, ?, ?)"
     )
     .bind("analytics", sk, JSON.stringify(result), now, now + ttlSeconds)
     .run();
@@ -86,7 +86,7 @@ export async function withCache<T>(
   endpointKey: string,
   params: Record<string, unknown>,
   fetchFn: () => Promise<T>,
-  ttlSeconds = DEFAULT_CACHE_TTL_SECONDS,
+  ttlSeconds = DEFAULT_CACHE_TTL_SECONDS
 ): Promise<T> {
   // Try cache first
   const cached = await getCachedAnalytics<T>(db, endpointKey, params);
@@ -108,7 +108,10 @@ export async function withCache<T>(
 // Clean up expired cache entries
 export async function cleanupExpiredCache(db: AnalyticsDatabase): Promise<number> {
   const now = Math.floor(Date.now() / 1000);
-  const result = await db.prepare("DELETE FROM analytics_cache WHERE expires_at < ?").bind(now).run();
+  const result = await db
+    .prepare("DELETE FROM analytics_cache WHERE expires_at < ?")
+    .bind(now)
+    .run();
   return result.meta?.changes ?? 0;
 }
 
@@ -140,10 +143,13 @@ export async function getCacheStats(db: AnalyticsDatabase): Promise<{
 export async function invalidateCache(
   db: AnalyticsDatabase,
   endpointKey: string,
-  params: Record<string, unknown>,
+  params: Record<string, unknown>
 ): Promise<void> {
   const sk = cacheKey(endpointKey, params);
-  await db.prepare("DELETE FROM analytics_cache WHERE pk = ? AND sk = ?").bind("analytics", sk).run();
+  await db
+    .prepare("DELETE FROM analytics_cache WHERE pk = ? AND sk = ?")
+    .bind("analytics", sk)
+    .run();
 }
 
 // Invalidate all analytics cache

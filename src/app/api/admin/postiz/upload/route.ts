@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  const body = (((await req.json()) as any).catch(() => null)) as { url?: string } | null;
+  const body = ((await req.json()) as any).catch(() => null) as { url?: string } | null;
   if (!body?.url) {
     return NextResponse.json({ error: "missing_url" }, { status: 400 });
   }

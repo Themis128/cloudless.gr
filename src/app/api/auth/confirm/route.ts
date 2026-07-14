@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   let email: string | undefined;
   let code: string | undefined;
   try {
-    const body = (((await req.json()) as any)) as { email?: string; code?: string };
+    const body = (await req.json()) as any as { email?: string; code?: string };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     code = typeof body.code === "string" ? body.code.trim() : undefined;
   } catch {

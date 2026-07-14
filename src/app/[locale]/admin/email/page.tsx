@@ -62,7 +62,7 @@ export default function EmailPage() {
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(((((await res.json()) as any)) as any));
+      setData((await res.json()) as any as any);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -71,7 +71,6 @@ export default function EmailPage() {
   }
 
   useEffect(() => {
-     
     load(tab);
   }, [tab]);
 

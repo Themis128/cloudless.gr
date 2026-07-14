@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   let body: { workflowId?: string; name?: string; payload?: unknown };
   try {
-    body = (((await req.json()) as any)) as typeof body;
+    body = (await req.json()) as any as typeof body;
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }

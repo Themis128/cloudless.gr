@@ -77,7 +77,12 @@ async function verifyOtp(email: string, otp: string, token: string): Promise<boo
 
 async function confirmUserD1(db: AuthDatabase, email: string): Promise<boolean> {
   try {
-    await db.prepare("UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?").bind(email).run();
+    await db
+      .prepare(
+        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?"
+      )
+      .bind(email)
+      .run();
     return true;
   } catch (err) {
     console.error("[auth/activate] D1 confirm failed:", err);
@@ -87,13 +92,12 @@ async function confirmUserD1(db: AuthDatabase, email: string): Promise<boolean> 
 
 async function confirmUserCognito(userPoolId: string, email: string): Promise<boolean> {
   try {
-    const { CognitoIdentityProviderClient, AdminConfirmSignUpCommand } = await import("@aws-sdk/client-cognito-identity-provider");
+    const { CognitoIdentityProviderClient, AdminConfirmSignUpCommand } =
+      await import("@aws-sdk/client-cognito-identity-provider");
     const issuer = process.env.COGNITO_ISSUER ?? "";
     const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";
     const client = new CognitoIdentityProviderClient({ region });
-    await client.send(
-      new AdminConfirmSignUpCommand({ UserPoolId: userPoolId, Username: email })
-    );
+    await client.send(new AdminConfirmSignUpCommand({ UserPoolId: userPoolId, Username: email }));
     return true;
   } catch (err: unknown) {
     const name = (err as { name?: string }).name;
@@ -141,7 +145,7 @@ export async function POST(req: NextRequest) {
   let otp: string | undefined;
   let token: string | undefined;
   try {
-    const body = (((await req.json()) as any)) as { email?: string; otp?: string; token?: string };
+    const body = (await req.json()) as any as { email?: string; otp?: string; token?: string };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     otp = body.otp;
     token = body.token;

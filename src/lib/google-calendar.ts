@@ -128,7 +128,7 @@ export async function getAvailableSlots(daysAhead = 7): Promise<TimeSlot[]> {
   });
 
   if (!freeBusyRes.ok) return [];
-  const freeBusyData = ((await freeBusyRes.json()) as any);
+  const freeBusyData = (await freeBusyRes.json()) as any;
   const busySlots: TimeSlot[] = freeBusyData.calendars?.[calendarId]?.busy ?? [];
 
   // Generate 30-min slots during business hours (09:00-17:00 Europe/Athens).
@@ -185,7 +185,7 @@ export async function bookConsultation(data: {
       return null;
     }
 
-    const event = ((await res.json()) as any);
+    const event = (await res.json()) as any;
     return { eventId: event.id, htmlLink: event.htmlLink };
   } catch (err) {
     console.error("[GCal] Error:", err);
@@ -229,7 +229,7 @@ export async function getConsultationsByEmail(email: string): Promise<Consultati
     );
 
     if (!res.ok) return [];
-    const data = ((await res.json()) as any);
+    const data = (await res.json()) as any;
     const items = data.items ?? [];
 
     return items

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
   const exp = Date.now() + 5 * 60 * 1000; // 5-minute window
   const nonce = crypto.randomUUID().replace(/-/g, "");
-  
+
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     false,
     ["sign"]
   );
-  
+
   const sigBuffer = await crypto.subtle.sign(
     "HMAC",
     keyMaterial,
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     .replace(/\//g, "_")
     .replace(/=+$/, "");
   const token = `${nonce}.${exp}.${sigB64}`;
-  
+
   const otpBuffer = await crypto.subtle.sign(
     "HMAC",
     keyMaterial,

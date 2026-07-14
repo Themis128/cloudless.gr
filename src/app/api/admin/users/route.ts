@@ -56,14 +56,19 @@ interface D1UserRow {
 }
 
 async function listD1Users(db: AuthDatabase, limit: number, filter?: string): Promise<AdminUser[]> {
-  let sql = "SELECT u.id, u.username, u.email, u.name, u.company, u.phone, u.status, u.email_verified, u.created_at, u.updated_at, r.role FROM user u LEFT JOIN user_role r ON u.id = r.user_id LIMIT ?";
+  let sql =
+    "SELECT u.id, u.username, u.email, u.name, u.company, u.phone, u.status, u.email_verified, u.created_at, u.updated_at, r.role FROM user u LEFT JOIN user_role r ON u.id = r.user_id LIMIT ?";
   const params: (number | string)[] = [limit];
   if (filter) {
-    sql = "SELECT u.id, u.username, u.email, u.name, u.company, u.phone, u.status, u.email_verified, u.created_at, u.updated_at, r.role FROM user u LEFT JOIN user_role r ON u.id = r.user_id WHERE u.email LIKE ? OR u.username LIKE ? LIMIT ?";
+    sql =
+      "SELECT u.id, u.username, u.email, u.name, u.company, u.phone, u.status, u.email_verified, u.created_at, u.updated_at, r.role FROM user u LEFT JOIN user_role r ON u.id = r.user_id WHERE u.email LIKE ? OR u.username LIKE ? LIMIT ?";
     params.unshift(`%${filter}%`, `%${filter}%`);
   }
 
-  const result = await db.prepare(sql).bind(...params).all<D1UserRow>();
+  const result = await db
+    .prepare(sql)
+    .bind(...params)
+    .all<D1UserRow>();
   const rows = result.results ?? [];
 
   return rows.map((u) => ({
@@ -86,7 +91,10 @@ async function mutateD1User(
   username: string,
   action: string
 ): Promise<{ success: boolean; message: string }> {
-  const user = await db.prepare("SELECT id FROM user WHERE username = ?").bind(username).first<{ id: string }>();
+  const user = await db
+    .prepare("SELECT id FROM user WHERE username = ?")
+    .bind(username)
+    .first<{ id: string }>();
   if (!user) throw Object.assign(new Error("User not found"), { status: 404 });
 
   switch (action) {
@@ -98,13 +106,18 @@ async function mutateD1User(
       return { success: true, message: "User enabled" };
     case "promote": {
       await db
-        .prepare("INSERT INTO user_role (user_id, role) VALUES (?, 'admin') ON CONFLICT(user_id, role) DO NOTHING")
+        .prepare(
+          "INSERT INTO user_role (user_id, role) VALUES (?, 'admin') ON CONFLICT(user_id, role) DO NOTHING"
+        )
         .bind(user.id, "admin")
         .run();
       return { success: true, message: "User promoted to admin" };
     }
     case "demote": {
-      await db.prepare("DELETE FROM user_role WHERE user_id = ? AND role = 'admin'").bind(user.id).run();
+      await db
+        .prepare("DELETE FROM user_role WHERE user_id = ? AND role = 'admin'")
+        .bind(user.id)
+        .run();
       return { success: true, message: "User removed from admin group" };
     }
     default:
@@ -237,7 +250,10 @@ export async function GET(request: NextRequest) {
       const users = await listD1Users(db, limit, filter || undefined);
       return NextResponse.json({ users, count: users.length, provider: "d1" });
     } catch (err) {
-      console.error("[admin-users] D1 list failed, falling back to Cognito:", err instanceof Error ? err.message : String(err));
+      console.error(
+        "[admin-users] D1 list failed, falling back to Cognito:",
+        err instanceof Error ? err.message : String(err)
+      );
       // Fall through to Cognito
     }
   }
@@ -260,7 +276,10 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const { action, username } = (((await request.json()) as any)) as { action: string; username: string };
+  const { action, username } = (await request.json()) as any as {
+    action: string;
+    username: string;
+  };
   if (!action || !username) {
     return NextResponse.json({ error: "action and username required" }, { status: 400 });
   }

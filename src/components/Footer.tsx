@@ -24,7 +24,7 @@ export default function Footer() {
   useEffect(() => {
     // Intentional post-hydration flip to swap from the SSR-matching empty
     // snapshot to the real year. See React error #418 context above.
-     
+
     setMounted(true);
   }, []);
   const year = mounted ? new Date().getFullYear() : null;

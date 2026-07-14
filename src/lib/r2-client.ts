@@ -1,14 +1,16 @@
 /**
  * R2 Client Helper
- * 
+ *
  * Provides unified access to Cloudflare R2 buckets across the application.
  * Handles environment detection (Workers vs Lambda) and routing to appropriate bucket.
  */
 
 // Environment detection
 export function isCloudflareWorkers(): boolean {
-  return typeof (globalThis as any).caches !== "undefined" &&
-         !(process as any).env?.AWS_LAMBDA_FUNCTION_NAME;
+  return (
+    typeof (globalThis as any).caches !== "undefined" &&
+    !(process as any).env?.AWS_LAMBDA_FUNCTION_NAME
+  );
 }
 
 // Get R2 bucket binding for assets (static files)
@@ -39,7 +41,7 @@ export function getDataLakeBucket(env: any): R2Bucket | null {
 
 // Serve static asset from R2 with proper headers
 export async function serveStaticAsset(
-  env: any, 
+  env: any,
   key: string,
   opts: { cacheSeconds?: number } = {}
 ): Promise<Response | null> {
@@ -52,18 +54,26 @@ export async function serveStaticAsset(
   const headers = new Headers();
   asset.writeHttpMetadata(headers);
   headers.set("Cache-Control", `public, max-age=${opts.cacheSeconds || 31536000}, immutable`);
-  
+
   // Set CORS headers
   headers.set("Access-Control-Allow-Origin", "*");
-  
+
   // Set content type if missing
   if (!headers.get("Content-Type")) {
     const ext = key.split(".").pop()?.toLowerCase();
     const mimeTypes: Record<string, string> = {
-      css: "text/css", js: "application/javascript", json: "application/json",
-      html: "text/html", svg: "image/svg+xml", png: "image/png",
-      jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
-      webp: "image/webp", woff2: "font/woff2", woff: "font/woff"
+      css: "text/css",
+      js: "application/javascript",
+      json: "application/json",
+      html: "text/html",
+      svg: "image/svg+xml",
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      webp: "image/webp",
+      woff2: "font/woff2",
+      woff: "font/woff",
     };
     if (ext && mimeTypes[ext]) {
       headers.set("Content-Type", mimeTypes[ext]);
@@ -79,14 +89,15 @@ export async function listR2Objects(
   bucketType: "assets" | "media" | "lake",
   prefix = ""
 ): Promise<string[]> {
-  const bucket = bucketType === "assets" 
-    ? getAssetsBucket(env) 
-    : bucketType === "media" 
-      ? getMediaBucket(env) 
-      : getDataLakeBucket(env);
-  
+  const bucket =
+    bucketType === "assets"
+      ? getAssetsBucket(env)
+      : bucketType === "media"
+        ? getMediaBucket(env)
+        : getDataLakeBucket(env);
+
   if (!bucket?.list) return [];
-  
+
   const result = await bucket.list({ prefix, limit: 1000 });
   return result.objects.map((obj: { key: string }) => obj.key);
 }

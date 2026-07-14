@@ -68,7 +68,7 @@ export default function WorkspaceAnalyticsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/analytics/workspaces");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(((((await res.json()) as any)) as any));
+      setData((await res.json()) as any as any);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load analytics");
     } finally {
@@ -77,7 +77,6 @@ export default function WorkspaceAnalyticsPage() {
   }
 
   useEffect(() => {
-     
     load();
   }, []);
 

@@ -89,8 +89,8 @@ export default function NotificationsPage() {
         return;
       }
 
-      const listJson = (((((await listRes.json()) as any)) as any)) as { notifications?: Notification[] };
-      const statsJson = (((((await statsRes.json()) as any)) as any)) as Analytics;
+      const listJson = (await listRes.json()) as any as any as { notifications?: Notification[] };
+      const statsJson = (await statsRes.json()) as any as any as Analytics;
       setNotifications(listJson.notifications ?? []);
       setAnalytics(statsJson);
     } catch (e) {

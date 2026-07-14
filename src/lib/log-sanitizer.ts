@@ -1,6 +1,6 @@
 /**
  * Log Sanitization Utilities for Security
- * 
+ *
  * Prevents log injection attacks by removing control characters and format specifiers.
  * Format strings in console methods can be exploited when user-controlled data contains
  * %s, %d, %i, %o, etc.

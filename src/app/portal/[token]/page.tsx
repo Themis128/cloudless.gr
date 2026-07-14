@@ -216,7 +216,7 @@ function ReplyForm({
         body: JSON.stringify({ stepId, text: text.trim() }),
       });
       if (res.ok) {
-        const { comment } = ((await res.json()) as any);
+        const { comment } = (await res.json()) as any;
         onSent(comment);
         setText("");
       }
@@ -605,7 +605,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
         const res = await fetch(`/api/portal/${token}`);
         if (res.status === 404) throw new Error("This portal link is invalid or has been revoked.");
         if (!res.ok) throw new Error("Failed to load your portal. Please try again later.");
-        setData(((await res.json()) as any));
+        setData((await res.json()) as any);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
       } finally {

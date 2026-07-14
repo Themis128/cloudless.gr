@@ -76,12 +76,18 @@ function ResetPasswordForm() {
                 </svg>
               </div>
               <p className="font-mono text-sm text-slate-300">
-                {t("auth.resetLinkSent", "If an account exists with that email, we've sent a reset link.")}
+                {t(
+                  "auth.resetLinkSent",
+                  "If an account exists with that email, we've sent a reset link."
+                )}
               </p>
               <p className="font-mono text-xs text-slate-500">
                 {t("auth.checkInbox", "Check your inbox (and spam folder) for the reset link.")}
               </p>
-              <Link href="/auth/login" className="text-neon-cyan block font-mono text-sm hover:underline">
+              <Link
+                href="/auth/login"
+                className="text-neon-cyan block font-mono text-sm hover:underline"
+              >
                 {t("auth.backToSignIn", "Back to Sign In →")}
               </Link>
             </div>
@@ -95,7 +101,10 @@ function ResetPasswordForm() {
 
               <form onSubmit={handleRequest} className="space-y-5">
                 <div>
-                  <label htmlFor="reset-email" className="mb-2 block font-mono text-sm text-slate-400">
+                  <label
+                    htmlFor="reset-email"
+                    className="mb-2 block font-mono text-sm text-slate-400"
+                  >
                     {t("auth.email", "Email")}
                   </label>
                   <input

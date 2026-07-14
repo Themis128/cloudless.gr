@@ -104,7 +104,12 @@ export async function GET(req: NextRequest) {
 
   // Mark user as verified by clearing any unverified flag if present
   try {
-    await db.prepare("UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?").bind(email).run();
+    await db
+      .prepare(
+        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?"
+      )
+      .bind(email)
+      .run();
   } catch {
     // Non-fatal
   }
@@ -142,7 +147,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await db.prepare("UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?").bind(email).run();
+    await db
+      .prepare(
+        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?"
+      )
+      .bind(email)
+      .run();
   } catch (err) {
     console.error("[auth/activate-d1] update failed:", err);
     return NextResponse.json({ error: "Activation failed" }, { status: 500 });

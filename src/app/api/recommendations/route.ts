@@ -10,10 +10,7 @@
  */
 
 import { NextRequest } from "next/server";
-import {
-  getSimilarProducts,
-  getTrendingProducts,
-} from "@/lib/recommendations";
+import { getSimilarProducts, getTrendingProducts } from "@/lib/recommendations";
 
 type RecommendationType = "similar" | "trending";
 

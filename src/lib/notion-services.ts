@@ -132,7 +132,6 @@ export const staticServices: CloudlessService[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
- 
 function mapPage(page: any): CloudlessService {
   const p = page.properties ?? {};
   const featuresRaw = extractText(p.Features?.rich_text) || "";
@@ -154,7 +153,6 @@ function mapPage(page: any): CloudlessService {
     stripePriceId: extractText(p.StripePriceId?.rich_text) || undefined,
   };
 }
- 
 
 // ---------------------------------------------------------------------------
 // Public API

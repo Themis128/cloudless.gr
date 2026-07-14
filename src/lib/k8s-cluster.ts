@@ -77,7 +77,7 @@ async function k8sGet<T = unknown>(path: string): Promise<T | null> {
     };
     const res = await undiciFetch(`${API_BASE}${path}`, init);
     if (!res.ok) return null;
-    return (((await res.json()) as any)) as T;
+    return (await res.json()) as any as T;
   } catch {
     return null;
   }

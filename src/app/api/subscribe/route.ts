@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   // error (400), not a 500.
   let parsed;
   try {
-    parsed = ((await request.json()) as any);
+    parsed = (await request.json()) as any;
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }

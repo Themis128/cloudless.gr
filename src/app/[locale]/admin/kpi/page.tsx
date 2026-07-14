@@ -101,7 +101,7 @@ export default function KpiDashboard() {
     try {
       const res = await fetchWithAuth("/api/admin/kpi");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData((((((await res.json()) as any)) as any)) as KpiData);
+      setData((await res.json()) as any as any as KpiData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load KPIs");
     } finally {
@@ -110,7 +110,6 @@ export default function KpiDashboard() {
   }, []);
 
   useEffect(() => {
-     
     load();
   }, [load]);
 

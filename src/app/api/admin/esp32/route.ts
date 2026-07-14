@@ -40,7 +40,7 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
         { status: 503 }
       );
     }
-    const data: unknown = ((await res.json()) as any);
+    const data: unknown = (await res.json()) as any;
     return NextResponse.json(data, { status: res.status });
   } catch {
     return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 503 });
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         if (!res.ok) {
           return NextResponse.json({ error: "No ESP32 devices found" }, { status: 404 });
         }
-        const rawUntyped: unknown = ((await res.json()) as any);
+        const rawUntyped: unknown = (await res.json()) as any;
         // Pi /api/esp32/status returns { id, device_id, ip, rssi, ... }.
         // Prefer the explicit device_id field; fall back to synthesising
         // from id only when both are absent (older firmware).

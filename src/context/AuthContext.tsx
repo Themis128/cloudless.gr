@@ -161,9 +161,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           name: data.user.name ?? undefined,
           preferences: { ...DEFAULT_PREFERENCES },
         };
-        const admin = USE_COGNITO
-          ? isAdminFromSession(data.user)
-          : (data.isAdmin ?? false);
+        const admin = USE_COGNITO ? isAdminFromSession(data.user) : (data.isAdmin ?? false);
         setIsAdmin(admin);
         setUser(base);
         void enrichWithProfile(base).then((enriched) => {

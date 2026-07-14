@@ -147,7 +147,7 @@ export default function DatalakeDashboardPage() {
         `/api/admin/analytics/datalake${refresh ? "?refresh=1" : ""}`
       );
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const body = (((((await res.json()) as any)) as any)) as DatalakeResponse;
+      const body = (await res.json()) as any as any as DatalakeResponse;
       setData(body);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));

@@ -47,7 +47,7 @@ type Body = {
 export async function POST(request: NextRequest) {
   let body: Body;
   try {
-    body = (((await request.json()) as any)) as Body;
+    body = (await request.json()) as any as Body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }

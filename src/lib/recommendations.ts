@@ -93,7 +93,7 @@ async function generateWorkersAiEmbedding(text: string): Promise<number[] | null
   const ai = getAiBinding();
   if (!ai) return null;
   try {
-    const resp = await ai.run(WORKERS_AI_EMBED_MODEL, { text: [text] }) as {
+    const resp = (await ai.run(WORKERS_AI_EMBED_MODEL, { text: [text] })) as {
       data?: number[][];
       shape?: number[];
     };
@@ -102,7 +102,10 @@ async function generateWorkersAiEmbedding(text: string): Promise<number[] | null
     }
     return null;
   } catch (err) {
-    console.warn("[Recommendations] Workers AI embedding failed:", err instanceof Error ? err.message : err);
+    console.warn(
+      "[Recommendations] Workers AI embedding failed:",
+      err instanceof Error ? err.message : err
+    );
     return null;
   }
 }
@@ -122,7 +125,10 @@ async function generateBedrockEmbedding(text: string): Promise<number[] | null> 
     };
     return body.embedding ?? null;
   } catch (err) {
-    console.warn("[Recommendations] Bedrock embedding failed:", err instanceof Error ? err.message : err);
+    console.warn(
+      "[Recommendations] Bedrock embedding failed:",
+      err instanceof Error ? err.message : err
+    );
     return null;
   }
 }

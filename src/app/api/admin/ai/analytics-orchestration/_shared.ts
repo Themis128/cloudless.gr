@@ -37,7 +37,7 @@ export async function prepareOrchestration(
 
   try {
     ({ windowDays, connectors, goals, reportTitle } = parseAnalyticsOrchestrationRequestBody(
-      ((await request.json()) as any)
+      (await request.json()) as any
     ));
   } catch (error) {
     return {

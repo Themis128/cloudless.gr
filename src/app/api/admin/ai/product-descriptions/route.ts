@@ -101,7 +101,10 @@ async function generateOneWorkersAI(product: StoreProduct): Promise<string | nul
     return result.response ?? null;
   } catch (err) {
     // Sanitize err to prevent format string injection (% specifiers)
-    console.warn("[ai/product-descriptions] Workers AI failed, falling back to Bedrock:", sanitizeError(err));
+    console.warn(
+      "[ai/product-descriptions] Workers AI failed, falling back to Bedrock:",
+      sanitizeError(err)
+    );
     return null;
   }
 }
@@ -157,9 +160,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const allProducts = await getProducts();
-  const targets = productIds
-    ? allProducts.filter((p) => productIds!.includes(p.id))
-    : allProducts;
+  const targets = productIds ? allProducts.filter((p) => productIds!.includes(p.id)) : allProducts;
 
   if (targets.length === 0) {
     return NextResponse.json({ error: "No matching products found." }, { status: 400 });
@@ -179,7 +180,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         error: err instanceof Error ? err.message : String(err),
       });
       // Sanitize product.id and err to prevent log injection
-      console.error("[ai/product-descriptions] Failed for", sanitizeLog(product.id), ":", sanitizeError(err));
+      console.error(
+        "[ai/product-descriptions] Failed for",
+        sanitizeLog(product.id),
+        ":",
+        sanitizeError(err)
+      );
     }
   }
 
@@ -252,7 +258,12 @@ async function updateStripeDescriptions(
     descriptions.map(({ id, description }) =>
       stripe.products.update(id, { description }).catch((err) => {
         // Use separate arguments instead of template literals to avoid format string injection
-        console.warn("[ai/product-descriptions] Stripe update failed for", sanitizeLog(id), ":", sanitizeError(err));
+        console.warn(
+          "[ai/product-descriptions] Stripe update failed for",
+          sanitizeLog(id),
+          ":",
+          sanitizeError(err)
+        );
       })
     )
   );

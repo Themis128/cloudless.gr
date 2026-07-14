@@ -130,7 +130,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "pageId and status required" }, { status: 400 });
     }
 
-    const validStatuses: TaskStatus[] = ["Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked"];
+    const validStatuses: TaskStatus[] = [
+      "Backlog",
+      "To Do",
+      "In Progress",
+      "In Review",
+      "Done",
+      "Blocked",
+    ];
     if (!validStatuses.includes(status as TaskStatus)) {
       return NextResponse.json(
         { error: `Invalid status — must be one of: ${validStatuses.join(", ")}` },

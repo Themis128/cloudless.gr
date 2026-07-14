@@ -76,7 +76,7 @@ async function buildAppFlowyUrl(): Promise<AutologinResult> {
 
   let body: { access_token?: string };
   try {
-    body = (((await res.json()) as any)) as { access_token?: string };
+    body = (await res.json()) as any as { access_token?: string };
   } catch {
     throw new Error("AppFlowy GoTrue response was not valid JSON");
   }

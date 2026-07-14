@@ -10,7 +10,8 @@ export async function POST() {
   return Response.json(
     {
       ok: false,
-      error: "Workflows are only available when running on Cloudflare Workers. Deploy with 'pnpm cf:deploy' to use.",
+      error:
+        "Workflows are only available when running on Cloudflare Workers. Deploy with 'pnpm cf:deploy' to use.",
     },
     { status: 503 }
   );
@@ -20,7 +21,8 @@ export async function GET() {
   return Response.json(
     {
       ok: false,
-      error: "Workflows are only available when running on Cloudflare Workers. Deploy with 'pnpm cf:deploy' to use.",
+      error:
+        "Workflows are only available when running on Cloudflare Workers. Deploy with 'pnpm cf:deploy' to use.",
     },
     { status: 503 }
   );

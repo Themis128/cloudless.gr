@@ -16,7 +16,7 @@ export default function AdminDocsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/docs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = (await res.json()) as any as any as any;
       setDocs(data.docs ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load docs");
@@ -26,7 +26,6 @@ export default function AdminDocsPage() {
   }
 
   useEffect(() => {
-     
     load();
   }, []);
 

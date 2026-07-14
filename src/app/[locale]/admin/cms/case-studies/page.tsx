@@ -56,7 +56,7 @@ export default function AdminCaseStudiesPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/case-studies");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (((((await res.json()) as any)) as any)) as { caseStudies: CaseStudy[] };
+      const data = (await res.json()) as any as any as { caseStudies: CaseStudy[] };
       setItems(data.caseStudies ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -66,7 +66,7 @@ export default function AdminCaseStudiesPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});  
+    load().catch(() => {});
   }, [load]);
 
   const openCreate = () => {
@@ -126,7 +126,7 @@ export default function AdminCaseStudiesPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (((((await res.json()) as any)) as any)) as { error?: string };
+        const d = (await res.json()) as any as any as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);

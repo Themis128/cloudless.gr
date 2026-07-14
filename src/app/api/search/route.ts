@@ -23,21 +23,15 @@ interface SearchRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SearchRequest = ((await request.json()) as any);
+    const body: SearchRequest = (await request.json()) as any;
 
     if (!body.query || typeof body.query !== "string") {
-      return Response.json(
-        { error: "Missing or invalid 'query' field" },
-        { status: 400 }
-      );
+      return Response.json({ error: "Missing or invalid 'query' field" }, { status: 400 });
     }
 
     const query = body.query.trim();
     if (query.length === 0) {
-      return Response.json(
-        { error: "Query must not be empty" },
-        { status: 400 }
-      );
+      return Response.json({ error: "Query must not be empty" }, { status: 400 });
     }
 
     const limit = Math.min(Math.max(1, body.limit ?? 10), 50);

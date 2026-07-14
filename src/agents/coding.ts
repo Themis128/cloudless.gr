@@ -69,7 +69,10 @@ function normalizeMode(value: string | null | undefined): CodingMode {
   return value === "patch" ? "patch" : "review";
 }
 
-function normalizeModelProfile(value: string | null | undefined, mode: CodingMode): CodingModelProfile {
+function normalizeModelProfile(
+  value: string | null | undefined,
+  mode: CodingMode
+): CodingModelProfile {
   if (value === "fast" || value === "review" || value === "deep") {
     return value;
   }
@@ -245,7 +248,13 @@ export class CodingAgent extends Agent<Env, CodingState> {
     return nextState;
   }
 
-  private setDone(prompt: string, mode: CodingMode, route: ModelRoute, responseText: string, gatewayLogId: string) {
+  private setDone(
+    prompt: string,
+    mode: CodingMode,
+    route: ModelRoute,
+    responseText: string,
+    gatewayLogId: string
+  ) {
     const nextState: CodingState = {
       lastPrompt: prompt,
       lastResponse: responseText,
@@ -374,9 +383,16 @@ export class CodingAgent extends Agent<Env, CodingState> {
 
       if (request.method === "POST") {
         try {
-          const body = await request.json() as { prompt?: string; model?: string; modelProfile?: string };
+          const body = (await request.json()) as {
+            prompt?: string;
+            model?: string;
+            modelProfile?: string;
+          };
           prompt = body.prompt ?? prompt;
-          modelProfile = normalizeModelProfile(body.modelProfile ?? body.model ?? modelProfile, "patch");
+          modelProfile = normalizeModelProfile(
+            body.modelProfile ?? body.model ?? modelProfile,
+            "patch"
+          );
         } catch {
           // Ignore malformed JSON and fall back to query string.
         }
@@ -444,9 +460,16 @@ export class CodingAgent extends Agent<Env, CodingState> {
 
       if (request.method === "POST") {
         try {
-          const body = await request.json() as { prompt?: string; model?: string; modelProfile?: string };
+          const body = (await request.json()) as {
+            prompt?: string;
+            model?: string;
+            modelProfile?: string;
+          };
           prompt = body.prompt ?? prompt;
-          modelProfile = normalizeModelProfile(body.modelProfile ?? body.model ?? modelProfile, "patch");
+          modelProfile = normalizeModelProfile(
+            body.modelProfile ?? body.model ?? modelProfile,
+            "patch"
+          );
         } catch {
           // Ignore malformed JSON and fall back to query string.
         }
@@ -480,10 +503,18 @@ export class CodingAgent extends Agent<Env, CodingState> {
 
       if (request.method === "POST") {
         try {
-          const body = await request.json() as { prompt?: string; mode?: string; model?: string; modelProfile?: string };
+          const body = (await request.json()) as {
+            prompt?: string;
+            mode?: string;
+            model?: string;
+            modelProfile?: string;
+          };
           prompt = body.prompt ?? prompt;
           mode = normalizeMode(body.mode ?? mode);
-          modelProfile = normalizeModelProfile(body.modelProfile ?? body.model ?? modelProfile, mode);
+          modelProfile = normalizeModelProfile(
+            body.modelProfile ?? body.model ?? modelProfile,
+            mode
+          );
         } catch {
           // Ignore malformed JSON and fall back to query string.
         }
@@ -524,7 +555,8 @@ export class CodingAgent extends Agent<Env, CodingState> {
       routes: {
         status: "/api/agents/coding-agent/default/status",
         task: "/api/agents/coding-agent/default/task?prompt=Review%20my%20Worker%20routing&model=review",
-        patch: "/api/agents/coding-agent/default/patch?prompt=Propose%20a%20safe%20patch&model=deep",
+        patch:
+          "/api/agents/coding-agent/default/patch?prompt=Propose%20a%20safe%20patch&model=deep",
         structuredPatch: "/api/agents/coding-agent/default/structured-patch",
         result: "/api/agents/coding-agent/default/result",
         reset: "/api/agents/coding-agent/default/reset",

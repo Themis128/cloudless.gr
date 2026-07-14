@@ -109,7 +109,11 @@ export async function POST(req: NextRequest) {
   let password: string | undefined;
   let fullName: string | undefined;
   try {
-    const body = (((await req.json()) as any)) as { email?: string; password?: string; fullName?: string };
+    const body = (await req.json()) as any as {
+      email?: string;
+      password?: string;
+      fullName?: string;
+    };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     password = body.password;
     fullName = body.fullName;
@@ -129,7 +133,8 @@ export async function POST(req: NextRequest) {
   // Always succeed-or-look-like-success to defeat account enumeration.
 
   try {
-    const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand } = await import("@aws-sdk/client-cognito-identity-provider");
+    const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand } =
+      await import("@aws-sdk/client-cognito-identity-provider");
     const { createHmac, randomBytes } = await import("crypto");
     const issuer = process.env.COGNITO_ISSUER ?? "";
     const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";

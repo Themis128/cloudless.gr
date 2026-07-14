@@ -115,7 +115,6 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
   );
 
   try {
-     
     const results = await notionFetchAll<any>(`/databases/${NOTION_SUBMISSIONS_DB_ID}/query`, {
       sorts: [{ property: SUBMITTED_AT_PROP, direction: "descending" }],
     });
@@ -135,7 +134,6 @@ export async function listSubmissions(limit = 50): Promise<SubmissionRecord[]> {
         url: page.url,
       };
     });
-     
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion] Failed to list submissions:", msg); // codeql[js/log-injection]
