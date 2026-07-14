@@ -191,7 +191,7 @@
     "playwright": "^1.61.1",
     "prettier": "^3.9.4",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "sst": "^4.17.0",
+    "sst": "^4.17.1",
     "tailwindcss": "^4.3.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
