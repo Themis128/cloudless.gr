@@ -54,6 +54,20 @@ minimumReleaseAgeExclude:
   - '@aws-sdk/credential-provider-process@3.972.58'
   - '@aws-sdk/credential-provider-sso@3.973.2'
   - '@aws-sdk/credential-provider-web-identity@3.972.64'
+  # Transitive @aws-sdk sub-packages that also trip the gate
+  - '@aws-sdk/dynamodb-codec@3.973.32'
+  - '@aws-sdk/eventstream-handler-node@3.972.27'
+  - '@aws-sdk/middleware-endpoint-discovery@3.972.24'
+  - '@aws-sdk/middleware-eventstream@3.972.23'
+  - '@aws-sdk/middleware-sdk-s3@3.972.63'
+  - '@aws-sdk/middleware-websocket@3.972.40'
+  - '@aws-sdk/nested-clients@3.997.32'
+  - '@aws-sdk/signature-v4-multi-region@3.996.40'
+  - '@aws-sdk/token-providers@3.1087.0'
+  - '@aws-sdk/types@3.974.1'
+  - '@aws-sdk/xml-builder@3.972.35'
+  # openai recently published; exempt until it ages past the window
+  - 'openai@6.47.0'
 
 # Note: overrides are now defined in .npmrc for pnpm v10+ compatibility
 # See: https://pnpm.io/settings#overrides
