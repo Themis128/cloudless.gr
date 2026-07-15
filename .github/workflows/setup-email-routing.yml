@@ -1,0 +1,107 @@
+name: Setup Cloudflare Email Routing
+on:
+  workflow_dispatch:
+    inputs:
+      destination_email:
+        description: 'Destination email address'
+        required: true
+        default: 'tbaltzakis@cloudless.gr'
+
+jobs:
+  setup-email:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC → AWS for SSM access
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+          
+      - name: Get Cloudflare token from SSM
+        id: get_token
+        run: |
+          TOKEN=$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN --with-decryption --region us-east-1 --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+          echo "::add-mask::$TOKEN"
+        
+      - name: Configure MX Records
+        run: |
+          DOMAIN="cloudless.gr"
+          CF_TOKEN="${{ steps.get_token.outputs.token }}"
+          
+          ZONE_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$DOMAIN" \
+            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result[0].id')
+          
+          echo "Zone ID: $ZONE_ID"
+          
+          # MX Records for Email Routing
+          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"type":"MX","name":"cloudless.gr","content":"mx1.mail.protonmail.ch","priority":10,"ttl":3600,"proxied":false}'
+          
+          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"type":"MX","name":"cloudless.gr","content":"mx2.mail.protonmail.ch","priority":20,"ttl":3600,"proxied":false}'
+            
+          echo "✓ MX Records configured"
+          
+      - name: Configure SPF Record
+        run: |
+          DOMAIN="cloudless.gr"
+          CF_TOKEN="${{ steps.get_token.outputs.token }}"
+          
+          ZONE_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$DOMAIN" \
+            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result[0].id')
+          
+          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"type":"TXT","name":"cloudless.gr","content":"v=spf1 include:cloudflare.net ~all","ttl":3600,"proxied":false}'
+            
+          echo "✓ SPF Record configured"
+          
+      - name: Enable Email Routing
+        run: |
+          CF_TOKEN="${{ steps.get_token.outputs.token }}"
+          
+          ZONE_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=cloudless.gr" \
+            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result[0].id')
+          
+          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/email/routing/setup" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{}'
+            
+          echo "✓ Email Routing enabled"
+          
+      - name: Add Destination Address
+        run: |
+          CF_TOKEN="${{ steps.get_token.outputs.token }}"
+          DEST_EMAIL="${{ github.event.inputs.destination_email }}"
+          
+          ACCOUNT_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts" \
+            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result[0].id')
+          
+          curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/email/routing/addresses" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"email\":\"$DEST_EMAIL\"}"
+            
+          echo "✓ Destination address added: $DEST_EMAIL"
+          echo "  Check your email for verification link!"
+          
+      - name: Create Routing Rule
+        run: |
+          CF_TOKEN="${{ steps.get_token.outputs.token }}"
+          DEST_EMAIL="${{ github.event.inputs.destination_email }}"
+          
+          ACCOUNT_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts" \
+            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result[0].id')
+          
+          curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/email/routing/rules" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"name":"noreply","enabled":true,"pattern":"noreply@cloudless.gr","actions":[{"type":"forward","value":"'"$DEST_EMAIL"'"}]}'
+            
+          echo "✓ Routing rule created: noreply@cloudless.gr → $DEST_EMAIL"
