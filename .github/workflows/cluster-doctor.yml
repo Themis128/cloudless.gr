@@ -7,7 +7,7 @@ name: Cluster doctor (read-only diagnostics)
 # re-triggered 2026-06-05 — k3s crash-looped on omv 2026-06-04; checking current state
 # re-triggered 2026-06-05T06:40Z — k3s recovered via restart workflow; full pod health check
 # re-triggered 2026-06-12 — DISKPRESSUREHIGH (88.59%); running alongside pi-disk-cleanup
-# re-triggered 2026-07-09T13:46Z — investigating deployment oscillation (coredns/traefik/local-path flip-flopping)
+# re-triggered 2026-07-09T13:45Z — investigating deployment oscillation (coredns/traefik/local-path flip-flopping)
 
 # Read-only visibility into the omv k3s cluster from CI. Runs scripts/cluster-
 # doctor.sh over Tailscale + KUBECONFIG_B64 and posts the snapshot as a comment
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
       - name: Connect to tailnet
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
