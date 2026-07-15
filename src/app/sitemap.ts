@@ -20,6 +20,12 @@ import { isConfiguredAsync } from "@/lib/integrations";
 // cost.
 export const revalidate = 3600;
 
+// Render sitemap.xml on each request rather than baking it at build time so
+// Notion ? Sitemap Sync (notion-docs-sitemap.yml) doesn't need a redeploy
+// to take effect. Revalidate at most hourly to keep the CDN warm for crawlers.
+export const dynamic = "force-dynamic";
+export const revalidate = 3600;
+
 // ---------------------------------------------------------------------------
 // Static page last-modified dates
 //

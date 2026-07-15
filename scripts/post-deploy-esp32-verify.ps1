@@ -1,6 +1,6 @@
 # Post-deploy verification for the ESP32 ↔ Notion mirror.
 #
-# Runs against the deployed cloudless.gr (or any reachable origin you
+# Runs against the deployed cloudless.online (or any reachable origin you
 # pass via -Origin). Verifies the new admin sync endpoint round-trips.
 #
 # Prereqs:
@@ -10,11 +10,11 @@
 #     `await (await import('aws-amplify/auth')).fetchAuthSession().then(s => s.tokens.idToken.toString())`
 #
 # Usage:
-#   pwsh -File scripts/post-deploy-esp32-verify.ps1 -Origin https://cloudless.gr -IdToken "<TOKEN>"
+#   pwsh -File scripts/post-deploy-esp32-verify.ps1 -Origin https://cloudless.online -IdToken "<TOKEN>"
 
 param(
     [Parameter(Mandatory = $true)] [string] $IdToken,
-    [string] $Origin = "https://cloudless.gr"
+    [string] $Origin = "https://cloudless.online"
 )
 
 $ErrorActionPreference = "Stop"

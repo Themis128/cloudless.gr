@@ -1,4 +1,3 @@
-/* jshint esversion: 11, node: true */
 // Minimal stub — actual behaviour is replaced by vi.mock() at test time.
 // Prevents @aws-sdk/util-endpoints from crashing under JSDOM during module init.
 // Exports every command used across src/ so vitest auto-mocks never complain about
