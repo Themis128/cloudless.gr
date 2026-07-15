@@ -48,15 +48,67 @@ jobs:
           echo "=== cloudless pods ==="
           kubectl get pods -n cloudless
           echo ""
+          echo "=== kube-system pods (Traefik health) ==="
+          kubectl get pods -n kube-system | grep -E "traefik|svclb" || echo "(no traefik pods found)"
+          echo ""
           echo "=== pi-origin health (before) ==="
           code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
             https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
           echo "HTTP $code"
 
+      - name: Check port 18443 on Pi host via privileged pod
+        run: |
+          kubectl delete pod cf-probe -n default --ignore-not-found --wait=true
+          cat <<'PODEOF' | kubectl create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: cf-probe
+            namespace: default
+          spec:
+            restartPolicy: Never
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            containers:
+              - name: w
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command:
+                  - sh
+                  - -c
+                  - |
+                    apk add -q util-linux curl 2>/dev/null
+                    echo "=== ss -tlnp | grep 18443 ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
+                    echo "=== curl https://localhost:18443 (max 5s) ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      curl -ksS --max-time 5 https://localhost:18443/ -o /dev/null -w "HTTP %{http_code}\n" 2>&1 || echo "curl failed"
+                    echo "=== all HTTPS/TLS ports listening on host ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep -E ":443|:8443|:18443|:9443|:9000" || echo "(none found)"
+                    echo "=== traefik process ports (all) ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep traefik || echo "(traefik not in ss — check k3s NodePorts)"
+                    echo "=== k3s NodePort services ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      sh -c 'KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get svc -A --field-selector spec.type=NodePort 2>/dev/null | head -20 || echo "kubectl not available"'
+                    echo "=== traefik pods ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active k3s 2>&1 || true
+          PODEOF
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-probe \
+            -n default --timeout=90s || true
+          kubectl logs -n default cf-probe || true
+          kubectl delete pod -n default cf-probe --ignore-not-found
+
       - name: Restart cloudflared via privileged pod (nsenter)
         run: |
           kubectl delete pod cf-restart -n default --ignore-not-found --wait=true
-          kubectl apply -f - <<'EOF'
+          cat <<'PODEOF' | kubectl create -f -
           apiVersion: v1
           kind: Pod
           metadata:
@@ -67,6 +119,7 @@ jobs:
             nodeSelector:
               kubernetes.io/hostname: omv
             hostPID: true
+            hostNetwork: true
             containers:
               - name: w
                 image: alpine:3
@@ -78,21 +131,70 @@ jobs:
                   - |
                     set -e
                     apk add -q util-linux 2>/dev/null
-                    echo "=== cloudflared status before restart ==="
+                    echo "=== socat status on port 18443 ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl status cloudflared --no-pager 2>&1 | head -10 || true
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
+                    echo "=== check for socat systemd unit ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl list-units --type=service 2>/dev/null | grep socat || echo "(no socat systemd unit)"
+                    echo "=== kill broken socat on port 18443 ==="
+                    SOCAT_LINE=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "")
+                    SOCAT_PID=$(echo "$SOCAT_LINE" | awk 'match($0, /pid=[0-9]+/) {s=substr($0,RSTART+4,RLENGTH-4); print s; exit}')
+                    if [ -n "$SOCAT_PID" ]; then
+                      SOCAT_CMD=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        cat /proc/$SOCAT_PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'unknown')
+                      echo "socat PID=$SOCAT_PID cmdline: $SOCAT_CMD"
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        kill -9 "$SOCAT_PID" 2>/dev/null || true
+                      sleep 1
+                      # Also kill any forked children still holding handles to port 18443
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        sh -c 'pkill -9 -x socat 2>/dev/null; true'
+                      sleep 1
+                      echo "socat killed"
+                    else
+                      echo "no socat found on 18443"
+                    fi
+                    echo "18443 after kill:"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443 — port is free)"
+                    # Spawn new socat pointing to Traefik ClusterIP 10.43.64.171:18443.
+                    # The old config pointed to 192.168.1.200 (dead keepalived VIP). We tried
+                    # 192.168.1.128 next but that also times out: the svclb DNAT rule is in
+                    # PREROUTING (ingress only) and doesn't apply to locally-originated traffic.
+                    # The ClusterIP is reachable directly from the host network namespace because
+                    # k3s installs kube-proxy / iptables rules that work for OUTPUT traffic too.
+                    # TCP-LISTEN (dual-stack) so both IPv4 (cloudflared → 127.0.0.1:18443)
+                    # and IPv6 clients can connect. TCP6-LISTEN+ipv6only=1 was IPv6-only;
+                    # cloudflared connects via IPv4 and its TLS handshake timed out.
+                    echo "spawning socat via Traefik ClusterIP 10.43.64.171:18443"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      sh -c 'printf "%s\n" "#!/bin/sh" "exec /usr/bin/socat TCP-LISTEN:18443,fork,reuseaddr TCP4:10.43.64.171:18443" > /tmp/start-socat.sh && chmod +x /tmp/start-socat.sh && setsid /tmp/start-socat.sh </dev/null >/tmp/socat-18443.log 2>&1 & echo "socat spawned pid=$!"'
+                    sleep 3
+                    echo "18443 after spawn:"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing — spawn failed; check /tmp/socat-18443.log on host)"
                     echo "=== restarting cloudflared ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
-                    sleep 3
-                    echo "=== cloudflared status after restart ==="
+                    sleep 5
+                    echo "=== 18443 after restart ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(still nothing on 18443)"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl is-active cloudflared
-                    echo "cloudflared restarted OK"
-          EOF
-          echo "=== waiting for pod to complete ==="
+                    echo "done"
+          PODEOF
+          echo "=== waiting for pod to complete (up to 150s) ==="
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-restart \
-            -n default --timeout=60s
+            -n default --timeout=150s || {
+            echo "=== pod did not succeed — current state ==="
+            kubectl get pod cf-restart -n default -o wide || true
+            kubectl describe pod cf-restart -n default || true
+            kubectl logs cf-restart -n default || true
+            exit 1
+          }
           kubectl logs -n default cf-restart
           kubectl delete pod -n default cf-restart --ignore-not-found
 
