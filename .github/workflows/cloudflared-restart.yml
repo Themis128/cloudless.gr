@@ -128,34 +128,22 @@ jobs:
                     echo "=== check for socat systemd unit ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl list-units --type=service 2>/dev/null | grep socat || echo "(no socat systemd unit)"
-                    echo "=== kill broken socat + respawn pointing to 192.168.1.128 ==="
+                    echo "=== kill+restart socat if present ==="
                     SOCAT_LINE=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       ss -tlnp 2>/dev/null | grep 18443 || echo "")
+                    # busybox grep has no -P; use awk to extract pid=NNNN
                     SOCAT_PID=$(echo "$SOCAT_LINE" | awk 'match($0, /pid=[0-9]+/) {s=substr($0,RSTART+4,RLENGTH-4); print s; exit}')
                     if [ -n "$SOCAT_PID" ]; then
-                      SOCAT_CMD=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        cat /proc/$SOCAT_PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'unknown')
-                      echo "socat PID=$SOCAT_PID cmdline: $SOCAT_CMD"
+                      echo "socat PID: $SOCAT_PID"
+                      echo "socat cmdline: $(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        cat /proc/$SOCAT_PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'unknown')"
                       echo "killing socat PID $SOCAT_PID"
                       nsenter --target 1 --mount --uts --ipc --net --pid -- kill "$SOCAT_PID" || true
-                      sleep 1
-                      # Kill all child socat processes too (fork mode)
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        pkill -f 'socat.*18443' 2>/dev/null || true
-                      sleep 1
+                      sleep 2
                       echo "socat killed"
                     else
                       echo "no socat found on 18443"
                     fi
-                    # Respawn socat pointing to 192.168.1.128:18443 (omv-main LAN IP, bypasses dead VIP)
-                    # The broken config pointed to 192.168.1.200 (keepalived VIP, currently unreachable)
-                    echo "respawning socat → 192.168.1.128:18443"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      nohup socat TCP6-LISTEN:18443,fork,reuseaddr,ipv6only=1 TCP4:192.168.1.128:18443 </dev/null >/tmp/socat-18443.log 2>&1 &
-                    sleep 2
-                    echo "socat after respawn:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443 — respawn may have failed)"
                     echo "=== restarting cloudflared ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
