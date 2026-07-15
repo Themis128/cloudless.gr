@@ -200,7 +200,12 @@ function priorityEmoji(priority: string): string {
   }
 }
 
-async function postTicketAsync(payload: SlackInteractionPayload): Promise<void> {
+async function postTicketAsync(
+  payload: SlackInteractionPayload,
+): Promise<void> {
+  const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
+  if (!token) return;
+
   const values = payload.view?.state.values ?? {};
   const email = slackEscape(values.ticket_email?.ticket_email_input?.value ?? "");
   const issueType =
@@ -252,7 +257,12 @@ async function postTicketAsync(payload: SlackInteractionPayload): Promise<void> 
   });
 }
 
-async function postDeployAsync(payload: SlackInteractionPayload): Promise<void> {
+async function postDeployAsync(
+  payload: SlackInteractionPayload,
+): Promise<void> {
+  const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
+  if (!token) return;
+
   const values = payload.view?.state.values ?? {};
   const releaseNotes = values.deploy_notes?.deploy_notes_input?.value ?? null;
 

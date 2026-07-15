@@ -11,7 +11,7 @@ const STATUS_EMOJI: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
-  if (!(await isCronAuthorized(request))) {
+  if (!await isCronAuthorized(request)) {
     return cronUnauthorized();
   }
 

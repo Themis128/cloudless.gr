@@ -6,7 +6,7 @@ import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
-  if (!(await isCronAuthorized(request))) {
+  if (!await isCronAuthorized(request)) {
     return cronUnauthorized();
   }
 

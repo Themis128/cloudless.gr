@@ -4,7 +4,7 @@ import { SlackClient } from "@/lib/slack-notify";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
 export async function GET(request: NextRequest) {
-  if (!(await isCronAuthorized(request))) {
+  if (!await isCronAuthorized(request)) {
     return cronUnauthorized();
   }
 

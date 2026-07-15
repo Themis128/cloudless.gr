@@ -1,16 +1,58 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-// Mock next-auth/jwt so getToken returns controlled token data.
-// proxy.ts calls getToken() to read the next-auth session cookie.
-const mockGetToken = vi.fn();
-vi.mock("next-auth/jwt", () => ({ getToken: (opts: unknown) => mockGetToken(opts) }));
+// vi.hoisted runs before all imports — needed because proxy.ts creates JWKS at
+// module-load time from NEXT_PUBLIC_COGNITO_USER_POOL_ID. Without this the env
+// var is unset when the module loads, JWKS === null, and readCognitoToken()
+// always returns { valid: false } regardless of the cookie we pass.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_testPool";
+  process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
+});
 
 vi.mock("next-intl/middleware", () => ({
   default: () => (_request: NextRequest) => NextResponse.next(),
 }));
 
+// Replace the real JWKS fetch + signature verification with a simple
+// base64url decode so tests can use unsigned JWTs without a live Cognito pool.
+vi.mock("jose", () => ({
+  createRemoteJWKSet: () => ({}),
+  jwtVerify: async (token: string) => {
+    const [, body] = token.split(".");
+    const payload = JSON.parse(
+      Buffer.from(body, "base64url").toString("utf8"),
+    );
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      throw new Error("jwt expired");
+    }
+    return { payload };
+  },
+}));
+
 import { proxy } from "@/proxy";
+
+function makeJwt(payload: Record<string, unknown>): string {
+  const header = Buffer.from(
+    JSON.stringify({ alg: "RS256", typ: "JWT" }),
+  ).toString("base64url");
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${header}.${body}.signature`;
+}
+
+function makeAuthCookies(isAdmin = false): string {
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID as string;
+  const username = "test-user";
+  const token = makeJwt({
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    "cognito:groups": isAdmin ? ["admin"] : ["users"],
+  });
+
+  return [
+    `CognitoIdentityServiceProvider.${clientId}.LastAuthUser=${username}`,
+    `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken=${token}`,
+  ].join("; ");
+}
 
 function makeRequest(path: string, cookie?: string): NextRequest {
   return new NextRequest(`http://localhost:4000${path}`, {
@@ -27,6 +69,8 @@ describe("proxy protected routes access", () => {
     const response = await proxy(makeRequest("/en/dashboard"));
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/en/auth/login");
+    // redirect param must be the bare (locale-stripped) path, not /en/dashboard,
+    // so login can use @/i18n/navigation router.push() without doubling the locale.
     expect(response.headers.get("location")).toContain("redirect=%2Fdashboard");
   });
 
@@ -34,17 +78,15 @@ describe("proxy protected routes access", () => {
     const response = await proxy(makeRequest("/en/admin"));
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toContain("/en/auth/login");
+    // bare path, not /en/admin
     expect(response.headers.get("location")).toContain("redirect=%2Fadmin");
   });
 
   it("allows authenticated non-admin user to access /en/dashboard and nested routes", async () => {
-    mockGetToken.mockResolvedValue({ sub: "user-1", groups: ["viewer"], roles: [] });
-
-    const dashboardResponse = await proxy(
-      makeRequest("/en/dashboard", "authjs.session-token=mock")
-    );
+    const cookie = makeAuthCookies(false);
+    const dashboardResponse = await proxy(makeRequest("/en/dashboard", cookie));
     const purchasesResponse = await proxy(
-      makeRequest("/en/dashboard/purchases", "authjs.session-token=mock")
+      makeRequest("/en/dashboard/purchases", cookie),
     );
 
     expect(dashboardResponse.status).toBe(200);
@@ -54,25 +96,25 @@ describe("proxy protected routes access", () => {
   });
 
   it("redirects authenticated non-admin user from /en/admin and nested routes to /en/dashboard", async () => {
-    mockGetToken.mockResolvedValue({ sub: "user-1", groups: ["viewer"], roles: [] });
-
-    const adminResponse = await proxy(makeRequest("/en/admin", "authjs.session-token=mock"));
+    const cookie = makeAuthCookies(false);
+    const adminResponse = await proxy(makeRequest("/en/admin", cookie));
     const adminOrdersResponse = await proxy(
-      makeRequest("/en/admin/orders", "authjs.session-token=mock")
+      makeRequest("/en/admin/orders", cookie),
     );
 
     expect(adminResponse.status).toBe(307);
     expect(adminResponse.headers.get("location")).toContain("/en/dashboard");
     expect(adminOrdersResponse.status).toBe(307);
-    expect(adminOrdersResponse.headers.get("location")).toContain("/en/dashboard");
+    expect(adminOrdersResponse.headers.get("location")).toContain(
+      "/en/dashboard",
+    );
   });
 
   it("allows authenticated admin user to access /en/admin and nested routes", async () => {
-    mockGetToken.mockResolvedValue({ sub: "admin-1", groups: ["admin"], roles: [] });
-
-    const adminResponse = await proxy(makeRequest("/en/admin", "authjs.session-token=mock"));
+    const cookie = makeAuthCookies(true);
+    const adminResponse = await proxy(makeRequest("/en/admin", cookie));
     const adminOrdersResponse = await proxy(
-      makeRequest("/en/admin/orders", "authjs.session-token=mock")
+      makeRequest("/en/admin/orders", cookie),
     );
 
     expect(adminResponse.status).toBe(200);

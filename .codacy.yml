@@ -10,26 +10,9 @@ engines:
     enabled: false
   revive:
     enabled: false
-  csslint:
-    enabled: false
-  stylelint:
-    enabled: false
   opengrep:
     enabled: true
   trivy:
     enabled: true
   lizard:
     enabled: true
-exclude_paths:
-  - "infrastructure/**"
-  - "scripts/**"
-  - "e2e/**"
-  - "tests/**"
-  - "**/*.test.ts"
-  - "**/*.test.tsx"
-  - "**/*.spec.ts"
-  - "**/__tests__/**"
-  - "**/node_modules/**"
-  - ".next/**"
-  - "dist/**"
-  - "build/**"

@@ -4,25 +4,6 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 
-/**
- * Admin Dashboard — the platform command center.
- * Aligned with every surface of the one-stop-shop platform:
- * growth (leads → campaigns → ROI), clients (portals, deliverables,
- * payments, health), the public website (blog, CMS, store, docs),
- * and system health.
- */
-
-interface PortalHealth {
-  score: number;
-  band: "healthy" | "watch" | "at_risk";
-}
-
-interface PortalSummary {
-  deliverables?: { status: string }[];
-  paymentLinks?: { status: string }[];
-  health?: PortalHealth;
-}
-
 interface DashStats {
   leads: number | null;
   spendCents: number | null;

@@ -54,15 +54,12 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? "[box-shadow:var(--shadow-md)]" : ""}`}
+      className={`sticky top-0 z-50 transition-shadow duration-200${scrolled ? " [box-shadow:var(--shadow-md)]" : ""}`}
     >
-      {/* Top accent stripe */}
-      <div className="bg-neon-cyan h-0.5" />
-      <div
-        className="border-b backdrop-blur-xl"
-        style={{ background: "var(--surface-glass)", borderColor: "var(--border-subtle)" }}
-      >
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+      {/* QD-inspired top accent bar */}
+      <div className="bg-neon-cyan h-px shadow-[0_0_10px_rgba(0,255,245,0.5)]" />
+      <div className="bg-void/90 border-neon-cyan/10 overflow-x-hidden border-b backdrop-blur-xl">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Logo */}
           <Link
             href="/"
@@ -160,7 +157,11 @@ export default function Navbar() {
                       href="/contact"
                       className="bg-accent hover:bg-accent/90 rounded-lg px-4 py-2.5 font-mono text-sm font-semibold whitespace-nowrap text-[var(--accent-on)] transition-all duration-300"
                     >
-                      {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
+                      {translate(
+                        locale,
+                        "navbar.freeAudit",
+                        "Get a Free Audit",
+                      )}
                     </Link>
                     <Link
                       href="/auth/login"
@@ -294,7 +295,11 @@ export default function Navbar() {
                       className="bg-accent hover:bg-accent/90 mt-2 block min-h-11 rounded-lg px-5 py-3 text-center font-mono text-sm font-semibold text-[var(--accent-on)] transition-all"
                       onClick={() => setMobileOpen(false)}
                     >
-                      {translate(locale, "navbar.freeAudit", "Get a Free Audit")}
+                      {translate(
+                        locale,
+                        "navbar.freeAudit",
+                        "Get a Free Audit",
+                      )}
                     </Link>
                     <Link
                       href="/auth/login"

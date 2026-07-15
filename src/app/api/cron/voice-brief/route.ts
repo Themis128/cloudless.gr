@@ -89,7 +89,7 @@ async function notifySlack(
 // ---------------------------------------------------------------------------
 
 export async function GET(request: NextRequest) {
-  if (!(await isCronAuthorized(request))) {
+  if (!await isCronAuthorized(request)) {
     return cronUnauthorized();
   }
 

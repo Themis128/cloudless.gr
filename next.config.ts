@@ -104,8 +104,8 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   experimental: {
-    // Tree-shake heavy barrel packages — reduces client bundle for GSAP, cmdk, etc.
-    optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
+    // Tree-shake heavy barrel packages — reduces client bundle for Amplify, GSAP, cmdk
+    optimizePackageImports: ["aws-amplify", "gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
   },
 };
 

@@ -171,27 +171,6 @@ interface AppConfig {
   META_PAGE_ID: string;
   // GitHub Actions
   GITHUB_TOKEN: string;
-  /**
-   * Fine-grained PAT used by /api/slack/interactions and /api/slack/commands
-   * to trigger workflow_dispatch on weekly-article-draft.yml (and similar).
-   * Permissions: Actions = Read and write, scoped to the cloudless.gr repo.
-   * Falls back to GITHUB_TOKEN if unset, so a single broader PAT also works.
-   */
-  GITHUB_DISPATCH_TOKEN: string;
-  // Postiz (self-hosted social publishing)
-  POSTIZ_API_URL: string;
-  POSTIZ_API_KEY: string;
-  /** HMAC secret shared with Postiz webhook config — verifies inbound events. */
-  POSTIZ_WEBHOOK_SECRET: string;
-  // Meilisearch (self-hosted search engine on omv-main, see infrastructure/meilisearch/)
-  /** Base URL of the Meilisearch instance, e.g. https://meili.cloudless.gr */
-  MEILI_HOST: string;
-  /** Master key for Meilisearch admin operations (index/create/delete docs). */
-  MEILI_MASTER_KEY: string;
-  /** Meilisearch search-only API key (read-only, safe for client usage). */
-  MEILI_SEARCH_KEY: string;
-  /** Optional Slack channel override for Postiz publish/error/oauth events. */
-  POSTIZ_SLACK_CHANNEL: string;
   // Cron auth
   CRON_SECRET: string;
   // AI
@@ -208,7 +187,103 @@ export function resetSsmCache(): void {
   cachedAt = 0;
 }
 
-async function fetchSsmParams(): Promise<Map<string, string>> {
+/**
+ * Builds an AppConfig purely from process.env — used in test environments
+ * so tests never touch AWS SSM.
+ */
+function buildConfigFromEnv(): AppConfig {
+  return {
+    SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
+    SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
+    AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
+    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "",
+    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "",
+    SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
+    SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
+    SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
+    HUBSPOT_API_KEY:
+      process.env.HUBSPOT_API_KEY ||
+      process.env.HUBSPOT_PRIVATE_APP_TOKEN ||
+      "",
+    HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET || "",
+    NOTION_API_KEY: process.env.NOTION_API_KEY || "",
+    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
+    NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
+    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID || "",
+    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID || "",
+    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID || "",
+    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID || "",
+    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID || "",
+    NOTION_GSC_REPORTS_DB_ID: process.env.NOTION_GSC_REPORTS_DB_ID || "",
+    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID || "",
+    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID || "",
+    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID || "",
+    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID || "",
+    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
+    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID || "",
+    GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
+    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(
+      /\\n/g,
+      "\n",
+    ),
+    GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
+    GSC_SITE_URL: process.env.GSC_SITE_URL || "sc-domain:cloudless.gr",
+    SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN || "",
+    SENTRY_ORG: process.env.SENTRY_ORG || "baltzakisthemiscom",
+    SENTRY_PROJECT: process.env.SENTRY_PROJECT || "cloudless-gr",
+    ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL || "",
+    ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN || "",
+    GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || "",
+    GOOGLE_ADS_CUSTOMER_ID: process.env.GOOGLE_ADS_CUSTOMER_ID || "",
+    LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID || "",
+    LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET || "",
+    LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN || "",
+    LINKEDIN_AD_ACCOUNT_ID: process.env.LINKEDIN_AD_ACCOUNT_ID || "",
+    LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN || "",
+    TIKTOK_APP_ID: process.env.TIKTOK_APP_ID || "",
+    TIKTOK_APP_SECRET: process.env.TIKTOK_APP_SECRET || "",
+    TIKTOK_ACCESS_TOKEN: process.env.TIKTOK_ACCESS_TOKEN || "",
+    TIKTOK_ADVERTISER_ID: process.env.TIKTOK_ADVERTISER_ID || "",
+    X_API_KEY: process.env.X_API_KEY || "",
+    X_API_SECRET: process.env.X_API_SECRET || "",
+    X_ACCESS_TOKEN: process.env.X_ACCESS_TOKEN || "",
+    X_ACCESS_SECRET: process.env.X_ACCESS_SECRET || "",
+    X_AD_ACCOUNT_ID: process.env.X_AD_ACCOUNT_ID || "",
+    META_AD_ACCOUNT_ID: process.env.META_AD_ACCOUNT_ID || "",
+    META_PIXEL_ID: process.env.META_PIXEL_ID || "",
+    META_CAPI_ACCESS_TOKEN: process.env.META_CAPI_ACCESS_TOKEN || "",
+    META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
+    META_PAGE_ID: process.env.META_PAGE_ID || "",
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN || "",
+    CRON_SECRET: process.env.CRON_SECRET || "",
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
+    ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",
+  };
+}
+
+/**
+ * Fetches all /cloudless/production/* parameters from SSM.
+ * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
+ * In test environments (NODE_ENV=test), reads from process.env directly.
+ * When SSM_DISABLED=1 (e.g. K3s Pi deployment where all config is injected
+ * via Kubernetes secret), skips SSM entirely and reads from process.env.
+ */
+export async function getConfig(): Promise<AppConfig> {
+  // In tests, skip SSM entirely and read from process.env. Still cache the
+  // result so successive getConfig() calls return the same object reference;
+  // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.
+  if (process.env.NODE_ENV === "test" || process.env.SSM_DISABLED === "1") {
+    if (cached) return cached;
+    cached = buildConfigFromEnv();
+    cachedAt = Date.now();
+    return cached;
+  }
+
+  if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
+
   const ssm = getSsmClient();
   const params = new Map<string, string>();
   let nextToken: string | undefined;
@@ -350,14 +425,6 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
     META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
     GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
-    GITHUB_DISPATCH_TOKEN: params.get("GITHUB_DISPATCH_TOKEN") ?? "",
-    POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
-    POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
-    POSTIZ_WEBHOOK_SECRET: params.get("POSTIZ_WEBHOOK_SECRET") ?? "",
-    POSTIZ_SLACK_CHANNEL: params.get("POSTIZ_SLACK_CHANNEL") ?? "",
-    MEILI_HOST: params.get("MEILI_HOST") ?? "",
-    MEILI_MASTER_KEY: params.get("MEILI_MASTER_KEY") ?? "",
-    MEILI_SEARCH_KEY: params.get("MEILI_SEARCH_KEY") ?? "",
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",

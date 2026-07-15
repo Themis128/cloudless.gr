@@ -11,7 +11,9 @@ export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(aBuf, bBuf);
 }
 
-export async function isCronAuthorized(request: NextRequest): Promise<boolean> {
+export async function isCronAuthorized(
+  request: NextRequest,
+): Promise<boolean> {
   const config = await getConfig();
   const expected = config.CRON_SECRET || process.env.CRON_SECRET;
   if (!expected) return false;

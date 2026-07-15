@@ -3,6 +3,16 @@ import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
+const _upId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
+const _reg = _upId.split("_")[0] || "us-east-1";
+const JWKS = _upId
+  ? createRemoteJWKSet(
+      new URL(
+        `https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`,
+      ),
+    )
+  : null;
+
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
 
@@ -17,21 +27,17 @@ function stripLocale(pathname: string): string {
   return pathname.slice(segment.length + 1) || "/";
 }
 
-async function readAuthToken(
+async function readCognitoToken(
   req: NextRequest,
 ): Promise<{ valid: boolean; isAdmin: boolean }> {
-  // The session JWT can exceed the 4096-byte cookie limit when next-auth
-  // CHUNKS it into `<name>.0`, `<name>.1`, … — the unchunked `<name>` cookie
-  // then does not exist. Detect either form (base cookie OR first chunk) before
-  // paying for the getToken dynamic import; getToken's SessionStore reassembles
-  // the chunks itself.
-  const baseNames = ["__Secure-authjs.session-token", "authjs.session-token"];
-  const hasSession = baseNames.some(
-    (n) => req.cookies.get(n) ?? req.cookies.get(`${n}.0`),
-  );
-
-  if (!hasSession) return { valid: false, isAdmin: false };
-
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  if (!clientId || !JWKS) return { valid: false, isAdmin: false };
+  const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
+  const username = req.cookies.get(lastAuthKey)?.value;
+  if (!username) return { valid: false, isAdmin: false };
+  const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken`;
+  const token = req.cookies.get(tokenKey)?.value;
+  if (!token) return { valid: false, isAdmin: false };
   try {
     const { getToken } = await import("next-auth/jwt");
     const token = await getToken({
@@ -43,11 +49,13 @@ async function readAuthToken(
           ? "__Secure-authjs.session-token"
           : "authjs.session-token",
     });
-    if (!token) return { valid: false, isAdmin: false };
-
-    const groups = (token.groups as string[]) ?? [];
-    const admin = groups.includes("admin");
-    return { valid: true, isAdmin: admin };
+    return {
+      valid: true,
+      isAdmin:
+        (payload["cognito:groups"] as string[] | undefined)?.includes(
+          "admin",
+        ) ?? false,
+    };
   } catch {
     return { valid: false, isAdmin: false };
   }

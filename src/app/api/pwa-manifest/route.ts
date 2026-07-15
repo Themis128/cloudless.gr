@@ -8,7 +8,7 @@ const MANIFEST = {
     "Cloud architecture, serverless development, data analytics, and AI-powered marketing for startups and SMBs.",
   start_url: "/?source=pwa",
   scope: "/",
-  lang: "en",
+  lang: "el",
   dir: "ltr",
   display: "standalone",
   display_override: ["window-controls-overlay", "standalone", "minimal-ui"],

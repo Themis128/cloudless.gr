@@ -501,30 +501,9 @@ async function handleTicket(payload: SlashCommandPayload): Promise<Response> {
   return new Response(null, { status: 200 });
 }
 
-async function handleAnalytics(payload: SlashCommandPayload): Promise<Response> {
-  // The slash command now multiplexes by `payload.text`:
-  //   (empty) / "stripe"   → existing Stripe revenue summary (back-compat).
-  //   "ads"                → list every campaign that's wired into the
-  //                          ad-analytics module + the channels it posts to.
-  //   "ads <slug>"         → live LinkedIn snapshot for one campaign. Heavy
-  //                          (N+1 fetches → ~3-5 s) so we use Slack's lazy-
-  //                          listener pattern: ack immediately with a
-  //                          "loading…" ephemeral, finish the work in the
-  //                          background, then POST the final Block Kit to
-  //                          `payload.response_url`.
-  //   "ads help"           → usage.
-  const argv = payload.text.trim().split(/\s+/).filter(Boolean);
-  const head = (argv[0] ?? "").toLowerCase();
-
-  if (head === "ads") {
-    return handleAdAnalytics(payload, argv.slice(1));
-  }
-  // Fall through: empty text, "stripe", or anything else lands in the
-  // pre-existing Stripe revenue path.
-  return handleStripeAnalytics(payload);
-}
-
-async function handleStripeAnalytics(payload: SlashCommandPayload): Promise<Response> {
+async function handleAnalytics(
+  payload: SlashCommandPayload,
+): Promise<Response> {
   try {
     const { orders, hasMore } = await listRecentCheckoutSessions(10);
 
