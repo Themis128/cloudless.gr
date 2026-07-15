@@ -1,0 +1,1 @@
+console.log('result: ' + Math.pow(2, 32));
