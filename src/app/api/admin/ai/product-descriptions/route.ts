@@ -101,10 +101,8 @@ async function generateOneWorkersAI(product: StoreProduct): Promise<string | nul
     return result.response ?? null;
   } catch (err) {
     // Sanitize err to prevent format string injection (% specifiers)
-    console.warn(
-      "[ai/product-descriptions] Workers AI failed, falling back to Bedrock:",
-      sanitizeError(err)
-    );
+    const safeErr = err instanceof Error ? err.message.replace(/%/g, "") : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+    console.warn("[ai/product-descriptions] Workers AI failed, falling back to Bedrock:", safeErr);
     return null;
   }
 }
@@ -180,12 +178,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         error: err instanceof Error ? err.message : String(err),
       });
       // Sanitize product.id and err to prevent log injection
-      console.error(
-        "[ai/product-descriptions] Failed for",
-        sanitizeLog(product.id),
-        ":",
-        sanitizeError(err)
-      );
+      const safeId = String(product.id).replace(/[\x00-\x1F\x7F]/g, "");
+      const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+      console.error(`[ai/product-descriptions] Failed for ${safeId}:`, safeErr);
     }
   }
 
@@ -236,7 +231,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   // Fire-and-forget: update Stripe product metadata when configured.
   updateStripeDescriptions(descriptions).catch((err) => {
-    console.warn("[ai/product-descriptions] Stripe metadata update failed:", sanitizeError(err));
+    // Sanitize err to prevent format string injection
+    const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+    console.warn("[ai/product-descriptions] Stripe metadata update failed:", safeErr);
   });
 
   return NextResponse.json({ applied });
@@ -257,13 +254,10 @@ async function updateStripeDescriptions(
   await Promise.allSettled(
     descriptions.map(({ id, description }) =>
       stripe.products.update(id, { description }).catch((err) => {
-        // Use separate arguments instead of template literals to avoid format string injection
-        console.warn(
-          "[ai/product-descriptions] Stripe update failed for",
-          sanitizeLog(id),
-          ":",
-          sanitizeError(err)
-        );
+        // Sanitize id and err to prevent log injection
+        const safeId = String(id).replace(/[\x00-\x1F\x7F]/g, "");
+        const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
+        console.warn(`[ai/product-descriptions] Stripe update failed for ${safeId}:`, safeErr);
       })
     )
   );

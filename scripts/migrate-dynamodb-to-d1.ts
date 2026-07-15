@@ -4,7 +4,7 @@
  * Migrate DynamoDB tables to D1 for Cloudflare Free Tier migration.
  *
  * Usage:
- *   CLOUDFLARE_API_TOKEN=x AWS_PROFILE=default npx tsx scripts/migrate-dynamodb-to-d1.ts
+ *   AWS_PROFILE=default npx tsx scripts/migrate-dynamodb-to-d1.ts
  */
 
 import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
@@ -12,7 +12,6 @@ import { exec } from "child_process";
 import { writeFile, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
-import { randomUUID } from "crypto";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
@@ -65,7 +64,7 @@ const COLUMN_MAPPINGS: Record<string, Record<string, string>> = {
 
 const TABLES = [
   { dynamo: "cloudless-production-UserProfileTable-bctubzrn", d1: "user" },
-  { dynamo: "cloudless-production-SessionTokenStoreTable-mrbwcwzt", d1: "user_token" },
+  { dynamo: "cloudless-production-SessionTokenStoreTable-mrbwcwzt", d1: "session" },
   { dynamo: "cloudless-production-StripeTransactionsTable-nhtvnuew", d1: "stripe_transaction" },
   { dynamo: "cloudless-production-AdminNotificationsTable-uuhacatu", d1: "admin_notification" },
   { dynamo: "cloudless-production-AnalyticsCacheTable-fneaemkr", d1: "analytics_cache" },
@@ -76,34 +75,16 @@ function getDynamoClient(): DynamoDBClient {
 }
 
 async function executeSql(sql: string): Promise<void> {
-  const tmpFile = join(tmpdir(), `d1-migrate-${Date.now()}-${Math.random().toString(36).slice(2)}.sql`);
-  await writeFile(tmpFile, sql);
-  
   return new Promise((resolve, reject) => {
     exec(
-      `npx wrangler d1 execute user-auth-db --remote --file="${tmpFile}"`,
-      { stdio: "inherit", env: { ...process.env, CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN } },
-      (error) => {
-        unlink(tmpFile).catch(() => {});
-        error ? reject(error) : resolve();
-      }
+      `echo "${sql}" | npx wrangler d1 execute user-auth-db --remote`,
+      { stdio: "inherit" },
+      (error) => (error ? reject(error) : resolve())
     );
   });
 }
 
-function formatValue(attr: Record<string, unknown>): string {
-  if (attr.S !== undefined) return `'${String(attr.S).replace(/'/g, "''")}'`;
-  if (attr.N !== undefined) return String(attr.N);
-  if (attr.BOOL !== undefined) return attr.BOOL ? "1" : "0";
-  if (attr.NULL !== undefined) return "NULL";
-  if (attr.SS !== undefined) return `'${JSON.stringify(attr.SS).replace(/'/g, "''")}'`;
-  if (attr.NS !== undefined) return `'${JSON.stringify(attr.NS).replace(/'/g, "''")}'`;
-  if (attr.L !== undefined) return `'${JSON.stringify(attr.L).replace(/'/g, "''")}'`;
-  if (attr.M !== undefined) return `'${JSON.stringify(attr.M).replace(/'/g, "''")}'`;
-  return "NULL";
-}
-
-async function migrateUserTable(dynamoTable: string, d1Table: string): Promise<number> {
+async function migrateTable(dynamoTable: string, d1Table: string): Promise<number> {
   const client = getDynamoClient();
   let count = 0;
   const mapping = COLUMN_MAPPINGS[d1Table] || {};
@@ -122,81 +103,19 @@ async function migrateUserTable(dynamoTable: string, d1Table: string): Promise<n
     const items = result.Items || [];
 
     for (const item of items) {
-      // For user table, we need to handle missing required columns
-      // D1 requires: id, username, password_hash, email, created_at, updated_at (NOT NULL)
-      // DynamoDB UserProfile only has: userId, preferences
-      
-      const userId = item.userId?.S || randomUUID();
-      const email = item.email?.S || `${userId}@cloudless.gr.placeholder`;
-      
-      const columns = ["id", "username", "email", "password_hash", "preferences_json", "created_at", "updated_at"];
-      
-      const values = [
-        `'${userId}'`,
-        `'${email}'`, // username defaults to email
-        `'${email}'`,
-        "''", // password_hash - empty, user needs to reset
-        item.preferences ? formatValue(item.preferences) : "NULL",
-        String(now),
-        String(now),
-      ];
-
-      const sql = `INSERT OR REPLACE INTO ${d1Table} (${columns.join(", ")}) VALUES (${values.join(", ")})`;
-
-      try {
-        await executeSql(sql);
-        count++;
-      } catch (err) {
-        console.error(`[migrate] Failed to insert into ${d1Table}:`, err);
-      }
-    }
-
-    ExclusiveStartKey = result.LastEvaluatedKey;
-    await new Promise((r) => setTimeout(r, 100));
-  } while (ExclusiveStartKey);
-
-  console.log(`[migrate] Migrated ${count} items from ${dynamoTable} to ${d1Table}`);
-  return count;
-}
-
-async function migrateTable(dynamoTable: string, d1Table: string): Promise<number> {
-  // Special handling for user table
-  if (d1Table === "user") {
-    return migrateUserTable(dynamoTable, d1Table);
-  }
-
-  const client = getDynamoClient();
-  let count = 0;
-  const mapping = COLUMN_MAPPINGS[d1Table] || {};
-
-  let ExclusiveStartKey: Record<string, unknown> | undefined;
-
-  do {
-    const result = await client.send(
-      new ScanCommand({
-        TableName: dynamoTable,
-        ExclusiveStartKey,
-      })
-    );
-
-    const items = result.Items || [];
-
-    for (const item of items) {
-      const attrNames = Object.keys(item);
-      
-      // Filter to only columns that exist in both DynamoDB and mapping
-      const validAttrs = attrNames.filter((col) => {
-        const d1Col = mapping[col];
-        if (!d1Col) return false;
-        // Skip columns that would fail NOT NULL constraints with empty values
-        if (!item[col]) return false;
-        return true;
+      const columns = Object.keys(item);
+      const values = columns.map((col) => {
+        const attr = item[col];
+        if (attr.S !== undefined) return `'${attr.S.replace(/'/g, "''")}'`;
+        if (attr.N !== undefined) return attr.N;
+        if (attr.BOOL !== undefined) return attr.BOOL ? 1 : 0;
+        if (attr.NULL !== undefined) return "NULL";
+        if (attr.SS !== undefined) return `'${JSON.stringify(attr.SS)}'`;
+        if (attr.NS !== undefined) return `'${JSON.stringify(attr.NS)}'`;
+        if (attr.L !== undefined) return `'${JSON.stringify(attr.L)}'`;
+        if (attr.M !== undefined) return `'${JSON.stringify(attr.M)}'`;
+        return "NULL";
       });
-      
-      const columns = validAttrs.map((col) => mapping[col]);
-      const values = validAttrs.map((col) => formatValue(item[col]));
-
-      if (columns.length === 0) continue;
 
       const sql = `INSERT OR REPLACE INTO ${d1Table} (${columns.join(", ")}) VALUES (${values.join(", ")})`;
 
@@ -218,12 +137,6 @@ async function migrateTable(dynamoTable: string, d1Table: string): Promise<numbe
 
 async function main() {
   console.log("[migrate] Starting DynamoDB to D1 migration...\n");
-
-  // Check if CLOUDFLARE_API_TOKEN is available
-  if (!process.env.CLOUDFLARE_API_TOKEN) {
-    console.error("[migrate] ERROR: CLOUDFLARE_API_TOKEN environment variable is required");
-    process.exit(1);
-  }
 
   let totalMigrated = 0;
 

@@ -1,6 +1,5 @@
-# fly.toml app configuration file generated for cloudless-proxy on 2026-07-12T03:57:30+03:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+# Fly.io Proxy Configuration for cloudless.gr
+# Free Tier: Automatic HA Failover (Cloudflare → Pi/k3s)
 #
 
 app = "cloudless-proxy"
@@ -20,25 +19,10 @@ PRIMARY_HOST = "cloudless.gr"
   internal_port = 8080
   protocol = "tcp"
 
-  [[services.ports]]
-    handlers = ["http"]
-    port = 80
-    x_forwarded_for = true
-    xfp = true
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
-
-  [[services.checks]]
-    grace_period = "10s"
-    interval = "30s"
-    restart_limit = 0
-    timeout = "2s"
-    port = 8080
-    type = "http"
-    method = "GET"
-    path = "/health"
+[env]
+  # Backends to proxy to
+  PRIMARY_HOST = "cloudless.gr"
+  FALLBACK_HOST = "omv.tail8eb71.ts.net"
 
 [[vm]]
   cpu_kind = "shared"

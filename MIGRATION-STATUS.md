@@ -12,8 +12,7 @@
 2. **scripts/add-dynamodb-migration-permissions.sh** - IAM setup script
 3. **scripts/create-dynamodb-policy.py** - Alternative policy creator
 4. **scripts/migrate-dynamodb-to-d1.ts** - Updated with correct table names
-5. **scripts/etl/_r2-config.mjs** - Fixed BUCKET to `datalake-bucket` (was `cloudless-analytics`)
-6. **All 12 -to-r2.mjs ETL scripts** - Fixed to import BUCKET from _r2-config.mjs
+5. **fly-cron-apps/cron-runner.ts** - Cron replacement script
 
 ## Execution Results:
 

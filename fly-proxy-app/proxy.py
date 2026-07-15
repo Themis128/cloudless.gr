@@ -1,7 +1,7 @@
 """Fly.io HA Failover Proxy for cloudless.gr.
 
 Primary: Cloudflare Workers (cloudless.gr)
-Fallback: Pi k3s via Tailscale (github-omv.tail4ecae1.ts.net)
+Fallback: Pi k3s via Tailscale (omv.tail8eb71.ts.net)
 """
 
 import os
@@ -13,7 +13,7 @@ app = FastAPI()
 
 # Backend configuration
 PRIMARY_HOST = os.getenv("PRIMARY_HOST", "cloudless.gr")
-FALLBACK_HOST = os.getenv("FALLBACK_HOST", "github-omv.tail4ecae1.ts.net")
+FALLBACK_HOST = os.getenv("FALLBACK_HOST", "omv.tail8eb71.ts.net")
 
 # Health cache with 30s TTL
 health_cache = {"healthy": True, "timestamp": 0}
