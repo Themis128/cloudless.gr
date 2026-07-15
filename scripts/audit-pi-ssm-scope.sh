@@ -5,7 +5,7 @@
 #
 # Walks /cloudless/production/* in SSM, uses
 # `iam:SimulatePrincipalPolicy` to check whether
-# `cloudless-pi-standby` is allowed `ssm:GetParameter` on each key.
+# `cloudless-pi-standby` is allowed the runtime SSM read actions on each key.
 # Prints a summary; exits 1 if any key is denied.
 #
 # Wired into .github/workflows/probe-pi-ssm-scope.yml (daily 06:00 UTC).
@@ -31,6 +31,7 @@ PREFIX="${PREFIX:-/cloudless/production/}"
 REGION="${AWS_REGION:-us-east-1}"
 ACCOUNT_ID="${ACCOUNT_ID:-}"
 JSON_OUT=0
+ACTIONS=("ssm:GetParameter" "ssm:GetParameters" "ssm:GetParametersByPath")
 
 for arg in "$@"; do
   case "$arg" in
@@ -65,7 +66,7 @@ if [ "${#KEYS[@]}" -eq 0 ]; then
   exit 0
 fi
 
-# 2. Batch-simulate ssm:GetParameter against all keys.
+# 2. Batch-simulate all runtime SSM read actions against all keys.
 #    simulate-principal-policy accepts up to 32 ResourceArns per call.
 #    With ~50-200 SSM keys, serial calls hit the 5-min workflow timeout
 #    (v1 of this script was sequential and timed out — verified
@@ -90,28 +91,28 @@ while [ "$i" -lt "$TOTAL_ARNS" ]; do
   # in the same order. We pair them back up via the ARN field.
   result=$(aws iam simulate-principal-policy \
     --policy-source-arn "$USER_ARN" \
-    --action-names "ssm:GetParameter" \
+    --action-names "${ACTIONS[@]}" \
     --resource-arns "${BATCH[@]}" \
-    --query 'EvaluationResults[].[EvalResourceName,EvalDecision]' \
+    --query 'EvaluationResults[].[EvalActionName,EvalResourceName,EvalDecision]' \
     --output text 2>&1) || {
       echo "::warning::simulate-principal-policy batch failed (i=$i): $result"
       # Mark this whole batch as denied so the alert surfaces it.
       for arn in "${BATCH[@]}"; do
-        DENIED+=("${arn##*:parameter}")
+        DENIED+=("simulate-failed:${arn##*:parameter}")
       done
       i="$end"
       continue
     }
 
-  # Parse "ARN\tdecision\n..." per line.
-  while IFS=$'\t' read -r arn decision; do
+  # Parse "action\tARN\tdecision\n..." per line.
+  while IFS=$'\t' read -r action arn decision; do
     [ -z "$arn" ] && continue
     case "$decision" in
       allowed) ;;
       *)
-        # Strip "arn:aws:ssm:REGION:ACCT:parameter" prefix to recover key
+        # Strip "arn:aws:ssm:REGION:ACCT:parameter" prefix to recover key.
         key_name="${arn##*:parameter}"
-        DENIED+=("$key_name")
+        DENIED+=("${action}:${key_name}")
         ;;
     esac
   done <<< "$result"
@@ -124,10 +125,15 @@ KEYS_TOTAL=${#KEYS[@]}
 DENIED_COUNT=${#DENIED[@]}
 
 if [ "$JSON_OUT" -eq 1 ]; then
-  # Build JSON manually (no jq dep)
-  denied_json=$(printf '"%s",' "${DENIED[@]}" | sed 's/,$//')
+  # Build JSON manually (no jq dep). Avoid [""] when DENIED is empty.
+  if [ "$DENIED_COUNT" -gt 0 ]; then
+    denied_json=$(printf '"%s",' "${DENIED[@]}" | sed 's/,$//')
+  else
+    denied_json=""
+  fi
+
   cat <<EOF
-{"keys_total":${KEYS_TOTAL},"keys_denied_count":${DENIED_COUNT},"keys_denied":[${denied_json}],"pi_user":"${PI_USER}","action":"$( [ "$DENIED_COUNT" -gt 0 ] && echo "Grant ssm:GetParameter on the denied resources to ${PI_USER}" || echo "ok" )"}
+{"keys_total":${KEYS_TOTAL},"keys_denied_count":${DENIED_COUNT},"keys_denied":[${denied_json}],"pi_user":"${PI_USER}","action":"$( [ "$DENIED_COUNT" -gt 0 ] && echo "Grant SSM read actions on the denied resources to ${PI_USER}" || echo "ok" )"}
 EOF
 else
   echo "=== Pi SSM scope audit ==="
@@ -143,9 +149,10 @@ else
       echo "  - ${k}"
     done
     echo
-    echo "Fix: extend ${PI_USER}'s SSM read statement to cover these resources."
+    echo "Fix: extend ${PI_USER}'s SSM read statement to cover these action/resource pairs."
     echo "Typical inline policy (replace existing statement Resource:):"
-    echo '    "Resource": "arn:aws:ssm:'"${REGION}"':'"${ACCOUNT_ID}"':parameter'"${PREFIX}"'*"'
+    echo '    "Action": ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"],
+    "Resource": "arn:aws:ssm:'"${REGION}"':'"${ACCOUNT_ID}"':parameter'"${PREFIX}"'*"'
   else
     echo
     echo "All ${KEYS_TOTAL} SSM keys are readable by ${PI_USER}."

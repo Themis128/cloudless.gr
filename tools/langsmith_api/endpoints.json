@@ -1,0 +1,74 @@
+{
+  "langsmith.health": {
+    "client": "langsmith",
+    "method": "GET",
+    "path": "/info/health",
+    "description": "Check LangSmith service health.",
+    "auth_required": false,
+    "paginated": false
+  },
+  "langsmith.workspaces.list": {
+    "client": "langsmith",
+    "method": "GET",
+    "path": "/workspaces",
+    "description": "List LangSmith workspaces.",
+    "auth_required": true,
+    "paginated": true
+  },
+  "langsmith.datasets.list": {
+    "client": "langsmith",
+    "method": "GET",
+    "path": "/datasets",
+    "description": "List LangSmith datasets.",
+    "auth_required": true,
+    "paginated": true
+  },
+  "langsmith.runs.query": {
+    "client": "langsmith",
+    "method": "POST",
+    "path": "/runs/query",
+    "description": "Query LangSmith runs/traces.",
+    "auth_required": true,
+    "paginated": true
+  },
+  "deepagents.agents.list": {
+    "client": "deepagents",
+    "method": "GET",
+    "path": "/agents",
+    "description": "List Managed Deep Agents.",
+    "auth_required": true,
+    "paginated": true
+  },
+  "deepagents.threads.list": {
+    "client": "deepagents",
+    "method": "GET",
+    "path": "/threads",
+    "description": "List Managed Deep Agent threads.",
+    "auth_required": true,
+    "paginated": true
+  },
+  "agent_server.health": {
+    "client": "agent-server",
+    "method": "GET",
+    "path": "/health",
+    "description": "Check local or remote Agent Server health.",
+    "auth_required": false,
+    "paginated": false
+  },
+  "agent_server.assistants.search": {
+    "client": "agent-server",
+    "method": "POST",
+    "path": "/assistants/search",
+    "description": "Search Agent Server assistants.",
+    "auth_required": false,
+    "paginated": false
+  },
+  "fleet.connections.list": {
+    "client": "fleet",
+    "method": "GET",
+    "path": "/agent-connections",
+    "description": "List Fleet/agent connections. Exact path may vary by deployment.",
+    "auth_required": true,
+    "paginated": true
+  }
+}

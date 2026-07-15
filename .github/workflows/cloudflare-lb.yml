@@ -1,15 +1,20 @@
 name: Cloudflare HA load balancer
 
-# Provision / reconcile the cloudless.gr HA failover at the Cloudflare layer
-# (where the domain's DNS actually lives — it is NOT delegated to Route 53).
-# Builds a Load Balancer per hostname that health-checks /api/health and steers
-# AWS(primary) -> Pi/k3s(secondary) automatically. See scripts/setup-cloudflare-lb.sh.
+# Provision / reconcile the cloudless.gr Cloudflare Tunnel + Workers failover at
+# the layer that actually owns the domain's DNS: Cloudflare (NOT Route 53).
 #
-# SAFE BY DEFAULT: a push to this file / the script runs in REPORT mode (validates
-# the token + LB entitlement, prints the live account/zone/DNS/LB state and the
-# plan, writes nothing). To apply — including the apex/www DNS cutover — dispatch
-# with apply=true.
+# Architecture (post-AWS decommission):
+#   - Primary: Pi/k3s cluster via Cloudflare Tunnel (HTTPS via Tunnel cert)
+#   - Secondary: Cloudflare Workers (serverless, static fallback for maintenance)
+#
+# Previously used AWS CloudFront as primary. Now: Pi is primary, Workers is secondary.
+# Cloudflared on Pi terminates TLS at the edge (no Pi cert management needed).
+#
+# SAFE BY DEFAULT: runs in REPORT mode (validates token + states, prints plan).
+# To apply — including DNS cutover — dispatch with apply=true.
 # Last triggered: 2026-06-03 (status check — verifying token + LB state)
+#
+# Required token scopes: Zone:Read, Load Balancing Pools/Monitors/LB:Edit, DNS:Edit
 #
 # Auth: Cloudflare token from the CLOUDFLARE_API_TOKEN repo secret (add in the
 # GitHub UI), falling back to SSM /cloudless/production/CLOUDFLARE_API_TOKEN via

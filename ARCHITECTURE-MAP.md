@@ -1,12 +1,12 @@
 # cloudless.gr — Architecture Map
 
-> Generated: 2026-06-23 (read-only inspection)
+> Updated: 2026-07-10 (reflects Cloudflare-only: Pi tunnel + Workers fallback)
 
 ---
 
 ## 1. Framework & App Structure
 
-- **Framework:** Next.js 16.2.9 (App Router), deployed via SST v4.15.2
+- **Framework:** Next.js 16.2.1 (App Router)
 - **Runtime:** Node.js >=20, pnpm >=10 (lock: pnpm-lock.yaml)
 - **Package manager:** pnpm 10.33.2 (workspaces defined in `pnpm-workspace.yaml`)
 - **Language:** TypeScript 6.0.3 (strict mode via tsconfig.json)
@@ -30,8 +30,8 @@
 ## 2. Auth Flow
 
 - **Auth library:** next-auth v5.0.0-beta.31 (`src/lib/auth.ts`)
-- **Provider:** Cognito OIDC (custom issuer derivation from `COGNITO_USER_POOL_ID`)
-- **Token storage:** DynamoDB `SessionTokenStore` table — keeps session cookie under 4KB (avoids CloudFront/Lambda 413s)
+- **Provider:** Cognito OIDC (AWS, always-up)
+- **Token storage:** DynamoDB `SessionTokenStore` table (also used on Pi w/ SSM hydration)
 - **Session strategy:** JWT, with refresh-token rotation (pattern from authjs.dev)
 - **Groups:** Cognito `cognito:groups` claim → `session.user.groups`
 - **Lazy initialization:** All `process.env` reads are deferred per-request; `instrumentation.register()` hydrates SSM secrets before first request
@@ -201,20 +201,60 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 
 ---
 
-## 7. Deployment & Build Assumptions
+## 7. Deployment & Build Assumptions & HA Architecture
 
-- **Production deploy:** SST v4 (`sst deploy --stage production`) → AWS Lambda + CloudFront
-- **Pi cluster (k3s):** Docker-based with `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
+### Cloudflare-Only Architecture (Primary)
+
+- **Primary runtime:** Pi k3s cluster (self-hosted on OMV-MAIN, exposed via **Cloudflare Tunnel**: `pi-origin.cloudless.gr`)
+- **HA failover:** Cloudflare Workers (`cloudless-failover.baltzakis-themis.workers.dev`) via Load Balancer
+- **Docker build (Pi):** `Dockerfile` + `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
 - **WSL dev:** `NEXT_DIST_DIR` env var to avoid NTFS slow benchmarks; `allowedDevOrigins` for LAN access
 - **SSM hydration:** Secrets loaded via `instrumentation.ts` → SST SSM parameter store (`/cloudless/production/*`)
-- **Server external packages:** AWS SDK clients externalized (Turbopack resolver workaround for pnpm hoisting)
-- **next-auth** is transpiled (not externalized) — avoids ESM import errors
-- **Coverage mode:** E2E coverage via V8 native coverage (server `NODE_V8_COVERAGE` + browser CDP), forced `source-map` devtool
-- **Source maps:** Only in coverage mode (production maps uploaded to Sentry via SST)
-- **Docker build:** `Dockerfile` present, `.dockerignore` configured
-- **K8s manifests:** `k8s/` directory for Pi cluster deployments
-- **Workers (Cloudflare):** `workers/` directory present
-- **Infrastructure:** `infrastructure/` directory with IaC
+
+### Traffic Flow
+
+```
+cloudless.gr / www.cloudless.gr
+        │
+        ▼
+ Cloudflare Load Balancer  (steering: off)
+        │
+        ├─► [PRIMARY]   cl-pi-<host>
+        │               pi-origin.cloudless.gr (via Cloudflare Tunnel)
+        │               health: GET /api/health, expect 200, interval=60s
+        │
+        └─► [FALLBACK]  cl-worker-<host>
+                         cloudless-failover.baltzakis-themis.workers.dev
+                         (serves cached/static during Pi maintenance)
+```
+
+### Cloudflare HTTPS/TLS
+
+**Automatic - no manual certificate management required.**
+
+- `pi-origin.cloudless.gr` — HTTPS via Cloudflare Tunnel (edge termination)
+- `cloudless.gr` / `www.cloudless.gr` — HTTPS via Cloudflare Universal SSL
+- Edge certificates auto-provisioned and auto-renewed
+
+### Setup
+
+- **Tunnel setup:** `.github/workflows/setup-pi-tunnel.yml` (run once)
+- **LB setup:** `.github/workflows/cloudflare-lb.yml` → dispatch with `apply=true`
+- **Pi deploy:** `.github/workflows/deploy-pi.yml` (builds to ECR, rolls out to k3s)
+- **Tunnel manifest:** `k8s/tunnel/pi-tunnel.yaml` (cloudflared on Pi cluster)
+
+### Token Required
+
+- `/cloudless/production/CLOUDFLARE_API_TOKEN` — Zone:Read, DNS:Edit, Load Balancing:Edit, Tunnel:Edit
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `k8s/tunnel/pi-tunnel.yaml` | Cloudflare Tunnel deployment on Pi k3s |
+| `.github/workflows/setup-pi-tunnel.yml` | One-time tunnel creation |
+| `.github/workflows/cloudflare-lb.yml` | Load Balancer provisioning/update |
+| `workers/cloudless-failover/` | Workers fallback code |
 
 ---
 
@@ -244,11 +284,12 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 7. **Coverage config:** `next.config.ts` has conditional webpack overrides when `COVERAGE=1` — editing next.config.ts could break the coverage pipeline
 8. **Secrets in .env.local:** Contains real credentials — never commit, never expose in logs
 9. **pnpm overrides:** Version pinning for security advisories — removing/altering overrides could reintroduce vulnerabilities
-10. **Next.js 16 edge:** Using `next@16.2.9` — some APIs may have changed from v14/v15 patterns
+10. **Next.js 16 edge:** Using `next@16.2.1` — some APIs may have changed from v14/v15 patterns
+11. **LB failover:** Requires `CLOUDFLARE_API_TOKEN` with Load Balancing scopes in SSM
 
 ---
 
-## File Reference
+## 10. File Reference
 
 | File | Purpose |
 |---|---|
@@ -263,7 +304,13 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 | `src/i18n/routing.ts` | Locale definitions (en, el, fr, de) |
 | `src/i18n/request.ts` | Static locale message loader |
 | `sentry.client.config.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` | Sentry config |
-| `sst.config.ts` | SST v4 deploy config |
+| `sst.config.ts` | SST v4 deploy config (Cognito + SSM) |
 | `instrumentation.ts` | SSM hydration on cold start |
 | `.env.example` | All environment variables |
 | `Dockerfile` | Self-hosted Docker build (Pi/k3s) |
+| `.github/workflows/cloudflare-lb.yml` | Cloudflare HA failover setup |
+| `.github/workflows/setup-pi-tunnel.yml` | Cloudflare Tunnel creation |
+| `k8s/tunnel/pi-tunnel.yaml` | Pi Cloudflare Tunnel manifest |
+| `workers/cloudless-failover/` | Workers fallback |
+| `k8s/cloudless-app-optimized.yaml` | Pi k3s deployment |
+| `k8s/search/meilisearch.yaml` | R21 search backend (4Gi PVC on OMV-MAIN SSD) |

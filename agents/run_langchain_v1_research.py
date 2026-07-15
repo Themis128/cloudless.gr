@@ -49,7 +49,7 @@ def main():
         "python -m pip install langchain-classic",
         "",
         "Search for old imports:",
-        'grep -R "create_react_agent\\|langchain.chains\\|langchain.retrievers\\|from langchain import hub\\|from langchain import" -n agents src app . 2>/dev/null || true',
+        "grep -R \"create_react_agent\\|langchain.chains\\|langchain.retrievers\\|from langchain import hub\\|from langchain import\" -n agents src app . 2>/dev/null || true",
         "",
         "Check installed versions:",
         "python - <<'EOF'",

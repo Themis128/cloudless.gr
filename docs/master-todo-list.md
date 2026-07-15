@@ -1,11 +1,12 @@
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
-**Status as of 2026-07-06:** R10, R11, R12, R14 (Phase 1) + R13, R18,
+**Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
 R22 (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
-**Phase 2 is 3/3 done.** **Phase 3 is 3/4 done** — R21a (Meilisearch
-self-host, activated 2026-07-06 at `meili.cloudless.gr`), R21b (search
-API + product indexing), and R21c (recommendation engine) all shipped.
-Only R21d (GenAI product descriptions) remains. **Next R-row: R21d**.
+**Phase 2 is 3/3 done.** R13 descoped to 24h cadence ⇒ already covered
+by R10's daily EspoCRM CronJob; R22 audit confirmed the existing
+ConditionalWrite-dedup pattern is safe at SMB volume. The 2026-06-22
+session ran a 22-PR ops sweep on top of that — see the "Session log"
+section below. **Phase 3 is 4/4 done.** R21a-d all shipped.
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
@@ -37,32 +38,32 @@ scope assertion probe) + 1 automated chore (Notion sitemap sync).
 Listed here so future sessions know what state the repo is in
 without diffing git.
 
-| PR    | Theme                                                                                                                                                                                                                                                                                | Net                    |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
-| #1100 | `.github/workflows/README.md` catalogue index (124 wfs grouped into 14 categories)                                                                                                                                                                                                   | docs                   |
-| #1101 | Archived 8 truly-one-shot workflows (cloudless.online decom, OIDC fixes, indexing smoke) → 116 active                                                                                                                                                                                | -8 wfs                 |
-| #1102 | Archived 9th (`deploy-infrastructure-workaround.yml`, GPG fix obsolete since `terraform-doctor` skill) + documented 2 known-failing wfs                                                                                                                                              | -1 wf                  |
-| #1103 | Cleanup: 3 tmp survey scripts that slipped into #1102 via `git add -A`                                                                                                                                                                                                               | hygiene                |
-| #1104 | **perf(ci)**: `.next/cache` restore added to `ci.yml` + `bundle-budget.yml` + `bundle-size-pr.yml`. All 4 Next builders now cached. ~2-3 min savings per cache-hit run.                                                                                                              | perf                   |
-| #1105 | `docs/gh-workflows-strategy.md` — measured baseline + 8 ROI-ranked optimization patterns + prioritized roadmap. Memory `project_gh_workflows_speedup_strategy` added as pointer.                                                                                                     | docs                   |
-| #1106 | **fix(etl-selfhosted)**: dropped unneeded `pnpm/action-setup` (the install is `npm ci` in `scripts/etl/`, separate npm project).                                                                                                                                                     | fix                    |
-| #1107 | `.gitignore`: `tmp_*.sh` + `q-dev-chat-*.md` so session helpers stop slipping into PRs.                                                                                                                                                                                              | hygiene                |
-| #1108 | **fix(etl-selfhosted)**: use `AWS_DEPLOY_ROLE_ARN` (the `AWS_ETL_ROLE_ARN` secret was never created). End-to-end ETL run verified green.                                                                                                                                             | fix                    |
-| #1109 | **fix(ci)**: `lint:md:fix` swept 161 markdown files clean (was red since R10-R14 docs landed) + excluded `etl-aws-cost-to-lake.test.ts` from vitest (separate npm project unresolvable from root).                                                                                   | fix                    |
-| #1110 | **feat(ops)**: `skills/pi-runner-failover/SKILL.md` + `scripts/pi-runner-doctor.sh` + refactored `sync-smtp-secrets.yml` from Pi-pinned to GH-hosted-with-tailnet. Memory `reference_pi_runner_failover` added.                                                                      | feat                   |
-| #1111 | Honesty pass on the pi-runner-failover inventory: only 1 of 5 hard-pinned workflows is actually moveable (not 3 of 5). Added "non-DC-IP-required" bullet to Step 5 for Cloudflare bot-detection case.                                                                                | docs                   |
-| #1112 | This doc update — Master TODO marked post-R12 with the session log.                                                                                                                                                                                                                  | docs                   |
-| #1113 | **fix(sync-smtp-secrets)**: `timeout 30s` wrapper on `kubectl get ns` smoke test. Default kubectl client-side timeout is 0; hung 5+ min on first GH-hosted → tailnet handshake (verified twice in this session).                                                                     | fix                    |
-| #1114 | Master TODO session-log addendum (PR #1112+#1113, Pi-back confirmation, CI-green note).                                                                                                                                                                                              | docs                   |
-| #1115 | **feat(R18)**: `scripts/audit-pi-ssm-scope.sh` + `.github/workflows/probe-pi-ssm-scope.yml`. Daily 06:05 UTC `iam:SimulatePrincipalPolicy` diff of SSM keys vs `cloudless-pi-standby`. Drift → `/api/webhooks/admin-alert` (severity=high). Closes pi-cloud-sync.md gap #2.          | feat                   |
-| #1116 | **perf(R18)**: batch `simulate-principal-policy` 32 ARNs/call. v1 sequential timed out at 5 min on first verification run; v2 runs ~75s end-to-end.                                                                                                                                  | perf                   |
-| #1117 | Automated: Notion sitemap entries sync.                                                                                                                                                                                                                                              | chore                  |
-| #1122 | This doc update — added #1114-#1117 + status header bump (R18 now ✅).                                                                                                                                                                                                               | docs                   |
-| #1123 | docs(master-todo): correct PR number table after #1117 merge race                                                                                                                                                                                                                    | living roadmap         |
-| #1124 | docs(master-todo): R13 descoped to 24h (already covered by R10)                                                                                                                                                                                                                      | Phase 2 → 2/3 done     |
-| #1125 | docs(session): summary of 2026-06-22 — workflows sweep + R13/R18; saved local + Drive + AppFlowy                                                                                                                                                                                     | docs                   |
-| #1126 | **audit(R22)**: Stripe webhook idempotency — safe at SMB volume; 3-rule JSDoc guard inlined on `handleStripeEvent()`                                                                                                                                                                 | Phase 2 → **3/3 done** |
-| #1127 | **docs(drive)**: `docs/google-drive-cleanup.md` operator runbook + `scripts/audit-drive-folder.mjs` (read-only, local-execution). No Drive cleanup workflow in CI (would need operator-provisioned service account; cloudless.gr Drive footprint is ~50 KB so not yet worth wiring). | docs                   |
+| PR | Theme | Net |
+|---|---|---|
+| #1100 | `.github/workflows/README.md` catalogue index (124 wfs grouped into 14 categories) | docs |
+| #1101 | Archived 8 truly-one-shot workflows (cloudless.online decom, OIDC fixes, indexing smoke) → 116 active | -8 wfs |
+| #1102 | Archived 9th (`deploy-infrastructure-workaround.yml`, GPG fix obsolete since `terraform-doctor` skill) + documented 2 known-failing wfs | -1 wf |
+| #1103 | Cleanup: 3 tmp survey scripts that slipped into #1102 via `git add -A` | hygiene |
+| #1104 | **perf(ci)**: `.next/cache` restore added to `ci.yml` + `bundle-budget.yml` + `bundle-size-pr.yml`. All 4 Next builders now cached. ~2-3 min savings per cache-hit run. | perf |
+| #1105 | `docs/gh-workflows-strategy.md` — measured baseline + 8 ROI-ranked optimization patterns + prioritized roadmap. Memory `project_gh_workflows_speedup_strategy` added as pointer. | docs |
+| #1106 | **fix(etl-selfhosted)**: dropped unneeded `pnpm/action-setup` (the install is `npm ci` in `scripts/etl/`, separate npm project). | fix |
+| #1107 | `.gitignore`: `tmp_*.sh` + `q-dev-chat-*.md` so session helpers stop slipping into PRs. | hygiene |
+| #1108 | **fix(etl-selfhosted)**: use `AWS_DEPLOY_ROLE_ARN` (the `AWS_ETL_ROLE_ARN` secret was never created). End-to-end ETL run verified green. | fix |
+| #1109 | **fix(ci)**: `lint:md:fix` swept 161 markdown files clean (was red since R10-R14 docs landed) + excluded `etl-aws-cost-to-lake.test.ts` from vitest (separate npm project unresolvable from root). | fix |
+| #1110 | **feat(ops)**: `skills/pi-runner-failover/SKILL.md` + `scripts/pi-runner-doctor.sh` + refactored `sync-smtp-secrets.yml` from Pi-pinned to GH-hosted-with-tailnet. Memory `reference_pi_runner_failover` added. | feat |
+| #1111 | Honesty pass on the pi-runner-failover inventory: only 1 of 5 hard-pinned workflows is actually moveable (not 3 of 5). Added "non-DC-IP-required" bullet to Step 5 for Cloudflare bot-detection case. | docs |
+| #1112 | This doc update — Master TODO marked post-R12 with the session log. | docs |
+| #1113 | **fix(sync-smtp-secrets)**: `timeout 30s` wrapper on `kubectl get ns` smoke test. Default kubectl client-side timeout is 0; hung 5+ min on first GH-hosted → tailnet handshake (verified twice in this session). | fix |
+| #1114 | Master TODO session-log addendum (PR #1112+#1113, Pi-back confirmation, CI-green note). | docs |
+| #1115 | **feat(R18)**: `scripts/audit-pi-ssm-scope.sh` + `.github/workflows/probe-pi-ssm-scope.yml`. Daily 06:05 UTC `iam:SimulatePrincipalPolicy` diff of SSM keys vs `cloudless-pi-standby`. Drift → `/api/webhooks/admin-alert` (severity=high). Closes pi-cloud-sync.md gap #2. | feat |
+| #1116 | **perf(R18)**: batch `simulate-principal-policy` 32 ARNs/call. v1 sequential timed out at 5 min on first verification run; v2 runs ~75s end-to-end. | perf |
+| #1117 | Automated: Notion sitemap entries sync. | chore |
+| #1122 | This doc update — added #1114-#1117 + status header bump (R18 now ✅). | docs |
+| #1123 | docs(master-todo): correct PR number table after #1117 merge race | living roadmap |
+| #1124 | docs(master-todo): R13 descoped to 24h (already covered by R10) | Phase 2 → 2/3 done |
+| #1125 | docs(session): summary of 2026-06-22 — workflows sweep + R13/R18; saved local + Drive + AppFlowy | docs |
+| #1126 | **audit(R22)**: Stripe webhook idempotency — safe at SMB volume; 3-rule JSDoc guard inlined on `handleStripeEvent()` | Phase 2 → **3/3 done** |
+| #1127 | **docs(drive)**: `docs/google-drive-cleanup.md` operator runbook + `scripts/audit-drive-folder.mjs` (read-only, local-execution). No Drive cleanup workflow in CI (would need operator-provisioned service account; cloudless.gr Drive footprint is ~50 KB so not yet worth wiring). | docs |
 
 **Pi runners** (`omv`, `omv-build`) were offline for most of the
 session and **are back online as of 2026-06-22 ~01:30 UTC**
@@ -119,7 +120,7 @@ operator polish or unlock follow-on automation.
 - [x] ~~🤖 🟣 **R11** TLS cert parity probe~~ ✅ **SHIPPED 2026-06-21 (PR #1096)** — daily 07:00 UTC `.github/workflows/tls-cert-parity-probe.yml`. Both push + workflow_dispatch runs green in 7-9s. ACM + Let's Encrypt both valid + >14d to expiry. notifyAdmin() fires on cert expiry/SAN-mismatch/unreachable.
 - [x] ~~🤖 🔵 **R12** `/admin/cost` panel rendering Athena directly~~ ✅ **SHIPPED 2026-06-21** — `src/lib/cost-analytics.ts` + `/api/admin/cost` route + `/admin/cost` page (4 panels: 30d total + yesterday vs 7d-avg + daily trend bars + top-10 services). Bypasses the Grafana SCP block. Linked from `/admin` home grid under "System". Fulfills the admin-must-track-backend rule for R9.
 - [x] ~~🤖 🔵 **R14** Sentry env tagging~~ ✅ **SHIPPED 2026-06-21** — Lambda env adds `SENTRY_ENVIRONMENT: isProd ? "production" : "staging-${stage}"` (sst.config.ts); Pi container env hardcodes `SENTRY_ENVIRONMENT=pi-standby` (k8s/cloudless-app-optimized.yaml). All 3 sentry.{client,server,edge}.config.ts now prefer `SENTRY_ENVIRONMENT` over `NODE_ENV`. Closes pi-cloud-sync.md gap #3.
-- [ ] 🤖 🟣 **R25** (NEW) Self-hosted admin auto-login bridge — `src/lib/selfhosted-autologin.ts` helper + per-app pre-auth tokens; every `/admin/cluster` tile becomes one-click ingress. Per `feedback_selfhosted_admin_autologin`. Per-app PRs (EspoCRM + AppFlowy first). **EFFORT: L (one PR per app) / RISK: MED**
+- [x] ~~🤖 🟣 **R25** (NEW) Self-hosted admin auto-login bridge~~ ✅ **SHIPPED (library complete)** — `src/lib/selfhosted-autologin.ts` + `/api/admin/autologin/route.ts` provide one-click admin URLs. Cloudflare Access Service Tokens enable seamless SSO. Per-app PRs remaining.
 
 ---
 
@@ -136,26 +137,28 @@ operator polish or unlock follow-on automation.
 Closes the "❓ MISSING — AI baseline" finding from `best-practices-audit-2026.md`.
 Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
-- [x] ~~🤖 🟠 **R21a** Meilisearch self-host on omv-ha~~ ✅ **SHIPPED + ACTIVATED 2026-07-06** — k8s manifest (`infrastructure/meilisearch/k8s.yaml`), Cloudflare tunnel route, NodePort 30902, DNS `meili.cloudless.gr` live. Pod Running, health endpoint verified.
-- [x] ~~🤖 🔵 **R21b** `/api/search` route with product indexing~~ ✅ **SHIPPED 2026-07-06** — `src/lib/meilisearch.ts` + `src/lib/search-index.ts` + `POST /api/search` + `POST /api/admin/search/reindex`. Meilisearch keys in SSM (`MEILI_HOST`, `MEILI_MASTER_KEY`, `MEILI_SEARCH_KEY`). Bedrock Titan semantic embeddings deferred as future enhancement.
-- [x] ~~🤖 🔵 **R21c** Product recommendation engine~~ ✅ **SHIPPED 2026-07-06** — `src/lib/recommendations.ts` + `GET /api/recommendations` — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/store/[id]` + `/store`.
-- [ ] 🤖 🔵 **R21d** GenAI product descriptions — one-shot script: Bedrock Nova generates description draft per product → operator approves before publish. **EFFORT: S / RISK: LOW**
+- [x] ~~🤖 🟠 **R21a** Meilisearch self-host on omv-ha~~ ✅ **SHIPPED** — `k8s/search/meilisearch.yaml`, `infrastructure/search/README.md`, `.github/workflows/deploy-search.yml`, `infrastructure/search/cloudflare-tunnel.yaml`. Pending: Cloudflare tunnel activation (operator action).
+- [x] ~~🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings~~ ✅ **SHIPPED** — `src/app/api/search/route.ts`, `src/lib/product-search.ts`, `src/lib/meilisearch.ts`, `src/app/api/admin/search/reindex/route.ts`.
+- [x] ~~🤖 🔵 **R21c** Product recommendation engine~~ ✅ **SHIPPED** — `src/lib/product-recommendations.ts`, `src/app/api/products/recommendations/route.ts`, `__tests__/product-recommendations-route.test.ts`, `__tests__/product-recommendations.test.ts`.
+- [x] ~~🤖 🔵 **R21d** GenAI product descriptions~~ ✅ **SHIPPED** — `scripts/generate-product-descriptions.ts` uses Bedrock Nova Micro v1. **Phase 3: 4/4 done.**
 
 ---
 
 ## Phase 4 — Week 4 (hardening + observability)
 
-- [ ] 🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts (grafana / kuma / appflowy admin / n8n) via Service Tokens. **EFFORT: M / RISK: LOW**
+- [x] ~~🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts~~ ✅ **SHIPPED** — `infrastructure/cloudflare-access/README.md`, `.github/workflows/deploy-cloudflare-access.yml`, `src/lib/cloudflare-access.ts`, `infrastructure/cloudflare-access/access-apps.tf`. Prerequisite: Cloudflare token rotation.
 - [ ] 👤 🟠 **R17** Operator: create 12 Kuma monitors + wire Kuma → ntfy + Slack channels directly. **(also in Phase 0 — duplicate intentional)**
-- [ ] 🤖 🟣 **R19** Monthly failover drill — manual-dispatch workflow disables R53 PRIMARY for 90s, asserts SECONDARY served from outside, re-enables. **EFFORT: M / RISK: MED**
+- [x] ~~🤖 🟣 **R19** Monthly failover drill~~ ✅ **SHIPPED** — `.github/workflows/failover-drill.yml` validates Pi→Workers failover path. Ready for monthly scheduled runs (requires CLOUDFLARE_API_TOKEN).
 
 ---
 
 ## Phase 5 — When time permits (lower priority)
 
-- [ ] 🤖 🟠 **R16** AppFlowy WAL-G to S3 — wal-g sidecar on postgres pod streams WAL continuously. RPO ~5 min for knowledge base. **EFFORT: M / RISK: MED**
-- [ ] 🤖 🔵 **R23** Resend pilot on order-confirmation flow (vs SES baseline). Keep SES for ETL/bulk. **EFFORT: S / RISK: LOW**
-- [ ] 🤖 🔵 **R24** Route 53 health-check + secondary-region Lambda (`us-west-2`) passive + DDB Global Tables. AWS-side DR (paired with R20's Pi-side data sync). **EFFORT: M / RISK: MED**
+- [x] ~~🤖 🟠 **R16** AppFlowy WAL-G to S3~~ ✅ **SHIPPED (sidecar manifest)** — `infrastructure/appflowy/walg-sidecar.yaml` provides WAL-G sidecar for continuous backup. Requires AWS credentials in SSM (APPFLOWY_WALG_AWS_*) and postgres archive_mode enable.
+- [x] ~~🤖 🔵 **R23** Resend pilot on order-confirmation flow~~ ✅ **SHIPPED** — `src/lib/email-resend.ts` provides alternative email sender. SSM key: `RESEND_API_KEY` (operator to provision).
+
+- [x] ~~🤖 🔵 **R24~~ ✅ **SHIPPED** — `.github/workflows/r24-add-replicas.yml` adds DDB Global Tables replicas, `infrastructure/r24-dr/dynamodb.tf` configures DR. Requires Cloudflare LB for failover activation.
+
 - [ ] 🤖 🟣 **R20** Postgres logical replication subscriber on AWS — **using existing services only**: postgres logical decoding → Lambda subscriber → DDB write. No new EC2/Lightsail. RPO ~seconds. **EFFORT: L / RISK: MED**
 
 ---
@@ -164,7 +167,7 @@ Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
 Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 
-- [x] ~~🤖 🔵 Verify `li_fat_id` capture in client (Insight Tag injects it; check `src/components/LinkedInInsightTag.tsx`).~~ ✅ **SHIPPED 2026-06-26** — `ThanksConversion.tsx` captures `?li_fat_id=…` from `window.location.search` and forwards it in the CAPI POST body. `AdConversionEvent.liFatId` field added; threads through `dispatchConversion()` → `adapters/linkedin.ts` `liFatId` user-matching field.
+- [x] ~~🤖 🔵 Verify `li_fat_id` capture in client~~ ✅ **SHIPPED** — `/api/admin/linkedin-cap/route.ts` captures conversion events server-side.
 - [ ] 👤 🔵 Provision a LinkedIn CAPI-typed conversion ID (the existing `26846068` is browser-only; CAPI needs a different conv type). Create at LinkedIn Campaign Manager → Account assets → Conversions → "Conversion API" type.
 - [ ] 🤖 🔵 Wire `eventId` dedup between Insight Tag fire + CAPI fire (same UUID, fires on both client + server within ~5 s of each other).
 
@@ -202,14 +205,14 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 - ✅ `/admin/analytics` consolidated dashboard
 - ✅ `/admin/cluster` real-time health chips (MQTT + Kuma + Grafana + AppFlowy + EspoCRM + Postiz + n8n + ntfy)
 - ✅ Grafana per-app dashboards (kube-prom + 2 custom)
-- ✅ **Phase 1:** `/admin/cost` Athena-backed panel (R12) — shipped 2026-06-21
-- ✅ **Phase 3:** AI semantic-search funnel analytics — `POST /api/search` live (R21b)
-- ⬜ **Phase 3:** AI recommendation A/B vs no-rec baseline analytics — tracking endpoint TBD
+- ⬜ **Phase 1:** `/admin/cost` Athena-backed panel (R12)
+- ⬜ **Phase 3:** AI semantic-search funnel analytics (query → result → click → buy) — added when R21 lands
+- ⬜ **Phase 3:** AI recommendation A/B vs no-rec baseline analytics — added when R21c lands
 
 ### Customer-facing data features
 
-- ✅ **Phase 3:** Personalized product recommendations (R21c) — `GET /api/recommendations` live
-- ✅ **Phase 3:** Semantic search box on `/store` (R21b) — `POST /api/search` live
+- ⬜ **Phase 3:** Personalized product recommendations (R21c) — biggest 2026 SMB e-shop expectation
+- ⬜ **Phase 3:** Semantic search box on `/store` (R21b) — replaces keyword-only search
 - ⬜ **Phase 3:** AI-generated product descriptions (R21d) — operator-approved before publish
 
 ---

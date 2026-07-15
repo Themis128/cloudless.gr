@@ -33,10 +33,9 @@ jobs:
       #   1800KB → 1900KB (portal feature): customer portal flow added /portal/waiting,
       #     /portal/[token] timeline, admin pending-clients UI, lucide-react icons (~25KB).
       #   1900KB → 2300KB (analytics warehouse): @aws-sdk/client-s3 server-side only;
+      #   2300KB → 2310KB (2026-06-23): minor baseline drift, current static chunks 2303KB.
       #     client bundle growth from portal/dashboard/admin expansion (~292KB).
-      #   2300KB → 2330KB (LangGraph agent protocol): undici + @sentry/core declared
-      #     as direct deps (were transitive); actual client bundle contribution ~26KB.
-      BUNDLE_MAX_KB: "2330"
+      BUNDLE_MAX_KB: "2310"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -66,7 +65,7 @@ jobs:
           cat audit-report/bundle.md >> "$GITHUB_STEP_SUMMARY" || true
       - name: Upload bundle report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         with:
           name: bundle-report-${{ github.run_id }}
           path: audit-report/

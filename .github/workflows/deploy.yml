@@ -125,6 +125,8 @@ jobs:
           SENTRY_ORG: baltzakisthemiscom
           SENTRY_PROJECT: cloudless-gr
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: prod
+          NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod
           # Cloudflare Workers AI - reads SSM (source of truth, GH secret is stale).
           CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
           CLOUDFLARE_API_TOKEN: ${{ steps.cftoken.outputs.token }}
