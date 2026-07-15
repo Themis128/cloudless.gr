@@ -131,54 +131,52 @@ jobs:
                   - |
                     set -e
                     apk add -q util-linux 2>/dev/null
-                    echo "=== socat status on port 18443 ==="
+                    echo "=== current traefik-ipv6-proxy.service ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /etc/systemd/system/traefik-ipv6-proxy.service 2>/dev/null || echo "(unit file not found)"
+                    echo "=== updating traefik-ipv6-proxy.service ==="
+                    # Root cause: the systemd unit has Restart=always with the dead keepalived VIP
+                    # (192.168.1.200:18443) and TCP6-LISTEN+ipv6only=1 (IPv6-only). It respawns socat
+                    # within 5s of any manual kill, undoing all previous fix attempts.
+                    # Fix: rewrite ExecStart to use Traefik ClusterIP 10.43.64.171:18443 (reachable
+                    # directly from host network namespace via kube-proxy iptables OUTPUT rules) and
+                    # TCP-LISTEN (dual-stack) so cloudflared's IPv4 connections reach the socket.
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      sh -c 'cat > /etc/systemd/system/traefik-ipv6-proxy.service << '"'"'EOF'"'"'
+                    [Unit]
+                    Description=IPv6 proxy for Traefik 18443
+                    After=network.target k3s.service
+
+                    [Service]
+                    ExecStart=/usr/bin/socat TCP-LISTEN:18443,fork,reuseaddr TCP4:10.43.64.171:18443
+                    Restart=always
+                    RestartSec=5
+
+                    [Install]
+                    WantedBy=multi-user.target
+                    EOF'
+                    echo "=== reloading systemd daemon ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl daemon-reload
+                    echo "=== restarting traefik-ipv6-proxy ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl restart traefik-ipv6-proxy
+                    sleep 3
+                    echo "=== traefik-ipv6-proxy status ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active traefik-ipv6-proxy
+                    echo "=== socat cmdline after fix ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
-                    echo "=== check for socat systemd unit ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl list-units --type=service 2>/dev/null | grep socat || echo "(no socat systemd unit)"
-                    echo "=== kill broken socat on port 18443 ==="
-                    SOCAT_LINE=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "")
-                    SOCAT_PID=$(echo "$SOCAT_LINE" | awk 'match($0, /pid=[0-9]+/) {s=substr($0,RSTART+4,RLENGTH-4); print s; exit}')
-                    if [ -n "$SOCAT_PID" ]; then
-                      SOCAT_CMD=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        cat /proc/$SOCAT_PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'unknown')
-                      echo "socat PID=$SOCAT_PID cmdline: $SOCAT_CMD"
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        kill -9 "$SOCAT_PID" 2>/dev/null || true
-                      sleep 1
-                      # Also kill any forked children still holding handles to port 18443
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        sh -c 'pkill -9 -x socat 2>/dev/null; true'
-                      sleep 1
-                      echo "socat killed"
-                    else
-                      echo "no socat found on 18443"
-                    fi
-                    echo "18443 after kill:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443 — port is free)"
-                    # Spawn new socat pointing to Traefik ClusterIP 10.43.64.171:18443.
-                    # The old config pointed to 192.168.1.200 (dead keepalived VIP). We tried
-                    # 192.168.1.128 next but that also times out: the svclb DNAT rule is in
-                    # PREROUTING (ingress only) and doesn't apply to locally-originated traffic.
-                    # The ClusterIP is reachable directly from the host network namespace because
-                    # k3s installs kube-proxy / iptables rules that work for OUTPUT traffic too.
-                    echo "spawning socat via Traefik ClusterIP 10.43.64.171:18443"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'printf "%s\n" "#!/bin/sh" "exec /usr/bin/socat TCP6-LISTEN:18443,fork,reuseaddr,ipv6only=1 TCP4:10.43.64.171:18443" > /tmp/start-socat.sh && chmod +x /tmp/start-socat.sh && setsid /tmp/start-socat.sh </dev/null >/tmp/socat-18443.log 2>&1 & echo "socat spawned pid=$!"'
-                    sleep 3
-                    echo "18443 after spawn:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing — spawn failed; check /tmp/socat-18443.log on host)"
+                    PID=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 | awk -F 'pid=' '{split($2,a,","); print a[1]}')
+                    [ -n "$PID" ] && nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      cat /proc/$PID/cmdline 2>/dev/null | tr '\0' ' ' || echo "no socat pid found"
+                    echo ""
                     echo "=== restarting cloudflared ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
                     sleep 5
-                    echo "=== 18443 after restart ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "(still nothing on 18443)"
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl is-active cloudflared
                     echo "done"
