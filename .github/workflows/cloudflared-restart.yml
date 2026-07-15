@@ -128,22 +128,38 @@ jobs:
                     echo "=== check for socat systemd unit ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl list-units --type=service 2>/dev/null | grep socat || echo "(no socat systemd unit)"
-                    echo "=== kill+restart socat if present ==="
+                    echo "=== kill broken socat on port 18443 ==="
                     SOCAT_LINE=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       ss -tlnp 2>/dev/null | grep 18443 || echo "")
-                    # busybox grep has no -P; use awk to extract pid=NNNN
                     SOCAT_PID=$(echo "$SOCAT_LINE" | awk 'match($0, /pid=[0-9]+/) {s=substr($0,RSTART+4,RLENGTH-4); print s; exit}')
                     if [ -n "$SOCAT_PID" ]; then
-                      echo "socat PID: $SOCAT_PID"
-                      echo "socat cmdline: $(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        cat /proc/$SOCAT_PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'unknown')"
-                      echo "killing socat PID $SOCAT_PID"
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- kill "$SOCAT_PID" || true
-                      sleep 2
+                      SOCAT_CMD=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        cat /proc/$SOCAT_PID/cmdline 2>/dev/null | tr '\0' ' ' || echo 'unknown')
+                      echo "socat PID=$SOCAT_PID cmdline: $SOCAT_CMD"
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        kill -9 "$SOCAT_PID" 2>/dev/null || true
+                      sleep 1
+                      # Also kill any forked children still holding handles to port 18443
+                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                        sh -c 'pkill -9 -x socat 2>/dev/null; true'
+                      sleep 1
                       echo "socat killed"
                     else
                       echo "no socat found on 18443"
                     fi
+                    echo "18443 after kill:"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443 — port is free)"
+                    # Spawn new socat pointing to 192.168.1.128:18443 (omv-main LAN IP, bypasses dead VIP 192.168.1.200).
+                    # Write wrapper script via printf (avoids nested heredoc in YAML), then setsid so the
+                    # child is adopted by PID 1 on the host rather than reaped by the container sh.
+                    echo "spawning socat via 192.168.1.128:18443"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      sh -c 'printf "%s\n" "#!/bin/sh" "exec /usr/bin/socat TCP6-LISTEN:18443,fork,reuseaddr,ipv6only=1 TCP4:192.168.1.128:18443" > /tmp/start-socat.sh && chmod +x /tmp/start-socat.sh && setsid /tmp/start-socat.sh </dev/null >/tmp/socat-18443.log 2>&1 & echo "socat spawned pid=$!"'
+                    sleep 3
+                    echo "18443 after spawn:"
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing — spawn failed; check /tmp/socat-18443.log on host)"
                     echo "=== restarting cloudflared ==="
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl restart cloudflared
