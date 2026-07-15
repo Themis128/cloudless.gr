@@ -3,7 +3,7 @@ name: App auth doctor (Pi cloudless deployment wiring)
 # re-triggered 2026-06-03T00:30Z — post-k3s-restart verification (cluster recovered)
 
 # Read-only: dumps how the k3s `cloudless` app is wired for auth (env names,
-# secrets, configmaps — never values) for auth diagnostics.
+# secrets, configmaps — never values) so we can wire Keycloak onto the standby.
 # Posts to issue #382.
 
 on:
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
       - name: Connect to tailnet
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
       - name: Configure kubectl
@@ -46,9 +46,9 @@ jobs:
           [ -n "$AK" ] && echo "::add-mask::$AK"; [ -n "$SK" ] && echo "::add-mask::$SK"
           if [ -z "$AK" ] || [ -z "$SK" ]; then echo "## SSM: could not read pi-standby-aws-creds (keys may differ)"; kubectl -n cloudless get secret pi-standby-aws-creds -o jsonpath='{.data}' | grep -oE '"[^"]+":' | tr -d '":,' | sed 's/^/  key: /'; exit 0; fi
           export AWS_ACCESS_KEY_ID="$AK" AWS_SECRET_ACCESS_KEY="$SK" AWS_REGION=us-east-1
-          echo "## SSM /cloudless/production param NAMES matching AUTH|COGNITO|NEXTAUTH:" | tee -a aad.log
+          echo "## SSM /cloudless/production param NAMES matching AUTH|COGNITO|KEYCLOAK|NEXTAUTH:" | tee -a aad.log
           aws ssm get-parameters-by-path --path /cloudless/production --recursive --query 'Parameters[].Name' --output text 2>&1 \
-            | tr '\t' '\n' | grep -iE 'AUTH_SECRET|COGNITO|NEXTAUTH' | sed 's/^/  /' | tee -a aad.log || echo "  (none / aws error)" | tee -a aad.log
+            | tr '\t' '\n' | grep -iE 'AUTH_SECRET|COGNITO|KEYCLOAK|NEXTAUTH' | sed 's/^/  /' | tee -a aad.log || echo "  (none / aws error)" | tee -a aad.log
       - name: Post to tracking issue
         if: always()
         run: |

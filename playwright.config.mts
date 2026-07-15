@@ -26,7 +26,8 @@ const adminStorage = path.join(rootDir, "e2e", ".auth", "admin.json");
  *   npx playwright test --ui
  */
 export default defineConfig({
-  globalTeardown: process.env.COVERAGE === "1" ? "./e2e/coverage/server-teardown.ts" : undefined,
+  globalSetup: "./e2e/global-setup.mts",
+  globalTeardown: "./e2e/coverage/server-teardown.mts",
   testDir: path.join(rootDir, "e2e"),
   testIgnore: ["**/k3s/**"],
   fullyParallel: true,
@@ -40,8 +41,20 @@ export default defineConfig({
           name: "cloudless.gr coverage",
           outputFile: "./coverage/playwright/index.html",
           coverage: {
-            entryFilter: { "**/src/**": true, "**/node_modules/**": false, "**/.next/**": false },
-            sourceFilter: { "**/src/**": true, "**/node_modules/**": false },
+            // entryFilter runs against the *loaded bundle* URL (e.g.
+            // http://localhost:4000/_next/static/chunks/app/[locale]/page-HASH.js),
+            // never a literal `/src/` path — so a `**/src/**` allowlist here drops
+            // everything before source maps resolve. Exclude vendor/framework
+            // bundles and let the rest through; sourceFilter restricts to src/
+            // *after* the source maps remap bundles back to original files.
+            entryFilter: (entry: { url?: string }) => {
+              const u = entry.url ?? "";
+              if (u.includes("/node_modules/")) return false;
+              if (/\/_next\/static\/chunks\/(framework|main-app|main|webpack|polyfills|pages)/.test(u)) return false;
+              return true;
+            },
+            sourceFilter: (sourcePath: string) =>
+              /(^|\/)src\//.test(sourcePath) && !sourcePath.includes("/node_modules/"),
             reports: ["v8", "html", "lcov", "console-summary"],
             outputDir: "./coverage/playwright",
           },
