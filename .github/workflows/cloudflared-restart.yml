@@ -4,28 +4,9 @@ name: cloudflared restart — restore tunnel when pi-origin returns 000
 # cloudless pod being healthy. Symptom: k3s E2E timeouts against pi-origin while
 # kubectl get pods shows 1/1 Running.
 #
-# Root cause (fully traced 2026-06-27):
-#   cloudflared runs as a systemd service on omv (Pi 5, the control-plane node).
-#   It uses `service: https://localhost:18443` in /etc/cloudflared/config.yml.
-#   socat (traefik-ipv6-proxy.service) was originally forwarding to the dead keepalived
-#   VIP 192.168.1.200:18443.
-#
-#   Traefik runs on omv-HA (the worker node, 10.42.1.225:18443). From the omv host
-#   network namespace, Traefik is reachable ONLY via the k3s NodePort (16616) using
-#   loopback, but this requires net.ipv4.conf.lo.route_localnet=1.  Without that
-#   sysctl, the kernel drops locally-DNAT'd packets because the flannel-CNI destination
-#   looks like a routed address arriving on loopback.
-#
-#   Fix applied here:
-#     1. Enable net.ipv4.conf.lo.route_localnet=1 (persisted to sysctl.d).
-#     2. Restore the missing flannel VXLAN route + FDB entry for omv-ha's pod CIDR
-#        (10.42.1.0/24 via flannel.1). K3s should populate this automatically but
-#        doesn't after a k3s restart — without it, NodePort DNAT reaches KUBE-SEP
-#        but then kernel can't route the DNAT'd packet to 10.42.1.x.
-#     3. Rewrite traefik-ipv6-proxy.service ExecStart to:
-#        socat TCP-LISTEN:18443,fork,reuseaddr TCP4:127.0.0.1:16616
-#        (127.0.0.1:16616 = Traefik websecure NodePort via loopback DNAT).
-#     4. Restart cloudflared.
+# Root cause: cloudflared runs as a systemd service on the Pi host (not in k3s).
+# When it drops its edge connection and doesn't self-heal, SSH + systemctl restart
+# forces a fresh tunnel registration.
 #
 # Trigger: push path (to fire on merge) or workflow_dispatch.
 
@@ -47,6 +28,8 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
+      PI_HOST: "100.113.41.119"
+      PI_USER: "tbaltzakis"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
@@ -55,266 +38,48 @@ jobs:
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Configure kubectl
+      - name: Install SSH key
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Check cloudless pod and pi-origin before restart
-        continue-on-error: true
+      - name: Diagnose cloudflared status via SSH
         run: |
-          echo "=== cloudless pods ==="
-          kubectl get pods -n cloudless || echo "(k3s API unavailable)"
-          echo ""
-          echo "=== kube-system pods (Traefik health) ==="
-          kubectl get pods -n kube-system | grep -E "traefik|svclb" || echo "(no traefik pods found)"
-          echo ""
-          echo "=== Traefik NodePort ==="
-          kubectl get svc traefik -n kube-system -o jsonpath='{.spec.ports[?(@.name=="websecure")].nodePort}' && echo ""
-          echo ""
-          echo "=== pi-origin health (before) ==="
-          code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
-            https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
-          echo "HTTP $code"
+          echo "=== cloudflared systemd status ==="
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status cloudflared --no-pager 2>&1 | head -20; \
+             echo ''; \
+             echo '=== last 20 lines of cloudflared journal ==='; \
+             sudo journalctl -u cloudflared --no-pager --lines=20 2>&1" \
+            2>&1 || true
 
-      - name: Fix socat + route_localnet + restart cloudflared via privileged pod
+      - name: Restart cloudflared via SSH
         run: |
-          # Wait for k3s API to become ready (it may be temporarily overloaded)
-          echo "=== waiting for k3s API (up to 90s) ==="
-          for i in $(seq 1 18); do
-            if kubectl get --raw /readyz >/dev/null 2>&1; then
-              echo "k3s API ready after ~$((i * 5))s"
-              break
-            fi
-            echo "  [$i/18] API not ready, waiting 5s..."
-            sleep 5
-          done
-          if ! kubectl get --raw /readyz >/dev/null 2>&1; then
-            echo "::error::k3s API still unavailable after 90s — cannot create fix pod"
-            exit 1
-          fi
-
-          # Determine Traefik websecure NodePort dynamically
-          TRAEFIK_NODEPORT=$(kubectl get svc traefik -n kube-system \
-            -o jsonpath='{.spec.ports[?(@.name=="websecure")].nodePort}')
-          echo "Traefik websecure NodePort: $TRAEFIK_NODEPORT"
-
-          # Get omv-ha's flannel.1 MAC (needed to restore FDB entry).
-          # Using a manifest file avoids JSON-within-single-quoted-shell escaping issues.
-          kubectl delete pod ha-mac-probe -n default --ignore-not-found --wait=true
-          cat <<'MACEOF' | kubectl apply -f -
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: ha-mac-probe
-            namespace: default
-          spec:
-            restartPolicy: Never
-            nodeSelector:
-              kubernetes.io/hostname: omv-ha
-            hostNetwork: true
-            containers:
-              - name: w
-                image: alpine:3
-                securityContext:
-                  privileged: true
-                command:
-                  - sh
-                  - -c
-                  - |
-                    echo "IFACES_BEGIN"
-                    ip -br link show 2>/dev/null
-                    echo "IFACES_END"
-                    ls /sys/class/net/ 2>/dev/null
-                    echo "SYSFS_END"
-                    MAC=""
-                    for iface in flannel.1 flannel0 flannel cni0 vxlan.calico; do
-                      if [ -f "/sys/class/net/$iface/address" ]; then
-                        MAC=$(cat "/sys/class/net/$iface/address" 2>/dev/null)
-                        echo "FOUND_IFACE=$iface MAC=$MAC"
-                        break
-                      fi
-                    done
-                    echo "FINAL_MAC=$MAC" 
-          MACEOF
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/ha-mac-probe \
-            -n default --timeout=30s || true
-          PROBE_LOGS=$(kubectl logs ha-mac-probe -n default 2>/dev/null)
-          echo "=== omv-ha probe output ===" && echo "$PROBE_LOGS"
-          HA_FLANNEL_MAC=$(echo "$PROBE_LOGS" | grep '^FINAL_MAC=' | cut -d= -f2 | tr -d '[:space:]')
-          kubectl delete pod ha-mac-probe -n default --ignore-not-found
-          echo "omv-ha flannel MAC: $HA_FLANNEL_MAC"
-
-          kubectl delete pod cf-fix -n default --ignore-not-found --wait=true
-          cat <<PODEOF | kubectl create -f -
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: cf-fix
-            namespace: default
-          spec:
-            restartPolicy: Never
-            nodeSelector:
-              kubernetes.io/hostname: omv
-            hostPID: true
-            hostNetwork: true
-            containers:
-              - name: w
-                image: alpine:3
-                securityContext:
-                  privileged: true
-                command:
-                  - sh
-                  - -c
-                  - |
-                    set -e
-                    apk add -q util-linux 2>/dev/null
-
-                    echo "=== current state ==="
-                    echo "traefik-ipv6-proxy unit:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      cat /etc/systemd/system/traefik-ipv6-proxy.service 2>/dev/null || echo "(not found)"
-                    echo ""
-                    echo "route_localnet (before):"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sysctl net.ipv4.conf.all.route_localnet net.ipv4.conf.lo.route_localnet 2>/dev/null || true
-
-                    echo ""
-                    echo "=== step 1: enable route_localnet on loopback ==="
-                    # Required for NodePort-via-loopback DNAT to work from host namespace.
-                    # Without this the kernel drops DNAT'd packets destined for flannel
-                    # CIDR because they arrive on lo, which by default rejects routed addresses.
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sysctl -w net.ipv4.conf.all.route_localnet=1
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sysctl -w net.ipv4.conf.lo.route_localnet=1
-                    # Persist across reboots
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'echo "net.ipv4.conf.all.route_localnet = 1" > /etc/sysctl.d/90-route-localnet.conf'
-                    echo "route_localnet (after):"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sysctl net.ipv4.conf.all.route_localnet net.ipv4.conf.lo.route_localnet 2>/dev/null || true
-
-                    echo ""
-                    echo "=== step 1b: diagnose + restore cross-node route for omv-ha ==="
-                    # omv-ha probe found flannel-wg (WireGuard backend), NOT flannel.1 (VXLAN).
-                    # k3s flannel-wg manages its own WireGuard peers but the host routing
-                    # table may be missing the 10.42.1.0/24 route after a k3s restart.
-                    echo "=== omv host interfaces ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ip -br link show 2>/dev/null || true
-                    echo "=== full routing table ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ip route show table all 2>/dev/null | grep -E '10.42|flannel|cni' || echo "(no pod routes found)"
-                    echo "=== iptables NodePort chain ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      iptables -t nat -L KUBE-NODEPORTS 2>/dev/null | head -20 || true
-
-                    # Detect the flannel WireGuard interface (flannel-wg or flannel.1)
-                    FLANNEL_IFACE=""
-                    for candidate in flannel-wg flannel.1 flannel0; do
-                      EXISTS=$(nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        ip link show "$candidate" 2>/dev/null | head -1)
-                      if [ -n "$EXISTS" ]; then FLANNEL_IFACE="$candidate"; break; fi
-                    done
-                    echo "flannel interface on omv: ${FLANNEL_IFACE:-(none found)}"
-
-                    # For WireGuard backend, the route should already exist but may have
-                    # been dropped. Add it via the detected flannel interface.
-                    if [ -n "$FLANNEL_IFACE" ]; then
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        ip route replace 10.42.1.0/24 dev "$FLANNEL_IFACE" onlink 2>/dev/null || \
-                      nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                        ip route add 10.42.1.0/24 dev "$FLANNEL_IFACE" onlink 2>/dev/null || true
-                    else
-                      echo "WARNING: no flannel interface found on omv — route not added"
-                    fi
-                    echo "route after fix:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ip route show 2>/dev/null | grep 10.42.1 || echo "(still missing)"
-                    echo "reachability to omv-ha pod CIDR gateway:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ping -c1 -W3 10.42.1.1 2>&1 | tail -2 || echo "ping skipped"
-
-                    echo ""
-                    echo "=== step 2: rewrite traefik-ipv6-proxy.service ==="
-                    # Target: 127.0.0.1:${TRAEFIK_NODEPORT} = Traefik websecure NodePort.
-                    # DNAT chain: socat → 127.0.0.1:${TRAEFIK_NODEPORT} → KUBE-NODEPORTS iptables
-                    # → KUBE-EXT → KUBE-SVC → KUBE-SEP DNAT → Traefik pod (omv-ha) via flannel.
-                    # route_localnet=1 makes this path work from the host network namespace.
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'cat > /etc/systemd/system/traefik-ipv6-proxy.service << '"'"'EOF'"'"'
-                    [Unit]
-                    Description=socat bridge: localhost:18443 -> Traefik NodePort (cloudflared origin)
-                    After=network.target k3s.service
-
-                    [Service]
-                    ExecStart=/usr/bin/socat TCP-LISTEN:18443,fork,reuseaddr TCP4:127.0.0.1:${TRAEFIK_NODEPORT}
-                    Restart=always
-                    RestartSec=5
-
-                    [Install]
-                    WantedBy=multi-user.target
-                    EOF'
-                    echo "unit written:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      cat /etc/systemd/system/traefik-ipv6-proxy.service
-
-                    echo ""
-                    echo "=== step 3: reload + restart socat service ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl daemon-reload
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart traefik-ipv6-proxy
-                    sleep 3
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active traefik-ipv6-proxy
-                    echo "socat listening:"
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      ss -tlnp 2>/dev/null | grep 18443 || echo "(nothing on 18443)"
-
-                    echo ""
-                    echo "=== step 4: test socat -> NodePort -> Traefik ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      sh -c 'curl -ksS --max-time 10 https://localhost:18443/ \
-                        -o /dev/null -w "HTTP %{http_code}\n" 2>&1 || echo "curl failed (may need a few more seconds)"'
-
-                    echo ""
-                    echo "=== step 5: restart cloudflared ==="
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl restart cloudflared
-                    sleep 5
-                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                      systemctl is-active cloudflared
-                    echo "done"
-          PODEOF
-          echo "=== waiting for pod to complete (up to 180s) ==="
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-fix \
-            -n default --timeout=180s || {
-            echo "=== pod did not succeed — current state ==="
-            kubectl get pod cf-fix -n default -o wide || true
-            kubectl describe pod cf-fix -n default || true
-            kubectl logs cf-fix -n default || true
-            exit 1
-          }
-          kubectl logs -n default cf-fix
-          kubectl delete pod -n default cf-fix --ignore-not-found
+          echo "=== restarting cloudflared ==="
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl restart cloudflared 2>&1; echo restart_exit=\$?; \
+             sleep 3; \
+             sudo systemctl status cloudflared --no-pager 2>&1 | head -10" \
+            2>&1
 
       - name: Wait for pi-origin to recover
         run: |
-          echo "=== polling pi-origin.cloudless.gr/api/health (up to 120s) ==="
-          for i in $(seq 1 12); do
+          echo "=== polling pi-origin.cloudless.gr/api/health (up to 90s) ==="
+          for i in $(seq 1 9); do
             code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
               https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
-            echo "  [$i/12] HTTP $code"
+            echo "  [$i/9] HTTP $code"
             if [ "$code" = "200" ]; then
               echo "✓ pi-origin is healthy"
               exit 0
             fi
             sleep 10
           done
-          echo "::warning::pi-origin did not recover within 120s after cloudflared restart"
+          echo "::warning::pi-origin did not recover within 90s after cloudflared restart"
 
       - name: Post result to tracking issue
         if: always()
