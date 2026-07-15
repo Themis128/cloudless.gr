@@ -188,13 +188,30 @@ const runUrl = `https://github.com/${REPO}/actions/runs/${RUN_ID}`;
 
 // Output JSON for agentic workflows if --json flag
 if (process.argv.includes("--json")) {
+  // Extract the first analysis's content for the agentic workflow format
+  const firstAnalysis = analyses[0]?.analysis || "";
+  let rootCause = "Unknown failure";
+  let fix = "No fix suggested";
+  let confidence = "Unknown";
+
+  // Parse the analysis text to extract root_cause, fix, confidence
+  const rcMatch = firstAnalysis.match(/\*\*Root cause:\*\*\s*(.+?)(?:\n\n|\n\*\*)/i);
+  const fixMatch = firstAnalysis.match(/\*\*Fix:\*\*\s*(.+?)(?:\n\n|\n\*\*)/i);
+  const confMatch = firstAnalysis.match(/\*\*Confidence:\*\*\s*(.+?)(?:\n\n|\n\*|\n$)/i);
+
+  if (rcMatch) rootCause = rcMatch[1].trim();
+  if (fixMatch) fix = fixMatch[1].trim();
+  if (confMatch) confidence = confMatch[1].trim();
+
   const jsonOutput = {
     run_id: RUN_ID,
     workflow: WORKFLOW_NAME,
     branch: HEAD_BRANCH,
     sha: HEAD_SHA,
     pr_number: prNumber || null,
-    analyses,
+    root_cause: rootCause,
+    fix: fix,
+    confidence: confidence,
     run_url: runUrl,
   };
   console.log(JSON.stringify(jsonOutput));

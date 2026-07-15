@@ -1,0 +1,30 @@
+# Agentic Workflows Configuration Template
+# 
+# IMPORTANT: Copy this section to .env.local and fill in your values.
+# .env.local is in .gitignore and should NOT be committed.
+#
+# Required environment variables:
+#
+# Tavily Search API (for internet_search tool)
+# Get from: https://tavily.com/api
+TAVILY_API_KEY=""
+
+# OpenAI-compatible local model (vLLM)
+OPENAI_BASE_URL="http://127.0.0.1:8001/v1"
+OPENAI_API_KEY="dummy"
+LOCAL_MODEL_NAME="Qwen/Qwen2.5-Coder-3B-Instruct-AWQ"
+
+# Optional: Anthropic API for Deep Agents
+# ANTHROPIC_API_KEY=""
+# ANTHROPIC_BASE_URL=""
+
+# Optional: GitHub Personal Access Token (for GitHub MCP)
+# GITHUB_PERSONAL_ACCESS_TOKEN=""
+
+# Installation commands:
+# 1. Create venv:   python3 -m venv .venv
+# 2. Install deps:  .venv/bin/pip install -r requirements.txt
+# 3. Activate:      source .venv/bin/activate
+# 4. Add your API keys to .env.local
+#
+# Then run agents with: PYTHONPATH=. python agents/run_cloudless_agent.py "query"

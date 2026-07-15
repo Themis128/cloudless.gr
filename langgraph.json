@@ -1,0 +1,9 @@
+{
+  "dependencies": [],
+  "graphs": {
+    "cloudless_agent": "./agents/cloudless_research_agent.py:agent",
+    "create_agent_experiment": "./agents/experiments/langchain_v1_create_agent_local_vllm.py:build_agent",
+    "modelrequest_middleware_experiment": "./agents/experiments/langchain_v1_modelrequest_middleware_local_vllm.py:build_agent"
+  },
+  "env": ".env.local"
+}
