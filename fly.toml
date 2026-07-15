@@ -1,27 +1,32 @@
 # Fly.io Proxy Configuration for cloudless.gr
-# Free Tier: Automatic HA Failover (Cloudflare → Pi/k3s)
+# Free Tier: Automatic HA Failover (AWS CloudFront → Pi/k3s)
 #
+# This config deploys a reverse proxy app that handles failover.
+# See fly-proxy-app/ directory for the proxy implementation.
 
 app = "cloudless-proxy"
-primary_region = "fra"
 
-# Auto-start/stop and HTTPS settings for HA failover
-auto_start_machines = true
-auto_stop_machines = true
-min_machines_running = 0
-force_https = true
+primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
 
-[env]
-FALLBACK_HOST = "github-omv.tail4ecae1.ts.net"
-PRIMARY_HOST = "cloudless.gr"
+[build]
+  # Build the proxy app from fly-proxy-app directory
+  context = "fly-proxy-app"
 
 [[services]]
   internal_port = 8080
   protocol = "tcp"
+  
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    
+  [[services.http_options]]
+    health_check_path = "/health"
+    health_check_interval = "30s"
 
 [env]
   # Backends to proxy to
-  PRIMARY_HOST = "cloudless.gr"
+  PRIMARY_HOST = "d3k7muo3c6lw6s.cloudfront.net"
   FALLBACK_HOST = "omv.tail8eb71.ts.net"
 
 [[vm]]
