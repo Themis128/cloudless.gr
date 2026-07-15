@@ -1,0 +1,105 @@
+{
+  "name": "Hot lead alert — score >65 to Slack #notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hot-lead",
+        "options": {}
+      },
+      "name": "Webhook (hot-lead)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "hot-lead"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "email", "value": "={{ $json.payload.record.emailAddress || $json.payload.email || '' }}" },
+            { "name": "firstName", "value": "={{ $json.payload.record.firstName || '' }}" },
+            { "name": "lastName", "value": "={{ $json.payload.record.lastName || '' }}" },
+            { "name": "leadScore", "value": "={{ $json.payload.record.leadScore || $json.payload.score || 0 }}" },
+            { "name": "company", "value": "={{ $json.payload.record.account?.name || $json.payload.record.company || '' }}" }
+          ]
+        }
+      },
+      "name": "Extract lead fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $('Extract lead fields').item.json.leadScore }}",
+              "operation": "larger",
+              "value2": 65
+            }
+          ]
+        }
+      },
+      "name": "Hot lead check (>65)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"ignored\": true, \"note\": \"Lead score below threshold\" }"
+      },
+      "name": "Respond (not hot)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://hooks.slack.com/services/{{ $('Slack webhook URL').item.json.webhookPath }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ text: '🔥 Hot Lead Alert - score ' + $('Extract lead fields').item.json.leadScore, attachments: [{ color: '#ff0000', fields: [{ title: 'Name', value: $('Extract lead fields').item.json.firstName + ' ' + $('Extract lead fields').item.json.lastName, short: true }, { title: 'Email', value: $('Extract lead fields').item.json.email, short: true }, { title: 'Score', value: $('Extract lead fields').item.json.leadScore, short: true }, { title: 'Company', value: $('Extract lead fields').item.json.company || '—', short: true }] }] }) }}",
+        "options": { "timeout": 5000 }
+      },
+      "name": "Slack #notifications alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, alerted: true, leadScore: $('Extract lead fields').item.json.leadScore }) }}"
+      },
+      "name": "Respond (hot)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    }
+  ],
+  "connections": {
+    "Webhook (hot-lead)": { "main": [[{ "node": "Extract lead fields", "type": "main", "index": 0 }]] },
+    "Extract lead fields": { "main": [[{ "node": "Hot lead check (>65)", "type": "main", "index": 0 }]] },
+    "Hot lead check (>65)": {
+      "main": [
+        [{ "node": "Respond (not hot)", "type": "main", "index": 0 }],
+        [{ "node": "Slack #notifications alert", "type": "main", "index": 0 }]
+      ]
+    },
+    "Slack #notifications alert": { "main": [[{ "node": "Respond (hot)", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "analytics" }, { "name": "leads" }, { "name": "cloudless" }]
+}

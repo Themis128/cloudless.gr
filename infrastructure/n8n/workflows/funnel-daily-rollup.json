@@ -1,0 +1,90 @@
+{
+  "name": "Funnel daily rollup — cloudless.gr",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": { "item": [{ "hour": 0, "minute": 5 }] }
+      },
+      "name": "Cron (daily midnight)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.ANALYTICS_API_URL || 'https://cloudless.gr' }}/api/admin/analytics/unified",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Cookie", "value": "={{ $env.ADMIN_COOKIE || '' }}" }
+          ]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "name": "Fetch unified analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract funnel metrics from the unified analytics response\nconst body = items[0]?.json || {};\nconst data = body.data || body;\n\n// Build the rollup record from the raw data\nconst rollup = {\n  date: new Date().toISOString().slice(0, 10),\n  visitors: data.uniqueVisitors || 0,\n  leads: data.leads || 0,\n  mql: data.marketingQualifiedLeads || 0,\n  sql: data.salesQualifiedLeads || 0,\n  opportunities: data.opportunities || 0,\n  customers: data.customers || 0,\n  revenue: data.revenue || 0,\n  conversionRate: data.leads > 0 ? (data.customers / data.leads * 100).toFixed(2) : 0\n};\n\nreturn [{ json: rollup }];"
+      },
+      "name": "Extract funnel metrics",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://hooks.slack.com/services/{{ $('Slack webhook URL').item.json.webhookPath }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ text: '📊 Daily Funnel Rollup - ' + $('Extract funnel metrics').item.json.date, attachments: [{ color: '#36a64f', fields: [{ title: 'Visitors', value: $('Extract funnel metrics').item.json.visitors, short: true }, { title: 'Leads', value: $('Extract funnel metrics').item.json.leads, short: true }, { title: 'MQL', value: $('Extract funnel metrics').item.json.mql, short: true }, { title: 'SQL', value: $('Extract funnel metrics').item.json.sql, short: true }, { title: 'Opportunities', value: $('Extract funnel metrics').item.json.opportunities, short: true }, { title: 'Customers', value: $('Extract funnel metrics').item.json.customers, short: true }, { title: 'Revenue', value: '€' + $('Extract funnel metrics').item.json.revenue, short: true }, { title: 'Conversion Rate', value: $('Extract funnel metrics').item.json.conversionRate + '%', short: true }] }] }) }}",
+        "options": { "timeout": 5000 }
+      },
+      "name": "Slack #analytics digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.DUCKDB_API_URL || 'http://duckdb.cloudless.gr' }}/upload",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ table: 'funnel_daily', data: [items[0].json] }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "name": "Upload to DuckDB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Cron (daily midnight)": { "main": [[{ "node": "Fetch unified analytics", "type": "main", "index": 0 }]] },
+    "Fetch unified analytics": { "main": [[{ "node": "Extract funnel metrics", "type": "main", "index": 0 }]] },
+    "Extract funnel metrics": { "main": [[{ "node": "Slack #analytics digest", "type": "main", "index": 0 }]] },
+    "Slack #analytics digest": { "main": [[{ "node": "Upload to DuckDB", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "analytics" }, { "name": "funnel" }, { "name": "cloudless" }]
+}

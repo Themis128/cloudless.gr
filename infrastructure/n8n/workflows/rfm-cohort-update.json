@@ -1,0 +1,81 @@
+{
+  "name": "RFM cohort update — weekly churn scoring",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": { "item": [{ "hour": 2, "minute": 0 }] }
+      },
+      "name": "Cron (weekly Sunday 2am)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CLOUDLESS_API_URL || 'https://cloudless.gr' }}/api/cron/rfm-cohort",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "x-cron-secret", "value": "={{ $env.CRON_SECRET || '' }}" }
+          ]
+        },
+        "options": { "timeout": 120000 }
+      },
+      "name": "Trigger RFM compute endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse the response and extract summary stats\nconst body = items[0]?.json || {};\nconst stats = body.stats || body.results || {};\nreturn [{ json: { timestamp: new Date().toISOString(), stats } }];"
+      },
+      "name": "Extract stats",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://hooks.slack.com/services/{{ $('Slack webhook URL').item.json.webhookPath }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParametersJson": "={{ JSON.stringify({ text: '📊 RFM Cohort Update Complete', attachments: [{ color: '#36a64f', fields: [{ title: 'Customers scored', value: $('Extract stats').item.json.stats.customersScored || 0, short: true }, { title: 'At-risk customers', value: $('Extract stats').item.json.stats.atRiskCount || 0, short: true }, { title: 'High-value customers', value: $('Extract stats').item.json.stats.highValueCount || 0, short: true }] }] }) }}",
+        "options": { "timeout": 5000 }
+      },
+      "name": "Slack #analytics notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"updated\": true }"
+      },
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Cron (weekly Sunday 2am)": { "main": [[{ "node": "Trigger RFM compute endpoint", "type": "main", "index": 0 }]] },
+    "Trigger RFM compute endpoint": { "main": [[{ "node": "Extract stats", "type": "main", "index": 0 }]] },
+    "Extract stats": { "main": [[{ "node": "Slack #analytics notification", "type": "main", "index": 0 }]] },
+    "Slack #analytics notification": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "analytics" }, { "name": "rfm" }, { "name": "cloudless" }]
+}
