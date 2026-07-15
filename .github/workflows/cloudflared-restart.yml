@@ -5,8 +5,9 @@ name: cloudflared restart — restore tunnel when pi-origin returns 000
 # kubectl get pods shows 1/1 Running.
 #
 # Root cause: cloudflared runs as a systemd service on the Pi host (not in k3s).
-# When it drops its edge connection and doesn't self-heal, SSH + systemctl restart
-# forces a fresh tunnel registration.
+# Restarted via a privileged pod on the omv node that uses nsenter to call
+# systemctl on the host — same pattern as fix-selfhosted-tunnels.yml.
+# No SSH required; works as long as the k3s API is reachable.
 #
 # Trigger: push path (to fire on merge) or workflow_dispatch.
 
@@ -28,8 +29,6 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: "100.113.41.119"
-      PI_USER: "tbaltzakis"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
@@ -38,33 +37,70 @@ jobs:
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Install SSH key
+      - name: Configure kubectl
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-      - name: Diagnose cloudflared status via SSH
+      - name: Check cloudless pod and pi-origin before restart
         run: |
-          echo "=== cloudflared systemd status ==="
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            "$PI_USER@$PI_HOST" \
-            "sudo systemctl status cloudflared --no-pager 2>&1 | head -20; \
-             echo ''; \
-             echo '=== last 20 lines of cloudflared journal ==='; \
-             sudo journalctl -u cloudflared --no-pager --lines=20 2>&1" \
-            2>&1 || true
+          echo "=== cloudless pods ==="
+          kubectl get pods -n cloudless
+          echo ""
+          echo "=== pi-origin health (before) ==="
+          code=$(curl -o /dev/null -s -w "%{http_code}" --max-time 10 \
+            https://pi-origin.cloudless.gr/api/health 2>/dev/null || echo "000")
+          echo "HTTP $code"
 
-      - name: Restart cloudflared via SSH
+      - name: Restart cloudflared via privileged pod (nsenter)
         run: |
-          echo "=== restarting cloudflared ==="
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            "$PI_USER@$PI_HOST" \
-            "sudo systemctl restart cloudflared 2>&1; echo restart_exit=\$?; \
-             sleep 3; \
-             sudo systemctl status cloudflared --no-pager 2>&1 | head -10" \
-            2>&1
+          kubectl delete pod cf-restart -n default --ignore-not-found --wait=true
+          cat <<'PODEOF' | kubectl create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: cf-restart
+            namespace: default
+          spec:
+            restartPolicy: Never
+            nodeSelector:
+              kubernetes.io/hostname: omv
+            hostPID: true
+            hostNetwork: true
+            containers:
+              - name: w
+                image: alpine:3
+                securityContext:
+                  privileged: true
+                command:
+                  - sh
+                  - -c
+                  - |
+                    set -e
+                    apk add -q util-linux 2>/dev/null
+                    echo "=== cloudflared status before ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl status cloudflared --no-pager 2>&1 | head -10 || true
+                    echo "=== restarting cloudflared ==="
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl restart cloudflared
+                    sleep 3
+                    nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                      systemctl is-active cloudflared
+                    echo "cloudflared restarted OK"
+          PODEOF
+          echo "=== waiting for pod to complete (up to 150s) ==="
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-restart \
+            -n default --timeout=150s || {
+            echo "=== pod did not succeed — current state ==="
+            kubectl get pod cf-restart -n default -o wide || true
+            kubectl describe pod cf-restart -n default || true
+            kubectl logs cf-restart -n default || true
+            exit 1
+          }
+          kubectl logs -n default cf-restart
+          kubectl delete pod -n default cf-restart --ignore-not-found
 
       - name: Wait for pi-origin to recover
         run: |
