@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cloudless Agent Worker</title>
+    <style>
+
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        max-width: 720px;
+        margin: 48px auto;
+        padding: 0 24px;
+      }
+
+      button {
+        margin-right: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      code {
+        background: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      pre {
+        background: #111;
+        color: #0f0;
+        padding: 16px;
+        border-radius: 8px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Cloudless Agent Worker</h1>
+
+    <p>
+      CounterAgent instance:
+      <code>/api/agents/counter-agent/default</code>
+    </p>
+
+    <h2>Counter</h2>
+
+    <p>
+      Current count:
+      <strong id="count">loading...</strong>
+    </p>
+
+    <button id="increment">Increment</button>
+    <button id="decrement">Decrement</button>
+    <button id="reset">Reset</button>
+    <button id="refresh">Refresh</button>
+
+    <h2>Last response</h2>
+    <pre id="output"></pre>
+
+    <script>
+
+      const baseUrl = "/api/api/agents/counter-agent/default";
+
+      const countEl = document.getElementById("count");
+      const outputEl = document.getElementById("output");
+
+      async function callAgent(path) {
+        const response = await fetch(baseUrl + path);
+
+        if (!response.ok) {
+          throw new Error("Request failed: " + response.status);
+        }
+
+        return response.json();
+      }
+
+      function render(data) {
+        if (typeof data.count === "number") {
+          countEl.textContent = data.count;
+        }
+
+        outputEl.textContent = JSON.stringify(data, null, 2);
+      }
+
+      async function refresh() {
+        render(await callAgent("/status"));
+      }
+
+      async function increment() {
+        render(await callAgent("/increment"));
+      }
+
+      async function decrement() {
+        render(await callAgent("/decrement"));
+      }
+
+      async function reset() {
+        render(await callAgent("/reset"));
+      }
+
+      document.getElementById("increment").addEventListener("click", function () {
+        increment().catch(function (error) {
+          outputEl.textContent = error.stack || String(error);
+        });
+      });
+
+      document.getElementById("decrement").addEventListener("click", function () {
+        decrement().catch(function (error) {
+          outputEl.textContent = error.stack || String(error);
+        });
+      });
+
+      document.getElementById("reset").addEventListener("click", function () {
+        reset().catch(function (error) {
+          outputEl.textContent = error.stack || String(error);
+        });
+      });
+
+      document.getElementById("refresh").addEventListener("click", function () {
+        refresh().catch(function (error) {
+          outputEl.textContent = error.stack || String(error);
+        });
+      });
+
+      refresh().catch(function (error) {
+        outputEl.textContent = error.stack || String(error);
+      });
+    </script>
+  </body>
+</html>

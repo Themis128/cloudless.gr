@@ -115,14 +115,7 @@
     "cf:types": "wrangler types",
     "cf:typecheck": "tsc --noEmit -p tsconfig.worker.json",
     "cf:dev": "wrangler dev --port 8787",
-    "cf:deploy": "wrangler deploy",
-    "cf:deploy:free": "wrangler deploy --config wrangler-cloudflare-free.json",
-    "cf:build": "next build",
-    "cf:deploy:full": "pnpm cf:build && pnpm cf:r2:upload-static && pnpm cf:deploy",
-    "cf:r2:upload-static": "bash scripts/extract-static-assets.sh",
-    "cf:deploy:migrate": "bash scripts/deploy-cloudflare.sh",
-    "cf:r2:upload-dir": "bash scripts/r2-upload-dir.sh",
-    "cf:r2:upload-out": "npx wrangler r2 object put cloudless-assets --file ./out/index.html index.html"
+    "cf:deploy": "wrangler deploy"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
@@ -138,13 +131,12 @@
     "@aws-sdk/client-ssm": "^3.1087.0",
     "@duckdb/duckdb-wasm": "1.33.1-dev57.0",
     "@langchain/langgraph-sdk": "^1.9.25",
-    "@noble/hashes": "^2.2.0",
-    "@sentry/core": "10.65.0",
-    "@sentry/nextjs": "^10.65.0",
-    "agents": "^0.17.4",
-    "ai": "^6.0.0",
+    "@react-email/components": "1.0.12",
+    "@sentry/core": "10.63.0",
+    "@sentry/nextjs": "^10.63.0",
+    "agents": "^0.17.3",
     "cmdk": "^1.1.1",
-    "countup.js": "^2.10.1",
+    "countup.js": "^2.10.0",
     "hono-agents": "^3.0.11",
     "jose": "^6.2.3",
     "langsmith": "^0.8.2",
@@ -168,8 +160,8 @@
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1087.0",
     "@axe-core/playwright": "^4.12.1",
-    "@cloudflare/workers-types": "^5.20260714.1",
-    "@next/bundle-analyzer": "16.2.10",
+    "@cloudflare/workers-types": "^4.20260701.1",
+    "@next/bundle-analyzer": "^16.2.9",
     "@parcel/watcher": "^2.5.6",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
@@ -191,10 +183,31 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "sst": "^4.17.0",
     "tailwindcss": "^4.3.2",
-    "tsx": "^4.23.1",
-    "typescript": "^5.8.3",
-    "vite": "^8.1.4",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.110.0"
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.2",
+    "vitest": "^4.1.9",
+    "wrangler": "^4.106.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "fast-xml-builder@<1.1.7": ">=1.1.7",
+      "brace-expansion@>=5.0.0 <5.0.6": ">=5.0.6",
+      "js-cookie@<3.0.7": ">=3.0.7",
+      "postcss@<8.5.10": ">=8.5.10",
+      "esbuild": ">=0.28.1",
+      "ws@<8.21.0": ">=8.21.0",
+      "js-yaml@<4.2.0": ">=4.2.0",
+      "markdown-it@<14.2.0": ">=14.2.0",
+      "undici@<7.28.0": "7.28.0",
+      "nodemailer@<8.0.11": ">=8.0.11"
+    },
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@sentry/cli",
+      "@swc/core",
+      "esbuild",
+      "workerd"
+    ]
   }
 }

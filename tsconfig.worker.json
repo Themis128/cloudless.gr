@@ -9,6 +9,7 @@
   },
   "include": [
     "worker-configuration.d.ts",
+    "src/index.ts",
     "src/agents/**/*.ts"
   ],
   "exclude": [
@@ -17,7 +18,6 @@
     "__tests__",
     "e2e",
     "tools",
-    "scripts",
-    "src/index.ts"
+    "scripts"
   ]
 }

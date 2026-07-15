@@ -23,11 +23,17 @@ export function CounterAgentWidget() {
         Count: <strong>{count}</strong>
       </p>
 
-      <button onClick={() => agent.stub.increment()}>Increment</button>
+      <button onClick={() => agent.stub.increment()}>
+        Increment
+      </button>
 
-      <button onClick={() => agent.stub.decrement()}>Decrement</button>
+      <button onClick={() => agent.stub.decrement()}>
+        Decrement
+      </button>
 
-      <button onClick={() => agent.stub.reset()}>Reset</button>
+      <button onClick={() => agent.stub.reset()}>
+        Reset
+      </button>
     </section>
   );
 }

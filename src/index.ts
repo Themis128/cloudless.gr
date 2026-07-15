@@ -1,6 +1,5 @@
 import { getAgentByName, routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
-import { setEmailBinding } from "./lib/email-sender";
 
 export { CounterAgent };
 export { EchoAgent } from "./agents/echo";
@@ -63,10 +62,6 @@ async function handleServerCounterRoute(request: Request, env: Env): Promise<Res
   const instanceName = parts[3] || "default";
   const action = parts[4] || "status";
 
-  if (!env.CounterAgent) {
-    return Response.json({ ok: false, error: "CounterAgent not configured" }, { status: 500 });
-  }
-
   const counter = await getAgentByName(env.CounterAgent, instanceName);
 
   if (action === "status") {
@@ -126,25 +121,13 @@ async function handleServerCounterRoute(request: Request, env: Env): Promise<Res
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    // Inject Cloudflare Email binding for the unified email sender
-    if (env.EMAIL) {
-      setEmailBinding(env.EMAIL);
-      (globalThis as any).__EMAIL_BINDING__ = env.EMAIL;
-    }
-
     const url = new URL(request.url);
 
     const isCustomAgentRoute = url.pathname.startsWith(AGENT_PATH_PREFIX + "/");
     const isDefaultAgentRoute = url.pathname.startsWith(DEFAULT_AGENT_PATH_PREFIX + "/");
     const isServerCounterRoute = url.pathname.startsWith(SERVER_COUNTER_PREFIX + "/");
 
-    // Public demo route - no auth required
-    const isPublicDemo = url.pathname.startsWith("/api/agents/counter-agent/default");
-    if (
-      (isCustomAgentRoute || isServerCounterRoute) &&
-      !isPublicDemo &&
-      !isAuthorized(request, env)
-    ) {
+    if ((isCustomAgentRoute || isServerCounterRoute) && !isAuthorized(request, env)) {
       return unauthorized();
     }
 
@@ -172,7 +155,6 @@ export default {
       return agentResponse;
     }
 
-    // Worker doesn't serve static assets - return 404 for unmatched routes
-    return new Response("Not found", { status: 404 });
+    return env.ASSETS.fetch(request);
   },
 };

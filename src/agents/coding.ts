@@ -1,9 +1,7 @@
 import { Agent, callable } from "agents";
-import { generateStructuredPatch } from "./structured-patch";
 
 export type CodingStatus = "idle" | "running" | "done" | "failed";
 export type CodingMode = "review" | "patch";
-export type CodingModelProfile = "fast" | "review" | "deep";
 
 export type CodingState = {
   lastPrompt: string;
@@ -12,19 +10,7 @@ export type CodingState = {
   updatedAt: string;
   status: CodingStatus;
   mode: CodingMode;
-  modelProfile: CodingModelProfile;
-  model: string;
-  gatewayId: string;
-  gatewayLogId: string;
   error: string;
-};
-
-type ModelRoute = {
-  profile: CodingModelProfile;
-  model: string;
-  gatewayId: string;
-  skipCache: boolean;
-  cacheTtl?: number;
 };
 
 function cleanModelText(text: string): string {
@@ -69,52 +55,11 @@ function normalizeMode(value: string | null | undefined): CodingMode {
   return value === "patch" ? "patch" : "review";
 }
 
-function normalizeModelProfile(
-  value: string | null | undefined,
-  mode: CodingMode
-): CodingModelProfile {
-  if (value === "fast" || value === "review" || value === "deep") {
-    return value;
-  }
-
-  return mode === "patch" ? "deep" : "review";
-}
-
-function getModelRoute(profile: CodingModelProfile, mode: CodingMode): ModelRoute {
-  const gatewayId = "default";
-
-  if (profile === "fast") {
-    return {
-      profile,
-      model: "@cf/meta/llama-3.1-8b-instruct-fast",
-      gatewayId,
-      skipCache: false,
-      cacheTtl: 3600,
-    };
-  }
-
-  if (profile === "deep") {
-    return {
-      profile,
-      model: "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-      gatewayId,
-      skipCache: mode === "patch",
-    };
-  }
-
-  return {
-    profile,
-    model: "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-    gatewayId,
-    skipCache: mode === "patch",
-  };
-}
-
 function buildSystemPrompt(mode: CodingMode): string {
   const shared = [
     "You are CodingAgent for the cloudless.gr project.",
     "The project is a TypeScript Cloudflare Workers + Cloudflare Agents SDK application.",
-    "The Worker uses Durable Object Agents, routeAgentRequest(), Workers AI, Static Assets, Bearer-token auth, and AI Gateway model routing.",
+    "The Worker uses Durable Object Agents, routeAgentRequest(), Workers AI, Static Assets, and Bearer-token auth.",
     "Use ONLY the repository context provided in the user task.",
     "Do not assume Express.js, Node HTTP servers, Vercel routing, wrangler.toml, or files that are not shown.",
     "If a claim cannot be verified from the provided context, say so explicitly.",
@@ -122,7 +67,7 @@ function buildSystemPrompt(mode: CodingMode): string {
     "Do not claim that you executed commands, edited files, deployed code, inspected files outside the prompt, or accessed a shell.",
     "You are in planning/suggestion mode only.",
     "Do not include <think>, hidden reasoning, chain-of-thought, or internal analysis.",
-    "Prefer TypeScript, Cloudflare Workers, Durable Objects, Workers AI, AI Gateway, and secure defaults.",
+    "Prefer TypeScript, Cloudflare Workers, Durable Objects, Workers AI, and secure defaults.",
   ];
 
   if (mode === "patch") {
@@ -178,10 +123,6 @@ export class CodingAgent extends Agent<Env, CodingState> {
     updatedAt: "",
     status: "idle",
     mode: "review",
-    modelProfile: "review",
-    model: "",
-    gatewayId: "default",
-    gatewayLogId: "",
     error: "",
   };
 
@@ -194,10 +135,6 @@ export class CodingAgent extends Agent<Env, CodingState> {
       updatedAt: this.state?.updatedAt ?? "",
       status: this.state?.status ?? "idle",
       mode: this.state?.mode ?? "review",
-      modelProfile: this.state?.modelProfile ?? "review",
-      model: this.state?.model ?? "",
-      gatewayId: this.state?.gatewayId ?? "default",
-      gatewayLogId: this.state?.gatewayLogId ?? "",
       error: this.state?.error ?? "",
     };
   }
@@ -216,10 +153,6 @@ export class CodingAgent extends Agent<Env, CodingState> {
       updatedAt: nowIso(),
       status: "idle",
       mode: "review",
-      modelProfile: "review",
-      model: "",
-      gatewayId: "default",
-      gatewayLogId: "",
       error: "",
     };
 
@@ -228,7 +161,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
     return nextState;
   }
 
-  private setRunning(prompt: string, mode: CodingMode, route: ModelRoute) {
+  private setRunning(prompt: string, mode: CodingMode) {
     const nextState: CodingState = {
       lastPrompt: prompt,
       lastResponse: this.state?.lastResponse ?? "",
@@ -236,10 +169,6 @@ export class CodingAgent extends Agent<Env, CodingState> {
       updatedAt: nowIso(),
       status: "running",
       mode,
-      modelProfile: route.profile,
-      model: route.model,
-      gatewayId: route.gatewayId,
-      gatewayLogId: "",
       error: "",
     };
 
@@ -248,13 +177,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
     return nextState;
   }
 
-  private setDone(
-    prompt: string,
-    mode: CodingMode,
-    route: ModelRoute,
-    responseText: string,
-    gatewayLogId: string
-  ) {
+  private setDone(prompt: string, mode: CodingMode, responseText: string) {
     const nextState: CodingState = {
       lastPrompt: prompt,
       lastResponse: responseText,
@@ -262,10 +185,6 @@ export class CodingAgent extends Agent<Env, CodingState> {
       updatedAt: nowIso(),
       status: "done",
       mode,
-      modelProfile: route.profile,
-      model: route.model,
-      gatewayId: route.gatewayId,
-      gatewayLogId,
       error: "",
     };
 
@@ -274,20 +193,16 @@ export class CodingAgent extends Agent<Env, CodingState> {
     return nextState;
   }
 
-  private setFailed(prompt: string, mode: CodingMode, route: ModelRoute, error: unknown) {
+  private setFailed(prompt: string, mode: CodingMode, error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
 
     const nextState: CodingState = {
       lastPrompt: prompt,
-      lastResponse: "",
+      lastResponse: this.state?.lastResponse ?? "",
       count: this.state?.count ?? 0,
       updatedAt: nowIso(),
       status: "failed",
       mode,
-      modelProfile: route.profile,
-      model: route.model,
-      gatewayId: route.gatewayId,
-      gatewayLogId: "",
       error: message,
     };
 
@@ -296,49 +211,24 @@ export class CodingAgent extends Agent<Env, CodingState> {
     return nextState;
   }
 
-  async runCodingTask(
-    prompt: string,
-    mode: CodingMode = "review",
-    modelProfile: CodingModelProfile = "review"
-  ) {
-    const route = getModelRoute(modelProfile, mode);
-
-    this.setRunning(prompt, mode, route);
+  async runCodingTask(prompt: string, mode: CodingMode = "review") {
+    this.setRunning(prompt, mode);
 
     try {
       const systemPrompt = buildSystemPrompt(mode);
 
-      if (!this.env.AI) {
-        throw new Error("AI binding not configured");
-      }
-
       const result = await this.env.AI.run(
-        route.model,
+        "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
         {
           prompt: systemPrompt + "\n\nUser task and repository context:\n" + prompt,
-        },
-        {
-          gateway: {
-            id: route.gatewayId,
-            skipCache: route.skipCache,
-            cacheTtl: route.cacheTtl,
-            collectLog: true,
-            metadata: {
-              agent: "CodingAgent",
-              mode,
-              modelProfile: route.profile,
-              model: route.model,
-            },
-          },
         }
       );
 
       const responseText = extractText(result);
-      const gatewayLogId = this.env.AI?.aiGatewayLogId ?? "";
 
-      return this.setDone(prompt, mode, route, responseText, gatewayLogId);
+      return this.setDone(prompt, mode, responseText);
     } catch (error) {
-      return this.setFailed(prompt, mode, route, error);
+      return this.setFailed(prompt, mode, error);
     }
   }
 
@@ -355,10 +245,6 @@ export class CodingAgent extends Agent<Env, CodingState> {
         updatedAt: state.updatedAt,
         status: state.status,
         mode: state.mode,
-        modelProfile: state.modelProfile,
-        model: state.model,
-        gatewayId: state.gatewayId,
-        gatewayLogId: state.gatewayLogId,
         error: state.error,
       });
     }
@@ -377,99 +263,13 @@ export class CodingAgent extends Agent<Env, CodingState> {
       });
     }
 
-    if (url.pathname.endsWith("/structured-patch")) {
-      let prompt = url.searchParams.get("prompt") ?? "";
-      let modelProfile = normalizeModelProfile(url.searchParams.get("model"), "patch");
-
-      if (request.method === "POST") {
-        try {
-          const body = (await request.json()) as {
-            prompt?: string;
-            model?: string;
-            modelProfile?: string;
-          };
-          prompt = body.prompt ?? prompt;
-          modelProfile = normalizeModelProfile(
-            body.modelProfile ?? body.model ?? modelProfile,
-            "patch"
-          );
-        } catch {
-          // Ignore malformed JSON and fall back to query string.
-        }
-      }
-
-      if (!prompt.trim()) {
-        return Response.json(
-          {
-            ok: false,
-            error: "Missing prompt",
-            example: "/api/agents/coding-agent/default/structured-patch",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
-
-      const route = getModelRoute(modelProfile, "patch");
-
-      this.setRunning(prompt, "patch", route);
-
-      try {
-        const structuredPatch = await generateStructuredPatch(
-          this.env,
-          route.model,
-          [
-            buildSystemPrompt("patch"),
-            "",
-            "Return ONLY a structured patch object matching the schema.",
-            "Use only the repository context below.",
-            "",
-            prompt,
-          ].join("\n")
-        );
-
-        const responseText = JSON.stringify(structuredPatch, null, 2);
-        const gatewayLogId = this.env.AI?.aiGatewayLogId ?? "";
-
-        const result = this.setDone(prompt, "patch", route, responseText, gatewayLogId);
-
-        return Response.json({
-          ok: true,
-          structuredPatch,
-          ...result,
-        });
-      } catch (error) {
-        const result = this.setFailed(prompt, "patch", route, error);
-
-        return Response.json(
-          {
-            ok: false,
-            ...result,
-          },
-          {
-            status: 500,
-          }
-        );
-      }
-    }
-
     if (url.pathname.endsWith("/patch")) {
       let prompt = url.searchParams.get("prompt") ?? "";
-      let modelProfile = normalizeModelProfile(url.searchParams.get("model"), "patch");
 
       if (request.method === "POST") {
         try {
-          const body = (await request.json()) as {
-            prompt?: string;
-            model?: string;
-            modelProfile?: string;
-          };
+          const body = await request.json() as { prompt?: string };
           prompt = body.prompt ?? prompt;
-          modelProfile = normalizeModelProfile(
-            body.modelProfile ?? body.model ?? modelProfile,
-            "patch"
-          );
         } catch {
           // Ignore malformed JSON and fall back to query string.
         }
@@ -488,7 +288,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
         );
       }
 
-      const result = await this.runCodingTask(prompt, "patch", modelProfile);
+      const result = await this.runCodingTask(prompt, "patch");
 
       return Response.json({
         ok: result.status !== "failed",
@@ -499,22 +299,12 @@ export class CodingAgent extends Agent<Env, CodingState> {
     if (url.pathname.endsWith("/task")) {
       let prompt = url.searchParams.get("prompt") ?? "";
       let mode = normalizeMode(url.searchParams.get("mode"));
-      let modelProfile = normalizeModelProfile(url.searchParams.get("model"), mode);
 
       if (request.method === "POST") {
         try {
-          const body = (await request.json()) as {
-            prompt?: string;
-            mode?: string;
-            model?: string;
-            modelProfile?: string;
-          };
+          const body = await request.json() as { prompt?: string; mode?: string };
           prompt = body.prompt ?? prompt;
           mode = normalizeMode(body.mode ?? mode);
-          modelProfile = normalizeModelProfile(
-            body.modelProfile ?? body.model ?? modelProfile,
-            mode
-          );
         } catch {
           // Ignore malformed JSON and fall back to query string.
         }
@@ -533,7 +323,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
         );
       }
 
-      const result = await this.runCodingTask(prompt, mode, modelProfile);
+      const result = await this.runCodingTask(prompt, mode);
 
       return Response.json({
         ok: result.status !== "failed",
@@ -544,20 +334,10 @@ export class CodingAgent extends Agent<Env, CodingState> {
     return Response.json({
       ok: true,
       agent: "CodingAgent",
-      modelRouting: {
-        gatewayId: "default",
-        profiles: {
-          fast: "@cf/meta/llama-3.1-8b-instruct-fast",
-          review: "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-          deep: "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-        },
-      },
       routes: {
         status: "/api/agents/coding-agent/default/status",
-        task: "/api/agents/coding-agent/default/task?prompt=Review%20my%20Worker%20routing&model=review",
-        patch:
-          "/api/agents/coding-agent/default/patch?prompt=Propose%20a%20safe%20patch&model=deep",
-        structuredPatch: "/api/agents/coding-agent/default/structured-patch",
+        task: "/api/agents/coding-agent/default/task?prompt=Review%20my%20Worker%20routing",
+        patch: "/api/agents/coding-agent/default/patch?prompt=Propose%20a%20safe%20patch",
         result: "/api/agents/coding-agent/default/result",
         reset: "/api/agents/coding-agent/default/reset",
       },
