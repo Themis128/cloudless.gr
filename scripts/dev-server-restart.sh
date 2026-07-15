@@ -30,6 +30,9 @@ if [ ! -f "${REPO}/.env.local" ]; then
     --name "/cloudless/production/AUTH_SECRET" \
     --with-decryption --output text --query Parameter.Value --region us-east-1)
   cat > "${REPO}/.env.local" <<EOF
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_1Bq3Mpqer
+NEXT_PUBLIC_COGNITO_DOMAIN=https://cloudless-auth.auth.us-east-1.amazoncognito.com
+COGNITO_USER_POOL_ID=us-east-1_1Bq3Mpqer
 AUTH_SECRET=${AUTH_SECRET}
 AUTH_TRUST_HOST=true
 AUTH_URL=http://localhost:${PORT}

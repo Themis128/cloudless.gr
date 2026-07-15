@@ -39,12 +39,8 @@ test.describe("Homepage", () => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    const link = page.getByRole("navigation").first().getByRole("link", { name: /services/i });
-    await link.waitFor({ state: "visible" });
-    await Promise.all([
-      page.waitForURL(/\/services/, { timeout: 10000 }),
-      link.click(),
-    ]);
+    await page.getByRole("navigation").first().getByRole("link", { name: /services/i }).click();
+    await expect(page).toHaveURL(/\/services/, { timeout: 10000 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
@@ -52,27 +48,18 @@ test.describe("Homepage", () => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    const link = page.getByRole("navigation").first().getByRole("link", { name: /store/i });
-    await link.waitFor({ state: "visible" });
-    await Promise.all([
-      page.waitForURL(/\/store/, { timeout: 10000 }),
-      link.click(),
-    ]);
+    await page.getByRole("navigation").first().getByRole("link", { name: /store/i }).click();
+    await expect(page).toHaveURL(/\/store/, { timeout: 10000 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("desktop: homepage → blog navigation works", async ({ page, isMobile }) => {
     test.skip(!!isMobile, "Navbar links hidden on mobile");
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    const link = page.getByRole("navigation").first().getByRole("link", { name: /blog/i });
-    await link.waitFor({ state: "visible" });
-    await Promise.all([
-      page.waitForURL(/\/blog/, { timeout: 15000 }),
-      link.click(),
-    ]);
-    // The URL flips before the cold blog route finishes streaming in dev mode;
-    // give the heading room to paint rather than asserting at the default deadline.
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 15000 });
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("navigation").first().getByRole("link", { name: /blog/i }).click();
+    await expect(page).toHaveURL(/\/blog/, { timeout: 10000 });
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });
 
@@ -162,11 +149,8 @@ test.describe("Store – product detail", () => {
 
   test("related products section is rendered", async ({ page }) => {
     await page.goto("/store/srv-cloud");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.locator("text=/€|\\$|EUR/").first()).toBeVisible();
-    // Product detail page should render without crashing; related items may
-    // be empty when the recommendations API returns no matches.
-    await expect(page.getByRole("button", { name: /add to cart|buy|order/i })).toBeVisible();
+    const related = page.getByText(/related|you may also|more products/i).first();
+    await expect(related).toBeVisible();
   });
 
   test("non-existent product ID renders a not-found page", async ({ page }) => {
@@ -351,23 +335,28 @@ test.describe("Auth – Login page", () => {
   test("renders email, password fields and Sign In button", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    // When Keycloak is configured, the login page shows a single SSO button.
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
     const hasEmail = await page.locator("#login-email").isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasAws || hasEmail, "login page must show Continue with AWS button or email field").toBeTruthy();
+    expect(hasKeycloak || hasEmail, "login page must show Keycloak SSO button or email field").toBeTruthy();
   });
 
   test("has a Create Account signup link", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
+    // The signup link is only shown in Cognito mode; Keycloak mode redirects to Keycloak UI.
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    if (!hasKeycloak) {
+      await expect(page.getByRole("link", { name: /create account/i })).toBeVisible();
+    }
   });
 
   test("has a Forgot Password link", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    // Cognito Hosted UI handles forgot-password; the login page may or may not show a local link.
-    const hasForgotLink = await page.getByRole("link", { name: /forgot password/i }).isVisible({ timeout: 5_000 }).catch(() => false);
-    if (hasForgotLink) {
+    // The forgot-password link is only shown in Cognito mode.
+    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    if (!hasKeycloak) {
       await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
     }
   });
@@ -381,40 +370,26 @@ test.describe("Auth – Login page", () => {
 });
 
 test.describe("Auth – Signup page", () => {
-  test("renders signup page (Cognito or local auth mode)", async ({ page }) => {
+  test("renders Full Name, email, password fields and Create Account button", async ({ page }) => {
     await page.goto("/auth/signup");
-    await page.waitForLoadState("networkidle");
-    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
-    if (hasAws) {
-      // Cognito mode: button and Sign In link must be present
-      await expect(page.getByRole("button", { name: /continue with aws/i })).toBeVisible();
-      await expect(page.getByRole("link", { name: /sign in/i }).first()).toBeVisible();
-    } else {
-      // Local auth mode: form fields
-      await expect(page.locator("#signup-email")).toBeVisible();
-      await expect(page.locator("#signup-password")).toBeVisible();
-      await expect(page.locator("#signup-confirm-password")).toBeVisible();
-      await expect(page.getByRole("button", { name: /create account/i })).toBeVisible();
-    }
+    await expect(page.locator("#signup-email")).toBeVisible();
+    await expect(page.locator("#signup-password")).toBeVisible();
+    await expect(page.locator("#signup-confirm-password")).toBeVisible();
+    await expect(page.getByRole("button", { name: /create account/i })).toBeVisible();
   });
 
   test("has a Sign In link back to login", async ({ page }) => {
     await page.goto("/auth/signup");
     await page.waitForLoadState("networkidle");
-    // Sign In link is always present regardless of auth mode
+    await expect(page.locator("#signup-email")).toBeVisible({ timeout: 10000 });
+    // Sign In link sits below the form — scroll it into view
     const signInLink = page.getByRole("link", { name: /sign in/i }).first();
-    await expect(signInLink).toBeVisible({ timeout: 10_000 });
+    await signInLink.scrollIntoViewIfNeeded();
+    await expect(signInLink).toBeVisible();
   });
 
-  test("password mismatch shows an error (local auth only)", async ({ page }) => {
+  test("password mismatch shows an error", async ({ page }) => {
     await page.goto("/auth/signup");
-    await page.waitForLoadState("networkidle");
-    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
-    if (hasAws) {
-      // Cognito mode: password validation is handled by Cognito Hosted UI
-      test.skip(true, "Password validation is handled by Cognito Hosted UI");
-      return;
-    }
     await expect(page.locator("#signup-email")).toBeVisible();
     await page.locator("#signup-email").fill("test@example.com");
     await page.locator("#signup-password").fill("password123");
@@ -430,7 +405,7 @@ test.describe("Auth – Forgot Password page", () => {
     await page.goto("/auth/forgot-password");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("#forgot-email")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole("button", { name: /send reset link/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /send reset code/i })).toBeVisible();
   });
 });
 

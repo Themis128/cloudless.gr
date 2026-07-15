@@ -1,9 +1,11 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import dynamic from "next/dynamic";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import TrainingBanner from "@/components/TrainingBanner";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import NextAuthProvider from "@/components/NextAuthProvider";
@@ -13,15 +15,10 @@ import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
-import ClientCartSlideOver from "@/components/ClientCartSlideOver";
+
+const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
 import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
-import AttributionCapture from "@/components/AttributionCapture";
-import ConsentGatedPixel from "@/components/ConsentGatedPixel";
-import LinkedInInsightTag from "@/components/LinkedInInsightTag";
-
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
-const LINKEDIN_PARTNER_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID ?? "";
 
 type Props = {
   children: React.ReactNode;
@@ -41,29 +38,17 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<import("next").Metadata> {
-  const { locale } = await params;
-
-  const ogLocaleMap: Record<string, string> = {
-    en: "en_US",
-    el: "el_GR",
-    fr: "fr_FR",
-    de: "de_DE",
-  };
+  await params;
 
   return {
     alternates: {
       languages: {
-        en: `${BASE_URL}/en`,
+        en: `${BASE_URL}`,
         el: `${BASE_URL}/el`,
         fr: `${BASE_URL}/fr`,
         de: `${BASE_URL}/de`,
-        "x-default": `${BASE_URL}/en`,
+        "x-default": `${BASE_URL}`,
       },
-    },
-    openGraph: {
-      url: `${BASE_URL}/${locale}`,
-      siteName: "Cloudless",
-      locale: ogLocaleMap[locale] ?? "en_US",
     },
   };
 }
@@ -82,23 +67,24 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Load messages for NextIntlClientProvider
   const messages = await getMessages();
 
+  // cognitoConfig kept for backwards compatibility — unused with next-auth Cognito.
+  const cognitoConfig = { userPoolId: "", userPoolClientId: "" };
+
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <NextAuthProvider>
-        <AuthProvider>
+        <AuthProvider cognitoConfig={cognitoConfig}>
           <CartProvider>
             <CookieConsentProvider>
               <GoogleAnalyticsConsent />
-              {META_PIXEL_ID && <ConsentGatedPixel pixelId={META_PIXEL_ID} />}
-              {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
-              <AttributionCapture />
               <JsonLd data={getOrganizationSchema()} />
+              <TrainingBanner locale={locale} />
               <Navbar />
               <main id="main-content" className="flex-1">
                 {children}
               </main>
               <Footer />
-              <ClientCartSlideOver />
+              <CartSlideOver />
               <ServiceWorkerRegistration />
               <ClientDecorators />
               <CookieConsent />

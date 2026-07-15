@@ -58,15 +58,6 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // App code — allow any types and set-state-in-effect for rapid iteration
-  {
-    files: ["src/**/*.{ts,tsx}"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "react-hooks/set-state-in-effect": "off",
-    },
-  },
-
   // Override ignores of eslint-config-next
   globalIgnores([
     ".next/**",
@@ -85,17 +76,7 @@ const eslintConfig = defineConfig([
     "coverage/**",
     ".coverage-v8-server/**",
     ".coverage-run/**",
-    "workers/**/dist/**",
-    // Untracked VIBE agent UI page (gitignored: src/app/**/admin/local-agent/) —
-    // not part of the cloudless.gr repo, so exclude from lint to avoid noise.
-    "src/app/**/admin/local-agent/**",
-    // SST auto-generated env type declarations — eslint-disable directive is
-    // injected by SST and triggers "unused directive" when no rules fire.
-    "**/sst-env.d.ts",
-    // Skill scripts and Lambda functions are standalone utilities that legitimately
-    // use console.log for output — not app production code.
-    ".claude/skills/**",
-    "infrastructure/ses-to-espocrm/lambda/**"
+    "workers/**/dist/**"
   ]),
 ]);
 

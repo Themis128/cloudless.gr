@@ -15,19 +15,10 @@ vi.mock("@/lib/api-auth", () => ({
   requireAuth: vi.fn(),
 }));
 
-function adminOk() {
-  mockRequireAdmin.mockResolvedValue({ ok: true, user: { sub: "a1" } });
-}
-function adminFail() {
-  mockRequireAdmin.mockResolvedValue({ ok: false, response: new Response(null, { status: 401 }) });
-}
+function adminOk() { mockRequireAdmin.mockResolvedValue({ ok: true, user: { sub: "a1" } }); }
+function adminFail() { mockRequireAdmin.mockResolvedValue({ ok: false, response: new Response(null, { status: 401 }) }); }
 function req(url: string, method = "GET", body?: unknown) {
-  return new NextRequest(url, {
-    method,
-    ...(body
-      ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }
-      : {}),
-  });
+  return new NextRequest(url, { method, ...(body ? { body: JSON.stringify(body), headers: { "Content-Type": "application/json" } } : {}) });
 }
 
 // ── /api/admin/ai/report-insights ────────────────────────────────────────────
@@ -40,36 +31,26 @@ vi.mock("@/lib/anthropic", () => ({
 }));
 
 describe("POST /api/admin/ai/report-insights", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
-    const res = await POST(
-      req("http://localhost/api/admin/ai/report-insights", "POST", { metrics: {}, period: "30d" })
-    );
+    const res = await POST(req("http://localhost/api/admin/ai/report-insights", "POST", { metrics: {}, period: "30d" }));
     expect(res.status).toBe(401);
   });
 
   it("returns 400 when metrics missing", async () => {
     adminOk();
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
-    const res = await POST(
-      req("http://localhost/api/admin/ai/report-insights", "POST", { period: "30d" })
-    );
+    const res = await POST(req("http://localhost/api/admin/ai/report-insights", "POST", { period: "30d" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for malformed JSON", async () => {
     adminOk();
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
-    const r = new NextRequest("http://localhost/api/admin/ai/report-insights", {
-      method: "POST",
-      body: "bad-json",
-    });
+    const r = new NextRequest("http://localhost/api/admin/ai/report-insights", { method: "POST", body: "bad-json" });
     const res = await POST(r);
     expect(res.status).toBe(400);
   });
@@ -78,12 +59,7 @@ describe("POST /api/admin/ai/report-insights", () => {
     adminOk();
     mockGetAnthropicApiKey.mockResolvedValue(null);
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
-    const res = await POST(
-      req("http://localhost/api/admin/ai/report-insights", "POST", {
-        metrics: { clicks: 100 },
-        period: "30d",
-      })
-    );
+    const res = await POST(req("http://localhost/api/admin/ai/report-insights", "POST", { metrics: { clicks: 100 }, period: "30d" }));
     expect(res.status).toBe(503);
   });
 
@@ -92,12 +68,7 @@ describe("POST /api/admin/ai/report-insights", () => {
     mockGetAnthropicApiKey.mockResolvedValue("sk-ant-xxx");
     mockCallClaude.mockResolvedValue("Campaign performed well with 100 clicks.");
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
-    const res = await POST(
-      req("http://localhost/api/admin/ai/report-insights", "POST", {
-        metrics: { clicks: 100 },
-        period: "30d",
-      })
-    );
+    const res = await POST(req("http://localhost/api/admin/ai/report-insights", "POST", { metrics: { clicks: 100 }, period: "30d" }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.insights).toContain("100 clicks");
@@ -108,9 +79,7 @@ describe("POST /api/admin/ai/report-insights", () => {
     mockGetAnthropicApiKey.mockResolvedValue("sk-ant-xxx");
     mockCallClaude.mockRejectedValue(new Error("API error"));
     const { POST } = await import("@/app/api/admin/ai/report-insights/route");
-    const res = await POST(
-      req("http://localhost/api/admin/ai/report-insights", "POST", { metrics: { clicks: 100 } })
-    );
+    const res = await POST(req("http://localhost/api/admin/ai/report-insights", "POST", { metrics: { clicks: 100 } }));
     expect(res.status).toBe(500);
   });
 });
@@ -126,10 +95,7 @@ vi.mock("@/lib/campaigns/linkedin", async (orig) => ({
 }));
 
 describe("GET /api/admin/campaigns/linkedin/insights", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -151,9 +117,7 @@ describe("GET /api/admin/campaigns/linkedin/insights", () => {
     mockIsLinkedInConfigured.mockResolvedValue(true);
     mockGetLinkedInInsights.mockResolvedValue({ impressions: 1000, clicks: 50 });
     const { GET } = await import("@/app/api/admin/campaigns/linkedin/insights/route");
-    const res = await GET(
-      req("http://localhost/api/admin/campaigns/linkedin/insights?start=2024-01-01&end=2024-01-31")
-    );
+    const res = await GET(req("http://localhost/api/admin/campaigns/linkedin/insights?start=2024-01-01&end=2024-01-31"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.insights.impressions).toBe(1000);
@@ -169,10 +133,7 @@ vi.mock("@/lib/campaigns/tiktok", async (orig) => ({
 }));
 
 describe("GET /api/admin/campaigns/tiktok/insights", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -208,10 +169,7 @@ vi.mock("@/lib/campaigns/x-ads", async (orig) => ({
 }));
 
 describe("GET /api/admin/campaigns/x/insights", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -249,17 +207,12 @@ vi.mock("@/lib/activecampaign", async (orig) => ({
 }));
 
 describe("GET /api/admin/email/campaigns/[id]", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
     const { GET } = await import("@/app/api/admin/email/campaigns/[id]/route");
-    const res = await GET(req("http://localhost/api/admin/email/campaigns/1"), {
-      params: Promise.resolve({ id: "1" }),
-    });
+    const res = await GET(req("http://localhost/api/admin/email/campaigns/1"), { params: Promise.resolve({ id: "1" }) });
     expect(res.status).toBe(401);
   });
 
@@ -267,9 +220,7 @@ describe("GET /api/admin/email/campaigns/[id]", () => {
     adminOk();
     mockIsActiveCampaignConfigured.mockResolvedValue(false);
     const { GET } = await import("@/app/api/admin/email/campaigns/[id]/route");
-    const res = await GET(req("http://localhost/api/admin/email/campaigns/1"), {
-      params: Promise.resolve({ id: "1" }),
-    });
+    const res = await GET(req("http://localhost/api/admin/email/campaigns/1"), { params: Promise.resolve({ id: "1" }) });
     expect(res.status).toBe(503);
   });
 
@@ -278,9 +229,7 @@ describe("GET /api/admin/email/campaigns/[id]", () => {
     mockIsActiveCampaignConfigured.mockResolvedValue(true);
     mockGetCampaign.mockResolvedValue(null);
     const { GET } = await import("@/app/api/admin/email/campaigns/[id]/route");
-    const res = await GET(req("http://localhost/api/admin/email/campaigns/999"), {
-      params: Promise.resolve({ id: "999" }),
-    });
+    const res = await GET(req("http://localhost/api/admin/email/campaigns/999"), { params: Promise.resolve({ id: "999" }) });
     expect(res.status).toBe(404);
   });
 
@@ -289,9 +238,7 @@ describe("GET /api/admin/email/campaigns/[id]", () => {
     mockIsActiveCampaignConfigured.mockResolvedValue(true);
     mockGetCampaign.mockResolvedValue({ id: "1", name: "Newsletter", status: "sent" });
     const { GET } = await import("@/app/api/admin/email/campaigns/[id]/route");
-    const res = await GET(req("http://localhost/api/admin/email/campaigns/1"), {
-      params: Promise.resolve({ id: "1" }),
-    });
+    const res = await GET(req("http://localhost/api/admin/email/campaigns/1"), { params: Promise.resolve({ id: "1" }) });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.campaign.name).toBe("Newsletter");

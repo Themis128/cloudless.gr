@@ -26,7 +26,6 @@ permissions:
   contents: read
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   AWS_REGION: us-east-1
   ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: cloudless-pi-app
@@ -36,18 +35,13 @@ env:
 jobs:
   build-and-push:
     name: Build arm64 image and push to ECR
-    # GH-hosted runner with QEMU cross-compilation. The self-hosted Pi runner
-    # was unreliable (OOM, runner disconnects, 25+ min builds hitting gRPC
-    # deadline). ubuntu-latest completes in ~12 min consistently — matches
-    # build-pi-image.yml which already proved this path stable.
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Self-hosted arm64 runner. Label set `[omv, pi, build]` is unique to
+    # `omv-build` on omv-main (which has docker + USB-SSD-backed _work).
+    # The `omv` runner stays disabled to relieve SD-card contention.
+    runs-on: [self-hosted, omv, pi, build]
     outputs:
       short_sha: ${{ steps.check_ecr.outputs.short_sha }}
-      # Image is in ECR if the pre-build check found it OR our push step
-      # observed it already present (concurrent build-pi-image.yml won the
-      # race to the immutable tag). Either way the rollout can proceed.
-      image_exists: ${{ steps.check_ecr.outputs.exists == 'true' && 'true' || steps.push_ecr.outputs.pushed_or_exists }}
+      image_exists: ${{ steps.check_ecr.outputs.exists }}
 
     steps:
       - name: Checkout
@@ -80,23 +74,15 @@ jobs:
           fi
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Remove stale buildx builder
+      - name: Set up QEMU (arm64 emulation)
         if: steps.check_ecr.outputs.exists != 'true'
-        run: docker buildx rm --all-inactive --force 2>/dev/null || true
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+        with:
+          platforms: arm64
 
       - name: Set up Docker Buildx
         if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-        with:
-          # Increase gRPC keepalive to prevent "no active session / context
-          # deadline exceeded" during long Next.js builds on the Pi.
-          # The Next.js build can take 25+ min on arm64; set to 3600s (1h)
-          # to cover the full build + export phase.
-          buildkitd-config-inline: |
-            [grpc]
-              keepalive = 3600
-            [worker.oci]
-              max-parallelism = 2
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: ensure local cache dirs exist
         if: steps.check_ecr.outputs.exists != 'true'
@@ -114,7 +100,7 @@ jobs:
       # manifest-HEAD bug that caused the 2026-05-29 401 failures.
       - name: Build and load to dockerd
         if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           platforms: linux/arm64
@@ -133,12 +119,12 @@ jobs:
           build-args: |
             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
             NEXT_PUBLIC_STAGE=production
-            NEXT_PUBLIC_AUTH_PROVIDER=cognito
+            NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
+            NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
+            NEXT_PUBLIC_COGNITO_DOMAIN=https://cloudless-auth.auth.us-east-1.amazoncognito.com
+            NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-            SENTRY_ENVIRONMENT=pi-standby
-            NEXT_PUBLIC_SENTRY_ENVIRONMENT=pi-standby
             NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
-            NEXT_PUBLIC_LINKEDIN_PARTNER_ID=${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
             APP_VERSION=${{ github.sha }}
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
 
@@ -148,46 +134,15 @@ jobs:
       # `aws ecr get-login-password | docker login --password-stdin` writes
       # directly to config.json, bypassing any credential helper.
       - name: Push to ECR
-        id: push_ecr
         if: steps.check_ecr.outputs.exists != 'true'
         run: |
-          set -uo pipefail
+          set -euo pipefail
           TAG="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}"
           echo "==> docker login via get-login-password"
           aws ecr get-login-password --region ${{ env.AWS_REGION }} \
             | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
           echo "==> docker push ${TAG}"
-          # Capture output so we can distinguish the immutable-tag race (the
-          # concurrent build-pi-image.yml already pushed this exact SHA) from a
-          # genuine push failure. ECR repos use immutable tags, so a same-SHA
-          # re-push returns: "tag invalid: ... already exists ... cannot be
-          # overwritten because the tag is immutable." That means the image IS
-          # in ECR — success for our purposes, so the rollout must still run.
-          #
-          # IMPORTANT — `if ! push_log=$(...)` pattern, not `push_log=$(...); rc=$?`:
-          # GitHub's default shell is `bash -e {0}`, so a bare command
-          # substitution whose command exits non-zero aborts the whole script
-          # BEFORE we ever reach the rc check. Wrapping in `if` is the only
-          # way to capture both stdout/stderr AND the non-zero exit without
-          # tripping -e. Same pattern used by build-pi-image.yml's push step.
-          # Lost-race seen 2026-06-16 (deploy run 27596604011 on c880628):
-          # build-pi-image.yml pushed first at 05:49:18, deploy-pi.yml's push
-          # failed at 05:50:18, but the old code never saw the error string.
-          if push_log=$(docker push "${TAG}" 2>&1); then
-            echo "${push_log}"
-            echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
-            echo "Pushed ${TAG}."
-          else
-            echo "${push_log}"
-            if echo "${push_log}" | grep -qiE 'already exists.*immutable|tag.*immutable'; then
-              echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
-              echo "::notice::Tag already present (immutable) — concurrent build won the race; image is in ECR, proceeding to rollout."
-            else
-              echo "pushed_or_exists=false" >> "$GITHUB_OUTPUT"
-              echo "::error::docker push failed for a reason other than the immutable-tag race."
-              exit 1
-            fi
-          fi
+          docker push "${TAG}"
 
       - name: Update SSM Pi image tracking
         run: |
@@ -202,12 +157,12 @@ jobs:
     name: Rollout restart on k3s
     # GH-hosted runner joins tailnet, uses KUBECONFIG_B64 to call k3s API
     # directly over Tailscale — no SSH hop required.
-    # Failover-capable: when the GH-hosted runner's Tailscale path to the
-    # k3s API breaks (DERP relay failures, packet drops, billing issues),
-    # flip vars.RUNNER_GENERIC to ["self-hosted","omv","build"] via
-    # `.github/scripts/toggle-runner.sh pi`. The Pi runners can reach the
-    # k3s API over the LAN; the Tailscale step is a no-op on them.
-    # Default stays ubuntu-latest for cost (Pi runner busy with build job).
+    # Failover-capable: when GH-hosted billing is broken, flip
+    #   .github/scripts/toggle-runner.sh pi
+    # to route this onto the self-hosted Pi build runners. The Pi runners are
+    # already inside the local network and can reach the k3s API directly
+    # (192.168.1.128:6443) without Tailscale, so the tailnet step becomes a
+    # no-op on them.
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     needs: build-and-push
     if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
@@ -238,66 +193,9 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
-      - name: Diagnose kubectl reachability
-        # FAIL-FAST: the old "Wait for k3s /readyz" step swallowed kubectl
-        # stderr with `2>/dev/null`, so any auth/TLS/network error looped
-        # silently for 10 minutes as "not ready". Surface the real error
-        # before polling so failures are diagnosable in seconds, not minutes.
-        run: |
-          set +e
-          echo "==> kubeconfig (minified)"
-          kubectl config view --minify || echo "(kubectl config view failed)"
-          echo
-          echo "==> First /readyz call WITH stderr"
-          kubectl get --raw /readyz --request-timeout=10s
-          rc=$?
-          echo "kubectl exit code: $rc"
-          if [ "$rc" -ne 0 ]; then
-            echo "::error::kubectl could not reach the k3s API. Likely causes:"
-            echo "::error::  - KUBECONFIG_B64 secret is stale or wrong cluster CA"
-            echo "::error::  - Tailscale tunnel didn't come up (see prior step)"
-            echo "::error::  - k3s server cert was rotated (refresh KUBECONFIG_B64)"
-            exit 1
-          fi
-      - name: Wait for k3s /readyz (3x stable via kubectl)
-        run: |
-          # k3s /readyz returns the string "ok" when all checks pass.
-          # We do NOT suppress stderr — if kubectl starts failing, we want
-          # to see why immediately, not after a silent loop.
-          wait_for_api() {
-            local stable=0
-            local last_err=""
-            for i in $(seq 1 60); do
-              # Capture stderr to a temp so we can surface it on failure
-              out=$(kubectl get --raw /readyz --request-timeout=5s 2>/tmp/k_err)
-              rc=$?
-              if [ "$rc" -eq 0 ] && echo "$out" | grep -q 'ok'; then
-                stable=$((stable + 1))
-                echo "  ${i}/60 — /readyz ok (stable ${stable}/3)"
-                if [ "$stable" -ge 3 ]; then
-                  return 0
-                fi
-              else
-                stable=0
-                last_err=$(cat /tmp/k_err 2>/dev/null | head -3)
-                echo "  ${i}/60 — /readyz not ready (rc=$rc): ${last_err}"
-              fi
-              sleep 5
-            done
-            return 1
-          }
-
-          echo "Waiting for k3s API to be stable (3x kubectl /readyz ok)..."
-          if wait_for_api; then
-            echo "k3s API stable — proceeding to rollout"
-          else
-            echo "::error::k3s /readyz never returned 3x ok in 5 min — aborting"
-            exit 1
-          fi
       - name: Set image and roll out
         run: |
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
             -n ${{ env.K3S_NAMESPACE }}
-          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=600s
-# re-triggered 2026-06-04T20:50Z — run #319 OIDC auth transient failure
+          kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=180s

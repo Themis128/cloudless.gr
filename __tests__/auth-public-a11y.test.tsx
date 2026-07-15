@@ -59,33 +59,36 @@ describe("auth/public accessibility", () => {
   it("login page exposes labeled, autocomplete-enabled credentials fields", () => {
     render(<LoginPage />);
 
+    // When Cognito is configured (NEXT_PUBLIC_COGNITO_USER_POOL_ID is set in test env),
+    // the login page shows a single SSO button instead of email/password fields.
     const kcButton = screen.getByRole("button", { name: /continue with aws/i });
     expect(kcButton).toBeTruthy();
   });
 
-  it("signup page exposes the Cognito Hosted UI handoff", () => {
+  it("signup page exposes verification-safe fields and password constraints", () => {
     const { container } = render(<SignUpPage />);
 
-    expect(screen.getByRole("heading", { name: /create account/i })).toBeTruthy();
-    expect(screen.getByText(/account creation is handled securely through aws/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /continue with aws/i })).toBeTruthy();
+    const email = screen.getByLabelText("Email") as HTMLInputElement;
+    const password = screen.getByLabelText("Password") as HTMLInputElement;
+    const confirm = screen.getByLabelText("Confirm Password") as HTMLInputElement;
 
-    expect(screen.queryByLabelText("Email")).toBeNull();
-    expect(screen.queryByLabelText("Password")).toBeNull();
-    expect(screen.queryByLabelText("Confirm Password")).toBeNull();
-
+    expect(email.autocomplete).toBe("email");
+    expect(password.autocomplete).toBe("new-password");
+    expect(confirm.autocomplete).toBe("new-password");
+    expect(password.minLength).toBe(8);
+    expect(confirm.minLength).toBe(8);
     expect(container.querySelector('a[href="/auth/login"]')).toBeTruthy();
   });
 
-  it("forgot password page has email field and reset link button", () => {
+  it("forgot password page uses one-time-code and new-password semantics", () => {
     render(<ForgotPasswordPage />);
 
     const email = screen.getByLabelText("Email") as HTMLInputElement;
-    const sendLink = screen.getByRole("button", { name: "Send Reset Link" });
+    const sendCode = screen.getByRole("button", { name: "Send Reset Code" });
 
     expect(email.type).toBe("email");
     expect(email.autocomplete).toBe("email");
-    expect(sendLink).toBeTruthy();
+    expect(sendCode).toBeTruthy();
   });
 
   it("newsletter form provides email field, explicit submit button, and privacy link", () => {

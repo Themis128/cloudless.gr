@@ -24,10 +24,7 @@ function adminFail() {
 // ── /api/admin/ops/monitor ────────────────────────────────────────────────────
 
 describe("GET /api/admin/ops/monitor", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -39,9 +36,7 @@ describe("GET /api/admin/ops/monitor", () => {
   it("returns 503 with offline:true when Pi LAN is unreachable", async () => {
     adminOk();
     const { GET } = await import("@/app/api/admin/ops/monitor/route");
-    const res = await GET(
-      new NextRequest("http://localhost/api/admin/ops/monitor?resource=status")
-    );
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/monitor?resource=status"));
     const data = await res.json();
     expect(data.offline).toBe(true);
   });
@@ -50,99 +45,28 @@ describe("GET /api/admin/ops/monitor", () => {
     adminOk();
     process.env.ALERT_API_URL = "https://external-api.example.com";
     const { GET } = await import("@/app/api/admin/ops/monitor/route");
-    const res = await GET(
-      new NextRequest("http://localhost/api/admin/ops/monitor?resource=unknown")
-    );
+    const res = await GET(new NextRequest("http://localhost/api/admin/ops/monitor?resource=unknown"));
     expect(res.status).toBe(400);
     delete process.env.ALERT_API_URL;
   });
 });
 
-// ── /api/admin/ops/errors ─────────────────────────────────────────────────────
+// ── /api/admin/ops/errors/[id] ────────────────────────────────────────────────
 
 const mockIsSentryConfigured = vi.fn();
-const mockGetUnresolvedIssues = vi.fn();
-const mockVerifySentryToken = vi.fn();
 const mockUpdateIssueStatus = vi.fn();
 vi.mock("@/lib/sentry", () => ({
   isSentryConfigured: (...a: unknown[]) => mockIsSentryConfigured(...a),
-  getUnresolvedIssues: (...a: unknown[]) => mockGetUnresolvedIssues(...a),
-  verifySentryToken: (...a: unknown[]) => mockVerifySentryToken(...a),
   updateIssueStatus: (...a: unknown[]) => mockUpdateIssueStatus(...a),
 }));
 
-describe("GET /api/admin/ops/errors", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  it("returns 401 when not admin", async () => {
-    adminFail();
-    const { GET } = await import("@/app/api/admin/ops/errors/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 503 when Sentry not configured", async () => {
-    adminOk();
-    mockIsSentryConfigured.mockResolvedValue(false);
-    const { GET } = await import("@/app/api/admin/ops/errors/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
-    expect(res.status).toBe(503);
-  });
-
-  it("returns 503 with auth_rejected when token is rejected", async () => {
-    adminOk();
-    mockIsSentryConfigured.mockResolvedValue(true);
-    mockGetUnresolvedIssues.mockResolvedValue(null);
-    mockVerifySentryToken.mockResolvedValue({
-      status: "rejected",
-      message: "Token rejected (401) — check SENTRY_AUTH_TOKEN scopes (project:read required).",
-    });
-    const { GET } = await import("@/app/api/admin/ops/errors/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
-    expect(res.status).toBe(503);
-    const data = await res.json();
-    expect(data.code).toBe("auth_rejected");
-  });
-
-  it("returns issues list when configured", async () => {
-    adminOk();
-    mockIsSentryConfigured.mockResolvedValue(true);
-    mockGetUnresolvedIssues.mockResolvedValue({
-      issues: [{ id: "1", title: "Error 1", level: "error", count: "10", userCount: 2, firstSeen: "2026-01-01", lastSeen: "2026-01-02", status: "unresolved", permalink: "https://sentry.io/1", shortId: "CLOUDLESS-GR-1", metadata: {} }],
-      total: 1,
-      fetchedAt: "2026-01-02T00:00:00.000Z",
-    });
-    const { GET } = await import("@/app/api/admin/ops/errors/route");
-    const res = await GET(new NextRequest("http://localhost/api/admin/ops/errors"));
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.issues).toHaveLength(1);
-    expect(data.total).toBe(1);
-  });
-});
-
-// ── /api/admin/ops/errors/[id] ────────────────────────────────────────────────
-
 describe("PUT /api/admin/ops/errors/[id]", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(
-      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
-        method: "PUT",
-        body: "{}",
-        headers: { "Content-Type": "application/json" },
-      }),
-      { params: Promise.resolve({ id: "abc" }) }
-    );
+    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: "{}", headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
     expect(res.status).toBe(401);
   });
 
@@ -150,14 +74,7 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
     adminOk();
     mockIsSentryConfigured.mockResolvedValue(false);
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(
-      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
-        method: "PUT",
-        body: JSON.stringify({ status: "resolved" }),
-        headers: { "Content-Type": "application/json" },
-      }),
-      { params: Promise.resolve({ id: "abc" }) }
-    );
+    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: JSON.stringify({ status: "resolved" }), headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
     expect(res.status).toBe(503);
   });
 
@@ -165,14 +82,7 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
     adminOk();
     mockIsSentryConfigured.mockResolvedValue(true);
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(
-      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
-        method: "PUT",
-        body: JSON.stringify({ status: "deleted" }),
-        headers: { "Content-Type": "application/json" },
-      }),
-      { params: Promise.resolve({ id: "abc" }) }
-    );
+    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: JSON.stringify({ status: "deleted" }), headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
     expect(res.status).toBe(400);
   });
 
@@ -181,45 +91,30 @@ describe("PUT /api/admin/ops/errors/[id]", () => {
     mockIsSentryConfigured.mockResolvedValue(true);
     mockUpdateIssueStatus.mockResolvedValue({ id: "abc", status: "resolved" });
     const { PUT } = await import("@/app/api/admin/ops/errors/[id]/route");
-    const res = await PUT(
-      new NextRequest("http://localhost/api/admin/ops/errors/abc", {
-        method: "PUT",
-        body: JSON.stringify({ status: "resolved" }),
-        headers: { "Content-Type": "application/json" },
-      }),
-      { params: Promise.resolve({ id: "abc" }) }
-    );
+    const res = await PUT(new NextRequest("http://localhost/api/admin/ops/errors/abc", { method: "PUT", body: JSON.stringify({ status: "resolved" }), headers: { "Content-Type": "application/json" } }), { params: Promise.resolve({ id: "abc" }) });
     expect(res.status).toBe(200);
     expect(mockUpdateIssueStatus).toHaveBeenCalledWith("abc", "resolved");
   });
 });
 
 // ── /api/admin/notion/search ──────────────────────────────────────────────────
-// Route is now backed by AppFlowy — mock @/lib/appflowy instead of notion-search.
 
-const mockAppFlowyListAllWorkspaces = vi.fn();
-const mockAppFlowyListAllUsers = vi.fn();
-const mockAppFlowySearchDocuments = vi.fn();
-vi.mock("@/lib/appflowy", async (orig) => {
-  const mod = await orig<typeof import("@/lib/appflowy")>();
-  return {
-    ...mod,
-    listAllWorkspaces: (...a: unknown[]) => mockAppFlowyListAllWorkspaces(...a),
-    listAllUsers: (...a: unknown[]) => mockAppFlowyListAllUsers(...a),
-    searchDocuments: (...a: unknown[]) => mockAppFlowySearchDocuments(...a),
-  };
-});
+const mockSearchPages = vi.fn();
+const mockSearchDatabases = vi.fn();
+const mockListUsers = vi.fn();
+const mockGetDatabaseSchema = vi.fn();
+vi.mock("@/lib/notion-search", () => ({
+  searchPages: (...a: unknown[]) => mockSearchPages(...a),
+  searchDatabases: (...a: unknown[]) => mockSearchDatabases(...a),
+  listUsers: (...a: unknown[]) => mockListUsers(...a),
+  getDatabaseSchema: (...a: unknown[]) => mockGetDatabaseSchema(...a),
+}));
 vi.mock("@/lib/api-errors", () => ({
   mapIntegrationError: () => null,
 }));
 
 describe("GET /api/admin/notion/search", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-    mockAppFlowyListAllWorkspaces.mockResolvedValue([{ workspace_id: "ws1" }]);
-    mockAppFlowySearchDocuments.mockResolvedValue([]);
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -230,9 +125,7 @@ describe("GET /api/admin/notion/search", () => {
 
   it("returns users list when type=users", async () => {
     adminOk();
-    mockAppFlowyListAllUsers.mockResolvedValue([
-      { uid: "u1", name: "Alice", email: "alice@x.com" },
-    ]);
+    mockListUsers.mockResolvedValue([{ id: "u1", name: "Alice" }]);
     const { GET } = await import("@/app/api/admin/notion/search/route");
     const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=users"));
     const data = await res.json();
@@ -242,32 +135,30 @@ describe("GET /api/admin/notion/search", () => {
   it("returns 400 when type=schema without database_id", async () => {
     adminOk();
     const { GET } = await import("@/app/api/admin/notion/search/route");
-    // AppFlowy search route returns empty results for unknown type with no q, not 400.
-    // The schema concept doesn't exist in AppFlowy; update the assertion to 200.
     const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=schema"));
-    expect([200, 400]).toContain(res.status);
+    expect(res.status).toBe(400);
   });
 
   it("returns database schema when type=schema with database_id", async () => {
     adminOk();
+    mockGetDatabaseSchema.mockResolvedValue({ properties: {} });
     const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(
-      new NextRequest("http://localhost/api/admin/notion/search?type=schema&database_id=db-123")
-    );
-    expect(res.status).toBe(200);
+    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=schema&database_id=db-123"));
+    const data = await res.json();
+    expect(data.schema).toBeDefined();
   });
 
   it("returns database results when type=database", async () => {
     adminOk();
+    mockSearchDatabases.mockResolvedValue([]);
     const { GET } = await import("@/app/api/admin/notion/search/route");
-    const res = await GET(
-      new NextRequest("http://localhost/api/admin/notion/search?type=database&q=test")
-    );
+    const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?type=database&q=test"));
     expect(res.status).toBe(200);
   });
 
   it("defaults to searching all pages", async () => {
     adminOk();
+    mockSearchPages.mockResolvedValue([]);
     const { GET } = await import("@/app/api/admin/notion/search/route");
     const res = await GET(new NextRequest("http://localhost/api/admin/notion/search?q=test"));
     expect(res.status).toBe(200);
@@ -278,17 +169,14 @@ describe("GET /api/admin/notion/search", () => {
 
 const mockIsHubSpotConfigured = vi.fn();
 const mockListTickets = vi.fn();
-vi.mock("@/lib/espocrm", async (orig) => ({
-  ...(await orig<typeof import("@/lib/espocrm")>()),
-  isEspoCRMConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
+vi.mock("@/lib/hubspot", async (orig) => ({
+  ...(await orig<typeof import("@/lib/hubspot")>()),
+  isHubSpotConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
   listTickets: (...a: unknown[]) => mockListTickets(...a),
 }));
 
 describe("GET /api/admin/crm/tickets", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 401 when not admin", async () => {
     adminFail();
@@ -297,7 +185,7 @@ describe("GET /api/admin/crm/tickets", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when EspoCRM not configured", async () => {
+  it("returns 503 when HubSpot not configured", async () => {
     adminOk();
     mockIsHubSpotConfigured.mockResolvedValue(false);
     const { GET } = await import("@/app/api/admin/crm/tickets/route");

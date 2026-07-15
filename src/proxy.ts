@@ -4,21 +4,17 @@ import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
-// Keycloak JWKS — primary for both k3s (Pi) and Lambda deployments.
-// Falls back to Cognito for zero-downtime rollout during migration.
-const _kcIssuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
+// Cognito JWKS — primary for both k3s (Pi) and Lambda deployments.
 const _upId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
-const _reg = _upId.split("_")[0] || "us-east-1";
+const _reg = process.env.AWS_REGION || _upId.split("_")[0] || "us-east-1";
 
-const JWKS = _kcIssuer
-  ? createRemoteJWKSet(new URL(`${_kcIssuer}/protocol/openid-connect/certs`))
-  : _upId
-    ? createRemoteJWKSet(
-        new URL(`https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`),
-      )
-    : null;
+const JWKS = _upId
+  ? createRemoteJWKSet(
+      new URL(`https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`),
+    )
+  : null;
 
-const JWT_ISSUER = _kcIssuer || (_upId ? `https://cognito-idp.${_reg}.amazonaws.com/${_upId}` : "");
+const JWT_ISSUER = _upId ? `https://cognito-idp.${_reg}.amazonaws.com/${_upId}` : "";
 
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
@@ -69,9 +65,9 @@ async function readAuthToken(
     }
   }
 
-  // Legacy Cognito fallback — active while old sessions still exist during rollout
+  // Direct Cognito id_token cookie fallback (Amplify-style sessions)
   const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  if (clientId && !_kcIssuer) {
+  if (clientId) {
     const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
     const username = req.cookies.get(lastAuthKey)?.value;
     if (username) {

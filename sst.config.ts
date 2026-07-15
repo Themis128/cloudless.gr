@@ -39,16 +39,22 @@ function buildSiteEnvironment(
     // to compare cloud actual vs SSM expected.
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
-    // Keycloak — replaces Cognito. NEXT_PUBLIC_* baked into client bundle.
-    NEXT_PUBLIC_KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
-    NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: "cloudless-app",
-    // Server-side only (admin REST API + JWT issuer for proxy.ts)
-    KEYCLOAK_ISSUER: "https://auth.cloudless.gr/realms/master",
-    KEYCLOAK_ADMIN_CLIENT_ID: "admin-cli",
-    // KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD loaded from SSM at runtime
+    // AWS Cognito — replaces Keycloak. Public values baked into the client
+    // bundle; the user pool ID and Hosted UI domain are non-secret constants.
+    // The app client ID is injected at deploy time (process.env, sourced from
+    // the NEXT_PUBLIC_COGNITO_CLIENT_ID GitHub secret / SSM) because it is
+    // provisioned per-environment.
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_1Bq3Mpqer",
+    NEXT_PUBLIC_COGNITO_DOMAIN:
+      "https://cloudless-auth.auth.us-east-1.amazoncognito.com",
+    NEXT_PUBLIC_COGNITO_CLIENT_ID:
+      process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "",
+    // Server-side only (JWT issuer for proxy.ts + api-auth.ts + next-auth
+    // Cognito provider). AWS_REGION is set automatically by Lambda.
+    COGNITO_USER_POOL_ID: "us-east-1_1Bq3Mpqer",
+    // COGNITO_CLIENT_ID and COGNITO_CLIENT_SECRET loaded from SSM at runtime
+    // by ssm-config.ts (the app client is provisioned per-environment).
     // AUTH_SECRET injected from SSM at deploy time (above).
-    // KEYCLOAK_ADMIN_* loaded from SSM at runtime by ssm-config.ts.
-    // Cognito user pools deleted 2026-05-30 — no fallback env vars needed.
     // Notion database IDs (non-secret, safe to inline)
     NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
     NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",

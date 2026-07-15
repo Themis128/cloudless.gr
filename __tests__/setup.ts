@@ -81,13 +81,13 @@ process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
 process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
 process.env.COGNITO_CLIENT_ID = "test-client-id";
 
-// ── Keycloak / next-auth ──────────────────────────────────────────────────────
-process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
-process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID = "cloudless-app";
-process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+// ── Cognito / next-auth ──────────────────────────────────────────────────────
+process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
+process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "cloudless-app";
+process.env.NEXT_PUBLIC_COGNITO_DOMAIN = "https://cloudless.auth.us-east-1.amazoncognito.com";
+process.env.COGNITO_USER_POOL_ID = "us-east-1_TESTPOOL";
+process.env.AWS_REGION = "us-east-1";
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
-process.env.KEYCLOAK_ADMIN_USER = "tbaltzakis";
-process.env.KEYCLOAK_ADMIN_PASSWORD = "test-admin-pass";
 
 // ── Cache resets ──────────────────────────────────────────────────────────────
 // Reset all in-memory caches before each test and restore env vars that tests

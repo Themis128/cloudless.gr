@@ -26,10 +26,7 @@ vi.mock("@/lib/integrations", () => ({
 }));
 
 describe("notion-esp32.ts", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   describe("isEsp32NotionConfigured", () => {
     it("returns false when devicesDbId missing", async () => {
@@ -77,16 +74,7 @@ describe("notion-esp32.ts", () => {
       delete process.env.NOTION_ESP32_DEVICES_DB_ID;
       mockGetIntegrationsAsync.mockResolvedValue({});
       const { upsertEsp32DeviceInNotion } = await import("@/lib/notion-esp32");
-      const result = await upsertEsp32DeviceInNotion({
-        ip: "192.168.1.1",
-        rssi: -60,
-        firmware_ver: "1.0",
-        uptime_s: 3600,
-        free_ram_bytes: 50000,
-        last_heartbeat: new Date().toISOString(),
-        device_id: "esp32-01",
-        stale: false,
-      });
+      const result = await upsertEsp32DeviceInNotion({ ip: "192.168.1.1", rssi: -60, firmware_ver: "1.0", uptime_s: 3600, free_ram_bytes: 50000, last_heartbeat: new Date().toISOString(), device_id: "esp32-01", stale: false });
       expect(result).toBeNull();
     });
   });
@@ -95,14 +83,7 @@ describe("notion-esp32.ts", () => {
 // ── store-products.ts ─────────────────────────────────────────────────────────
 
 describe("store-products.ts", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-    vi.stubEnv("STRIPE_SECRET_KEY", "");
-  });
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("getProductById returns undefined for unknown id", async () => {
     const { getProductById } = await import("@/lib/store-products");
@@ -118,10 +99,10 @@ describe("store-products.ts", () => {
 
   it("getProductsByCategory returns matching products", async () => {
     const { getProductsByCategory, defaultProducts } = await import("@/lib/store-products");
-    const digital = defaultProducts.filter((p) => p.category === "digital");
+    const digital = defaultProducts.filter(p => p.category === "digital");
     const result = getProductsByCategory("digital");
     expect(result.length).toBe(digital.length);
-    expect(result.every((p) => p.category === "digital")).toBe(true);
+    expect(result.every(p => p.category === "digital")).toBe(true);
   });
 
   it("getProductsByCategory returns empty for unknown category", async () => {
@@ -160,20 +141,13 @@ describe("store-products.ts", () => {
 // ── ssm-config.ts (additional branches) ──────────────────────────────────────
 
 describe("ssm-config.ts", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("getConfig falls back to env vars when SSM keys unset", async () => {
     // With no AWS creds and no SSM prefix override, getConfig should fall back
     // to env vars. We stub the SSM client to throw so env fallback is exercised.
     vi.doMock("@aws-sdk/client-ssm", () => ({
-      SSMClient: class {
-        send() {
-          throw new Error("no credentials");
-        }
-      },
+      SSMClient: class { send() { throw new Error("no credentials"); } },
       GetParametersByPathCommand: class {},
     }));
     process.env.NOTION_API_KEY = "test-notion-key";
@@ -192,159 +166,6 @@ describe("ssm-config.ts", () => {
   });
 });
 
-// ── ssm-config.ts — real SSM fetch path ───────────────────────────────────────
-// getConfig() short-circuits to env when NODE_ENV === "test", so to exercise
-// fetchSsmParams/buildConfigFromParams/validateRequiredKeys we temporarily flip
-// NODE_ENV to "production" and stub the @aws-sdk/client-ssm boundary (a network
-// dependency — not production code) to return canned parameters.
-
-describe("ssm-config.ts — SSM fetch path", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  afterEach(() => {
-    // Restore NODE_ENV (and any other stubbed env) so other suites keep their
-    // env short-circuit. setup.ts also calls unstubAllEnvs() globally.
-    vi.unstubAllEnvs();
-  });
-
-  function stubSsm(
-    pages: Array<{ Parameters?: Array<{ Name: string; Value: string }>; NextToken?: string }>
-  ) {
-    let call = 0;
-    const send = vi.fn(async () => pages[Math.min(call++, pages.length - 1)]);
-    vi.doMock("@aws-sdk/client-ssm", () => ({
-      SSMClient: class {
-        send = send;
-      },
-      GetParametersByPathCommand: class {
-        input: unknown;
-        constructor(input: unknown) {
-          this.input = input;
-        }
-      },
-    }));
-    return send;
-  }
-
-  it("builds config from SSM parameters and strips the prefix", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NOTION_API_KEY", "ntn_from_env");
-    stubSsm([
-      {
-        Parameters: [
-          { Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk_live_x" },
-          { Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "whsec_y" },
-        ],
-      },
-    ]);
-    const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
-    resetSsmCache();
-    const cfg = await getConfig();
-    expect(cfg.STRIPE_SECRET_KEY).toBe("sk_live_x");
-    expect(cfg.STRIPE_WEBHOOK_SECRET).toBe("whsec_y");
-    // NOTION_API_KEY is env-only (SSM keys decommissioned) — reads from process.env
-    expect(cfg.NOTION_API_KEY).toBe("ntn_from_env");
-  });
-
-  it("follows NextToken pagination across multiple pages", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    const send = stubSsm([
-      {
-        Parameters: [{ Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk_p1" }],
-        NextToken: "page2",
-      },
-      {
-        Parameters: [{ Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "whsec_p2" }],
-      },
-    ]);
-    const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
-    resetSsmCache();
-    const cfg = await getConfig();
-    expect(send).toHaveBeenCalledTimes(2);
-    expect(cfg.STRIPE_SECRET_KEY).toBe("sk_p1");
-    expect(cfg.STRIPE_WEBHOOK_SECRET).toBe("whsec_p2");
-  });
-
-  it("normalizes escaped newlines in GOOGLE_PRIVATE_KEY from SSM", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    stubSsm([
-      {
-        Parameters: [
-          { Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk" },
-          { Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "wh" },
-          {
-            Name: "/cloudless/production/GOOGLE_PRIVATE_KEY",
-            Value: String.raw`-----BEGIN-----\nLINE2\n-----END-----`,
-          },
-        ],
-      },
-    ]);
-    const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
-    resetSsmCache();
-    const cfg = await getConfig();
-    expect(cfg.GOOGLE_PRIVATE_KEY).not.toContain(String.raw`\n`);
-    expect(cfg.GOOGLE_PRIVATE_KEY).toContain("\nLINE2\n");
-  });
-
-  it("warns when required Stripe keys are missing but still returns config", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NOTION_API_KEY", "n_from_env");
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    stubSsm([{ Parameters: [] }]);
-    const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
-    resetSsmCache();
-    const cfg = await getConfig();
-    // NOTION_API_KEY is env-only — SSM value is ignored
-    expect(cfg.NOTION_API_KEY).toBe("n_from_env");
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Missing required parameters"));
-    warn.mockRestore();
-  });
-
-  it("serves stale cache when a later SSM fetch fails", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    let call = 0;
-    const send = vi.fn(async () => {
-      call += 1;
-      if (call === 1) {
-        return {
-          Parameters: [
-            { Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk_cached" },
-            { Name: "/cloudless/production/STRIPE_WEBHOOK_SECRET", Value: "wh_cached" },
-          ],
-        };
-      }
-      throw new Error("transient SSM outage");
-    });
-    vi.doMock("@aws-sdk/client-ssm", () => ({
-      SSMClient: class {
-        send = send;
-      },
-      GetParametersByPathCommand: class {
-        constructor(public input: unknown) {}
-      },
-    }));
-    const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
-    resetSsmCache();
-    const first = await getConfig();
-    expect(first.STRIPE_SECRET_KEY).toBe("sk_cached");
-    // Force the 5-min TTL to expire so the next call re-fetches (and fails)
-    vi.useFakeTimers();
-    vi.setSystemTime(Date.now() + 6 * 60 * 1000);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const second = await getConfig();
-    expect(second.STRIPE_SECRET_KEY).toBe("sk_cached"); // stale cache served
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("serving stale config"),
-      expect.anything()
-    );
-    warn.mockRestore();
-    vi.useRealTimers();
-  });
-});
-
 // ── auth.ts ───────────────────────────────────────────────────────────────────
 // auth.ts uses next-auth which requires Node environment (not jsdom).
 // We verify it imports correctly in our test env by mocking next-auth.
@@ -357,18 +178,10 @@ vi.mock("next-auth", () => ({
     auth: vi.fn(),
   })),
 }));
-
-vi.mock("@/lib/session-token-store", () => ({
-  getTokens: vi.fn().mockResolvedValue(null),
-  putTokens: vi.fn().mockResolvedValue(undefined),
-  deleteTokens: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("next-auth/providers/cognito", () => ({ default: vi.fn(() => ({})) }));
 
 describe("auth.ts", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("exports handlers, signIn, signOut, auth", async () => {
     const mod = await import("@/lib/auth");
@@ -381,15 +194,14 @@ describe("auth.ts", () => {
 
 // ── stripe-transactions.ts ────────────────────────────────────────────────────
 
+
 describe("stripe-transactions.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env.STRIPE_TRANSACTIONS_TABLE = "test-stripe-events";
   });
-  afterEach(() => {
-    delete process.env.STRIPE_TRANSACTIONS_TABLE;
-  });
+  afterEach(() => { delete process.env.STRIPE_TRANSACTIONS_TABLE; });
 
   describe("resolveDynamoEndpoint", () => {
     it("returns undefined when DYNAMODB_ENDPOINT not set", async () => {
@@ -444,12 +256,7 @@ describe("stripe-transactions.ts", () => {
       delete process.env.STRIPE_TRANSACTIONS_TABLE;
       const { persistStripeEvent } = await import("@/lib/stripe-transactions");
       await expect(
-        persistStripeEvent({
-          id: "evt_1",
-          type: "checkout.session.completed",
-          data: { object: {} },
-          created: 1700000000,
-        } as never)
+        persistStripeEvent({ id: "evt_1", type: "checkout.session.completed", data: { object: {} }, created: 1700000000 } as never)
       ).rejects.toThrow(/STRIPE_TRANSACTIONS_TABLE is not configured/);
     });
 
@@ -459,12 +266,7 @@ describe("stripe-transactions.ts", () => {
       // DynamoDB stub has no send method → will throw; verify it at least
       // gets past the table name check and fails on the client, not config.
       await expect(
-        persistStripeEvent({
-          id: "evt_1",
-          type: "checkout.session.completed",
-          data: { object: {} },
-          created: 1700000000,
-        } as never)
+        persistStripeEvent({ id: "evt_1", type: "checkout.session.completed", data: { object: {} }, created: 1700000000 } as never)
       ).rejects.toThrow();
     });
   });

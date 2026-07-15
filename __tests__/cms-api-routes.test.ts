@@ -32,10 +32,7 @@ vi.mock("@/lib/notion-services", () => ({
 }));
 
 describe("GET /api/services", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns static fallback when not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
@@ -58,9 +55,7 @@ describe("GET /api/services", () => {
 
   it("returns notion data when configured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(true);
-    mockGetServices.mockResolvedValue([
-      { id: "s3", title: "Cloud", category: "Dev", description: "", featured: true },
-    ]);
+    mockGetServices.mockResolvedValue([{ id: "s3", title: "Cloud", category: "Dev", description: "", featured: true }]);
     const { GET } = await import("@/app/api/services/route");
     const res = await GET(new Request("http://localhost/api/services"));
     const data = await res.json();
@@ -93,10 +88,7 @@ vi.mock("@/lib/notion-faqs", () => ({
 }));
 
 describe("GET /api/faqs", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns static fallback when not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
@@ -147,10 +139,7 @@ vi.mock("@/lib/notion-testimonials", () => ({
 }));
 
 describe("GET /api/testimonials", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns static fallback when not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
@@ -203,10 +192,7 @@ vi.mock("@/lib/notion-case-studies", () => ({
 }));
 
 describe("GET /api/case-studies", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns static fallback when not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
@@ -228,17 +214,12 @@ describe("GET /api/case-studies", () => {
 });
 
 describe("GET /api/case-studies/[slug]", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns static case study when not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
     const { GET } = await import("@/app/api/case-studies/[slug]/route");
-    const res = await GET(new Request("http://localhost/api/case-studies/sample"), {
-      params: Promise.resolve({ slug: "sample" }),
-    });
+    const res = await GET(new Request("http://localhost/api/case-studies/sample"), { params: Promise.resolve({ slug: "sample" }) });
     const data = await res.json();
     expect(data.source).toBe("static");
     expect(data.caseStudy.slug).toBe("sample");
@@ -247,24 +228,15 @@ describe("GET /api/case-studies/[slug]", () => {
   it("returns 404 when static slug not found", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
     const { GET } = await import("@/app/api/case-studies/[slug]/route");
-    const res = await GET(new Request("http://localhost/api/case-studies/missing"), {
-      params: Promise.resolve({ slug: "missing" }),
-    });
+    const res = await GET(new Request("http://localhost/api/case-studies/missing"), { params: Promise.resolve({ slug: "missing" }) });
     expect(res.status).toBe(404);
   });
 
   it("returns notion data when configured and found", async () => {
     mockIsConfiguredAsync.mockResolvedValue(true);
-    mockGetCaseStudyBySlug.mockResolvedValue({
-      id: "cs1",
-      slug: "sample",
-      title: "Case 1",
-      html: "<p>body</p>",
-    });
+    mockGetCaseStudyBySlug.mockResolvedValue({ id: "cs1", slug: "sample", title: "Case 1", html: "<p>body</p>" });
     const { GET } = await import("@/app/api/case-studies/[slug]/route");
-    const res = await GET(new Request("http://localhost/api/case-studies/sample"), {
-      params: Promise.resolve({ slug: "sample" }),
-    });
+    const res = await GET(new Request("http://localhost/api/case-studies/sample"), { params: Promise.resolve({ slug: "sample" }) });
     const data = await res.json();
     expect(data.source).toBe("notion");
     expect(data.caseStudy.slug).toBe("sample");
@@ -274,9 +246,7 @@ describe("GET /api/case-studies/[slug]", () => {
     mockIsConfiguredAsync.mockResolvedValue(true);
     mockGetCaseStudyBySlug.mockResolvedValue(null);
     const { GET } = await import("@/app/api/case-studies/[slug]/route");
-    const res = await GET(new Request("http://localhost/api/case-studies/gone"), {
-      params: Promise.resolve({ slug: "gone" }),
-    });
+    const res = await GET(new Request("http://localhost/api/case-studies/gone"), { params: Promise.resolve({ slug: "gone" }) });
     expect(res.status).toBe(404);
   });
 });
@@ -296,10 +266,7 @@ vi.mock("@/lib/notion-docs", () => ({
 }));
 
 describe("GET /api/docs", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns empty docs when not configured", async () => {
     mockIsConfiguredAsync.mockResolvedValue(false);
@@ -334,62 +301,42 @@ describe("GET /api/docs", () => {
 });
 
 describe("GET /api/docs/[slug]", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 503 when not configured", async () => {
     mockIsConfigured.mockReturnValue(false);
-    mockIsConfiguredAsync.mockResolvedValue(false);
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
-    const res = await GET(new NextRequest("http://localhost/api/docs/intro"), {
-      params: Promise.resolve({ slug: "intro" }),
-    });
+    const res = await GET(new NextRequest("http://localhost/api/docs/intro"), { params: Promise.resolve({ slug: "intro" }) });
     expect(res.status).toBe(503);
   });
 
   it("returns 404 when doc not found", async () => {
     mockIsConfigured.mockReturnValue(true);
-    mockIsConfiguredAsync.mockResolvedValue(true);
     mockGetDocBySlug.mockResolvedValue(null);
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
-    const res = await GET(new NextRequest("http://localhost/api/docs/missing"), {
-      params: Promise.resolve({ slug: "missing" }),
-    });
+    const res = await GET(new NextRequest("http://localhost/api/docs/missing"), { params: Promise.resolve({ slug: "missing" }) });
     expect(res.status).toBe(404);
   });
 
   it("returns 500 when content fetch fails", async () => {
     mockIsConfigured.mockReturnValue(true);
-    mockIsConfiguredAsync.mockResolvedValue(true);
     mockGetDocBySlug.mockResolvedValue({ id: "d1", slug: "intro" });
     mockGetDocContent.mockResolvedValue(null);
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
-    const res = await GET(new NextRequest("http://localhost/api/docs/intro"), {
-      params: Promise.resolve({ slug: "intro" }),
-    });
+    const res = await GET(new NextRequest("http://localhost/api/docs/intro"), { params: Promise.resolve({ slug: "intro" }) });
     expect(res.status).toBe(500);
   });
 
   it("returns doc content when found", async () => {
     mockIsConfigured.mockReturnValue(true);
-    mockIsConfiguredAsync.mockResolvedValue(true);
     mockGetDocBySlug.mockResolvedValue({ id: "d1", slug: "intro", title: "Intro" });
-    mockGetDocContent.mockResolvedValue({
-      id: "d1",
-      slug: "intro",
-      title: "Intro",
-      html: "<p>content</p>",
-    });
+    mockGetDocContent.mockResolvedValue({ id: "d1", slug: "intro", title: "Intro", html: "<p>content</p>" });
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
-    const res = await GET(new NextRequest("http://localhost/api/docs/intro"), {
-      params: Promise.resolve({ slug: "intro" }),
-    });
+    const res = await GET(new NextRequest("http://localhost/api/docs/intro"), { params: Promise.resolve({ slug: "intro" }) });
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.html).toBe("<p>content</p>");
