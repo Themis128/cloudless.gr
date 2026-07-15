@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
+// Keycloak JWKS — primary for both k3s (Pi) and Lambda deployments.
+// Falls back to Cognito for zero-downtime rollout during migration.
+const _kcIssuer = process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER ?? "";
 const _upId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
 const _reg = _upId.split("_")[0] || "us-east-1";
-const JWKS = _upId
-  ? createRemoteJWKSet(
-      new URL(
-        `https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`,
-      ),
-    )
-  : null;
+
+const JWKS = _kcIssuer
+  ? createRemoteJWKSet(new URL(`${_kcIssuer}/protocol/openid-connect/certs`))
+  : _upId
+    ? createRemoteJWKSet(
+        new URL(`https://cognito-idp.${_reg}.amazonaws.com/${_upId}/.well-known/jwks.json`),
+      )
+    : null;
+
+const JWT_ISSUER = _kcIssuer || (_upId ? `https://cognito-idp.${_reg}.amazonaws.com/${_upId}` : "");
 
 const LOCALES = routing.locales as readonly string[];
 const DEFAULT_LOCALE = routing.defaultLocale;
@@ -27,38 +34,68 @@ function stripLocale(pathname: string): string {
   return pathname.slice(segment.length + 1) || "/";
 }
 
-async function readCognitoToken(
+async function readAuthToken(
   req: NextRequest,
 ): Promise<{ valid: boolean; isAdmin: boolean }> {
-  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  if (!clientId || !JWKS) return { valid: false, isAdmin: false };
-  const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
-  const username = req.cookies.get(lastAuthKey)?.value;
-  if (!username) return { valid: false, isAdmin: false };
-  const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken`;
-  const token = req.cookies.get(tokenKey)?.value;
-  if (!token) return { valid: false, isAdmin: false };
-  try {
-    const { getToken } = await import("next-auth/jwt");
-    const token = await getToken({
-      req: req as Parameters<typeof getToken>[0]["req"],
-      secret: process.env.AUTH_SECRET ?? "",
-      secureCookie: process.env.NODE_ENV === "production",
-      cookieName:
-        process.env.NODE_ENV === "production"
-          ? "__Secure-authjs.session-token"
-          : "authjs.session-token",
-    });
-    return {
-      valid: true,
-      isAdmin:
-        (payload["cognito:groups"] as string[] | undefined)?.includes(
-          "admin",
-        ) ?? false,
-    };
-  } catch {
-    return { valid: false, isAdmin: false };
+  if (!JWKS || !JWT_ISSUER) return { valid: false, isAdmin: false };
+
+  // next-auth stores the session as an encrypted JWT in __Secure-authjs.session-token
+  // (prod) or authjs.session-token (dev/HTTP). Extract and verify the id_token
+  // that next-auth embeds in the session JWT payload.
+  const sessionCookie =
+    req.cookies.get("__Secure-authjs.session-token")?.value ??
+    req.cookies.get("authjs.session-token")?.value;
+
+  if (sessionCookie) {
+    try {
+      // next-auth v5 session cookies are encrypted — decode with next-auth secret
+      // via the getToken helper (edge-compatible).
+      const { getToken } = await import("next-auth/jwt");
+      const token = await getToken({
+        req: req as Parameters<typeof getToken>[0]["req"],
+        secret: process.env.AUTH_SECRET ?? "",
+        secureCookie: process.env.NODE_ENV === "production",
+        cookieName:
+          process.env.NODE_ENV === "production"
+            ? "__Secure-authjs.session-token"
+            : "authjs.session-token",
+      });
+      if (token) {
+        const groups = (token.groups as string[]) ?? [];
+        return { valid: true, isAdmin: groups.includes("admin") };
+      }
+    } catch {
+      // fall through to legacy Cognito check
+    }
   }
+
+  // Legacy Cognito fallback — active while old sessions still exist during rollout
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+  if (clientId && !_kcIssuer) {
+    const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
+    const username = req.cookies.get(lastAuthKey)?.value;
+    if (username) {
+      const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.idToken`;
+      const token = req.cookies.get(tokenKey)?.value;
+      if (token) {
+        try {
+          const { payload } = await jwtVerify(token, JWKS, {
+            issuer: JWT_ISSUER,
+            audience: clientId,
+          });
+          return {
+            valid: true,
+            isAdmin:
+              (payload["cognito:groups"] as string[] | undefined)?.includes("admin") ?? false,
+          };
+        } catch {
+          // invalid token
+        }
+      }
+    }
+  }
+
+  return { valid: false, isAdmin: false };
 }
 
 // --- next-intl locale middleware ---
@@ -80,23 +117,12 @@ const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
   "/api/contact": { windowMs: 60_000, max: 3 },
   "/api/subscribe": { windowMs: 60_000, max: 2 },
   "/api/unsubscribe": { windowMs: 60_000, max: 3 },
-  // Public, unauthenticated account creation: each call fires an SES
-  // verification email — email-bombing / SES-cost vector. Keep it tight.
-  "/api/auth/register": { windowMs: 60_000, max: 3 },
   "/api/checkout": { windowMs: 60_000, max: 6 },
   "/api/calendar/book": { windowMs: 60_000, max: 3 },
+  "/api/hubspot/ticket": { windowMs: 60_000, max: 3 },
   "/api/crm/contact": { windowMs: 60_000, max: 3 },
   // LLM proxy — each call hits the Anthropic API and costs money. Tighter cap.
   "/api/chat": { windowMs: 60_000, max: 12 },
-  // Public analytics tracking — writes to Notion on every call. Cap matches in-handler limit.
-  "/api/track": { windowMs: 60_000, max: 30 },
-  // Mass-email sender — shared-secret-authenticated but one call triggers SES
-  // sends to all subscribers. The secret is the real auth gate; this is
-  // belt-and-suspenders against credential-leak abuse. Allow up to 6/hour
-  // so an operator can re-dispatch the publisher (Slack `/cloudless-newsletter
-  // send`, GitHub Actions retry) without waiting an hour each time. Was 1/hour
-  // — that blocked every legitimate retry the moment the weekly cron ran.
-  "/api/newsletter/send": { windowMs: 3_600_000, max: 6 },
 };
 
 // Admin endpoints are JWT-auth-gated, but we still rate-limit them to cap
@@ -158,7 +184,7 @@ function generateNonce(): string {
  * blanket 'unsafe-inline'. This means:
  *   - Inline scripts without the matching nonce attribute are blocked.
  *   - Scripts loaded by a trusted (nonced) script are implicitly trusted,
- *     so GTM / Stripe / EspoCRM child scripts continue to work.
+ *     so GTM / Stripe / HubSpot child scripts continue to work.
  *   - 'unsafe-eval' is retained for Three.js WebGL shader compilation on
  *     the home page — removing it would require pre-compiling all GLSL.
  *
@@ -170,7 +196,8 @@ function generateNonce(): string {
  *   - Stripe (checkout + redirect)
  *   - Sentry (browser SDK + ingest)
  *   - Meta Pixel (connect.facebook.net)
- *   - EspoCRM (forms + tracking)
+ *   - Cognito (Amplify auth flows)
+ *   - HubSpot (forms + tracking)
  *   - Google Analytics / GTM
  */
 function buildCSP(nonce: string): string {
@@ -182,8 +209,8 @@ function buildCSP(nonce: string): string {
     ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`
     : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`;
   const connectSrc = isDev
-    ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com"
-    : "connect-src 'self' wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com https://plausible.io https://www.clarity.ms";
+    ? "connect-src 'self' ws: wss: http://localhost:* http://172.* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com"
+    : "connect-src 'self' ws://192.168.1.128:30800 wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com";
 
   return [
     "default-src 'self'",
@@ -202,12 +229,7 @@ function buildCSP(nonce: string): string {
     "media-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    // Meta Pixel (fbevents.js) falls back to submitting a hidden <form> to
-    // https://www.facebook.com/tr/ when it can't use an image/beacon transport.
-    // connect.facebook.net is the documented companion host. Without these the
-    // browser blocks the post ("violates form-action 'self'") and conversions
-    // silently stop being reported. 'self' stays first so our own forms work.
-    "form-action 'self' https://www.facebook.com https://connect.facebook.net",
+    "form-action 'self'",
     "frame-ancestors 'none'",
     "report-uri /api/csp-report",
     "report-to csp-endpoint",
@@ -258,6 +280,7 @@ function addSecurityHeaders(response: NextResponse, nonce: string): void {
       "screen-wake-lock=()",
       "serial=()",
       "usb=()",
+      "web-share=(self)",
       "xr-spatial-tracking=()",
     ].join(", "),
   );
@@ -265,17 +288,6 @@ function addSecurityHeaders(response: NextResponse, nonce: string): void {
     "Strict-Transport-Security",
     "max-age=63072000; includeSubDomains; preload",
   );
-  // Cross-Origin isolation headers. The marketing/storefront app does not
-  // window.opener any third-party origins, and does not need
-  // SharedArrayBuffer, so the strictest settings are safe.
-  //   COOP: same-origin    → popups from any cross-origin opener are isolated
-  //   CORP: same-origin    → resources can only be loaded by same-origin pages
-  //   COEP: credentialless → loads any subresource without forcing CORP on it,
-  //                          which would otherwise break Stripe + Sentry + EspoCRM
-  //                          scripts that don't set CORP on their CDN responses
-  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
-  response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
-  response.headers.set("Cross-Origin-Embedder-Policy", "credentialless");
   response.headers.set("Report-To", REPORT_TO);
   response.headers.set("Content-Security-Policy", buildCSP(nonce));
   // Forward nonce to server components (layout.tsx reads x-nonce via headers()).
@@ -357,19 +369,6 @@ async function handlePageRoute(
   const bare = stripLocale(pathname);
   const locale = getLocaleFromPath(pathname);
   const prefix = `/${locale}`;
-
-  // Post-login resolver: the OIDC callbackUrl routes here; we read the session
-  // and redirect admins → /admin, everyone else → /dashboard.
-  if (bare === "/auth/post-login") {
-    const { valid, isAdmin: hasAdminGroup } = await readAuthToken(request);
-    if (!valid) {
-      return NextResponse.redirect(new URL(`${prefix}/auth/login`, request.url));
-    }
-    return NextResponse.redirect(
-      new URL(`${prefix}${hasAdminGroup ? "/admin" : "/dashboard"}`, request.url),
-    );
-  }
-
   const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
   const isDashboardPath = bare === "/dashboard" || bare.startsWith("/dashboard/");
 
@@ -401,18 +400,6 @@ export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const { pathname } = request.nextUrl;
 
-  // Canonical host: cloudless.gr (apex). 308-redirect www.cloudless.gr → apex
-  // so the LinkedIn Insight Tag, GA4, and search-engine canonical signal are
-  // all consolidated on one host. Done before HTTPS upgrade so we don't
-  // double-redirect on plain-HTTP www traffic.
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
-  if (process.env.NODE_ENV === "production" && host.toLowerCase().startsWith("www.cloudless.gr")) {
-    const apexUrl = request.nextUrl.clone();
-    apexUrl.host = "cloudless.gr";
-    apexUrl.protocol = "https:";
-    return NextResponse.redirect(apexUrl, 308);
-  }
-
   // Enforce HTTPS in production so all traffic stays encrypted in transit.
   // Exclude /api/* routes: k8s health probes hit the pod directly over HTTP
   // (Next.js sets x-forwarded-proto:http on plain HTTP connections), and
@@ -426,12 +413,6 @@ export async function proxy(request: NextRequest) {
     const httpsUrl = request.nextUrl.clone();
     httpsUrl.protocol = "https:";
     return NextResponse.redirect(httpsUrl, 308);
-  }
-
-  // Let Auth.js own its complete route group. OAuth callbacks depend on
-  // Auth.js cookies/state/PKCE/nonce remaining untouched by custom API proxy logic.
-  if (pathname.startsWith("/api/auth/")) {
-    return NextResponse.next();
   }
 
   if (pathname.startsWith("/api/")) {

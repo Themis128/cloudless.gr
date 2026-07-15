@@ -8,13 +8,8 @@
  */
 
 import { beforeEach, afterEach, vi } from "vitest";
-import {
-  resetIntegrationCache,
-  resetIntegrationCacheAsync,
-  resetSlackConfigCache,
-} from "@/lib/integrations";
+import { resetIntegrationCache, resetIntegrationCacheAsync, resetSlackConfigCache } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
-import { resetJwksCache } from "@/lib/api-auth";
 
 // ── Notion ────────────────────────────────────────────────────────────────────
 process.env.NOTION_API_KEY = "secret_test_key_12345";
@@ -28,7 +23,7 @@ process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";
 process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
 process.env.NOTION_WEBHOOK_SECRET = "whsec_notion_test";
 
-// ── EspoCRM ───────────────────────────────────────────────────────────────────
+// ── HubSpot ───────────────────────────────────────────────────────────────────
 process.env.HUBSPOT_API_KEY = "test-hs-token";
 
 // ── ActiveCampaign ────────────────────────────────────────────────────────────
@@ -77,28 +72,22 @@ process.env.AWS_SES_REGION = "us-east-1";
 
 // ── Google / GSC ─────────────────────────────────────────────────────────────
 process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";
-process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
+process.env.GOOGLE_PRIVATE_KEY =
+  "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
 process.env.GOOGLE_CALENDAR_ID = "calendar@cloudless.gr";
 process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
 
-// ── Cognito (sole auth provider since the 2026-06 migration) ─────────────────
-// Mirrors production (sst.config.ts / .env.example) so that:
-//   - component tests that statically import the signup page render the
-//     Cognito Hosted UI handoff (NEXT_PUBLIC_AUTH_PROVIDER=cognito), and
-//   - auth.ts signOut event tests can perform RP-initiated logout against the
-//     Cognito /logout endpoint (COGNITO_DOMAIN + AUTH_URL).
-// Tests that need a different state (amplify-config.test.ts, auth.test.ts)
-// save/clear and restore these keys themselves, so the global default is safe.
-process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+// ── Cognito (kept for legacy fallback path in proxy.ts) ──────────────────────
 process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
 process.env.COGNITO_CLIENT_ID = "test-client-id";
-process.env.COGNITO_CLIENT_SECRET = "test-client-secret";
-process.env.COGNITO_DOMAIN = "https://cloudless-auth.auth.us-east-1.amazoncognito.com";
-process.env.AUTH_URL = "http://localhost:4000";
 
-// ── next-auth ─────────────────────────────────────────────────────────────────
+// ── Keycloak / next-auth ──────────────────────────────────────────────────────
+process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
+process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID = "cloudless-app";
+process.env.KEYCLOAK_ISSUER = "https://auth.cloudless.gr/realms/master";
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
-process.env.SESSION_TOKEN_STORE_TABLE = "test-session-token-store";
+process.env.KEYCLOAK_ADMIN_USER = "tbaltzakis";
+process.env.KEYCLOAK_ADMIN_PASSWORD = "test-admin-pass";
 
 // ── Cache resets ──────────────────────────────────────────────────────────────
 // Reset all in-memory caches before each test and restore env vars that tests
@@ -109,23 +98,18 @@ beforeEach(() => {
   delete process.env.SLACK_WEBHOOK_URL;
   // Restore credentials that 503 "not configured" tests may clear.
   process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";
-  process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
+  process.env.GOOGLE_PRIVATE_KEY =
+    "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
   process.env.HUBSPOT_API_KEY = "test-hs-token";
   process.env.NOTION_API_KEY = "secret_test_key_12345";
   process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";
   process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
   process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
-  // Clear COGNITO_ISSUER so api-auth.ts uses the decode-only fallback
-  // for fake-sig test tokens. Without this, CI (where COGNITO_ISSUER may be
-  // set as a GH secret) tries real JWKS verification and rejects them.
-  // Tests that need JWKS verification set the issuer explicitly.
-  delete process.env.COGNITO_ISSUER;
   resetIntegrationCache();
   resetIntegrationCacheAsync();
   resetSlackConfigCache();
   resetSsmCache();
-  resetJwksCache();
 });
 
 afterEach(() => {

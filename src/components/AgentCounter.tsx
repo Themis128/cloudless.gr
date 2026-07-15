@@ -14,15 +14,16 @@ export default function AgentCounter() {
 
   const agentUrl = "/api/agents/counter-agent/default";
 
-  async function callAgent(action: string): Promise<CounterAgentResponse> {
+  async function callAgent(method: string): Promise<CounterAgentResponse> {
     try {
-      const response = await fetch(`${agentUrl}/${action}`, {
-        method: "GET",
+      const response = await fetch(`${agentUrl}?method=${method}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
       }
-      const data = (await response.json()) as CounterAgentResponse;
+      const data = await response.json();
       return data;
     } catch (err) {
       return { error: (err as Error).message };
@@ -32,7 +33,7 @@ export default function AgentCounter() {
   async function refresh() {
     setLoading(true);
     setError(null);
-    const result = await callAgent("status");
+    const result = await callAgent("getCount");
     if (result.error) {
       setError(result.error);
     } else {
@@ -69,8 +70,7 @@ export default function AgentCounter() {
   }
 
   useEffect(() => {
-    // Intentionally fire-and-forget: initial data load on mount
-    refresh().catch(() => {});
+    void refresh();
   }, []);
 
   return (
@@ -78,42 +78,48 @@ export default function AgentCounter() {
       <div className="flex items-center gap-4">
         <span className="font-mono text-sm text-slate-400">
           Current count:{" "}
-          <span className="text-neon-cyan font-bold">{loading ? "loading..." : count}</span>
+          <span className="text-neon-cyan font-bold">
+            {loading ? "loading..." : count}
+          </span>
         </span>
       </div>
 
       <div className="flex gap-2">
         <button
           onClick={() => void increment()}
-          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
+          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
           disabled={loading}
         >
           Increment
         </button>
         <button
           onClick={() => void decrement()}
-          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
+          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
           disabled={loading}
         >
           Decrement
         </button>
         <button
           onClick={() => void reset()}
-          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
+          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
           disabled={loading}
         >
           Reset
         </button>
         <button
           onClick={() => void refresh()}
-          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
+          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
           disabled={loading}
         >
           Refresh
         </button>
       </div>
 
-      {error && <pre className="text-xs text-red-400">Error: {error}</pre>}
+      {error && (
+        <pre className="text-red-400 text-xs">
+          Error: {error}
+        </pre>
+      )}
     </div>
   );
 }

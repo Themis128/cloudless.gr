@@ -8,7 +8,12 @@ import { NextRequest, NextResponse } from "next/server";
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_testPool";
   process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
+  // Clear Keycloak issuer so proxy.ts uses the Cognito fallback path in tests
+  process.env.NEXT_PUBLIC_KEYCLOAK_ISSUER = "";
 });
+
+// Mock next-auth/jwt so getToken always returns null (Cognito path runs)
+vi.mock("next-auth/jwt", () => ({ getToken: async () => null }));
 
 vi.mock("next-intl/middleware", () => ({
   default: () => (_request: NextRequest) => NextResponse.next(),
@@ -41,7 +46,7 @@ function makeJwt(payload: Record<string, unknown>): string {
 }
 
 function makeAuthCookies(isAdmin = false): string {
-  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID as string;
+  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
   const username = "test-user";
   const token = makeJwt({
     exp: Math.floor(Date.now() / 1000) + 3600,

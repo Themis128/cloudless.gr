@@ -1,0 +1,46 @@
+{
+  "mcpServers": {
+    "project": {
+      "command": "npx",
+      "args": ["-y", "project-mcp"],
+      "autoStart": true
+    },
+    "mcp-tool-shop": {
+      "command": "npx",
+      "args": ["-y", "mcp-tool-shop"],
+      "autoStart": true
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
+      },
+      "autoStart": true
+    },
+    "cloudflare": {
+      "url": "https://mcp.cloudflare.com/mcp",
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": true,
+      "autoApprove": [
+        "deploy",
+        "kv_get",
+        "kv_put"
+      ]
+    },
+    "cloudflare-docs": {
+      "url": "https://docs.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-bindings": {
+      "url": "https://bindings.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-builds": {
+      "url": "https://builds.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-observability": {
+      "url": "https://observability.mcp.cloudflare.com/mcp"
+    }
+  }
+}
