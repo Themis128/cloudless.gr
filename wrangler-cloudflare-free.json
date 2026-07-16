@@ -24,7 +24,7 @@
     "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
     "APP_VERSION": "${GITHUB_SHA}"
   },
-  "analytics_engine": [
+  "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
       "dataset": "cloudless_analytics"
@@ -58,7 +58,7 @@
         "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
         "APP_VERSION": "staging"
       },
-      "analytics_engine": [
+      "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
           "dataset": "cloudless_analytics"
@@ -87,7 +87,7 @@
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
         "APP_VERSION": "${GITHUB_SHA}"
       },
-      "analytics_engine": [
+      "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
           "dataset": "cloudless_analytics"

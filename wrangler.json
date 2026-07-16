@@ -25,7 +25,7 @@
     "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
     "APP_VERSION": "${GITHUB_SHA}"
   },
-  "analytics_engine": [
+  "analytics_engine_datasets": [
     { "binding": "ANALYTICS", "dataset": "cloudless_analytics" }
   ],
   "ai": { "binding": "AI" },
@@ -49,7 +49,7 @@
         "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
         "APP_VERSION": "staging"
       },
-      "analytics_engine": [{ "binding": "ANALYTICS", "dataset": "cloudless_analytics" }],
+      "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "cloudless_analytics" }],
       "ai": { "binding": "AI" },
       "send_email": [{ "name": "EMAIL" }],
       "r2_buckets": [
@@ -72,7 +72,7 @@
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
         "APP_VERSION": "${GITHUB_SHA}"
       },
-      "analytics_engine": [{ "binding": "ANALYTICS", "dataset": "cloudless_analytics" }],
+      "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "cloudless_analytics" }],
       "ai": { "binding": "AI" },
       "send_email": [{ "name": "EMAIL" }],
       "r2_buckets": [
