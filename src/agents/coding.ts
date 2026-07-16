@@ -2,7 +2,7 @@ import { Agent, callable } from "agents";
 
 // Env for agents - extends the generated Cloudflare.Env
 // This provides the types needed for Agent<T> while staying compatible
-interface Env extends Cloudflare.Env {}
+type Env = Cloudflare.Env;
 
 export type CodingStatus = "idle" | "running" | "done" | "failed";
 export type CodingMode = "review" | "patch";

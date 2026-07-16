@@ -1,4 +1,4 @@
-import { getAgentByName, routeAgentRequest } from "agents";
+import { routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
 
 // Extend the generated Env with bindings that wrangler doesn't generate types for
@@ -164,8 +164,8 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
   }
 }
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+const worker = {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     const isCustomAgentRoute = url.pathname.startsWith(AGENT_PATH_PREFIX + "/");
@@ -209,3 +209,5 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+
+export default worker;
