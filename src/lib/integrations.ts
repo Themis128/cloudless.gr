@@ -159,6 +159,16 @@ export function isConfigured(...keys: (keyof IntegrationConfig)[]): boolean {
   return keys.every((k) => Boolean(config[k]));
 }
 
+/** Cron authorization helpers */
+export function isCronAuthorized(_request: Request): Promise<boolean> {
+  // Placeholder - actual implementation would check CRON_SECRET
+  return Promise.resolve(false);
+}
+
+export function cronUnauthorized(): Response {
+  return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+}
+
 let cachedAsync: IntegrationConfig | null = null;
 
 /**

@@ -1,7 +1,6 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import dynamic from "next/dynamic";
 import { routing } from "@/i18n/routing";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,8 +14,7 @@ import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { CookieConsentProvider } from "@/context/CookieConsentContext";
 import CookieConsent from "@/components/CookieConsent";
 import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
-
-const CartSlideOver = dynamic(() => import("@/components/store/CartSlideOver"));
+import ClientCartSlideOver from "@/components/ClientCartSlideOver";
 import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
 
@@ -84,7 +82,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                 {children}
               </main>
               <Footer />
-              <CartSlideOver />
+              <ClientCartSlideOver />
               <ServiceWorkerRegistration />
               <ClientDecorators />
               <CookieConsent />

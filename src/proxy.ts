@@ -38,11 +38,20 @@ async function readAuthToken(
   // next-auth stores the session as an encrypted JWT in __Secure-authjs.session-token
   // (prod) or authjs.session-token (dev/HTTP). Extract and verify the id_token
   // that next-auth embeds in the session JWT payload.
-  const sessionCookie =
-    req.cookies.get("__Secure-authjs.session-token")?.value ??
-    req.cookies.get("authjs.session-token")?.value;
+  // Note: next-auth v5 splits large session cookies into chunks (.0, .1, etc.)
+  // We need to check for both chunked and unchunked cookies.
+  const prodCookieName = "__Secure-authjs.session-token";
+  const devCookieName = "authjs.session-token";
 
-  if (sessionCookie) {
+  // Check for chunked cookies first (next-auth splits large JWTs)
+  const chunkedCookie = req.cookies.get(`${prodCookieName}.0`)?.value ??
+    req.cookies.get(`${devCookieName}.0`)?.value;
+
+  // Also check unchunked cookie
+  const sessionCookie = req.cookies.get(prodCookieName)?.value ??
+    req.cookies.get(devCookieName)?.value;
+
+  if (sessionCookie || chunkedCookie) {
     try {
       // next-auth v5 session cookies are encrypted — decode with next-auth secret
       // via the getToken helper (edge-compatible).
@@ -51,10 +60,12 @@ async function readAuthToken(
         req: req as Parameters<typeof getToken>[0]["req"],
         secret: process.env.AUTH_SECRET ?? "",
         secureCookie: process.env.NODE_ENV === "production",
+        // When there's a chunked cookie present, we need to use the base name
+        // so getToken can find and reassemble the chunks
         cookieName:
           process.env.NODE_ENV === "production"
-            ? "__Secure-authjs.session-token"
-            : "authjs.session-token",
+            ? prodCookieName
+            : devCookieName,
       });
       if (token) {
         const groups = (token.groups as string[]) ?? [];
@@ -65,31 +76,34 @@ async function readAuthToken(
     }
   }
 
-  // Direct Cognito id_token cookie fallback (Amplify-style sessions)
-  const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-  if (clientId) {
-    const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
-    const username = req.cookies.get(lastAuthKey)?.value;
-    if (username) {
-      const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.idToken`;
-      const token = req.cookies.get(tokenKey)?.value;
-      if (token) {
-        try {
-          const { payload } = await jwtVerify(token, JWKS, {
-            issuer: JWT_ISSUER,
-            audience: clientId,
-          });
-          return {
-            valid: true,
-            isAdmin:
-              (payload["cognito:groups"] as string[] | undefined)?.includes("admin") ?? false,
-          };
-        } catch {
-          // invalid token
-        }
-      }
-    }
-  }
+// Direct Cognito token cookie fallback (Amplify-style sessions)
+    // Amplify stores idToken in accessToken cookie under the key pattern:
+    // CognitoIdentityServiceProvider.{client}.{user}.accessToken
+    const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
+    if (clientId) {
+      const lastAuthKey = `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`;
+      const username = req.cookies.get(lastAuthKey)?.value;
+      if (username) {
+        // Amplify stores tokens with 'accessToken' key name (contains id_token payload)
+        const tokenKey = `CognitoIdentityServiceProvider.${clientId}.${username}.accessToken`;
+       const token = req.cookies.get(tokenKey)?.value;
+       if (token) {
+         try {
+           const { payload } = await jwtVerify(token, JWKS, {
+             issuer: JWT_ISSUER,
+             audience: clientId,
+           });
+           return {
+             valid: true,
+             isAdmin:
+               (payload["cognito:groups"] as string[] | undefined)?.includes("admin") ?? false,
+           };
+         } catch {
+           // invalid token
+         }
+       }
+     }
+   }
 
   return { valid: false, isAdmin: false };
 }
@@ -357,11 +371,69 @@ function handleApiRoute(
   return response;
 }
 
+// POST-LOGIN ROUTE: /auth/post-login
+//
+// After a successful sign-in, next-auth redirects to /auth/post-login for client-side
+// routing. This endpoint reads the session token, determines if the user has admin
+// privileges, and redirects to /admin or /dashboard accordingly.
+// This enables role-based first navigation without flashing the login page.
+async function handlePostLoginRoute(
+  request: NextRequest,
+): Promise<NextResponse> {
+  const prodCookieName = "__Secure-authjs.session-token";
+  const devCookieName = "authjs.session-token";
+
+  // Check for chunked cookies first (next-auth splits large JWTs)
+  const chunkedCookie = request.cookies.get(`${prodCookieName}.0`)?.value ??
+    request.cookies.get(`${devCookieName}.0`)?.value;
+
+  // Also check unchunked cookie
+  const sessionCookie = request.cookies.get(prodCookieName)?.value ??
+    request.cookies.get(devCookieName)?.value;
+
+  if (!sessionCookie && !chunkedCookie) {
+    // No session cookie - redirect to login
+    const locale = getLocaleFromPath(request.nextUrl.pathname);
+    return NextResponse.redirect(
+      new URL(`/${locale}/auth/login`, request.nextUrl.origin)
+    );
+  }
+
+  // Try to decode the session token to check groups
+  try {
+    const { getToken } = await import("next-auth/jwt");
+    const token = await getToken({
+      req: request as Parameters<typeof getToken>[0]["req"],
+      secret: process.env.AUTH_SECRET ?? "",
+      secureCookie: process.env.NODE_ENV === "production",
+      cookieName: process.env.NODE_ENV === "production" ? prodCookieName : devCookieName,
+    });
+    const locale = getLocaleFromPath(request.nextUrl.pathname);
+    const groups = (token?.groups as string[]) ?? [];
+    if (groups.includes("admin")) {
+      return NextResponse.redirect(new URL(`/${locale}/admin`, request.nextUrl.origin));
+    }
+    return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.nextUrl.origin));
+  } catch {
+    // If token decode fails, redirect to login
+    const locale = getLocaleFromPath(request.nextUrl.pathname);
+    return NextResponse.redirect(
+      new URL(`/${locale}/auth/login`, request.nextUrl.origin)
+    );
+  }
+}
+
 async function handlePageRoute(
   request: NextRequest,
   pathname: string,
   nonce: string,
 ): Promise<NextResponse> {
+  // Handle post-login route BEFORE the locale stripping
+  const bareForRouteCheck = stripLocale(pathname);
+  if (bareForRouteCheck === "/auth/post-login") {
+    return handlePostLoginRoute(request);
+  }
+
   const bare = stripLocale(pathname);
   const locale = getLocaleFromPath(pathname);
   const prefix = `/${locale}`;
@@ -386,6 +458,10 @@ async function handlePageRoute(
   // server-side with no first-paint flash. next/headers reads request-side.
   request.headers.set("x-pathname", pathname);
   const response = intlMiddleware(request);
+  // intlMiddleware can return null for redirects - handle gracefully
+  if (!response) {
+    return NextResponse.next();
+  }
   addSecurityHeaders(response, nonce);
   return response;
 }

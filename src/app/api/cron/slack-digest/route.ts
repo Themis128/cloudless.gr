@@ -26,6 +26,7 @@ import { NextRequest } from "next/server";
 import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
 import { isSentryConfigured, getErrorCounts, getTopErrors } from "@/lib/sentry";
+import { isCronAuthorized, cronUnauthorized } from "@/lib/integrations";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -360,5 +361,5 @@ async function postErrorDigest(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function slackEscape(text: string): string {
-  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  return text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
 }

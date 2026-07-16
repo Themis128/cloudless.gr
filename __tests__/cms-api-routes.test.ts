@@ -304,7 +304,7 @@ describe("GET /api/docs/[slug]", () => {
   beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });
 
   it("returns 503 when not configured", async () => {
-    mockIsConfigured.mockReturnValue(false);
+    mockIsConfiguredAsync.mockResolvedValue(false);
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
     const res = await GET(new NextRequest("http://localhost/api/docs/intro"), { params: Promise.resolve({ slug: "intro" }) });
@@ -312,7 +312,7 @@ describe("GET /api/docs/[slug]", () => {
   });
 
   it("returns 404 when doc not found", async () => {
-    mockIsConfigured.mockReturnValue(true);
+    mockIsConfiguredAsync.mockResolvedValue(true);
     mockGetDocBySlug.mockResolvedValue(null);
     const { NextRequest } = await import("next/server");
     const { GET } = await import("@/app/api/docs/[slug]/route");
@@ -321,7 +321,7 @@ describe("GET /api/docs/[slug]", () => {
   });
 
   it("returns 500 when content fetch fails", async () => {
-    mockIsConfigured.mockReturnValue(true);
+    mockIsConfiguredAsync.mockResolvedValue(true);
     mockGetDocBySlug.mockResolvedValue({ id: "d1", slug: "intro" });
     mockGetDocContent.mockResolvedValue(null);
     const { NextRequest } = await import("next/server");
@@ -331,7 +331,7 @@ describe("GET /api/docs/[slug]", () => {
   });
 
   it("returns doc content when found", async () => {
-    mockIsConfigured.mockReturnValue(true);
+    mockIsConfiguredAsync.mockResolvedValue(true);
     mockGetDocBySlug.mockResolvedValue({ id: "d1", slug: "intro", title: "Intro" });
     mockGetDocContent.mockResolvedValue({ id: "d1", slug: "intro", title: "Intro", html: "<p>content</p>" });
     const { NextRequest } = await import("next/server");

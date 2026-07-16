@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockGetSeoSnapshot = vi.fn();
-const mockIsHubSpotConfigured = vi.fn();
+const mockIsEspoCRMConfigured = vi.fn();
 const mockGetPipelineStats = vi.fn();
 const mockListNewsletterSubscribers = vi.fn();
 const mockGetStripe = vi.fn();
@@ -12,9 +12,9 @@ const mockGetStripe = vi.fn();
 vi.mock("@/lib/gsc", () => ({
   getSeoSnapshot: (...a: unknown[]) => mockGetSeoSnapshot(...a),
 }));
-vi.mock("@/lib/hubspot", async (orig) => ({
-  ...(await orig<typeof import("@/lib/hubspot")>()),
-  isHubSpotConfigured: (...a: unknown[]) => mockIsHubSpotConfigured(...a),
+vi.mock("@/lib/espocrm", async (orig) => ({
+  ...(await orig<typeof import("@/lib/espocrm")>()),
+  isEspoCRMConfigured: (...a: unknown[]) => mockIsEspoCRMConfigured(...a),
   getPipelineStats: (...a: unknown[]) => mockGetPipelineStats(...a),
   listNewsletterSubscribers: (...a: unknown[]) => mockListNewsletterSubscribers(...a),
 }));
@@ -41,14 +41,14 @@ describe("voice-brief-sources.ts", () => {
   });
 
   describe("fetchPipelineMetrics", () => {
-    it("returns null when HubSpot not configured", async () => {
-      mockIsHubSpotConfigured.mockResolvedValue(false);
+    it("returns null when EspoCRM not configured", async () => {
+      mockIsEspoCRMConfigured.mockResolvedValue(false);
       const { fetchPipelineMetrics } = await import("@/lib/voice-brief-sources");
       expect(await fetchPipelineMetrics()).toBeNull();
     });
 
     it("converts totalValue from cents to euros", async () => {
-      mockIsHubSpotConfigured.mockResolvedValue(true);
+      mockIsEspoCRMConfigured.mockResolvedValue(true);
       mockGetPipelineStats.mockResolvedValue({ totalDeals: 5, totalValue: 10000 });
       const { fetchPipelineMetrics } = await import("@/lib/voice-brief-sources");
       const result = await fetchPipelineMetrics();
@@ -59,14 +59,14 @@ describe("voice-brief-sources.ts", () => {
   });
 
   describe("fetchEmailMetrics", () => {
-    it("returns null when HubSpot not configured", async () => {
-      mockIsHubSpotConfigured.mockResolvedValue(false);
+    it("returns null when EspoCRM not configured", async () => {
+      mockIsEspoCRMConfigured.mockResolvedValue(false);
       const { fetchEmailMetrics } = await import("@/lib/voice-brief-sources");
       expect(await fetchEmailMetrics()).toBeNull();
     });
 
     it("returns subscriber count", async () => {
-      mockIsHubSpotConfigured.mockResolvedValue(true);
+      mockIsEspoCRMConfigured.mockResolvedValue(true);
       mockListNewsletterSubscribers.mockResolvedValue([{ id: "1" }, { id: "2" }, { id: "3" }]);
       const { fetchEmailMetrics } = await import("@/lib/voice-brief-sources");
       const result = await fetchEmailMetrics();

@@ -7,54 +7,126 @@
  * Usage per Step 5 of the blueprint.
  */
 
-// Note: DuckDB is loaded dynamically in browser for client-side queries
-// This module provides types and preset queries for the Workers export
-
-export interface DuckDBQueryResult {
-  toArray(): any[];
+// Analytics Engine schema for events stored from Cloudflare Workers
+export interface AnalyticsEvent {
+  timestamp: Date;
+  index1?: string; // endpoint
+  index2?: string; // status
+  index3?: string; // user_id
+  index4?: string; // method
+  index5?: string; // path
+  metric1?: number; // latency_ms
+  metric2?: number; // duration_ms
+  metric3?: number; // bytes_in
+  metric4?: number; // bytes_out
 }
 
-// Preset queries matching original Athena use cases
+// Parquet file structure for R2 datalake
+export interface ParquetPartition {
+  year: string;
+  month: string;
+  day: string;
+  key: string;
+}
+
+// Preset queries for parquet data in R2 datalake-bucket
 export const ANALYTICS_QUERIES = {
-  // Daily rollup - replaces Athena weekly rollup
-  dailyRollup: `
+  // Daily funnel metrics - replaces Athena weekly rollup
+  dailyFunnel: `
     SELECT 
-      date_trunc('day', timestamp) as day,
+      day,
       COUNT(*) as total_events,
-      AVG(latency) as avg_latency,
-      MAX(latency) as max_latency
-    FROM daily_logs 
-    GROUP BY day 
+      AVG(latency_ms) as avg_latency,
+      MAX(latency_ms) as max_latency
+    FROM read_parquet('datalake-bucket/analytics/year=*/month=*/day=*/*.parquet')
+    GROUP BY day
     ORDER BY day DESC
     LIMIT 30
   `,
 
-  // Status breakdown - replaces Athena status analysis
+  // Status breakdown for error monitoring
   statusBreakdown: `
-    SELECT status, COUNT(*), AVG(latency) 
-    FROM daily_logs 
+    SELECT 
+      status, 
+      COUNT(*) as hits, 
+      AVG(latency_ms) as avg_latency
+    FROM read_parquet('datalake-bucket/analytics/year=*/month=*/*.parquet')
+    WHERE day >= current_date - interval '7 days'
     GROUP BY status
+    ORDER BY hits DESC
   `,
 
-  // Top endpoints
+  // Top endpoints by traffic
   topEndpoints: `
-    SELECT endpoint, COUNT(*) as hits, AVG(duration) as avg_duration
-    FROM daily_logs 
+    SELECT 
+      endpoint, 
+      COUNT(*) as hits, 
+      AVG(duration_ms) as avg_duration,
+      PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms) as p95_latency
+    FROM read_parquet('datalake-bucket/analytics/year=*/month=*/*.parquet')
     GROUP BY endpoint 
     ORDER BY hits DESC 
     LIMIT 100
   `,
+
+  // Lead funnel from contact forms
+  leadFunnel: `
+    SELECT 
+      date_trunc('day', timestamp) as day,
+      COUNT(*) as leads,
+      AVG(CASE WHEN score >= 65 THEN 1 ELSE 0 END) as hot_lead_pct
+    FROM contacts_parquet
+    GROUP BY day
+    ORDER BY day DESC
+    LIMIT 90
+  `,
 };
 
-// Placeholder - actual DuckDB is loaded client-side
-export async function queryAthenaDataLake(parquetUrl: string, sql: string): Promise<any[]> {
-  // This is used in static export - client-side DuckDB loads via CDN
-  throw new Error("DuckDB queries run client-side. Use useAnalytics hook in browser.");
+/**
+ * Get parquet file listing from R2 datalake bucket.
+ * Used by client-side DuckDB to discover available partitions.
+ */
+export async function listParquetPartitions(
+  r2Client: R2Bucket,
+  prefix: string = 'analytics/'
+): Promise<ParquetPartition[]> {
+  const partitions: ParquetPartition[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const response = await r2Client.list({ prefix, cursor });
+    for (const obj of response.objects) {
+      const match = obj.key.match(/analytics\/year=(\d+)\/month=(\d+)\/day=(\d+)\//);
+      if (match) {
+        partitions.push({
+          year: match[1],
+          month: match[2],
+          day: match[3],
+          key: obj.key,
+        });
+      }
+    }
+    cursor = response.cursor;
+  } while (cursor);
+
+  return partitions.sort((a, b) => 
+    `${b.year}${b.month}${b.day}`.localeCompare(`${a.year}${a.month}${a.day}`)
+  );
 }
 
-export function useAnalytics(parquetUrl: string) {
-  return {
-    query: (sql: string) => queryAthenaDataLake(parquetUrl, sql),
-    queries: ANALYTICS_QUERIES,
-  };
+/**
+ * Get presigned URL for parquet file access.
+ * Allows browser-based DuckDB to read R2 data.
+ */
+export async function getParquetPresignedUrl(
+  r2Client: R2Bucket,
+  key: string
+): Promise<string | null> {
+  try {
+    // R2 signed URLs work with Workers
+    const url = await r2Client.signURL(key, 'GET', 3600);
+    return url.toString();
+  } catch {
+    return null;
+  }
 }

@@ -57,10 +57,13 @@ export async function fetchEmailMetrics(): Promise<EmailMetrics | null> {
  * skip the call rather than throw inside).
  */
 export async function fetchStripeMetrics(): Promise<StripeMetrics | null> {
-  const stripe = await getStripe();
-  if (!stripe) return null;
-  const sessions = await stripe.checkout.sessions.list({ limit: 50 });
-  const paid = sessions.data.filter((s) => s.payment_status === "paid");
-  const revenueEuros = paid.reduce((acc, s) => acc + (s.amount_total ?? 0), 0) / 100;
-  return { orders: paid.length, revenueEuros };
+  try {
+    const stripe = await getStripe();
+    const sessions = await stripe.checkout.sessions.list({ limit: 50 });
+    const paid = sessions.data.filter((s) => s.payment_status === "paid");
+    const revenueEuros = paid.reduce((acc, s) => acc + (s.amount_total ?? 0), 0) / 100;
+    return { orders: paid.length, revenueEuros };
+  } catch {
+    return null;
+  }
 }

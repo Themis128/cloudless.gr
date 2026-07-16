@@ -17,6 +17,37 @@ export function isMeilisearchConfigured(): boolean {
   return Boolean(getMeiliHost() && getMeiliSearchKey());
 }
 
+// Types and functions used by search-index.ts
+export type ProductDocument = {
+  id: string;
+  name: string;
+  description: string;
+  price?: number;
+  currency?: string;
+  category?: string;
+  image?: string;
+  features?: string[];
+  featuresText?: string;
+  categoryLabel?: string;
+  updatedAt?: string;
+};
+
+export type SearchResult = {
+  hits: ProductDocument[];
+  nbHits: number;
+  query?: string;
+};
+
+export async function indexProducts(_documents: ProductDocument[]): Promise<void> {
+  // Placeholder - actual implementation would call Meilisearch API
+  console.warn("[Meilisearch] indexProducts not implemented");
+}
+
+export async function resetIndex(_documents: ProductDocument[]): Promise<void> {
+  // Placeholder - actual implementation would call Meilisearch API
+  console.warn("[Meilisearch] resetIndex not implemented");
+}
+
 export async function meiliRequest<T>(
   path: string,
   init: RequestInit = {},

@@ -32,6 +32,16 @@ CF_R2_ACCESS_KEY_ID=your-r2-access-key-id
 CF_R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
 ANALYTICS_BUCKET=datalake-bucket
 
+# ─── Cloudflare Analytics Engine ─────────────────────────────────────────────
+# Analytics Engine dataset is auto-provisioned via wrangler deploy.
+# No local secret needed - uses binding at runtime.
+# Dataset will be created as: cloudless_analytics
+
+# ─── R2 Access (for parquet export) ─────────────────────────────────────────
+# These are required for ETL scripts that write to R2
+# CF_R2_ACCESS_KEY_ID and CF_R2_SECRET_ACCESS_KEY are from R2 keys
+#   Console → R2 → Manage R2 API Tokens → Create token with read/write access
+
 # ─── Optional: External Services ───────────────────────────────────────────
 # LOCAL_LLM_BASE_URL=http://localhost:11434
 # LANGGRAPH_URL=http://localhost:8123

@@ -1,0 +1,51 @@
+# Fly.io Analytics Stack - Metabase Dashboard
+# Free Tier: DuckDB + Metabase for analytics
+#
+# This config deploys Metabase for SQL analytics on R2 parquet data.
+# DuckDB integration via DuckDB-WASM in the Worker handles queries.
+
+app = "cloudless-analytics"
+
+primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
+
+[build]
+  image = "metabase/metabase:v0.53.3"
+  # ARM64 build for Pi compatibility
+
+[env]
+  # Metabase database configuration
+  MB_DB_FILE = "/metabase-data/metabase.db"
+  MB_JETTY_HOST = "0.0.0.0"
+  MB_JETTY_PORT = "3000"
+  
+  # Timezone configuration
+  TZ = "Europe/Athens"
+  
+  # DuckDB/R2 integration
+  DUCKDB_PARQUET_PATH = "datalake-bucket/analytics/"
+  DUCKDB_R2_ENDPOINT = "https://00000000000000000000000000000000.r2.cloudflarestorage.com"
+
+[mounts]
+  source = "metabase_data"
+  destination = "/metabase-data"
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+  
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    
+  [[services.http_options]]
+    health_check_path = "/api/health"
+    health_check_interval = "60s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1gb"
+
+# For ARM64 compatibility
+[deploy]
+  strategy = "immediate"

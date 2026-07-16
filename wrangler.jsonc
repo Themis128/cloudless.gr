@@ -42,6 +42,12 @@
       ]
     }
   ],
+  "analytics_engine": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "cloudless_analytics"
+    }
+  ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",

@@ -1,18 +1,43 @@
 {
-  "name": "fully-migrated-serverless-stack",
+  "name": "cloudless-gr",
   "main": "src/index-cloudflare-free.js",
   "compatibility_date": "2026-07-09",
-  "assets": { "directory": "./out" },
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "routes": [
+    { "pattern": "cloudless.gr", "custom_domain": true },
+    { "pattern": "www.cloudless.gr", "custom_domain": true },
+    { "pattern": "staging.cloudless.gr", "custom_domain": true }
+  ],
+  "triggers": {
+    "crons": [
+      "0 1 * * *",
+      "0 6 ? * MON-FRI *",
+      "0 * * * *",
+      "0 2 ? * SUN *",
+      "0 5 ? * MON *"
+    ]
+  },
   "vars": {
     "ENVIRONMENT": "production",
     "API_VERSION": "v1.0",
     "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
     "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
   },
+  "analytics_engine": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "cloudless_analytics"
+    }
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
   "ai": {
     "binding": "AI"
   },
+  "send_email": [{ "name": "EMAIL" }],
   "r2_buckets": [
     { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
     { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
@@ -32,9 +57,16 @@
         "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
         "APP_VERSION": "staging"
       },
+      "analytics_engine": [
+        {
+          "binding": "ANALYTICS",
+          "dataset": "cloudless_analytics"
+        }
+      ],
       "ai": {
         "binding": "AI"
       },
+      "send_email": [{ "name": "EMAIL" }],
       "r2_buckets": [
         { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
         { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
@@ -53,9 +85,16 @@
         "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
       },
+      "analytics_engine": [
+        {
+          "binding": "ANALYTICS",
+          "dataset": "cloudless_analytics"
+        }
+      ],
       "ai": {
         "binding": "AI"
       },
+      "send_email": [{ "name": "EMAIL" }],
       "r2_buckets": [
         { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
         { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },

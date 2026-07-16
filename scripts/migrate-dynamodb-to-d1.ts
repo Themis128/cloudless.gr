@@ -15,25 +15,19 @@ import { join } from "path";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
-// Column mappings: DynamoDB attribute name → D1 column name
-// Based on actual D1 schema from migrations/0001-auth-schema.sql + schema-migration-v2.sql
+// DynamoDB attribute name → D1 column name
+// Based on actual D1 schema from migrations/0001-auth-schema.sql
 const COLUMN_MAPPINGS: Record<string, Record<string, string>> = {
-  // D1 user table: id, username, password_hash, email, name, company, phone, preferences_json, created_at, updated_at, status
-  // DynamoDB UserProfile only has: userId, preferences (no email/password - those come from Cognito)
   user: {
     userId: "id",
+    email: "email",
     preferences: "preferences_json",
   },
-  // D1 user_token table: user_id, id_token, refresh_token, updated_at, expires_at
-  user_token: {
-    userId: "user_id",
-    idToken: "id_token",
-    refreshToken: "refresh_token",
+  session: {
+    sessionId: "id",
     expiresAt: "expires_at",
-    updatedAt: "updated_at",
+    userId: "user_id",
   },
-  // D1 stripe_transaction ACTUAL schema: event_id, event_type, customer_id, processing_status, received_at, payload_json
-  // DynamoDB has many extra columns not in D1 schema - only map the ones that exist
   stripe_transaction: {
     eventId: "event_id",
     eventType: "event_type",
@@ -41,18 +35,16 @@ const COLUMN_MAPPINGS: Record<string, Record<string, string>> = {
     processingStatus: "processing_status",
     receivedAt: "received_at",
     payloadJson: "payload_json",
-    // Note: livemode, currency, etc. are not in actual D1 schema - they're in DynamoDB but ignored
   },
-  // D1 admin_notification ACTUAL schema: pk, sk, category, payload_json, created_at
-  // DynamoDB has extra columns (catPk, catSk, etc.) - only map what exists in D1
   admin_notification: {
     pk: "pk",
     sk: "sk",
+    catPk: "cat_pk",
+    catSk: "cat_sk",
     category: "category",
-    metadata: "payload_json",
     createdAt: "created_at",
+    metadata: "payload_json",
   },
-  // D1 analytics_cache table: pk, sk, result_json, cached_at, expires_at
   analytics_cache: {
     pk: "pk",
     sk: "sk",
@@ -77,7 +69,7 @@ function getDynamoClient(): DynamoDBClient {
 async function executeSql(sql: string): Promise<void> {
   return new Promise((resolve, reject) => {
     exec(
-      `echo "${sql}" | npx wrangler d1 execute user-auth-db --remote`,
+      `npx wrangler d1 execute user-auth-db --remote --command="${sql}"`,
       { stdio: "inherit" },
       (error) => (error ? reject(error) : resolve())
     );
@@ -103,9 +95,12 @@ async function migrateTable(dynamoTable: string, d1Table: string): Promise<numbe
     const items = result.Items || [];
 
     for (const item of items) {
-      const columns = Object.keys(item);
-      const values = columns.map((col) => {
-        const attr = item[col];
+      const d1Columns = Object.keys(mapping);
+      const values = d1Columns.map((d1Col) => {
+        const d1ToDynamo = Object.entries(mapping).find(([, v]) => v === d1Col);
+        const dynamoCol = d1ToDynamo ? d1ToDynamo[0] : d1Col.toLowerCase();
+        const attr = item[dynamoCol] || item[d1Col];
+        if (!attr) return "NULL";
         if (attr.S !== undefined) return `'${attr.S.replace(/'/g, "''")}'`;
         if (attr.N !== undefined) return attr.N;
         if (attr.BOOL !== undefined) return attr.BOOL ? 1 : 0;
@@ -117,7 +112,7 @@ async function migrateTable(dynamoTable: string, d1Table: string): Promise<numbe
         return "NULL";
       });
 
-      const sql = `INSERT OR REPLACE INTO ${d1Table} (${columns.join(", ")}) VALUES (${values.join(", ")})`;
+      const sql = `INSERT OR REPLACE INTO ${d1Table} (${d1Columns.join(", ")}) VALUES (${values.join(", ")})`;
 
       try {
         await executeSql(sql);

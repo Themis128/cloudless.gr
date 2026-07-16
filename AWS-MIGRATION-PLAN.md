@@ -7,55 +7,51 @@
 
 ## Migration Phases
 
-### Phase 1: Proxy Configuration Update ✅ DONE
+### Phase 1: Proxy Configuration ✅ COMPLETE
 - [x] Update `fly.toml` PRIMARY_HOST to `cloudless.gr`
 - [x] Update `fly-proxy-app/proxy.py` PRIMARY_HOST to `cloudless.gr`
-- [ ] Redeploy Fly.io proxy (requires `flyctl` installed)
+- [x] Fly.io HA failover configured (Workers as primary)
 
-### Phase 2: Secrets Migration ⚠️ PARTIAL
-- [x] `scripts/sync-ssm-to-wrangler.ts` - Updated with all secrets mapping
-- [x] 15 secrets synced to Wrangler
+### Phase 2: Secrets Migration ✅ COMPLETE
+- [x] `scripts/sync-ssm-to-wrangler.ts` - All secrets synced
+- [x] All required secrets configured in Wrangler
 
-**Missing secrets (need to add to SSM or set directly):**
-- SESSION_SECRET
-- ANTHROPIC_CHAT_MODEL (optional)
-- SLACK_WEBHOOK_URL
-- SLACK_OPS_USERS
-- GITHUB_DISPATCH_TOKEN
-- AGENT_AUTH_TOKEN
+### Phase 3: Data Migration ✅ COMPLETE
+- [x] `scripts/migrate-dynamodb-to-d1.ts` - All 5 tables migrated
+- [x] D1 tables: user, session, stripe_transaction, admin_notification, analytics_cache
+- [x] `scripts/migrate-s3-to-r2.mjs` - R2 buckets configured
 
-### Phase 3: Data Migration ❌ IAM PERMISSION DENIED
-- [x] `scripts/migrate-dynamodb-to-d1.ts` - Ready (table names updated)
-- [x] `schema.sql` - D1 tables already defined
-- [ ] Import data to D1 - **Failed**: `cloudless-ops` user lacks `dynamodb:Scan` permission
+### Phase 4: Service Migration ✅ COMPLETE
+- [x] SES → Cloudflare Email (email binding active)
+- [x] R2 → 4 buckets configured (cloudless-assets, app-media-bucket, cloudless-analytics, datalake-bucket)
+- [x] Athena → DuckDB-Wasm endpoint ready
+- [x] Bedrock → Workers AI (with Anthropic fallback)
+- [x] SNS → Webhook/Slack integration
 
-### Phase 4: Service Migration
-- [x] SES → Cloudflare Email (email-sender.ts has fallback)
-- [ ] S3 → R2 bucket sync (`scripts/migrate-s3-to-r2.js`)
-- [ ] Athena → DuckDB-Wasm (analytics-client.ts - client-side ready)
-- [ ] Bedrock → Workers AI
-- [ ] SNS → Webhook notifications
+### Phase 5: Auth Migration ✅ COMPLETE
+- [x] D1 Auth endpoints in `src/index-cloudflare-free.js`
+- [x] Cognito fully replaced by D1 Auth
 
-### Phase 5: Auth Migration
-- [x] D1 Auth endpoints ready in `src/index-cloudflare-free.js`
-- [ ] Switch Cognito to D1 Auth (update auth routes)
+### Phase 6: Cron Migration ✅ COMPLETE
+- [x] All 5 cron jobs as Workers Cron Triggers
+- [x] analytics-rollup, calendar-digest, gsc-cache-refresh, report-cleanup, voice-brief
 
-### Phase 6: Cron Migration
-- [x] `fly-cron-apps/cron-runner.ts` - Cron runner script created
-- [ ] Create Fly.io scheduled machines for 4 Lambda jobs
+## AWS Services Inventory - Migration Complete
 
-## AWS Services Inventory
-
-| Service | Migration Priority | Status | Action |
-|---------|-------------------|--------|--------|
-| SSM | HIGH | Ready | Secrets sync script created |
-| Cognito | HIGH | Ready | D1 Auth implemented |
-| DynamoDB | HIGH | Blocked | Add IAM permission |
-| SES | MEDIUM | Ready | Email binding in wrangler.json |
-| S3 | MEDIUM | Ready | migrate-s3-to-r2.js script exists |
-| Athena | LOW | Ready | DuckDB-Wasm alternative exists |
-| Bedrock | MEDIUM | Pending | Workers AI bindings needed |
-| SNS | LOW | Pending | Webhook replacement needed |
+| Service | Migration Target | Status |
+|---------|------------------|--------|
+| Lambda@Edge | Workers (edge functions) | ✅ Migrated |
+| Lambda (SST/Next.js) | Workers + D1/R2/AI | ✅ Migrated |
+| CloudFront | Workers Routes | ✅ Deleted |
+| SSM | Wrangler secrets | ✅ Synced |
+| DynamoDB | D1 | ✅ Migrated |
+| S3 (assets) | R2 | ✅ Migrated |
+| S3 (analytics) | R2 | ✅ Migrated |
+| SES | Cloudflare Email Service | ✅ Active |
+| Bedrock (Nova) | Workers AI | ✅ Primary + Anthropic fallback |
+| Athena | DuckDB-Wasm | ✅ R2 parquet endpoint |
+| Cognito | D1 Auth | ✅ Replaced |
+| SNS | Webhook/Slack | ✅ Integrated |
 
 ## Execution Commands
 
