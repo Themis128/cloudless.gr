@@ -20,12 +20,12 @@ on:
     - cron: "45 */6 * * *"
   workflow_dispatch:
   workflow_run:
-    # Run after Deploy to Production completes so we check drift right
+    # Run after Deploy to Cloudflare Workers + k3s completes so we check drift right
     # when convergence should be happening — NOT immediately on the
     # triggering push, which races the deploy's own SSM update step and
     # produces false-positive failures (the "cloud-sha is still old"
     # window between push and the deploy's put-parameter call).
-    workflows: ["Deploy to Production"]
+    workflows: ["Deploy to Cloudflare Workers + k3s"]
     types: [completed]
 
 permissions:

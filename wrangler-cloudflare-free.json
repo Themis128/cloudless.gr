@@ -21,7 +21,8 @@
     "ENVIRONMENT": "production",
     "API_VERSION": "v1.0",
     "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
-    "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
+    "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
+    "APP_VERSION": "${GITHUB_SHA}"
   },
   "analytics_engine": [
     {
@@ -83,7 +84,8 @@
         "ENVIRONMENT": "production",
         "API_VERSION": "v1.0",
         "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
-        "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr"
+        "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
+        "APP_VERSION": "${GITHUB_SHA}"
       },
       "analytics_engine": [
         {

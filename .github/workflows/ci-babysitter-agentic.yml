@@ -11,7 +11,7 @@ on:
   workflow_run:
     workflows:
       - CI
-      - Deploy to Production
+      - Deploy to Cloudflare Workers + k3s
       - build pi image
       - Deploy to Pi
     types: [completed]

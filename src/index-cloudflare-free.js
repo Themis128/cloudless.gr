@@ -778,26 +778,26 @@ export default {
        return jsonResponse({ services, allOk: Object.values(services).every(Boolean) });
      }
 
-     // ==========================================
-     // HEALTH CHECK
-     // ==========================================
-     if (url.pathname === "/api/health" && method === "GET") {
-      let dbOk = false;
-      try {
-        const { results } = await env.AUTH_DB.prepare("SELECT 1 as ok").all();
-        dbOk = results.length > 0 && results[0].ok === 1;
-      } catch {
-        dbOk = false;
-      }
+      // ==========================================
+      // HEALTH CHECK
+      // ==========================================
+      if (url.pathname === "/api/health" && method === "GET") {
+       let dbOk = false;
+       try {
+         const { results } = await env.AUTH_DB.prepare("SELECT 1 as ok").all();
+         dbOk = results.length > 0 && results[0].ok === 1;
+       } catch {
+         dbOk = false;
+       }
 
-      return jsonResponse({
-        status: dbOk ? "ok" : "degraded",
-        version: "1.0.0",
-        authProvider: "d1",
-        dbConnected: dbOk,
-        timestamp: new Date().toISOString(),
-      });
-    }
+       return jsonResponse({
+         status: dbOk ? "ok" : "degraded",
+         version: env.APP_VERSION || process.env.APP_VERSION || "1.0.0",
+         authProvider: "d1",
+         dbConnected: dbOk,
+         timestamp: new Date().toISOString(),
+       });
+     }
 
     // ==========================================
     // FALLBACK: Serve index.html for SPA routes

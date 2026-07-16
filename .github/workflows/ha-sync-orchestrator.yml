@@ -7,7 +7,7 @@ name: HA sync orchestrator
 
 on:
   workflow_run:
-    workflows: ["Deploy to Production"]
+    workflows: ["Deploy to Cloudflare Workers + k3s"]
     types: [completed]
 
 permissions:

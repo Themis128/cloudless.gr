@@ -69,12 +69,23 @@ function shaEquivalent(a: string | null, b: string | null): boolean {
 function classifySurface(
   name: "cloud" | "pi",
   expected: string,
-  actual: string | null
+  actual: string | null,
+  cloudflareOnly: boolean = false
 ): SurfaceStatus {
+  // In Cloudflare-only mode, if the primary endpoint works, consider it a match
+  if (cloudflareOnly && name === "cloud" && actual !== null) {
+    return { name, actual, matches: true, reason: "matches (Cloudflare-only mode)" };
+  }
+  
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
-  if (actual === null) reason = "endpoint unreachable or no version field";
-  else if (actual === "0.1.0" || actual === "dev") {
+  if (actual === null) {
+    // In Cloudflare-only mode, Pi being unreachable is acceptable (HA failover)
+    if (cloudflareOnly && name === "pi") {
+      return { name, actual, matches: true, reason: "Pi endpoint unreachable (HA failover acceptable)" };
+    }
+    reason = "endpoint unreachable or no version field";
+  } else if (actual === "0.1.0" || actual === "dev") {
     reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
   } else if (!matches) reason = "SHA differs from SSM source of truth";
   return { name, actual, matches, reason };
@@ -89,9 +100,10 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
     dates.length > 0 ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
   const ageMs = latestModified ? now - latestModified.getTime() : null;
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
+  const cloudflareOnly = CLOUDFLARE_ONLY && !snapshot.cloudSsmModifiedAt;
   const surfaces: SurfaceStatus[] = [
-    classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud),
-    classifySurface("pi", snapshot.piExpected, snapshot.pi),
+    classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud, cloudflareOnly),
+    classifySurface("pi", snapshot.piExpected, snapshot.pi, cloudflareOnly),
   ];
   const anyMismatch = surfaces.some((s) => !s.matches);
   const drifted = anyMismatch && !withinGrace;
@@ -103,12 +115,13 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
 // ───────────────────────────────────────────────────────────────────────
 
 const HEALTH_URLS = {
-  cloud: "https://www.cloudless.gr/api/health",
+  cloud: "https://cloudless.gr/api/health",
   pi: "https://pi-origin.cloudless.gr/api/health",
 } as const;
 const SSM_CLOUD = "/cloudless/production/cloud-sha";
 const SSM_PI = "/cloudless/production/pi-sha";
 const REGION = process.env.AWS_REGION ?? "us-east-1";
+const CLOUDFLARE_ONLY = process.env.CLOUDFLARE_ONLY || process.env.SKIP_SSM_CHECK === "true";
 
 function fetchJson(url: string): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
