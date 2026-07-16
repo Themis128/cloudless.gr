@@ -69,6 +69,3 @@ minimumReleaseAgeExclude:
   # openai recently published; exempt until it ages past the window
   - 'openai@6.47.0'
 
-# Overrides for security patches (pnpm v11+ format)
-overrides:
-  postcss: ">=8.5.10"
