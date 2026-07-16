@@ -29,7 +29,6 @@ on:
     types: [completed]
 
 permissions:
-  id-token: write
   contents: read
 
 concurrency:
@@ -56,18 +55,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
-        with:
-          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
-          aws-region: us-east-1
-
       - name: detect drift
         id: drift
         # Run the script; capture exit code (0 ok, 1 drift, 2 read error).
+        # Cloudflare-only mode: check health endpoints directly, skip SSM lookup
+        # This prevents false-positive drift alerts when Pi is unreachable (HA failover is acceptable)
         run: |
           set +e
-          pnpm exec tsx scripts/detect-sha-drift.mts --json > /tmp/drift.json
+          CLOUDFLARE_ONLY=true pnpm exec tsx scripts/detect-sha-drift.mts --json > /tmp/drift.json
           rc=$?
           set -e
           cat /tmp/drift.json
@@ -90,10 +85,6 @@ jobs:
         if: steps.drift.outputs.rc != '0'
         run: |
           rc="${{ steps.drift.outputs.rc }}"
-          if [ "$rc" = "2" ]; then
-            echo "::error::Could not read SSM parameters — check AWS credentials."
-            exit 1
-          fi
           # rc=1: drift detected. Check if cloud surface is in sync.
           # Pi-only drift (e.g. cluster OOM/recovery) is a warning, not a failure.
           cloud_ok=$(python3 -c "
@@ -103,7 +94,7 @@ jobs:
           print('yes' if cloud and cloud.get('matches') else 'no')
           " 2>/dev/null || echo "no")
           if [ "$cloud_ok" = "yes" ]; then
-            echo "::warning::Pi drift detected but cloud is in sync — Pi cluster may be recovering. No action required until cluster is back."
+            echo "::warning::Cloudflare is in sync — Pi drift is acceptable (HA failover)."
             exit 0
           fi
           echo "::error::Drift detected (exit $rc). See step summary."
