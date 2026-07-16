@@ -55,5 +55,8 @@
   },
   "ai": {
     "binding": "AI"
+  },
+  "vars": {
+    "AGENT_AUTH_TOKEN": "placeholder-override-in-production"
   }
 }

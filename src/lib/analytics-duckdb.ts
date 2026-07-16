@@ -121,17 +121,17 @@ export async function listParquetPartitions(
 
 /**
  * Get presigned URL for parquet file access.
- * Allows browser-based DuckDB to read R2 data.
+ * Note: R2 signed URLs are only available via the S3-compatible REST API,
+ * not through the R2Bucket binding. This function is a placeholder.
+ * For client-side DuckDB, consider proxying through a Worker endpoint.
  */
 export async function getParquetPresignedUrl(
-  r2Client: R2Bucket,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _r2Client: R2Bucket,
   key: string
 ): Promise<string | null> {
-  try {
-    // R2 signed URLs work with Workers
-    const url = await r2Client.signURL(key, 'GET', 3600);
-    return url.toString();
-  } catch {
-    return null;
-  }
+  // R2 signed URLs require using the S3-compatible REST API
+  // This implementation would need to call a Worker endpoint that generates signed URLs
+  // or use the REST API directly with aws4 signing
+  return null;
 }

@@ -12,6 +12,7 @@
 
 import NextAuth, { type DefaultSession } from "next-auth";
 import Cognito from "next-auth/providers/cognito";
+import type { NextRequest } from "next/server";
 
 // Region derivation: prefer AWS_REGION, then pool ID prefix, then default
 const _poolId = process.env.COGNITO_USER_POOL_ID ?? process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
@@ -149,31 +150,38 @@ export const handlers = {
       }
       return new Response("{}", { status: 200 });
     }
-    return auth.handlers.GET(req);
+    // Convert Workers Request to NextRequest for compatibility
+    const nextReq = req as NextRequest;
+    return auth.handlers.GET(nextReq);
   },
   POST: async (req: Request) => {
     const auth = getNextAuth();
     if (!auth) {
       return new Response("{}", { status: 200 });
     }
-    return auth.handlers.POST(req);
+    // Convert Workers Request to NextRequest for compatibility
+    const nextReq = req as NextRequest;
+    return auth.handlers.POST(nextReq);
   },
 };
 
 export const signIn = async (...args: unknown[]) => {
   const auth = getNextAuth();
   if (!auth) return undefined;
-  return auth.signIn(...args);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (auth.signIn as any)(...args);
 };
 
 export const signOut = async (...args: unknown[]) => {
   const auth = getNextAuth();
   if (!auth) return undefined;
-  return auth.signOut(...args);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (auth.signOut as any)(...args);
 };
 
 export const auth = async (...args: unknown[]) => {
   const auth = getNextAuth();
   if (!auth) return null;
-  return auth.auth(...args);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (auth.auth as any)(...args);
 };

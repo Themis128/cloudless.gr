@@ -88,9 +88,8 @@ export async function getAutologinUrl(app: SelfhostedApp): Promise<AutologinResu
         throw new Error(`AppFlowy GoTrue returned HTTP ${status}`);
       }
 
-      const data = await resp.json().catch(() => {
-        throw new Error("AppFlowy GoTrue response is not valid JSON");
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await resp.json() as any;
 
       if (!data.access_token) {
         throw new Error("AppFlowy GoTrue returned no access_token in response");
