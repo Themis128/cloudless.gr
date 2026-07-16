@@ -151,11 +151,13 @@ jobs:
           command: deploy --env=production
           workingDirectory: .
 
-      - name: Publish Cloudflare SHA to SSM
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Publish Cloudflare SHA to SSM
         run: |
           aws ssm put-parameter \
             --name /cloudless/production/cloud-sha \
@@ -209,11 +211,13 @@ jobs:
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
             APP_VERSION=${{ github.sha }}
 
-      - name: Publish Pi SHA to SSM
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Publish Pi SHA to SSM
         run: |
           aws ssm put-parameter \
             --name /cloudless/production/pi-sha \
