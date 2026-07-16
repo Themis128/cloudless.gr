@@ -53,7 +53,7 @@ jobs:
       - name: inspect existing pi build runs for deploy SHA
         id: check
         if: steps.check_ghcr.outputs.image_in_ghcr != 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        uses: actions/github-script@605b8d4e77f46f1fdf7b6f4857f24984e0b43f58 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -94,7 +94,7 @@ jobs:
       - name: dispatch pi image build for deploy SHA
         id: dispatch
         if: steps.check_ghcr.outputs.image_in_ghcr != 'true' && steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        uses: actions/github-script@605b8d4e77f46f1fdf7b6f4857f24984e0b43f58 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -135,33 +135,13 @@ jobs:
 
       - name: wait for pi build completion
         if: steps.check_ghcr.outputs.image_in_ghcr != 'true' && steps.check.outputs.exists != 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        uses: actions/github-script@605b8d4e77f46f1fdf7b6f4857f24984e0b43f58 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const deploySha = '${{ steps.meta.outputs.sha }}';
             let dispatchedRunId = Number('${{ steps.dispatch.outputs.run_id }}') || 0;
             const { owner, repo } = context.repo;
-
-            // Recheck ECR on every cancelled-run detection. The
-            // build-pi-image and deploy-pi workflows race on the immutable
-            // SHA tag — the "loser" exits with `cancelled` but the image
-            // IS in ECR. Without this recheck the loop would re-dispatch
-            // forever until the 45-min budget elapses.
-            const { execSync } = require('child_process');
-            function imageInEcr() {
-              try {
-                execSync(
-                  `aws ecr describe-images --repository-name cloudless-pi-app ` +
-                  `--image-ids imageTag=${deploySha} --region us-east-1 ` +
-                  `--no-cli-pager > /dev/null 2>&1`,
-                  { stdio: 'pipe' }
-                );
-                return true;
-              } catch {
-                return false;
-              }
-            }
 
             // Pi builds frequently spend 20-30 min queued on the GitHub ARM
             // runner before doing ~2-3 min of actual work. 45 min covers the
@@ -196,18 +176,26 @@ jobs:
                   // race (in which case the image IS in ECR despite the
                   // cancelled GitHub run), or by a genuine concurrency
                   // cancellation. Recheck ECR before re-dispatching.
-                  if (imageInEcr()) {
-                    core.info(`Pi build run ${dispatchedRunId} cancelled but image is in ECR for ${deploySha} — treating as success.`);
+                  core.warning(`Pi build run ${dispatchedRunId} cancelled — image should be in GHCR now. Checking...`);
+                  try {
+                    const { execSync } = require('child_process');
+                    execSync(
+                      `docker manifest inspect ghcr.io/${owner}/${repo}/cloudless-pi-app:${deploySha} >/dev/null 2>&1`,
+                      { stdio: 'pipe' }
+                    );
+                    core.info(`Pi build run ${dispatchedRunId} cancelled but image is in GHCR for ${deploySha} — treating as success.`);
                     return;
+                  } catch {
+                    // Image not in GHCR yet, continue waiting
                   }
                   cancelMissCount++;
                   if (cancelMissCount >= 2) {
                     // Branch has advanced past deploySha. The newer commit's
                     // HA sync will handle its own build. Exit gracefully.
-                    core.warning(`Pi build cancelled twice with no image in ECR for ${deploySha} — branch has advanced. Exiting gracefully; newer deploy's HA sync will handle it.`);
+                    core.warning(`Pi build cancelled twice with no image in GHCR for ${deploySha} — branch has advanced. Exiting gracefully; newer deploy's HA sync will handle it.`);
                     return;
                   }
-                  core.warning(`Pi build run ${dispatchedRunId} was cancelled and no image in ECR yet (miss ${cancelMissCount}/2). Searching by SHA for a replacement run.`);
+                  core.warning(`Pi build run ${dispatchedRunId} was cancelled and no image in GHCR yet (miss ${cancelMissCount}/2). Searching by SHA for a replacement run.`);
                   dispatchedRunId = null;
                   await sleep(delayMs);
                   continue;
@@ -240,14 +228,22 @@ jobs:
                 const latest = candidates[0];
                 if (latest.conclusion === 'cancelled') {
                   // Same race-survivor pattern — if the image is already in
-                  // ECR, the build effectively succeeded and we can return.
-                  if (imageInEcr()) {
-                    core.info(`Latest pi build cancelled but image is in ECR for ${deploySha} — treating as success.`);
+                  // GHCR, the build effectively succeeded and we can return.
+                  core.warning(`Latest pi build cancelled — checking GHCR for ${deploySha}...`);
+                  try {
+                    const { execSync } = require('child_process');
+                    execSync(
+                      `docker manifest inspect ghcr.io/${owner}/${repo}/cloudless-pi-app:${deploySha} >/dev/null 2>&1`,
+                      { stdio: 'pipe' }
+                    );
+                    core.info(`Pi build cancelled but image is in GHCR for ${deploySha} — treating as success.`);
                     return;
+                  } catch {
+                    // Image not in GHCR yet, continue waiting
                   }
                   cancelMissCount++;
                   if (cancelMissCount >= 2) {
-                    core.warning(`Pi build cancelled twice with no image in ECR for ${deploySha} — branch has advanced. Exiting gracefully.`);
+                    core.warning(`Pi build cancelled twice with no image in GHCR for ${deploySha} — branch has advanced. Exiting gracefully.`);
                     return;
                   }
                   // Cancelled runs happen when a PR-triggered build is auto-cancelled
@@ -289,16 +285,16 @@ jobs:
             core.setFailed(`Timed out waiting for successful pi build run for SHA ${deploySha}`);
 
       - name: wait for k3s rollout (deploy-pi.yml)
-        # build-pi-image.yml only pushes to ECR; the actual kubectl rollout runs
+        # build-pi-image.yml only pushes to GHCR; the actual kubectl rollout runs
         # in deploy-pi.yml. Wait for that too so the k3s E2E (which fires on our
         # success) always hits the fully-rolled-out image, not mid-rollout pods.
         # If the Pi runner is offline (run stuck in queued), exit gracefully —
-        # AWS Lambda is the primary; Pi is standby.
-        # When the image was already in ECR (immutable-tag race), deploy-pi
-        # has its own race-survival path (see CLAUDE.md) and will have rolled
+        # Cloudflare Workers is the primary; Pi is standby.
+        # When the image was already in GHCR (immutable-tag race), deploy-pi
+        # has its own race-survival path and will have rolled
         # out separately — skip this wait.
-        if: steps.ecr.outputs.image_in_ecr != 'true'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        if: steps.check_ghcr.outputs.image_in_ghcr != 'true'
+        uses: actions/github-script@605b8d4e77f46f1fdf7b6f4857f24984e0b43f58 # v9.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -340,7 +336,7 @@ jobs:
                 if (active.status === 'queued') {
                   consecutiveQueued++;
                   if (consecutiveQueued >= maxQueuedAttempts) {
-                    core.warning(`deploy-pi.yml stuck in queued for ${consecutiveQueued} checks — Pi runner likely offline. AWS Lambda is primary; skipping.`);
+                    core.warning(`deploy-pi.yml stuck in queued for ${consecutiveQueued} checks — Pi runner likely offline. Cloudflare Workers is primary; skipping.`);
                     return;
                   }
                 } else {
@@ -366,7 +362,7 @@ jobs:
                         return;
                       }
                       // All jobs done but rollout didn't succeed — build likely failed
-                      core.warning(`deploy-pi.yml all jobs completed but rollout did not succeed (build likely failed). AWS Lambda is primary; skipping Pi rollout.`);
+                      core.warning(`deploy-pi.yml all jobs completed but rollout did not succeed (build likely failed). Cloudflare Workers is primary; skipping.`);
                       return;
                     }
                   }
@@ -389,16 +385,16 @@ jobs:
                 core.warning(`deploy-pi.yml for ${deploySha} was cancelled (superseded by a newer push). Skipping; the newer commit's HA sync will handle it. URL: ${candidates[0].html_url}`);
                 return;
               }
-              // Build failures on the Pi are non-critical — AWS Lambda is the
+              // Build failures on the Pi are non-critical — Cloudflare Workers is the
               // primary and Pi is standby. A Docker build failure (OOM, cache
               // corruption, transient arm64 issue) should not block the HA sync
               // from reporting success for the production deploy.
               if (conclusion === 'failure') {
-                core.warning(`deploy-pi.yml for ${deploySha} failed (likely Docker build issue on Pi). AWS Lambda is primary; skipping. URL: ${candidates[0].html_url}`);
+                core.warning(`deploy-pi.yml for ${deploySha} failed (likely Docker build issue on Pi). Cloudflare Workers is primary; skipping. URL: ${candidates[0].html_url}`);
                 return;
               }
               // Anything else (action_required, timed_out) — warn and skip.
-              core.warning(`deploy-pi.yml for ${deploySha} ended with: ${conclusion}. AWS Lambda is primary; skipping. URL: ${candidates[0].html_url}`);
+              core.warning(`deploy-pi.yml for ${deploySha} ended with: ${conclusion}. Cloudflare Workers is primary; skipping. URL: ${candidates[0].html_url}`);
               return;
             }
             core.setFailed(`Timed out waiting for deploy-pi.yml for SHA ${deploySha}`);

@@ -54,7 +54,9 @@
         "deploy",
         "kv_get",
         "kv_put",
-        "search"
+        "search",
+        "execute",
+        "docs"
       ]
     }
   }
