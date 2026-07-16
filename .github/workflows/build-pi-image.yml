@@ -53,11 +53,12 @@ jobs:
     name: build arm64 + push to ECR
     # Self-hosted arm64 runner on omv-main. `omv-build` carries
     # `[self-hosted, omv, build]`; the `pi` label was dropped after a
-    # runner re-registration. Targeting `[omv, build]` picks up omv-main's
-    # Docker+USB-SSD runner correctly.
+    # runner re-registration. Targeting `[self-hosted, omv, pi, build]` picks up
+    # the omv-build runner correctly (has docker + USB-SSD).
     #
-    # GH-hosted runner with QEMU for arm64 cross-compilation.
-    runs-on: ubuntu-latest
+    # When Pi runners are offline, this falls back to GitHub-hosted runners
+    # with QEMU for arm64 cross-compilation (via RUNNER_GENERIC).
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted", "omv", "pi", "build"]') }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1

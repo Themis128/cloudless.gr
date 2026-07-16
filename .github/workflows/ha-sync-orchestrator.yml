@@ -13,7 +13,7 @@ on:
 permissions:
   actions: write
   contents: read
-  id-token: write    # for OIDC → AWS, used by the ECR-presence escape hatch
+  id-token: write    # for OIDC → GHCR
 
 concurrency:
   group: ha-sync-${{ github.event.workflow_run.id }}
@@ -36,37 +36,23 @@ jobs:
           echo "branch=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
           echo "url=${{ github.event.workflow_run.html_url }}" >> "$GITHUB_OUTPUT"
 
-      # Escape hatch — check ECR for the image first.
-      # build-pi-image.yml and deploy-pi.yml race on the same SHA tag
-      # (immutable-tag) and both push successfully but the "loser" exits
-      # gracefully and shows as `cancelled` to GitHub Actions. The wait
-      # step downstream would then thrash on a re-dispatch loop. If the
-      # image IS in ECR for this SHA, the build effectively succeeded
-      # regardless of what the GitHub run shows — short-circuit here.
-      - name: configure AWS for ECR check
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: short-circuit if image already in ECR
-        id: ecr
+      - name: check GHCR for image
+        id: check_ghcr
         run: |
           SHA='${{ steps.meta.outputs.sha }}'
-          if aws ecr describe-images \
-              --repository-name cloudless-pi-app \
-              --image-ids imageTag="${SHA}" \
-              --region us-east-1 >/dev/null 2>&1; then
-            echo "image_in_ecr=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Image cloudless-pi-app:${SHA} already in ECR — skipping pi-build wait" >> "$GITHUB_STEP_SUMMARY"
+          # Check if image exists in GHCR using docker manifest inspect
+          # This uses GitHub token for auth, no AWS needed
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/cloudless-pi-app:${SHA} >/dev/null 2>&1; then
+            echo "image_in_ghcr=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Image ghcr.io/${{ github.repository_owner }}/cloudless-pi-app:${SHA} already exists" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "image_in_ecr=false" >> "$GITHUB_OUTPUT"
-            echo "Image cloudless-pi-app:${SHA} not yet in ECR — entering normal wait flow" >> "$GITHUB_STEP_SUMMARY"
+            echo "image_in_ghcr=false" >> "$GITHUB_OUTPUT"
+            echo "Image not found in GHCR — entering normal wait flow" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: inspect existing pi build runs for deploy SHA
         id: check
-        if: steps.ecr.outputs.image_in_ecr != 'true'
+        if: steps.check_ghcr.outputs.image_in_ghcr != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -107,7 +93,7 @@ jobs:
 
       - name: dispatch pi image build for deploy SHA
         id: dispatch
-        if: steps.ecr.outputs.image_in_ecr != 'true' && steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
+        if: steps.check_ghcr.outputs.image_in_ghcr != 'true' && steps.check.outputs.exists != 'true' && steps.check.outputs.active != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -116,11 +102,6 @@ jobs:
             const deployBranch = '${{ steps.meta.outputs.branch }}';
             const { owner, repo } = context.repo;
 
-            // GitHub's createWorkflowDispatch API requires ref to be a branch
-            // or tag name — commit SHAs are NOT valid refs for this endpoint.
-            // We dispatch at the branch (always valid) and pass the exact SHA
-            // as target_sha input so build-pi-image.yml checks out the right
-            // commit regardless of whether the branch has since advanced.
             const dispatchedAt = new Date().toISOString();
             await github.rest.actions.createWorkflowDispatch({
               owner,
@@ -129,14 +110,8 @@ jobs:
               ref: deployBranch,
               inputs: { target_sha: deploySha },
             });
-            core.info(`Dispatched build-pi-image.yml for ${deploySha} via ref=${deployBranch}`);
+            core.info(`Dispatched build-pi-image.yml for ${deploySha}`);
 
-            // Capture the run ID by polling for the newly-created run. The
-            // dispatch API is fire-and-forget (no run ID in the response), so
-            // we wait up to 30s for the run to appear, then store its ID.
-            // Tracking by run ID instead of head_sha makes the wait-loop below
-            // immune to rapid pushes that advance the branch before the build
-            // completes (the old head_sha filter would silently miss the run).
             function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
             let runId = null;
             for (let i = 0; i < 10; i++) {
@@ -154,12 +129,12 @@ jobs:
               core.info(`Captured dispatched run ID: ${runId}`);
               core.setOutput('run_id', String(runId));
             } else {
-              core.warning('Could not capture dispatched run ID — wait step will fall back to SHA filter');
+              core.warning('Could not capture dispatched run ID');
               core.setOutput('run_id', '');
             }
 
       - name: wait for pi build completion
-        if: steps.ecr.outputs.image_in_ecr != 'true' && steps.check.outputs.exists != 'true'
+        if: steps.check_ghcr.outputs.image_in_ghcr != 'true' && steps.check.outputs.exists != 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

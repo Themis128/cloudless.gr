@@ -2,11 +2,11 @@
   "mcpServers": {
     "cloudless-infra": {
       "command": "node",
-      "args": ["${HOME}/.config/kiro/tools/ssh-mcp/dist/index.js"],
+      "args": ["C:/Users/baltz/AppData/Roaming/kiro/tools/ssh-mcp/dist/index.js"],
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.113.41.119",
         "OMV_SSH_USER": "omv",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
+        "OMV_SSH_KEY": "C:/Users/baltz/.ssh/id_ed25519",
         "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
       },
       "autoApprove": [
@@ -24,11 +24,6 @@
         "read",
         "write"
       ]
-    },
-    "mcp-tool-shop": {
-      "command": "npx",
-      "args": ["--no-install", "mcp-tool-shop"],
-      "autoStart": true
     },
     "notion": {
       "command": "npx",

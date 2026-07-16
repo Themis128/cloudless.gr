@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Deploy to Cloudflare Workers
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -31,17 +31,12 @@ jobs:
   deploy:
     name: Deploy
     environment: production
-    # Pinned to ubuntu-latest. SST + CDK synth + Sentry sourcemap upload
-    # do not fit on an ARM Pi runner under cold-deploy conditions — the
-    # Deploy (SST) step hung past the 40 min timeout when we tried the
-    # failover pattern here (2026-05-23, run 26321031309). See
-    # docs/runners.md "Workflows that stay GitHub-hosted".
-    runs-on: ubuntu-latest
+    # Use Pi build runners (self-hosted, omv, build) which are always available
+    # and can handle the build without QEMU overhead. Falls back to GitHub
+    # hosted if Pi runners are offline.
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted", "omv", "build"]') }}
     timeout-minutes: 40
     env:
-      # NEXT_PUBLIC_* vars must be in the workflow env (not just the deploy step)
-      # so they're visible during `next build` invoked by `sst deploy`. Next.js
-      # inlines NEXT_PUBLIC_* into the client bundle at build time — not runtime.
       NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
       NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -79,99 +74,37 @@ jobs:
           echo "CACHE_VERSION bumped to ${VERSION} (sha: ${SHORT_SHA})"
           grep "CACHE_VERSION" public/sw.js
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Notify Slack — deploy started
-        if: env.SLACK_WEBHOOK_URL != ''
-        continue-on-error: true
-        run: |
-          curl -s --max-time 10 -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"text\": \":rocket: Deploy started — \`${GITHUB_SHA::7}\` by ${{ github.actor }}\",
-              \"blocks\": [
-                {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":rocket: Deploy Started\", \"emoji\": true}},
-                {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
-              ]
-            }" || true
-
-      - name: Clear any stale SST lock
-        run: pnpm sst unlock --stage production || true
-
-      - name: Resolve Cloudflare token from SSM
-        id: cftoken
-        run: |
-          set -e
-          TOKEN=$(aws ssm get-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --with-decryption --region us-east-1 \
-            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
-            echo "::warning::SSM CLOUDFLARE_API_TOKEN empty - Workers AI not wired"
-          fi
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy (SST)
-        run: pnpm sst deploy --stage production
+      - name: Deploy to Cloudflare Workers
+        run: pnpm cf:deploy:free
         env:
-          AWS_REGION: us-east-1
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NEXT_PUBLIC_AUTH_PROVIDER: d1
+          NEXT_PUBLIC_SITE_URL: https://cloudless.gr
+          NEXT_PUBLIC_STAGE: production
+          NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: baltzakisthemiscom
           SENTRY_PROJECT: cloudless-gr
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           SENTRY_ENVIRONMENT: prod
           NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod
-          # Cloudflare Workers AI - reads SSM (source of truth, GH secret is stale).
-          CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
-          CLOUDFLARE_API_TOKEN: ${{ steps.cftoken.outputs.token }}
-          NODE_OPTIONS: --max-old-space-size=3072
 
-      - name: Publish cloud SHA to SSM (source of truth for sha-drift-detector)
-        if: success()
+      - name: Notify Slack — deploy result
+        if: env.SLACK_WEBHOOK_URL != ''
         continue-on-error: true
         run: |
-          set -euo pipefail
-          aws ssm put-parameter \
-            --name '/cloudless/production/cloud-sha' \
-            --type String \
-            --value "${GITHUB_SHA}" \
-            --overwrite \
-            --description 'Latest cloud (CloudFront/Lambda) deploy SHA — written by deploy.yml.' \
-            --region us-east-1 > /dev/null
-          echo "→ Published cloud SHA ${GITHUB_SHA::12} to SSM /cloudless/production/cloud-sha"
-
-      - name: Notify Slack — deploy succeeded
-        if: success() && env.SLACK_WEBHOOK_URL != ''
-        continue-on-error: true
-        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            STATUS=":white_check_mark: Deploy Succeeded"
+          else
+            STATUS=":x: Deploy Failed"
+          fi
           curl -s --max-time 10 -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
             -d "{
-              \"text\": \":white_check_mark: Deploy succeeded — \`${GITHUB_SHA::7}\` is live\",
+              \"text\": \"${STATUS} — \`${GITHUB_SHA::7}\` by ${{ github.actor }}\",
               \"blocks\": [
-                {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":white_check_mark: Deploy Succeeded\", \"emoji\": true}},
+                {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"${STATUS}\", \"emoji\": true}},
                 {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\n*URL:* <https://cloudless.gr|cloudless.gr>\"}},
                 {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
               ]
-            }"
-
-      - name: Notify Slack — deploy failed
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
-        continue-on-error: true
-        run: |
-          curl -s --max-time 10 -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"text\": \":x: Deploy failed — \`${GITHUB_SHA::7}\` by ${{ github.actor }}\",
-              \"blocks\": [
-                {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \":x: Deploy Failed\", \"emoji\": true}},
-                {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
-              ]
-            }"
+            }" || true
