@@ -10,10 +10,10 @@ name: CI Failure Babysitter (Agentic)
 on:
   workflow_run:
     workflows:
-      - CI
-      - Deploy to Cloudflare Workers + k3s
-      - build pi image
-      - Deploy to Pi
+  - CI
+  - Deploy to Cloudflare Workers + k3s
+  - build pi image
+  - Deploy to Pi (GHCR + k3s rollout)
     types: [completed]
   workflow_dispatch:
     inputs:
