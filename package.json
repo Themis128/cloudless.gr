@@ -119,6 +119,8 @@
     "cf:deploy:free": "wrangler deploy --config wrangler-cloudflare-free.json",
     "cf:build": "next build",
     "cf:deploy:full": "pnpm cf:build && pnpm cf:r2:upload-static && pnpm cf:deploy",
+    "cf:deploy:staging": "wrangler deploy -c wrangler.staging.jsonc",
+    "cf:deploy:preview": "wrangler deploy -c wrangler.preview.jsonc",
     "cf:r2:upload-static": "bash scripts/extract-static-assets.sh",
     "cf:deploy:migrate": "bash scripts/deploy-cloudflare.sh",
     "cf:r2:upload-dir": "bash scripts/r2-upload-dir.sh",

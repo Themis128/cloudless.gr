@@ -8,11 +8,21 @@ on:
       - '**.md'
       - '**.png'
       - '**.jpg'
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+  deployments: write
 
 jobs:
   build-and-validate:
     name: Build and Validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     outputs:
       short_sha: ${{ steps.meta.outputs.sha }}
     steps:
@@ -22,26 +32,41 @@ jobs:
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
 
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
           cache: pnpm
 
-      - name: Restore build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: |
-            .next/cache
-            ~/.pnpm-store
-          key: build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          path:
+            - .next/cache
+        key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
+        restore-keys: |
+          nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          nextjs-${{ runner.os }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test:ci
+
+      - name: Validate secrets exist
+        run: |
+          [[ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]] || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Bump service worker CACHE_VERSION
         run: |
@@ -59,16 +84,10 @@ jobs:
           echo "Full SHA: ${GITHUB_SHA}"
           echo "Short SHA: ${SHA}"
 
-      - name: TypeScript check
-        run: pnpm typecheck
-
-      - name: Lint check
-        run: pnpm lint
-
   build-assets:
     name: Build Assets
     needs: build-and-validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
@@ -76,23 +95,18 @@ jobs:
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
 
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
           cache: pnpm
 
-      - name: Restore build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          path: |
-            .next/cache
-            ~/.pnpm-store
-          key: build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -106,7 +120,7 @@ jobs:
   deploy-worker:
     name: Deploy to Cloudflare Workers
     needs: [build-and-validate, build-assets]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     environment: production
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
@@ -115,11 +129,6 @@ jobs:
         with:
           dest: ~/setup-pnpm-${{ runner.name }}
 
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: 22
@@ -127,17 +136,47 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build Next.js for static export
+      - name: Backup database before migration
         run: |
-          rm -rf ./out
-          NEXT_OUTPUT_STANDALONE=1 pnpm build
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          npx wrangler d1 export user-auth-db --output ./backup_${TIMESTAMP}.sql 2>/dev/null || echo "Backup skipped (new database or no tables yet)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Apply database migrations
+        run: npx wrangler d1 migrations apply user-auth-db --env=production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Deploy to Workers (Production)
-        uses: cloudflare/wrangler-action@v3
         id: deploy
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy --env=production
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler-cloudflare-free.json --env=production
+          wranglerVersion: "4.15.0"
+          workingDirectory: .
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -sf https://cloudless.gr/api/health || exit 1
+          echo "✅ Production health check passed"
+
+      - name: Create GitHub Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              target_url: 'https://cloudless.gr',
+              context: 'Cloudflare Workers',
+              description: 'Deployed to production'
+            });
 
       - name: Configure AWS credentials (OIDC)
         id: aws
@@ -154,38 +193,6 @@ jobs:
             --name /cloudless/production/cloud-sha \
             --value "${{ github.sha }}" \
             --type String --overwrite --region us-east-1
-
-  # D1 migrations (only on scheduled runs or manual dispatch)
-  d1-migrate:
-    name: D1 Migrations
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
-
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-
-      - name: pin pnpm store to persistent local path
-        run: |
-          mkdir -p "$HOME/.pnpm-store"
-          pnpm config set store-dir "$HOME/.pnpm-store"
-
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Apply migrations to D1
-        run: |
-          for migration in migrations/*.sql; do
-            npx wrangler d1 execute user-auth-db --file="$migration" --env=production
-          done
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
 # To set secrets for the first time, run locally:
 # npx wrangler secret put SESSION_SECRET

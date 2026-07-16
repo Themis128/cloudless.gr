@@ -4,29 +4,61 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: preview-deploy-${{ github.head_ref }}
+  cancel-in-progress: true
+
 jobs:
   preview:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     permissions:
       contents: read
       pull-requests: write
-    
+
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
+
+      - uses: pnpm/action-setup@v5
         with:
-          node-version: '22'
-          cache: 'pnpm'
-      
-      - run: pnpm install --frozen-lockfile
-      
+          dest: ~/setup-pnpm-${{ runner.name }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test:ci
+
+      - name: Validate secrets
+        run: |
+          [[ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]] || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Apply preview database migrations
+        run: npx wrangler d1 migrations apply auth-db-preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: Build for Cloudflare
         run: pnpm cf:build
         env:
           NEXT_PUBLIC_AUTH_PROVIDER: d1
           NEXT_PUBLIC_SITE_URL: https://cloudless.gr
-      
+
       - name: Upload static assets
         run: |
           mkdir -p ./out
@@ -41,29 +73,36 @@ jobs:
           fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      
+
       - name: Deploy Preview
         id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: fb7dc7b69b662480cd5961a4d1913c78
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy -c wrangler.preview.jsonc
-      
+          wranglerVersion: "4.15.0"
+
+      - name: Preview health check
+        run: |
+          sleep 5
+          curl -sf "${{ steps.deploy.outputs.deployment-url }}/api/health" || exit 1
+          echo "✅ Preview health check passed"
+
       - name: Comment Preview URL
         uses: actions/github-script@v7
         with:
           script: |
             const url = '${{ steps.deploy.outputs.deployment-url }}';
             const body = `## 🚀 Preview Deployment\n\n| | |\n|---|---|\n| **URL** | ${url} |\n| **Branch** | \`${{ github.head_ref }}\` |\n| **Commit** | \`${{ github.sha }}\` |\n\n*This preview environment shares bindings with other PR previews.*`;
-            
+
             const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo
             });
             const botComment = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.includes('Preview Deployment'));
-            
+
             if (botComment) {
               await github.rest.issues.updateComment({
                 comment_id: botComment.id,
@@ -79,3 +118,12 @@ jobs:
                 body
               });
             }
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              target_url: url,
+              context: 'Preview Deploy',
+              description: 'Deployed to preview'
+            });

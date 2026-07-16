@@ -1,0 +1,42 @@
+{
+  "name": "cloudless-gr-staging",
+  "main": "src/index-cloudflare-free.js",
+  "compatibility_date": "2026-07-09",
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  "ai": { "binding": "AI" },
+
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "cloudless_analytics_staging"
+    }
+  ],
+
+  "r2_buckets": [
+    { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics-staging" },
+    { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets-staging" },
+    { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket-staging" },
+    { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket-staging" }
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "AUTH_DB",
+      "database_name": "auth-db-staging",
+      "database_id": "PLACEHOLDER_NEEDS_REAL_ID"
+    }
+  ],
+
+  "send_email": [ { "name": "EMAIL" } ],
+
+  "vars": {
+    "ENVIRONMENT": "staging",
+    "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
+    "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr"
+  }
+}

@@ -63,6 +63,38 @@
       "entrypoint": "ChatEntrypoint"
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "AUTH_DB",
+      "database_name": "auth-db"
+    }
+  ],
+  "send_email": [ { "name": "EMAIL" } ],
+
+  "env": {
+    "staging": {
+      "name": "cloudless-gr-staging",
+      "d1_databases": [
+        {
+          "binding": "AUTH_DB",
+          "database_name": "auth-db-staging"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr"
+      }
+    },
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "AUTH_DB",
+          "database_name": "auth-db"
+        }
+      ]
+    }
+  },
+
   "vars": {
     "AGENT_AUTH_TOKEN": "placeholder-override-in-production"
   }

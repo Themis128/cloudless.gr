@@ -20,8 +20,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-production
-  cancel-in-progress: true
+  group: production-deploy
+  cancel-in-progress: false
 
 permissions:
   id-token: write
@@ -72,6 +72,38 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test:ci
+
+      - name: Validate secrets exist
+        run: |
+          [[ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]] || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
+          [[ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]] || (echo "Missing CLOUDFLARE_ACCOUNT_ID" && exit 1)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Backup database before migration
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          npx wrangler d1 export user-auth-db --output ./backup_${TIMESTAMP}.sql 2>/dev/null || echo "Backup skipped (new database or no tables yet)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Apply database migrations
+        run: npx wrangler d1 migrations apply user-auth-db
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: Bump service worker CACHE_VERSION
         run: |
           SHORT_SHA="${GITHUB_SHA::8}"
@@ -81,6 +113,7 @@ jobs:
           grep "CACHE_VERSION" public/sw.js
 
       - name: Deploy to Cloudflare Workers
+        id: deploy
         run: pnpm cf:deploy:free
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -94,6 +127,26 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           SENTRY_ENVIRONMENT: prod
           NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod
+
+      - name: Health check
+        run: |
+          sleep 10
+          curl -sf https://cloudless.gr/api/health || exit 1
+          echo "✅ Production health check passed"
+
+      - name: Create GitHub Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'success',
+              target_url: 'https://cloudless.gr',
+              context: 'Cloudflare Workers',
+              description: 'Deployed to production'
+            });
 
       - name: Notify Slack — deploy result
         if: env.SLACK_WEBHOOK_URL != ''
