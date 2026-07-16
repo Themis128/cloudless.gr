@@ -35,10 +35,10 @@ jobs:
 
     permissions:
       contents: read
-      pull-requests: write   # post PR comment
-      issues: write          # post to tracking issue #382
-      actions: read          # fetch job logs
-      id-token: write        # OIDC → AWS SSM for ANTHROPIC_API_KEY
+      pull-requests: write
+      issues: write
+      actions: read
+      id-token: write
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.0
@@ -100,58 +100,41 @@ jobs:
         id: issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIAGNOSIS: ${{ steps.diagnosis.outputs.diagnosis }}
         run: |
           # Parse the diagnosis and create an issue for Copilot coding agent
-          python3 << 'PY'
+          python3 - "$DIAGNOSIS" << 'EOF'
           import json
           import os
           import subprocess
+          import sys
           
-          diagnosis = json.loads(os.environ.get("DIAGNOSIS", "{}"))
+          diagnosis_json = os.environ.get("DIAGNOSIS", "{}")
+          diagnosis = json.loads(diagnosis_json)
           workflow_name = os.environ.get("WORKFLOW_NAME", "Unknown")
           head_branch = os.environ.get("HEAD_BRANCH", "")
           head_sha = os.environ.get("HEAD_SHA", "")
           pr_number = os.environ.get("PR_NUMBER", "")
           repo = os.environ.get("REPO", "Themis128/cloudless.gr")
           
-          # Fall back to reading from diagnosis.json if env not set
-          if not diagnosis:
-              try:
-                  with open("diagnosis.json") as f:
-                      diagnosis = json.load(f)
-              except:
-                  pass
-          
           root_cause = diagnosis.get("root_cause", "Unknown failure")
           fix = diagnosis.get("fix", "No fix suggested")
           
-          # Create issue body with agent-friendly instructions
-          body = f"""## 🤖 Agentic CI Fix: {workflow_name}
-
-**Root Cause:** {root_cause}
-
-**Suggested Fix:** {fix}
-
-**Context:**
-- Workflow: {workflow_name}
-- Branch: `{head_branch}`
-- SHA: `{head_sha}`
-- PR: #{pr_number}
-
-**Auto-fix instructions for GitHub Copilot:**
-Please analyze the failure and propose a patch. Use the CodingAgent pattern:
-1. Review the affected files in `src/`, `scripts/`, or `infrastructure/`
-2. Create a minimal, targeted fix
-3. Run `pnpm lint && pnpm typecheck && pnpm build` to verify
-4. Push to a branch and create a PR
-
-/cc @copilot-for-github-actions
-"""
+          body = "## Agentic CI Fix: " + workflow_name + "\\n\\n"
+          body += "**Root Cause:** " + root_cause + "\\n\\n"
+          body += "**Suggested Fix:** " + fix + "\\n\\n"
+          body += "**Context:**\\n"
+          body += "- Workflow: " + workflow_name + "\\n"
+          body += "- Branch: `" + head_branch + "`\\n"
+          body += "- SHA: `" + head_sha + "`\\n"
+          body += "- PR: #" + pr_number + "\\n\\n"
+          body += "**Auto-fix instructions for GitHub Copilot:**\\n"
+          body += "Please analyze the failure and propose a patch.\\n\\n"
+          body += "/cc copilot-actions"
           
-          # Create issue via GitHub API
           cmd = [
               "gh", "issue", "create",
-              "--title", f"Auto-fix: {workflow_name} failure on {head_branch}",
+              "--title", "Auto-fix: " + workflow_name + " failure on " + head_branch,
               "--body", body,
               "--label", "auto-fix",
               "--label", "agentic-ci"
@@ -159,46 +142,7 @@ Please analyze the failure and propose a patch. Use the CodingAgent pattern:
           result = subprocess.run(cmd, capture_output=True, text=True)
           if result.returncode == 0:
               issue_url = result.stdout.strip()
-              print(f"Created auto-fix issue: {issue_url}")
-              # Extract issue number
-              import re
-              match = re.search(r'/issues/(\d+)', issue_url)
-              if match:
-                  print(f"ISSUE_NUMBER={match.group(1)}")
+              print("Created auto-fix issue: " + issue_url)
           else:
-              print(f"Failed to create issue: {result.stderr}")
-              print("ISSUE_NUMBER=")
-          PY
-
-      - name: Post diagnosis to PR
-        if: steps.diagnosis.outputs.diagnosis != '' && PR_NUMBER != ''
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.workflow_run?.pull_requests[0].number }}
-        run: |
-          # Post the diagnosis as a PR comment if we have a PR
-          node - << 'JS'
-          const diagnosis = require("./diagnosis.json");
-          const prNumber = process.env.PR_NUMBER;
-          if (prNumber) {
-            const { execSync } = require("child_process");
-            const body = `## 🔍 CI Failure Diagnosis
-
-**Root cause:** ${diagnosis.root_cause || 'Unknown'}
-
-**Fix:** ${diagnosis.fix || 'No fix suggested'}
-
-**Confidence:** ${diagnosis.confidence || 'Unknown'}
-
-_Auto-fix issue created — GitHub Copilot will investigate._`;
-            try {
-              execSync(`gh pr comment ${prNumber} --body '${body}'`, { stdio: "inherit" });
-            } catch (e) {
-              console.log("Could not post PR comment:", e.message);
-            }
-          }
-          JS
-
-      - name: Skip (API key absent)
-        if: steps.ssm.outputs.key == ''
-        run: echo "ANTHROPIC_API_KEY not in SSM — skipping diagnosis."
+              print("Failed to create issue: " + result.stderr)
+          EOF

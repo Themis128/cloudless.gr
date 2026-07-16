@@ -12,9 +12,7 @@ name: HA failover watchdog
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   PRIMARY_TARGET: "cloudless-gr.baltzakis-themis.workers.dev"
-  # Tailscale Funnel endpoint on omv (Pi) standby node
   STANDBY_TARGET: "github-omv.tail4ecae1.ts.net"
-  # Probe the Fly.io proxy's health endpoint (which checks primary and proxies)
   HEALTH_URL: "https://cloudless-proxy.fly.dev/api/health"
   HEALTH_HOST_HEADER: "cloudless.gr"
   HEALTH_TIMEOUT_SEC: "15"
@@ -115,22 +113,9 @@ jobs:
         run: |
           set -e
           DESIRED="$([ "$TARGET" = "standby" ] && echo "$STANDBY_TARGET" || echo "$PRIMARY_TARGET")"
-
-          ZONE_ID=$(curl -sS \
-            -H "Authorization: Bearer $CF_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['id'])")
-
-          ALL_RECS=$(curl -sS \
-            -H "Authorization: Bearer $CF_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records")
-
-          echo "$ALL_RECS" | python3 -c "
-import sys,json
-for r in json.load(sys.stdin)['result']:
-    print(f"{r['type']}|{r['name']}|{r['id']}|{r.get('content','')}")
-" > /tmp/records.txt
-
+          ZONE_ID=$(curl -sS -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME" | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['id'])")
+          ALL_RECS=$(curl -sS -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records")
+          echo "$ALL_RECS" | python3 -c "import sys,json; [print(f\"{r['type']}|{r['name']}|{r['id']}|{r.get('content','')}\") for r in json.load(sys.stdin)['result']]" > /tmp/records.txt
           CHANGED=0
           for HOST in cloudless.gr www.cloudless.gr; do
             REC_LINE=$(grep "|${HOST}|" /tmp/records.txt | grep -E "^A|^CNAME" | head -1)
@@ -139,11 +124,7 @@ for r in json.load(sys.stdin)['result']:
             CURRENT=$(echo "$REC_LINE" | cut -d'|' -f4)
             if [ "$CURRENT" != "$DESIRED" ]; then
               echo "→ Switching $HOST: $CURRENT → $DESIRED"
-              curl -sS -X PATCH \
-                -H "Authorization: Bearer $CF_TOKEN" \
-                -H "Content-Type: application/json" \
-                "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$REC_ID" \
-                -d "{\"content\":\"$DESIRED\",\"proxied\":true}" > /dev/null
+              curl -sS -X PATCH -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$REC_ID" -d "{\"content\":\"$DESIRED\",\"proxied\":true}" > /dev/null
               CHANGED=1
             fi
           done
