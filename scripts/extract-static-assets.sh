@@ -5,8 +5,7 @@ set -euo pipefail
 
 echo "=== Building for Cloudflare Workers deployment ==="
 
-# Clean out directory
-rm -rf ./out
+# Ensure out directory exists
 mkdir -p ./out
 
 # Build Next.js with static export
