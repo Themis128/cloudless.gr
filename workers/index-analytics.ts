@@ -5,12 +5,12 @@
  * Part of the Cloudflare + Fly.io migration strategy - Tier 2 Analytics Services.
  */
 
-// import { DuckDBQueryResult } from './lib/analytics-duckdb';
-
 export interface Env {
   ANALYTICS: AnalyticsEngineDataset;
   DATALAKE_BUCKET: R2Bucket;
   ANALYTICS_BUCKET: R2Bucket;
+  ACCOUNT_ID: string;
+  API_TOKEN: string;
 }
 
 export default {
@@ -39,15 +39,25 @@ export default {
 
 async function handleExportToParquet(request: Request, env: Env): Promise<Response> {
   try {
-    // Query last 24 hours from Analytics Engine
-    const { results } = await env.ANALYTICS.query(
-      `SELECT * FROM analytics_events 
-       WHERE timestamp > now() - interval '24 hours'
-       ORDER BY timestamp DESC`
+    // Query last 24 hours from Analytics Engine via REST API
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/analytics_engine/datasets/cloudless_analytics/events`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${env.API_TOKEN}`,
+        },
+      }
     );
 
+    if (!response.ok) {
+      throw new Error(`Analytics API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
     // Convert to parquet format (simplified - actual DuckDB would handle this)
-    const parquetData = JSON.stringify(results, null, 2);
+    const parquetData = JSON.stringify(data, null, 2);
     
     // Partition by date
     const today = new Date().toISOString().split('T')[0];
@@ -60,14 +70,14 @@ async function handleExportToParquet(request: Request, env: Env): Promise<Respon
       },
       customMetadata: {
         'exported-at': new Date().toISOString(),
-        'record-count': String(results.length),
+        'record-count': String(data.result?.length || 0),
       },
     });
 
     return new Response(JSON.stringify({
       success: true,
       key,
-      recordCount: results.length,
+      recordCount: data.result?.length || 0,
       exportedAt: new Date().toISOString(),
     }), {
       headers: { 'Content-Type': 'application/json' },
@@ -114,10 +124,9 @@ async function handleDailyRollup(request: Request, env: Env): Promise<Response> 
 
   try {
     // Write rollup event to Analytics Engine
-    await env.ANALYTICS.write({
-      index1: 'daily_rollup',
-      index2: 'starting',
-      metric1: Date.now(),
+    env.ANALYTICS.writeDataPoint({
+      indexes: ['daily_rollup', 'starting'],
+      doubles: [Date.now()],
     });
 
     // Trigger parquet export
