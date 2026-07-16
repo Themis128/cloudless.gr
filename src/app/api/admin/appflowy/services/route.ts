@@ -44,14 +44,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   return NextResponse.json({ error: "Create via AppFlowy UI" }, { status: 501 });
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(_request: NextRequest) {
   return NextResponse.json({ ok: true, note: "Updates are managed inside AppFlowy directly." });
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   return NextResponse.json({ ok: false, error: "Delete via AppFlowy UI" }, { status: 501 });
 }

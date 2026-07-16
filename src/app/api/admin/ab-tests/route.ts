@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getABFlags, saveFlagsToD1, DEFAULT_FLAGS, type ABFlag } from "@/lib/ab-flags";
-import type { AuthDatabase } from "@/lib/auth-d1";
-
-// D1 binding interface - provided by Worker context
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
-function getAuthDb(): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  return env.AUTH_DB ?? null;
-}
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -27,7 +16,7 @@ export async function PATCH(request: NextRequest) {
 
   let updates: Partial<ABFlag> & { id: string };
   try {
-    updates = (await request.json()) as any;
+    updates = (await request.json()) as Partial<ABFlag> & { id: string };
     if (!updates.id) throw new Error("id required");
   } catch (e) {
     return NextResponse.json(
@@ -65,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   let body: { action: "reset" };
   try {
-    body = (await request.json()) as any;
+    body = (await request.json()) as { action: "reset" };
   } catch {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }

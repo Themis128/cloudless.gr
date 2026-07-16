@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
@@ -9,7 +9,6 @@ import { useCurrentLocale } from "@/lib/use-locale";
 function ResetConfirmForm() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 

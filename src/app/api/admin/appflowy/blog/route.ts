@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const posts = await getPosts();
     return NextResponse.json({ posts, count: posts.length });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to list posts" }, { status: 500 });
   }
 }

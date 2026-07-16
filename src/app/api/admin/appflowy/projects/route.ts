@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ error: "Create via AppFlowy UI" }, { status: 501 });
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(_request: NextRequest) {
   // AppFlowy doesn't have a status field on pages — acknowledge the call gracefully.
   return NextResponse.json({
     ok: true,

@@ -76,6 +76,6 @@ export class HelloWorkflow extends WorkflowEntrypoint<Record<string, never>, Par
    */
   protected async reportProgress(progress: Progress): Promise<void> {
     // In a real workflow, this would send to a Durable Object or external service
-    console.log(`[Workflow Progress]`, progress);
+    console.warn(`[Workflow Progress]`, progress);
   }
 }

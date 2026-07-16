@@ -19,7 +19,6 @@ import { requireAdmin } from "@/lib/api-auth";
 import { getProducts } from "@/lib/store-products";
 import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import type { StoreProduct } from "@/lib/store-products";
-import { sanitizeError, sanitizeLog } from "@/lib/log-sanitizer";
 
 // ---------------------------------------------------------------------------
 // Config
