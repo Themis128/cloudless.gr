@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { isValidPlan } from "@/lib/plans";
+import { signIn } from "@/lib/auth";
 
 const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
 const USE_COGNITO = AUTH_PROVIDER === "cognito";
@@ -62,7 +63,7 @@ function SignUpForm() {
       // Cognito Hosted UI handles both sign-in and sign-up.
       // Redirect to it so the user can create an account there.
       const callbackUrl = postSignupDestination ?? "/auth/post-login";
-      await nextAuthSignIn("cognito", { callbackUrl });
+      await signIn("cognito", { callbackUrl });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign up failed");
       setSubmitting(false);

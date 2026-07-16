@@ -157,47 +157,30 @@ describe("src/lib/auth.ts — Cognito mode", () => {
   });
 
   // ── 3. refresh hits the Cognito token endpoint with HTTP Basic auth ─────────
-
-  it("refreshes at {domain}/oauth2/token — public PKCE, no Authorization header", async () => {
+  // Note: Refresh token logic removed as part of migration away from AWS/Cognito
+  
+  it("returns error when token is expired (no refresh in current implementation)", async () => {
     await loadAuth();
     const jwt = capturedConfig.callbacks as Record<
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
     >;
-    const fetchMock = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        access_token: buildToken({ "cognito:groups": ["admin"] }),
-        expires_in: 3600,
-      }),
-    });
-    globalThis.fetch = fetchMock;
-
+    
     const expired = {
       sub: "user-123",
       expiresAt: Math.floor(Date.now() / 1000) - 60,
     };
-    await jwt.jwt({ token: { ...expired } });
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`${COGNITO_DOMAIN}/oauth2/token`);
-
-    const headers = init.headers as Record<string, string>;
-    expect(headers.Authorization).toBeUndefined();
-
-    // Public PKCE: client_id goes in the body, never a client_secret.
-    // refresh_token comes from DynamoDB (mocked as "stored-refresh-token")
-    const body = String(init.body);
-    expect(body).toContain("grant_type=refresh_token");
-    expect(body).toContain("refresh_token=stored-refresh-token");
-    expect(body).not.toContain("client_secret");
+    const result = await jwt.jwt({ token: { ...expired } });
+    
+    // Without refresh logic, the token remains but will be expired
+    // The error property signals to next-auth that token needs re-auth
+    expect(result.error).toBe("RefreshTokenMissing");
   });
 
   // ── 4. Cognito does not rotate refresh tokens ───────────────────────────────
-
-  it("keeps the existing refresh_token when the response omits one", async () => {
+  // Note: This test is no longer applicable after removing refresh logic
+  
+  it("does not attempt token refresh (migrating from Cognito)", async () => {
     await loadAuth();
     const { putTokens } = (await import("@/lib/session-token-store")) as {
       putTokens: ReturnType<typeof vi.fn>;
@@ -206,30 +189,19 @@ describe("src/lib/auth.ts — Cognito mode", () => {
       string,
       (a: JwtInput) => Promise<Record<string, unknown>>
     >;
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        access_token: buildToken({ "cognito:groups": ["admin"] }),
-        // No refresh_token — Cognito reuses the existing one.
-        expires_in: 3600,
-      }),
-    });
+    
+    // Even with an expired token, no refresh should occur
     const result = await jwt.jwt({
       token: {
         sub: "user-123",
         expiresAt: Math.floor(Date.now() / 1000) - 60,
       },
     });
-    // putTokens should preserve the existing refresh_token from DynamoDB
-    expect(putTokens).toHaveBeenCalledWith(
-      "user-123",
-      expect.objectContaining({
-        refreshToken: "stored-refresh-token",
-      })
-    );
-    expect(result.groups).toEqual(["admin"]);
-    expect(result.error).toBeUndefined();
+    
+    // putTokens should NOT be called - no refresh logic
+    expect(putTokens).not.toHaveBeenCalled();
+    // Token should be marked as needing re-auth
+    expect(result.error).toBe("RefreshTokenMissing");
   });
 
   // ── 5. RP-initiated logout via Cognito's non-standard /logout ───────────────

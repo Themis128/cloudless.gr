@@ -2,6 +2,7 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
+import { type PortalSummary } from "@/lib/client-portals";
 import { Link } from "@/i18n/navigation";
 
 interface DashStats {

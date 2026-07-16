@@ -19,6 +19,7 @@ import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
+import { getSlackConfigAsync } from "@/lib/integrations";
 
 /**
  * Action IDs registered in this route that map to a workflow_dispatch

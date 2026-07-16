@@ -92,6 +92,55 @@ interface AppConfig {
   // AI
   ANTHROPIC_API_KEY: string;
   ANTHROPIC_CHAT_MODEL: string;
+  // Internal AI generate endpoint auth
+  AI_GENERATE_SECRET: string;
+  // GitHub Actions dispatch
+  GITHUB_DISPATCH_TOKEN: string;
+  // Admin alerts / webhooks
+  ADMIN_ALERT_SECRET: string;
+  CONTENT_WEBHOOK_SECRET: string;
+  SENTRY_WEBHOOK_SECRET: string;
+  SNS_PORTAL_TOPIC_ARN: string;
+  // Monitoring / observability
+  GRAFANA_BASE_URL: string;
+  GRAFANA_API_TOKEN: string;
+  PROMETHEUS_URL: string;
+  KUMA_BASE_URL: string;
+  KUMA_STATUS_PAGE_SLUG: string;
+  KUMA_API_KEY: string;
+  NTFY_BASE_URL: string;
+  NTFY_TOPIC: string;
+  NTFY_TOKEN: string;
+  ADMIN_PUSH_VIA_NTFY: string;
+  // MQTT broker
+  MQTT_BROKER_HOST: string;
+  MQTT_BROKER_PORT: string;
+  MQTT_USERNAME: string;
+  MQTT_PASSWORD: string;
+  // EspoCRM
+  ESPOCRM_BASE_URL: string;
+  ESPOCRM_API_KEY: string;
+  ESPOCRM_WEBHOOK_SECRET: string;
+  // AppFlowy CMS
+  APPFLOWY_API_URL: string;
+  APPFLOWY_JWT_SECRET: string;
+  APPFLOWY_EMAIL: string;
+  APPFLOWY_PASSWORD: string;
+  // Postiz social scheduler
+  POSTIZ_API_URL: string;
+  POSTIZ_API_KEY: string;
+  POSTIZ_WEBHOOK_SECRET: string;
+  POSTIZ_SLACK_CHANNEL: string;
+  // ActiveCampaign
+  ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: string;
+  // LinkedIn CAPI
+  LINKEDIN_CAPI_ACCESS_TOKEN: string;
+  // n8n
+  N8N_API_URL: string;
+  N8N_API_KEY: string;
+  // n8n workflow IDs
+  N8N_WORKFLOW_LEAD_ENRICH_ID: string;
+  N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: string;
 }
 
 let cached: AppConfig | null = null;
@@ -220,6 +269,43 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
+    AI_GENERATE_SECRET: params.get("AI_GENERATE_SECRET") ?? "",
+    GITHUB_DISPATCH_TOKEN: params.get("GITHUB_DISPATCH_TOKEN") ?? "",
+    ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
+    CONTENT_WEBHOOK_SECRET: params.get("CONTENT_WEBHOOK_SECRET") ?? "",
+    SENTRY_WEBHOOK_SECRET: params.get("SENTRY_WEBHOOK_SECRET") ?? "",
+    SNS_PORTAL_TOPIC_ARN: params.get("SNS_PORTAL_TOPIC_ARN") ?? "",
+    GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
+    GRAFANA_API_TOKEN: params.get("GRAFANA_API_TOKEN") ?? "",
+    PROMETHEUS_URL: params.get("PROMETHEUS_URL") ?? "",
+    KUMA_BASE_URL: params.get("KUMA_BASE_URL") ?? "",
+    KUMA_STATUS_PAGE_SLUG: params.get("KUMA_STATUS_PAGE_SLUG") ?? "",
+    KUMA_API_KEY: params.get("KUMA_API_KEY") ?? "",
+    NTFY_BASE_URL: params.get("NTFY_BASE_URL") ?? "",
+    NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
+    NTFY_TOKEN: params.get("NTFY_TOKEN") ?? "",
+    ADMIN_PUSH_VIA_NTFY: params.get("ADMIN_PUSH_VIA_NTFY") ?? "",
+    MQTT_BROKER_HOST: params.get("MQTT_BROKER_HOST") ?? "",
+    MQTT_BROKER_PORT: params.get("MQTT_BROKER_PORT") ?? "",
+    MQTT_USERNAME: params.get("MQTT_USERNAME") ?? "",
+    MQTT_PASSWORD: params.get("MQTT_PASSWORD") ?? "",
+    ESPOCRM_BASE_URL: params.get("ESPOCRM_BASE_URL") ?? "",
+    ESPOCRM_API_KEY: params.get("ESPOCRM_API_KEY") ?? "",
+    ESPOCRM_WEBHOOK_SECRET: params.get("ESPOCRM_WEBHOOK_SECRET") ?? "",
+    APPFLOWY_API_URL: params.get("APPFLOWY_API_URL") ?? "",
+    APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
+    APPFLOWY_EMAIL: params.get("APPFLOWY_EMAIL") ?? "",
+    APPFLOWY_PASSWORD: params.get("APPFLOWY_PASSWORD") ?? "",
+    POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
+    POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
+    POSTIZ_WEBHOOK_SECRET: params.get("POSTIZ_WEBHOOK_SECRET") ?? "",
+    POSTIZ_SLACK_CHANNEL: params.get("POSTIZ_SLACK_CHANNEL") ?? "",
+    ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: params.get("ACTIVECAMPAIGN_LEAD_AUTOMATION_ID") ?? "",
+    LINKEDIN_CAPI_ACCESS_TOKEN: params.get("LINKEDIN_CAPI_ACCESS_TOKEN") ?? "",
+    N8N_API_URL: params.get("N8N_API_URL") ?? "",
+    N8N_API_KEY: params.get("N8N_API_KEY") ?? "",
+    N8N_WORKFLOW_LEAD_ENRICH_ID: params.get("N8N_WORKFLOW_LEAD_ENRICH_ID") ?? "",
+    N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: params.get("N8N_WORKFLOW_NEWSLETTER_NURTURE_ID") ?? "",
   };
 }
 
@@ -293,6 +379,43 @@ function buildConfigFromEnv(): AppConfig {
     CRON_SECRET: process.env.CRON_SECRET || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",
+    AI_GENERATE_SECRET: process.env.AI_GENERATE_SECRET || "",
+    GITHUB_DISPATCH_TOKEN: process.env.GITHUB_DISPATCH_TOKEN || "",
+    ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",
+    CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || "",
+    SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
+    SNS_PORTAL_TOPIC_ARN: process.env.SNS_PORTAL_TOPIC_ARN || "",
+    GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
+    GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
+    PROMETHEUS_URL: process.env.PROMETHEUS_URL || "",
+    KUMA_BASE_URL: process.env.KUMA_BASE_URL || "",
+    KUMA_STATUS_PAGE_SLUG: process.env.KUMA_STATUS_PAGE_SLUG || "",
+    KUMA_API_KEY: process.env.KUMA_API_KEY || "",
+    NTFY_BASE_URL: process.env.NTFY_BASE_URL || "",
+    NTFY_TOPIC: process.env.NTFY_TOPIC || "",
+    NTFY_TOKEN: process.env.NTFY_TOKEN || "",
+    ADMIN_PUSH_VIA_NTFY: process.env.ADMIN_PUSH_VIA_NTFY || "",
+    MQTT_BROKER_HOST: process.env.MQTT_BROKER_HOST || "",
+    MQTT_BROKER_PORT: process.env.MQTT_BROKER_PORT || "",
+    MQTT_USERNAME: process.env.MQTT_USERNAME || "",
+    MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
+    ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL || "",
+    ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY || "",
+    ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET || "",
+    APPFLOWY_API_URL: process.env.APPFLOWY_API_URL || "",
+    APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
+    APPFLOWY_EMAIL: process.env.APPFLOWY_EMAIL || "",
+    APPFLOWY_PASSWORD: process.env.APPFLOWY_PASSWORD || "",
+    POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
+    POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
+    POSTIZ_WEBHOOK_SECRET: process.env.POSTIZ_WEBHOOK_SECRET || "",
+    POSTIZ_SLACK_CHANNEL: process.env.POSTIZ_SLACK_CHANNEL || "",
+    ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: process.env.ACTIVECAMPAIGN_LEAD_AUTOMATION_ID || "",
+    LINKEDIN_CAPI_ACCESS_TOKEN: process.env.LINKEDIN_CAPI_ACCESS_TOKEN || "",
+    N8N_API_URL: process.env.N8N_API_URL || "",
+    N8N_API_KEY: process.env.N8N_API_KEY || "",
+    N8N_WORKFLOW_LEAD_ENRICH_ID: process.env.N8N_WORKFLOW_LEAD_ENRICH_ID || "",
+    N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: process.env.N8N_WORKFLOW_NEWSLETTER_NURTURE_ID || "",
   };
 }
 

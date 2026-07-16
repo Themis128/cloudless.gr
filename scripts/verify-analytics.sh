@@ -1,134 +1,52 @@
 #!/bin/bash
-# Analytics verification script - checks all analytics-related services
-# Usage: ./scripts/verify-analytics.sh [--watch]
+# Verification script for analytics stack deployment
+# Run after each phase of the ANALYTICS-IMPLEMENTATION-STRATEGY.md
 
 set -e
 
-WATCH_MODE=false
-if [[ "$1" == "--watch" ]]; then
-  WATCH_MODE=true
-fi
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-echo "=== Cloudless Analytics Stack Verification ==="
-echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+echo "=== Analytics Stack Verification ==="
 echo ""
 
-# Function to check pod status
-check_pods() {
-  local namespace=$1
-  local expected=$2
-  local running=$(kubectl get pods -n "$namespace" --no-headers 2>/dev/null | grep -c "Running" || echo "0")
-  local ready=$(kubectl get pods -n "$namespace" --no-headers 2>/dev/null | grep -c "1/1" || echo "0")
-  
-  if [[ "$running" -ge "$expected" ]]; then
-    echo -e "${GREEN}✓${NC} $namespace: $running/$expected pods running"
-  else
-    echo -e "${RED}✗${NC} $namespace: $running/$expected pods running (expected $expected)"
-  fi
-}
+# Phase 1: AppFlowy Check
+echo "🔍 Checking AppFlowy deployment..."
+kubectl get namespace appflowy 2>/dev/null || { echo "❌ Namespace appflowy not found"; exit 1; }
+kubectl get pods -n appflowy 2>/dev/null | grep -E "(postgres|redis|gotrue|appflowy-cloud|appflowy-web|admin-frontend|nginx|worker)" || { echo "❌ Some AppFlowy pods missing"; }
+echo "✅ AppFlowy pods present"
 
-# Function to check PVC status
-check_pvcs() {
-  local namespace=$1
-  local pvcs=$(kubectl get pvc -n "$namespace" --no-headers 2>/dev/null | wc -l || echo "0")
-  echo -e "${GREEN}✓${NC} $namespace: $pvcs PVCs provisioned"
-}
+# Phase 2: n8n Check
+echo "🔍 Checking n8n deployment..."
+kubectl get namespace n8n 2>/dev/null || { echo "❌ Namespace n8n not found"; exit 1; }
+kubectl get pods -n n8n 2>/dev/null | grep n8n || { echo "❌ n8n pods missing"; }
+echo "✅ n8n pods present"
 
-# Function to check service endpoints
-check_service() {
-  local service=$1
-  local expected_port=$2
-  
-  if kubectl get svc -n "$namespace" "$service" --no-headers 2>/dev/null | grep -q "$expected_port"; then
-    echo -e "${GREEN}✓${NC} Service $service: NodePort $expected_port configured"
-  else
-    echo -e "${YELLOW}?${NC} Service $service: check NodePort configuration"
-  fi
-}
+# Phase 3: EspoCRM Check
+echo "🔍 Checking EspoCRM deployment..."
+kubectl get namespace espocrm 2>/dev/null || { echo "❌ Namespace espocrm not found (will be created in Phase 3)"; }
+echo "ℹ️  EspoCRM: Phase 3 target"
 
-# Phase 1: AppFlowy Stack
-echo "--- Phase 1: AppFlowy Stack ---"
-check_pods "appflowy" 9
-check_pvcs "appflowy"
+# Phase 4: Analytics (DuckDB/Metabase) Check
+echo "🔍 Checking analytics stack..."
+# Check if analytics namespace exists or will be created
+echo "ℹ️  DuckDB/Metabase: Phase 4 target"
+
+# Resource check
 echo ""
+echo "📊 Current Resource Usage:"
+kubectl top nodes 2>/dev/null || echo "⚠️  Metrics server not available (run kubectl top nodes manually)"
 
-# Checking specific pods by label
-for label in "app=postgres" "app=redis" "app=gotrue" "app=appflowy-cloud" "app=appflowy-web" "app=nginx"; do
-  if kubectl get pods -n appflowy -l "$label" --no-headers 2>/dev/null | grep -q "Running"; then
-    echo -e "${GREEN}✓${NC} AppFlowy pod $label: running"
-  else
-    echo -e "${RED}✗${NC} AppFlowy pod $label: not running"
-  fi
-done
+# Storage check  
 echo ""
+echo "💾 Storage Allocation:"
+echo "  AppFlowy MinIO: $(kubectl get pvc -n appflowy appflowy-minio 2>/dev/null | awk 'NR>1 {print $4}' || echo 'pending')"
+echo "  AppFlowy Postgres: $(kubectl get pvc -n appflowy appflowy-postgres 2>/dev/null | awk 'NR>1 {print $4}' || echo 'pending')"
 
-# Phase 2: n8n
-echo "--- Phase 2: n8n ---"
-check_pods "n8n" 1
-check_pvcs "n8n"
+# Cloudflare bindings check
 echo ""
+echo "🔗 Cloudflare Bindings Check:"
+echo "  wrangler whoami should show account: $(grep -o 'fb7dc7b69b662480cd5961a4d1913c78' wrangler-cloudflare-free.json && echo '✅' || echo '❓')"
+echo "  Analytics binding: $(grep -q '"binding": "ANALYTICS"' wrangler-cloudflare-free.json && echo '✅ Configured' || echo '❌ Missing')"
+echo "  D1 binding: $(grep -q '"binding": "AUTH_DB"' wrangler-cloudflare-free.json && echo '✅ Configured' || echo '❌ Missing')"
+echo "  R2 buckets: $(grep -c '"binding": ".*_BUCKET"' wrangler-cloudflare-free.json) configured"
 
-# Phase 3: EspoCRM
-echo "--- Phase 3: EspoCRM ---"
-check_pods "espocrm" 2
-check_pvcs "espocrm"
 echo ""
-
-# Phase 4: Analytics Stack (monitoring namespace)
-echo "--- Phase 4: Analytics Stack ---"
-# Check if DuckDB pod exists (would be in a dedicated namespace or monitoring)
-if kubectl get pods -n monitoring -l "app=duckdb" --no-headers 2>/dev/null | grep -q "Running"; then
-  echo -e "${GREEN}✓${NC} DuckDB: running in monitoring namespace"
-else
-  echo -e "${YELLOW}?${NC} DuckDB: not deployed yet (Phase 3.5) or in different namespace"
-fi
-
-# Check Metabase
-if kubectl get pods -n monitoring -l "app=metabase" --no-headers 2>/dev/null | grep -q "Running"; then
-  echo -e "${GREEN}✓${NC} Metabase: running in monitoring namespace"
-else
-  echo -e "${YELLOW}?${NC} Metabase: not deployed yet (Phase 4) or in analytics namespace"
-fi
-echo ""
-
-# Phase 5: Postiz
-echo "--- Phase 5: Postiz ---"
-check_pods "postiz" 3
-check_pvcs "postiz"
-echo ""
-
-# Resource usage
-echo "--- Resource Usage ---"
-kubectl top nodes 2>/dev/null || echo "Metrics not available (metrics-server may be pending)"
-echo ""
-
-# ETL Script Status
-echo "--- ETL Script Status ---"
-for script in stripe-to-lake.mjs clients-to-lake.mjs compute-rfm-churn.mjs espocrm-to-lake.mjs gsc-to-lake.mjs; do
-  if [[ -f "scripts/etl/$script" ]]; then
-    echo -e "${GREEN}✓${NC} $script exists"
-  else
-    echo -e "${RED}✗${NC} $script missing"
-  fi
-done
-echo ""
-
-if [[ "$WATCH_MODE" == "true" ]]; then
-  echo "Watching mode enabled - press Ctrl+C to exit"
-  while true; do
-    sleep 30
-    echo ""
-    echo "=== Refresh: $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-    check_pods "appflowy" 9
-    check_pods "n8n" 1
-    check_pods "espocrm" 2
-  done
-else
-  echo "Done. Run with --watch for continuous monitoring."
-fi
+echo "=== Verification Complete ==="

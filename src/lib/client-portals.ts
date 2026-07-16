@@ -332,6 +332,18 @@ export function applyClientResponse(
 }
 
 /** Deliverables visible to the client (drafts are internal). */
+export type PortalHealthBand = "healthy" | "at-risk" | "critical";
+
+export type PortalSummary = {
+  token: string;
+  label: string;
+  clientEmail: string;
+  clientName: string;
+  deliverables: PortalDeliverable[];
+  paymentLinks: PortalPaymentLink[];
+  health?: { band: PortalHealthBand };
+};
+
 export function clientVisibleDeliverables(portal: ClientPortal): PortalDeliverable[] {
   return (portal.deliverables ?? []).filter((d) => d.status !== "draft");
 }

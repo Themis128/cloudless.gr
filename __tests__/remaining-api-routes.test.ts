@@ -92,11 +92,17 @@ describe("GET /api/admin/esp32/notion-sync", () => {
 // ── /api/cron/slack-digest ────────────────────────────────────────────────────
 
 const mockIsCronAuthorized = vi.fn();
-vi.mock("@/lib/cron-auth", () => ({
-  isCronAuthorized: (...a: unknown[]) => mockIsCronAuthorized(...a),
-  cronUnauthorized: () => new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
-  safeEqual: vi.fn().mockReturnValue(true),
-}));
+const mockIsConfigured = vi.fn();
+vi.mock("@/lib/integrations", async (orig) => {
+  const actual = await orig<typeof import("@/lib/integrations")>();
+  return {
+    ...actual,
+    isCronAuthorized: (...a: unknown[]) => mockIsCronAuthorized(...a),
+    isConfigured: (...a: unknown[]) => mockIsConfigured(...a),
+    isConfiguredAsync: vi.fn().mockResolvedValue(true),
+    cronUnauthorized: () => new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
+  };
+});
 
 const mockListRecentCheckoutSessions = vi.fn();
 const mockGetStripeForPurchases = vi.fn();
@@ -211,12 +217,6 @@ describe("GET /api/notion-image", () => {
 });
 
 // ── /api/user/purchases ───────────────────────────────────────────────────────
-
-const mockIsConfigured = vi.fn();
-vi.mock("@/lib/integrations", () => ({
-  isConfigured: (...a: unknown[]) => mockIsConfigured(...a),
-  isConfiguredAsync: vi.fn().mockResolvedValue(true),
-}));
 
 describe("GET /api/user/purchases", () => {
   beforeEach(() => { vi.clearAllMocks(); vi.resetModules(); });

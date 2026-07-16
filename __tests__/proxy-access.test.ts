@@ -8,12 +8,12 @@ import { NextRequest, NextResponse } from "next/server";
 vi.hoisted(() => {
   process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = "us-east-1_testPool";
   process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID = "test-client-id";
-  // proxy.ts validates Cognito JWTs; ensure the pool is set for tests
-  process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || "us-east-1_TESTPOOL";
 });
 
 // Mock next-auth/jwt so getToken always returns null (Cognito path runs)
-vi.mock("next-auth/jwt", () => ({ getToken: async () => null }));
+vi.mock("next-auth/jwt", () => ({
+  getToken: vi.fn(),
+}));
 
 vi.mock("next-intl/middleware", () => ({
   default: () => (_request: NextRequest) => NextResponse.next(),
@@ -23,7 +23,7 @@ vi.mock("next-intl/middleware", () => ({
 // base64url decode so tests can use unsigned JWTs without a live Cognito pool.
 vi.mock("jose", () => ({
   createRemoteJWKSet: () => ({}),
-  jwtVerify: async (token: string) => {
+  jwtVerify: async (token: string, _jwks: unknown, _options?: unknown) => {
     const [, body] = token.split(".");
     const payload = JSON.parse(
       Buffer.from(body, "base64url").toString("utf8"),
@@ -66,9 +66,6 @@ function makeRequest(path: string, cookie?: string): NextRequest {
 }
 
 describe("proxy protected routes access", () => {
-  beforeEach(() => {
-    mockGetToken.mockResolvedValue(null); // unauthenticated by default
-  });
 
   it("redirects unauthenticated /en/dashboard to /en/auth/login", async () => {
     const response = await proxy(makeRequest("/en/dashboard"));

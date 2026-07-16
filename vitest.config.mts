@@ -50,6 +50,12 @@ export default defineConfig({
         __dirname,
         "__tests__/stubs/aws-sesv2-stub.js",
       ),
+      // @/* -> ./src/* path alias. Vite does NOT honor tsconfig `paths`
+      // unless the (uninstalled) vite-tsconfig-paths plugin is present, which
+      // is why every test failed with "Failed to resolve import @/...". Map it
+      // explicitly. Placed LAST so it does not shadow the @aws-sdk/* stubs
+      // above (those are matched first by prefix).
+      "@": path.resolve(__dirname, "src"),
     },
   },
   define: {
