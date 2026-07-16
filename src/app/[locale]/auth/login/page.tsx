@@ -19,7 +19,7 @@ function normalizeRedirectPath(path: string): string {
 function LoginContent() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isLoading, signIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextParam = searchParams.get("next") ?? searchParams.get("redirect");
@@ -43,7 +43,7 @@ function LoginContent() {
     setError("");
     setSubmitting(true);
     try {
-      await useAuth().signIn(email, password);
+      await signIn(email, password);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {

@@ -9,7 +9,7 @@ import { useCurrentLocale } from "@/lib/use-locale";
 function SignUpForm() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isLoading, signUp } = useAuth();
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,7 +37,7 @@ function SignUpForm() {
     }
     setSubmitting(true);
     try {
-      await useAuth().signUp(email, password, fullName);
+      await signUp(email, password, fullName);
       // Show success state
       setError("");
       setFullName("");
