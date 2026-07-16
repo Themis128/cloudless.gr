@@ -8,12 +8,21 @@ name: CI Failure Babysitter (Agentic)
 # 4. Posts diagnosis to the relevant PR (or tracking issue #382)
 
 on:
-  workflow_run:
-    workflows:
-  - CI
-  - Deploy to Cloudflare Workers + k3s
-  - build pi image
-  - Deploy to Pi (GHCR + k3s rollout)
+   workflow_run:
+     workflows:
+   - CI
+   - Deploy to Cloudflare Workers (Agentic)
+   - build pi image
+   - Deploy to Pi (GHCR + k3s rollout)
+```
+<arg_key>task_progress</arg_key>
+<arg_value>- [ ] Analyze workflow failures and identify issues
+- [x] Check GitHub secrets vs workflow requirements  
+- [x] Fix ci-babysitter-agentic.yml workflow name mismatch
+- [x] Fix deploy-cloudflare-free-tier.yml to use SSM fallback for account ID
+- [x] Fix secrets-check.yml to use vars for SES values
+- [x] Fix ha-failover-watchdog.yml to add checkout step
+- [ ] Verify all fixes by running workflows
     types: [completed]
   workflow_dispatch:
     inputs:
