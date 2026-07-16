@@ -43,7 +43,7 @@ concurrency:
 
 jobs:
   probe-and-steer:
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"'"'ubuntu-latest'"'"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     timeout-minutes: 4
     steps:
       - name: Configure AWS credentials
