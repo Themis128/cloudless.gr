@@ -1,5 +1,9 @@
 import { Agent, callable } from "agents";
 
+// Env for agents - extends the generated Cloudflare.Env
+// This provides the types needed for Agent<T> while staying compatible
+interface Env extends Cloudflare.Env {}
+
 export type CodingStatus = "idle" | "running" | "done" | "failed";
 export type CodingMode = "review" | "patch";
 
@@ -17,7 +21,7 @@ function cleanModelText(text: string): string {
   const thinkEnd = text.lastIndexOf("</think>");
 
   if (thinkEnd >= 0) {
-    text = text.slice(thinkEnd + "</think>".length);
+    text = text.slice(thinkEnd + "think".length);
   }
 
   return text.trim();
@@ -66,7 +70,7 @@ function buildSystemPrompt(mode: CodingMode): string {
     "If something is already implemented in the provided code, say it is implemented.",
     "Do not claim that you executed commands, edited files, deployed code, inspected files outside the prompt, or accessed a shell.",
     "You are in planning/suggestion mode only.",
-    "Do not include <think>, hidden reasoning, chain-of-thought, or internal analysis.",
+    "Do not include <think, hidden reasoning, chain-of-thought, or internal analysis.",
     "Prefer TypeScript, Cloudflare Workers, Durable Objects, Workers AI, and secure defaults.",
   ];
 

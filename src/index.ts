@@ -1,7 +1,14 @@
 import { getAgentByName, routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
 
-export { CounterAgent };
+// Extend the generated Env with bindings that wrangler doesn't generate types for
+// AGENT_AUTH_TOKEN is a secret, ASSETS is for static assets, CounterAgent is the DO namespace
+interface Env extends Cloudflare.Env {
+  AGENT_AUTH_TOKEN: string;
+  ASSETS: Fetcher;
+  CounterAgent: DurableObjectNamespace<CounterAgent>;
+}
+
 export { EchoAgent } from "./agents/echo";
 export { CodingAgent } from "./agents/coding";
 
@@ -63,7 +70,8 @@ async function handleServerCounterRoute(request: Request, env: Env): Promise<Res
   const instanceName = parts[3] || "default";
   const action = parts[4] || "status";
 
-  const counter = await getAgentByName(env.CounterAgent, instanceName);
+  // Use getByName to get the stub with callable methods
+  const counter = env.CounterAgent.getByName(instanceName);
 
   if (action === "status") {
     return Response.json({
@@ -132,8 +140,12 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
     // Build headers object for RPC context
     const headers = Object.fromEntries(request.headers.entries());
     
-    // Try streaming first (SSE response for chat widget)
-    const stream = await env.CHAT.chatStream(body.messages || [], headers);
+    // CHAT is WorkerEntrypoint from wrangler types
+    // Call chatStream method with the appropriate signature
+    const chatStub = env.CHAT as unknown as {
+      chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
+    };
+    const stream = await chatStub.chatStream(body.messages || [], headers);
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
