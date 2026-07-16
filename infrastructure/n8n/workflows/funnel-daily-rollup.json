@@ -39,7 +39,7 @@
     },
     {
       "parameters": {
-        "url": "=https://hooks.slack.com/services/{{ $('Slack webhook URL').item.json.webhookPath }}",
+        "url": "={{ $env.SLACK_WEBHOOK_URL || 'https://hooks.slack.com/services/T0000000000000000000000000000000000000000' }}",
         "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
