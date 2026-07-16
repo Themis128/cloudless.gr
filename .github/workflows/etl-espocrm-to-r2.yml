@@ -53,21 +53,26 @@ jobs:
         run: npm ci
         working-directory: scripts/etl
 
-      - name: Pull ESPOCRM_BASE_URL + ESPOCRM_API_KEY from SSM
+      - name: Pull EspoCRM credentials from SSM
         id: ssm
         run: |
           BASE=$(aws ssm get-parameter --name /cloudless/production/ESPOCRM_BASE_URL --query 'Parameter.Value' --output text)
-          KEY=$(aws ssm get-parameter --name /cloudless/production/ESPOCRM_API_KEY --with-decryption --query 'Parameter.Value' --output text)
-          echo "::add-mask::$KEY"
+          # Prefer API_PASSWORD (Basic Auth) over API_KEY
+          API_PASSWORD=$(aws ssm get-parameter --name /cloudless/production/ESPOCRM_API_PASSWORD --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          API_KEY=$(aws ssm get-parameter --name /cloudless/production/ESPOCRM_API_KEY --with-decryption --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          [ -n "$API_PASSWORD" ] && echo "::add-mask::$API_PASSWORD"
+          [ -n "$API_KEY" ] && echo "::add-mask::$API_KEY"
           {
             echo "ESPOCRM_BASE_URL=$BASE"
-            echo "ESPOCRM_API_KEY=$KEY"
+            echo "ESPOCRM_API_PASSWORD=$API_PASSWORD"
+            echo "ESPOCRM_API_KEY=$API_KEY"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run EspoCRM ETL to R2
         run: node scripts/etl/espocrm-to-r2.mjs
         env:
           ESPOCRM_BASE_URL: ${{ steps.ssm.outputs.ESPOCRM_BASE_URL }}
+          ESPOCRM_API_PASSWORD: ${{ steps.ssm.outputs.ESPOCRM_API_PASSWORD }}
           ESPOCRM_API_KEY: ${{ steps.ssm.outputs.ESPOCRM_API_KEY }}
           ANALYTICS_BUCKET: ${{ env.BUCKET }}
 

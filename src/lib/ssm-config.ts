@@ -117,9 +117,11 @@ interface AppConfig {
   MQTT_BROKER_PORT: string;
   MQTT_USERNAME: string;
   MQTT_PASSWORD: string;
-  // EspoCRM
+  // EspoCRM (self-hosted on omv k3s) - supports both API key and Basic Auth
   ESPOCRM_BASE_URL: string;
   ESPOCRM_API_KEY: string;
+  ESPOCRM_API_PASSWORD: string;
+  ESPOCRM_API_USER: string;
   ESPOCRM_WEBHOOK_SECRET: string;
   // AppFlowy CMS
   APPFLOWY_API_URL: string;
@@ -146,7 +148,7 @@ interface AppConfig {
 let cached: AppConfig | null = null;
 let cachedAt = 0;
 
-/** Clears the SSM config cache — used in tests to pick up env changes. */
+/** Clears the SSM config cache - used in tests to pick up env changes. */
 export function resetSsmCache(): void {
   cached = null;
   cachedAt = 0;
@@ -200,7 +202,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
 
   if (!sesFrom.includes("@") || !sesTo.includes("@")) {
     console.warn(
-      `[SSM] SES email addresses look invalid — FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`
+      `[SSM] SES email addresses look invalid - FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`
     );
   }
 
@@ -291,6 +293,8 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     MQTT_PASSWORD: params.get("MQTT_PASSWORD") ?? "",
     ESPOCRM_BASE_URL: params.get("ESPOCRM_BASE_URL") ?? "",
     ESPOCRM_API_KEY: params.get("ESPOCRM_API_KEY") ?? "",
+    ESPOCRM_API_PASSWORD: params.get("ESPOCRM_API_PASSWORD") ?? "",
+    ESPOCRM_API_USER: params.get("ESPOCRM_API_USER") ?? "admin",
     ESPOCRM_WEBHOOK_SECRET: params.get("ESPOCRM_WEBHOOK_SECRET") ?? "",
     APPFLOWY_API_URL: params.get("APPFLOWY_API_URL") ?? "",
     APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
@@ -310,7 +314,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
 }
 
 /**
- * Builds an AppConfig purely from process.env — used in test environments
+ * Builds an AppConfig purely from process.env - used in test environments
  * so tests never touch AWS SSM.
  */
 function buildConfigFromEnv(): AppConfig {
@@ -401,6 +405,8 @@ function buildConfigFromEnv(): AppConfig {
     MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL || "",
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY || "",
+    ESPOCRM_API_PASSWORD: process.env.ESPOCRM_API_PASSWORD || "",
+    ESPOCRM_API_USER: process.env.ESPOCRM_API_USER || "admin",
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET || "",
     APPFLOWY_API_URL: process.env.APPFLOWY_API_URL || "",
     APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
@@ -443,7 +449,7 @@ export async function getConfig(): Promise<AppConfig> {
   try {
     params = await fetchSsmParams();
   } catch (err) {
-    // Transient SSM failure — serve stale cache rather than crashing all requests
+    // Transient SSM failure - serve stale cache rather than crashing all requests
     if (cached) {
       console.warn("[SSM] Fetch failed, serving stale config:", err);
       return cached;
@@ -451,12 +457,12 @@ export async function getConfig(): Promise<AppConfig> {
     // Dev-only fallback: when AWS creds aren't available locally (no
     // ~/.aws/credentials, no SSO session, no env keys), don't crash every
     // API route. Build config from .env.local directly. In production,
-    // throwing is correct — Lambda always has IAM role creds, so a failure
+    // throwing is correct - Lambda always has IAM role creds, so a failure
     // there is real.
     if (process.env.NODE_ENV !== "production") {
       const errName = (err as { name?: string })?.name ?? "Error";
       console.warn(
-        `[SSM] ${errName} in dev — falling back to .env.local. ` +
+        `[SSM] ${errName} in dev - falling back to .env.local. ` +
           "Set AWS_PROFILE or use IAM env keys to talk to real SSM."
       );
       cached = buildConfigFromEnv();

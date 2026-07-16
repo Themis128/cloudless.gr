@@ -54,9 +54,11 @@ export interface IntegrationConfig {
   META_PAGE_ID?: string;
   // AI
   ANTHROPIC_API_KEY?: string;
-  // EspoCRM (EspoCRM replacement, self-hosted on omv k3s)
+  // EspoCRM (self-hosted on omv k3s) - supports both API key and Basic Auth
   ESPOCRM_BASE_URL?: string;
   ESPOCRM_API_KEY?: string;
+  ESPOCRM_API_PASSWORD?: string;
+  ESPOCRM_API_USER?: string;
   ESPOCRM_WEBHOOK_SECRET?: string;
   // Notion SDK (read-only legacy; SSM keys decommissioned — values come from env only)
   NOTION_API_KEY?: string;
@@ -128,6 +130,8 @@ export function getIntegrations(): IntegrationConfig {
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL,
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY,
+    ESPOCRM_API_PASSWORD: process.env.ESPOCRM_API_PASSWORD,
+    ESPOCRM_API_USER: process.env.ESPOCRM_API_USER,
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET,
     NOTION_API_KEY: process.env.NOTION_API_KEY,
     NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID,
@@ -247,6 +251,8 @@ export async function getIntegrationsAsync(): Promise<IntegrationConfig> {
       ANTHROPIC_API_KEY: envCfg.ANTHROPIC_API_KEY || ssm.ANTHROPIC_API_KEY || undefined,
       ESPOCRM_BASE_URL: envCfg.ESPOCRM_BASE_URL || ssm.ESPOCRM_BASE_URL || undefined,
       ESPOCRM_API_KEY: envCfg.ESPOCRM_API_KEY || ssm.ESPOCRM_API_KEY || undefined,
+      ESPOCRM_API_PASSWORD: envCfg.ESPOCRM_API_PASSWORD || ssm.ESPOCRM_API_PASSWORD || undefined,
+      ESPOCRM_API_USER: envCfg.ESPOCRM_API_USER || ssm.ESPOCRM_API_USER || undefined,
       ESPOCRM_WEBHOOK_SECRET:
         envCfg.ESPOCRM_WEBHOOK_SECRET || ssm.ESPOCRM_WEBHOOK_SECRET || undefined,
       NOTION_API_KEY: envCfg.NOTION_API_KEY || undefined,

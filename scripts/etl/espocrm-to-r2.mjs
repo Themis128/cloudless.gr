@@ -13,9 +13,16 @@ import { getS3Client, BUCKET } from "./_r2-config.mjs";
 const PAGE_SIZE = 100;
 const BASE = (process.env.ESPOCRM_BASE_URL || "").replace(/\/$/, "");
 const KEY = process.env.ESPOCRM_API_KEY;
+const API_PASSWORD = process.env.ESPOCRM_API_PASSWORD; // For Basic Auth
+const API_USER = process.env.ESPOCRM_API_USER || "admin";
 
-if (!BASE || !KEY) {
-	console.error("ESPOCRM_BASE_URL and ESPOCRM_API_KEY are required");
+// Build auth headers: prefer API_PASSWORD (Basic Auth via Espo-Authorization), fallback to X-Api-Key
+const AUTH_HEADERS = API_PASSWORD
+	? { "Espo-Authorization": Buffer.from(`${API_USER}:${API_PASSWORD}`).toString("base64") }
+	: { "X-Api-Key": KEY };
+
+if (!BASE || (!KEY && !API_PASSWORD)) {
+	console.error("ESPOCRM_BASE_URL and ESPOCRM_API_KEY or ESPOCRM_API_PASSWORD are required");
 	process.exit(1);
 }
 
@@ -165,7 +172,7 @@ async function espoListAll(entity, select) {
 		if (select) url.searchParams.set("select", select.join(","));
 		const data = await fetchEspoWithRetry(
 			url,
-			{ headers: { "X-Api-Key": KEY } },
+			{ headers: AUTH_HEADERS },
 			`${entity} list (offset ${offset})`
 		);
 		all.push(...(data.list ?? []));
@@ -404,7 +411,7 @@ async function main() {
 	try {
 		const probe = await fetch(`${BASE}/api/v1/App/user`, {
 			method: "GET",
-			headers: { "X-Api-Key": KEY },
+			headers: AUTH_HEADERS,
 			signal: AbortSignal.timeout(15_000),
 		});
 		if (probe.status >= 500) {
