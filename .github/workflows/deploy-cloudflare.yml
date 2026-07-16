@@ -177,12 +177,12 @@ jobs:
             [worker.oci]
               max-parallelism = 2
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@763ddd85a42cf275f3314fb78abca7a9a446feb4 # v3.4.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+       - name: Login to GitHub Container Registry
+         uses: docker/login-action@v3.4.0
+         with:
+           registry: ghcr.io
+           username: ${{ github.actor }}
+           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push arm64 image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
