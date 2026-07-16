@@ -79,7 +79,23 @@ cat > ./out/index.html << 'EOF'
 EOF
 
 echo "✅ Static assets extracted to ./out/"
-echo ""
-echo "Next steps:"
-echo "1. pnpm cf:r2:upload-dir  # Upload to R2 bucket"
-echo "2. pnpm cf:deploy         # Deploy the Worker"
+
+# Upload to R2 bucket
+echo "Uploading to R2..."
+if [ -d "./out" ]; then
+  find "./out" -type f | while read -r file; do
+    rel_path="${file#./out/}"
+
+    # Skip hidden files
+    if [[ "$rel_path" == .* ]]; then
+      continue
+    fi
+
+    echo "Uploading: $rel_path"
+    npx wrangler r2 object put "cloudless-assets/$rel_path" --file="$file" --remote 2>/dev/null || true
+  done
+  echo "✅ Assets uploaded to R2"
+else
+  echo "❌ No ./out directory found - cannot upload"
+  exit 1
+fi

@@ -106,13 +106,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Build Next.js
-        run: pnpm cf:build
+      - name: Build and upload assets to R2 (includes extraction + upload)
+        run: pnpm cf:r2:upload-static
         env:
           NEXT_PUBLIC_AUTH_PROVIDER: d1
           NEXT_PUBLIC_SITE_URL: https://cloudless.gr
           NEXT_PUBLIC_STAGE: production
           NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   deploy-worker:
     name: Deploy to Cloudflare Workers
@@ -132,12 +133,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Upload assets to R2
-        run: pnpm cf:r2:upload-static
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
       - name: Deploy to Workers (Primary)
+       # Note: Assets are already uploaded by build-assets job (cf:r2:upload-static)
         uses: cloudflare/wrangler-action@v3
         id: deploy
         with:

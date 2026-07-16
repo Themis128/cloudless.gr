@@ -33,15 +33,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      # Build Next.js
-      - run: pnpm cf:build
+      # Build and upload static assets to R2 (includes extraction + upload)
+      - run: pnpm cf:r2:upload-static
         env:
           NEXT_PUBLIC_AUTH_PROVIDER: d1
           NEXT_PUBLIC_SITE_URL: https://cloudless.gr
-
-      # Deploy assets to R2 (requires CLOUDFLARE_API_TOKEN)
-      - run: pnpm cf:r2:upload-dir
-        env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   # Deploy main Worker with both domains
