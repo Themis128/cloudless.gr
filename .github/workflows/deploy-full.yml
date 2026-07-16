@@ -139,6 +139,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
+    outputs:
+      image_tag: ${{ steps.normalize.outputs.image_tag }}
     steps:
       - uses: actions/checkout@v4.3.1
 
@@ -158,6 +160,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Normalize registry path (lowercase)
+        id: normalize
+        run: |
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"  # Bash: ${var,,} lowercases
+          SHA="${{ needs.build-and-validate.outputs.short_sha }}"
+          echo "image_tag=${OWNER}/cloudless-pi-app:${SHA}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push arm64 image
         uses: docker/build-push-action@v7.2.0
         with:
@@ -165,7 +174,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/cloudless-pi-app:${{ needs.build-and-validate.outputs.short_sha }}
+          tags: ghcr.io/${{ steps.normalize.outputs.image_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           sbom: false
@@ -212,7 +221,7 @@ jobs:
       - name: Set image and rollout
         run: |
           kubectl set image deployment/cloudless \
-            cloudless=ghcr.io/${{ github.repository_owner }}/cloudless-pi-app:${{ needs.build-and-validate.outputs.short_sha }} \
+            cloudless=ghcr.io/${{ needs.build-pi-image.outputs.image_tag }} \
             -n cloudless || {
               echo "::warning::Failed to set image — Pi deployment may be stale"
               exit 0
@@ -242,7 +251,7 @@ jobs:
               \"text\": \"${STATUS} — \\`${GITHUB_SHA::7}\`\",
               \"blocks\": [
                 {\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"${STATUS}\", \"emoji\": true}},
-                {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\n*Commit:* \`${GITHUB_SHA::7}\`\n*Actor:* ${{ github.actor }}\n*Cloudflare:* ${{ needs.deploy-worker.result }}\n*k3s:* ${{ needs.rollout-k3s.result }}\"}},
-                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"}]}
+                {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"*Stage:* \`production\`\\n*Commit:* \\`${GITHUB_SHA::7}\\`\\n*Actor:* ${{ github.actor }}\\n*Cloudflare:* ${{ needs.deploy-worker.result }}\\n*k3s:* ${{ needs.rollout-k3s.result }}\"}},
+                {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>\"]}
               ]
             }"
