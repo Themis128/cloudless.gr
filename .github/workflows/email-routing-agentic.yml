@@ -1,7 +1,6 @@
----
-emoji: "📧"
-description: "Agentic email routing setup replacing legacy SES SMTP bootstrap"
 name: Email Routing Agentic
+
+# Agentic email routing setup replacing legacy SES SMTP bootstrap
 
 on:
   workflow_dispatch:

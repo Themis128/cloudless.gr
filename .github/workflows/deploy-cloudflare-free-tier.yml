@@ -1,4 +1,5 @@
 name: Deploy to Cloudflare Workers (Cloudflare-only)
+
 # Replaces CloudFront/SST deployment - full migration to Cloudflare
 on:
   push:
@@ -71,18 +72,21 @@ jobs:
           command: deploy --env=production
 
       # Write deploy SHA to SSM for drift detection
-      - name: record deploy sha
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials (OIDC)
+        id: aws
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
-          role-to-assume: arn:aws:iam::278585680617:role/cloudless-github-actions
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
-      - name: put cloud-sha ssm param
+        continue-on-error: true
+
+      - name: Record deploy SHA to SSM
+        if: steps.aws.outcome == 'success'
         run: |
           aws ssm put-parameter \
             --name /cloudless/production/cloud-sha \
             --value "${{ github.sha }}" \
-            --type String \
-            --overwrite
+            --type String --overwrite --region us-east-1
 
   # D1 migrations (only on scheduled runs or manual dispatch)
   d1-migrate:
