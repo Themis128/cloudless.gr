@@ -1,0 +1,29 @@
+---
+emoji: "📧"
+description: "Agentic email routing setup replacing legacy SES SMTP bootstrap"
+name: Email Routing Agentic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/email-routing-agentic.yml"
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  email-routing-agentic:
+    name: Email Routing Setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Placeholder step
+        run: |
+          echo "Placeholder for agentic email routing setup."
+          echo "Implement via .github/aw/templates when available."

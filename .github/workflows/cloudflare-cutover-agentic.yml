@@ -1,0 +1,29 @@
+---
+emoji: "🔀"
+description: "Agentic Cloudflare cutover workflow replacing legacy CloudFront decommission"
+name: Cloudflare Cutover Agentic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudflare-cutover-agentic.yml"
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  cloudflare-cutover-agentic:
+    name: Cloudflare Cutover
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Placeholder step
+        run: |
+          echo "Placeholder for agentic Cloudflare cutover."
+          echo "Implement via .github/aw/templates when available."
