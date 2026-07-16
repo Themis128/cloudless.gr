@@ -120,17 +120,5 @@ test.describe("GitHub Agentic Workflows - Infrastructure", () => {
         ).toBeTruthy();
       }
     });
-  });
-});
-
-</parameter>
-<task_progress>
-- [x] Analyze existing agentic workflows and scripts
-- [x] Understand GitHub Agentic Workflows platform requirements
-- [x] Review Playwright test patterns in the project
-- [x] Create comprehensive test suite for agentic workflows
-- [x] Add yaml package dependency
-- [x] Create the test file in e2e directory
-- [ ] Run tests to validate they pass
-</task_progress>
-</write_to_file>
+   });
+ });
