@@ -2,7 +2,9 @@
   "mcpServers": {
     "cloudless-infra": {
       "command": "node",
-      "args": ["C:/Users/baltz/AppData/Roaming/kiro/tools/ssh-mcp/dist/index.js"],
+      "args": [
+        "C:/Users/baltz/AppData/Roaming/kiro/tools/ssh-mcp/dist/index.js"
+      ],
       "env": {
         "OMV_SSH_HOST_TAILSCALE": "100.113.41.119",
         "OMV_SSH_USER": "omv",
@@ -17,7 +19,10 @@
     },
     "project": {
       "command": "npx",
-      "args": ["--no-install", "project-mcp"],
+      "args": [
+        "--no-install",
+        "project-mcp"
+      ],
       "autoStart": true,
       "autoApprove": [
         "search",
@@ -27,7 +32,10 @@
     },
     "notion": {
       "command": "npx",
-      "args": ["--no-install", "@notionhq/notion-mcp-server"],
+      "args": [
+        "--no-install",
+        "@notionhq/notion-mcp-server"
+      ],
       "env": {
         "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
       },
@@ -45,7 +53,9 @@
       "autoApprove": [
         "deploy",
         "kv_get",
-        "kv_put"
+        "kv_put",
+        "search",
+        "search"
       ]
     }
   }

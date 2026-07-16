@@ -1,4 +1,4 @@
-name: Deploy to Pi (ECR + k3s rollout)
+name: Deploy to Pi (GHCR + k3s rollout)
 
 on:
   push:
@@ -22,19 +22,17 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  id-token: write # required for OIDC
   contents: read
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
-  ECR_REPOSITORY: cloudless-pi-app
+  GHCR_REGISTRY: ghcr.io
+  GHCR_REPOSITORY: ${{ github.repository_owner }}/cloudless-pi-app
   K3S_NAMESPACE: cloudless
   K3S_DEPLOYMENT: cloudless
 
 jobs:
-  build-and-push:
-    name: Build arm64 image and push to ECR
+  push-ghcr:
+    name: Push arm64 image to GHCR
     # Self-hosted arm64 runner. Label set `[self-hosted, omv, pi, build]` is
     # unique to `omv-build` on omv-main (which has docker + USB-SSD-backed _work).
     # The `omv` runner stays disabled to relieve SD-card contention.
@@ -44,34 +42,28 @@ jobs:
     # to route this onto GitHub-hosted runners with QEMU for arm64 cross-compilation.
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted", "omv", "pi", "build"]') }}
     outputs:
-      short_sha: ${{ steps.check_ecr.outputs.short_sha }}
-      image_exists: ${{ steps.check_ecr.outputs.exists }}
+      short_sha: ${{ steps.check_ghcr.outputs.short_sha }}
+      image_exists: ${{ steps.check_ghcr.outputs.exists }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+        uses: actions/checkout@v4.3.1
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3.4.0
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
-
-      - name: Check if image tag already exists in ECR
-        id: check_ecr
+      - name: Check if image tag already exists in GHCR
+        id: check_ghcr
         run: |
           SHORT_SHA="${GITHUB_SHA::12}"
-          if aws ecr describe-images \
-            --repository-name ${{ env.ECR_REPOSITORY }} \
-            --image-ids imageTag="${SHORT_SHA}" \
-            --region ${{ env.AWS_REGION }} \
-            --query 'imageDetails[0].imageTags' \
-            --output text 2>/dev/null | grep -q "${SHORT_SHA}"; then
+          TAG="${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPOSITORY }}:${SHORT_SHA}"
+          if docker manifest inspect "${TAG}" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Image ${SHORT_SHA} already in ECR — skipping build."
+            echo "Image ${SHORT_SHA} already in GHCR — skipping build."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "Image ${SHORT_SHA} not found — will build and push."
@@ -79,85 +71,54 @@ jobs:
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU (arm64 emulation)
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+        if: steps.check_ghcr.outputs.exists != 'true'
+        uses: docker/setup-qemu-action@v4.0.0
         with:
           platforms: arm64
 
       - name: Set up Docker Buildx
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+        if: steps.check_ghcr.outputs.exists != 'true'
+        uses: docker/setup-buildx-action@v4.0.0
 
       - name: ensure local cache dirs exist
-        if: steps.check_ecr.outputs.exists != 'true'
+        if: steps.check_ghcr.outputs.exists != 'true'
         run: |
           sudo mkdir -p /opt/docker-cache
           sudo chmod 777 /opt/docker-cache
 
       - name: warm base image into Docker daemon cache
-        if: steps.check_ecr.outputs.exists != 'true'
+        if: steps.check_ghcr.outputs.exists != 'true'
         run: docker pull node:22-alpine
 
       # Build with load:true (not push:true) — see the long comment in
       # build-pi-image.yml for the rationale. Push happens via plain
-      # `docker push` in the next step, bypassing the buildkit/ECR
-      # manifest-HEAD bug that caused the 2026-05-29 401 failures.
+      # `docker push` in the next step.
       - name: Build and load to dockerd
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        if: steps.check_ghcr.outputs.exists != 'true'
+        uses: docker/build-push-action@v7.1.0
         with:
           context: .
           platforms: linux/arm64
           load: true
           push: false
-          # SHA tag only — ECR has immutable tags, :latest is never pushed.
-          # Rollout uses kubectl set image with this SHA for pinned, reproducible deploys.
-          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}
+          tags: ${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPOSITORY }}:${{ steps.check_ghcr.outputs.short_sha }}
           cache-from: type=local,src=/opt/docker-cache
           cache-to: type=local,dest=/opt/docker-cache,mode=max
-          # Disable provenance/SBOM attestation manifests — they require a
-          # separate Buildx session push that times out on the Pi runner when
-          # ECR is slow (no active session / context deadline exceeded).
           provenance: false
           sbom: false
-           build-args: |
-             NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
-             NEXT_PUBLIC_STAGE=production
-             NEXT_PUBLIC_COGNITO_USER_POOL_ID=${{ secrets.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
-             NEXT_PUBLIC_COGNITO_CLIENT_ID=${{ secrets.NEXT_PUBLIC_COGNITO_CLIENT_ID }}
-             NEXT_PUBLIC_COGNITO_DOMAIN=https://cloudless-auth.auth.us-east-1.amazoncognito.com
-             NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${{ secrets.NEXT_PUBLIC_HUBSPOT_PORTAL_ID }}
-             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-             NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
-             APP_VERSION=${{ github.sha }}
-             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
-             SENTRY_ENVIRONMENT=pi-standby
-             NEXT_PUBLIC_SENTRY_ENVIRONMENT=pi-standby
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_STAGE=production
+            NEXT_PUBLIC_AUTH_PROVIDER=d1
+            NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+            APP_VERSION=${{ github.sha }}
 
-      # Login + push in one step — avoids credential-store issues on self-hosted
-      # Pi runners where `amazon-ecr-login` writes to secretservice/pass but
-      # dockerd reads only ~/.docker/config.json.
-      # `aws ecr get-login-password | docker login --password-stdin` writes
-      # directly to config.json, bypassing any credential helper.
-      - name: Push to ECR
-        if: steps.check_ecr.outputs.exists != 'true'
+      - name: Push to GHCR
+        if: steps.check_ghcr.outputs.exists != 'true'
         run: |
-          set -euo pipefail
-          TAG="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}"
-          echo "==> docker login via get-login-password"
-          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
-            | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+          TAG="${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPOSITORY }}:${{ steps.check_ghcr.outputs.short_sha }}"
           echo "==> docker push ${TAG}"
           docker push "${TAG}"
-
-      - name: Update SSM Pi image tracking
-        run: |
-          aws ssm put-parameter \
-            --name "/cloudless/production/pi-sha" \
-            --value "${{ steps.check_ecr.outputs.short_sha }}" \
-            --type String \
-            --description 'Latest Pi (k3s) deploy SHA — written by deploy-pi.yml.' \
-            --overwrite
 
   rollout:
     name: Rollout restart on k3s
@@ -165,32 +126,21 @@ jobs:
     # directly over Tailscale — no SSH hop required.
     # Failover-capable: when GH-hosted billing is broken, flip
     #   .github/scripts/toggle-runner.sh pi
-    # to route this onto the self-hosted Pi build runners. The Pi runners are
-    # already inside the local network and can reach the k3s API directly
-    # (192.168.1.128:6443) without Tailscale, so the tailnet step becomes a
-    # no-op on them.
+    # to route this onto the self-hosted Pi build runners.
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
-    needs: build-and-push
-    if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
+    needs: push-ghcr
+    if: always() && needs.push-ghcr.result != 'cancelled' && (needs.push-ghcr.result == 'success' || needs.push-ghcr.outputs.image_exists == 'true')
 
     steps:
       - name: Connect to tailnet
-        # continue-on-error: Pi runners are already Tailscale nodes — if
-        # tailscale-action fails to re-auth the existing daemon (e.g. ephemeral
-        # key consumed), the runner's pre-existing Tailscale connection still
-        # routes kubectl traffic to 100.113.41.119:6443 correctly.
         continue-on-error: true
-        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        uses: tailscale/github-action@v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
       - name: Verify Tailscale path to omv-main
         run: |
-          # tailscale ping exits 1 when all pings route via DERP (no direct
-          # path) even though the connection works fine for kubectl. Treat as
-          # diagnostic-only; let kubectl be the definitive connectivity gate.
           tailscale ping -c 3 --timeout=15s 100.74.191.58 \
             || echo "Note: Tailscale using DERP relay — kubectl will still work"
-          # nc exit code unreliable through DERP; log result but don't fail.
           nc -zv -w 10 100.74.191.58 6443 \
             && echo "Port 6443 directly reachable" \
             || echo "Port 6443 via nc failed — proceeding over Tailscale relay"
@@ -202,6 +152,6 @@ jobs:
       - name: Set image and roll out
         run: |
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
-            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
+            ${{ env.K3S_DEPLOYMENT }}=${{ env.GHCR_REGISTRY }}/${{ env.GHCR_REPOSITORY }}:${{ needs.push-ghcr.outputs.short_sha }} \
             -n ${{ env.K3S_NAMESPACE }}
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=180s

@@ -1,9 +1,8 @@
 name: Deploy to Cloudflare Workers + k3s
 
 # Unified deployment workflow for Cloudflare Workers and k3s (Pi cluster)
-# Builds Next.js, uploads static assets to R2, deploys Worker, builds arm64
-# image, and rolls out to k3s.
-# No AWS dependencies for the Cloudflare path; uses SSM for SHA tracking.
+# Builds Next.js, deploys Worker, builds arm64 image, and rolls out to k3s.
+# No AWS dependencies for the Cloudflare path.
 
 on:
   push:
@@ -28,12 +27,11 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write  # for OIDC SSM writes
-  packages: write  # for GHCR push
+  id-token: write
+  packages: write
 
 env:
   NODE_VERSION: 22
-  AWS_REGION: us-east-1
 
 jobs:
   build-and-validate:
@@ -43,24 +41,16 @@ jobs:
       short_sha: ${{ steps.meta.outputs.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+        uses: actions/checkout@v4.3.1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        uses: actions/setup-node@v6.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - name: Restore build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: |
-            .next/cache
-            ~/.pnpm-store
-          key: build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -78,8 +68,6 @@ jobs:
         run: |
           SHA="${GITHUB_SHA::12}"
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-          echo "Full SHA: ${GITHUB_SHA}"
-          echo "Short SHA: ${SHA}"
 
       - name: TypeScript check
         run: pnpm typecheck
@@ -92,23 +80,15 @@ jobs:
     needs: build-and-validate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      - uses: actions/checkout@v4.3.1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: actions/setup-node@v6.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-
-      - name: Restore build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: |
-            .next/cache
-            ~/.pnpm-store
-          key: build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -126,46 +106,32 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      - uses: actions/checkout@v4.3.1
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      - uses: actions/setup-node@v6.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Upload assets to R2
-        run: pnpm cf:r2:upload-static
+      - name: Deploy to Workers (Primary)
+        run: pnpm cf:deploy:free
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      - name: Deploy to Workers (Primary)
-        uses: cloudflare/wrangler-action@v3
-        id: deploy
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy --env=production
-          workingDirectory: .
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Publish Cloudflare SHA to SSM
-        run: |
-          aws ssm put-parameter \
-            --name /cloudless/production/cloud-sha \
-            --value "${{ needs.build-and-validate.outputs.short_sha }}" \
-            --type String \
-            --overwrite \
-            --region ${{ env.AWS_REGION }} 2>/dev/null || true
-          echo "Published Cloudflare SHA: ${{ needs.build-and-validate.outputs.short_sha }}"
+          NEXT_PUBLIC_AUTH_PROVIDER: d1
+          NEXT_PUBLIC_SITE_URL: https://cloudless.gr
+          NEXT_PUBLIC_STAGE: production
+          NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: baltzakisthemiscom
+          SENTRY_PROJECT: cloudless-gr
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: prod
+          NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod
 
   build-pi-image:
     name: Build Pi Image (GHCR)
@@ -174,10 +140,10 @@ jobs:
     permissions:
       packages: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      - uses: actions/checkout@v4.3.1
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+        uses: docker/setup-buildx-action@v4.1.0
         with:
           buildkitd-config-inline: |
             [grpc]
@@ -185,15 +151,15 @@ jobs:
             [worker.oci]
               max-parallelism = 2
 
-       - name: Login to GitHub Container Registry
-         uses: docker/login-action@v3.4.0
-         with:
-           registry: ghcr.io
-           username: ${{ github.actor }}
-           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push arm64 image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@v7.2.0
         with:
           context: .
           file: ./Dockerfile
@@ -211,33 +177,17 @@ jobs:
             NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
             APP_VERSION=${{ github.sha }}
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Publish Pi SHA to SSM
-        run: |
-          aws ssm put-parameter \
-            --name /cloudless/production/pi-sha \
-            --value "${{ needs.build-and-validate.outputs.short_sha }}" \
-            --type String \
-            --overwrite \
-            --region ${{ env.AWS_REGION }} 2>/dev/null || true
-          echo "Published Pi SHA: ${{ needs.build-and-validate.outputs.short_sha }}"
-
   rollout-k3s:
     name: Rollout to k3s (Pi)
     needs: [build-pi-image, deploy-worker]
     if: always() && (needs.deploy-worker.result == 'success' || needs.build-pi-image.result == 'success')
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+      - uses: actions/checkout@v4.3.1
 
       - name: Connect to tailnet
         continue-on-error: true
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: tailscale/github-action@v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
@@ -250,10 +200,8 @@ jobs:
       - name: Diagnose k3s API reachability
         run: |
           set +e
-          echo "==> Checking k3s API reachability"
           kubectl get --raw /healthz --request-timeout=10s
           rc=$?
-          echo "kubectl exit code: $rc"
           if [ "$rc" -ne 0 ]; then
             echo "::warning::kubectl could not reach k3s API — Pi runner may be offline"
             echo "Cloudflare Workers is primary; skipping k3s rollout"
