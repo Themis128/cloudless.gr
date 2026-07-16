@@ -266,8 +266,8 @@ interface Env {
 }
 
 // Default export for HTTP fetch compatibility (also useful for local dev)
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+const chatWorker = {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/chat" && request.method === "POST") {
@@ -281,6 +281,8 @@ export default {
     return Response.json({ error: "Not Found" }, { status: 404 });
   },
 };
+
+export default chatWorker;
 
 // Helper to run chat without WorkerEntrypoint (for HTTP fallback)
 async function runChat(
