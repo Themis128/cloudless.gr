@@ -138,7 +138,7 @@ jobs:
         id: deploy
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy --env=production
+          command: deploy --config wrangler-cloudflare-free.json --env=production
           workingDirectory: .
 
       - name: Configure AWS credentials (OIDC)
