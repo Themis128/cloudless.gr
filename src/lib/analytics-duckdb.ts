@@ -106,7 +106,12 @@ export async function listParquetPartitions(
         });
       }
     }
-    cursor = response.cursor;
+    // Cursor only exists when truncated is true - use type guard
+    if (response.truncated && 'cursor' in response) {
+      cursor = response.cursor;
+    } else {
+      cursor = undefined;
+    }
   } while (cursor);
 
   return partitions.sort((a, b) => 
