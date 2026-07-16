@@ -69,5 +69,6 @@ minimumReleaseAgeExclude:
   # openai recently published; exempt until it ages past the window
   - 'openai@6.47.0'
 
-# Note: overrides are now defined in .npmrc for pnpm v10+ compatibility
-# See: https://pnpm.io/settings#overrides
+# Overrides for security patches (pnpm v11+ format)
+overrides:
+  postcss: ">=8.5.10"
