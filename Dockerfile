@@ -9,7 +9,7 @@
 #   docker run --rm -p 3000:3000 --env-file .env.local cloudless-pi-app:dev
 
 ARG NODE_VERSION=22-alpine
-ARG PNPM_VERSION=10.33.2
+ARG PNPM_VERSION=11.9.0
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) deps — install all production+dev deps (cached on lockfile only)
