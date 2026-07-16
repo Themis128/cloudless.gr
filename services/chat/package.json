@@ -1,0 +1,10 @@
+{
+  "name": "cloudless-gr-chat",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "types": "wrangler types"
+  }
+}

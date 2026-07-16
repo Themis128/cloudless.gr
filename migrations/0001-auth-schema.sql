@@ -3,7 +3,7 @@
 
 -- Users table (replaces Cognito User Pool)
 -- Stores user profile data including preferences
-CREATE TABLE user (
+CREATE TABLE IF NOT EXISTS user (
   id TEXT NOT NULL PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
   name TEXT,
@@ -17,7 +17,7 @@ CREATE TABLE user (
 
 -- User roles (replaces Cognito groups)
 -- Admin users get access to /admin routes
-CREATE TABLE user_role (
+CREATE TABLE IF NOT EXISTS user_role (
   user_id TEXT NOT NULL,
   role TEXT NOT NULL CHECK(role IN ('admin', 'user')),
   PRIMARY KEY (user_id, role),
@@ -26,7 +26,7 @@ CREATE TABLE user_role (
 
 -- Sessions table (replaces SessionTokenStore + JWT cookie token offloading)
 -- Stores session tokens to keep cookies under 4KB limit
-CREATE TABLE session (
+CREATE TABLE IF NOT EXISTS session (
   id TEXT NOT NULL PRIMARY KEY,
   user_id TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE session (
 );
 
 -- Stripe transactions (replaces StripeTransactions DynamoDB table)
-CREATE TABLE stripe_transaction (
+CREATE TABLE IF NOT EXISTS stripe_transaction (
   event_id TEXT NOT NULL PRIMARY KEY,
   event_type TEXT NOT NULL,
   tag_category TEXT,
@@ -49,13 +49,13 @@ CREATE TABLE stripe_transaction (
 );
 
 -- Stripe transaction indexes for querying
-CREATE INDEX idx_stripe_event_type ON stripe_transaction(event_type);
-CREATE INDEX idx_stripe_received_at ON stripe_transaction(received_at);
-CREATE INDEX idx_stripe_customer ON stripe_transaction(customer_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_event_type ON stripe_transaction(event_type);
+CREATE INDEX IF NOT EXISTS idx_stripe_received_at ON stripe_transaction(received_at);
+CREATE INDEX IF NOT EXISTS idx_stripe_customer ON stripe_transaction(customer_id);
 
 -- Admin notifications (replaces AdminNotifications DynamoDB table)
 -- Events log for all client-facing interactions
-CREATE TABLE admin_notification (
+CREATE TABLE IF NOT EXISTS admin_notification (
   pk TEXT NOT NULL,  -- "NOTIF" constant
   sk TEXT NOT NULL,  -- "<createdAt-ISO8601>#<id>"
   cat_pk TEXT NOT NULL,  -- "CAT#<category>"
@@ -65,12 +65,12 @@ CREATE TABLE admin_notification (
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 
-CREATE INDEX idx_notification_cat_pk ON admin_notification(cat_pk);
-CREATE INDEX idx_notification_cat_sk ON admin_notification(cat_sk);
+CREATE INDEX IF NOT EXISTS idx_notification_cat_pk ON admin_notification(cat_pk);
+CREATE INDEX IF NOT EXISTS idx_notification_cat_sk ON admin_notification(cat_sk);
 
 -- Analytics cache (replaces AnalyticsCache DynamoDB table)
 -- Query result caching for GSC endpoints
-CREATE TABLE analytics_cache (
+CREATE TABLE IF NOT EXISTS analytics_cache (
   pk TEXT NOT NULL,  -- route name
   sk TEXT NOT NULL,  -- params hash
   result_json TEXT,
@@ -78,14 +78,14 @@ CREATE TABLE analytics_cache (
   expires_at INTEGER
 );
 
-CREATE INDEX idx_analytics_expires ON analytics_cache(expires_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_expires ON analytics_cache(expires_at);
 
 -- Create indexes for user lookups
-CREATE INDEX idx_user_email ON user(email);
-CREATE INDEX idx_session_expires ON session(expires_at);
+CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
+CREATE INDEX IF NOT EXISTS idx_session_expires ON session(expires_at);
 
 -- Trigger to update updated_at on user changes
-CREATE TRIGGER update_user_timestamp 
+CREATE TRIGGER IF NOT EXISTS update_user_timestamp 
   AFTER UPDATE ON user 
   FOR EACH ROW 
   BEGIN 

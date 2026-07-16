@@ -56,6 +56,13 @@
   "ai": {
     "binding": "AI"
   },
+  "services": [
+    {
+      "binding": "CHAT",
+      "service": "cloudless-gr-chat",
+      "entrypoint": "ChatEntrypoint"
+    }
+  ],
   "vars": {
     "AGENT_AUTH_TOKEN": "placeholder-override-in-production"
   }

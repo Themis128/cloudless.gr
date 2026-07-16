@@ -1,77 +1,81 @@
-name: Preview Deploy
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+name: Deploy Preview
 
 on:
   pull_request:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'sst.config.ts'
-      - 'next.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-
-concurrency:
-  group: preview-${{ github.head_ref }}
-  cancel-in-progress: true
-
-permissions:
-  id-token: write
-  contents: read
-  pull-requests: write
+    types: [opened, synchronize, reopened]
 
 jobs:
   preview:
-    name: Deploy Preview
     runs-on: ubuntu-latest
-    timeout-minutes: 40
-
+    permissions:
+      contents: read
+      pull-requests: write
+    
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
         with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: 22
-          cache: pnpm
+          node-version: '22'
+          cache: 'pnpm'
+      
       - run: pnpm install --frozen-lockfile
-
-      - name: Configure AWS credentials
-        id: awscreds
-        continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6 v6.2.0
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          role-session-name: gha-preview-${{ github.run_id }}
-          aws-region: us-east-1
-          audience: sts.amazonaws.com
-
-      - name: Fail with OIDC trust-policy guidance
-        if: steps.awscreds.outcome == 'failure'
+      
+      - name: Build for Cloudflare
+        run: pnpm cf:build
+        env:
+          NEXT_PUBLIC_AUTH_PROVIDER: d1
+          NEXT_PUBLIC_SITE_URL: https://cloudless.gr
+      
+      - name: Upload static assets
         run: |
-          echo "OIDC assume role failed for PR preview."
-          echo "If this is from a fork, GitHub will not grant OIDC tokens by default."
-          echo "If this is an internal PR, check that the IAM trust policy allows the pull_request sub-claim for this repo."
-          exit 1
-
-      - name: Deploy staging
+          mkdir -p ./out
+          if [ -d ".next/static" ]; then cp -r .next/static/* ./out/ 2>/dev/null || true; fi
+          if [ -d "public" ]; then cp -r public/* ./out/ 2>/dev/null || true; fi
+          if [ -d "./out" ]; then
+            find "./out" -type f | while read -r file; do
+              rel_path="${file#./out/}"
+              [[ "$rel_path" == .* ]] && continue
+              npx wrangler r2 object put "cloudless-assets-preview/$rel_path" --file="$file" 2>/dev/null || true
+            done
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      
+      - name: Deploy Preview
         id: deploy
-        run: |
-          pnpm deploy:staging 2>&1 | tee deploy-output.txt
-          # Extract the site URL from SST output
-          URL=$(grep -oP 'https://\S+' deploy-output.txt | head -1 || echo "")
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-
-      - name: Comment PR with preview URL
-        if: steps.deploy.outputs.url != ''
-        uses: marocchino/sticky-pull-request-comment@d4d6b0936434b21bc8345ad45a440c5f7d2c40ff # v3
+        uses: cloudflare/wrangler-action@v3
         with:
-          header: preview-url
-          message: |
-            ### 🚀 Preview deployed!
-            **URL:** ${{ steps.deploy.outputs.url }}
-            **Commit:** ${{ github.sha }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: fb7dc7b69b662480cd5961a4d1913c78
+          command: deploy -c wrangler.preview.jsonc
+      
+      - name: Comment Preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.deployment-url }}';
+            const body = `## 🚀 Preview Deployment\n\n| | |\n|---|---|\n| **URL** | ${url} |\n| **Branch** | \`${{ github.head_ref }}\` |\n| **Commit** | \`${{ github.sha }}\` |\n\n*This preview environment shares bindings with other PR previews.*`;
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            const botComment = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.includes('Preview Deployment'));
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body
+              });
+            }

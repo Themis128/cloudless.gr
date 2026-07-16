@@ -8,6 +8,7 @@ export { CodingAgent } from "./agents/coding";
 const AGENT_PATH_PREFIX = "/api/agents";
 const DEFAULT_AGENT_PATH_PREFIX = "/agents";
 const SERVER_COUNTER_PREFIX = "/api/server/counter";
+const CHAT_PATH_PREFIX = "/api/chat";
 
 function unauthorized() {
   return Response.json(
@@ -119,6 +120,38 @@ async function handleServerCounterRoute(request: Request, env: Env): Promise<Res
   );
 }
 
+// ---------------------------------------------------------------------------
+// Chat service routing - delegates to cloudless-gr-chat via service binding
+// ---------------------------------------------------------------------------
+
+async function handleChatRoute(request: Request, env: Env): Promise<Response> {
+  try {
+    // For RPC-style call, extract messages and call directly
+    const body = (await request.json().catch(() => ({}))) as { messages?: { role: "user" | "assistant"; content: string }[] };
+    
+    // Build headers object for RPC context
+    const headers = Object.fromEntries(request.headers.entries());
+    
+    // Try streaming first (SSE response for chat widget)
+    const stream = await env.CHAT.chatStream(body.messages || [], headers);
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (err) {
+    // If stream fails, try regular fetch as fallback
+    if (err instanceof Error && err.message.includes("Rate limit")) {
+      return Response.json({ error: err.message }, { status: 429 });
+    }
+    // Fall back to ASSETS fetch for Next.js route
+    return env.ASSETS.fetch(request);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -126,9 +159,15 @@ export default {
     const isCustomAgentRoute = url.pathname.startsWith(AGENT_PATH_PREFIX + "/");
     const isDefaultAgentRoute = url.pathname.startsWith(DEFAULT_AGENT_PATH_PREFIX + "/");
     const isServerCounterRoute = url.pathname.startsWith(SERVER_COUNTER_PREFIX + "/");
+    const isChatRoute = url.pathname.startsWith(CHAT_PATH_PREFIX + "/") || url.pathname === CHAT_PATH_PREFIX;
 
     if ((isCustomAgentRoute || isServerCounterRoute) && !isAuthorized(request, env)) {
       return unauthorized();
+    }
+
+    // Route chat to dedicated service worker via RPC binding
+    if (isChatRoute) {
+      return handleChatRoute(request, env);
     }
 
     if (isServerCounterRoute) {

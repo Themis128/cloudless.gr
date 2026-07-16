@@ -447,357 +447,377 @@ export default {
       return jsonResponse({ ok: true, message: `User ${email} promoted to admin` });
     }
 
-     // ==========================================
-     // CHAT ENDPOINT (Workers AI)
-     // ==========================================
+    // ==========================================
+    // CHAT ENDPOINT (Service Binding)
+    // ==========================================
 
-     // POST /api/chat - Chat with Workers AI
-     if (url.pathname === "/api/chat" && method === "POST") {
-       const encoder = new TextEncoder();
+    // POST /api/chat - Delegate to cloudless-gr-chat service via RPC binding
+    if (url.pathname === "/api/chat" && method === "POST") {
+      // First, try service binding (RPC-style, zero latency)
+      if (env.CHAT) {
+        try {
+          const body = await request.json();
+          const messages = body.messages || [];
+          const headers = {};
+          for (const [key, value] of request.headers.entries()) {
+            headers[key.toLowerCase()] = value;
+          }
 
-       // Parse messages
-       let messages;
-       try {
-         const body = await request.json();
-         if (!body.messages || !Array.isArray(body.messages)) {
-           return jsonResponse({ error: "Invalid request: messages array required" }, 400);
-         }
-         messages = body.messages.slice(-10).map((m) => ({
-           role: m.role === "assistant" ? "assistant" : "user",
-           content: String(m.content || "").slice(0, 500),
-         }));
-       } catch {
-         return jsonResponse({ error: "Invalid request body" }, 400);
-       }
+          // RPC-style call to chat service
+          const stream = await env.CHAT.chatStream(messages, headers);
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache, no-transform",
+              "Connection": "keep-alive",
+              "X-Accel-Buffering": "no",
+            },
+          });
+        } catch (err) {
+          console.warn("[chat] Service binding failed, falling back:", err instanceof Error ? err.message : err);
+        }
+      }
 
-       // Try Workers AI first
-       if (env.AI) {
-         try {
-           const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).`;
+      // Fallback: Workers AI inline
+      const encoder = new TextEncoder();
+      let messages;
+      try {
+        const body = await request.json();
+        if (!body.messages || !Array.isArray(body.messages)) {
+          return jsonResponse({ error: "Invalid request: messages array required" }, 400);
+        }
+        messages = body.messages.slice(-10).map((m) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: String(m.content || "").slice(0, 500),
+        }));
+      } catch {
+        return jsonResponse({ error: "Invalid request body" }, 400);
+      }
 
-           const workersAiMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+      // Try Workers AI first
+      if (env.AI) {
+        try {
+          const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).`;
 
-           const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-             messages: workersAiMessages,
-             max_tokens: 600,
-           });
+          const workersAiMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
 
-           const response = result.response || "";
-           const stream = new ReadableStream({
-             start(controller) {
-               const chunks = response.match(/.{1,80}/g) || [response];
-               for (const chunk of chunks) {
-                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
-               }
-               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-               controller.close();
-             },
-           });
+          const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+            messages: workersAiMessages,
+            max_tokens: 600,
+          });
 
-           return new Response(stream, {
-             headers: {
-               "Content-Type": "text/event-stream",
-               "Cache-Control": "no-cache",
-               "Connection": "keep-alive",
-             },
-           });
-         } catch (err) {
-           console.warn("[chat] Workers AI failed:", err instanceof Error ? err.message : err);
-           // Fall through to fallback
-         }
-       }
+          const response = result.response || "";
+          const stream = new ReadableStream({
+            start(controller) {
+              const chunks = response.match(/.{1,80}/g) || [response];
+              for (const chunk of chunks) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+              }
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+            },
+          });
 
-       // Fallback: Anthropic API if available
-       if (env.ANTHROPIC_API_KEY) {
-         try {
-           const resp = await fetch("https://api.anthropic.com/v1/messages", {
-             method: "POST",
-             headers: {
-               "x-api-key": env.ANTHROPIC_API_KEY,
-               "content-type": "application/json",
-               "anthropic-version": "2023-06-01",
-             },
-             body: JSON.stringify({
-               model: "claude-3-5-sonnet-20241022",
-               max_tokens: 600,
-               messages,
-               system: "You are Cloudless Assistant, a helpful pre-sales assistant.",
-             }),
-           });
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              "Connection": "keep-alive",
+            },
+          });
+        } catch (err) {
+          console.warn("[chat] Workers AI failed:", err instanceof Error ? err.message : err);
+        }
+      }
 
-           if (resp.ok) {
-             const data = await resp.json();
-             const text = data.content?.[0]?.text || "";
-             const stream = new ReadableStream({
-               start(controller) {
-                 const chunks = text.match(/.{1,80}/g) || [text];
-                 for (const chunk of chunks) {
-                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
-                 }
-                 controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-                 controller.close();
-               },
-             });
-             return new Response(stream, {
-               headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
-             });
-           }
-         } catch (err) {
-           console.warn("[chat] Anthropic fallback failed:", err instanceof Error ? err.message : err);
-         }
-       }
+      // Fallback: Anthropic API if available
+      if (env.ANTHROPIC_API_KEY) {
+        try {
+          const resp = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": env.ANTHROPIC_API_KEY,
+              "content-type": "application/json",
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: "claude-3-5-sonnet-20241022",
+              max_tokens: 600,
+              messages,
+              system: "You are Cloudless Assistant, a helpful pre-sales assistant.",
+            }),
+          });
 
-       return jsonResponse({ error: "Chat not configured" }, 503);
-     }
+          if (resp.ok) {
+            const data = await resp.json();
+            const text = data.content?.[0]?.text || "";
+            const stream = new ReadableStream({
+              start(controller) {
+                const chunks = text.match(/.{1,80}/g) || [text];
+                for (const chunk of chunks) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+                }
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                controller.close();
+              },
+            });
+            return new Response(stream, {
+              headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+            });
+          }
+        } catch (err) {
+          console.warn("[chat] Anthropic fallback failed:", err instanceof Error ? err.message : err);
+        }
+      }
 
-     // ==========================================
-     // CONTACT ENDPOINT (Email + D1 logging)
-     // ==========================================
+      return jsonResponse({ error: "Chat not configured" }, 503);
+    }
 
-     // POST /api/contact - Contact form handler
-     if (url.pathname === "/api/contact" && method === "POST") {
-       let parsed;
-       try {
-         parsed = await request.json();
-       } catch {
-         return jsonResponse({ error: "Invalid request body" }, 400);
-       }
+    // ==========================================
+    // CONTACT ENDPOINT (Email + D1 logging)
+    // ==========================================
 
-       const { name, email, company, service, message, phone } = parsed;
+    // POST /api/contact - Contact form handler
+    if (url.pathname === "/api/contact" && method === "POST") {
+      let parsed;
+      try {
+        parsed = await request.json();
+      } catch {
+        return jsonResponse({ error: "Invalid request body" }, 400);
+      }
 
-       if (!name || !email || !message) {
-         return jsonResponse({ error: "Name, email, and message are required" }, 400);
-       }
+      const { name, email, company, service, message, phone } = parsed;
 
-       const now = Math.floor(Date.now() / 1000);
+      if (!name || !email || !message) {
+        return jsonResponse({ error: "Name, email, and message are required" }, 400);
+      }
 
-       // Log to admin_notifications D1 table
-       try {
-         await env.AUTH_DB.prepare(
-           "INSERT INTO admin_notification (pk, sk, category, title, message, actor, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-         ).bind(
-           `contact#${now}`,
-           `contact#${now}`,
-           "contact",
-           `New contact: ${String(name).slice(0, 100)}`,
-           String(message).slice(0, 500),
-           String(email),
-           JSON.stringify({ company, service, phone, leadScore: 0, leadBand: "cold" }),
-           now
-         ).run();
-       } catch (err) {
-         console.error("[contact] D1 log failed:", err);
-       }
+      const now = Math.floor(Date.now() / 1000);
 
-       // Send email via EMAIL binding if available
-       if (env.EMAIL) {
-         try {
-           const html = `
-             <h2>New contact form submission</h2>
-             <p><strong>Name:</strong> ${name}</p>
-             <p><strong>Email:</strong> ${email}</p>
-             <p><strong>Company:</strong> ${company || "—"}</p>
-             <p><strong>Service:</strong> ${service || "—"}</p>
-             <hr />
-             <p>${String(message).replace(/\n/g, "<br />")}</p>
-           `;
+      // Log to admin_notifications D1 table
+      try {
+        await env.AUTH_DB.prepare(
+          "INSERT INTO admin_notification (pk, sk, category, title, message, actor, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `contact#${now}`,
+          `contact#${now}`,
+          "contact",
+          `New contact: ${String(name).slice(0, 100)}`,
+          String(message).slice(0, 500),
+          String(email),
+          JSON.stringify({ company, service, phone, leadScore: 0, leadBand: "cold" }),
+          now
+        ).run();
+      } catch (err) {
+        console.error("[contact] D1 log failed:", err);
+      }
 
-           await env.EMAIL.send({
-             to: "tbaltzakis@cloudless.gr",
-             from: { email: "noreply@cloudless.gr", name: "Cloudless" },
-             subject: `[Contact] ${String(service || "General").slice(0, 100)} — ${String(name).slice(0, 100)}`,
-             html,
-             text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || "—"}\nService: ${service || "—"}\n\n${message}`,
-           });
+      // Send email via EMAIL binding if available
+      if (env.EMAIL) {
+        try {
+          const html = `
+            <h2>New contact form submission</h2>
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Company:</strong> ${company || "—"}</p>
+            <p><strong>Service:</strong> ${service || "—"}</p>
+            <hr />
+            <p>${String(message).replace(/\n/g, "<br />")}</p>
+          `;
 
-           // Auto-reply to visitor
-           await env.EMAIL.send({
-             to: email,
-             from: { email: "noreply@cloudless.gr", name: "Cloudless" },
-             subject: "Thanks for your message",
-             html: `<p>Hi ${name}, thanks for reaching out! We'll get back to you within 24 hours.</p>`,
-             text: `Hi ${name}, thanks for your message. We'll respond within 24 hours.`,
-           });
-         } catch (err) {
-           console.error("[contact] Email send failed:", err);
-         }
-       }
+          await env.EMAIL.send({
+            to: "tbaltzakis@cloudless.gr",
+            from: { email: "noreply@cloudless.gr", name: "Cloudless" },
+            subject: `[Contact] ${String(service || "General").slice(0, 100)} — ${String(name).slice(0, 100)}`,
+            html,
+            text: `Name: ${name}\nEmail: ${email}\nCompany: ${company || "—"}\nService: ${service || "—"}\n\n${message}`,
+          });
 
-       // Log to DATALAKE_BUCKET if available
-       try {
-         if (env.DATALAKE_BUCKET) {
-           await env.DATALAKE_BUCKET.put(
-             `lake/${now}/contact.json`,
-             JSON.stringify({ name, email, company, service, message, phone, created_at: now })
-           );
-         }
-       } catch (err) {
-         console.error("[contact] Datalake log failed:", err);
-       }
+          // Auto-reply to visitor
+          await env.EMAIL.send({
+            to: email,
+            from: { email: "noreply@cloudless.gr", name: "Cloudless" },
+            subject: "Thanks for your message",
+            html: `<p>Hi ${name}, thanks for reaching out! We'll get back to you within 24 hours.</p>`,
+            text: `Hi ${name}, thanks for your message. We'll respond within 24 hours.`,
+          });
+        } catch (err) {
+          console.error("[contact] Email send failed:", err);
+        }
+      }
 
-       return jsonResponse({ success: true });
-     }
+      // Log to DATALAKE_BUCKET if available
+      try {
+        if (env.DATALAKE_BUCKET) {
+          await env.DATALAKE_BUCKET.put(
+            `lake/${now}/contact.json`,
+            JSON.stringify({ name, email, company, service, message, phone, created_at: now })
+          );
+        }
+      } catch (err) {
+        console.error("[contact] Datalake log failed:", err);
+      }
 
-     // ==========================================
-     // SUBSCRIBE ENDPOINT (Newsletter)
-     // ==========================================
+      return jsonResponse({ success: true });
+    }
 
-     // POST /api/subscribe - Newsletter signup
-     if (url.pathname === "/api/subscribe" && method === "POST") {
-       let parsed;
-       try {
-         parsed = await request.json();
-       } catch {
-         return jsonResponse({ error: "Invalid request body" }, 400);
-       }
+    // ==========================================
+    // SUBSCRIBE ENDPOINT (Newsletter)
+    // ==========================================
 
-       const { email } = parsed;
+    // POST /api/subscribe - Newsletter signup
+    if (url.pathname === "/api/subscribe" && method === "POST") {
+      let parsed;
+      try {
+        parsed = await request.json();
+      } catch {
+        return jsonResponse({ error: "Invalid request body" }, 400);
+      }
 
-       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-         return jsonResponse({ error: "Valid email required" }, 400);
-       }
+      const { email } = parsed;
 
-       const now = Math.floor(Date.now() / 1000);
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse({ error: "Valid email required" }, 400);
+      }
 
-       // Log to admin_notifications
-       try {
-         await env.AUTH_DB.prepare(
-           "INSERT INTO admin_notification (pk, sk, category, title, message, actor, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-         ).bind(
-           `subscribe#${now}`,
-           `subscribe#${now}`,
-           "subscribe",
-           "New newsletter subscriber",
-           email,
-           email,
-           JSON.stringify({ source: "newsletter_form" }),
-           now
-         ).run();
-       } catch (err) {
-         console.error("[subscribe] D1 log failed:", err);
-       }
+      const now = Math.floor(Date.now() / 1000);
 
-       // Welcome email
-       if (env.EMAIL) {
-         try {
-           await env.EMAIL.send({
-             to: email,
-             from: { email: "noreply@cloudless.gr", name: "Cloudless" },
-             subject: "Welcome to Cloudless Newsletter",
-             html: `<p>Thanks for subscribing! Check your inbox for updates on cloud architecture, serverless, and AI.</p>`,
-             text: "Thanks for subscribing to Cloudless!",
-           });
-         } catch (err) {
-           console.error("[subscribe] Welcome email failed:", err);
-         }
-       }
+      // Log to admin_notifications
+      try {
+        await env.AUTH_DB.prepare(
+          "INSERT INTO admin_notification (pk, sk, category, title, message, actor, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        ).bind(
+          `subscribe#${now}`,
+          `subscribe#${now}`,
+          "subscribe",
+          "New newsletter subscriber",
+          email,
+          email,
+          JSON.stringify({ source: "newsletter_form" }),
+          now
+        ).run();
+      } catch (err) {
+        console.error("[subscribe] D1 log failed:", err);
+      }
 
-       return jsonResponse({ success: true });
-     }
+      // Welcome email
+      if (env.EMAIL) {
+        try {
+          await env.EMAIL.send({
+            to: email,
+            from: { email: "noreply@cloudless.gr", name: "Cloudless" },
+            subject: "Welcome to Cloudless Newsletter",
+            html: `<p>Thanks for subscribing! Check your inbox for updates on cloud architecture, serverless, and AI.</p>`,
+            text: "Thanks for subscribing to Cloudless!",
+          });
+        } catch (err) {
+          console.error("[subscribe] Welcome email failed:", err);
+        }
+      }
 
-     // ==========================================
-     // STRIPE WEBHOOK ENDPOINT
-     // ==========================================
+      return jsonResponse({ success: true });
+    }
 
-     // POST /api/webhooks/stripe - Stripe webhook handler
-     if (url.pathname === "/api/webhooks/stripe" && method === "POST") {
-       const sig = request.headers.get("stripe-signature");
+    // ==========================================
+    // STRIPE WEBHOOK ENDPOINT
+    // ==========================================
 
-       // Verify webhook secret if configured
-       if (env.STRIPE_WEBHOOK_SECRET && sig) {
-         try {
-           const body = await request.text();
-           // In production, verify with stripe.webhooks.constructEvent
-           // For now, log the event
-           const event = JSON.parse(body);
-           const now = Math.floor(Date.now() / 1000);
+    // POST /api/webhooks/stripe - Stripe webhook handler
+    if (url.pathname === "/api/webhooks/stripe" && method === "POST") {
+      const sig = request.headers.get("stripe-signature");
 
-           await env.AUTH_DB.prepare(
-             "INSERT INTO stripe_transaction (event_id, event_type, customer_id, processing_status, received_at, payload_json) VALUES (?, ?, ?, ?, ?, ?)"
-           ).bind(
-             event.id || `evt_${now}`,
-             event.type || "unknown",
-             event.data?.object?.customer || null,
-             "processed",
-             now,
-             JSON.stringify(event)
-           ).run();
+      // Verify webhook secret if configured
+      if (env.STRIPE_WEBHOOK_SECRET && sig) {
+        try {
+          const body = await request.text();
+          const event = JSON.parse(body);
+          const now = Math.floor(Date.now() / 1000);
 
-           return jsonResponse({ received: true });
-         } catch (err) {
-           console.error("[stripe-webhook] Processing failed:", err);
-           return jsonResponse({ error: "Webhook processing failed" }, 500);
-         }
-       }
+          await env.AUTH_DB.prepare(
+            "INSERT INTO stripe_transaction (event_id, event_type, customer_id, processing_status, received_at, payload_json) VALUES (?, ?, ?, ?, ?, ?)"
+          ).bind(
+            event.id || `evt_${now}`,
+            event.type || "unknown",
+            event.data?.object?.customer || null,
+            "processed",
+            now,
+            JSON.stringify(event)
+          ).run();
 
-       return jsonResponse({ error: "Webhook not configured" }, 503);
-     }
+          return jsonResponse({ received: true });
+        } catch (err) {
+          console.error("[stripe-webhook] Processing failed:", err);
+          return jsonResponse({ error: "Webhook processing failed" }, 500);
+        }
+      }
 
-     // ==========================================
-     // CHECKOUT ENDPOINT
-     // ==========================================
+      return jsonResponse({ error: "Webhook not configured" }, 503);
+    }
 
-     // POST /api/checkout - Create Stripe checkout session
-     if (url.pathname === "/api/checkout" && method === "POST") {
-       let parsed;
-       try {
-         parsed = await request.json();
-       } catch {
-         return jsonResponse({ error: "Invalid request body" }, 400);
-       }
+    // ==========================================
+    // CHECKOUT ENDPOINT
+    // ==========================================
 
-       const { items = [], successUrl, cancelUrl } = parsed;
+    // POST /api/checkout - Create Stripe checkout session
+    if (url.pathname === "/api/checkout" && method === "POST") {
+      let parsed;
+      try {
+        parsed = await request.json();
+      } catch {
+        return jsonResponse({ error: "Invalid request body" }, 400);
+      }
 
-       if (!env.STRIPE_SECRET_KEY) {
-         return jsonResponse({ error: "Checkout not configured" }, 503);
-       }
+      const { items = [], successUrl, cancelUrl } = parsed;
 
-       // In production, create checkout session with Stripe API
-       // For now, return a stub response
-       return jsonResponse({
-         url: successUrl || "https://cloudless.gr",
-         sessionId: "cs_test_placeholder",
-       });
-     }
+      if (!env.STRIPE_SECRET_KEY) {
+        return jsonResponse({ error: "Checkout not configured" }, 503);
+      }
 
-     // ==========================================
-     // SERVICES STATUS ENDPOINT
-     // ==========================================
+      return jsonResponse({
+        url: successUrl || "https://cloudless.gr",
+        sessionId: "cs_test_placeholder",
+      });
+    }
 
-     // GET /api/services - Service health check
-     if (url.pathname === "/api/services" && method === "GET") {
-       const services = {
-         auth: !!env.AUTH_DB,
-         email: !!env.EMAIL,
-         ai: !!env.AI,
-         stripe: !!env.STRIPE_SECRET_KEY,
-         analytics: !!env.ANALYTICS_BUCKET,
-         r2: !!env.ASSETS_BUCKET,
-       };
+    // ==========================================
+    // SERVICES STATUS ENDPOINT
+    // ==========================================
 
-       return jsonResponse({ services, allOk: Object.values(services).every(Boolean) });
-     }
+    // GET /api/services - Service health check
+    if (url.pathname === "/api/services" && method === "GET") {
+      const services = {
+        auth: !!env.AUTH_DB,
+        email: !!env.EMAIL,
+        ai: !!env.AI,
+        stripe: !!env.STRIPE_SECRET_KEY,
+        analytics: !!env.ANALYTICS_BUCKET,
+        r2: !!env.ASSETS_BUCKET,
+        chat: !!env.CHAT,
+      };
 
-      // ==========================================
-      // HEALTH CHECK
-      // ==========================================
-      if (url.pathname === "/api/health" && method === "GET") {
-       let dbOk = false;
-       try {
-         const { results } = await env.AUTH_DB.prepare("SELECT 1 as ok").all();
-         dbOk = results.length > 0 && results[0].ok === 1;
-       } catch {
-         dbOk = false;
-       }
+      return jsonResponse({ services, allOk: Object.values(services).every(Boolean) });
+    }
 
-       return jsonResponse({
-         status: dbOk ? "ok" : "degraded",
-         version: env.APP_VERSION || process.env.APP_VERSION || "1.0.0",
-         authProvider: "d1",
-         dbConnected: dbOk,
-         timestamp: new Date().toISOString(),
-       });
-     }
+    // ==========================================
+    // HEALTH CHECK
+    // ==========================================
+    if (url.pathname === "/api/health" && method === "GET") {
+      let dbOk = false;
+      try {
+        const { results } = await env.AUTH_DB.prepare("SELECT 1 as ok").all();
+        dbOk = results.length > 0 && results[0].ok === 1;
+      } catch {
+        dbOk = false;
+      }
+
+      return jsonResponse({
+        status: dbOk ? "ok" : "degraded",
+        version: env.APP_VERSION || process.env.APP_VERSION || "1.0.0",
+        authProvider: "d1",
+        dbConnected: dbOk,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // ==========================================
     // FALLBACK: Serve index.html for SPA routes
