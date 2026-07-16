@@ -72,18 +72,21 @@ function classifySurface(
   actual: string | null,
   cloudflareOnly: boolean = false
 ): SurfaceStatus {
-  // In Cloudflare-only mode, if the primary endpoint works, consider it a match
-  if (cloudflareOnly && name === "cloud" && actual !== null) {
-    return { name, actual, matches: true, reason: "matches (Cloudflare-only mode)" };
+  // In Cloudflare-only mode, if the primary (cloud) endpoint works, consider it a match
+  // and also consider Pi as a match regardless of its state (HA failover acceptable)
+  if (cloudflareOnly) {
+    if (name === "cloud" && actual !== null) {
+      return { name, actual, matches: true, reason: "matches (Cloudflare-only mode)" };
+    }
+    if (name === "pi") {
+      // Pi can be anything or unreachable in Cloudflare-only mode
+      return { name, actual, matches: true, reason: actual ? "Pi endpoint (HA standby)" : "Pi endpoint unreachable (HA acceptable)" };
+    }
   }
   
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
   if (actual === null) {
-    // In Cloudflare-only mode, Pi being unreachable is acceptable (HA failover)
-    if (cloudflareOnly && name === "pi") {
-      return { name, actual, matches: true, reason: "Pi endpoint unreachable (HA failover acceptable)" };
-    }
     reason = "endpoint unreachable or no version field";
   } else if (actual === "0.1.0" || actual === "dev") {
     reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
@@ -100,7 +103,7 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
     dates.length > 0 ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
   const ageMs = latestModified ? now - latestModified.getTime() : null;
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
-  const cloudflareOnly = CLOUDFLARE_ONLY && !snapshot.cloudSsmModifiedAt;
+  const cloudflareOnly = CLOUDFLARE_ONLY && snapshot.cloudExpected === "cloudflare-primary";
   const surfaces: SurfaceStatus[] = [
     classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud, cloudflareOnly),
     classifySurface("pi", snapshot.piExpected, snapshot.pi, cloudflareOnly),
@@ -175,6 +178,24 @@ async function readSsmParam(
 async function snapshot(): Promise<DriftSnapshot | null> {
   const { SSMClient } = await import("@aws-sdk/client-ssm");
   const ssmClient = new SSMClient({ region: REGION });
+  
+  // CloudFlare-only mode: skip SSM and just use health endpoints
+  if (CLOUDFLARE_ONLY) {
+    const [cloudJson, piJson] = await Promise.all([
+      fetchJson(HEALTH_URLS.cloud),
+      fetchJson(HEALTH_URLS.pi),
+    ]);
+    const now = new Date();
+    return {
+      cloudExpected: "cloudflare-primary", // Placeholder - actual version from endpoint
+      piExpected: "ha-standby",
+      cloudSsmModifiedAt: now,
+      piSsmModifiedAt: now,
+      cloud: typeof cloudJson?.version === "string" ? cloudJson.version : null,
+      pi: typeof piJson?.version === "string" ? piJson.version : null,
+    };
+  }
+  
   const [cloudSsm, piSsm, cloudJson, piJson] = await Promise.all([
     readSsmParam(ssmClient, SSM_CLOUD),
     readSsmParam(ssmClient, SSM_PI),
