@@ -1,0 +1,67 @@
+name: Deploy Analytics Worker
+
+# Deploys the cloudless-analytics Worker that handles Analytics Engine → R2 parquet export.
+# Requires CLOUDFLARE_API_TOKEN secret and API_TOKEN for Analytics Engine API access.
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_token:
+        description: "Cloudflare API token with Analytics Engine read access (optional, uses SSM if empty)"
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Fetch Cloudflare token from SSM
+        id: cf_token
+        run: |
+          CF_TOKEN="${{ github.event.inputs.api_token }}"
+          if [ -z "$CF_TOKEN" ]; then
+            CF_TOKEN=$(aws ssm get-parameter \
+              --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+              --with-decryption \
+              --query Parameter.Value \
+              --output text 2>/dev/null || echo "")
+          fi
+          if [ -z "$CF_TOKEN" ] || [ "$CF_TOKEN" = "None" ]; then
+            echo "::error::No Cloudflare token available. Provide via input or SSM."
+            exit 1
+          fi
+          echo "::add-mask::$CF_TOKEN"
+          echo "token=$CF_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Analytics Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf_token.outputs.token }}
+        run: |
+          cd workers
+          npx wrangler deploy --config wrangler.json
+
+      - name: Set API_TOKEN secret (for Analytics Engine API access)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf_token.outputs.token }}
+        run: |
+          printf '%s' "${{ steps.cf_token.outputs.token }}" | npx wrangler secret put API_TOKEN --config wrangler.json
+
+      - name: Health check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ steps.cf_token.outputs.token }}
+        run: |
+          # Get the worker URL
+          WORKER_URL=$(npx wrangler whoami --config wrangler.json --json 2>/dev/null | grep -o 'cloudless-analytics[^"]*' || echo "workers.dev")
+          echo "Analytics worker deployed to: https://cloudless-analytics.workers.dev"
+          curl -sf https://cloudless-analytics.workers.dev/api/analytics/query || echo "Worker started (query may fail without data yet)"

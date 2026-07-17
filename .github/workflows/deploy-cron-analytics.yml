@@ -1,0 +1,81 @@
+name: Deploy Cron Analytics
+
+# Deploys the cloudless-cron-analytics Fly.io app that triggers analytics rollups.
+# Reads CRON_SECRET from SSM and sets it as a Fly.io secret.
+
+on:
+  workflow_dispatch:
+    inputs:
+      cron_secret:
+        description: "CRON_SECRET for cron endpoint authentication (optional, will read from SSM if empty)"
+        required: false
+      apply:
+        description: "Actually deploy (true) or dry-run (false)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Fetch CRON_SECRET from SSM
+        id: cron_secret
+        run: |
+          SECRET="${{ github.event.inputs.cron_secret }}"
+          if [ -z "$SECRET" ]; then
+            SECRET=$(aws ssm get-parameter \
+              --name /cloudless/production/CRON_SECRET \
+              --with-decryption \
+              --query "Parameter.Value" \
+              --output text 2>/dev/null || echo "")
+          fi
+          if [ -z "$SECRET" ] || [ "$SECRET" = "None" ]; then
+            echo "::error::/cloudless/production/CRON_SECRET not found in SSM and no input provided"
+            exit 1
+          fi
+          echo "::add-mask::$SECRET"
+          echo "value=$SECRET" >> "$GITHUB_OUTPUT"
+
+      - name: Create Fly.io app (if not exists)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl apps create --name cloudless-cron-analytics --org personal || true
+        if: ${{ github.event.inputs.apply == 'true' }}
+
+      - name: Set CRON_SECRET in Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl secrets set CRON_SECRET="${{ steps.cron_secret.outputs.value }}" --app cloudless-cron-analytics
+        if: ${{ github.event.inputs.apply == 'true' }}
+
+      - name: Deploy Cron Analytics app
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          cd fly-cron-apps/analytics-rollup
+          flyctl deploy --app cloudless-cron-analytics
+        if: ${{ github.event.inputs.apply == 'true' }}
+
+      - name: Show deployment status
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl status --app cloudless-cron-analytics
+          flyctl ips list --app cloudless-cron-analytics
+        if: ${{ github.event.inputs.apply == 'true' }}
