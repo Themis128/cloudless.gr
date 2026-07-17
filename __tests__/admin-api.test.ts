@@ -1,7 +1,6 @@
 
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { NextRequest } from "next/server";
 import { resetIntegrationCache } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
 
@@ -9,6 +8,22 @@ import { resetSsmCache } from "@/lib/ssm-config";
 // Hoist mock variables so vi.mock() factories can reference them safely.
 // ---------------------------------------------------------------------------
 
+// Stub next/server - prevents next-auth's env.js from crashing under JSDOM.
+// Tests use the imported NextRequest stub, not the real implementation.
+vi.mock("next/server", () => ({
+  NextRequest: class NextRequest {
+    constructor(url, init) {
+      this.url = url;
+      this.method = init?.method || "GET";
+      this.headers = new Map(Object.entries(init?.headers || {}));
+    }
+  },
+  NextResponse: {
+    json: (data, init) => ({ json: () => Promise.resolve(data), ...init }),
+    redirect: (url) => ({ url, status: 302 }),
+  },
+  userAgent: () => ({ isBot: () => false }),
+}));
 const {
   mockGetConfig,
   mockIsConfiguredAsync,

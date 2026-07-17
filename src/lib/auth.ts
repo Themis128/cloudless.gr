@@ -127,7 +127,7 @@ const nextAuth = NextAuth({
     })
   ],
   callbacks: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     async jwt({ token, user }: { token: any; user?: any }) {
       // Cognito OIDC returns user with id, email, name, etc.
       // Credentials provider returns user with id, email, name, company, phone
@@ -142,7 +142,7 @@ const nextAuth = NextAuth({
       }
       return token;
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     async session({ session, token }: { session: any; token: any }) {
       if (token && session.user) {
         session.user.id = token.id as string;

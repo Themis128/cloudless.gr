@@ -88,7 +88,7 @@ export async function getAutologinUrl(app: SelfhostedApp): Promise<AutologinResu
         throw new Error(`AppFlowy GoTrue returned HTTP ${status}`);
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const data = await resp.json() as any;
 
       if (!data.access_token) {

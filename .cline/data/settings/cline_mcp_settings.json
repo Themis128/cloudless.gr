@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "fast-markdown": {
+      "command": "/home/tbaltzakis/.local/bin/fast-markdown-mcp",
+      "args": [],
+      "env": {
+        "MCP_STORAGE_DIR": "/home/tbaltzakis/DevDocs/storage/markdown"
+      },
+      "autoStart": true
+    }
+  }
+}

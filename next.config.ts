@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
   // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
   // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
   // clients so Next uses Node's native resolver instead of bundling them.
+  // Also externalize next-intl to fix Turbopack bundling issue where all
+  // NextResponse static methods (next, rewrite, redirect, json) are not
+  // properly bound in the bundled module context.
   serverExternalPackages: [
     "@aws-sdk/client-bedrock-runtime",
     "@aws-sdk/client-cognito-identity-provider",
@@ -41,9 +44,12 @@ const nextConfig: NextConfig = {
     "10.255.255.254",
     "*.local",
   ],
+  // Turbopack resolve alias for next-intl config
   turbopack: {
     root: resolve(import.meta.dirname),
-    resolveAlias: { "next-intl/config": "./src/i18n/request.ts" },
+    resolveAlias: {
+      "next-intl/config": "./src/i18n/request.ts",
+    },
   },
   images: {
     remotePatterns: [

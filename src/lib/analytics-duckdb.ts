@@ -126,7 +126,7 @@ export async function listParquetPartitions(
  * For client-side DuckDB, consider proxying through a Worker endpoint.
  */
 export async function getParquetPresignedUrl(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   _r2Client: R2Bucket,
   key: string
 ): Promise<string | null> {

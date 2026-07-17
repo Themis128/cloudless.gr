@@ -1,9 +1,6 @@
 /**
  * Stub for next/server used in Vitest.
- *
- * next-auth beta and other modules import next/server via ESM bare specifiers,
- * which Vitest/JSDOM cannot resolve. Tests that import from next/server need
- * NextRequest (used in admin-api.test.ts) and potentially NextResponse.
+ * next-auth beta imports this via ESM bare specifier.
  */
 export class NextRequest {
   constructor(url, init) {
