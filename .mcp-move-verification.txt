@@ -1,0 +1,3 @@
+MCP server move completed successfully.
+Source: /home/tbaltzakis/cloudless.gr/cloudflare-pages-mcp/
+Destination: /home/tbaltzakis/cloudflare-pages-mcp/

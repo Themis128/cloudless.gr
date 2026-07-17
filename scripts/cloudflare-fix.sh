@@ -33,15 +33,17 @@ if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
 fi
 
 ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
-
-# Verify the MCP server binary exists
-if [ ! -f "/home/tbaltzakis/cloudflare-pages-mcp/dist/index.js" ]; then
-  echo "❌ MCP server binary not found, rebuilding..."
-  cd /home/tbaltzakis/cloudflare-pages-mcp
-  npm run build
-fi
-
-echo "✅ MCP server binary exists"
+ 
+ # Verify the MCP server binary exists (skip in CI with SKIP_MCP_CHECK=true)
+ if [ -z "${SKIP_MCP_CHECK:-}" ]; then
+   MCP_BIN="${MCP_BIN_PATH:-/home/tbaltzakis/cloudflare-pages-mcp/dist/index.js}"
+   if [ -f "$MCP_BIN" ]; then
+     echo "✅ MCP server binary exists at $MCP_BIN"
+   else
+     echo "⚠️  MCP server binary not found (local environment only)"
+     echo "    Expected: $MCP_BIN"
+   fi
+ fi
 
 # Verify API token validity
 echo "🔍 Verifying Cloudflare API token..."
