@@ -57,6 +57,7 @@
   "env": {
     "staging": {
       "name": "cloudless-gr-staging",
+      "routes": [],
       "vars": {
         "ENVIRONMENT": "staging",
         "API_VERSION": "v1.0",
@@ -86,6 +87,7 @@
     },
     "production": {
       "name": "cloudless-gr",
+      "routes": [],
       "vars": {
         "ENVIRONMENT": "production",
         "API_VERSION": "v1.0",
