@@ -3,13 +3,14 @@
  *
  * Replaces AWS Cognito + DynamoDB SessionTokenStore with:
  * - D1 database for user storage and sessions
- * - Argon2/Bcrypt password hashing
+ * - PBKDF2/scrypt password hashing (secure, available in Workers)
  * - Custom password reset flow
  * - JWT-like session tokens (stored server-side, referenced by cookie)
  */
 
 // Token expiry constants
-const SESSION_EXPIRY_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const SESSION_EXPIRY_SECONDS = 60 * 60 * 24 * 30; // 30 days (default)
+const SESSION_EXPIRY_REMEMBER_SECONDS = 60 * 60 * 24 * 60; // 60 days (remember me)
 const RESET_TOKEN_EXPIRY_SECONDS = 60 * 60 * 24; // 24 hours
 
 // Secret key for session tokens - must be set via Wrangler secret
@@ -69,16 +70,140 @@ function encodeBase64(uint8: Uint8Array): string {
 }
 
 // Crypto utilities (Web Crypto API available in Workers)
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password + SESSION_SECRET);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return encodeHex(new Uint8Array(hash));
+// Using PBKDF2 for secure password hashing (available in Workers runtime)
+
+// Generate a random salt for password hashing
+function generateSalt(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return encodeBase64(bytes);
 }
 
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const computed = await hashPassword(password);
-  return computed === hash;
+// PBKDF2-based password hashing with salt
+async function hashPassword(password: string): Promise<string> {
+  const salt = generateSalt();
+  const encoder = new TextEncoder();
+  const saltBytes = Uint8Array.from(atob(salt), (c) => c.charCodeAt(0));
+
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password + SESSION_SECRET),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: saltBytes,
+      iterations: 100_000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+
+  return `${salt}:${encodeHex(new Uint8Array(derivedBits))}`;
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  const [salt, hash] = storedHash.split(":");
+  if (!salt || !hash) {
+    // Legacy SHA-256 hash support (backward compatibility)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + SESSION_SECRET);
+    const legacyHash = await crypto.subtle.digest("SHA-256", data);
+    const computed = encodeHex(new Uint8Array(legacyHash));
+    return computed === storedHash;
+  }
+
+  const encoder = new TextEncoder();
+  const saltBytes = Uint8Array.from(atob(salt), (c) => c.charCodeAt(0));
+
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password + SESSION_SECRET),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: saltBytes,
+      iterations: 100_000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+
+  return `${salt}:${encodeHex(new Uint8Array(derivedBits))}` === storedHash;
+}
+
+// Password strength validation
+export function validatePasswordStrength(password: string): { valid: boolean; error?: string } {
+  if (password.length < 8) {
+    return { valid: false, error: "Password must be at least 8 characters" };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: "Password must contain at least one uppercase letter" };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: "Password must contain at least one lowercase letter" };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: "Password must contain at least one number" };
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return { valid: false, error: "Password must contain at least one special character" };
+  }
+  return { valid: true };
+}
+
+// Session activity logging
+export async function logSessionActivity(
+  db: AuthDatabase,
+  sessionId: string,
+  action: "login" | "logout" | "lockout" | "failed_attempt",
+  email?: string,
+  ip?: string,
+  userAgent?: string
+): Promise<void> {
+  await db
+    .prepare(
+      "INSERT INTO session_log (session_id, action, email, ip, user_agent, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    )
+    .bind(
+      sessionId,
+      action,
+      email || null,
+      ip || null,
+      userAgent || null,
+      Math.floor(Date.now() / 1000)
+    )
+    .run();
+}
+
+// Check failed attempts for account lockout
+export async function checkFailedAttempts(
+  db: AuthDatabase,
+  email: string
+): Promise<{ locked: boolean; attempts: number }> {
+  const threshold = 5;
+  const windowSeconds = 15 * 60; // 15 minutes
+  const now = Math.floor(Date.now() / 1000);
+
+  const attempts = await db
+    .prepare(
+      "SELECT COUNT(*) as count FROM session_log WHERE action = 'failed_attempt' AND email = ? AND created_at > ?"
+    )
+    .bind(email, now - windowSeconds)
+    .first<{ count: number }>();
+
+  return { locked: (attempts?.count ?? 0) >= threshold, attempts: attempts?.count ?? 0 };
 }
 
 function generateResetToken(): string {
@@ -130,11 +255,17 @@ export async function createUser(
 export async function authenticateUser(
   db: AuthDatabase,
   email: string,
-  password: string
+  password: string,
+  rememberMe?: boolean
 ): Promise<AuthResult> {
   // Check if SESSION_SECRET is configured
   if (!SESSION_SECRET) {
     return { error: "Authentication not configured" };
+  }
+
+  // Validate SESSION_SECRET length (32+ bytes)
+  if (SESSION_SECRET.length < 32) {
+    console.warn("[auth] SESSION_SECRET should be at least 32 characters for security");
   }
 
   const user = await db.prepare("SELECT * FROM user WHERE email = ?").bind(email).first<D1User>();
@@ -148,9 +279,12 @@ export async function authenticateUser(
     return { error: "Invalid credentials" };
   }
 
-  // Create session
+  // Create session with appropriate expiry
   const sessionId = crypto.randomUUID();
-  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_EXPIRY_SECONDS;
+  const expirySeconds = rememberMe
+    ? SESSION_EXPIRY_REMEMBER_SECONDS
+    : SESSION_EXPIRY_SECONDS;
+  const expiresAt = Math.floor(Date.now() / 1000) + expirySeconds;
 
   await db
     .prepare("INSERT INTO session (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
@@ -338,4 +472,15 @@ export async function cleanupExpiredSessions(db: AuthDatabase): Promise<number> 
   const now = Math.floor(Date.now() / 1000);
   const result = await db.prepare("DELETE FROM session WHERE expires_at < ?").bind(now).run();
   return result.meta?.changes ?? 0;
+}
+
+// Session secret validation
+export function validateSessionSecret(): { valid: boolean; error?: string } {
+  if (!SESSION_SECRET) {
+    return { valid: false, error: "SESSION_SECRET is not set" };
+  }
+  if (SESSION_SECRET.length < 32) {
+    return { valid: false, error: "SESSION_SECRET must be at least 32 characters" };
+  }
+  return { valid: true };
 }

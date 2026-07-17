@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser, type AuthDatabase } from "@/lib/auth-d1";
+import { createUser, validatePasswordStrength, validateSessionSecret, type AuthDatabase } from "@/lib/auth-d1";
 import { sendActivationEmail, notifyTeam, slackRegistrationNotify } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { createHmac as nodeCreateHmac } from "crypto";
@@ -20,6 +20,12 @@ export async function POST(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  }
+
+  // Validate SESSION_SECRET
+  const secretCheck = validateSessionSecret();
+  if (!secretCheck.valid) {
+    console.warn("[auth/register-d1] SESSION_SECRET validation:", secretCheck.error);
   }
 
   const ipRl = rateLimit(`auth-register:ip:${getClientIp(req)}`, 10, 60_000);
@@ -44,8 +50,10 @@ export async function POST(req: NextRequest) {
   const emailRl = rateLimit(`auth-register:email:${email}`, 3, 600_000);
   if (!emailRl.ok) return emailRl.response;
 
-  if (password.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+  // Validate password strength
+  const strengthCheck = validatePasswordStrength(password);
+  if (!strengthCheck.valid) {
+    return NextResponse.json({ error: strengthCheck.error }, { status: 400 });
   }
 
   try {

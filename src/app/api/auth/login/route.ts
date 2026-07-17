@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateUser, getUserBySession, isAdmin, type AuthDatabase } from "@/lib/auth-d1";
+import {
+  authenticateUser,
+  getUserBySession,
+  isAdmin,
+  checkFailedAttempts,
+  logSessionActivity,
+  validateSessionSecret,
+  type AuthDatabase,
+} from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 // D1 binding interface - provided by Worker context
@@ -24,15 +32,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.redirect(new URL("/api/auth/login/cognito", req.url));
   }
 
+  // Validate SESSION_SECRET
+  const secretCheck = validateSessionSecret();
+  if (!secretCheck.valid) {
+    console.warn("[auth/login] SESSION_SECRET validation:", secretCheck.error);
+  }
+
   const ipRl = rateLimit(`auth-login:ip:${getClientIp(req)}`, 10, 60_000);
   if (!ipRl.ok) return ipRl.response;
 
   let email: string | undefined;
   let password: string | undefined;
+  let rememberMe = false;
   try {
-    const body = (await req.json()) as { email?: string; password?: string };
+    const body = (await req.json()) as { email?: string; password?: string; rememberMe?: boolean };
     email = typeof body.email === "string" ? body.email.toLowerCase().trim() : undefined;
     password = body.password;
+    rememberMe = !!body.rememberMe;
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
@@ -41,9 +57,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and password required" }, { status: 400 });
   }
 
-  const result = await authenticateUser(db, email, password);
+  // Check for account lockout
+  const lockoutCheck = await checkFailedAttempts(db, email);
+  if (lockoutCheck.locked) {
+    return NextResponse.json(
+      { error: "Account temporarily locked due to too many failed attempts. Try again in 15 minutes." },
+      { status: 429 }
+    );
+  }
+
+  const result = await authenticateUser(db, email, password, rememberMe);
 
   if (result.error) {
+    // Log failed attempt for lockout tracking
+    await logSessionActivity(
+      db,
+      "failed-attempt",
+      "failed_attempt",
+      email,
+      getClientIp(req),
+      req.headers.get("user-agent") || undefined
+    ).catch(() => {});
+
     return NextResponse.json({ error: result.error }, { status: 401 });
   }
 
@@ -51,8 +86,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
   }
 
+  // Log successful login
+  await logSessionActivity(
+    db,
+    result.session.id,
+    "login",
+    result.user!.email,
+    getClientIp(req),
+    req.headers.get("user-agent") || undefined
+  ).catch(() => {});
+
   // Check admin status
   const userIsAdmin = await isAdmin(db, result.user!.id);
+
+  // Calculate cookie maxAge based on session expiry
+  const cookieMaxAge = rememberMe
+    ? 60 * 60 * 24 * 60 // 60 days
+    : 60 * 60 * 24 * 30; // 30 days (default)
 
   // Set session cookie
   const response = NextResponse.json({
@@ -72,7 +122,7 @@ export async function POST(req: NextRequest) {
     secure: process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https://"),
     sameSite: "strict",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: cookieMaxAge,
   });
 
   return response;

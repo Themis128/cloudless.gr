@@ -1,0 +1,14 @@
+# Disable metoro-node-agent on Pi cluster
+
+# The node-agent requires eBPF/BTF support (kernel 6.18.34+) which is not
+# available on the Pi kernel. This override disables it while preserving the
+# exporter sidecars and other metoro components.
+
+# Usage:
+#   helm -n metoro upgrade metoro-exporter ./helm-charts/metoro-exporter \
+#     -f infrastructure/monitoring/metoro-disable-node-agent.yaml
+
+# Or for manual disable, see ops/pending-actions-runbook.md
+
+metoro-node-agent:
+  enabled: false

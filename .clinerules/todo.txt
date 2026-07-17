@@ -7,7 +7,7 @@
 ### MCP Configuration Fixes
 - [x] Create `.cline/data/settings/cline_mcp_settings.json` (created)
 - [x] Add fast-markdown-mcp server entry to MCP config (done)
-- [x] Verify DevDocs storage path: `/home/tbaltzakis/DevDocs/storage/markdown/` (1 file exists)
+- [x] Verify DevDocs storage path: `/home/tbaltzakis/DevDocs/storage/markdown/` (16 files exist)
 - [x] Fix fast-markdown-mcp entry point (added run_main() async wrapper)
 - [x] Fix infinite retry loop in MCP server (removed while True, graceful shutdown)
 - [x] Fix log handler cleanup (prevent I/O closed file errors)
@@ -16,18 +16,21 @@
 - [ ] Restart Cline to load MCP configuration changes
 
 ### Cluster Resource Optimization (Pi 5 - 8GB RAM)
-- [ ] Apply monitoring-node-selector-fix.yml for Prometheus/Alertmanager
-- [ ] Fix cloudflare-geo-exporter scaling issues (4 pods in terminating/pending)
-- [ ] Resolve metoro-node-agent CrashLoopBackOff (eBPF not supported on Pi kernel)
+- [x] Apply monitoring-node-selector-fix.yml for Prometheus/Alertmanager
+- [x] Fix cloudflare-geo-exporter scaling issues (4 pods in terminating/pending)
+- [x] Resolve metoro-node-agent CrashLoopBackOff (eBPF not supported on Pi kernel)
 - [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
-- [ ] Update node selector in kube-prom-stack-values.yaml for persistence
+- [x] Update node selector in kube-prom-stack-values.yaml for persistence
 
 ### Postiz Deployment Fixes
-- [ ] Monitor Postiz image pull (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, taking time
-- [ ] Verify Postiz PVC claims (uploadsPvc: 2Gi → 20Gi for media)
+- [x] Monitor Postiz image pull (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, taking time
+- [x] Verify Postiz PVC claims (uploadsPvc: 2Gi → 20Gi for media)
 - [ ] Configure Postiz Cloudflare Tunnel via `infrastructure/postiz/cloudflare-tunnel.yaml`
 - [ ] Deploy postiz-liteLLM service for AI features (optional)
 - [ ] Increase Postiz resources (currently requests 512Mi RAM - may need 1Gi)
+
+### Cloudflare API Token Setup
+- [ ] Create CLOUDFLARE_API_TOKEN secret (SSM + GitHub Actions)
 
 ### AppFlowy Stack Completion
 - [ ] Deploy AppFlowy worker to omv-ha node (offload from omv)
@@ -43,11 +46,22 @@
 ## 🔐 SECURITY & AUTH OPTIMIZATIONS
 
 ### D1 Authentication Hardening
-- [ ] Upgrade password hashing from SHA-256 to bcrypt (security recommendation)
-- [ ] Add rate limiting to auth endpoints (login, register, reset)
-- [ ] Implement session cleanup job (delete expired sessions)
-- [ ] Add CSRF protection to auth forms
-- [ ] Verify SESSION_SECRET is set (32+ bytes required)
+- [x] **Password strength validation** - min 8 chars, mixed case, number, symbol (todo-auth-processes.md)
+- [x] **Upgrade to PBKDF2** - Replace SHA-256 with secure hashing (backward compatible)
+- [x] **Rate limiting** - Auth endpoints: max 10 attempts/minute (already exists in rate-limit.ts)
+- [x] **CSRF protection** - Created csrf.ts utility and migration 0004-csrf-tokens.sql
+- [x] **Account lockout** - After >5 failed attempts in 15 minutes
+- [x] **Email verification flow** - Send verification on register (OTP via SES implemented)
+- [x] **"Remember me" option** - Longer sessions (60 days vs 30)
+- [x] **Password reset rate limiting** - Max 3 requests/hour (already in reset-password/route.ts)
+- [x] **Session activity logging** - Track login IPs/timestamps
+- [x] **Multi-session support** - Concurrent sessions supported via sessions table
+- [x] **Admin audit log** - Log auth actions for compliance (migration 0005 + auth-audit.ts)
+- [x] **Auth middleware utility** - Created auth-middleware.ts with requireAuth, requireAdmin, optionalAuth
+- [x] **OpenAPI documentation** - Created auth-openapi.ts
+- [x] **Auth testing sandbox** - Created /api/auth/sandbox endpoint
+- [x] **Verify SESSION_SECRET** - Added validation for 32+ bytes
+- [x] **D1 binding check** - Verified in wrangler.jsonc
 
 ### MCP Security Audit
 - [ ] Run `pnpm mcp-security-scan` on API routes
@@ -162,12 +176,15 @@
 - [x] Create workers-failover-playbook.md
 - [x] Create cluster-map-pod-status.md
 - [x] Create analytics-etl-pipeline.md
-- [ ] Create oauth-provider-setup.md
+- [x] Create oauth-provider-setup.md
+- [x] Create stripe-webhook-idempotency-r22.md
+- [x] Create restart-mcp-instructions.md
+- [x] Create mcp-documentation-sprint-summary.md
 - [x] Document MCP tool usage patterns (server.py reference)
 - [x] Add API endpoint catalog (cloudless-api-catalog.md)
 
 ### Runbook Updates
-- [ ] Update CLUSTER-MAP.md with current pod statuses
+- [x] Update CLUSTER-MAP.md with current pod statuses
 - [x] Document Cloudflare Tunnel certificate renewal (cloudflare-tunnel-cert-renewal.md)
 - [x] Add backup/restore procedures for D1 (d1-backup-restore.md)
 - [x] Create failover playbook (Workers → Pi → Tailscale) (workers-failover-playbook.md)

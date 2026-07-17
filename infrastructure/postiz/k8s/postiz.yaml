@@ -5,6 +5,7 @@
 #   - postgres (PVC 2Gi)  — Postiz database
 #   - redis    (PVC 512Mi) — queue/cache
 #   - postiz   (port 5000, NodePort 30500) — app + API
+#   - uploads  (PVC 20Gi) — media uploads (updated from 2Gi)
 #
 # Exposure: Cloudflare tunnel hostname postiz.cloudless.gr → http://192.168.1.128:30500
 # (see infrastructure/postiz/cloudflare-tunnel.yaml).
@@ -50,7 +51,7 @@ spec:
   accessModes: ["ReadWriteOnce"]
   resources:
     requests:
-      storage: 2Gi
+      storage: 20Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
