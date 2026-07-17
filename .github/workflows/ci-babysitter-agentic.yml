@@ -65,7 +65,7 @@ jobs:
         id: ssm
         run: |
           KEY=$(aws ssm get-parameter \
-            --name "/cloudless/production/ANTHROPIC_API_KEY" \
+            --name "/sst/cloudless/github/ANTHROPIC_API_KEY" \
             --with-decryption \
             --query "Parameter.Value" \
             --output text 2>/dev/null || echo "")

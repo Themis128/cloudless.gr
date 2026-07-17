@@ -60,6 +60,9 @@ jobs:
 
       - name: Run tests
         run: pnpm test:ci
+        env:
+          NEXT_PUBLIC_AUTH_PROVIDER: d1
+          NEXT_PUBLIC_SITE_URL: https://cloudless.gr
 
       - name: Validate secrets exist
         run: |
