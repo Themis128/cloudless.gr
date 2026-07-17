@@ -576,6 +576,46 @@ export default {
         }
       }
 
+      // Fallback: Anthropic API (available in SSM)
+      if (env.ANTHROPIC_API_KEY) {
+        try {
+          const resp = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": env.ANTHROPIC_API_KEY,
+              "content-type": "application/json",
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: "claude-3-5-sonnet-20241022",
+              max_tokens: 600,
+              messages,
+              system: "You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).",
+            }),
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            const text = data.content?.[0]?.text || "";
+            const stream = new ReadableStream({
+              start(controller) {
+                const chunks = text.match(/.{1,80}/g) || [text];
+                for (const chunk of chunks) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+                }
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                controller.close();
+              },
+            });
+            return new Response(stream, {
+              headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+            });
+          }
+        } catch (err) {
+          console.warn("[chat] Anthropic fallback failed:", err instanceof Error ? err.message : String(err));
+        }
+      }
+
       return jsonResponse({ error: "Chat not configured" }, 503);
     }
 
