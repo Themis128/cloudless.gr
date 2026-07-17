@@ -51,8 +51,8 @@ Conventions in use today (consolidated retroactively):
 | `cloudless-https-health-probe.yml` | HTTPS reachability | every 5 min |
 | `sha-drift-detector.yml` | SSM SHA == Lambda SHA == Pi SHA | every 6h |
 | `sha-drift-watchdog.yml` | Re-runs detector on failure | workflow_run |
-| `admin-login-probe.yml` | Cognito login still works | hourly |
-| `app-auth-doctor.yml` | NextAuth config + JWKS | daily |
+| `admin-login-probe.yml` | Self-hosted apps admin login | every 6h |
+| `app-auth-doctor.yml` | D1 auth config + SESSION_SECRET | daily |
 | `notion-integration-health.yml` | All 13 DBs reachable | daily |
 | `notion-schema-check.yml` | Schema vs code expectations | weekly |
 | `notion-schema-drift.yml` | Diff vs last-known schema | daily |
@@ -93,9 +93,9 @@ Conventions in use today (consolidated retroactively):
 
 ## ☁️ Cloudflare ops (6)
 
-`cloudflare-lb.yml` · `apply-cloudflare-lb.yml` ·
+`cloudflare-lb.yml` · `store-cloudflare-token.yml` ·
 `cloudflare-disable-email-obfuscation.yml` · `cloudflare-token-rotate.yml` ·
-`store-cloudflare-token.yml` · `verify-cloudflare-token.yml`
+`verify-cloudflare-token.yml` · `cloudflared-restart.yml`
 
 ## 📚 CMS / Notion (4)
 
@@ -177,10 +177,9 @@ nudge until the underlying gap is closed.
 
 | Workflow | Last failure | Root cause | Fix |
 |----------|-------------|------------|-----|
-| `apply-cloudflare-lb.yml` | 2026-06-14 | Cloudflare API token in SSM is stale (Phase 0 blocker) | Rotate via `cloudflare-token-doctor` skill |
-| `ad-readiness.yml` | 2026-06-20 | LinkedIn ad secrets not all set | Operator: confirm `LINKEDIN_*` SSM keys are non-empty |
+| `ad-readiness.yml` | 2026-06-20 | LinkedIn ad secrets not all set | Operator: set `LINKEDIN_*` SSM keys |
 
-When either of these is fixed, remove its row from this table.
+When the underlying issue is fixed, remove its row from this table.
 
 ## Failure routing matrix
 

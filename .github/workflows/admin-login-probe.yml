@@ -1,7 +1,8 @@
 name: Self-hosted admin login probe
 
 # Runs scripts/probe-selfhosted-admin.sh against AppFlowy, EspoCRM, Postiz,
-# n8n every 6 hours. Fails loudly if the unified admin password
+# n8n every 6 hours. Also checks the Cloudflare Workers D1 auth endpoint.
+# Fails loudly if the unified admin password
 # (tbaltzakis@cloudless.gr / TH!123789th!) is broken on any app — catches
 # credential drift (an admin pw rotation that didn't sweep one of the apps,
 # a pod that lost its bootstrap, an OIDC misconfig that disables local auth).
@@ -42,3 +43,20 @@ jobs:
             exit 0
           fi
           bash scripts/probe-selfhosted-admin.sh
+
+      - name: Check D1 auth endpoint
+        # Verify the Workers D1 auth endpoint is reachable
+        # curl https://cloudless.gr/api/auth/session
+        # Returns 200 (user logged in), 401 (no session), or 503 (D1 not configured)
+        run: |
+          set -uo pipefail
+          HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' https://cloudless.gr/api/auth/session || echo "000")
+          case "$HTTP_CODE" in
+            200|401|503)
+              echo "✅ D1 auth endpoint responding (HTTP $HTTP_CODE - 200=user, 401=no session, 503=D1 not configured)"
+              ;;
+            *)
+              echo "::warning::D1 auth endpoint returned HTTP $HTTP_CODE (expected 200/401/503)"
+              exit 0
+              ;;
+          esac

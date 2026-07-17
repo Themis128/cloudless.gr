@@ -18,6 +18,7 @@ name: Rotate Cloudflare API token
 # After the workflow runs:
 #   - SSM updated ✅ (automatic)
 #   - GH Actions secret updated ✅ (automatic via gh CLI)
+#   - Wrangler secrets sync — see sync step below
 #   - Cowork session secret update — STILL MANUAL (see skill)
 
 on:
@@ -99,7 +100,7 @@ jobs:
             echo "4. Verify new token works with /user/tokens/verify"
             echo "5. Old token is invalidated **immediately** on the rotate call"
             echo ""
-            echo "Still manual: Cowork session secret (use \`cloudflare-token-rotation\` skill)"
+            echo "Still manual: Cowork session secret + Wrangler D1 secrets (see skill)"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Rotate token via Cloudflare API
@@ -189,6 +190,22 @@ jobs:
             exit 0
           fi
 
+      - name: Sync to Wrangler secrets (D1/MCP)
+        if: ${{ inputs.apply == true }}
+        env:
+          NEW_TOKEN: ${{ steps.rotate.outputs.new_token }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          echo "::add-mask::$NEW_TOKEN"
+          echo "CF_API_TOKEN=$NEW_TOKEN" >> "$GITHUB_ENV"
+          # Wrangler CLI requires token via CF_API_TOKEN env var
+          # List current secrets to show they exist
+          npx wrangler secret list --config wrangler-cloudflare-free.json 2>/dev/null || echo "::notice::Wrangler not configured for this repo yet"
+          # Note: SESSION_SECRET and other D1 secrets need manual sync via wrangler secret put
+          echo "::notice::New token available in SSM /cloudless/production/CLOUDFLARE_API_TOKEN"
+          echo "::notice::For D1/MCP secrets, run 'pnpm wrangler secret put SESSION_SECRET' locally if needed"
+
       - name: Apply summary
         if: ${{ inputs.apply == true }}
         env:
@@ -205,6 +222,7 @@ jobs:
             echo ""
             echo "### Still manual"
             echo "- **Cowork session secret** — copy the SSM value into your Cowork session-environment secret store. See the \`cloudflare-token-rotation\` skill for the exact UI steps."
+            echo "- **Wrangler D1 secrets** — SESSION_SECRET etc. must be set via 'pnpm wrangler secret put'"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Failure notification

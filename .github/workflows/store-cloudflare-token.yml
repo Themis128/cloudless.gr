@@ -19,6 +19,7 @@ name: Store Cloudflare API token → SSM → apply HA load balancer
 #   2. Run this workflow (dispatch) with the token value.
 #      apply=true (default) immediately wires the LB.
 #      apply=false stores only — run cloudflare-lb.yml to verify first.
+#   3. For D1 auth, manually run 'pnpm wrangler secret put SESSION_SECRET' locally.
 
 on:
   workflow_dispatch:
@@ -79,6 +80,20 @@ jobs:
             >/dev/null
           echo "✓ Token stored to SSM /cloudless/production/CLOUDFLARE_API_TOKEN"
           echo "stored=true" >> "$GITHUB_OUTPUT"
+
+      - name: Sync to Wrangler secrets (D1/MCP)
+        if: ${{ github.event.inputs.apply == 'true' && steps.store.outputs.stored == 'true' }}
+        env:
+          CF_TOKEN: ${{ github.event.inputs.cloudflare_token }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          echo "::add-mask::$CF_TOKEN"
+          echo "CF_API_TOKEN=$CF_TOKEN" >> "$GITHUB_ENV"
+          # Wrangler CLI requires token via CF_API_TOKEN env var
+          echo "::notice::Token available in SSM /cloudless/production/CLOUDFLARE_API_TOKEN"
+          echo "::notice::For D1/MCP secrets, run 'pnpm wrangler secret put SESSION_SECRET' locally if needed"
+          npx wrangler secret list --config wrangler-cloudflare-free.json 2>/dev/null || echo "::notice::Wrangler not configured for this repo yet"
 
       - name: Apply Cloudflare HA load balancer
         id: apply

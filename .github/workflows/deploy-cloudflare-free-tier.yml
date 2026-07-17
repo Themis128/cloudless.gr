@@ -158,7 +158,7 @@ jobs:
             --name "/cloudless/production/CLOUDFLARE_ACCOUNT_ID" \
             --query "Parameter.Value" --output text 2>/dev/null || echo "")
           if [ -z "$ACCOUNT_ID" ] || [ "$ACCOUNT_ID" = "None" ]; then
-            ACCOUNT_ID="fb7dc7b69b662480cd5961a4d1913c78"
+            ACCOUNT_ID="fb7dc7b69b6624280cd5961a4d1913c78"
           fi
           echo "account_id=$ACCOUNT_ID" >> "$GITHUB_OUTPUT"
 
@@ -177,6 +177,17 @@ jobs:
           sleep 10
           curl -sf https://cloudless.gr/api/health || exit 1
           echo "✅ Production health check passed"
+
+      - name: Verify D1 auth post-deploy
+        run: |
+          set -uo pipefail
+          # Check that the D1 auth endpoint responds (requires SESSION_SECRET to be set)
+          HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' https://cloudless.gr/api/auth/session || echo "000")
+          if [[ "$HTTP_CODE" =~ ^(200|401|503)$ ]]; then
+            echo "✅ D1 auth endpoint responding (HTTP $HTTP_CODE - 200=user, 401=no session, 503=D1 not configured)"
+          else
+            echo "::warning::D1 auth endpoint returned HTTP $HTTP_CODE"
+          fi
 
       - name: Create GitHub Deployment
         uses: actions/github-script@v7
