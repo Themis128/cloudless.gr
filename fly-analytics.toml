@@ -3,6 +3,10 @@
 #
 # This config deploys Metabase for SQL analytics on R2 parquet data.
 # DuckDB integration via DuckDB-WASM in the Worker handles queries.
+#
+# Deployment:
+#   fly volumes create metabase_data --app cloudless-analytics --size 1 --region fra
+#   fly deploy --app cloudless-analytics --config fly-analytics.toml
 
 app = "cloudless-analytics"
 
@@ -22,8 +26,7 @@ primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
   TZ = "Europe/Athens"
   
   # DuckDB/R2 integration
-  DUCKDB_PARQUET_PATH = "datalake-bucket/analytics/"
-  DUCKDB_R2_ENDPOINT = "https://00000000000000000000000000000000.r2.cloudflarestorage.com"
+  # Set R2 credentials via: fly secrets set R2_ACCESS_KEY_ID=xxx R2_SECRET_ACCESS_KEY=xxx --app cloudless-analytics
 
 [mounts]
   source = "metabase_data"

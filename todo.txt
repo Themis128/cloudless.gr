@@ -1,0 +1,217 @@
+# Cloudless.gr Migration + Optimization Todo List
+# Cloudflare + Local Cluster Architecture Corrections
+# Generated: 2026-07-17 (post-migration optimization phase)
+
+## 🏗️ INFRASTRUCTURE CORRECTIONS
+
+### MCP Configuration Fixes
+- [x] Create `.cline/data/settings/cline_mcp_settings.json` (created)
+- [x] Add fast-markdown-mcp server entry to MCP config (done)
+- [x] Verify DevDocs storage path: `/home/tbaltzakis/DevDocs/storage/markdown/` (1 file exists)
+- [x] Fix fast-markdown-mcp entry point (added run_main() async wrapper)
+- [x] Fix infinite retry loop in MCP server (removed while True, graceful shutdown)
+- [x] Fix log handler cleanup (prevent I/O closed file errors)
+- [x] Add Playwright tests for MCP integration
+- [x] Create Python unit tests for MCP server
+- [ ] Restart Cline to load MCP configuration changes
+
+### Cluster Resource Optimization (Pi 5 - 8GB RAM)
+- [ ] Apply monitoring-node-selector-fix.yml for Prometheus/Alertmanager
+- [ ] Fix cloudflare-geo-exporter scaling issues (4 pods in terminating/pending)
+- [ ] Resolve metoro-node-agent CrashLoopBackOff (eBPF not supported on Pi kernel)
+- [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
+- [ ] Update node selector in kube-prom-stack-values.yaml for persistence
+
+### Postiz Deployment Fixes
+- [ ] Monitor Postiz image pull (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, taking time
+- [ ] Verify Postiz PVC claims (uploadsPvc: 2Gi → 20Gi for media)
+- [ ] Configure Postiz Cloudflare Tunnel via `infrastructure/postiz/cloudflare-tunnel.yaml`
+- [ ] Deploy postiz-liteLLM service for AI features (optional)
+- [ ] Increase Postiz resources (currently requests 512Mi RAM - may need 1Gi)
+
+### AppFlowy Stack Completion
+- [ ] Deploy AppFlowy worker to omv-ha node (offload from omv)
+- [ ] Configure AppFlowy ingress route for port 30810
+- [ ] Verify MinIO storage (10Gi) for CMS assets
+
+### n8n Workflow Automation
+- [ ] Import analytics workflows from `infrastructure/n8n/workflows/`
+- [ ] Configure n8n credentials (SSH Key, Slack, R2 access)
+- [ ] Enable lead-enrichment webhook workflow
+- [ ] Activate hot-lead-alert workflow for notifications
+
+## 🔐 SECURITY & AUTH OPTIMIZATIONS
+
+### D1 Authentication Hardening
+- [ ] Upgrade password hashing from SHA-256 to bcrypt (security recommendation)
+- [ ] Add rate limiting to auth endpoints (login, register, reset)
+- [ ] Implement session cleanup job (delete expired sessions)
+- [ ] Add CSRF protection to auth forms
+- [ ] Verify SESSION_SECRET is set (32+ bytes required)
+
+### MCP Security Audit
+- [ ] Run `pnpm mcp-security-scan` on API routes
+- [ ] Remove unused API keys from .env (AWS credentials no longer needed)
+- [ ] Clean up SSM parameters (deprecated AWS resources)
+- [ ] Verify POSTIZ_API_KEY is configured in Wrangler secrets
+
+## 📊 ANALYTICS STACK COMPLETION
+
+### DuckDB/Wasm Integration
+- [ ] Generate parquet files from R2 analytics data
+- [ ] Verify analytics-client.ts connects to /api/analytics/r2
+- [ ] Create DuckDB views for funnel metrics (v_funnel_metrics)
+- [ ] Set up daily rollup cron for analytics data
+
+### Metabase Dashboard
+- [ ] Configure Metabase connection to DuckDB
+- [ ] Create dashboards: Lead Sources, Deal Velocity, CLV Cohorts
+- [ ] Set up Metabase queries for R2 parquet analysis
+
+### Cloudflare analytics
+- [ ] Replace Google Analytics with Plausible (already configured)
+- [ ] Verify analytics-engine-datasets binding in wrangler.jsonc
+- [ ] Set up analytics ingestion for Workers AI calls
+
+## 🚀 PERFOMANCE OPTIMIZATIONS
+
+### CDN & Caching
+- [ ] Optimize R2 cache-control headers (increase to 7 days for assets)
+- [ ] Configure Cloudflare Cache Rules for /api/analytics/*
+- [ ] Add edge caching for /api/blog and /api/docs (Notion→AppFlowy transition)
+- [ ] Pre-warm Workers cache after deployments
+
+### Bundle Optimization
+- [ ] Run `ANALYZE=true next build` to check bundle sizes
+- [ ] Audit large dependencies in package.json (langchain, aws-sdk)
+- [ ] Consider removing unused AWS SDK imports
+- [ ] Optimize DuckDB-Wasm loading (lazy load)
+
+### Resource Allocation
+- [ ] Reduce cloudless-app replicas from 5 → 3 (if low traffic)
+- [ ] Lower PostgreSQL request from 1Gi → 512Mi (if usage is low)
+- [ ] Configure horizontal pod autoscaling for AppFlowy services
+
+## 🔄 DATA MIGRATION CLEANUP
+
+### Final Sync Operations
+- [x] Sync PostgreSQL standby data to D1 (55 users, 54 roles synced - verified)
+- [ ] Migrate remaining S3 assets to R2
+- [x] Verify analytics_cache has no stale entries (cleaned)
+
+### Database Schema Updates
+- [x] Add NOT NULL constraint to password_hash (migration 0003 - completed)
+- [x] Create backup strategy for D1 (wrangler d1 backup - documented)
+- [ ] Add retention policy for admin_notification (90 days → archive)
+
+## 🛠️ DEVELOPMENT WORKFLOW
+
+### CI/CD Optimizations
+- [ ] Update GitHub Actions to use RUNNER_GENERIC failover (for ARM64 compatibility)
+- [ ] Add smoke test for Workers deployment
+- [ ] Configure preview deployments for PRs
+- [ ] Add Lighthouse audit step to deployment pipeline
+
+### Testing Gaps
+- [ ] Add E2E tests for D1 auth endpoints
+- [ ] Add unit tests for password reset flow
+- [ ] Test chat streaming fallback (Workers AI → Anthropic)
+- [ ] Verify all locale redirects work (next-intl middleware)
+
+## 🌐 EXTERNAL SERVICE INTEGRATIONS
+
+### Ad Platforms (Verify All Connected)
+- [ ] Google Ads API connection (OAuth2 tokens in SSM)
+- [ ] Meta/Facebook CAPI configured (send conversion events)
+- [ ] LinkedIn Ads API verification
+- [ ] TikTok Ads API tokens
+- [ ] X/Twitter Ads OAuth1 configuration
+
+### Email Configuration
+- [ ] Verify Cloudflare Email service is active
+- [ ] Set up SPF/DKIM/DMARC for cloudless.gr
+- [ ] Test email deliverability to major providers
+- [ ] Configure email routing for admin domains
+
+### Slack Integrations
+- [ ] Verify SLACK_BOT_TOKEN in Wrangler secrets
+- [ ] Test /cloudless-status slash command
+- [ ] Configure workflow notifications (#alerts, #orders, #contacts)
+- [ ] Verify n8n Slack webhook integration
+
+## 💰 COST OPTIMIZATION
+
+### Cloudflare Free Tier Compliance
+- [ ] Monitor daily Workers invocations (< 100K limit)
+- [ ] Track R2 operations (< 10M ops/month)
+- [ ] Verify D1 database size (< 5GB free tier)
+- [ ] Set up Cloudflare budget alerts
+
+### AWS Cleanup
+- [ ] Delete CloudFront distribution (already noted as deleted)
+- [ ] Remove unused SSM parameters
+- [ ] Cancel unused Lambda functions
+- [ ] Delete DynamoDB tables after final migration verification
+
+## 📝 DOCUMENTATION & KNOWLEDGE BASE
+
+### DevDocs Integration
+- [x] Add cloudless.gr architecture docs to DevDocs storage (migration-completion.md)
+- [ ] Create troubleshooting guides in markdown
+- [x] Document MCP tool usage patterns (server.py reference)
+- [ ] Add API endpoint catalog
+
+### Runbook Updates
+- [ ] Update CLUSTER-MAP.md with current pod statuses
+- [ ] Document Cloudflare Tunnel certificate renewal
+- [ ] Add backup/restore procedures for D1
+- [ ] Create failover playbook (Workers → Pi → Tailscale)
+
+## ✅ COMPLETED VERIFICATION
+
+### Already Done (from todo-list.txt)
+- [x] R2 buckets created (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket)
+- [x] D1 database created (user-auth-db)
+- [x] Wrangler configuration ready (wrangler.jsonc, wrangler-cloudflare-free.json)
+- [x] Schema migration files created (0001-auth-schema.sql, 0002-d1-optimizations.sql)
+- [x] Worker endpoint created (index-cloudflare-free.js with auth, chat, analytics)
+- [x] AUTH_PROVIDER set to "d1" in environment variables
+- [x] Worker deployed and health endpoint confirmed
+- [x] Authentication routes implemented (register, login, logout, reset-password, reset-confirm)
+- [x] Admin promotion endpoint working
+
+### Cluster Status
+- [x] PostgreSQL secret created in k3s
+- [x] n8n running on omv node (check via SSH)
+- [x] D1 connection verified via REST API
+- [x] Session endpoint returning 200
+
+## 🪰 FLY.IO IMPLEMENTATION
+
+### cloudless-proxy (HA Failover)
+- [x] Proxy FastAPI implementation (fly-proxy-app/proxy.py)
+- [x] fly.toml configuration for proxy
+- [x] Proxy deployed and running (2 machines in fra)
+
+### cloudless-analytics (Metabase Dashboard)  
+- [x] fly-analytics.toml configuration
+- [x] Dockerfile-ready setup (uses public Metabase image)
+- [ ] Deploy Metabase to Fly.io (waiting for R2 credentials)
+
+### cloudless-cron-analytics (Analytics Rollup)
+- [x] Create cron-runner.js (pure JavaScript, no placeholders)
+- [x] Create Dockerfile for cron apps
+- [x] Update analytics-rollup/fly.toml configuration
+- [x] Fix analytics-rollup route to use POST
+- [ ] Deploy cron app (waiting for CRON_SECRET)
+
+## 🎯 NEXT ACTIONS (Priority Order)
+
+1. ~~Critical:~~ ~~Fix MCP configuration~~ (✓ done)
+2. **High:** Restart Cline to load MCP configuration changes
+3. **High:** Apply monitoring stack node selector fixes
+4. **High:** Complete Postiz deployment and verify status
+5. **Medium:** Configure 2TB SSD for analytics storage
+6. **Medium:** Add bcrypt password hashing to auth
+7. **Low:** Optimize resource allocation for existing pods
+8. **Low:** Clean up AWS resources after final verification

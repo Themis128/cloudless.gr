@@ -3,7 +3,7 @@ import { createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
 import { SlackClient } from "@/lib/slack-notify";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   if (!await isCronAuthorized(request)) {
     return cronUnauthorized();
   }

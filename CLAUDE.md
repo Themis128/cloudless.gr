@@ -555,6 +555,58 @@ which automates Stages 0-3 from the Pi.
 - `aws-actions/configure-aws-credentials`: `v4.x`
 - `hashicorp/setup-terraform`: prefer `v3.x` (v2 nears Node 20 EOL)
 
+## Fly.io Deployment (live 2026-06-13)
+
+Fly.io provides backup services for cloudless.gr with free-tier deployments:
+
+| App | Purpose | Region | Status |
+|-----|---------|--------|--------|
+| cloudless-proxy | HA failover proxy | fra | Deployed Jul 13 2026 |
+| cloudless-analytics | Metabase dashboard | fra | Pending deployment |
+| cloudless-cron-analytics | Analytics rollup cron | fra | Pending deployment |
+
+### Proxy Deployment (fly.toml)
+- **Primary backend:** `cloudless.gr` (Cloudflare Workers on Pi k3s)
+- **Fallback backend:** `omv.tail8eb71.ts.net` (Tailscale Funnel to omv-ha)
+- **Health check:** `/health` endpoint returns primary health status
+- **Configuration:** In `fly.toml` at repository root
+
+### Analytics Deployment (fly-analytics.toml)
+- **Metabase v0.53.3** for SQL analytics on R2 parquet data
+- **Volume:** `metabase_data` (1GB persistent) for SQLite database
+- **Secrets required:** `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+- **Deploy:**
+  ```bash
+  fly volumes create metabase_data --size 1 --app cloudless-analytics
+  fly deploy --app cloudless-analytics --config fly-analytics.toml
+  ```
+
+### Cron Deployment (fly-cron-apps/)
+- **cron-runner.js** - Pure JavaScript Node 20-alpine image
+- **Secret:** `CRON_SECRET` (32 bytes, set via `fly secrets set`)
+- **Schedule:** Hourly via Fly.io Machines API
+- **Config:** `fly-cron-apps/analytics-rollup/fly.toml`
+- **Route:** `POST /api/cron/analytics-rollup` (requires CRON_SECRET authorization)
+
+### Deployment Commands
+```bash
+# Check Fly.io status
+fly apps list  # shows: cloudless-proxy
+
+# Deploy analytics
+fly deploy --app cloudless-analytics --config fly-analytics.toml
+
+# Deploy cron (after creating app)
+fly apps create cloudless-cron-analytics
+fly secrets set CRON_SECRET=$(openssl rand -hex 32) --app cloudless-cron-analytics
+fly deploy --app cloudless-cron-analytics --config fly-cron-apps/analytics-rollup/fly.toml
+```
+
+### Notes
+- **No organization "cloudless"** exists in Fly.io - uses personal account
+- **No placeholders** - all secrets must be actual values
+- ARM64 compatible for potential future Pi deployment
+
 ## OpenClaudia Marketing Skills
 
 67 marketing skills from [OpenClaudia](https://github.com/OpenClaudia/openclaudia-skills) are installed at `.claude/skills/`. They provide slash-command marketing automation for cloudless.gr.
