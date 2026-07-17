@@ -238,14 +238,29 @@ Fly.io Failover (Secondary)
 
 ## Deployment Checklist
 
-- [ ] AppFlowy namespace created
-- [ ] AppFlowy PVC claims configured (30Gi total)
-- [ ] AppFlowy pods running (postgres, redis, gotrue, cloud, web, admin, nginx, worker)
-- [ ] n8n namespace created
+- [x] AppFlowy namespace created
+- [x] AppFlowy PVC claims configured (30Gi total)
+- [x] AppFlowy pods running (postgres, redis, gotrue, cloud, web, admin, nginx, worker)
+- [x] n8n namespace created
 - [ ] n8n analytics workflows imported
-- [ ] EspoCRM namespace created
+- [x] EspoCRM namespace created
 - [ ] EspoCRM webhooks configured
-- [ ] Analytics namespace with DuckDB/Metabase
+- [x] Analytics namespace with DuckDB/Metabase (Metabase running, DuckDB pending)
 - [ ] 2TB SSD mounted and configured
 - [ ] R2 → DuckDB sync verified
 - [ ] Metabase dashboards created
+- [x] Postiz deployed (fixing node selector: omv-main → omv)
+- [ ] Postiz-liteLLM service deployed (optional - AI features)
+- [ ] Postiz Cloudflare Tunnel configured
+- [ ] Postiz PVC claims completed (currently pending - node selector fix in progress)
+
+## Completed Today (2026-07-17)
+
+### Fixed Issues
+- **Postiz node selector**: Changed `omv-main` → `omv` in both values.yaml and values-prod.yaml
+- **Postiz redeployed**: Helm upgrade completed successfully, postgres/redis running
+- **Postiz IngressRoute**: Applied traefik ingress route for postiz.cloudless.gr
+
+### Pending/Blocked
+- **cloudless-app (Pi)**: ImagePullBackOff - 403 Forbidden from ECR (AWS migration complete, Workers is primary)
+- **Postiz main pod**: Still pulling image (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, will take time

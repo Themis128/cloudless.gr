@@ -117,4 +117,4 @@ ingress:
 
 # Pin the entire stack to omv-main — local-path PVs are node-bound.
 nodeSelector:
-  kubernetes.io/hostname: "omv-main"
+  kubernetes.io/hostname: "omv"

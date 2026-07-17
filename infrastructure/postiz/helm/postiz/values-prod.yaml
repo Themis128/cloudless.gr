@@ -25,4 +25,4 @@ ingress:
   enabled: false
 
 nodeSelector:
-  kubernetes.io/hostname: "omv-main"
+  kubernetes.io/hostname: "omv"
