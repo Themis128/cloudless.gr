@@ -1,14 +1,25 @@
 import { routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
+import type { CounterState } from "./agents/counter";
 
 // Extend the generated Env with bindings that wrangler doesn't generate types for
 // AGENT_AUTH_TOKEN is a secret, ASSETS is for static assets, CounterAgent is the DO namespace
+// CHAT is optional - service binding to dedicated chat worker
+
+interface ChatService {
+  chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
+}
+
 interface Env extends Cloudflare.Env {
   AGENT_AUTH_TOKEN: string;
   ASSETS: Fetcher;
   CounterAgent: DurableObjectNamespace<CounterAgent>;
+  CHAT?: ChatService;
 }
 
+// Re-export agents for Durable Object registration
+export { CounterAgent } from "./agents/counter";
+export type { CounterState } from "./agents/counter";
 export { EchoAgent } from "./agents/echo";
 export { CodingAgent } from "./agents/coding";
 

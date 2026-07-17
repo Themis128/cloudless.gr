@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS user (
   company TEXT,
   phone TEXT,
   password_hash TEXT NOT NULL,
-  preferences_json TEXT,  -- JSON string for theme, language, notifications
+  preferences_json TEXT,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS stripe_transaction (
   customer_id TEXT,
   processing_status TEXT,
   received_at INTEGER NOT NULL,
-  payload_json TEXT  -- Full Stripe event payload
+  payload_json TEXT
 );
 
 -- Stripe transaction indexes for querying
@@ -55,24 +55,21 @@ CREATE INDEX IF NOT EXISTS idx_stripe_customer ON stripe_transaction(customer_id
 
 -- Admin notifications (replaces AdminNotifications DynamoDB table)
 -- Events log for all client-facing interactions
+-- Uses category column for filtering (DynamoDB GSI pattern replicated via column)
 CREATE TABLE IF NOT EXISTS admin_notification (
-  pk TEXT NOT NULL,  -- "NOTIF" constant
-  sk TEXT NOT NULL,  -- "<createdAt-ISO8601>#<id>"
-  cat_pk TEXT NOT NULL,  -- "CAT#<category>"
-  cat_sk TEXT NOT NULL,  -- "<createdAt-ISO8601>#<id>"
+  pk TEXT NOT NULL,
+  sk TEXT NOT NULL,
   category TEXT NOT NULL,
   payload_json TEXT,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_notification_cat_pk ON admin_notification(cat_pk);
-CREATE INDEX IF NOT EXISTS idx_notification_cat_sk ON admin_notification(cat_sk);
 
 -- Analytics cache (replaces AnalyticsCache DynamoDB table)
 -- Query result caching for GSC endpoints
 CREATE TABLE IF NOT EXISTS analytics_cache (
-  pk TEXT NOT NULL,  -- route name
-  sk TEXT NOT NULL,  -- params hash
+  pk TEXT NOT NULL,
+  sk TEXT NOT NULL,
   result_json TEXT,
   cached_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   expires_at INTEGER
@@ -85,9 +82,9 @@ CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
 CREATE INDEX IF NOT EXISTS idx_session_expires ON session(expires_at);
 
 -- Trigger to update updated_at on user changes
-CREATE TRIGGER IF NOT EXISTS update_user_timestamp 
-  AFTER UPDATE ON user 
-  FOR EACH ROW 
-  BEGIN 
-    UPDATE user SET updated_at = strftime('%s', 'now') WHERE id = NEW.id; 
+CREATE TRIGGER IF NOT EXISTS update_user_timestamp
+  AFTER UPDATE ON user
+  FOR EACH ROW
+  BEGIN
+    UPDATE user SET updated_at = strftime('%s', 'now') WHERE id = NEW.id;
   END;

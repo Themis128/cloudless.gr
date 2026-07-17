@@ -13,22 +13,22 @@
   "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
-      "dataset": "cloudless_analytics_staging"
+      "dataset": "cloudless_analytics_preview"
     }
   ],
 
   "r2_buckets": [
-    { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics-staging" },
-    { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets-staging" },
-    { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket-staging" },
-    { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket-staging" }
+    { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics-preview" },
+    { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets-preview" },
+    { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket-preview" },
+    { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket-preview" }
   ],
 
   "d1_databases": [
     {
       "binding": "AUTH_DB",
-      "database_name": "auth-db-staging",
-      "database_id": "PLACEHOLDER_NEEDS_REAL_ID"
+      "database_name": "auth-db-preview",
+      "database_id": "70d90155-12de-46d7-a0ea-113b3e7127cf"
     }
   ],
 
@@ -37,6 +37,7 @@
   "vars": {
     "ENVIRONMENT": "staging",
     "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
-    "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr"
+    "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
+    "SESSION_SECRET": "placeholder-need-to-set-via-secret"
   }
 }

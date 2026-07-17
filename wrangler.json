@@ -23,7 +23,8 @@
     "API_VERSION": "v1.0",
     "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
     "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
-    "APP_VERSION": "${GITHUB_SHA}"
+    "APP_VERSION": "${GITHUB_SHA}",
+    "SESSION_SECRET": "${SESSION_SECRET}"
   },
   "analytics_engine_datasets": [
     { "binding": "ANALYTICS", "dataset": "cloudless_analytics" }
@@ -42,12 +43,14 @@
   "env": {
     "staging": {
       "name": "cloudless-gr-staging",
+      "routes": [],
       "vars": {
         "ENVIRONMENT": "staging",
         "API_VERSION": "v1.0",
         "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
         "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
-        "APP_VERSION": "staging"
+        "APP_VERSION": "staging",
+        "SESSION_SECRET": "${SESSION_SECRET}"
       },
       "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "cloudless_analytics" }],
       "ai": { "binding": "AI" },
@@ -70,7 +73,8 @@
         "API_VERSION": "v1.0",
         "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
-        "APP_VERSION": "${GITHUB_SHA}"
+        "APP_VERSION": "${GITHUB_SHA}",
+        "SESSION_SECRET": "${SESSION_SECRET}"
       },
       "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "cloudless_analytics" }],
       "ai": { "binding": "AI" },

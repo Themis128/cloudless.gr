@@ -27,7 +27,9 @@ export interface RequiredTokenPermissions {
 export interface CloudflareEnv {
   // R2 Buckets
   ASSETS_BUCKET: R2Bucket;
+  MEDIA_BUCKET: R2Bucket;
   ANALYTICS_BUCKET: R2Bucket;
+  DATALAKE_BUCKET: R2Bucket;
 
   // D1 Database
   AUTH_DB: D1Database;
@@ -35,14 +37,27 @@ export interface CloudflareEnv {
   // Workers AI
   AI: Ai;
 
-  // Secrets (injected via Wrangler)
+  // Analytics Engine
+  ANALYTICS: AnalyticsEngineDataset;
+
+  // Email
+  EMAIL: SendEmail;
+
+  // Secrets (injected via Wrangler secrets)
+  SESSION_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
-  AUTH_SECRET?: string;
   SLACK_WEBHOOK_URL?: string;
   SLACK_BOT_TOKEN?: string;
   SLACK_SIGNING_SECRET?: string;
   ANTHROPIC_API_KEY?: string;
+
+  // Environment Variables
+  ENVIRONMENT?: "production" | "staging";
+  API_VERSION?: "v1.0";
+  NEXT_PUBLIC_AUTH_PROVIDER?: "d1";
+  NEXT_PUBLIC_SITE_URL?: string;
+  APP_VERSION?: string;
 }
 
 // Detect if running in Cloudflare Workers
@@ -88,7 +103,9 @@ export function getCloudflareConfig() {
 
 // Helper for Workers to validate required secrets
 export function validateRequiredSecrets(env: CloudflareEnv): string[] {
-  const required = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "AUTH_SECRET"];
+  // Note: AUTH_SECRET is deprecated, using SESSION_SECRET instead
+  const required = ["SESSION_SECRET"];
+  const optional = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"];
   return required.filter((k) => !env[k as keyof CloudflareEnv]);
 }
 

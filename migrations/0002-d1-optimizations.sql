@@ -21,11 +21,12 @@ CREATE INDEX IF NOT EXISTS idx_analytics_cache_lookup ON analytics_cache(pk, sk)
 -- CREATE INDEX IF NOT EXISTS idx_user_reset_token ON user(reset_token_hash); -- For token validation
 
 -- Session expiration cleanup is already covered by idx_session_expires
--- but let us add a partial index for active sessions only
-CREATE INDEX IF NOT EXISTS idx_session_active ON session(id) WHERE expires_at > strftime('%s', 'now');
+-- Note: SQLite partial indexes cannot use non-deterministic functions (strftime)
+-- Use idx_session_expires instead for active session queries
+-- CREATE INDEX IF NOT EXISTS idx_session_active ON session(id) WHERE expires_at > strftime('%s', 'now');
 
 -- User preferences JSON for faster lookups
--- For queries that filter by preferences (e.g., theme, language)
+-- Note: Lowercase index on expression - keep as regular index for compatibility
 CREATE INDEX IF NOT EXISTS idx_user_email_lower ON user(LOWER(email));
 
 -- Statistics table for fast aggregate queries

@@ -1,8 +1,9 @@
 {
   "name": "cloudless-assets",
-  "pages": {
-    "bucket": "cloudless-assets",
-    "include": ["_next/**", "static/**", "images/**", "*.{css,js,woff2,woff,png,jpg,jpeg,gif,svg,webp}"],
-    "exclude": ["*"]
-  }
+  "pages_build_output_dir": "./out",
+  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "compatibility_date": "2026-07-09",
+  "r2_buckets": [
+    { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" }
+  ]
 }

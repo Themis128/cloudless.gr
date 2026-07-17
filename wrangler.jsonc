@@ -42,7 +42,7 @@
       ]
     }
   ],
-  "analytics_engine": [
+  "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
       "dataset": "cloudless_analytics"
@@ -59,10 +59,17 @@
   "d1_databases": [
     {
       "binding": "AUTH_DB",
-      "database_name": "auth-db"
+      "database_name": "auth-db",
+      "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
     }
   ],
-  "send_email": [ { "name": "EMAIL" } ],
+  "send_email": [{ "name": "EMAIL" }],
+  "r2_buckets": [
+    { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
+    { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
+    { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
+    { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
+  ],
 
   "env": {
     "staging": {
@@ -70,8 +77,15 @@
       "d1_databases": [
         {
           "binding": "AUTH_DB",
-          "database_name": "auth-db-staging"
+          "database_name": "auth-db-preview",
+          "database_id": "70d90155-12de-46d7-a0ea-113b3e7127cf"
         }
+      ],
+      "r2_buckets": [
+        { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets-preview" },
+        { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket-preview" },
+        { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics-preview" },
+        { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket-preview" }
       ],
       "vars": {
         "ENVIRONMENT": "staging",
@@ -82,13 +96,21 @@
       "d1_databases": [
         {
           "binding": "AUTH_DB",
-          "database_name": "auth-db"
+          "database_name": "user-auth-db",
+          "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
         }
+      ],
+      "r2_buckets": [
+        { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
+        { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
+        { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
+        { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
       ]
     }
   },
 
   "vars": {
-    "AGENT_AUTH_TOKEN": "placeholder-override-in-production"
+    "AGENT_AUTH_TOKEN": "placeholder-override-in-production",
+    "SESSION_SECRET": "${SESSION_SECRET}"
   }
 }
