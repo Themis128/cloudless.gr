@@ -6,7 +6,7 @@ app = "cloudless-cron-analytics"
 primary_region = "fra"
 
 [build]
-  context = ".."
+  context = "."
   dockerfile = "Dockerfile"
 
 [env]
