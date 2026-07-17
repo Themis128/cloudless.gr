@@ -3,7 +3,7 @@
   "main": "index-analytics.ts",
   "compatibility_date": "2026-07-05",
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
-  "analytics_engine": [
+  "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
       "dataset": "cloudless_analytics"

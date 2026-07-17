@@ -494,63 +494,69 @@ export default {
         return jsonResponse({ error: "Invalid request body" }, 400);
       }
 
-      // Try Workers AI first
-      if (env.AI) {
+       // Try Workers AI first
+       if (env.AI) {
+         try {
+           const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).`;
+
+           const workersAiMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+
+           const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+             messages: workersAiMessages,
+             max_tokens: 600,
+           });
+
+           const response = result.response || "";
+           if (!response) {
+             throw new Error("Empty response from Workers AI");
+           }
+           const stream = new ReadableStream({
+             start(controller) {
+               const chunks = response.match(/.{1,80}/g) || [response];
+               for (const chunk of chunks) {
+                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+               }
+               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+               controller.close();
+             },
+           });
+
+           return new Response(stream, {
+             headers: {
+               "Content-Type": "text/event-stream",
+               "Cache-Control": "no-cache",
+               "Connection": "keep-alive",
+             },
+           });
+         } catch (err) {
+           console.warn("[chat] Workers AI failed:", err instanceof Error ? err.message : String(err));
+         }
+       }
+
+      // Fallback: Google Gemini API if available
+      if (env.GOOGLE_AI_API_KEY) {
         try {
-          const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).`;
-
-          const workersAiMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
-
-          const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-            messages: workersAiMessages,
-            max_tokens: 600,
-          });
-
-          const response = result.response || "";
-          const stream = new ReadableStream({
-            start(controller) {
-              const chunks = response.match(/.{1,80}/g) || [response];
-              for (const chunk of chunks) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
-              }
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
-            },
-          });
-
-          return new Response(stream, {
-            headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-cache",
-              "Connection": "keep-alive",
-            },
-          });
-        } catch (err) {
-          console.warn("[chat] Workers AI failed:", err instanceof Error ? err.message : err);
-        }
-      }
-
-      // Fallback: Anthropic API if available
-      if (env.ANTHROPIC_API_KEY) {
-        try {
-          const resp = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "x-api-key": env.ANTHROPIC_API_KEY,
-              "content-type": "application/json",
-              "anthropic-version": "2023-06-01",
-            },
-            body: JSON.stringify({
-              model: "claude-3-5-sonnet-20241022",
-              max_tokens: 600,
-              messages,
-              system: "You are Cloudless Assistant, a helpful pre-sales assistant.",
-            }),
-          });
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${env.GOOGLE_AI_API_KEY}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                contents: messages.map((m) => ({
+                  role: m.role === "user" ? "user" : "model",
+                  parts: [{ text: m.content }],
+                })),
+                systemInstruction: "You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).",
+                generationConfig: { maxOutputTokens: 600 },
+              }),
+            }
+          );
 
           if (resp.ok) {
             const data = await resp.json();
-            const text = data.content?.[0]?.text || "";
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
             const stream = new ReadableStream({
               start(controller) {
                 const chunks = text.match(/.{1,80}/g) || [text];
@@ -566,7 +572,7 @@ export default {
             });
           }
         } catch (err) {
-          console.warn("[chat] Anthropic fallback failed:", err instanceof Error ? err.message : err);
+          console.warn("[chat] Google Gemini fallback failed:", err instanceof Error ? err.message : String(err));
         }
       }
 
@@ -792,7 +798,7 @@ export default {
         stripe: !!env.STRIPE_SECRET_KEY,
         analytics: !!env.ANALYTICS_BUCKET,
         r2: !!env.ASSETS_BUCKET,
-        chat: !!env.CHAT,
+        chat: !!(env.CHAT || env.GOOGLE_AI_API_KEY || env.ANTHROPIC_API_KEY),
       };
 
       return jsonResponse({ services, allOk: Object.values(services).every(Boolean) });

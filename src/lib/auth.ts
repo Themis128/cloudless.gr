@@ -16,7 +16,7 @@ interface Env {
   AUTH_DB: D1Database;
 }
 
-function getDb(request: NextRequest): D1Database | null {
+function getDb(_request: NextRequest): D1Database | null {
   const env = process.env as unknown as Env;
   return env.AUTH_DB ?? null;
 }

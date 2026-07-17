@@ -7,7 +7,7 @@ interface Env {
   AUTH_DB: AuthDatabase;
 }
 
-function getDb(request: NextRequest): AuthDatabase | null {
+function getDb(_request: NextRequest): AuthDatabase | null {
   // In Workers, AUTH_DB is provided as a binding
   // In Next.js serverless, we need to check if it's configured
   const env = process.env as unknown as Env;

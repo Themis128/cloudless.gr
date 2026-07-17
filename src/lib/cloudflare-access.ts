@@ -6,8 +6,6 @@
  * interactive login for the unified admin user.
  */
 
-import { jwtVerify } from "jose";
-
 const CF_ACCESS_ISSUER = "https://api.cloudflare.com/client/v4/accounts";
 
 interface AccessTokenPayload {
@@ -31,7 +29,7 @@ interface VerifiedAccess {
 /**
  * Get the Cloudflare Access public keys for JWT verification
  */
-async function getAccessKeys(): Promise<Map<string, string>> {
+async function _getAccessKeys(): Promise<Map<string, string>> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   if (!accountId) {
     throw new Error("CLOUDFLARE_ACCOUNT_ID not configured");

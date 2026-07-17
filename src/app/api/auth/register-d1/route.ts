@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser, createPasswordResetToken, type AuthDatabase } from "@/lib/auth-d1";
+import { createUser, type AuthDatabase } from "@/lib/auth-d1";
 import { sendActivationEmail, notifyTeam, slackRegistrationNotify } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { createHmac as nodeCreateHmac } from "crypto";
@@ -8,7 +8,7 @@ interface Env {
   AUTH_DB: AuthDatabase;
 }
 
-function getDb(request: NextRequest): AuthDatabase | null {
+function getDb(_request: NextRequest): AuthDatabase | null {
   const env = process.env as unknown as Env;
   if (!env.AUTH_DB) {
     return null;

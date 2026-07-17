@@ -7,7 +7,7 @@ interface Env {
   AUTH_DB: AuthDatabase;
 }
 
-function getDb(request: NextRequest): AuthDatabase | null {
+function getDb(_request: NextRequest): AuthDatabase | null {
   const env = process.env as unknown as Env;
   if (!env.AUTH_DB) {
     return null;

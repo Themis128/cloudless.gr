@@ -6,7 +6,7 @@ interface Env {
   ANALYTICS_BUCKET: R2Bucket;
 }
 
-function getBucket(request: NextRequest): R2Bucket | null {
+function getBucket(_request: NextRequest): R2Bucket | null {
   const env = process.env as unknown as Env;
   if (!env.ANALYTICS_BUCKET) {
     return null;

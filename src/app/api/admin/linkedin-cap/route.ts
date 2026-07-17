@@ -1,8 +1,6 @@
 // R20/R26: LinkedIn Conversion API endpoint
 // Captures conversions server-side for better attribution
 
-import { sendLeadEvent } from "@/lib/meta-capi"; // Reuse similar pattern
-
 const LINKEDIN_ACCESS_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN || "";
 const LINKEDIN_CONVERSION_ID = process.env.LINKEDIN_CONVERSION_ID || "";
 
