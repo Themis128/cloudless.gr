@@ -4,25 +4,31 @@
   "compatibility_date": "2026-07-09",
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "routes": [
-    { "pattern": "cloudless.gr", "custom_domain": true },
-    { "pattern": "www.cloudless.gr", "custom_domain": true },
-    { "pattern": "staging.cloudless.gr", "custom_domain": true }
+    { "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true },
+    { "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true },
+    { "pattern": "staging.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true }
   ],
   "triggers": {
-  "crons": [
-    "0 1 * * *",
-    "0 6 * * 1-5",
-    "0 * * * *",
-    "0 2 * * 7",
-    "0 5 * * 1"
-  ]
+    "crons": [
+      "0 1 * * *",
+      "0 6 * * 1-5",
+      "0 * * * *",
+      "0 2 * * 7",
+      "0 5 * * 1"
+    ]
+  },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
   },
   "vars": {
     "ENVIRONMENT": "production",
     "API_VERSION": "v1.0",
     "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
     "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
-    "APP_VERSION": "${GITHUB_SHA}"
+    "APP_VERSION": "1.0.0"
   },
   "analytics_engine_datasets": [
     {
@@ -38,13 +44,6 @@
   "ai": {
     "binding": "AI"
   },
-  "services": [
-    {
-      "binding": "CHAT",
-      "service": "cloudless-gr-chat",
-      "entrypoint": "ChatEntrypoint"
-    }
-  ],
   "send_email": [{ "name": "EMAIL" }],
   "r2_buckets": [
     { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
@@ -74,13 +73,6 @@
       "ai": {
         "binding": "AI"
       },
-      "services": [
-        {
-          "binding": "CHAT",
-          "service": "cloudless-gr-chat",
-          "entrypoint": "ChatEntrypoint"
-        }
-      ],
       "send_email": [{ "name": "EMAIL" }],
       "r2_buckets": [
         { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
@@ -93,13 +85,13 @@
       ]
     },
     "production": {
-      "name": "fully-migrated-serverless-stack",
+      "name": "cloudless-gr",
       "vars": {
         "ENVIRONMENT": "production",
         "API_VERSION": "v1.0",
         "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
-        "APP_VERSION": "${GITHUB_SHA}"
+        "APP_VERSION": "1.0.0"
       },
       "analytics_engine_datasets": [
         {
@@ -110,13 +102,6 @@
       "ai": {
         "binding": "AI"
       },
-      "services": [
-        {
-          "binding": "CHAT",
-          "service": "cloudless-gr-chat",
-          "entrypoint": "ChatEntrypoint"
-        }
-      ],
       "send_email": [{ "name": "EMAIL" }],
       "r2_buckets": [
         { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },

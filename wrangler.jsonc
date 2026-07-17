@@ -56,13 +56,6 @@
   "ai": {
     "binding": "AI"
   },
-  "services": [
-    {
-      "binding": "CHAT",
-      "service": "cloudless-gr-chat",
-      "entrypoint": "ChatEntrypoint"
-    }
-  ],
   "d1_databases": [
     {
       "binding": "AUTH_DB",
