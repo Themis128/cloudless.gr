@@ -27,6 +27,37 @@ const AGENT_PATH_PREFIX = "/api/agents";
 const DEFAULT_AGENT_PATH_PREFIX = "/agents";
 const SERVER_COUNTER_PREFIX = "/api/server/counter";
 const CHAT_PATH_PREFIX = "/api/chat";
+const LOCALES = ["en", "el", "fr", "de"];
+
+// ---------------------------------------------------------------------------
+// Locale cascade fix: handle /en/en/en/... paths and redirect properly
+// ---------------------------------------------------------------------------
+
+function fixLocaleCascade(url: URL): Response | null {
+  const path = url.pathname;
+  
+  // Check for locale cascade: multiple consecutive locale prefixes (e.g., /en/en/en/...)
+  const localePattern = new RegExp(`^/(${LOCALES.join("|")})/(${LOCALES.join("|")})/(${LOCALES.join("|")}/)+`);
+  
+  if (localePattern.test(path)) {
+    // Extract the actual path after removing duplicate locale prefixes
+    // e.g., /en/en/en/blog -> /blog
+    let cleanPath = path.replace(localePattern, "/");
+    // Handle case like /en/en/en (no trailing path) -> redirect to /en
+    if (cleanPath === "/" && path !== "/") {
+      cleanPath = "/en";
+    }
+    
+    // Preserve query string
+    const cleanUrl = cleanPath === "/" ? 
+      (url.search ? `${cleanPath}?${url.search}` : cleanPath) : 
+      (url.search ? `${cleanPath}?${url.search}` : cleanPath);
+    
+    return Response.redirect(`${url.origin}${cleanPath}`, 301);
+  }
+  
+  return null;
+}
 
 function unauthorized() {
   return Response.json(
@@ -147,10 +178,10 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
   try {
     // For RPC-style call, extract messages and call directly
     const body = (await request.json().catch(() => ({}))) as { messages?: { role: "user" | "assistant"; content: string }[] };
-    
+
     // Build headers object for RPC context
     const headers = Object.fromEntries(request.headers.entries());
-    
+
     // CHAT is WorkerEntrypoint from wrangler types
     // Call chatStream method with the appropriate signature
     const chatStub = env.CHAT as unknown as {
@@ -178,6 +209,12 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
 const worker = {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    // Handle locale cascade redirects first
+    const localeRedirect = fixLocaleCascade(url);
+    if (localeRedirect) {
+      return localeRedirect;
+    }
 
     const isCustomAgentRoute = url.pathname.startsWith(AGENT_PATH_PREFIX + "/");
     const isDefaultAgentRoute = url.pathname.startsWith(DEFAULT_AGENT_PATH_PREFIX + "/");
@@ -220,5 +257,6 @@ const worker = {
     return env.ASSETS.fetch(request);
   },
 };
+
 
 export default worker;

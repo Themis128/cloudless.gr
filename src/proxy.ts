@@ -27,7 +27,12 @@ function getLocaleFromPath(pathname: string): string {
 function stripLocale(pathname: string): string {
   const segment = pathname.split("/")[1];
   if (!LOCALES.includes(segment)) return pathname;
-  return pathname.slice(segment.length + 1) || "/";
+  const stripped = pathname.slice(segment.length + 1) || "/";
+  // Recursively strip any additional locale prefixes to prevent /en/en/en/... cascade
+  if (stripped !== "/" && stripped.split("/")[1] && LOCALES.includes(stripped.split("/")[1])) {
+    return stripLocale(stripped);
+  }
+  return stripped;
 }
 
 async function readAuthToken(
@@ -428,6 +433,21 @@ async function handlePageRoute(
   pathname: string,
   nonce: string,
 ): Promise<NextResponse> {
+  // Fix malformed URLs with repeated locale prefixes (e.g., /en/en/en/...)
+  // This happens when the client-side redirect JS runs on an already-prefixed path
+  const segments = pathname.split("/").filter(Boolean);
+  const localeCount = segments.filter((s) => LOCALES.includes(s)).length;
+  if (localeCount > 1 || pathname === "/") {
+    // Redirect to /en or fix repeated locales
+    let targetPath = "/en";
+    if (localeCount > 1) {
+      const locale = segments[0]; // Use the first locale found
+      const rest = stripLocale(pathname);
+      targetPath = `/${locale}${rest}`;
+    }
+    return NextResponse.redirect(new URL(targetPath, request.url), 301);
+  }
+
   // Handle post-login route BEFORE the locale stripping
   const bareForRouteCheck = stripLocale(pathname);
   if (bareForRouteCheck === "/auth/post-login") {
