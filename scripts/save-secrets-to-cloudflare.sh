@@ -1,27 +1,14 @@
 #!/usr/bin/env bash
-# Save secrets from .env or SSM to Cloudflare Workers secrets
-# Usage: ./scripts/save-secrets-to-cloudflare.sh
+# Save all secrets from environment to Cloudflare Workers secrets (bulk)
+# Usage: CLOUDFLARE_API_TOKEN=... ./scripts/save-secrets-to-cloudflare.sh
 #
-# This script:
-# 1. Reads secrets from SSM (if configured) or prompts for input
-# 2. Saves them to Cloudflare Workers via wrangler secret put
-# 3. Verifies the secrets are set correctly
+# Reads all secrets from process.env and sets them via wrangler at once
+# For k3s: creates Kubernetes secret manifest with SSM_DISABLED=1 support
 
 set -euo pipefail
 
-echo "🔐 Cloudflare Workers Secrets Setup"
-echo "===================================="
-
-# Check for CLOUDFLARE_API_TOKEN
-if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-  echo "❌ CLOUDFLARE_API_TOKEN not set in environment"
-  echo ""
-  echo "Set it first:"
-  echo "  export CLOUDFLARE_API_TOKEN='your-api-token'"
-  echo ""
-  echo "Required permissions: Account → Workers Scripts → Edit"
-  exit 1
-fi
+echo "🔐 Cloudflare Workers Secrets Bulk Setup"
+echo "========================================="
 
 # Verify wrangler is available
 if ! command -v wrangler &> /dev/null; then
@@ -30,65 +17,99 @@ if ! command -v wrangler &> /dev/null; then
   exit 1
 fi
 
-# Secrets to migrate (based on .env.example and cloudflare-secrets-migration.md)
-SECRETS_TO_SET="SESSION_SECRET STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET SLACK_WEBHOOK_URL SLACK_BOT_TOKEN SLACK_SIGNING_SECRET ANTHROPIC_API_KEY POSTIZ_API_KEY"
+# All secrets that can be set (based on .env.example)
+ALL_SECRETS=(
+  "SESSION_SECRET"
+  "STRIPE_SECRET_KEY"
+  "STRIPE_WEBHOOK_SECRET"
+  "SLACK_WEBHOOK_URL"
+  "SLACK_BOT_TOKEN"
+  "SLACK_SIGNING_SECRET"
+  "POSTIZ_API_KEY"
+  "ADMIN_ALERT_SECRET"
+  "ESPOCRM_API_KEY"
+  "ESPOCRM_BASE_URL"
+  "ANTHROPIC_API_KEY"
+  "ACTIVECAMPAIGN_API_TOKEN"
+  "NOTION_API_KEY"
+)
+
+# Find secrets that have values in environment
+SECRETS_WITH_VALUES=()
+for s in "${ALL_SECRETS[@]}"; do
+  if [ -n "${!s:-}" ]; then
+    SECRETS_WITH_VALUES+=("$s")
+  fi
+done
 
 echo ""
-echo "📋 Secrets to set in Cloudflare Workers:"
-for s in $SECRETS_TO_SET; do
+echo "📋 Found ${#SECRETS_WITH_VALUES[@]} secrets in environment:"
+for s in "${SECRETS_WITH_VALUES[@]}"; do
   echo "  - $s"
 done
 echo ""
 
-# Confirm before proceeding
-read -p "Proceed with setting secrets? (y/N) " -n 1 -r
+if [ ${#SECRETS_WITH_VALUES[@]} -eq 0 ]; then
+  echo "❌ No secrets found in environment"
+  echo ""
+  echo "Load your .env file first:"
+  echo "  export \$(cat .env.local | grep -v '^#' | xargs)"
+  exit 1
+fi
+
+# Confirm
+read -p "Set these ${#SECRETS_WITH_VALUES[@]} secrets to Cloudflare Workers? (y/N) " -n 1 -r
 echo ""
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   echo "Aborted."
   exit 0
 fi
 
-echo ""
-echo "💾 Setting up Cloudflare Workers secrets..."
+echo "💾 Setting secrets..."
 echo ""
 
-# Function to set a secret
-set_secret() {
-  local name="$1"
-  local value="${2:-}"
-  
-  # If no value provided, try to read from env
-  if [ -z "$value" ]; then
-    value="${!name:-}"
-  fi
-  
-  if [ -z "$value" ]; then
-    echo "  [SKIP] $name - no value provided"
-    return 0
-  fi
-  
-  echo -n "  Setting $name... "
-  echo "$value" | npx wrangler secret put "$name" > /dev/null 2>&1 && echo "✓" || echo "✗ (may already exist)"
-}
+SUCCESS=0
+FAIL=0
 
-# Set all required secrets
-for secret in $SECRETS_TO_SET; do
-  value="${!secret:-}"
-  set_secret "$secret" "$value"
+for secret in "${SECRETS_WITH_VALUES[@]}"; do
+  value="${!secret}"
+  echo -n "  $secret... "
+  if echo "$value" | npx wrangler secret put "$secret" > /dev/null 2>&1; then
+    echo "✓"
+    ((SUCCESS++)) || true
+  else
+    echo "✗ (already exists or error)"
+    ((FAIL++)) || true
+  fi
 done
 
 echo ""
-echo "📝 Optional: Set via GitHub Secrets for CI/CD workflows"
-echo ""
-echo "For GitHub Actions, run:"
-echo "  gh secret set SESSION_SECRET --repo Themis128/cloudless.gr"
-echo "  gh secret set STRIPE_SECRET_KEY --repo Themis128/cloudless.gr"
-echo "  gh secret set SLACK_WEBHOOK_URL --repo Themis128/cloudless.gr"
+echo "Summary: $SUCCESS set, $FAIL skipped/errors"
 echo ""
 
-echo "✅ Cloudflare Workers secrets setup complete"
+# Also output Kubernetes secret for k3s
+echo "📋 Kubernetes secret manifest (for k3s with SSM_DISABLED=1):"
+echo "--- save as k3s/cloudless-secrets.yaml ---"
+echo "apiVersion: v1"
+echo "kind: Secret"
+echo "metadata:"
+echo "  name: cloudless-secrets"
+echo "  namespace: cloudless"
+echo "type: Opaque"
+echo "stringData:"
+for secret in "${SECRETS_WITH_VALUES[@]}"; do
+  echo "  $secret: \"${!secret}\""
+done
+echo "---"
 echo ""
-echo "Next steps:"
-echo "  1. Deploy worker: npx wrangler deploy"
-echo "  2. Verify health: curl https://cloudless.gr/api/health"
-echo "  3. Check /admin/integrations on the deployed site"
+
+# GitHub Actions secrets command
+echo "📋 GitHub Actions repo secrets (run after gh auth login):"
+for secret in SESSION_SECRET STRIPE_SECRET_KEY POSTIZ_API_KEY ADMIN_ALERT_SECRET ANTHROPIC_API_KEY; do
+  if [ -n "${!secret:-}" ]; then
+    echo "gh secret set $secret --repo Themis128/cloudless.gr"
+  fi
+done
+echo ""
+
+echo "✅ Done. Secrets available to both Workers and k3s."
