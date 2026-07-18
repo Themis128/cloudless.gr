@@ -30,32 +30,32 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], output: "test-results/" },
     },
     {
       name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
+      use: { ...devices["Desktop Firefox"], output: "test-results/" },
     },
     {
       name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      use: { ...devices["Desktop Safari"], output: "test-results/" },
     },
     {
       name: "mobile-chrome",
-      use: { ...devices["Pixel 5"] },
+      use: { ...devices["Pixel 5"], output: "test-results/" },
     },
     {
       name: "mobile-safari",
-      use: { ...devices["iPhone 12"] },
+      use: { ...devices["iPhone 12"], output: "test-results/" },
     },
     {
       name: "chromium-user",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], output: "test-results/" },
       dependencies: ["chromium"],
     },
     {
       name: "chromium-admin",
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], output: "test-results/" },
       dependencies: ["chromium"],
     },
   ],
@@ -67,5 +67,4 @@ export default defineConfig({
         timeout: 120000,
       }
     : undefined,
-  output: "test-results/",
 });
