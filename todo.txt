@@ -156,6 +156,7 @@
 ## ☁️ AWS → CLOUDFLARE MIGRATION (IN PROGRESS)
 
 ### Phase 1: Secrets Migration (SSM → Workers)
+- [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
 - [ ] Migrate ADMIN_ALERT_SECRET to Workers secret (via wrangler)
 - [ ] Migrate SLACK_WEBHOOK_URL to Workers secret
 - [ ] Migrate POSTIZ_API_KEY to Workers secret  
