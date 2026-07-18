@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "Node16",
+		"moduleResolution": "NodeNext",
+		"outDir": "dist",
+		"rootDir": "src",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"declaration": true,
+		"resolveJsonModule": true,
+		"allowImportingTsExtensions": true,
+		"types": ["node"],
+		"lib": ["ES2022"]
+	},
+	"include": ["src/**/*"]
+}
