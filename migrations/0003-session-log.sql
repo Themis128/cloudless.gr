@@ -22,8 +22,6 @@ CREATE INDEX IF NOT EXISTS idx_session_log_action_time ON session_log(action, cr
 
 -- Index for email-based failed attempt lookup (account lockout)
 CREATE INDEX IF NOT EXISTS idx_session_log_email ON session_log(email);
-```
 
 -- Cleanup old log entries (optional - for compliance)
 -- Note: Consider archiving instead of deleting for audit purposes
--- CREATE INDEX IF NOT EXISTS idx_session_log_cleanup ON session_log(created_at);
