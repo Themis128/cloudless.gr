@@ -102,3 +102,25 @@ kube-state-metrics:
       memory: 128Mi
     requests:
       memory: 64Mi
+
+# Set global node selector for all kube-prometheus-stack components
+# This ensures all chart workloads run on omv to avoid the NoSchedule taint on omv-ha.
+# Note: Some components still need explicit nodeSelector in their specific sections.
+global:
+  nodeSelector:
+    kubernetes.io/hostname: omv
+
+# Operator pod node selector (kube-prometheus-stack prometheus-operator)
+# This controls the deployment that manages CRDs and the alerting rules.
+prometheusOperator:
+  nodeSelector:
+    kubernetes.io/hostname: omv
+  resources:
+    limits:
+      memory: 128Mi
+    requests:
+      memory: 64Mi
+
+# Disable additional prometheus rules that may create extra workloads
+additionalPrometheusRules:
+  enabled: false

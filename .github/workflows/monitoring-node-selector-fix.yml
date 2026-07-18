@@ -1,16 +1,16 @@
-name: Monitoring Node Selector Fix (Prometheus/Alertmanager stuck Pending)
+name: Monitoring Node Selector Fix
 
-# Prometheus and Alertmanager pods are Pending because they lack `nodeSelector`.
-# The omv-ha node has `node-type=standby:NoSchedule` taint, so pods must be
-# explicitly scheduled on the omv (primary) node via `nodeSelector`.
+# Patch monitoring pods (Prometheus, Alertmanager, kube-state-metrics, cloudwatch-exporter) 
+# to add nodeSelector targeting the `omv` hostname. Fixes pods stuck in Pending due to 
+# NoSchedule taint on omv-ha node.
 #
-# This workflow patches the kube-prometheus-stack StatefulSets to add:
-#   nodeSelector:
-#     kubernetes.io/hostname: omv
+# Trigger by touching this file or via dispatch.
 #
-# Also patches kube-state-metrics and cloudwatch-exporter deployments if pending.
-#
-# Trigger: push to this file or the values file.
+# When to use:
+#   - Prometheus/Alertmanager pods in Pending state
+#   - kube-state-metrics pods in Pending state
+#   - cloudwatch-exporter pods in Pending state
+#   - omv-ha has node-type=standby:NoSchedule taint
 
 on:
   workflow_dispatch:
@@ -27,8 +27,7 @@ permissions:
 jobs:
   patch:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
@@ -42,117 +41,67 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
-          kubectl version --client
 
-      - name: Show pending monitoring pods before patch
+      - name: Show pending pods before patching
         run: |
-          echo "=== Monitoring namespace pods (non-Running) ===" | tee monitor-before.log
-          kubectl -n monitoring get pods --field-selector=status.phase!=Running -o wide 2>&1 | tee -a monitor-before.log || true
+          echo "=== Pending pods in monitoring namespace ==="
+          kubectl get pods -n monitoring | grep -E 'Pending|0/' || echo "No pending pods found"
+          echo ""
+          echo "=== All pods in monitoring namespace ==="
+          kubectl get pods -n monitoring -o wide
 
-      - name: Patch Prometheus StatefulSet node selector
+      - name: Patch Prometheus StatefulSet
         run: |
-          PROM_STS=$(kubectl -n monitoring get sts -l app.kubernetes.io/name=prometheus -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-          if [ -n "${PROM_STS:-}" ]; then
-            echo "Patching Prometheus StatefulSet: $PROM_STS"
-            kubectl -n monitoring patch statefulset "$PROM_STS" \
-              --type=strategic \
-              -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' \
-              2>&1 | tee -a monitor-before.log
-            echo "Waiting for Prometheus rollout..."
-            kubectl -n monitoring rollout status "sts/$PROM_STS" --timeout=3m 2>&1 | tee -a monitor-before.log || true
-          else
-            echo "No Prometheus StatefulSet found (already running?)" | tee -a monitor-before.log
-          fi
+          kubectl patch statefulset prometheus-monitoring-prometheus \
+            -n monitoring \
+            --type strategic \
+            --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}} 2>/dev/null || \
+            echo "Prometheus StatefulSet not found or already patched"
 
-      - name: Patch Alertmanager StatefulSet node selector
+      - name: Patch Alertmanager StatefulSet
         run: |
-          AM_STS=$(kubectl -n monitoring get sts -l app.kubernetes.io/name=alertmanager -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-          if [ -n "${AM_STS:-}" ]; then
-            echo "Patching Alertmanager StatefulSet: $AM_STS"
-            kubectl -n monitoring patch statefulset "$AM_STS" \
-              --type=strategic \
-              -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' \
-              2>&1 | tee -a monitor-before.log
-            echo "Waiting for Alertmanager rollout..."
-            kubectl -n monitoring rollout status "sts/$AM_STS" --timeout=3m 2>&1 | tee -a monitor-before.log || true
-          else
-            echo "No Alertmanager StatefulSet found (already running?)" | tee -a monitor-before.log
-          fi
+          kubectl patch statefulset alertmanager-monitoring-alertmanager \
+            -n monitoring \
+            --type strategic \
+            --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}} 2>/dev/null || \
+            echo "Alertmanager StatefulSet not found or already patched"
 
-      - name: Patch kube-state-metrics deployment node selector
+      - name: Patch kube-state-metrics Deployment
         run: |
-          KSM_DEPLOY=$(kubectl -n monitoring get deploy -l app=kube-state-metrics -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-          if [ -n "${KSM_DEPLOY:-}" ]; then
-            echo "Patching kube-state-metrics deployment: $KSM_DEPLOY"
-            kubectl -n monitoring patch deployment "$KSM_DEPLOY" \
-              --type=strategic \
-              -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' \
-              2>&1 | tee -a monitor-before.log
-            echo "Waiting for kube-state-metrics rollout..."
-            kubectl -n monitoring rollout status "deploy/$KSM_DEPLOY" --timeout=3m 2>&1 | tee -a monitor-before.log || true
-          else
-            echo "No kube-state-metrics deployment found (already running?)" | tee -a monitor-before.log
-          fi
+          kubectl patch deployment kube-prom-kube-state-metrics \
+            -n monitoring \
+            --type strategic \
+            --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}} 2>/dev/null || \
+            echo "kube-state-metrics Deployment not found or already patched"
 
-      - name: Patch cloudwatch-exporter deployment node selector
+      - name: Patch cloudwatch-exporter Deployment
         run: |
-          CW_DEPLOY=$(kubectl -n monitoring get deploy -l app=cloudwatch-exporter -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-          if [ -n "${CW_DEPLOY:-}" ]; then
-            echo "Patching cloudwatch-exporter deployment: $CW_DEPLOY"
-            kubectl -n monitoring patch deployment "$CW_DEPLOY" \
-              --type=strategic \
-              -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' \
-              2>&1 | tee -a monitor-before.log
-            echo "Waiting for cloudwatch-exporter rollout..."
-            kubectl -n monitoring rollout status "deploy/$CW_DEPLOY" --timeout=3m 2>&1 | tee -a monitor-before.log || true
-          else
-            echo "No cloudwatch-exporter deployment found (already running?)" | tee -a monitor-before.log
-          fi
+          kubectl patch deployment cloudless-cloudwatch-exporter \
+            -n monitoring \
+            --type strategic \
+            --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}} 2>/dev/null || \
+            echo "cloudwatch-exporter Deployment not found or already patched"
 
-      - name: Delete stuck cloudflare-geo-exporter pods
+      - name: Patch cloudflared-drift omv-ha CronJob nodeSelector
         run: |
-          echo "=== Cleaning up cloudflare-geo-exporter stuck pods ===" | tee geo-cleanup.log
-          GEO_PODS=$(kubectl -n monitoring get pods -l app=cloudflare-geo-exporter --no-headers 2>/dev/null \
-            | awk '/Pending|Terminating/{print $1}' || true)
-          if [ -n "${GEO_PODS:-}" ]; then
-            for pod in $GEO_PODS; do
-              echo "Deleting stuck pod: $pod" | tee -a geo-cleanup.log
-              kubectl -n monitoring delete pod "$pod" --force --grace-period=0 --ignore-not-found 2>&1 | tee -a geo-cleanup.log || true
-            done
-            sleep 10
-          else
-            echo "No stuck cloudflare-geo-exporter pods found" | tee -a geo-cleanup.log
-          fi
+          kubectl patch cronjob cloudflared-drift-count-omv-ha \
+            -n monitoring \
+            --type strategic \
+            --patch '{"spec":{"jobTemplate":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"}}}}}' 2>/dev/null || \
+            echo "cloudflared-drift-count-omv-ha CronJob not found or already patched"
 
-      - name: Show monitoring pods after patch
+      - name: Wait for rollouts to complete (60s timeout)
         run: |
-          echo "=== Monitoring namespace pods — after ===" | tee monitor-after.log
-          kubectl -n monitoring get pods -o wide 2>&1 | tee -a monitor-after.log || true
-          echo "" | tee -a monitor-after.log
-          echo "=== Pending pods (should be empty) ===" | tee -a monitor-after.log
-          kubectl -n monitoring get pods --field-selector=status.phase!=Running -o wide 2>&1 | tee -a monitor-after.log || true
+          echo "Waiting for Prometheus rollout..."
+          kubectl rollout status statefulset/prometheus-monitoring-prometheus -n monitoring --timeout=60s || true
+          echo "Waiting for Alertmanager rollout..."
+          kubectl rollout status statefulset/alertmanager-monitoring-alertmanager -n monitoring --timeout=60s || true
+          echo "Waiting for kube-state-metrics rollout..."
+          kubectl rollout status deployment/kube-prom-kube-state-metrics -n monitoring --timeout=60s || true
+          echo "Waiting for cloudwatch-exporter rollout..."
+          kubectl rollout status deployment/cloudless-cloudwatch-exporter -n monitoring --timeout=60s || true
 
-      - name: Verify Prometheus and Alertmanager endpoints
+      - name: Show final pod status
         run: |
-          echo "=== Verifying endpoints ===" | tee verify.log
-          # Check if prometheus port 9090 is reachable via cluster IP
-          kubectl -n monitoring get svc -l app.kubernetes.io/name=prometheus 2>&1 | tee -a verify.log || true
-          # Check if alertmanager port 9093 is reachable via cluster IP
-          kubectl -n monitoring get svc -l app.kubernetes.io/name=alertmanager 2>&1 | tee -a verify.log || true
-
-      - name: Post result to tracking issue
-        if: always()
-        run: |
-          {
-            echo "# Monitoring node selector fix — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
-            echo ""
-            echo "## Before"
-            echo '```'
-            cat monitor-before.log 2>/dev/null || echo '(no log)'
-            echo '```'
-            echo ""
-            echo "## After"
-            echo '```'
-            cat monitor-after.log 2>/dev/null || echo '(no log)'
-            echo '```'
-          } | gh issue comment 382 --repo "${{ github.repository }}" --body-file -
+          echo "=== Final pod status in monitoring namespace ==="
+          kubectl get pods -n monitoring -o wide
