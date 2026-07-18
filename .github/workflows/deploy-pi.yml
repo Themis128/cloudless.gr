@@ -26,7 +26,7 @@ permissions:
 
 env:
   GHCR_REGISTRY: ghcr.io
-  GHCR_REPOSITORY: ${{ github.repository_owner }}/cloudless-pi-app
+  GHCR_REPOSITORY: themis128/${{ github.event.repository.name }}-pi-app
   K3S_NAMESPACE: cloudless
   K3S_DEPLOYMENT: cloudless
 
