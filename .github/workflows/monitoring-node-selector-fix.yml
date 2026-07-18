@@ -12,8 +12,8 @@ name: Monitoring Node Selector Fix
 #   - cloudwatch-exporter pods in Pending state
 #   - omv-ha has node-type=standby:NoSchedule taint
 #
-# NOTE: Uses SSH to omv via Tailscale (100.113.41.119) instead of direct
-# kubectl because Cloudflare blocks GitHub Actions IPs from reaching the k3s API.
+# NOTE: Uses RUNNER_GENERIC failover to Pi runner to get direct kubectl access
+# to the k3s API. GitHub-hosted runners are blocked by Cloudflare.
 
 on:
   workflow_dispatch:
@@ -29,69 +29,50 @@ permissions:
 
 jobs:
   patch:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Connect to tailnet
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
-        with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
-
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          # Use Tailscale IP since we're connecting via the tailnet
-          ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      - name: Show pending pods before patching
-        run: |
-          echo "=== Pending pods in monitoring namespace ==="
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl get pods -n monitoring" | grep -E 'Pending|0/' || echo "No pending pods found"
-          echo ""
-          echo "=== All pods in monitoring namespace ==="
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl get pods -n monitoring -o wide"
-
       - name: Patch Prometheus StatefulSet
+        continue-on-error: true
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl patch statefulset prometheus-monitoring-prometheus -n monitoring --type strategic --patch '{\"spec\":{\"template\":{\"spec\":{\"nodeSelector\":{\"kubernetes.io/hostname\":\"omv\"}}}}'" || \
-            echo "Prometheus StatefulSet not found or already patched"
+          kubectl patch statefulset prometheus-monitoring-prometheus -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "Prometheus StatefulSet not found or already patched"
 
       - name: Patch Alertmanager StatefulSet
+        continue-on-error: true
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl patch statefulset alertmanager-monitoring-alertmanager -n monitoring --type strategic --patch '{\"spec\":{\"template\":{\"spec\":{\"nodeSelector\":{\"kubernetes.io/hostname\":\"omv\"}}}}'" || \
-            echo "Alertmanager StatefulSet not found or already patched"
+          kubectl patch statefulset alertmanager-monitoring-alertmanager -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "Alertmanager StatefulSet not found or already patched"
 
       - name: Patch kube-state-metrics Deployment
+        continue-on-error: true
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl patch deployment kube-prom-kube-state-metrics -n monitoring --type strategic --patch '{\"spec\":{\"template\":{\"spec\":{\"nodeSelector\":{\"kubernetes.io/hostname\":\"omv\"}}}}'" || \
-            echo "kube-state-metrics Deployment not found or already patched"
+          kubectl patch deployment kube-prom-kube-state-metrics -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "kube-state-metrics Deployment not found or already patched"
 
       - name: Patch cloudwatch-exporter Deployment
+        continue-on-error: true
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl patch deployment cloudless-cloudwatch-exporter -n monitoring --type strategic --patch '{\"spec\":{\"template\":{\"spec\":{\"nodeSelector\":{\"kubernetes.io/hostname\":\"omv\"}}}}'" || \
-            echo "cloudwatch-exporter Deployment not found or already patched"
+          kubectl patch deployment cloudless-cloudwatch-exporter -n monitoring --type strategic --patch '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}' 2>/dev/null || echo "cloudwatch-exporter Deployment not found or already patched"
 
       - name: Patch cloudflared-drift omv-ha CronJob nodeSelector
+        continue-on-error: true
         run: |
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl patch cronjob cloudflared-drift-count-omv-ha -n monitoring --type strategic --patch '{\"spec\":{\"jobTemplate\":{\"spec\":{\"nodeSelector\":{\"kubernetes.io/hostname\":\"omv-ha\"}}}}'" || \
-            echo "cloudflared-drift-count-omv-ha CronJob not found or already patched"
+          kubectl patch cronjob cloudflared-drift-count-omv-ha -n monitoring --type strategic --patch '{"spec":{"jobTemplate":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv-ha"}}}}}' 2>/dev/null || echo "cloudflared-drift-count-omv-ha CronJob not found or already patched"
 
       - name: Wait for rollouts to complete (60s timeout)
+        continue-on-error: true
         run: |
           echo "Waiting for Prometheus rollout..."
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl rollout status statefulset/prometheus-monitoring-prometheus -n monitoring --timeout=60s" || true
+          kubectl rollout status statefulset/prometheus-monitoring-prometheus -n monitoring --timeout=60s || true
           echo "Waiting for Alertmanager rollout..."
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl rollout status statefulset/alertmanager-monitoring-alertmanager -n monitoring --timeout=60s" || true
+          kubectl rollout status statefulset/alertmanager-monitoring-alertmanager -n monitoring --timeout=60s || true
           echo "Waiting for kube-state-metrics rollout..."
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl rollout status deployment/kube-prom-kube-state-metrics -n monitoring --timeout=60s" || true
+          kubectl rollout status deployment/kube-prom-kube-state-metrics -n monitoring --timeout=60s || true
           echo "Waiting for cloudwatch-exporter rollout..."
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl rollout status deployment/cloudless-cloudwatch-exporter -n monitoring --timeout=60s" || true
+          kubectl rollout status deployment/cloudless-cloudwatch-exporter -n monitoring --timeout=60s || true
 
-      - name: Show final pod status
+      - name: Show pod status
+        continue-on-error: true
         run: |
           echo "=== Final pod status in monitoring namespace ==="
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no tbaltzakis@100.113.41.119 "sudo kubectl get pods -n monitoring -o wide"
+          kubectl get pods -n monitoring -o wide
