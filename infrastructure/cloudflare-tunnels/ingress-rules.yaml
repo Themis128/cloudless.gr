@@ -48,6 +48,14 @@
     tcpKeepAlive: 30s
     httpHostHeader: manage.cloudless.gr
 
+# postiz.cloudless.gr - Postiz social publishing engine
+# Runs on omv-main NodePort 30500 in the postiz namespace
+- hostname: postiz.cloudless.gr
+  service: http://localhost:30500
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
 # Apply these changes:
 #   1. ssh tbaltzakis@192.168.1.128
 #   2. sudo vi /etc/cloudflared/config.yml
@@ -60,3 +68,4 @@
 #   curl -I https://docs.cloudless.gr
 #   curl -I https://meili.cloudless.gr
 #   curl -I https://manage.cloudless.gr
+#   curl -I https://postiz.cloudless.gr

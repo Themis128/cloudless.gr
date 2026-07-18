@@ -1,0 +1,40 @@
+version: "3.8"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    container_name: cloudless-gr-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/workspace
+    networks:
+      - cloudless-network
+    restart: unless-stopped
+
+  devdocs-backend:
+    image: devdocs-backend:latest
+    container_name: cloudless-devdocs-backend
+    ports:
+      - "24125:24125"
+    networks:
+      - cloudless-network
+    restart: unless-stopped
+
+  crawl4ai:
+    image: unclecode/crawl4ai:0.9.2
+    platform: linux/amd64
+    container_name: cloudless-crawl4ai
+    ports:
+      - "11235:11235"
+    networks:
+      - cloudless-network
+    restart: unless-stopped
+
+volumes:
+  cloudless-pnpm-store:
+
+networks:
+  cloudless-network:
+    driver: bridge

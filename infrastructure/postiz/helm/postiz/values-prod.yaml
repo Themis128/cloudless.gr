@@ -15,6 +15,9 @@ postiz:
   # AI routes to the in-cluster LiteLLM proxy → Ollama on Office WSL
   litellmUrl: "http://postiz-litellm:4000"
   aiSecretName: "postiz-openai"
+  # Override uploads PVC size - needed for media storage
+  uploadsPvc:
+    size: 20Gi
 
 service:
   type: NodePort

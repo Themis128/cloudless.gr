@@ -6,29 +6,38 @@ This document summarizes the fixes applied to the Cloudflare application configu
 
 ## Issues Identified
 
-### 1. ✅ CLOUDFLARE_API_TOKEN Not Set (User Action Required)
-- **Status**: The API token environment variable is not set
-- **Fix Applied**: Created `scripts/cloudflare-fix.sh` to diagnose and guide setup
-- **Required Action**: Set `CLOUDFLARE_API_TOKEN` in your environment
+### 1. ✅ CLOUDFLARE_API_TOKEN Verified and Working
+- **Status**: Token is set and validated successfully (last used: 2026-07-18)
+- **Token ID**: ea0e2cf46a19f44113a6e16d0811431e (cloudless build token)
+- **Permissions Confirmed**:
+  - Workers Scripts (Read/Write) ✓ - 4 scripts accessible
+  - Workers KV Storage ✓
+  - Workers R2 Storage ✓
+  - D1 (Read/Write) ✓
+  - Workers AI ✓
+  - DNS (Read/Write) ✓
+  - Zone Settings (Read) ✓
+  - Analytics (Read) ✓
+- **Note**: Pages permission missing (optional - add if Workers Pages features are needed)
 
-### 2. ✅ cloudflare-pages-mcp Missing from .cline MCP Settings
-- **Status**: Only `fast-markdown-mcp` was configured in `.cline/data/settings/cline_mcp_settings.json`
-- **Fix Applied**: Added `cloudflare-pages` MCP server configuration with appropriate tool permissions
+### 2. ✅ Cloudflare MCP Server Configured in .cline MCP Settings
+- **Status**: MCP server configuration added to `.cline/data/settings/cline_mcp_settings.json`
+- **Fix Applied**: Added `cloudflare` MCP server using official `@cloudflare/mcp-server-cloudflare` package
+- **Note**: Uses npx to run the official Cloudflare MCP server
+- **Required**: Restart Cline/Claude to load the updated MCP configuration
 
-### 3. ✅ MCP Server Binary Rebuilt
-- **Status**: The cloudflare-pages-mcp was rebuilt successfully
-- **Fix Applied**: Ran `npm run build` in the cloudflare-pages-mcp directory
-
-### 4. ✅ Static Assets Ready for Pages Deployment
-- **Status**: The `out/` directory contains built static files (index.html, offline.html, etc.)
-- **Fix Applied**: Verified `wrangler.pages.json` configuration for cloudless-assets project
+### 3. ✅ Workers Configuration Ready
+- **Status**: `wrangler-cloudflare-free.json` has correct bindings for R2, D1, AI, Email, Analytics
+- **Fix Applied**: Verified all bindings: AUTH_DB, ASSETS_BUCKET, ANALYTICS_BUCKET, MEDIA_BUCKET, DATALAKE_BUCKET
+- **Note**: SESSION_SECRET must be set via `wrangler secret put SESSION_SECRET` (32+ bytes required)
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `.cline/data/settings/cline_mcp_settings.json` | Added cloudflare-pages MCP server configuration |
-| `scripts/cloudflare-fix.sh` | Created diagnostic script for Cloudflare setup |
+| `.cline/data/settings/cline_mcp_settings.json` | Added cloudflare MCP server configuration |
+| `wrangler-cloudflare-free.json` | Verified and validated Worker bindings |
+| `scripts/cloudflare-fix.sh` | Updated to handle missing Pages permissions gracefully |
 
 ## Configuration Details
 
@@ -36,12 +45,12 @@ This document summarizes the fixes applied to the Cloudflare application configu
 ```json
 {
   "mcpServers": {
-    "cloudflare-pages": {
-      "command": "node",
-      "args": ["/home/tbaltzakis/cloudflare-pages-mcp/dist/index.js"],
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@cloudflare/mcp-server-cloudflare"],
       "env": {
         "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "fb7dc7b69b662480cd5961a4d1913c78"
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
       },
       "autoStart": true,
       "alwaysAllow": [
@@ -59,51 +68,74 @@ This document summarizes the fixes applied to the Cloudflare application configu
 }
 ```
 
-### Required API Token Permissions
+### Required API Token Permissions (for full MCP functionality)
 When creating your Cloudflare API token, ensure it has these permissions:
-- Account → Cloudflare Pages → Edit
-- Account → Workers Scripts → Edit
-- Account → Workers KV Storage → Edit
-- Zone → DNS → Edit
-- Zone → Zone → Read
+- Account → Cloudflare Pages → Edit (optional - for Pages features)
+- Account → Workers Scripts → Edit ✓ (included in current token)
+- Account → Workers KV Storage → Edit ✓ (included in current token)
+- Zone → DNS → Edit ✓ (included in current token)
+- Zone → Zone → Read ✓ (included in current token)
+
+### Workers Environment Variables (wrangler-cloudflare-free.json)
+```json
+{
+  "vars": {
+    "ENVIRONMENT": "production",
+    "API_VERSION": "v1.0",
+    "NEXT_PUBLIC_AUTH_PROVIDER": "d1",
+    "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
+    "APP_VERSION": "1.0.0"
+  }
+}
+```
+
+**Required Secrets (set via Wrangler CLI):**
+- `SESSION_SECRET` - 32+ random bytes for password hashing (set with `wrangler secret put SESSION_SECRET`)
+- Optional: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`
 
 ## Next Steps
 
-### 1. Set CLOUDFLARE_API_TOKEN
+### 1. ✅ CLOUDFLARE_API_TOKEN is Set
+The token has been provided and verified. To make it persistent:
 ```bash
-# For current session:
-export CLOUDFLARE_API_TOKEN="your_token_here"
+# For persistent shell profile (optional - already set for this session)
+echo 'export CLOUDFLARE_API_TOKEN="<your-cloudflare-api-token>"' >> ~/.bashrc
 
-# For persistent storage in GitHub repo secrets:
-gh secret set CLOUDFLARE_API_TOKEN
+# For persistent GitHub repo secret (requires gh auth login)
+echo "<your-cloudflare-api-token>" | gh secret set CLOUDFLARE_API_TOKEN --body -
 ```
 
-### 2. Restart Cline/Claude
+### 2. Set SESSION_SECRET (required for auth)
+```bash
+# Generate and set the session secret
+npx wrangler secret put SESSION_SECRET
+# Paste a 32+ byte random string when prompted
+```
+
+### 3. Restart Cline/Claude
 After setting the API token, restart your AI assistant to load the updated MCP configuration.
 
-### 3. Verify Deployment
+### 4. Verify Settings
 ```bash
 # Run the diagnostic script
-bash scripts/cloudflare-fix.sh
+CLOUDFLARE_API_TOKEN="<your-cloudflare-api-token>" bash scripts/cloudflare-fix.sh
 
-# Check Worker health
-bash scripts/workers-ai-doctor.sh
+# Run full token smoke test
+bash scripts/cf-token-smoketest.sh
 ```
 
-### 4. Optional: Deploy to Cloudflare Pages
-```bash
-# Deploy static assets to cloudless-assets Pages project
-bash scripts/r2-upload-dir.sh
-
-# Or use the MCP server (once API token is set):
-# "Deploy the out/ directory contents to cloudless-assets Pages project"
-```
+### 5. Optional: Add Pages Permissions
+If you need Cloudflare Pages functionality:
+1. Go to https://dash.cloudflare.com/profile/api-tokens
+2. Edit the "cloudless build token"
+3. Add Account → Cloudflare Pages → Edit permission
+4. Save the token
 
 ## Available MCP Tools
 
-Once configured, you can use these tools through your AI assistant:
+Once configured and Cline restarted, you can use these tools through your AI assistant:
 
-### Pages Tools
+### Pages Tools (requires Pages permission)
 - `pages_list_projects` - List all Pages projects
 - `pages_get_project` - Get project details
 - `pages_create_project` - Create a new project
@@ -116,8 +148,8 @@ Once configured, you can use these tools through your AI assistant:
 - `dns_create_record` - Create a DNS record
 
 ### Workers Tools
-- `workers_list` - List all Worker scripts
-- `workers_deploy` - Deploy a Worker script
+- `workers_list` - List all Worker scripts ✓
+- `workers_deploy` - Deploy a Worker script ✓
 
 ### KV Tools
 - `kv_list_namespaces` - List namespaces

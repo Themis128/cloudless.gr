@@ -1,0 +1,70 @@
+# Cloudflare Pages Configuration for Next.js
+# Uses @cloudflare/next-on-pages for full SSR support
+# Compatible with Wrangler v4
+
+name = "cloudless-gr-pages"
+compatibility_date = "2026-07-09"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./.vercel/output/static"
+account_id = "fb7dc7b69b662480cd5961a4d1913c78"
+
+# Pages Functions environment variables
+[vars]
+ENVIRONMENT = "production"
+API_VERSION = "v1.0"
+NEXT_PUBLIC_AUTH_PROVIDER = "d1"
+NEXT_PUBLIC_SITE_URL = "https://cloudless.gr"
+
+# D1 Database binding for API routes
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "user-auth-db"
+
+# R2 bucket bindings for static assets
+[[r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "cloudless-assets"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "app-media-bucket"
+
+[[r2_buckets]]
+binding = "ANALYTICS_BUCKET"
+bucket_name = "cloudless-analytics"
+
+[[r2_buckets]]
+binding = "DATALAKE_BUCKET"
+bucket_name = "datalake-bucket"
+
+# Analytics Engine binding
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "cloudless_analytics"
+
+# Secrets (set via: wrangler secret put SESSION_SECRET)
+# These are referenced at runtime from environment
+
+# Production environment overrides
+[env.production]
+name = "cloudless-gr-pages-prod"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+NEXT_PUBLIC_SITE_URL = "https://cloudless.gr"
+
+[env.production.d1_databases]
+binding = "AUTH_DB"
+database_name = "user-auth-db"
+
+# Staging environment
+[env.staging]
+name = "cloudless-gr-pages-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+NEXT_PUBLIC_SITE_URL = "https://staging.cloudless.gr"
+
+[env.staging.d1_databases]
+binding = "AUTH_DB"
+database_name = "auth-db-preview"

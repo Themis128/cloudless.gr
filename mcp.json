@@ -38,7 +38,7 @@
       ],
       "env": {
         "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}"
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
       },
       "autoStart": true
     },
@@ -106,17 +106,6 @@
       "env": {
         "BRAVE_API_KEY": "${BRAVE_API_KEY}"
       }
-    },
-    "cloudflare-pages": {
-      "command": "node",
-      "args": [
-        "/home/tbaltzakis/cloudless.gr/cloudflare-pages-mcp/dist/index.js"
-      ],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}"
-      },
-      "autoStart": true
     }
   }
 }

@@ -58,18 +58,27 @@ else
   exit 1
 fi
 
-# List Pages projects
+# List Pages projects (requires Account → Cloudflare Pages → Edit permission)
 echo ""
 echo "📋 Checking Cloudflare Pages projects..."
 PAGES_RESPONSE=$(curl -s --max-time 10 \
   -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
   "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/pages/projects")
 
-if echo "$PAGES_RESPONSE" | grep -q "error"; then
-  echo "❌ Failed to list Pages projects"
+if echo "$PAGES_RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+  ERR_MSG=$(echo "$PAGES_RESPONSE" | jq -r '.errors[0].message // "unknown error"')
+  echo "⚠️  Cannot access Pages API ($ERR_MSG)"
+  echo "   (Add 'Account → Cloudflare Pages → Edit' permission to token if needed)"
+elif echo "$PAGES_RESPONSE" | jq -e '.result' > /dev/null 2>&1; then
+  PAGES_COUNT=$(echo "$PAGES_RESPONSE" | jq '.result | length')
+  if [ "$PAGES_COUNT" -gt 0 ]; then
+    echo "Pages projects found ($PAGES_COUNT):"
+    echo "$PAGES_RESPONSE" | jq -r '.result[] | "- \(.name) (\(.subdomain).pages.dev)"' 2>/dev/null
+  else
+    echo "  No Pages projects found on this account"
+  fi
 else
-  echo "Pages projects found:"
-  echo "$PAGES_RESPONSE" | jq -r '.result[]? | "- \(.name) (\(.subdomain).pages.dev)"' 2>/dev/null || echo "  (No projects or parse error)"
+  echo "❌ Failed to list Pages projects (unexpected response)"
 fi
 
 echo ""

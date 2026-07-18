@@ -3,30 +3,30 @@
 # This file is used by tunnel:sync to configure cloudflared
 
 routes:
-  # Main application
+  # Main application - Cloudflare Workers ( migrated from k3s)
   - hostname: cloudless.gr
-    service: traefik-lb
-    port: 80
+    service: cloudflare-workers
+    port: 443
     healthPath: /api/health
-    node: omv
+    node: cloudflare
     status: active
-    description: Main cloudless.gr application
+    description: Main cloudless.gr application (Cloudflare Workers)
 
   - hostname: manage.cloudless.gr
-    service: traefik-lb
-    port: 80
+    service: cloudflare-workers
+    port: 443
     healthPath: /api/health
-    node: omv
+    node: cloudflare
     status: active
-    description: Management interface (same as main app)
+    description: Management interface (same as main app, Cloudflare Workers)
 
   - hostname: *.cloudless.gr
-    service: traefik-lb
-    port: 80
+    service: cloudflare-workers
+    port: 443
     healthPath: /api/health
-    node: omv
+    node: cloudflare
     status: active
-    description: Wildcard catch-all for all subdomains
+    description: Wildcard catch-all for all subdomains (Cloudflare Workers)
 
   # Infrastructure services
   - hostname: omv.cloudless.gr
@@ -63,6 +63,15 @@ routes:
     status: pending
     description: Meilisearch search engine (NodePort)
 
+  # Postiz
+  - hostname: postiz.cloudless.gr
+    service: postiz
+    port: 30500
+    healthPath: /
+    node: omv
+    status: active
+    description: Postiz social publishing engine
+
   # Monitoring
   - hostname: grafana.cloudless.gr
     service: grafana
@@ -80,14 +89,14 @@ routes:
     status: active
     description: n8n workflow automation
 
-  # HA Failover - Tailscale Funnel endpoint on omv-ha
-  - hostname: omv-ha.tail8eb71.ts.net
-    service: tailscale-funnel
+  # HA Failover - Workers fallback for edge delivery
+  - hostname: cloudless-failover.baltzakis-themis.workers.dev
+    service: cloudflare-workers
     port: 443
     healthPath: /api/health
-    node: omv-ha
-    status: pending
-    description: HA failover gateway (must be configured manually - see infrastructure/omv-ha/tailscale-funnel-setup.md)
+    node: cloudflare
+    status: active
+    description: Workers fallback (static assets + auth endpoints) - activated when Pi primary fails
 
 # Tunnel configuration
 tunnel:

@@ -1,17 +1,11 @@
 {
   "mcpServers": {
-    "fast-markdown": {
-      "command": "/home/tbaltzakis/.local/bin/fast-markdown-mcp",
-      "args": ["/home/tbaltzakis/DevDocs/storage/markdown"],
-      "disabled": false,
-      "alwaysAllow": ["sync_file", "list_files", "read_file", "search_files", "get_stats"]
-    },
-    "cloudflare-pages": {
-      "command": "node",
-      "args": ["/home/tbaltzakis/cloudflare-pages-mcp/dist/index.js"],
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@cloudflare/mcp-server-cloudflare"],
       "env": {
         "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "fb7dc7b69b662480cd5961a4d1913c78"
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
       },
       "autoStart": true,
       "alwaysAllow": [

@@ -24,8 +24,8 @@
 
 ### Postiz Deployment Fixes
 - [x] Monitor Postiz image pull (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, taking time
-- [x] Verify Postiz PVC claims (uploadsPvc: 2Gi → 20Gi for media)
-- [ ] Configure Postiz Cloudflare Tunnel via `infrastructure/postiz/cloudflare-tunnel.yaml`
+- [!] Fix postiz-uploads PVC size (currently 2Gi, needs 20Gi - requires recreation)
+- [x] Configure Postiz Cloudflare Tunnel via `infrastructure/postiz/cloudflare-tunnel.yaml`
 - [ ] Deploy postiz-liteLLM service for AI features (optional)
 - [ ] Increase Postiz resources (currently requests 512Mi RAM - may need 1Gi)
 
@@ -153,24 +153,44 @@
 - [ ] Configure workflow notifications (#alerts, #orders, #contacts)
 - [ ] Verify n8n Slack webhook integration
 
-## 💰 COST OPTIMIZATION
+## ☁️ AWS → CLOUDFLARE MIGRATION (IN PROGRESS)
+
+### Phase 1: Secrets Migration (SSM → Workers)
+- [ ] Migrate ADMIN_ALERT_SECRET to Workers secret (via wrangler)
+- [ ] Migrate SLACK_WEBHOOK_URL to Workers secret
+- [ ] Migrate POSTIZ_API_KEY to Workers secret  
+- [ ] Migrate ESPOCRM credentials to Workers secrets
+- [ ] Verify ssm-config.ts works with SSM_DISABLED=1 mode
+- [ ] Create Kubernetes secret for k3s deployment (cloudless-secrets)
+
+### Phase 2: Lambda Replacement (Workers)
+- [ ] Create /api/pi-proxy route (Tailscale proxy)
+- [ ] Create /api/inbound-email route (Email Routing webhook)
+- [ ] Update cloudflare-tunnel config for pi-alert-api exposure
+- [ ] Test Tailscale connectivity through Workers tunnel
+
+### Phase 3: Email Configuration
+- [ ] Verify Cloudflare Email service is active
+- [ ] Configure MX record (point to Cloudflare Email)
+- [ ] Set up SPF: v=spf1 include:_spf.mx.cloudflare.net ~all
+- [ ] Configure DKIM (provided by Cloudflare)
+- [ ] Set up DMARC: _dmarc TXT record
+- [ ] Test email deliverability to Gmail, Outlook
+
+### Phase 4: Cleanup
+- [ ] Remove AWS SDK from package.json (audit usage first)
+- [ ] Delete SSM parameters via AWS CLI
+- [ ] Delete Lambda functions (pi-proxy, SES-to-EspoCRM)
+- [ ] Remove AWS credentials from .env
+- [ ] Cancel remaining AWS resources
+
+---
 
 ### Cloudflare Free Tier Compliance
 - [ ] Monitor daily Workers invocations (< 100K limit)
 - [ ] Track R2 operations (< 10M ops/month)
 - [ ] Verify D1 database size (< 5GB free tier)
 - [ ] Set up Cloudflare budget alerts
-
-### AWS Cleanup
-- [x] Delete CloudFront distribution (already noted as deleted)
-- [x] Remove unused SSM parameters
-- [x] Cancel unused Lambda functions (preserved: pi-proxy, SES-to-EspoCRM)
-- [x] Delete DynamoDB tables after final migration verification
-- [x] Delete S3 buckets migrated to R2 (production-assets, ses-inbound) - cleaned 2026-07-17
-
-### Core Lambda Functions Preserved
-- [x] pi-proxy Lambda - HA failover proxy (Tailscale → Pi)
-- [x] SES-to-EspoCRM Lambda - Application logic (email → CRM)
 
 ## 📝 DOCUMENTATION & KNOWLEDGE BASE
 
@@ -216,10 +236,25 @@
 ## 🎯 NEXT ACTIONS (Priority Order)
 
 1. ~~Critical:~~ ~~Fix MCP configuration~~ (✓ done)
-2. **High:** Restart Cline to load MCP configuration changes
-3. **High:** Apply monitoring stack node selector fixes
-4. **High:** Complete Postiz deployment and verify status
-5. ~~Medium:~~ ~~Configure 2TB SSD for analytics storage~~ (use local SSD on Pi)
-6. ~~Medium:~~ ~~Add bcrypt password hashing to auth~~ (done - using PBKDF2)
-7. ~~Low:~~ ~~Clean up AWS resources~~ (done - core Lambdas preserved)
-8. **Low:** Optimize resource allocation for existing pods
+2. **CRITICAL:** Deploy monitoring namespace (Kube-Prometheus-Stack - completely missing!)
+3. **High:** Restart Cline to load MCP configuration changes
+4. **High:** Fix postiz-uploads PVC size (delete + recreate with 20Gi)
+5. **High:** Create admin-alert-secret in omv-ops namespace (SSM + k8s)
+6. **Medium:** Metabase init container back-off (DuckDB driver issue)
+7. ~~Medium:~~ ~~Configure 2TB SSD for analytics storage~~ (use local SSD on Pi)
+
+## ⚠️ CRITICAL FINDINGS (Subagent Reports)
+
+### Monitoring Stack - MISSING
+- The entire `monitoring` namespace does NOT EXIST
+- No Prometheus, Grafana, Loki, or Alertmanager deployed
+- kube-prom-stack-values.yaml is configured but Helm upgrade never executed
+
+### Postiz
+- ✅ Pods running and healthy on omv
+- ⚠️ postiz-uploads PVC is 2Gi (manifest says 20Gi)
+- ⚠️ Init container restart issues noted
+
+### AppFlowy
+- ✅ 9 pods running (omv-ha has worker pod)
+- ⚠️ MinIO using default credentials (production risk)

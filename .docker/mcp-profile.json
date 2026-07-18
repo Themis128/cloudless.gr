@@ -1,0 +1,47 @@
+{
+  "name": "cloudless-dev",
+  "title": "Cloudless.gr Development Profile",
+  "servers": {
+    "github": {
+      "server": "catalog://mcp/docker-mcp-catalog/github-official",
+      "config": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "playwright": {
+      "server": "catalog://mcp/docker-mcp-catalog/playwright"
+    },
+    "cloudflare": {
+      "server": "catalog://mcp/docker-mcp-catalog/cloudflare",
+      "config": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}"
+      }
+    },
+    "brave-search": {
+      "server": "catalog://mcp/docker-mcp-catalog/brave-search",
+      "config": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    },
+    "sequentialthinking": {
+      "server": "catalog://mcp/docker-mcp-catalog/sequentialthinking"
+    },
+    "filesystem": {
+      "server": "catalog://mcp/docker-mcp-catalog/filesystem",
+      "config": {
+        "allowed_directories": ["/home/tbaltzakis/cloudless.gr"]
+      }
+    },
+    "git": {
+      "server": "catalog://mcp/docker-mcp-catalog/git"
+    },
+    "docker": {
+      "server": "catalog://mcp/docker-mcp-catalog/docker",
+      "config": {
+        "DOCKER_HOST": "unix:///var/run/docker.sock"
+      }
+    }
+  },
+  "description": "MCP profile optimized for cloudless.gr development with Cloudflare, GitHub, Playwright, and infrastructure tools"
+}
