@@ -1,8 +1,8 @@
 /**
  * Smoke tests — fastest possible "is the standby alive" gate.
  *
- * These hit the public surface of the standby host
- * (always routes APIGW → Lambda → Funnel → Pi). If any of these
+ * These hit the public surface of the standby host via Tailscale Funnel.
+ * (always routes Cloudflare → Funnel → Pi k3s). If any of these
  * fail, every other test in this suite will too — so they're the canary.
  */
 import { test, expect } from "../coverage";
@@ -60,7 +60,7 @@ test.describe("k3s smoke", () => {
     expect(page.url()).toMatch(/\/(en|el|fr)(\/|$)/);
   });
 
-  test("standby front door resolves to AWS range, not Pi LAN", async ({ request }) => {
+  test("standby front door resolves correctly (not local Pi LAN IP)", async ({ request }) => {
     let r: Awaited<ReturnType<typeof request.get>>;
     try {
       r = await request.get(`https://${STANDBY_HOST}/api/health`);
@@ -71,6 +71,7 @@ test.describe("k3s smoke", () => {
     if (isOriginDown(r.status())) { test.skip(true, `origin returned ${r.status()}`); return; }
     expect(r.status()).toBe(200);
     const server = (r.headers()["server"] ?? "").toLowerCase();
+    // Should not be nginx (generic proxy) or pihole (local DNS blocker)
     expect(server).not.toContain("nginx");
     expect(server).not.toContain("pihole");
   });

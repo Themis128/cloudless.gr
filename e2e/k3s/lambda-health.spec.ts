@@ -1,14 +1,14 @@
 /**
- * Lambda / serverless function health — verifies the Lambda-backed API
- * routes respond within acceptable latency bounds and handle cold starts.
+ * Workers / serverless function health — verifies the Cloudflare Workers
+ * primary path responds within acceptable latency bounds and handles cold starts.
  *
- * Catches: Lambda timeout misconfiguration, memory exhaustion, cold start
- * regression, response size limit, missing env vars.
+ * Catches: Workers timeout misconfiguration, memory exhaustion, cold start
+ * regression, response size limit, missing env vars, D1 connectivity issues.
  */
 import { test, expect } from "../coverage";
 import { PRIMARY_HOST } from "./_helpers";
 
-test.describe("Lambda health (primary path)", () => {
+test.describe("Workers health (primary path)", () => {
   test("API health responds within 3s (warm)", async ({ request }) => {
     await request.get(`https://${PRIMARY_HOST}/api/health`, { failOnStatusCode: false });
     const start = Date.now();
@@ -18,13 +18,13 @@ test.describe("Lambda health (primary path)", () => {
     expect(elapsed, `warm response took ${elapsed}ms — expected <3000ms`).toBeLessThan(3_000);
   });
 
-  test("Lambda returns proper JSON content-type", async ({ request }) => {
+  test("Workers returns proper JSON content-type", async ({ request }) => {
     const r = await request.get(`https://${PRIMARY_HOST}/api/health`);
     const ct = r.headers()["content-type"] ?? "";
     expect(ct).toContain("application/json");
   });
 
-  test("Lambda environment variables are set (health body has expected fields)", async ({ request }) => {
+  test("Workers environment variables are set (health body has expected fields)", async ({ request }) => {
     const r = await request.get(`https://${PRIMARY_HOST}/api/health`);
     const body = await r.json();
     expect(body).toHaveProperty("status", "ok");
@@ -41,7 +41,7 @@ test.describe("Lambda health (primary path)", () => {
     expect(ct).toContain("text/html");
   });
 
-  test("non-existent API route returns 404, not Lambda 502", async ({ request }) => {
+  test("non-existent API route returns 404, not Workers 502", async ({ request }) => {
     const r = await request.get(
       `https://${PRIMARY_HOST}/api/this-route-does-not-exist-${Date.now()}`,
       { failOnStatusCode: false },
@@ -56,7 +56,7 @@ test.describe("Lambda health (primary path)", () => {
   });
 });
 
-test.describe("Lambda cold start resilience", () => {
+test.describe("Workers cold start resilience", () => {
   test("10 sequential health checks all return 200 (no intermittent 502s)", async ({ request }) => {
     const results: number[] = [];
     for (let i = 0; i < 10; i++) {
