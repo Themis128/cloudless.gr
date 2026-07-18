@@ -1,61 +1,42 @@
 /**
- * ETL: LinkedIn Ads → S3 Data Lake (Parquet)
+ * ETL: LinkedIn Ads → R2 Data Lake (Parquet)
  *
  * Pulls campaign-level insights for the last 90 days from the LinkedIn
  * Marketing Solutions REST API. Writes one row per (campaign × day),
  * lake/linkedin-ads/insights.parquet. Drives the paid-acquisition section
  * of the admin /analytics dashboard.
  *
- * Auth: LINKEDIN_ACCESS_TOKEN (GH secret), LINKEDIN_AD_ACCOUNT_ID env
+ * Auth: LINKEDIN_ACCESS_TOKEN (GitHub secret), LINKEDIN_AD_ACCOUNT_ID env
  *       (default 512642510, the cloudless.gr account per CLAUDE.md).
+ * Storage: R2 (via getS3Client()) - no AWS S3 dependency.
  * Daily refresh — overwrites the file.
  */
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
+import { getS3Client } from "./_r2-config.mjs";
 
-const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
+const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";
 const ACCOUNT = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
-const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
 
 /**
- * Resolve the LinkedIn access token. SSM-first because that's where the
- * operator rotates it (when the LinkedIn 60-day token expires, the new
- * value lands in /cloudless/production/LINKEDIN_ACCESS_TOKEN). The GH
- * secret with the same name is the env-var fallback for local runs;
- * relying on it in CI caused a REVOKED_ACCESS_TOKEN failure on
- * 2026-06-20 because the GH secret was 9 days older than the SSM value.
+ * Resolve the LinkedIn access token from environment variables.
+ * Previously SSM-first, now reads directly from env (Wrangler secret).
  */
-async function resolveToken() {
-  if (process.env.LINKEDIN_ACCESS_TOKEN_FORCE_ENV === "1" && process.env.LINKEDIN_ACCESS_TOKEN) {
-    return process.env.LINKEDIN_ACCESS_TOKEN;
+function resolveToken() {
+  const token = process.env.LINKEDIN_ACCESS_TOKEN;
+  if (!token) {
+    console.error("LINKEDIN_ACCESS_TOKEN not available (set via Wrangler secret)");
+    process.exit(1);
   }
-  try {
-    const ssm = new SSMClient({ region: REGION });
-    const res = await ssm.send(
-      new GetParameterCommand({
-        Name: `${SSM_PREFIX}/LINKEDIN_ACCESS_TOKEN`,
-        WithDecryption: true,
-      })
-    );
-    const v = res.Parameter?.Value;
-    if (v) return v;
-  } catch (err) {
-    console.warn("[etl/linkedin] SSM lookup failed, falling back to env:", err?.name || err?.message);
-  }
-  return process.env.LINKEDIN_ACCESS_TOKEN;
+  return token;
 }
 
-const TOKEN = await resolveToken();
-if (!TOKEN) {
-  console.error("LINKEDIN_ACCESS_TOKEN not available (tried SSM + env)");
-  process.exit(1);
-}
+const TOKEN = resolveToken();
 
-const s3 = new S3Client({ region: REGION });
+// R2 S3-compatible client (auto-detects credentials)
+const s3 = getS3Client();
 const LI_BASE = "https://api.linkedin.com/rest";
 const LI_HEADERS = {
   Authorization: `Bearer ${TOKEN}`,
@@ -166,7 +147,7 @@ async function main() {
     })
   );
   unlinkSync(tmp);
-  console.log(`✅ Uploaded ${rows.length} rows → s3://${BUCKET}/lake/linkedin-ads/`);
+  console.log(`✅ Uploaded ${rows.length} rows → R2://${BUCKET}/lake/linkedin-ads/`);
 }
 
 main().catch((e) => {
