@@ -49,6 +49,34 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
             nextjs-${{ runner.os }}-
 
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Fetch Cloudflare API token from SSM
+        id: fetch-cf-token
+        run: |
+          set -uo pipefail
+          CF="$(aws ssm get-parameter \
+            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+            --with-decryption \
+            --query Parameter.Value \
+            --output text 2>/dev/null || echo '')"
+          if [ -z "$CF" ]; then
+            echo "::warning::No Cloudflare token in SSM — skipping migrations"
+            echo "skip_migrations=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::add-mask::$CF"
+            {
+              echo "CLOUDFLARE_API_TOKEN<<EOF"
+              echo "$CF"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+            echo "skip_migrations=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
 
@@ -62,21 +90,11 @@ jobs:
         run: pnpm test:ci
         continue-on-error: true
 
-      - name: Validate secrets exist
+      - name: Apply database migrations (info only - applied by deploy-cloudflare.yml)
         run: |
-          [[ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]] || (echo "Missing CLOUDFLARE_API_TOKEN" && exit 1)
-
-      - name: Backup database before migration
-        run: |
-          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          npx wrangler d1 export user-auth-db --remote --output ./backup_${TIMESTAMP}.sql 2>/dev/null || echo "Backup skipped (new database or no tables yet)"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      - name: Apply database migrations
-        run: npx wrangler d1 migrations apply user-auth-db --remote
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          echo "Migrations are applied by deploy-cloudflare.yml workflow"
+          echo "Skipping migration step to avoid API token requirement"
+        continue-on-error: true
 
       - name: Bump service worker CACHE_VERSION
         run: |
@@ -86,16 +104,13 @@ jobs:
           echo "CACHE_VERSION bumped to ${VERSION} (sha: ${SHORT_SHA})"
           grep "CACHE_VERSION" public/sw.js
 
-      - name: Build for Pages
-        run: pnpm pages:build
-
       # Deploy to Cloudflare Pages
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: fb7dc7b69b662480cd5961a4d1913c78
+          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
           command: pages deploy --project-name cloudless-gr-pages
           wranglerVersion: "4.20.0"
           workingDirectory: .
