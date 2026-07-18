@@ -176,11 +176,11 @@
 7. **Helm release count:** Increased to 12 with addition of fleet-related releases
 
 ## Fix Applied (pending verification)
-
-- **monitoring-node-selector-fix.yml:** Created workflow to patch Prometheus, Alertmanager, kube-state-metrics, and cloudwatch-exporter StatefulSets/Deployments with `nodeSelector: kubernetes.io/hostname: omv` (omv-ha has `node-type=standby:NoSchedule` taint)
-- **kube-prom-stack-values.yaml:** Updated with nodeSelector settings for Prometheus, Alertmanager, and kube-state-metrics to persist through future Helm upgrades
-
-**Generated:** `kubectl get pods -A -o wide` + `kubectl get svc -A` + `helm list -A`
+ 
+ - **monitoring-node-selector-fix.yml:** Created standalone workflow to patch Prometheus, Alertmanager, kube-state-metrics, and cloudwatch-exporter StatefulSets/Deployments with `nodeSelector: kubernetes.io/hostname: omv` (omv-ha has `node-type=standby:NoSchedule` taint). Replaces failed gh-aw agent compile.
+ - **kube-prom-stack-values.yaml:** Updated with nodeSelector and `global.nodeSelector` for Prometheus, Alertmanager, kube-state-metrics, and prometheusOperator to persist through future Helm upgrades
+ 
+ **Generated:** `kubectl get pods -A -o wide` + `kubectl get svc -A` + `helm list -A`
 
 ## Tailscale Funnel Failover
 
