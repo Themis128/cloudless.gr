@@ -18,6 +18,7 @@
     "jsx": "react-jsx",
     "incremental": true,
     "strictBuiltinIteratorReturn": false,
+    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "next"
