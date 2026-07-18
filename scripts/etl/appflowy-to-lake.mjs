@@ -1,5 +1,5 @@
 /**
- * ETL: AppFlowy Cloud → S3 Data Lake (Parquet) — postgres-direct edition
+ * ETL: AppFlowy Cloud → R2 Data Lake (Parquet) — postgres-direct edition
  *
  * REVISED 2026-06-21: switched from REST `/admin/*` (which returned 0 rows
  * because the admin endpoints aren't publicly exposed on the AC version
@@ -15,17 +15,19 @@
  * (the same kubeconfig used by cluster-doctor / prometheus-tune workflows)
  * gives system:admin access to exec into the postgres pod.
  *
- * Runs daily via .github/workflows/etl-selfhosted-to-lake.yml.
+ * Runs daily via .github/workflows/etl-selfhosted-to-r2.yml.
+ * Storage: R2 via getS3Client() - no AWS dependency.
  */
 import { execSync } from "node:child_process";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
+import { getS3Client } from "./_r2-config.mjs";
 
-const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
+const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";
 
-const s3 = new S3Client({ region: REGION });
+// R2 S3-compatible client (auto-detects credentials)
+const s3 = getS3Client();
 
 // `kubectl exec` into the postgres pod and run a psql query, returning
 // the rows as an array of objects. The pod name varies, so we resolve it
@@ -85,7 +87,7 @@ async function uploadToS3(key, body) {
       ContentType: "application/octet-stream",
     })
   );
-  console.log(`✓ uploaded s3://${BUCKET}/${key} (${body.length} bytes)`);
+  console.log(`✓ uploaded R2://${BUCKET}/${key} (${body.length} bytes)`);
 }
 
 async function syncWorkspaces() {
@@ -137,4 +139,4 @@ async function syncUsers() {
 
 await syncWorkspaces();
 await syncUsers();
-console.log("✓ AppFlowy → S3 sync complete (postgres-direct)");
+console.log("✓ AppFlowy → R2 sync complete (postgres-direct)");
