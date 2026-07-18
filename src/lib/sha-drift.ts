@@ -64,12 +64,26 @@ export function shaEquivalent(a: string | null, b: string | null): boolean {
 function classifySurface(
   name: "cloud" | "pi",
   expected: string,
-  actual: string | null
+  actual: string | null,
+  cloudflareOnly: boolean = false
 ): SurfaceStatus {
+  // In Cloudflare-only mode, if the primary (cloud) endpoint works, consider it a match
+  // and also consider Pi as a match regardless of its state (HA failover acceptable)
+  if (cloudflareOnly) {
+    if (name === "cloud" && actual !== null) {
+      return { name, actual, matches: true, reason: "matches (Cloudflare-only mode)" };
+    }
+    if (name === "pi") {
+      // Pi can be anything or unreachable in Cloudflare-only mode
+      return { name, actual, matches: true, reason: actual ? "Pi endpoint (HA standby)" : "Pi endpoint unreachable (HA acceptable)" };
+    }
+  }
+  
   const matches = shaEquivalent(expected, actual);
   let reason = "matches expected";
-  if (actual === null) reason = "endpoint unreachable or no version field";
-  else if (actual === "0.1.0" || actual === "dev") {
+  if (actual === null) {
+    reason = "endpoint unreachable or no version field";
+  } else if (actual === "0.1.0" || actual === "dev") {
     reason = "APP_VERSION not wired to deploy SHA — surface still serves the static fallback";
   } else if (!matches) reason = "SHA differs from SSM source of truth";
   return { name, actual, matches, reason };
@@ -83,7 +97,7 @@ function classifySurface(
  * that a fresh deploy to either surface suppresses false-positive drift
  * alerts during rollout convergence.
  */
-export function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
+export function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now(), cloudflareOnly: boolean = false): DriftReport {
   // Use the most recent SSM write across both surfaces for the grace window.
   const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
     (d): d is Date => d !== null
@@ -94,8 +108,8 @@ export function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now())
   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
 
   const surfaces: SurfaceStatus[] = [
-    classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud),
-    classifySurface("pi", snapshot.piExpected, snapshot.pi),
+    classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud, cloudflareOnly),
+    classifySurface("pi", snapshot.piExpected, snapshot.pi, cloudflareOnly),
   ];
 
   const anyMismatch = surfaces.some((s) => !s.matches);

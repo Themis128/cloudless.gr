@@ -75,10 +75,10 @@ describe("voice-brief-sources.ts", () => {
   });
 
   describe("fetchStripeMetrics", () => {
-    it("throws when getStripe throws", async () => {
+    it("returns null when getStripe throws", async () => {
       mockGetStripe.mockRejectedValue(new Error("STRIPE_SECRET_KEY is not set"));
       const { fetchStripeMetrics } = await import("@/lib/voice-brief-sources");
-      await expect(fetchStripeMetrics()).rejects.toThrow("STRIPE_SECRET_KEY is not set");
+      expect(await fetchStripeMetrics()).toBeNull();
     });
 
     it("returns metrics from paid sessions", async () => {

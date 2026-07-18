@@ -94,24 +94,23 @@ function classifySurface(
   return { name, actual, matches, reason };
 }
 
-function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): DriftReport {
-  // Use the most recent SSM write across both surfaces for the grace window.
-  const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
-    (d): d is Date => d !== null
-  );
-  const latestModified =
-    dates.length > 0 ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
-  const ageMs = latestModified ? now - latestModified.getTime() : null;
-  const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
-  const cloudflareOnly = CLOUDFLARE_ONLY && snapshot.cloudExpected === "cloudflare-primary";
-  const surfaces: SurfaceStatus[] = [
-    classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud, cloudflareOnly),
-    classifySurface("pi", snapshot.piExpected, snapshot.pi, cloudflareOnly),
-  ];
-  const anyMismatch = surfaces.some((s) => !s.matches);
-  const drifted = anyMismatch && !withinGrace;
-  return { drifted, ageMs, withinGrace, surfaces };
-}
+function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now(), cloudflareOnly: boolean = false): DriftReport {
+   // Use the most recent SSM write across both surfaces for the grace window.
+   const dates = [snapshot.cloudSsmModifiedAt, snapshot.piSsmModifiedAt].filter(
+     (d): d is Date => d !== null
+   );
+   const latestModified =
+     dates.length > 0 ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
+   const ageMs = latestModified ? now - latestModified.getTime() : null;
+   const withinGrace = ageMs !== null && ageMs < GRACE_WINDOW_MS;
+   const surfaces: SurfaceStatus[] = [
+     classifySurface("cloud", snapshot.cloudExpected, snapshot.cloud, cloudflareOnly),
+     classifySurface("pi", snapshot.piExpected, snapshot.pi, cloudflareOnly),
+   ];
+   const anyMismatch = surfaces.some((s) => !s.matches);
+   const drifted = anyMismatch && !withinGrace;
+   return { drifted, ageMs, withinGrace, surfaces };
+ }
 
 // ───────────────────────────────────────────────────────────────────────
 // I/O

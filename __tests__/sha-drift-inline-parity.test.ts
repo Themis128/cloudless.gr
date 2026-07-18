@@ -37,14 +37,19 @@ function normalize(s: string): string {
  * Returns `null` if not found.
  */
 function extractDecl(source: string, name: string): string | null {
+  // For functions, match until we find "return { ... }; }" pattern
+  // which ends the function before the next top-level declaration
   const patterns = [
-    new RegExp(`(?:export\\s+)?function\\s+${name}\\b[\\s\\S]*?\\n\\}`, "m"),
-    new RegExp(`(?:export\\s+)?const\\s+${name}\\b[^;]*;`, "m"),
-    new RegExp(`(?:export\\s+)?interface\\s+${name}\\b[\\s\\S]*?\\n\\}`, "m"),
+    // Functions - match until return statement followed by closing brace and newline
+    new RegExp(`(?:export\\s+)?function\\s+${name}\\b[\\s\\S]*?return \\{[\\s\\S]*?;\\s*\\}`, "m"),
+    // Const - match until semicolon
+    new RegExp(`(?:export\\s+)?const\\s+${name}\\b[^;]*;`),
+    // Interface - match until closing brace followed by newline
+    new RegExp(`(?:export\\s+)?interface\\s+${name}\\b[\\s\\S]*?^\\}`, "m"),
   ];
   for (const re of patterns) {
     const m = source.match(re);
-    if (m) return m[0];
+    if (m) return m[0].trim();
   }
   return null;
 }
