@@ -1,12 +1,12 @@
 /**
  * HA failover path validation — verifies the dual-origin architecture behind
- * the Cloudflare edge (Cloudflare → CloudFront → Lambda primary; Cloudflare →
- * Pi k3s standby). Cloudflare fronts both paths, so the client sees cf-ray on
- * each; the primary-vs-standby backend split is asserted by the APIGW
- * request-id check in standby-path.spec.ts, not by edge headers here.
+ * the Cloudflare edge (Cloudflare → Workers primary; Cloudflare →
+ * Pi k3s standby via Tailscale Funnel). Cloudflare fronts both paths, so the
+ * client sees cf-ray on each; the primary-vs-standby backend split is asserted
+ * by the version SHA check.
  *
  * Catches: standby drift (different SHA), edge/DNS misconfiguration,
- * APIGW timeout, Lambda Funnel routing failure, Pi k3s pod crash.
+ * Workers timeout, Tailscale Funnel routing failure, Pi k3s pod crash.
  */
 import { test, expect } from "../coverage";
 import { probeHealth, isHealthBody, isNetworkError, STANDBY_HOST, PRIMARY_HOST } from "./_helpers";
@@ -51,12 +51,10 @@ test.describe("HA failover readiness", () => {
   });
 
   test("primary path goes through the Cloudflare edge (cf-ray header)", async ({ request }) => {
-    // The apex front door is Cloudflare, which proxies CloudFront → Lambda.
-    // Cloudflare terminates the client connection and strips the upstream
-    // x-amz-cf-* / x-cache headers, so the client only ever sees cf-ray here
-    // (same edge contract asserted in cloudflare-tunnel.spec.ts and
-    // tls-certificates.spec.ts). A missing cf-ray means the apex isn't behind
-    // Cloudflare — a real routing/DNS regression.
+    // The apex front door is Cloudflare, which proxies to Workers (primary) or
+    // Pi k3s via Tailscale Funnel (standby). Cloudflare terminates the client
+    // connection, so the client only ever sees cf-ray here.
+    // A missing cf-ray means the apex isn't behind Cloudflare — a real routing/DNS regression.
     const r = await request.get(`https://${PRIMARY_HOST}/api/health`, {
       failOnStatusCode: false,
     });

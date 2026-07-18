@@ -2,6 +2,24 @@
 
 Comprehensive Playwright test suite covering 100% of the application.
 
+## Architecture
+
+The tests validate the **Cloudflare + Pi k3s + Fly.io** architecture:
+
+| Component | Role | Test Files |
+|-----------|------|------------|
+| **Cloudflare Workers** | Primary edge - `/api/*`, `/api/health` | `cloudflare-infrastructure.spec.ts`, `infrastructure.spec.ts` |
+| **Pi k3s cluster** (omv) | Standby via Tailscale Funnel | `k3s/*` tests |
+| **Fly.io proxy** | HA failover proxy | `fly-proxy.spec.ts` |
+
+### Architecture Diagram
+```
+Visitor → cloudflare.gr edge (cf-ray)
+  ├─► Workers (primary) → D1 Auth + R2 Storage
+  ├─► pi-origin.cloudless.gr → Pi k3s (standby via Tailscale Funnel)
+  └─► cloudless-proxy.fly.dev → Fly.io HA proxy → Pi fallback
+```
+
 ## Test Files
 
 | File | Description |
@@ -11,6 +29,10 @@ Comprehensive Playwright test suite covering 100% of the application.
 | `components.spec.ts` | UI component tests - ScrollReveal, buttons, forms, navigation |
 | `chat.spec.ts` | Chat widget and AI integration tests |
 | `coverage.spec.ts` | Coverage-focused path testing for maximum code coverage |
+| `cloudflare-infrastructure.spec.ts` | Workers, D1 auth, R2 storage, Tunnel endpoints |
+| `fly-proxy.spec.ts` | Fly.io HA failover proxy tests |
+| `infrastructure.spec.ts` | Cloudflare edge, Pi k3s standby, Fly.io proxy |
+| `k3s/*.spec.ts` | Pi k3s cluster service smoke tests |
 
 ## Running Tests
 
@@ -29,6 +51,12 @@ pnpm test:e2e:ui
 
 # Run headed (non-headless)
 pnpm test:e2e:headed
+
+# Run infrastructure smoke tests (production endpoints)
+INFRA_SMOKE=1 pnpm playwright test e2e/infrastructure.spec.ts
+
+# Run Fly.io proxy tests
+INFRA_SMOKE=1 pnpm playwright test e2e/fly-proxy.spec.ts
 ```
 
 ## Test Projects
