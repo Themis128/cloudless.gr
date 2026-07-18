@@ -33,14 +33,10 @@ env:
 jobs:
   push-ghcr:
     name: Push arm64 image to GHCR
-    # Self-hosted arm64 runner. Label set `[self-hosted, omv, pi, build]` is
-    # unique to `omv-build` on omv-main (which has docker + USB-SSD-backed _work).
-    # The `omv` runner stays disabled to relieve SD-card contention.
-    # 
     # Failover-capable: when Pi runners are offline, flip
     #   .github/scripts/toggle-runner.sh pi
     # to route this onto GitHub-hosted runners with QEMU for arm64 cross-compilation.
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted", "omv", "pi", "build"]') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
     outputs:
       short_sha: ${{ steps.check_ghcr.outputs.short_sha }}
       image_exists: ${{ steps.check_ghcr.outputs.exists }}
