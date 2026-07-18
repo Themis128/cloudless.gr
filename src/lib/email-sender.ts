@@ -115,14 +115,42 @@ async function sendViaSES(payload: SendEmailPayload, fromAddress: string): Promi
 }
 
 /**
+ * Check if an email address is suppressed before sending.
+ * In Workers: checks D1 email_suppression table.
+ * In Lambda: skips (SES handles suppression natively).
+ */
+async function checkSuppression(toEmail: string): Promise<boolean> {
+  // In Lambda/SES, suppression is handled by AWS - no need to check D1
+  if (isNode() && !_emailBinding && !(globalThis as any).__EMAIL_BINDING__) {
+    return false;
+  }
+
+  // In Workers, check D1 suppression list
+  try {
+    const { isSuppressed } = await import("@/lib/ses-suppression-d1");
+    return isSuppressed(toEmail);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Send an email using the best available transport.
  *
  * Priority:
- * 1. Cloudflare Email binding (Workers, no API key)
- * 2. AWS SES (Lambda / local dev with AWS creds)
- * 3. Log-and-skip (if nothing is configured — e.g. test environments)
+ * 1. Check suppression list (skip if suppressed)
+ * 2. Cloudflare Email binding (Workers, no API key)
+ * 3. AWS SES (Lambda / local dev with AWS creds)
+ * 4. Log-and-skip (if nothing is configured — e.g. test environments)
  */
 export async function sendEmail(payload: SendEmailPayload): Promise<void> {
+  // Check suppression list first
+  const isSuppressed = await checkSuppression(payload.to);
+  if (isSuppressed) {
+    console.warn(`[email-sender] Skipping email to suppressed address`);
+    return;
+  }
+
   const { getConfig } = await import("@/lib/ssm-config");
   const cfg = await getConfig().catch(() => ({
     SES_FROM_EMAIL: "noreply@cloudless.gr",

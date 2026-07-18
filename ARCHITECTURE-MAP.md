@@ -79,7 +79,7 @@
 | `/store` | Product listing ("cloud consulting store") |
 | `/store/[id]` | Product detail |
 | `/store/success` | Post-purchase success |
-| `/blog` | Blog listing (Notion-powered CMS) |
+| `/blog` | Blog listing (Appflowy-powered CMS) |
 | `/blog/[slug]` | Blog article |
 | `/case-studies` | Case study listing |
 | `/case-studies/[slug]` | Case study detail |
@@ -120,7 +120,6 @@
 - **Campaigns:** Google Ads, Meta Ads, LinkedIn Ads, TikTok Ads, X Ads
 - **CRM:** Contacts, companies, deals, tickets, pipelines
 - **CMS:** Blog, case studies, FAQs, services, testimonials
-- **Notion:** All Notion-backed views (projects, tasks, submissions, status, analytics, docs)
 - **Operations:** Cluster monitor, ESP32 devices, Grafana, errors, audits, integrations
 - **Other:** AI assistant, AI generator, voice brief, email/ActiveCampaign, subscriptions, users, workspaces, calendar, client portals, Postiz, reports, settings, notifications
 
@@ -145,9 +144,8 @@
 ### API Routes (`src/app/api/`) — Key Groups
 
 - `auth/*` — Authentication handlers
-- `admin/*` — Full admin API (AI, analytics, campaigns, CRM, CMS, Notion, Postiz, etc.)
+- `admin/*` — Full admin API (AI, analytics, campaigns, CRM, CMS, Appflowy, Postiz, etc.)
 - `cron/*` — Scheduled tasks (ad-analytics-poll, gsc-cache-refresh, client-reports, etc.)
-- `webhooks/*` — External webhooks (Stripe, Notion, Sentry, Postiz, EspoCRM, n8n, MQTT, admin-alerts)
 - `slack/*`, `newsletter-slack/*` — Slack bot endpoints
 - `health`, `analytics/*`, `blog/*`, `docs/*`, `contact`, `calendar/*`, `chat`, `checkout`, `subscribe`, `unsubscribe`
 - `services`, `testimonials`, `case-studies/*`, `faqs`, `user/*`, `crm/*`, `campaigns/conversion`
@@ -166,7 +164,7 @@
 | **Stripe** | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` |
 | **Slack** | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_WEBHOOK_URL` |
 | **HubSpot** | `HUBSPOT_API_KEY`, `HUBSPOT_CLIENT_SECRET`, `HUBSPOT_PORTAL_ID` |
-| **Notion** | `NOTION_API_KEY`, 10+ DB IDs, webhook secret |
+| **Appflowy** | `APPFLOWY_API_URL`, `APPFLOWY_API_KEY`, workspace config |
 | **Google** | Calendar + Search Console service account + GSC site URL |
 | **Sentry** | DSN, org, project, auth token |
 | **Anthropic** | API key + chat model config |
@@ -261,7 +259,7 @@ cloudless.gr / www.cloudless.gr
 ## 8. Test Structure
 
 - **Unit tests:** Vitest v4 (`__tests__/*.test.ts/tsx`) — ~30+ test files covering:
-  - Auth callbacks, admin APIs, analytics, Notion, Slack, Sentry, client portals
+  - Auth callbacks, admin APIs, analytics, Appflowy, Slack, Sentry, client portals
   - Locale defaults, canonical origin, article quality gates, etc.
 - **E2E tests:** Playwright v1.61 (`e2e/*.spec.ts`) — multiple configs:
   - `playwright.config.mts` — main config
@@ -277,7 +275,7 @@ cloudless.gr / www.cloudless.gr
 
 1. **Auth availability:** Auth config resolves lazily; changes to `COGNITO_*` env vars could break sign-in/session flow
 2. **i18n completeness:** 4 locale JSON files must stay in sync — missing keys = blank UI text
-3. **External API dependencies:** Notion, Stripe, Slack, ActiveCampaign, HubSpot, AWS SDK — all must be available or gracefully degraded
+3. **External API dependencies:** Appflowy, Stripe, Slack, ActiveCampaign, HubSpot, AWS SDK — all must be available or gracefully degraded
 4. **SSM hydration timing:** `instrumentation.register()` runs async; any route handler that accesses `process.env` before hydration gets empty/fallback values
 5. **Turbopack vs Webpack:** Some configs differ between dev (Turbopack) and prod (Webpack) — `serverExternalPackages` only applies to Turbopack
 6. **Locale redirects:** next-intl middleware intercepts before Next.js `rewrites()` — any new public route must be tested for locale redirect behavior

@@ -1,5 +1,6 @@
 # Cloudless.gr Migration Completion Report
 # Generated: 2026-07-17 (MCP Integration + Auth Security Complete)
+# Updated: 2026-07-18 (AWS-to-Cloudflare Migration Implementation)
 
 ## Migration Status: COMPLETE ✅
 
@@ -49,7 +50,67 @@ All critical migration tasks have been completed successfully:
 - [x] SESSION_SECRET validation (32+ bytes)
 - [x] D1 binding verification in wrangler.jsonc
 
-### Remaining Operational Tasks
+## AWS-to-Cloudflare Migration Implementation (2026-07-18)
+
+### Migration Status Table (Updated)
+
+| File | AWS Service | Cloudflare Replacement | Status |
+|------|-------------|----------------------|--------|
+| `src/lib/ssm-config.ts` | AWS SSM Parameter Store | D1 app_config table (migration 0007) + Wrangler secrets | **Ready for transition** - SSM_DISABLED=1 escape hatch exists; ssm-config-d1.ts module created |
+| `src/lib/ses-suppression.ts` | AWS SESv2 (suppression list) | D1 email_suppression table (migration 0006) | **Complete** - D1 primary with SES fallback |
+| `src/lib/bedrock-chat.ts` | AWS Bedrock Runtime | Cloudflare Workers AI (@cf/meta/llama-3.1-8b-instruct) | **Complete** - Workers AI primary, Bedrock fallback |
+| `src/lib/bedrock-shared.ts` | AWS Bedrock Runtime | Cloudflare Workers AI | **Complete** - Used as fallback everywhere |
+| `src/lib/analytics.ts` | AWS S3 | Cloudflare R2 (analytics-r2.ts) | **Complete** - Re-exports R2-based functions |
+| `src/lib/analytics-r2.ts` | — | Cloudflare R2 + S3 fallback | **Complete** - R2 primary with S3 fallback |
+| `src/lib/session-token-store.ts` | DynamoDB | D1 (session-token-store-d1.ts) | **Migrated** - Parallel implementation exists |
+| `src/lib/voice-brief-store.ts` | AWS SSM (legacy) | D1 (AUTH_DB binding) | **Complete** - D1 primary with SSM fallback |
+| `src/lib/email-sender.ts` | — | Cloudflare Email + suppression check | **Complete** - Added D1 suppression check |
+
+### New Migration Files Created
+
+- `migrations/0006-email-suppression.sql` - D1 email suppression table
+- `migrations/0007-app-config.sql` - D1 application configuration table
+- `src/lib/ses-suppression-d1.ts` - Standalone D1 suppression module
+- `src/lib/ssm-config-d1.ts` - D1-based configuration store
+
+### Migration Pattern Applied
+
+The codebase uses a consistent environment detection + fallback pattern:
+
+```typescript
+// 1. Check if in Workers environment
+function isWorkers(): boolean {
+  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
+}
+
+// 2. Try D1 first if available
+if (isWorkers() && hasD1()) {
+  return operationD1();
+}
+
+// 3. Fall back to AWS services
+return operationAWS();
+```
+
+### Key Implementation Details
+
+#### Email Suppression (ses-suppression.ts)
+- D1 `email_suppression` table stores suppressed emails
+- 5-year retention period matching AWS SES suppression list behavior
+- `isSuppressed()` function checks suppression before sending emails
+- Integrated into `email-sender.ts` for automatic suppression checking
+
+#### Analytics Events (analytics.ts)
+- Now re-exports from `analytics-r2.ts` for unified interface
+- Uses `trackEvent(env, evt)` signature compatible with both environments
+- Global `__ENV__` binding injection for Workers compatibility
+
+#### Configuration (ssm-config.ts)
+- `ssm-config-d1.ts` module provides D1-based configuration
+- `app_config` table for non-secret runtime configuration
+- Secrets still managed via Wrangler secrets (SESSION_SECRET, etc.)
+
+## Remaining Operational Tasks
 - [ ] Restart Cline to load MCP configuration changes (requires manual restart)
 - [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
 - [ ] Complete Postiz deployment and PVC verification
@@ -84,7 +145,13 @@ The fast-markdown-mcp server is configured and ready with:
 
 ## Next Steps
 
-1. **Immediate:** Restart Cline/Claude desktop to load MCP configuration
-2. **High Priority:** Complete Postiz deployment and verify status
-3. **Medium Priority:** Configure 2TB SSD for analytics storage
-4. **Low Priority:** Optimize resource allocation for existing pods
+1. **Critical:** Apply migrations 0006 and 0007 to D1 database:
+   ```bash
+   npx wrangler d1 execute user-auth-db --file ./migrations/0006-email-suppression.sql --remote
+   npx wrangler d1 execute user-auth-db --file ./migrations/0007-app-config.sql --remote
+   ```
+
+2. **Immediate:** Restart Cline/Claude desktop to load MCP configuration
+3. **High Priority:** Complete Postiz deployment and verify status
+4. **Medium Priority:** Configure 2TB SSD for analytics storage
+5. **Low Priority:** Optimize resource allocation for existing pods

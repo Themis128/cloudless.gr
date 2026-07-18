@@ -3,16 +3,21 @@ import { getConfig } from "./ssm-config";
 
 let stripeInstance: Stripe | null = null;
 
-export async function getStripe(): Promise<Stripe> {
+export async function getStripe(): Promise<Stripe | null> {
   if (stripeInstance) return stripeInstance;
 
   const config = await getConfig();
   if (!config.STRIPE_SECRET_KEY) {
-    throw new Error("STRIPE_SECRET_KEY is not set");
+    return null;
   }
 
   stripeInstance = new Stripe(config.STRIPE_SECRET_KEY);
   return stripeInstance;
+}
+
+function isStripeConfigured() {
+  const stripe = stripeInstance;
+  return stripe !== null && stripe !== undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -33,11 +38,15 @@ export interface RecentOrder {
 /**
  * Fetch the most recent completed checkout sessions from Stripe.
  * Used by the /cloudless-orders slash command and admin dashboard.
+ * Returns empty list when Stripe is not configured.
  */
 export async function listRecentCheckoutSessions(
   limit: number = 10
 ): Promise<{ orders: RecentOrder[]; hasMore: boolean }> {
   const stripe = await getStripe();
+  if (!stripe) {
+    return { orders: [], hasMore: false };
+  }
 
   const sessions = await stripe.checkout.sessions.list({
     limit,
@@ -82,9 +91,11 @@ export interface StripeProduct {
  * Returns null if Stripe is not configured (caller should fall back to demo data).
  */
 export async function listStripeProducts(): Promise<StripeProduct[] | null> {
+  const stripe = await getStripe();
+  if (!stripe) {
+    return null;
+  }
   try {
-    const stripe = await getStripe();
-
     const products = await stripe.products.list({
       active: true,
       limit: 100,
