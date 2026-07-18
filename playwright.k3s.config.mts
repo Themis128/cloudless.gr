@@ -38,5 +38,5 @@ export default defineConfig({
       use: { ...devices["Desktop Safari"] },
     },
   ],
-  output: "test-results/k3s/",
+  outputDir: "test-results/k3s/",
 });
