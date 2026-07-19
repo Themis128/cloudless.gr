@@ -51,28 +51,28 @@ jobs:
           helm repo add tailscale https://pkgs.tailscale.com/helmcharts
           helm repo update
 
-       - name: Check k3s API connectivity
-         id: check
-         run: |
-           echo "=== Checking k3s API connectivity ==="
-           if nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
-             echo "reachable=true" >> $GITHUB_OUTPUT
-             echo "✅ k3s API is reachable"
-           else
-             echo "reachable=false" >> $GITHUB_OUTPUT
-             echo "::warning::k3s API (100.74.191.58:6443) not reachable"
-             echo "Cluster may be offline - run tailscale-reconnect-agent workflow to recover"
-           fi
+      - name: Check k3s API connectivity
+        id: check
+        run: |
+          echo "=== Checking k3s API connectivity ==="
+          if nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+            echo "reachable=true" >> $GITHUB_OUTPUT
+            echo "✅ k3s API is reachable"
+          else
+            echo "reachable=false" >> $GITHUB_OUTPUT
+            echo "::warning::k3s API (100.74.191.58:6443) not reachable"
+            echo "Cluster may be offline - run tailscale-reconnect-agent workflow to recover"
+          fi
 
-       - name: Create/update Tailscale OAuth secret
-         if: steps.check.outputs.reachable == 'true'
-         run: |
-           # Use TS_CLIENT_ID env var set above (falls back to TAILSCALE_OAUTH_* if TS_* not set)
-           kubectl create secret generic tailscale-operator-secrets \
-             -n tailscale-operator \
-             --from-literal=TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
-             --from-literal=TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
-             --dry-run=client -o yaml | kubectl apply -f -
+      - name: Create/update Tailscale OAuth secret
+        if: steps.check.outputs.reachable == 'true'
+        run: |
+          # Use TS_CLIENT_ID env var set above (falls back to TAILSCALE_OAUTH_* if TS_* not set)
+          kubectl create secret generic tailscale-operator-secrets \
+            -n tailscale-operator \
+            --from-literal=TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
+            --from-literal=TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy Tailscale Operator via Helm
         if: steps.check.outputs.reachable == 'true'
