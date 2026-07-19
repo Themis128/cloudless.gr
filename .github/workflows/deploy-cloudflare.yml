@@ -34,9 +34,11 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://cloudless.gr
 
       - name: Upload static assets to R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           mkdir -p ./out
-          if [ -d ".next/static" ]; then cp -r .next/static/* ./out/ 2>/dev/null || true; fi
+          if [ -d ".next/static" ]; then cp -r .next/static ./out/ 2>/dev/null || true; fi
           if [ -d "public" ]; then cp -r public/* ./out/ 2>/dev/null || true; fi
           
           # Create locale-specific index.html files
@@ -52,15 +54,9 @@ jobs:
   <title>Cloudless — Cloud Computing, Serverless & AI Marketing</title>
   <meta name="theme-color" content="#000000" />
   <link rel="icon" href="/favicon.ico" />
-  <script>
-    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/${locale}')) {
-      window.location.pathname = '/${locale}' + window.location.pathname;
-    }
-  </script>
 </head>
 <body>
   <div id="root">Loading...</div>
-  <script src="/static/chunks/${locale}.js" defer></script>
 </body>
 </html>
 EOF
@@ -77,12 +73,6 @@ EOF
   <title>Cloudless — Cloud Computing, Serverless & AI Marketing</title>
   <meta name="theme-color" content="#000000" />
   <link rel="icon" href="/favicon.ico" />
-  <script>
-    if (typeof window !== 'undefined' && window.location.hostname === 'cloudless.gr') {
-      const path = window.location.pathname === '/' ? '/en' : '/en' + window.location.pathname;
-      window.location.pathname = path;
-    }
-  </script>
 </head>
 <body>
   <div id="root">Loading...</div>
@@ -108,8 +98,6 @@ EOF
             echo "❌ No ./out directory found"
             exit 1
           fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
