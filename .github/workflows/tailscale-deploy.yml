@@ -22,17 +22,17 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-       - name: Check required secrets
-         run: |
-           # Support both naming conventions: TS_* (preferred) and TAILSCALE_OAUTH_* (legacy)
-           TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}"
-           TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}"
-           if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then
-             echo "::error::Tailscale OAuth credentials missing"
-             echo "Need: TS_CLIENT_ID/TS_CLIENT_SECRET or TAILSCALE_OAUTH_CLIENT_ID/TAILSCALE_OAUTH_SECRET"
-             exit 1
-           fi
-           echo "Tailscale OAuth credentials available"
+      - name: Check required secrets
+        run: |
+          # Support both naming conventions: TS_* (preferred) and TAILSCALE_OAUTH_* (legacy)
+          TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}"
+          TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}"
+          if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then
+            echo "::error::Tailscale OAuth credentials missing"
+            echo "Need: TS_CLIENT_ID/TS_CLIENT_SECRET or TAILSCALE_OAUTH_CLIENT_ID/TAILSCALE_OAUTH_SECRET"
+            exit 1
+          fi
+          echo "Tailscale OAuth credentials available"
 
       - name: Join Tailscale for cluster access
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
