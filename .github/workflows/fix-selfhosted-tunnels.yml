@@ -40,7 +40,7 @@ jobs:
       # ------------------------------------------------------------------
       # Step 2: Check current tunnel state on omv
       # ------------------------------------------------------------------
-      - name: Read current cloudflared config from omv-main
+      - name: Read current cloudflared config from omv
         run: |
           kubectl delete pod cf-read-omv -n default --ignore-not-found --wait=true
 
@@ -52,7 +52,7 @@ jobs:
             namespace: default
           spec:
             nodeSelector:
-              kubernetes.io/hostname: omv-main
+              kubernetes.io/hostname: omv
             hostPID: true
             hostNetwork: true
             restartPolicy: Never
@@ -138,7 +138,7 @@ jobs:
       # ------------------------------------------------------------------
       # Step 4: Apply patched config to omv (primary cloudflared)
       # ------------------------------------------------------------------
-      - name: Apply config to omv-main
+      - name: Apply config to omv
         run: |
           kubectl delete pod cf-apply-omv -n default --ignore-not-found --wait=true
           kubectl -n default create configmap cf-patch \
@@ -153,7 +153,7 @@ jobs:
             namespace: default
           spec:
             nodeSelector:
-              kubernetes.io/hostname: omv-main
+              kubernetes.io/hostname: omv
             hostPID: true
             hostNetwork: true
             restartPolicy: Never
@@ -188,7 +188,7 @@ jobs:
                     sleep 3
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       systemctl is-active cloudflared
-                    echo "cloudflared OK on omv-main"
+                    echo "cloudflared OK on omv"
           PODEOF
 
           kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-omv -n default --timeout=120s
@@ -231,7 +231,7 @@ jobs:
           - **Grafana** tunnel corrected: \`localhost:18443\` → \`http://192.168.1.128:30850\`
           - **n8n** tunnel port corrected: \`30820\` → \`30900\` (NodePort mismatch)
           - **ntfy** service patched to NodePort 30080
-          - Config applied to **omv-main**
+          - Config applied to **omv**
 
           **Verify:**
           - https://grafana.cloudless.gr/api/health
