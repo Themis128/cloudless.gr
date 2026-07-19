@@ -6,12 +6,16 @@ services:
       dockerfile: .devcontainer/Dockerfile
     container_name: cloudless-gr-app
     ports:
-      - "3000:3000"
+      - "3000:4000"
     volumes:
       - .:/workspace
+      - cloudless-pnpm-store:/pnpm-store
     networks:
       - cloudless-network
     restart: unless-stopped
+    environment:
+      - CI=true
+    command: ["pnpm", "dev"]
 
   devdocs-backend:
     image: devdocs-backend:latest
@@ -32,8 +36,49 @@ services:
       - cloudless-network
     restart: unless-stopped
 
+  playwright-mcp:
+    image: mcr.microsoft.com/playwright/mcp:latest
+    container_name: cloudless-playwright-mcp
+    environment:
+      - PLAYWRIGHT_BASE_URL=http://host.docker.internal:4000
+      - PLAYWRIGHT_HEADLESS=true
+    volumes:
+      - /home/tbaltzakis/cloudless.gr:/workspace:cached
+      - playwright-cache:/ms-playwright
+    networks:
+      - cloudless-network
+    profiles:
+      - mcp
+    ports:
+      - "8888:8888"
+
+  # Cloudflare Pages MCP Server - uses stdio transport
+  # IMPORTANT: Export CLOUDFLARE_API_TOKEN before running
+  # MCP stdio servers work best via MCP config (cline_mcp_settings.json)
+  # Use this for testing only - run with: docker compose --profile mcp up
+  cloudflare-pages-mcp:
+    build:
+      context: ./cloudflare-pages-mcp
+      dockerfile: Dockerfile
+    container_name: cloudless-pages-mcp
+    image: cloudless-pages-mcp:latest
+    working_dir: /app
+    environment:
+      # Use environment variable references instead of hardcoded values
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}
+    networks:
+      - cloudless-network
+    profiles:
+      - mcp
+    restart: unless-stopped
+    # Stdio MCP servers need interactive mode
+    stdin_open: true
+    tty: true
+
 volumes:
   cloudless-pnpm-store:
+  playwright-cache:
 
 networks:
   cloudless-network:

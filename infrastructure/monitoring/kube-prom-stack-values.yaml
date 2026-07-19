@@ -121,6 +121,10 @@ prometheusOperator:
     requests:
       memory: 64Mi
 
+# Disable default rules to avoid template errors
+defaultRules:
+  enabled: false
+
 # Disable additional prometheus rules that may create extra workloads
 additionalPrometheusRules:
   enabled: false

@@ -120,7 +120,23 @@
     "cf:r2:upload-static": "bash scripts/extract-static-assets.sh",
     "cf:deploy:migrate": "bash scripts/deploy-cloudflare.sh",
     "cf:r2:upload-dir": "bash scripts/r2-upload-dir.sh",
-    "cf:r2:upload-out": "npx wrangler r2 object put cloudless-assets --file ./out/index.html index.html"
+    "cf:r2:upload-out": "npx wrangler r2 object put cloudless-assets --file ./out/index.html index.html",
+    
+    "aw:list": "gh aw list",
+    "aw:status": "gh aw status",
+    "aw:validate": "gh aw validate",
+    "aw:workflow": "gh aw run",
+    "aw:deploy-pi": "gh aw run deploy-pi",
+    "aw:deploy-fly": "gh aw run deploy-fly-proxy",
+    "aw:k3s-restart": "gh aw run k3s-restart",
+    "aw:k3s-recover": "gh aw run k3s-app-recover",
+    "aw:monitoring-fix": "gh aw run monitoring-node-selector-fix",
+    "aw:security-scan": "gh aw run mcp-security-scan",
+    "aw:monthly-audit": "gh aw run monthly-security-audit",
+    "aw:a11y-audit": "gh aw run a11y-audit",
+    "aw:lighthouse": "gh aw run lighthouse",
+    "aw:cluster-doctor": "gh aw run cluster-doctor",
+    "aw:etl-espocrm": "gh aw run etl-espocrm-to-r2"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

@@ -1,0 +1,234 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║           CLINE + PLAYWRIGHT MCP - COPY & PASTE COMMANDS                 ║
+║              Fine-Tune cloudless.gr from VS Code Cline                    ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+PREREQUISITES: Ensure Playwright is running
+
+Open Terminal in VS Code and run:
+docker compose -f playwright-mcp-docker-compose.yml --profile playwright up -d
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HOW TO USE:
+
+1. Open Cline in VS Code (Ctrl+Shift+M or click Cline icon)
+2. Copy a command from below
+3. Paste it into Cline chat
+4. Cline will analyze and provide detailed report
+5. Implement suggestions
+6. Request re-verification
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PERFORMANCE & OPTIMIZATION
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Analyze home page performance:
+Analyze the home page load performance and identify bottlenecks. Measure Core Web Vitals (LCP, FID, CLS), capture console logs, and suggest optimizations.
+
+Test API response times:
+Check the API endpoint response times for /api/search. Use Playwright to perform GET request, assert response time is under 500ms, and validate JSON response structure.
+
+Find JavaScript errors:
+Identify all JavaScript errors across the application. Navigate to each page/feature, capture console errors, get stack traces, and identify error patterns.
+
+Detect memory leaks:
+Detect potential memory leaks in the application. Navigate through multiple pages, monitor console for memory warnings, and suggest memory management improvements.
+
+Analyze network performance:
+Perform detailed network performance analysis. Capture all network requests, analyze request sizes, check timing, and identify slow resources.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+USER INTERACTIONS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test login flow:
+Test the complete login flow. Navigate to login page, fill email and password fields, click login button, wait for redirect to dashboard, take screenshot, and capture any errors.
+
+Test checkout process:
+Automate and test the entire checkout flow. Fill customer information, fill payment details, click submit, verify success message, and check API calls during submission.
+
+Test contact form:
+Validate all form inputs on the contact page. Test empty form submission, test invalid email format, test valid submission, verify success notification, and check API request.
+
+Test search functionality:
+Generate comprehensive tests for the search feature. Type various search queries, verify results load, check pagination, analyze response time, and identify slow queries.
+
+Test drag and drop:
+Test all drag-and-drop interactions. Find draggable elements, drag to target locations, verify drop behavior, test animation smoothness, and check for glitches.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RESPONSIVE DESIGN
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test mobile responsiveness:
+Test responsive design on mobile (Pixel 5). Emulate 412x915 viewport, capture screenshots at key pages, test menu navigation, test form inputs on mobile, and check touch interactions.
+
+Test iPhone compatibility:
+Test on iPhone 12 emulation (390x844). Test all critical user flows, check button sizes for touch, verify scrolling performance, and test modal dismissal.
+
+Test tablet layout:
+Validate tablet responsiveness. Set viewport to 768x1024 (iPad), navigate through all pages, check navigation layout, test sidebar behavior, and verify image sizing.
+
+Test desktop layout:
+Verify all desktop breakpoints (1920x1080). Check full-width layouts, test multi-column layouts, verify header/footer, and take comparison screenshots.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+API TESTING
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test all API endpoints:
+Test all API endpoints (GET, POST, PATCH, DELETE). Validate response schemas, test create operations, test updates, test deletions, check status codes, and validate response times.
+
+Test error handling:
+Validate error handling for all API endpoints. Test invalid request body, test missing authentication, test missing required fields, verify error messages, and check status codes.
+
+Test rate limiting:
+Verify rate limiting is working. Send rapid GET requests to /api/search, capture 429 responses, check rate-limit headers, verify retry-after header.
+
+Test data validation:
+Test API data validation. Send requests with missing fields, send requests with invalid types, send oversized data, and verify validation error messages.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ERROR TRACKING
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Monitor network errors:
+Detect network-related errors and failures. Monitor failed network requests, track 5xx server errors, check CORS errors, identify slow endpoints.
+
+Track unhandled promises:
+Find unhandled promise rejections. Interact with async operations, capture console warnings, get promise rejection reasons, and suggest error handlers.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ACCESSIBILITY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test keyboard navigation:
+Validate keyboard navigation works everywhere. Test Tab navigation, Enter key for buttons, Space for checkboxes, Escape for modals, and verify focus indicators.
+
+Check ARIA labels:
+Validate all interactive elements have proper ARIA labels. Get page HTML, search for missing aria-labels, check aria-labelledby attributes, verify button descriptions.
+
+Test screen reader:
+Verify screen reader support. Get semantic HTML, check heading hierarchy, verify lists, check image alt text, validate form labels.
+
+Test color contrast:
+Check color contrast ratios. Extract text and background colors, calculate ratios, check WCAG compliance, and identify low contrast areas.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FORMS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test email validation:
+Validate email input field. Test invalid emails (test@, @test.com, test), test valid email, check error messages, verify field styling.
+
+Test password field:
+Validate password requirements. Test short passwords, test missing uppercase, test missing numbers, test missing special chars, test show/hide toggle.
+
+Test required fields:
+Validate all required fields enforcement. Submit form with empty fields, verify required field errors, check error message styling, test field re-validation.
+
+Test file upload:
+Validate file upload functionality. Upload valid file type, upload invalid file type, upload oversized file, check file size limits, verify upload progress.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BROWSER COMPATIBILITY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test on Chrome:
+Run full test suite on Chromium/Chrome to ensure browser compatibility.
+
+Test on Firefox:
+Run full test suite on Firefox to ensure browser compatibility.
+
+Test on Safari:
+Run full test suite on WebKit/Safari to ensure browser compatibility.
+
+Test cross-browser:
+Run tests on all browsers simultaneously to ensure universal compatibility.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SECURITY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test authentication:
+Validate authentication mechanisms. Test invalid credentials, test session expiration, test token refresh, verify logout functionality.
+
+Test authorization:
+Verify authorization rules. Access admin-only pages as user, verify 403 response, test role-based access, check permission enforcement.
+
+Test XSS prevention:
+Check for XSS vulnerabilities. Submit forms with script tags, submit with event handlers, check HTML escaping, verify safe rendering.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+VISUAL REGRESSION
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Capture page screenshots:
+Take screenshots for visual baseline. Navigate to each page, capture full page screenshots, and capture specific components for comparison.
+
+Test theme changes:
+Compare light and dark theme rendering. Toggle dark mode, capture screenshots, toggle light mode, and compare visual differences.
+
+Compare components:
+Verify component consistency across pages. Find all buttons/cards, capture each, and identify style mismatches.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PERFORMANCE PROFILING
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test image optimization:
+Verify images are properly optimized. Check image formats (WebP, JPEG), check sizes, test lazy loading, verify responsive images.
+
+Test CSS performance:
+Check CSS delivery and parsing. Get all stylesheets, check file sizes, verify critical CSS, test font loading.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WORKFLOW TIPS
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Start with performance analysis
+2. Follow with user interaction testing
+3. Test mobile responsiveness
+4. Validate API endpoints
+5. Check for errors and exceptions
+6. Verify accessibility
+7. Test form validation
+8. Run cross-browser tests
+9. Security testing
+10. Visual regression checks
+
+Then re-verify everything to confirm improvements!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Location: /home/tbaltzakis/cloudless.gr
+Status: Ready to Use
+Date: 2026-07-18
+

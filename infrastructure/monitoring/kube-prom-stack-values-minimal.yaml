@@ -1,0 +1,43 @@
+# Minimal values for kube-prometheus-stack on Pi ARM64
+# Override nodeSelector and resources for Pi 5 (omv)
+
+prometheus:
+  prometheusSpec:
+    nodeSelector:
+      kubernetes.io/hostname: omv
+    resources:
+      limits:
+        memory: 750Mi
+      requests:
+        memory: 512Mi
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector:
+      kubernetes.io/hostname: omv
+    resources:
+      limits:
+        memory: 128Mi
+      requests:
+        memory: 64Mi
+
+grafana:
+  service:
+    type: NodePort
+    nodePort: 30850
+  defaultDashboardsEnabled: false
+  sidecar:
+    dashboards:
+      enabled: false
+
+kube-state-metrics:
+  nodeSelector:
+    kubernetes.io/hostname: omv
+
+global:
+  nodeSelector:
+    kubernetes.io/hostname: omv
+
+prometheusOperator:
+  nodeSelector:
+    kubernetes.io/hostname: omv

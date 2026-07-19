@@ -1,23 +1,154 @@
 {
   "mcpServers": {
-    "cloudflare": {
+    "cloudflare-pages": {
       "command": "npx",
-      "args": ["-y", "@cloudflare/mcp-server-cloudflare"],
+      "args": ["tsx", "cloudflare-pages-mcp/src/index.ts"],
       "env": {
         "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
         "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
       },
-      "autoStart": true,
+      "autoStart": false,
       "alwaysAllow": [
         "pages_list_projects",
         "pages_get_project",
         "pages_list_deployments",
-        "pages_get_deployment_logs",
-        "dns_list_zones",
-        "dns_list_records",
+        "pages_get_deployment_logs"
+      ]
+    },
+    "cloudflare-builds": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://builds.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-observability": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://observability.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-containers": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://containers.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-logpush": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://logs.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-ai-gateway": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://ai-gateway.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-auditlogs": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://auditlogs.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-dns-analytics": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://dns-analytics.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-dex": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://dex.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-casb": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://casb.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-graphql": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://graphql.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-blog": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://blog.mcp.cloudflare.com/mcp"],
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-docs": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://docs.mcp.cloudflare.com/mcp"],
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "cloudflare-bindings": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://bindings.mcp.cloudflare.com/mcp"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "kv_namespaces_list",
+        "kv_namespace_create",
+        "kv_namespace_delete",
+        "kv_namespace_get",
+        "kv_namespace_update",
         "workers_list",
-        "account_get_details"
+        "workers_get_worker",
+        "workers_get_worker_code",
+        "r2_buckets_list",
+        "r2_bucket_create",
+        "r2_bucket_get",
+        "r2_bucket_delete",
+        "d1_databases_list",
+        "d1_database_create",
+        "d1_database_delete",
+        "d1_database_get",
+        "d1_database_query",
+        "hyperdrive_configs_list",
+        "hyperdrive_config_create",
+        "hyperdrive_config_delete",
+        "hyperdrive_config_get",
+        "hyperdrive_config_edit"
       ]
     }
   }
 }
+

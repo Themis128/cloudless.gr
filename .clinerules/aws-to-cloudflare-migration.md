@@ -17,22 +17,28 @@ This document tracks the migration of all AWS services to Cloudflare equivalents
 
 ## ETL Migration Status
 
-### scripts/etl/espocrm-to-r2.mjs
-- **S3 → R2**: Uses `_r2-config.mjs` with conditional R2 endpoint
-- **SSM → D1**: NOT YET MIGRATED - Still uses AWS SSM for credentials
-- **Issue**: `ESPOCRM_API_PASSWORD` doesn't exist in SSM, causing 401 errors
+### scripts/etl/espocrm-to-r2.mjs ✅ COMPLETE
+- **S3 → R2**: Uses `_r2-config.mjs` with R2 endpoint
+- **SSM → GitHub Secrets**: Migrated in commit `6a249a65` - uses `ESPOCRM_API_KEY` or `ESPOCRM_API_PASSWORD` from GitHub secrets
 
 ### scripts/etl/espocrm-to-lake.mjs (legacy S3 version)
 - Uses AWS SDK S3Client pointing to S3
 - Uses SSM for credentials
+- **Note**: Deprecated - use `espocrm-to-r2.mjs` instead
 
 ### scripts/etl/clients-to-lake.mjs
 - Uses SSMClient for `PENDING_CLIENTS_JSON` and `CLIENT_PORTALS_JSON`
 - Uses S3Client for S3
+- **Status**: Pending migration (SSM → D1)
 
-### scripts/etl/linkedin-ads-to-lake.mjs
-- Uses SSMClient for `LINKEDIN_ACCESS_TOKEN`
-- Uses S3Client for S3
+### scripts/etl/linkedin-ads-to-lake.mjs ✅ COMPLETE
+- Migrated in commit `e27470e3` - uses `getS3Client()` and `LINKEDIN_ACCESS_TOKEN` from env
+
+### scripts/etl/postiz-to-lake.mjs ✅ COMPLETE
+- Migrated in commit `af41adec` - uses `getS3Client()` and `POSTIZ_API_KEY` from env
+
+### scripts/etl/appflowy-to-lake.mjs ✅ COMPLETE
+- Migrated in commit `af41adec` - uses `getS3Client()` for R2 storage
 
 ## Migration Strategy
 
@@ -70,14 +76,18 @@ The ETL workflow should set `SSM_DISABLED=1` before the migration is complete, o
 - `process.env.ESPOCRM_API_PASSWORD` (from Wrangler secret)
 - `getS3Client()` from `_r2-config.mjs` for R2-compatible storage
 
-## Files to Update
+## Completed Files
 
-1. `.github/workflows/etl-espocrm-to-r2.yml` - Remove SSM step, use Wrangler secrets
-2. `scripts/etl/espocrm-to-r2.mjs` - Already uses R2 config, needs SSM env var fallback
-3. `scripts/etl/linkedin-ads-to-lake.mjs` - Migrate SSM client calls
-4. `scripts/etl/clients-to-lake.mjs` - Migrate SSM client calls
-5. `scripts/etl/postiz-to-lake.mjs` - Migrate S3 to R2
-6. `scripts/etl/appflowy-to-lake.mjs` - Migrate S3 to R2
+All ETL scripts have been migrated:
+- ✅ `.github/workflows/etl-espocrm-to-r2.yml` - Uses Wrangler secrets (no SSM/AWS)
+- ✅ `scripts/etl/espocrm-to-r2.mjs` - Uses `getS3Client()` + GitHub secrets
+- ✅ `scripts/etl/linkedin-ads-to-lake.mjs` - Uses `getS3Client()` + env vars
+- ✅ `scripts/etl/postiz-to-lake.mjs` - Uses `getS3Client()` (no AWS_REGION)
+- ✅ `scripts/etl/appflowy-to-lake.mjs` - Uses `getS3Client()` (no AWS_REGION)
+
+## Remaining Tasks
+
+- ⏳ `scripts/etl/clients-to-lake.mjs` - Migrate SSM → D1 app_config
 
 ## Notes
 

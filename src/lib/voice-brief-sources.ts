@@ -59,6 +59,7 @@ export async function fetchEmailMetrics(): Promise<EmailMetrics | null> {
 export async function fetchStripeMetrics(): Promise<StripeMetrics | null> {
   try {
     const stripe = await getStripe();
+    if (!stripe) return null;
     const sessions = await stripe.checkout.sessions.list({ limit: 50 });
     const paid = sessions.data.filter((s) => s.payment_status === "paid");
     const revenueEuros = paid.reduce((acc, s) => acc + (s.amount_total ?? 0), 0) / 100;

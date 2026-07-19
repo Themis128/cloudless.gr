@@ -49,6 +49,7 @@
     "scripts",
     "tools",
     "workers",
-    "cloudless-campaigns-code"
+    "cloudless-campaigns-code",
+    "cloudflare-pages-mcp"
   ]
 }

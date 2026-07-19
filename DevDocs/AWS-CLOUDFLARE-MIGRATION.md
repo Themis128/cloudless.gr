@@ -41,15 +41,14 @@ npx wrangler secret put POSTIZ_API_KEY
 ## ETL Scripts Migration Status
 
 ### Migrated (R2 + Env vars)
-- ✅ `espocrm-to-r2.mjs` - Uses `getS3Client()` + env vars
+- ✅ `espocrm-to-r2.mjs` - Uses `getS3Client()` + env vars (GitHub secrets)
 - ✅ `linkedin-ads-to-lake.mjs` - Uses `getS3Client()` + env vars
+- ✅ `postiz-to-lake.mjs` - Uses `getS3Client()` + env vars (no AWS_REGION)
+- ✅ `appflowy-to-lake.mjs` - Uses `getS3Client()` + env vars (no AWS_REGION)
 
 ### Pending Migration
-- ⏳ `clients-to-lake.mjs` - Uses Cognito + SSM (needs D1 auth migration)
+- ⏳ `clients-to-lake.mjs` - Uses SSM only (awaiting D1 app_config)
 - ⏳ `portals-to-lake.mjs` - Uses SSM only
-- ⏳ `postiz-to-lake.mjs` - Uses S3
-- ⏳ `appflowy-to-lake.mjs` - Uses S3
-- ⏳ `espocrm-to-lake.mjs` - Legacy, use espocrm-to-r2.mjs instead
 
 ## Environment Variables
 

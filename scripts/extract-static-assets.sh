@@ -12,10 +12,10 @@ mkdir -p ./out
 echo "Building Next.js static export..."
 NEXT_OUTPUT_STANDALONE=1 pnpm build
 
-# Copy all static assets from .next
+# Copy all static assets from .next (preserve /static prefix for correct path resolution)
 echo "Copying static assets..."
 if [ -d ".next/static" ]; then
-    cp -r .next/static/* ./out/ 2>/dev/null || true
+    cp -r .next/static ./out/static 2>/dev/null || true
 fi
 
 # Copy public files
@@ -27,7 +27,7 @@ fi
 # Create locale-specific index.html files for i18n
 for locale in en el fr; do
     mkdir -p "./out/${locale}"
-    cat > "./out/${locale}/index.html" << EOF
+      cat > "./out/${locale}/index.html" << EOF
 <!DOCTYPE html>
 <html lang="${locale}">
 <head>
@@ -46,7 +46,7 @@ for locale in en el fr; do
 </head>
 <body>
   <div id="root">Loading...</div>
-  <script src="/static/chunks/main.js" defer></script>
+  <script src="/static/chunks/1ualfx4277rj2.js" defer></script>
 </body>
 </html>
 EOF

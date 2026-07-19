@@ -125,4 +125,3 @@ test.describe("Fly.io proxy failover", () => {
     expect(res.status()).toBeLessThan(502);
   });
 });
-```

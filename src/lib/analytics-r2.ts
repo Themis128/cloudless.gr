@@ -21,6 +21,7 @@ export interface AnalyticsEvent {
   product_id?: string;
   service?: string;
   source?: string;
+  medium?: string;
   campaign?: string;
   properties?: Record<string, unknown>;
 }

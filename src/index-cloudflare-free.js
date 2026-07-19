@@ -331,8 +331,9 @@ export default {
     // ==========================================
     // LAYER 2: R2 STORAGE (STATIC ASSETS)
     // ==========================================
-    if (url.pathname.startsWith("/static/") || url.pathname === "/assets/") {
-      const assetPath = url.pathname.replace(/^\/static/, "").replace(/^\/assets/, "");
+    if (url.pathname.startsWith("/static/") || url.pathname.startsWith("/assets/")) {
+      // Strip leading slash to match R2 bucket key format (static/... not /static/...)
+      const assetPath = url.pathname.replace(/^\//, "");
       const asset = await env.ASSETS_BUCKET.get(assetPath);
 
       if (!asset) {
@@ -871,8 +872,21 @@ export default {
     // For any unknown route on cloudless.gr, serve the index.html (SPA fallback)
     // The ASSETS_BUCKET contains pre-built static files from the Next.js build
     if (host === "cloudless.gr" || host.endsWith(".cloudless.gr")) {
-      // Try to serve static file from R2
-      const assetPath = url.pathname === "/" ? "/index.html" : url.pathname;
+      // Check if this is a locale route (e.g., /en, /el, /fr)
+      const pathParts = url.pathname.split("/").filter(Boolean);
+      const localePattern = /^(en|el|fr)$/;
+      
+      let assetPath;
+      if (url.pathname === "/" || localePattern.test(pathParts[0])) {
+        // For root or locale routes, serve locale-specific index.html
+        const locale = pathParts[0] || "en";
+        assetPath = `${locale}/index.html`;
+      } else {
+        // Try to serve static file from R2
+        // Strip leading slash to match R2 bucket key format
+        assetPath = url.pathname.replace(/^\//, "");
+      }
+      
       const asset = await env.ASSETS_BUCKET.get(assetPath);
 
       if (asset) {
