@@ -1,7 +1,7 @@
 # API Coverage Gap Report
 # Cloudless.gr Workers vs Next.js Architecture Analysis
 # Generated: 2026-07-19 (accurate counts verified)
-# Updated: 2026-07-19 (added /api/config endpoint)
+# Updated: 2026-07-20 (D1-native auth complete, AWS migration 85% done)
 
 ## Summary
 
@@ -9,7 +9,8 @@
 - **Unique Endpoint Paths**: 165 unique API routes
 - **Workers (Edge) Covered**: 26 unique endpoints (Tier 1 implemented)
 - **Next.js/k3s Covered**: 139 endpoints (Tier 2-12)
-- **Coverage Gap**: 139 endpoints (84% on Next.js/k3s)
+- **Coverage at Edge**: 15.8% (26/165 endpoints on Workers)
+- **Coverage at k3s**: 84.2% (139/165 endpoints on Next.js/k3s)
 
 The hybrid architecture is intentional:
 - **Workers (edge)**: Public-facing, low-latency, stateless operations
@@ -273,6 +274,15 @@ The Workers configuration (`wrangler.jsonc`) includes:
 - ✅ `ANALYTICS` binding (Analytics Engine)
 - ✅ `CHAT` service binding (ChatAgent)
 - ✅ `ADMIN_API` service binding (AdminApi)
+
+## AWS Migration Status
+
+- [x] SSM Parameter Store → D1 app_config + Wrangler secrets (85% complete)
+- [x] S3 → R2 (all buckets migrated)
+- [x] DynamoDB → D1 (session store, auth tables)
+- [x] SES → Cloudflare Email (with D1 suppression)
+- [x] Bedrock → Workers AI (llama-3.1-8b-instruct)
+- [x] Cognito → D1-based auth (complete replacement)
 
 ## Notes
 

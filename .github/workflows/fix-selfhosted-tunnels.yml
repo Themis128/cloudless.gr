@@ -11,40 +11,59 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PI_HOST: "100.74.191.58"
+      PI_USER: "tbaltzakis"
     steps:
       - name: Join Tailscale
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      - name: Setup kubectl
+      - name: Setup SSH key
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-          kubectl version --client
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "SSH key configured for $PI_USER@$PI_HOST"
+
+      - name: Verify k3s API via SSH
+        run: |
+          echo "=== Testing SSH connectivity ==="
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes" \
+            2>&1 | head -20
 
       # ------------------------------------------------------------------
       # Step 1: Ensure services have correct NodePorts
       # ------------------------------------------------------------------
       - name: Fix n8n service NodePort
         run: |
-          kubectl patch svc n8n -n n8n -p '{"spec":{"type":"NodePort","ports":[{"port":5678,"targetPort":5678,"nodePort":30900}]}}' --type=merge || true
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml patch svc n8n -n n8n -p '{\"spec\":{\"type\":\"NodePort\",\"ports\":[{\"port\":5678,\"targetPort\":5678,\"nodePort\":30900}]}}' --type=merge" 2>&1 || true
           echo "n8n service patched to NodePort 30900"
 
       - name: Fix ntfy service NodePort
         run: |
-          kubectl patch svc ntfy -n ntfy -p '{"spec":{"type":"NodePort","ports":[{"port":80,"targetPort":80,"nodePort":30080}]}}' --type=merge || true
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml patch svc ntfy -n ntfy -p '{\"spec\":{\"type\":\"NodePort\",\"ports\":[{\"port\":80,\"targetPort\":80,\"nodePort\":30080}]}}' --type=merge" 2>&1 || true
           echo "ntfy service patched to NodePort 30080"
 
       # ------------------------------------------------------------------
       # Step 2: Check current tunnel state on omv
       # ------------------------------------------------------------------
       - name: Read current cloudflared config from omv
+        env:
+          KUBECMD: "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml"
         run: |
-          kubectl delete pod cf-read-omv -n default --ignore-not-found --wait=true
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD delete pod cf-read-omv -n default --ignore-not-found --wait=true" 2>&1 || true
 
-          cat <<'PODEOF' | kubectl create -f -
+          cat <<'PODEOF' > /tmp/cf-read-pod.yaml
           apiVersion: v1
           kind: Pod
           metadata:
@@ -69,9 +88,23 @@ jobs:
                     nsenter --target 1 --mount --uts --ipc --net --pid -- \
                       cat /etc/cloudflared/config.yml
           PODEOF
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-read-omv -n default --timeout=90s
-          kubectl logs -n default cf-read-omv | tee /tmp/cf-config-current.txt
-          kubectl delete pod -n default cf-read-omv --ignore-not-found
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD create -f -" < /tmp/cf-read-pod.yaml 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-read-omv -n default --timeout=90s" 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD logs -n default cf-read-omv" 2>&1 | tee /tmp/cf-config-current.txt
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD delete pod -n default cf-read-omv --ignore-not-found" 2>&1 || true
+
           echo "=== Current config ($(wc -l < /tmp/cf-config-current.txt) lines) ==="
           cat /tmp/cf-config-current.txt
 
@@ -139,13 +172,20 @@ jobs:
       # Step 4: Apply patched config to omv (primary cloudflared)
       # ------------------------------------------------------------------
       - name: Apply config to omv
+        env:
+          KUBECMD: "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml"
         run: |
-          kubectl delete pod cf-apply-omv -n default --ignore-not-found --wait=true
-          kubectl -n default create configmap cf-patch \
-            --from-file=config.yml=/tmp/cf-config-new.txt \
-            --dry-run=client -o yaml | kubectl apply -f -
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD delete pod cf-apply-omv -n default --ignore-not-found --wait=true" 2>&1 || true
 
-          cat <<'PODEOF' | kubectl create -f -
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD -n default create configmap cf-patch --from-file=config.yml=/tmp/cf-config-new.txt --dry-run=client -o yaml" 2>&1 | \
+            ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+              "$PI_USER@$PI_HOST" "$KUBECMD apply -f -" 2>&1
+
+          cat <<'PODEOF' > /tmp/cf-apply-pod.yaml
           apiVersion: v1
           kind: Pod
           metadata:
@@ -191,9 +231,21 @@ jobs:
                     echo "cloudflared OK on omv"
           PODEOF
 
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-omv -n default --timeout=120s
-          kubectl logs -n default cf-apply-omv
-          kubectl delete pod -n default cf-apply-omv --ignore-not-found
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD create -f -" < /tmp/cf-apply-pod.yaml 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD wait --for=jsonpath='{.status.phase}'=Succeeded pod/cf-apply-omv -n default --timeout=120s" 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD logs -n default cf-apply-omv" 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD delete pod -n default cf-apply-omv --ignore-not-found" 2>&1 || true
 
       # ------------------------------------------------------------------
       # Step 5: Verify all services are reachable

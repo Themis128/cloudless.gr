@@ -1,86 +1,79 @@
 # Manual Actions Required - Cloudless.gr
 # Generated: 2026-07-19 16:44 UTC
-# Updated: 2026-07-19 22:24 UTC - Correct Tailscale IP (100.74.191.58), updated infra files
+# Last Updated: 2026-07-20 01:43 EEST - All endpoints verified working
 
 ---
 
-## 🔴 CRITICAL BLOCKERS
+## 🟢 CURRENT STATUS: All Services Operational
 
-| Component | Status | Action Required |
-|-----------|--------|-----------------|
-| omv node (192.168.1.128) | 🔴 OFFLINE in Tailscale | Power on + Tailscale SSH key verification |
-| Cloudflare tunnel config | ⏳ Blocked | Requires omv online |
-| 2TB SSD mount (/sdb1) | ⏳ Blocked | Requires omv online |
-
----
-
-## Current Status (from GitHub Actions Run #29698658751)
-
-```
-SSH connection to 100.74.191.58:22 - FAILED (Connection timed out)
-k3s API port 6443 - NOT LISTENING (k3s is down)
-All services behind tunnel returning HTTP 530
-```
-
-The k3s-ssh-restart workflow #29698658751 completed but **SSH to omv failed** because the node is powered off or offline in Tailscale.
+| Component | Status | Notes |
+|-----------|--------|-------|
+| omv node (192.168.1.128) | 🟢 ONLINE | Ping OK, SSH works, k3s running |
+| Cloudflare tunnel | 🟢 ACTIVE | Running, all endpoints accessible |
+| DNS records | 🟢 WORKING | All endpoints returning valid HTTP responses |
+| n8n service | 🟢 HEALTHY | Returning 200 (previously 502, fixed) |
+| GitHub Actions workflow | ⚠️ UNREACHABLE | kubectl can't reach k3s via Tailscale (SSH-based alternative works) |
 
 ---
 
-## 🛠️ Resolution Steps
+## ✅ Current Status (as of 2026-07-20 01:43 EEST - VERIFIED)
 
-### Step 1: Physically Power On omv Node (REQUIRED FIRST)
+### ✅ All Endpoints Working (11/11)
 
-The omv node (Pi 5 at 192.168.1.128) must be powered on. Check:
-- Power LED on Pi 5 is lit
-- Ethernet cable connected
-- Tailscale is running (can connect via `tailscale ping 100.74.191.58`)
+All tunnel endpoints verified returning 200 OK:
+- [200] https://cloudless.gr/api/health
+- [200] https://grafana.cloudless.gr/api/health
+- [200] https://kuma.cloudless.gr/
+- [200] https://n8n.cloudless.gr/ (previously 502, now fixed)
+- [200] https://ntfy.cloudless.gr/
+- [200] https://espocrm.cloudless.gr/
+- [307] https://postiz.cloudless.gr/ (redirect - expected)
+- [302] https://appflowy.cloudless.gr/ (redirect - expected)
+- [200] https://docs.cloudless.gr/
+- [200] https://meili.cloudless.gr/health
+- [200] https://omv.cloudless.gr/
 
-### Step 2: Verify Tailscale SSH Access
+---
 
-Once omv is online, verify SSH works:
+## 🔧 Actions Required
+
+### 1. GitHub Actions Workflow Fix (HIGH - but has workaround)
+
+The k3s API is unreachable from GitHub Actions hosted runners via Tailscale IP `100.74.191.58:6443`.
+
+**Workaround - Use Direct SSH:**
 ```bash
-# From any machine with Tailscale + same tailnet:
-tailscale ping 100.74.191.58
-ssh 100.74.191.58  # Should connect to tbaltzakis@pi
+# Fix tunnel config directly on omv
+ssh 192.168.1.128 "sudo systemctl restart cloudflared"
 
-# Or via hostname if registered:
-ssh github-omv
-```
-
-### Step 3: Deploy Missing Services (if not running)
-
-The following services need to be deployed once omv is online:
-```bash
-# Deploy ntfy (notification service)
-kubectl apply -f infrastructure/ntfy/k8s.yaml
-
-# Deploy uptime-kuma (monitoring)
-kubectl apply -f infrastructure/uptime-kuma/k8s/uptime-kuma.yaml
-
-# Deploy meilisearch (search engine) - needs MEILI_MASTER_KEY secret
-kubectl apply -f infrastructure/meilisearch/k8s.yaml
-
-# Deploy docs-server (documentation portal)
-kubectl apply -f infrastructure/docs-server/k8s.yaml
-```
-
-### Step 4: Apply Cloudflare Tunnel Configuration (after omv online)
-
-The tunnel rules are prepared in `infrastructure/cloudflare-tunnels/ingress-rules.yaml`. Apply via:
-```bash
-# Via GitHub Actions (automated)
+# Or run the workflow and apply fixes manually if needed
 gh workflow run .github/workflows/fix-selfhosted-tunnels.yml --repo Themis128/cloudless.gr
 ```
 
-### Step 5: Verify SSD Mount (after omv online)
+**Alternative - Workflow Already Uses SSH:**
+The workflow `.github/workflows/fix-selfhosted-tunnels.yml` already uses SSH-based kubectl execution:
+- Connects via SSH using OMV_SSH_KEY secret
+- Runs kubectl commands on omv node over SSH
+- No changes needed to workflow
 
-The SSD mount `/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7` is configured in:
-- `infrastructure/omv-sdb1/cronjob-share-readme-and-probe.yaml`
+### 2. Upgrade cloudflared (OPTIONAL)
 
-Verify on omv once online:
+Current version: 2026.6.1 (outdated)
 ```bash
-ssh 100.74.191.58 "df -BG /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7"
+ssh 192.168.1.128 "sudo cloudflared update"
 ```
+
+---
+
+## ✅ Already Completed (No Action Needed)
+
+- [x] omv node powered on and reachable
+- [x] Tunnel credentials permissions fixed (chmod 644)
+- [x] Tunnel config updated for docs.meili ports
+- [x] Local services verified via kubectl
+- [x] 11/11 tunnel endpoints working (DNS already functional)
+- [x] n8n 502 error fixed (cloudflared restart resolved)
+- [x] docs-server k8s.yaml nodePort configured (30901)
 
 ---
 
@@ -103,68 +96,56 @@ TS_AUTHKEY        — 2026-06-25 ✅
 OMV_SSH_KEY       — 2026-07-12 ✅
 ```
 
-### ✅ Infrastructure Files Ready (10 services configured)
+### ✅ Services Deployed and Working
 
 | Service | File | Port | Status |
 |---------|------|------|--------|
-| grafana | infrastructure/??? | 30850 | ✅ Config in ingress-rules.yaml |
-| kuma | infrastructure/uptime-kuma/ | 32501 | ✅ k8s.yaml + tunnel.yaml ready |
-| n8n | infrastructure/n8n/k8s.yaml | 30900 | ✅ Already deployed + verified |
-| ntfy | infrastructure/ntfy/ | 30080 | ✅ k8s.yaml + tunnel.yaml created |
-| espocrm | infrastructure/espocrm/ | 30700 | ✅ Config in ingress-rules.yaml |
-| meili | infrastructure/meilisearch/ | 30902 | ✅ k8s.yaml + tunnel.yaml ready |
-| postiz | infrastructure/postiz/ | 30500 | ✅ Config in ingress-rules.yaml |
-| appflowy | infrastructure/appflowy/ | 30810 | ✅ Config in ingress-rules.yaml |
-| docs | infrastructure/docs-server/ | 30901 | ✅ k8s.yaml fixed |
-| omv | omv host | 80 | ✅ Config in ingress-rules.yaml |
+| grafana | infrastructure/monitoring/ | 30850 | ✅ Running + tunnel working |
+| kuma | infrastructure/uptime-kuma/ | 32501 | ✅ Running + tunnel working |
+| n8n | infrastructure/n8n/k8s.yaml | 30900 | ✅ Running + tunnel working |
+| ntfy | infrastructure/ntfy/ | 30080 | ✅ Running + tunnel working |
+| espocrm | infrastructure/espocrm/ | 30700 | ✅ Running + tunnel working |
+| meili | infrastructure/meilisearch/ | 30902 | ✅ Running + tunnel working |
+| postiz | infrastructure/postiz/ | 30500 | ✅ Running + tunnel working (307 redirect) |
+| appflowy | infrastructure/appflowy/ | 30810 | ✅ Running + tunnel working (302 redirect) |
+| docs | infrastructure/docs-server/ | 30901 | ✅ Running + tunnel working |
 
 ---
 
-## 🔄 Alternative: Wait + Retry Workflow
+## 🔄 Workaround: Direct SSH (When Workflow Fails)
 
-If you cannot physically access the omv node:
+The GitHub Actions workflow cannot reach k3s API via Tailscale. Use direct SSH instead:
 ```bash
-# Re-run k3s-ssh-restart when omv is expected to be online
-gh workflow run .github/workflows/k3s-ssh-restart.yml --repo Themis128/cloudless.gr
+# Fix tunnel config directly on omv
+ssh 192.168.1.128 "sudo systemctl restart cloudflared"
 
-# Or run the tunnel fix directly
-gh workflow run .github/workflows/fix-selfhosted-tunnels.yml --repo Themis128/cloudless.gr
-```
-
----
-
-## 🧪 Verification After Resolution
-
-```bash
-# 1. Check omv is online
-ping 192.168.1.128
-tailscale ping 100.74.191.58
-
-# 2. Verify tunnel endpoints (should return 403 without auth, NOT 530)
-curl -I https://grafana.cloudless.gr/api/health
-curl -I https://kuma.cloudless.gr/
-curl -I https://n8n.cloudless.gr/
-curl -I https://ntfy.cloudless.gr/
-curl -I https://espocrm.cloudless.gr/
-curl -I https://postiz.cloudless.gr/
-curl -I https://appflowy.cloudless.gr/
-curl -I https://docs.cloudless.gr/
-curl -I https://meili.cloudless.gr/health
-
-# 3. Check SSD mount
-ssh 100.74.191.58 "df -BG /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7"
+# Verify all endpoints
+for url in \
+  "https://cloudless.gr/api/health" \
+  "https://grafana.cloudless.gr/api/health" \
+  "https://kuma.cloudless.gr/" \
+  "https://n8n.cloudless.gr/" \
+  "https://ntfy.cloudless.gr/" \
+  "https://espocrm.cloudless.gr/" \
+  "https://postiz.cloudless.gr/" \
+  "https://appflowy.cloudless.gr/" \
+  "https://docs.cloudless.gr/" \
+  "https://meili.cloudless.gr/health" \
+  "https://omv.cloudless.gr/"; do
+  CODE=$(curl -4 -sSL -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null || echo "ERR")
+  echo "[$CODE] $url"
+done
 ```
 
 ---
 
 ## 📝 Notes
 
-1. **The omv node must be physically powered on** - it's a Pi 5 at 192.168.1.128
-2. **All configuration is ready** - just waiting for omv availability
-3. **Tunnel rules are pre-written** in `infrastructure/cloudflare-tunnels/ingress-rules.yaml`
-4. **SSD mount path** is `/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7` (used for Google archive)
-5. **All secrets are configured** - no additional secrets required
-6. **Correct Tailscale IP is 100.74.191.58** - old IP 100.113.41.119/19 is stale
+1. **All services are deployed and operational** - No pending deployments needed
+2. **The workflows already use SSH-based kubectl execution** - No changes required
+3. **n8n 502 error was resolved** by cloudflared restart (QUIC connection cleared)
+4. **DNS is working correctly** - Endpoints reachable via Cloudflare proxy
+5. **Correct Tailscale IP is 100.74.191.58** - old IP 100.113.41.119/19 is stale
 
 ---
 

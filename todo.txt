@@ -1,7 +1,7 @@
 # Cloudless.gr Migration + Optimization Todo List
 # Cloudflare + Local Cluster Architecture Corrections
 # Generated: 2026-07-17 (post-migration optimization phase)
-# Updated: 2026-07-19 (added /api/config endpoint, admin audit log completed)
+# Updated: 2026-07-20 (omv online, tunnel active, DNS fixes in progress)
 
 ## 🏗️ INFRASTRUCTURE CORRECTIONS
 
@@ -22,14 +22,16 @@
 - [x] Create tailscale-deploy.yml GitHub workflow for automated deployment
 - [x] Update Tailscale OAuth credentials documentation (README.md)
 - [x] Create Tailscale diagnostic script (tailscale-diagnose.sh)
-- [ ] Add TS_CLIENT_ID and TS_CLIENT_SECRET to GitHub secrets (REQUIRED)
-- [ ] Approve subnet routes in Tailscale admin console (10.42.0.0/16, 10.43.0.0/16)
+- [x] Add TS_CLIENT_ID and TS_CLIENT_SECRET to GitHub secrets (2026-07-19)
+- [x] Approve subnet routes in Tailscale admin console (10.42.0.0/16, 10.43.0.0/16)
 
 ### Cluster Resource Optimization (Pi 5 - 8GB RAM)
 - [x] Apply monitoring-node-selector-fix.yml for Prometheus/Alertmanager
 - [x] Fix cloudflare-geo-exporter scaling issues (4 pods in terminating/pending)
 - [x] Resolve metoro-node-agent CrashLoopBackOff (eBPF not supported on Pi kernel)
 - [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
+  - Mount path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
+  - Status: Ready, requires omv node for verification
 
 ### Postiz Deployment Fixes
 - [x] Monitor Postiz image pull (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, taking time
@@ -75,15 +77,16 @@
 - [x] **/api/config endpoint** - Created for ETL scripts to read config from D1 (migration 0007)
 
 ### Tailscale Secrets Configuration (REQUIRED)
-- [ ] Add TS_CLIENT_ID to GitHub secrets (OAuth Client ID from Tailscale admin)
-- [ ] Add TS_CLIENT_SECRET to GitHub secrets (OAuth Client Secret from Tailscale admin)
-- [ ] Add TS_AUTHKEY to GitHub secrets (Auth key for GitHub Actions runners)
-- [ ] Add OMV_SSH_KEY to GitHub secrets (SSH key for Pi node access)
+- [x] Add TS_CLIENT_ID to GitHub secrets (2026-07-19)
+- [x] Add TS_CLIENT_SECRET to GitHub secrets (2026-07-19)
+- [x] Add TS_AUTHKEY to GitHub secrets (2026-06-25)
+- [x] Add OMV_SSH_KEY to GitHub secrets (2026-07-12)
 
 ### MCP Security Audit
 - [ ] Run `pnpm mcp-security-scan` on API routes
 - [ ] Remove unused API keys from .env (AWS credentials no longer needed)
 - [ ] Clean up SSM parameters (deprecated AWS resources)
+- [ ] Verify POSTIZ_API_KEY, SLACK_WEBHOOK_URL are configured in Wrangler secrets
 
 ## 📊 ANALYTICS STACK COMPLETION
 
@@ -103,7 +106,7 @@
 - [ ] Verify analytics-engine-datasets binding in wrangler.jsonc
 - [ ] Set up analytics ingestion for Workers AI calls
 
-## 🚀 PERFOMANCE OPTIMIZATIONS
+## 🚀 PERFORMANCE OPTIMIZATIONS
 
 ### CDN & Caching
 - [ ] Optimize R2 cache-control headers (increase to 7 days for assets)
@@ -169,18 +172,46 @@
 - [ ] Configure workflow notifications (#alerts, #orders, #contacts)
 - [ ] Verify n8n Slack webhook integration
 
+## ⚠️ TUNNEL & DNS STATUS (2026-07-20)
+
+### Current State
+- **Tunnel**: ✅ ACTIVE (fixed 2026-07-20 01:25 EEST)
+- **omv Node**: ✅ ONLINE (192.168.1.128, Tailscale 100.74.191.58)
+- **DNS Records**: ⚠️ PARTIAL (docs/omv/meili need CNAME fix)
+
+### Failing Endpoints
+| Hostname | Status | Issue |
+|----------|--------|-------|
+| n8n.cloudless.gr | 502 | Backend n8n returning 502 on port 30900 |
+| meili.cloudless.gr | ERR | DNS missing, needs CNAME to tunnel |
+| omv.cloudless.gr | 530 | DNS missing, needs CNAME to tunnel |
+| docs.cloudless.gr | 404 | DNS partially working, content not served |
+
+### Required DNS Fixes
+```bash
+# Via Cloudflare Dashboard or Terraform:
+docs.cloudless.gr  → CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+omv.cloudless.gr   → CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+meili.cloudless.gr → CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+```
+
+### GitHub Actions Issue
+- **Status**: Still failing - `dial tcp 100.74.191.58:6443: i/o timeout`
+- **Workaround**: Use direct SSH to omv node instead of kubectl from hosted runners
+- **Fix**: Convert remaining workflows to SSH-based execution (see fix-selfhosted-tunnels.yml)
+
 ## ☁️ AWS → CLOUDFLARE MIGRATION (IN PROGRESS)
 
 ### Phase 1: Secrets Migration (SSM → Workers)
- - [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
- - [x] Migrate ADMIN_ALERT_SECRET to Workers secret (generate: 463953c7f9183ee69c0c4fc18495e72543398d79bdcf9702478dd59d920fc7b6)
- - [ ] Migrate SLACK_WEBHOOK_URL to Workers secret (interactive: `npx wrangler secret put SLACK_WEBHOOK_URL`)
- - [ ] Migrate POSTIZ_API_KEY to Workers secret (interactive: `npx wrangler secret put POSTIZ_API_KEY`)
- - [ ] Migrate ESPOCRM_API_KEY to Workers secret (interactive: `npx wrangler secret put ESPOCRM_API_KEY`)
- - [ ] Migrate ESPOCRM_API_PASSWORD to Workers secret (optional, interactive: `npx wrangler secret put ESPOCRM_API_PASSWORD`)
- - [x] ESPOCRM_BASE_URL stored in D1 app_config (migration 0007) - NOT a secret
- - [x] Verify ssm-config.ts works with SSM_DISABLED=1 mode
- - [x] Create Kubernetes secret for k3s deployment (infrastructure/cloudless/secrets.yaml)
+  - [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
+  - [x] Migrate ADMIN_ALERT_SECRET to Workers secret (463953c7f9183ee69c0c4fc18495e72543398d79bdcf9702478dd59d920fc7b6)
+  - [x] Migrate SLACK_WEBHOOK_URL to Workers secret (2026-07-19)
+  - [x] Migrate POSTIZ_API_KEY to Workers secret (2026-07-19)
+  - [x] Migrate ESPOCRM_API_KEY to Workers secret (2026-07-19)
+  - [x] Migrate ESPOCRM_API_PASSWORD to Workers secret (2026-07-19)
+  - [x] ESPOCRM_BASE_URL stored in D1 app_config (migration 0007) - NOT a secret
+  - [x] Verify ssm-config.ts works with SSM_DISABLED=1 mode
+  - [x] Create Kubernetes secret for k3s deployment (infrastructure/cloudless/secrets.yaml)
 
 ### Phase 2: Lambda Replacement (Workers)
 - [ ] Create /api/pi-proxy route (Tailscale proxy)
@@ -203,8 +234,6 @@
 - [ ] Remove AWS credentials from .env
 - [ ] Cancel remaining AWS resources
 
----
-
 ### Cloudflare Free Tier Compliance
 - [ ] Monitor daily Workers invocations (< 100K limit)
 - [ ] Track R2 operations (< 10M ops/month)
@@ -226,12 +255,16 @@
 - [x] Create mcp-documentation-sprint-summary.md
 - [x] Document MCP tool usage patterns (server.py reference)
 - [x] Add API endpoint catalog (cloudless-api-catalog.md)
+- [x] Create pending-actions-runbook.md (2026-07-19)
+- [x] Create ACTIONS-REQUIRED.md (2026-07-19)
+- [x] Update CLOUDFLARE-TUNNEL-MIGRATION.md (2026-07-20)
 
 ### Runbook Updates
 - [x] Update CLUSTER-MAP.md with current pod statuses
 - [x] Document Cloudflare Tunnel certificate renewal (cloudflare-tunnel-cert-renewal.md)
 - [x] Add backup/restore procedures for D1 (d1-backup-restore.md)
 - [x] Create failover playbook (Workers → Pi → Tailscale) (workers-failover-playbook.md)
+- [x] Document DNS fix procedures (ACTIONS-REQUIRED.md)
 
 ## ✅ COMPLETED VERIFICATION
 
@@ -239,7 +272,7 @@
 - [x] R2 buckets created (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket)
 - [x] D1 database created (user-auth-db)
 - [x] Wrangler configuration ready (wrangler.jsonc, wrangler-cloudflare-free.json)
-- [x] Schema migration files created (0001-auth-schema.sql, 0002-d1-optimizations.sql)
+- [x] Schema migration files created (0001-auth-schema.sql, 0002-d1-optimizations.sql, 0006-email-suppression.sql, 0007-app-config.sql)
 - [x] Worker endpoint created (index-cloudflare-free.js with auth, chat, analytics)
 - [x] AUTH_PROVIDER set to "d1" in environment variables
 - [x] Worker deployed and health endpoint confirmed
@@ -254,12 +287,15 @@
 
 ## 🎯 NEXT ACTIONS (Priority Order)
 
-1. ~~Critical:~~ ~~Fix MCP configuration~~ (✓ done)
-2. ~~Deploy monitoring namespace~~ (✓ Already deployed - CLUSTER-MAP.md confirms)
-3. **High:** Restart Cline/Claude to load MCP configuration changes
-4. ~~Apply D1 migrations 0006 and 0007~~ (✓ Completed - both migrations applied successfully)
-5. ~~Fix postiz-uploads PVC size~~ (✓ Recreated at 20Gi)
-6. ~~Create admin-alert-secret in cloudless namespace~~ (✓ Created infrastructure/cloudless/secrets.yaml)
+1. **CRITICAL:** Fix DNS records for docs/omv/meili (CNAME to tunnel)
+2. **HIGH:** Fix n8n 502 error on localhost:30900
+3. **HIGH:** Convert GitHub Actions workflows to SSH-based execution
+4. **HIGH:** Restart Cline to load MCP configuration changes
+5. **MEDIUM:** Apply SSD mount verification on omv
+6. **MEDIUM:** Deploy missing services (ntfy, uptime-kuma, meilisearch, docs-server)
+7. **MEDIUM:** Add bcrypt password hashing to auth (upgrade from PBKDF2)
+8. **LOW:** Optimize resource allocation for existing pods
+9. **LOW:** Clean up AWS resources after final verification
 
 ## ⚠️ CRITICAL FINDINGS (Subagent Reports)
 
@@ -270,8 +306,34 @@
 ### Postiz
 - ✅ Pods running and healthy on omv
 - ✅ postiz-uploads PVC recreated at 20Gi
-- ⚠️ Init container restart issues noted
+- ⚠️ Init container restart issues noted (cosmetic, not blocking)
 
 ### AppFlowy
 - ✅ 9 pods running (omv-ha has worker pod)
 - ⚠️ MinIO using default credentials (production risk)
+
+### Tunnel Status - FIXED
+- **Tunnel ID**: e977a490-58c5-4fdb-9155-86832e3e636a
+- **Status**: ✅ ACTIVE (fixed 2026-07-20 01:25 EEST)
+- **Fix Applied**: chmod 644 on credentials file + full cloudflared restart
+- **Version**: 2026.6.1 (outdated, upgrade recommended)
+
+### GitHub Actions k3s Connectivity - BLOCKED
+- **Issue**: Workflows using direct kubectl via Tailscale IP (100.74.191.58:6443) fail with i/o timeout
+- **Root cause**: GitHub-hosted runners cannot reach k3s API over Tailscale IP directly
+- **Workaround**: Use SSH + kubectl (proven pattern from other workflows)
+- **Status**: ⚠️ fix-selfhosted-tunnels.yml needs conversion to SSH-only
+
+### omv Node Status - ONLINE
+- **IP**: 192.168.1.128 (LAN), 100.74.191.58 (Tailscale)
+- **SSH**: ✅ Working (verified 2026-07-20)
+- **k3s**: ✅ Running (pods verified)
+- **Services**: ✅ All except n8n (502 error)
+
+### Missing Services (Pending Deployment)
+- `infrastructure/ntfy/k8s.yaml` - Notification service
+- `infrastructure/uptime-kuma/k8s/uptime-kuma.yaml` - Uptime monitoring
+- `infrastructure/meilisearch/k8s.yaml` - Search engine (needs MEILI_MASTER_KEY)
+- `infrastructure/docs-server/k8s.yaml` - Documentation portal
+
+---

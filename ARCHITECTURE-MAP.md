@@ -1,6 +1,6 @@
 # cloudless.gr — Architecture Map
 
-> Updated: 2026-07-10 (reflects Cloudflare-only: Pi tunnel + Workers fallback)
+> Updated: 2026-07-20 (reflects current tunnel + D1 auth + AWS migration 85%)
 
 ---
 
@@ -29,22 +29,33 @@
 
 ## 2. Auth Flow
 
-- **Auth library:** next-auth v5.0.0-beta.31 (`src/lib/auth.ts`)
-- **Provider:** Cognito OIDC (AWS, always-up)
-- **Token storage:** DynamoDB `SessionTokenStore` table (also used on Pi w/ SSM hydration)
-- **Session strategy:** JWT, with refresh-token rotation (pattern from authjs.dev)
-- **Groups:** Cognito `cognito:groups` claim → `session.user.groups`
-- **Lazy initialization:** All `process.env` reads are deferred per-request; `instrumentation.register()` hydrates SSM secrets before first request
-- **Graceful fallback:** Returns 200/null when auth env vars are absent (safe for local dev without AWS)
+- **Auth library:** next-auth v5.0.0-beta.31 (`src/lib/auth.ts`) + D1-native Workers auth
+- **Provider:** D1 database (Cloudflare) — complete Cognito replacement
+- **Token storage:** D1 `sessions` table + `user_sessions` table
+- **Session strategy:** JWT with D1-backed session validation
+- **Roles:** D1 `user_roles` table (54 roles synced from PostgreSQL)
+- **Password hashing:** PBKDF2 (upgraded from SHA-256, backward compatible)
+- **Security features:**
+  - Rate limiting (max 10 attempts/minute)
+  - Account lockout (>5 failed attempts in 15 minutes)
+  - CSRF protection (migration 0004)
+  - Email verification (OTP via SES/Cloudflare Email)
+  - Admin audit log (migration 0005)
+  - Session activity logging
 - **Auth pages:** `/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/post-login`
-- **Route handlers:** `src/app/api/auth/[...nextauth]/route.ts` (destructures `handlers.GET` / `handlers.POST`)
+- **Route handlers:**
+  - Next.js: `src/app/api/auth/[...nextauth]/route.ts`
+  - Workers: `index-cloudflare-free.js` (D1-native auth)
 - **Other auth-related APIs:**
-  - `/api/auth/register` — user registration
-  - `/api/auth/confirm` — email verification
-  - `/api/auth/activate` — account activation
-  - `/api/auth/resend-verification`
-  - `/api/admin/autologin` — admin impersonation/login
-- **API auth helper:** `src/lib/api-auth.ts` — validates API requests via Cognito JWT
+  - `/api/auth/register` — user registration (Next.js + Workers D1)
+  - `/api/auth/login` — email/password auth (Next.js + Workers D1)
+  - `/api/auth/logout` — session destroy
+  - `/api/auth/reset-password` — reset token generate
+  - `/api/auth/reset-confirm` — password update
+  - `/api/auth/session` — session validation
+  - `/api/admin/users/promote` — admin role assignment
+  - `/api/admin/auth-audit` — compliance audit log
+- **API auth helper:** `src/lib/api-auth.ts` — validates API requests
 - **Context:** `src/context/AuthContext.tsx` — client-side auth state
 - **Provider component:** `src/components/NextAuthProvider.tsx`
 
@@ -203,11 +214,13 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 
 ### Cloudflare-Only Architecture (Primary)
 
-- **Primary runtime:** Pi k3s cluster (self-hosted on OMV-MAIN, exposed via **Cloudflare Tunnel**: `pi-origin.cloudless.gr`)
+- **Primary runtime:** Pi k3s cluster (self-hosted on omv, 192.168.1.128, exposed via **Cloudflare Tunnel**: `cloudless.gr`)
 - **HA failover:** Cloudflare Workers (`cloudless-failover.baltzakis-themis.workers.dev`) via Load Balancer
+- **Tunnel ID:** `e977a490-58c5-4fdb-9155-86832e3e636a` (active since 2026-07-20)
 - **Docker build (Pi):** `Dockerfile` + `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
 - **WSL dev:** `NEXT_DIST_DIR` env var to avoid NTFS slow benchmarks; `allowedDevOrigins` for LAN access
-- **SSM hydration:** Secrets loaded via `instrumentation.ts` → SST SSM parameter store (`/cloudless/production/*`)
+- **Configuration:** D1 `app_config` table + Wrangler secrets (SSM deprecated, 85% migrated)
+- **Storage:** R2 buckets (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket)
 
 ### Traffic Flow
 
@@ -218,7 +231,7 @@ cloudless.gr / www.cloudless.gr
  Cloudflare Load Balancer  (steering: off)
         │
         ├─► [PRIMARY]   cl-pi-<host>
-        │               pi-origin.cloudless.gr (via Cloudflare Tunnel)
+        │               cloudless.gr (via Cloudflare Tunnel e977a490...)
         │               health: GET /api/health, expect 200, interval=60s
         │
         └─► [FALLBACK]  cl-worker-<host>
@@ -230,16 +243,16 @@ cloudless.gr / www.cloudless.gr
 
 **Automatic - no manual certificate management required.**
 
-- `pi-origin.cloudless.gr` — HTTPS via Cloudflare Tunnel (edge termination)
 - `cloudless.gr` / `www.cloudless.gr` — HTTPS via Cloudflare Universal SSL
+- Subdomains (grafana, n8n, postiz, etc.) — HTTPS via Cloudflare Tunnel
 - Edge certificates auto-provisioned and auto-renewed
 
 ### Setup
 
-- **Tunnel setup:** `.github/workflows/setup-pi-tunnel.yml` (run once)
+- **Tunnel setup:** `infrastructure/cloudflare-tunnels/` (config.yml, ingress-rules.yaml)
 - **LB setup:** `.github/workflows/cloudflare-lb.yml` → dispatch with `apply=true`
 - **Pi deploy:** `.github/workflows/deploy-pi.yml` (builds to ECR, rolls out to k3s)
-- **Tunnel manifest:** `k8s/tunnel/pi-tunnel.yaml` (cloudflared on Pi cluster)
+- **Tunnel manifest:** Deployed on omv node (systemd cloudflared service)
 
 ### Token Required
 
@@ -273,17 +286,18 @@ cloudless.gr / www.cloudless.gr
 
 ## 9. Risks Before Production Changes
 
-1. **Auth availability:** Auth config resolves lazily; changes to `COGNITO_*` env vars could break sign-in/session flow
+1. **Auth availability:** D1 auth is now primary; AWS Cognito deprecated but still in code (backward compatibility mode)
 2. **i18n completeness:** 4 locale JSON files must stay in sync — missing keys = blank UI text
-3. **External API dependencies:** Appflowy, Stripe, Slack, ActiveCampaign, HubSpot, AWS SDK — all must be available or gracefully degraded
-4. **SSM hydration timing:** `instrumentation.register()` runs async; any route handler that accesses `process.env` before hydration gets empty/fallback values
+3. **External API dependencies:** Appflowy, Stripe, Slack, ActiveCampaign, HubSpot — all must be available or gracefully degraded
+4. **D1 vs SSM config:** `ssm-config.ts` falls back to D1 when `SSM_DISABLED=1`; missing D1 migrations will break config
 5. **Turbopack vs Webpack:** Some configs differ between dev (Turbopack) and prod (Webpack) — `serverExternalPackages` only applies to Turbopack
 6. **Locale redirects:** next-intl middleware intercepts before Next.js `rewrites()` — any new public route must be tested for locale redirect behavior
 7. **Coverage config:** `next.config.ts` has conditional webpack overrides when `COVERAGE=1` — editing next.config.ts could break the coverage pipeline
 8. **Secrets in .env.local:** Contains real credentials — never commit, never expose in logs
 9. **pnpm overrides:** Version pinning for security advisories — removing/altering overrides could reintroduce vulnerabilities
 10. **Next.js 16 edge:** Using `next@16.2.1` — some APIs may have changed from v14/v15 patterns
-11. **LB failover:** Requires `CLOUDFLARE_API_TOKEN` with Load Balancing scopes in SSM
+11. **LB failover:** Requires `CLOUDFLARE_API_TOKEN` with Load Balancing scopes
+12. **Tunnel DNS:** 3 subdomains (docs, omv, meili) need CNAME records fixed to tunnel
 
 ---
 
