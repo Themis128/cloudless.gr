@@ -28,6 +28,7 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # Pi may be under extreme load; retrying. If same failure, Pi needs power cycle.
 # re-triggered 2026-07-09T14:01Z — k3s unstable: deployments oscillating (coredns/traefik flipping), kubectl unreachable
 # re-triggered 2026-07-09T14:20Z — triggering to stabilize cluster after version flip-flops
+# re-triggered 2026-07-19T17:52Z — k3s SSH restart triggered via incident response (k3s API timeout + runners offline)
 #
 
 on:
