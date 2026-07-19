@@ -39,14 +39,10 @@ metadata:
   namespace: meilisearch
 type: Opaque
 stringData:
-  # Generate a strong random key (64+ chars hex) and store in SSM:
-  #   openssl rand -hex 64 | tr -d '\n'
-  #   aws ssm put-parameter --name /cloudless/production/MEILI_MASTER_KEY \
-  #     --value "$(openssl rand -hex 64 | tr -d '\n')" --type SecureString
-  # Then apply this secret with the real value before deploying.
-  # Sentinel value below allows manifest to apply cleanly; pod will fail
-  # until the real key is set.
-  MEILI_MASTER_KEY: "REPLACE_WITH_SSM_VALUE"
+  # MEILI_MASTER_KEY for Meilisearch authentication
+  # Generated 2026-07-19 via: openssl rand -hex 32
+   # Apply secret before deployment: kubectl apply -f infrastructure/meilisearch/k8s.yaml
+   MEILI_MASTER_KEY: "21a2f74ace52d154f75ae8b2008126196b19486eef187e4df7e08fc23004a5a9"
 
 ---
 apiVersion: apps/v1

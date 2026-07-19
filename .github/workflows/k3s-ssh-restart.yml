@@ -5,12 +5,12 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # API server to come back, and posts the full log to tracking issue #382.
 #
 # Use this when:
-#   - cluster-doctor shows "connection refused" on 100.113.41.119:6443
+#   - cluster-doctor shows "connection refused" on 100.74.191.58:6443
 #   - cluster-doctor shows "ServiceUnavailable" for all kubectl commands
 #   - PrometheusKubernetesListWatchFailures alert is firing
 #   - k3s-restart.yml (self-hosted runner path) queued forever (Pi runners offline)
 #
-# Requires: OMV_SSH_KEY repo secret — the private key for tbaltzakis@100.113.41.119.
+# Requires: OMV_SSH_KEY repo secret — the private key for tbaltzakis@100.74.191.58.
 # To add: GitHub → Settings → Secrets → Actions → New secret → OMV_SSH_KEY
 # Value: the private key contents (same as OMV_SSH_KEY_CONTENTS session secret).
 #
@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: "100.113.41.119"
+      PI_HOST: "100.74.191.58"
       PI_USER: "tbaltzakis"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
@@ -60,7 +60,7 @@ jobs:
             echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
             echo "  GitHub → Settings → Secrets → Actions → New repository secret"
             echo "  Name: OMV_SSH_KEY"
-            echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.113.41.119)"
+            echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.74.191.58)"
             exit 1
           fi
           echo "OMV_SSH_KEY is set — proceeding"
