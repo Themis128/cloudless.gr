@@ -36,8 +36,8 @@ jobs:
 
       - name: Check required secrets
         run: |
-          if [ -z "${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" ] || [ -z "${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}" ]; then
-            echo "::error::TAILSCALE_OAUTH_CLIENT_ID and/or TAILSCALE_OAUTH_CLIENT_SECRET secrets are missing"
+          if [ -z "${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" ] || [ -z "${{ secrets.TAILSCALE_OAUTH_SECRET }}" ]; then
+            echo "::error::TAILSCALE_OAUTH_CLIENT_ID and/or TAILSCALE_OAUTH_SECRET secrets are missing"
             echo "Add Tailscale OAuth credentials to GitHub secrets"
             echo "See: https://tailscale.com/s/oauth-clients"
             exit 1
@@ -48,7 +48,7 @@ jobs:
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-client-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
 
       - name: Setup kubectl
         run: |
@@ -67,7 +67,6 @@ jobs:
           ssh-keyscan -H 192.168.1.128 >> ~/.ssh/known_hosts 2>/dev/null || true
           
           # Try LAN SSH (Pi may be online locally but off tailnet)
-          # Not using set -e to allow graceful failure
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             tbaltzakis@192.168.1.128 \
             "sudo systemctl restart tailscaled && sudo tailscale up --accept-routes --accept-dns --accept-ssh && echo 'tailscaled restarted on Pi host'" 2>&1 || {
@@ -117,7 +116,7 @@ jobs:
             --namespace tailscale-operator \
             --create-namespace \
             --set-string oauth.clientID="${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
-            --set-string oauth.clientSecret="${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}" \
+            --set-string oauth.clientSecret="${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
             --set operatorLogLevel=info \
             --timeout 300s --wait=false || {
               echo "⚠️ Helm install queued - will deploy when cluster is online"
