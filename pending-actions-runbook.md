@@ -56,12 +56,12 @@ infrastructure/meilisearch/                           ✅ Exists (k8s.yaml, clou
 
 | Action | File | Status |
 |--------|------|--------|
-| Deploy ntfy namespace + service | `infrastructure/ntfy/k8s.yaml` | ⏳ Blocked |
-| Deploy uptime-kuma | `infrastructure/uptime-kuma/k8s/uptime-kuma.yaml` | ⏳ Blocked |
-| Deploy meilisearch | `infrastructure/meilisearch/k8s.yaml` | ⏳ Blocked |
-| Deploy docs-server | `infrastructure/docs-server/k8s.yaml` | ⏳ Blocked |
-| Apply Cloudflare tunnel config | `infrastructure/cloudflare-tunnels/ingress-rules.yaml` | ⏳ Blocked |
-| SSD mount verification | `/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7` | ⏳ Blocked |
+| Deploy ntfy namespace + service | `infrastructure/ntfy/k8s.yaml` | ⏳ Blocked (omv offline) |
+| Deploy uptime-kuma | `infrastructure/uptime-kuma/k8s/uptime-kuma.yaml` | ⏳ Blocked (omv offline) |
+| Deploy meilisearch | `infrastructure/meilisearch/k8s.yaml` | ⏳ Blocked (omv offline) |
+| Deploy docs-server | `infrastructure/docs-server/k8s.yaml` | ⏳ Blocked (omv offline) |
+| Apply Cloudflare tunnel config | `infrastructure/cloudflare-tunnels/ingress-rules.yaml` | ⏳ Blocked (omv offline) |
+| SSD mount verification | `/srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7` | ⏳ Blocked (omv offline) |
 
 ---
 
