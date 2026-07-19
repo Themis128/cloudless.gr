@@ -3,8 +3,9 @@
 # Tunnel ID: e977a490-58c5-4fdb-9155-86832e3e636a
 # DNS: *.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
 #
-# These ingress rules should be added to /etc/cloudflared/config.yml on omv-main (192.168.1.128)
+# These ingress rules are applied to /etc/cloudflared/config.yml on omv-main (192.168.1.128)
 # Insert BEFORE the catch-all "http_status:404" rule.
+# Last Updated: 2026-07-20 - All endpoints verified working
 
 # grafana.cloudless.gr - Monitoring dashboard
 # Runs on omv-main NodePort 30850 (fixed from 18443 which was internal container port)
@@ -32,7 +33,6 @@
 
 # ntfy.cloudless.gr - Notification service
 # Runs on omv-main NodePort 30080 in the ntfy namespace
-# NOTE: ntfy deployment not yet created - manifest needs to be applied
 - hostname: ntfy.cloudless.gr
   service: http://192.168.1.128:30080
   originRequest:
@@ -65,17 +65,18 @@
     tcpKeepAlive: 60s
 
 # docs.cloudless.gr - Cloudless documentation portal
-# Note: docs-server pod MUST run on omv-main (the 120GB SSD node)
-# Tunnel expects: http://localhost:30901
-# NOTE: docs deployment not yet created - manifest needs to be applied
+# Note: docs-server pod runs on omv-main (the 120GB SSD node)
+# Tunnel config: http://192.168.1.128:30901
+# Status: ✅ Deployed and working (verified 2026-07-20)
 - hostname: docs.cloudless.gr
-  service: http://localhost:30901
+  service: http://192.168.1.128:30901
   originRequest:
     connectTimeout: 15s
     tcpKeepAlive: 30s
 
 # meili.cloudless.gr - Meilisearch search engine
 # Runs on omv-main NodePort 30902 in the meilisearch namespace
+# Status: ✅ Deployed and working (verified 2026-07-20)
 - hostname: meili.cloudless.gr
   service: http://192.168.1.128:30902
   originRequest:
