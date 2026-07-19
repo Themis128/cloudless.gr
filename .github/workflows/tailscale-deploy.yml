@@ -51,16 +51,31 @@ jobs:
           helm repo add tailscale https://pkgs.tailscale.com/helmcharts
           helm repo update
 
-      - name: Create/update Tailscale OAuth secret
-        run: |
-          # Use TS_CLIENT_ID env var set above (falls back to TAILSCALE_OAUTH_* if TS_* not set)
-          kubectl create secret generic tailscale-operator-secrets \
-            -n tailscale-operator \
-            --from-literal=TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
-            --from-literal=TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
+       - name: Check k3s API connectivity
+         id: check
+         run: |
+           echo "=== Checking k3s API connectivity ==="
+           if nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
+             echo "reachable=true" >> $GITHUB_OUTPUT
+             echo "✅ k3s API is reachable"
+           else
+             echo "reachable=false" >> $GITHUB_OUTPUT
+             echo "::warning::k3s API (100.74.191.58:6443) not reachable"
+             echo "Cluster may be offline - run tailscale-reconnect-agent workflow to recover"
+           fi
+
+       - name: Create/update Tailscale OAuth secret
+         if: steps.check.outputs.reachable == 'true'
+         run: |
+           # Use TS_CLIENT_ID env var set above (falls back to TAILSCALE_OAUTH_* if TS_* not set)
+           kubectl create secret generic tailscale-operator-secrets \
+             -n tailscale-operator \
+             --from-literal=TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
+             --from-literal=TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
+             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy Tailscale Operator via Helm
+        if: steps.check.outputs.reachable == 'true'
         run: |
           helm upgrade --install tailscale-operator tailscale/tailscale-operator \
             --namespace tailscale-operator \
@@ -71,20 +86,24 @@ jobs:
             --wait
 
       - name: Deploy ProxyClass
+        if: steps.check.outputs.reachable == 'true'
         run: |
           kubectl apply -f infrastructure/tailscale/proxyclass-monitoring.yaml
 
       - name: Deploy ProxyGroup and Subnet Router
+        if: steps.check.outputs.reachable == 'true'
         run: |
           kubectl apply -f infrastructure/tailscale/subnet-router.yaml
           kubectl apply -f infrastructure/tailscale/proxygroup-monitoring.yaml
 
       - name: Deploy Tailscale Ingress Class and Ingresses
+        if: steps.check.outputs.reachable == 'true'
         run: |
           kubectl apply -f infrastructure/tailscale/ingress-class.yaml
           kubectl apply -f infrastructure/tailscale/ingresses.yaml
 
       - name: Verify deployment
+        if: steps.check.outputs.reachable == 'true'
         run: |
           echo "=== Tailscale Operator Pods ==="
           kubectl get pods -n tailscale-operator -o wide
@@ -108,6 +127,13 @@ jobs:
             echo "# Tailscale Operator Deploy - $(date -u '+%Y-%m-%d %H:%M:%SZ')"
             git diff --stat
             echo ""
-            echo "Deployed resources:"
-            kubectl get pods -n tailscale-operator -o name
+            if [ "${{ steps.check.outputs.reachable }}" == "true" ]; then
+              echo "Deployed resources:"
+              kubectl get pods -n tailscale-operator -o name || echo "Could not reach cluster"
+            else
+              echo "⚠️ k3s cluster was unreachable during deployment"
+              echo ""
+              echo "To recover: Run 'tailscale-reconnect-agent' workflow to restart Tailscale on Pi"
+              echo "Or: Check Pi power status and restart if needed"
+            fi
           } | gh issue comment 382 --repo "${{ github.repository }}" --body-file - || true
