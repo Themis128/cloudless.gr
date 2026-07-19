@@ -44,7 +44,8 @@ spec:
         image: binwiederhier/ntfy:v2.13.0
         args:
         - serve
-        - --listen-http://0.0.0.0:80
+        - --listen-http
+        - :80
         - --attachment-cache-dir=/var/cache/ntfy
         - --base-url=https://ntfy.cloudless.gr
         ports:
@@ -62,6 +63,10 @@ spec:
           limits:
             cpu: 200m
             memory: 128Mi
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: ntfy-data
 
 ---
 apiVersion: v1
