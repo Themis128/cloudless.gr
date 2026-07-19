@@ -6,8 +6,50 @@
 # These ingress rules should be added to /etc/cloudflared/config.yml on omv-main (192.168.1.128)
 # Insert BEFORE the catch-all "http_status:404" rule.
 
+# grafana.cloudless.gr - Monitoring dashboard
+# Runs on omv-main NodePort 30850 (fixed from 18443 which was internal container port)
+- hostname: grafana.cloudless.gr
+  service: http://192.168.1.128:30850
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
+# kuma.cloudless.gr - Uptime Kuma monitoring
+# Runs on omv-main NodePort 32501 in the uptime-kuma namespace
+- hostname: kuma.cloudless.gr
+  service: http://192.168.1.128:32501
+  originRequest:
+    connectTimeout: 10s
+    tcpKeepAlive: 30s
+
+# n8n.cloudless.gr - Workflow automation
+# Runs on omv-main NodePort 30900 in the n8n namespace
+- hostname: n8n.cloudless.gr
+  service: http://192.168.1.128:30900
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
+# ntfy.cloudless.gr - Notification service
+# Runs on omv-main NodePort 30080 in the ntfy namespace
+# NOTE: ntfy deployment not yet created - manifest needs to be applied
+- hostname: ntfy.cloudless.gr
+  service: http://192.168.1.128:30080
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
+# espocrm.cloudless.gr - CRM system
+# Runs on omv-main NodePort 30700 in the espocrm namespace
+- hostname: espocrm.cloudless.gr
+  service: http://192.168.1.128:30700
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    noTLSVerify: false
+    httpHostHeader: espocrm.cloudless.gr
+
 # omv.cloudless.gr - OMV Web UI (OpenMediaVault admin panel)
-# Currently returning 502 - needs reload after config update
 - hostname: omv.cloudless.gr
   service: http://localhost:80
   originRequest:
@@ -25,6 +67,7 @@
 # docs.cloudless.gr - Cloudless documentation portal
 # Note: docs-server pod MUST run on omv-main (the 120GB SSD node)
 # Tunnel expects: http://localhost:30901
+# NOTE: docs deployment not yet created - manifest needs to be applied
 - hostname: docs.cloudless.gr
   service: http://localhost:30901
   originRequest:
@@ -32,9 +75,9 @@
     tcpKeepAlive: 30s
 
 # meili.cloudless.gr - Meilisearch search engine
-# Runs on omv-main NodePort 30902 in the search namespace
+# Runs on omv-main NodePort 30902 in the meilisearch namespace
 - hostname: meili.cloudless.gr
-  service: http://localhost:30902
+  service: http://192.168.1.128:30902
   originRequest:
     connectTimeout: 10s
     tcpKeepAlive: 30s
@@ -51,10 +94,20 @@
 # postiz.cloudless.gr - Postiz social publishing engine
 # Runs on omv-main NodePort 30500 in the postiz namespace
 - hostname: postiz.cloudless.gr
-  service: http://localhost:30500
+  service: http://192.168.1.128:30500
   originRequest:
     connectTimeout: 15s
     tcpKeepAlive: 30s
+
+# appflowy.cloudless.gr - AppFlowy CMS
+# Runs on omv-main NodePort 30810 in the appflowy namespace
+- hostname: appflowy.cloudless.gr
+  service: http://192.168.1.128:30810
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    noTLSVerify: false
+    httpHostHeader: appflowy.cloudless.gr
 
 # Apply these changes:
 #   1. ssh tbaltzakis@192.168.1.128
@@ -63,9 +116,14 @@
 #   4. sudo systemctl reload cloudflared
 #
 # Verify:
+#   curl -I https://grafana.cloudless.gr/api/health
+#   curl -I https://kuma.cloudless.gr/
+#   curl -I https://n8n.cloudless.gr/
+#   curl -I https://ntfy.cloudless.gr/
+#   curl -I https://espocrm.cloudless.gr/
 #   curl -I https://omv.cloudless.gr
-#   curl -I https://ftp.cloudless.gr
 #   curl -I https://docs.cloudless.gr
-#   curl -I https://meili.cloudless.gr
+#   curl -I https://meili.cloudless.gr/health
 #   curl -I https://manage.cloudless.gr
 #   curl -I https://postiz.cloudless.gr
+#   curl -I https://appflowy.cloudless.gr

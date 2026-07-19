@@ -63,14 +63,23 @@ routes:
     status: pending
     description: Meilisearch search engine (NodePort)
 
-  # Postiz
-  - hostname: postiz.cloudless.gr
-    service: postiz
-    port: 30500
+  # CRM
+  - hostname: espocrm.cloudless.gr
+    service: espocrm
+    port: 30700
     healthPath: /
     node: omv
-    status: active
-    description: Postiz social publishing engine
+    status: pending
+    description: EspoCRM customer relationship management
+
+  # Notifications
+  - hostname: ntfy.cloudless.gr
+    service: ntfy
+    port: 30080
+    healthPath: /
+    node: omv
+    status: pending
+    description: ntfy notification service
 
   # Monitoring
   - hostname: grafana.cloudless.gr
@@ -81,13 +90,40 @@ routes:
     status: active
     description: Grafana monitoring dashboard
 
+  - hostname: kuma.cloudless.gr
+    service: uptime-kuma
+    port: 32501
+    healthPath: /
+    node: omv
+    status: pending
+    description: Uptime Kuma monitoring
+
+  # Workflow
   - hostname: n8n.cloudless.gr
     service: n8n
-    port: 80
-    healthPath: /rest/health
+    port: 30900
+    healthPath: /
     node: omv
     status: active
     description: n8n workflow automation
+
+  # Postiz
+  - hostname: postiz.cloudless.gr
+    service: postiz
+    port: 30500
+    healthPath: /
+    node: omv
+    status: active
+    description: Postiz social publishing engine
+
+  # AppFlowy
+  - hostname: appflowy.cloudless.gr
+    service: appflowy
+    port: 30810
+    healthPath: /
+    node: omv
+    status: active
+    description: AppFlowy CMS (NodePort)
 
   # HA Failover - Workers fallback for edge delivery
   - hostname: cloudless-failover.baltzakis-themis.workers.dev

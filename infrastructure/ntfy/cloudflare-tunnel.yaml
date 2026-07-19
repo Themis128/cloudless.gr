@@ -1,0 +1,27 @@
+# Cloudflare Tunnel route: ntfy.cloudless.gr → ntfy NodePort on omv-main
+#
+# Same tunnel as other self-hosted services (ID e977a490-58c5-4fdb-9155-86832e3e636a).
+#
+# DNS record to add in Cloudflare (zone cloudless.gr):
+#   ntfy.cloudless.gr CNAME → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com
+#   (proxied=true, TTL=auto)
+#
+# To activate on omv-main:
+#   1. Append the ingress rule below to /etc/cloudflared/config.yml under
+#      the existing `ingress:` key, BEFORE the catch-all `service: http_status:404`
+#      rule.
+#   2. sudo systemctl restart cloudflared
+#   3. Verify: curl -I https://ntfy.cloudless.gr   # expect 200 (ntfy health page)
+#
+# Required secret: NTFY_ACCESS_TOKEN (optional, for publishing)
+#
+---
+# Ingress rule fragment — paste into /etc/cloudflared/config.yml
+ingress_rule:
+  hostname: ntfy.cloudless.gr
+  service: http://192.168.1.128:30080
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+    noTLSVerify: false
+    httpHostHeader: ntfy.cloudless.gr

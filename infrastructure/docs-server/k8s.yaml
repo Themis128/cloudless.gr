@@ -4,6 +4,40 @@
 # Runs on omv-main (120GB SSD) with NodePort 30901 for Cloudflare Tunnel access
 # Tunnel config: https://docs.cloudless.gr → http://localhost:30901
 
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docs-config
+  namespace: default
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      server_name docs.cloudless.gr;
+      location / {
+        return 302 https://github.com/Themis128/cloudless.gr/wiki;
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docs-html
+  namespace: default
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head><title>Cloudless Docs</title></head>
+    <body>
+      <p>Redirecting to <a href="https://github.com/Themis128/cloudless.gr/wiki">GitHub Wiki</a>...</p>
+      <script>location.href = "https://github.com/Themis128/cloudless.gr/wiki";</script>
+    </body>
+    </html>
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -51,6 +85,7 @@ spec:
       - configMap:
           name: docs-html
         name: html
+
 ---
 apiVersion: v1
 kind: Service
@@ -62,6 +97,6 @@ spec:
   selector:
     app: docs-server
   ports:
-  - port: 80
+  - port: 8080
     targetPort: 8080
     nodePort: 30901
