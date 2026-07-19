@@ -26,13 +26,14 @@ export default defineConfig({
       ? [["list"], ["github"]]
       : [["list"], ["html"]],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:4000",
+    // Default to production URL for testing, fallback to localhost:4000 for local dev
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || "https://cloudless.gr",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     actionTimeout: 10000,
     navigationTimeout: 30000,
-    // MCP Server settings
+    // MCP Server settings - for connecting to remote browser (optional)
     connectOptions: process.env.PLAYWRIGHT_MCP_SERVER
       ? {
           wsEndpoint: process.env.PLAYWRIGHT_MCP_SERVER,
@@ -77,15 +78,16 @@ export default defineConfig({
       dependencies: ["chromium"],
     },
 
-    // Docker MCP Remote execution (if available)
+    // Remote browser via MCP server (when PLAYWRIGHT_MCP_SERVER is set)
     ...(process.env.PLAYWRIGHT_MCP_SERVER
       ? [
           {
-            name: "docker-mcp-chromium",
+            name: "remote-mcp-chromium",
             use: {
               ...devices["Desktop Chrome"],
               connectOptions: {
                 wsEndpoint: process.env.PLAYWRIGHT_MCP_SERVER,
+                timeout: 30000,
               },
             },
           },
@@ -93,12 +95,6 @@ export default defineConfig({
       : []),
   ],
   outputDir: "test-results/",
-  webServer: process.env.COVERAGE === "1"
-    ? {
-        command: "pnpm dev",
-        url: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:4000",
-        reuseExistingServer: !process.env.CI,
-        timeout: 120000,
-      }
-    : undefined,
+  /* webServer disabled for MCP-based testing against production */
+  webServer: undefined,
 });

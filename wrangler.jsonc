@@ -63,14 +63,41 @@
       "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
     }
   ],
-  "send_email": [{ "name": "EMAIL" }],
-  "r2_buckets": [
-    { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
-    { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
-    { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
-    { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
   ],
-
+  "r2_buckets": [
+    {
+      "binding": "ASSETS_BUCKET",
+      "bucket_name": "cloudless-assets"
+    },
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "app-media-bucket"
+    },
+    {
+      "binding": "ANALYTICS_BUCKET",
+      "bucket_name": "cloudless-analytics"
+    },
+    {
+      "binding": "DATALAKE_BUCKET",
+      "bucket_name": "datalake-bucket"
+    }
+  ],
+  "services": [
+    {
+      "binding": "CHAT",
+      "service": "cloudless-chat",
+      "entrypoint": "ChatAgent"
+    },
+    {
+      "binding": "ADMIN_API",
+      "service": "cloudless-admin-api",
+      "entrypoint": "AdminApi"
+    }
+  ],
   "env": {
     "staging": {
       "name": "cloudless-gr-staging",
@@ -82,10 +109,22 @@
         }
       ],
       "r2_buckets": [
-        { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets-preview" },
-        { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket-preview" },
-        { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics-preview" },
-        { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket-preview" }
+        {
+          "binding": "ASSETS_BUCKET",
+          "bucket_name": "cloudless-assets-preview"
+        },
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "app-media-bucket-preview"
+        },
+        {
+          "binding": "ANALYTICS_BUCKET",
+          "bucket_name": "cloudless-analytics-preview"
+        },
+        {
+          "binding": "DATALAKE_BUCKET",
+          "bucket_name": "datalake-bucket-preview"
+        }
       ],
       "vars": {
         "ENVIRONMENT": "staging",
@@ -101,14 +140,25 @@
         }
       ],
       "r2_buckets": [
-        { "binding": "ASSETS_BUCKET", "bucket_name": "cloudless-assets" },
-        { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
-        { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
-        { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
+        {
+          "binding": "ASSETS_BUCKET",
+          "bucket_name": "cloudless-assets"
+        },
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "app-media-bucket"
+        },
+        {
+          "binding": "ANALYTICS_BUCKET",
+          "bucket_name": "cloudless-analytics"
+        },
+        {
+          "binding": "DATALAKE_BUCKET",
+          "bucket_name": "datalake-bucket"
+        }
       ]
     }
   },
-
   "vars": {
     "AGENT_AUTH_TOKEN": "placeholder-override-in-production",
     "SESSION_SECRET": "${SESSION_SECRET}"

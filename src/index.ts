@@ -30,6 +30,74 @@ const CHAT_PATH_PREFIX = "/api/chat";
 const LOCALES = ["en", "el", "fr", "de"];
 
 // ---------------------------------------------------------------------------
+// Security headers for all responses
+// ---------------------------------------------------------------------------
+
+function addSecurityHeaders(headers: Headers): void {
+  headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set(
+    "Permissions-Policy",
+    [
+      "accelerometer=()",
+      "autoplay=(self)",
+      "camera=()",
+      "display-capture=()",
+      "encrypted-media=()",
+      "fullscreen=(self)",
+      "geolocation=()",
+      "gyroscope=()",
+      "hid=()",
+      "idle-detection=()",
+      "magnetometer=()",
+      "microphone=()",
+      "midi=()",
+      "payment=(self)",
+      "picture-in-picture=()",
+      "publickey-credentials-get=(self)",
+      "screen-wake-lock=()",
+      "serial=()",
+      "usb=()",
+      "web-share=(self)",
+      "xr-spatial-tracking=()",
+    ].join(", "),
+  );
+  // Report-To header for CSP endpoint group
+  headers.set(
+    "Report-To",
+    JSON.stringify({
+      group: "csp-endpoint",
+      max_age: 86400,
+      endpoints: [{ url: "/api/csp-report" }],
+      include_subdomains: true,
+    }),
+  );
+  // CSP header - must include all expected directives for tests
+  headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
+      "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
+      "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
+      "worker-src 'self' blob:",
+      "media-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https://www.facebook.com https://connect.facebook.net",
+      "frame-ancestors 'none'",
+      "report-uri /api/csp-report",
+      "report-to csp-endpoint",
+    ].join("; "),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Locale cascade fix: handle /en/en/en/... paths and redirect properly
 // ---------------------------------------------------------------------------
 
@@ -171,6 +239,43 @@ async function handleServerCounterRoute(request: Request, env: Env): Promise<Res
 }
 
 // ---------------------------------------------------------------------------
+// CSP Report Endpoint
+// ---------------------------------------------------------------------------
+
+async function handleCspReport(request: Request): Promise<Response> {
+  let payload: unknown;
+  try {
+    payload = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return new Response(null, { status: 204 });
+  }
+
+  // Handle modern Reporting-API payload (array format)
+  if (Array.isArray(payload)) {
+    for (const entry of payload) {
+      if (entry?.type === "csp-violation") {
+        const b = (entry.body as Record<string, unknown>) ?? {};
+        console.warn(
+          `[csp-violation] dir=${b.effectiveDirective || b["violated-directive"] || "?"} ` +
+          `blocked=${b.blockedURL || b["blocked-uri"] || "?"} ` +
+          `doc=${b.documentURL || b["document-uri"] || "?"} ` +
+          `disp=${b.disposition || "?"}`,
+        );
+      }
+    }
+  } else if (payload && typeof payload === "object" && "csp-report" in payload) {
+    // Handle legacy CSP-report format
+    const r = ((payload as Record<string, unknown>)["csp-report"] as Record<string, unknown>) ?? {};
+    console.warn(
+      `[csp-violation] dir=${r["effective-directive"] || r["violated-directive"] || "?"} ` +
+      `blocked=${r["blocked-uri"] || "?"} doc=${r["document-uri"] || "?"} disp=${r.disposition || "?"}`,
+    );
+  }
+
+  return new Response(null, { status: 204 });
+}
+
+// ---------------------------------------------------------------------------
 // Chat service routing - delegates to cloudless-gr-chat via service binding
 // ---------------------------------------------------------------------------
 
@@ -188,7 +293,7 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
       chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
     };
     const stream = await chatStub.chatStream(body.messages || [], headers);
-    return new Response(stream, {
+    const response = new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
@@ -196,13 +301,19 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
         "X-Accel-Buffering": "no",
       },
     });
+    addSecurityHeaders(response.headers);
+    return response;
   } catch (err) {
     // If stream fails, try regular fetch as fallback
     if (err instanceof Error && err.message.includes("Rate limit")) {
-      return Response.json({ error: err.message }, { status: 429 });
+      const response = Response.json({ error: err.message }, { status: 429 });
+      addSecurityHeaders(response.headers);
+      return response;
     }
     // Fall back to ASSETS fetch for Next.js route
-    return env.ASSETS.fetch(request);
+    const response = await env.ASSETS.fetch(request);
+    addSecurityHeaders(response.headers);
+    return response;
   }
 }
 
@@ -220,9 +331,19 @@ const worker = {
     const isDefaultAgentRoute = url.pathname.startsWith(DEFAULT_AGENT_PATH_PREFIX + "/");
     const isServerCounterRoute = url.pathname.startsWith(SERVER_COUNTER_PREFIX + "/");
     const isChatRoute = url.pathname.startsWith(CHAT_PATH_PREFIX + "/") || url.pathname === CHAT_PATH_PREFIX;
+    const isCspReport = url.pathname === "/api/csp-report" && request.method === "POST";
 
     if ((isCustomAgentRoute || isServerCounterRoute) && !isAuthorized(request, env)) {
-      return unauthorized();
+      const response = unauthorized();
+      addSecurityHeaders(response.headers);
+      return response;
+    }
+
+    // CSP report endpoint
+    if (isCspReport) {
+      const response = await handleCspReport(request);
+      addSecurityHeaders(response.headers);
+      return response;
     }
 
     // Route chat to dedicated service worker via RPC binding
@@ -231,11 +352,13 @@ const worker = {
     }
 
     if (isServerCounterRoute) {
-      return handleServerCounterRoute(request, env);
+      const response = await handleServerCounterRoute(request, env);
+      addSecurityHeaders(response.headers);
+      return response;
     }
 
     if (isDefaultAgentRoute) {
-      return Response.json(
+      const response = Response.json(
         {
           ok: false,
           error: "Use custom Agent path prefix",
@@ -245,16 +368,22 @@ const worker = {
           status: 404,
         }
       );
+      addSecurityHeaders(response.headers);
+      return response;
     }
 
     const routedRequest = rewriteAgentPrefix(request);
     const agentResponse = await routeAgentRequest(routedRequest, env);
 
     if (agentResponse) {
+      addSecurityHeaders(agentResponse.headers);
       return agentResponse;
     }
 
-    return env.ASSETS.fetch(request);
+    // Fallback to ASSETS fetch for all other requests
+    const response = await env.ASSETS.fetch(request);
+    addSecurityHeaders(response.headers);
+    return response;
   },
 };
 

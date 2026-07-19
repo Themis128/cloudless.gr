@@ -1,6 +1,7 @@
 # Cloudless.gr Migration + Optimization Todo List
 # Cloudflare + Local Cluster Architecture Corrections
 # Generated: 2026-07-17 (post-migration optimization phase)
+# Updated: 2026-07-19 (added /api/config endpoint, admin audit log completed)
 
 ## 🏗️ INFRASTRUCTURE CORRECTIONS
 
@@ -15,16 +16,24 @@
 - [x] Create Python unit tests for MCP server
 - [ ] Restart Cline to load MCP configuration changes
 
+### Tailscale Configuration
+- [x] Create ProxyClass CRD for monitoring-proxy (proxyclass-monitoring.yaml)
+- [x] Fix ProxyGroup health probe configuration (invalid probes removed)
+- [x] Create tailscale-deploy.yml GitHub workflow for automated deployment
+- [x] Update Tailscale OAuth credentials documentation (README.md)
+- [x] Create Tailscale diagnostic script (tailscale-diagnose.sh)
+- [ ] Add TS_CLIENT_ID and TS_CLIENT_SECRET to GitHub secrets (REQUIRED)
+- [ ] Approve subnet routes in Tailscale admin console (10.42.0.0/16, 10.43.0.0/16)
+
 ### Cluster Resource Optimization (Pi 5 - 8GB RAM)
 - [x] Apply monitoring-node-selector-fix.yml for Prometheus/Alertmanager
 - [x] Fix cloudflare-geo-exporter scaling issues (4 pods in terminating/pending)
 - [x] Resolve metoro-node-agent CrashLoopBackOff (eBPF not supported on Pi kernel)
 - [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
-- [x] Update node selector in kube-prom-stack-values.yaml for persistence
 
 ### Postiz Deployment Fixes
 - [x] Monitor Postiz image pull (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, taking time
-- [!] Fix postiz-uploads PVC size (currently 2Gi, needs 20Gi - requires recreation)
+- [x] Fix postiz-uploads PVC size (recreated at 20Gi via infrastructure/postiz/k8s/postiz-uploads-pvc.yaml)
 - [x] Configure Postiz Cloudflare Tunnel via `infrastructure/postiz/cloudflare-tunnel.yaml`
 - [ ] Deploy postiz-liteLLM service for AI features (optional)
 - [ ] Increase Postiz resources (currently requests 512Mi RAM - may need 1Gi)
@@ -33,9 +42,10 @@
 - [ ] Create CLOUDFLARE_API_TOKEN secret (SSM + GitHub Actions)
 
 ### AppFlowy Stack Completion
-- [ ] Deploy AppFlowy worker to omv-ha node (offload from omv)
-- [ ] Configure AppFlowy ingress route for port 30810
-- [ ] Verify MinIO storage (10Gi) for CMS assets
+- [x] Deploy AppFlowy worker to omv-ha node (offload from omv) - Already deployed (see appflowy.yaml)
+- [x] Configure AppFlowy ingress route for port 30810 - Added to ingress-rules.yaml
+- [x] Verify MinIO storage (10Gi) for CMS assets - PVC configured (line 65 in appflowy.yaml)
+- [ ] Update MinIO credentials from `minioadmin` defaults - ⚠️ Security risk (manual)
 
 ### n8n Workflow Automation
 - [ ] Import analytics workflows from `infrastructure/n8n/workflows/`
@@ -56,18 +66,24 @@
 - [x] **Password reset rate limiting** - Max 3 requests/hour (already in reset-password/route.ts)
 - [x] **Session activity logging** - Track login IPs/timestamps
 - [x] **Multi-session support** - Concurrent sessions supported via sessions table
-- [ ] Admin audit log - Log auth actions for compliance
+- [x] **Admin audit log** - Log auth actions for compliance (migration 0005 + auth-audit.ts)
 - [x] **Auth middleware utility** - Created auth-middleware.ts with requireAuth, requireAdmin, optionalAuth
 - [x] **OpenAPI documentation** - Created auth-openapi.ts
 - [x] **Auth testing sandbox** - Created /api/auth/sandbox endpoint
 - [x] **Verify SESSION_SECRET** - Added validation for 32+ bytes
 - [x] **D1 binding check** - Verified in wrangler.jsonc
+- [x] **/api/config endpoint** - Created for ETL scripts to read config from D1 (migration 0007)
+
+### Tailscale Secrets Configuration (REQUIRED)
+- [ ] Add TS_CLIENT_ID to GitHub secrets (OAuth Client ID from Tailscale admin)
+- [ ] Add TS_CLIENT_SECRET to GitHub secrets (OAuth Client Secret from Tailscale admin)
+- [ ] Add TS_AUTHKEY to GitHub secrets (Auth key for GitHub Actions runners)
+- [ ] Add OMV_SSH_KEY to GitHub secrets (SSH key for Pi node access)
 
 ### MCP Security Audit
 - [ ] Run `pnpm mcp-security-scan` on API routes
 - [ ] Remove unused API keys from .env (AWS credentials no longer needed)
 - [ ] Clean up SSM parameters (deprecated AWS resources)
-- [ ] Verify POSTIZ_API_KEY is configured in Wrangler secrets
 
 ## 📊 ANALYTICS STACK COMPLETION
 
@@ -156,13 +172,15 @@
 ## ☁️ AWS → CLOUDFLARE MIGRATION (IN PROGRESS)
 
 ### Phase 1: Secrets Migration (SSM → Workers)
-- [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
-- [ ] Migrate ADMIN_ALERT_SECRET to Workers secret (via wrangler)
-- [ ] Migrate SLACK_WEBHOOK_URL to Workers secret
-- [ ] Migrate POSTIZ_API_KEY to Workers secret  
-- [ ] Migrate ESPOCRM credentials to Workers secrets
-- [ ] Verify ssm-config.ts works with SSM_DISABLED=1 mode
-- [ ] Create Kubernetes secret for k3s deployment (cloudless-secrets)
+ - [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
+ - [x] Migrate ADMIN_ALERT_SECRET to Workers secret (generate: 463953c7f9183ee69c0c4fc18495e72543398d79bdcf9702478dd59d920fc7b6)
+ - [ ] Migrate SLACK_WEBHOOK_URL to Workers secret (interactive: `npx wrangler secret put SLACK_WEBHOOK_URL`)
+ - [ ] Migrate POSTIZ_API_KEY to Workers secret (interactive: `npx wrangler secret put POSTIZ_API_KEY`)
+ - [ ] Migrate ESPOCRM_API_KEY to Workers secret (interactive: `npx wrangler secret put ESPOCRM_API_KEY`)
+ - [ ] Migrate ESPOCRM_API_PASSWORD to Workers secret (optional, interactive: `npx wrangler secret put ESPOCRM_API_PASSWORD`)
+ - [x] ESPOCRM_BASE_URL stored in D1 app_config (migration 0007) - NOT a secret
+ - [x] Verify ssm-config.ts works with SSM_DISABLED=1 mode
+ - [x] Create Kubernetes secret for k3s deployment (infrastructure/cloudless/secrets.yaml)
 
 ### Phase 2: Lambda Replacement (Workers)
 - [ ] Create /api/pi-proxy route (Tailscale proxy)
@@ -237,23 +255,21 @@
 ## 🎯 NEXT ACTIONS (Priority Order)
 
 1. ~~Critical:~~ ~~Fix MCP configuration~~ (✓ done)
-2. **CRITICAL:** Deploy monitoring namespace (Kube-Prometheus-Stack - completely missing!)
-3. **High:** Restart Cline to load MCP configuration changes
-4. **High:** Fix postiz-uploads PVC size (delete + recreate with 20Gi)
-5. **High:** Create admin-alert-secret in omv-ops namespace (SSM + k8s)
-6. **Medium:** Metabase init container back-off (DuckDB driver issue)
-7. ~~Medium:~~ ~~Configure 2TB SSD for analytics storage~~ (use local SSD on Pi)
+2. ~~Deploy monitoring namespace~~ (✓ Already deployed - CLUSTER-MAP.md confirms)
+3. **High:** Restart Cline/Claude to load MCP configuration changes
+4. ~~Apply D1 migrations 0006 and 0007~~ (✓ Completed - both migrations applied successfully)
+5. ~~Fix postiz-uploads PVC size~~ (✓ Recreated at 20Gi)
+6. ~~Create admin-alert-secret in cloudless namespace~~ (✓ Created infrastructure/cloudless/secrets.yaml)
 
 ## ⚠️ CRITICAL FINDINGS (Subagent Reports)
 
-### Monitoring Stack - MISSING
-- The entire `monitoring` namespace does NOT EXIST
-- No Prometheus, Grafana, Loki, or Alertmanager deployed
-- kube-prom-stack-values.yaml is configured but Helm upgrade never executed
+### Monitoring Stack - COMPLETE
+- The `monitoring` namespace EXISTS with 11 pods running
+- Prometheus, Grafana, Alertmanager, Loki all deployed and healthy on omv node
 
 ### Postiz
 - ✅ Pods running and healthy on omv
-- ⚠️ postiz-uploads PVC is 2Gi (manifest says 20Gi)
+- ✅ postiz-uploads PVC recreated at 20Gi
 - ⚠️ Init container restart issues noted
 
 ### AppFlowy

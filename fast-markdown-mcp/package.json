@@ -1,0 +1,23 @@
+{
+  "name": "fast-markdown-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for reading and searching markdown files in DevDocs storage",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "fast-markdown-mcp": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "node --loader ts-node/esm src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.15.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

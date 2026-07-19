@@ -1,0 +1,11 @@
+# Cloudless main application namespace
+# Used when SSM_DISABLED=1 (local secrets instead of AWS SSM)
+#
+# Apply: kubectl apply -f infrastructure/cloudless/namespace.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudless
+  labels:
+    name: cloudless

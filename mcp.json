@@ -1,19 +1,33 @@
 {
   "mcpServers": {
-    "cloudless-infra": {
+    "fast-markdown": {
       "command": "npx",
-      "args": [
-        "tsx",
-        "tools/ssh-mcp/src/index.ts"
-      ],
+      "args": ["tsx", "fast-markdown-mcp/src/index.ts"],
       "env": {
-        "OMV_SSH_HOST_TAILSCALE": "100.113.41.119",
-        "OMV_SSH_HA_HOST_TAILSCALE": "100.111.222.92",
-        "OMV_SSH_USER": "tbaltzakis",
-        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
-        "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}",
-        "OMV_SSH_PASSPHRASE": "${OMV_SSH_PASSPHRASE}"
-      }
+        "DEVDOCS_STORAGE_PATH": "${DEVDOCS_STORAGE_PATH:-/home/tbaltzakis/DevDocs/storage/markdown}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "list_files",
+        "read_file",
+        "search_files",
+        "get_toc"
+      ]
+    },
+    "cloudflare-pages": {
+      "command": "npx",
+      "args": ["tsx", "cloudflare-pages-mcp/src/index.ts"],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
+        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
+      },
+      "autoStart": false,
+      "alwaysAllow": [
+        "pages_list_projects",
+        "pages_get_project",
+        "pages_list_deployments",
+        "pages_get_deployment_logs"
+      ]
     },
     "playwright": {
       "command": "npx",
@@ -24,18 +38,6 @@
       "env": {
         "PLAYWRIGHT_HEADLESS": "true"
       }
-    },
-    "cloudflare-pages": {
-      "command": "npx",
-      "args": [
-        "tsx",
-        "cloudflare-pages-mcp/src/index.ts"
-      ],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
-      },
-      "autoStart": false
     },
     "cloudflare": {
       "command": "npx",

@@ -50,13 +50,10 @@ test.describe("Admin APIs unauthenticated", () => {
 });
 
 test.describe("Admin APIs authenticated", () => {
-  test.use({ storageState: STORAGE });
+  // Skip entire describe block if no valid auth credentials
+  test.skip(!hasRealAuth(), "Skipping authenticated admin APIs (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)");
 
-  test.beforeEach(({}, testInfo) => {
-    if (!hasRealAuth()) {
-      testInfo.skip(true, "Skipping authenticated admin APIs (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)");
-    }
-  });
+  test.use({ storageState: STORAGE });
 
   for (const api of ALL_ADMIN_APIS) {
     test(`auth GET ${api} — non-5xx`, async ({ request }) => {

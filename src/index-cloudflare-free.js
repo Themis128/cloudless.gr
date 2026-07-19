@@ -8,16 +8,34 @@
 const SESSION_EXPIRY_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const RESET_TOKEN_EXPIRY_SECONDS = 60 * 60 * 24; // 24 hours
 
+// PBKDF2 password hashing (WebCrypto compatible) - ~100k iterations for security
 async function hashPassword(password, secret) {
+  const encoder = new TextEncoder();
+  const salt = encoder.encode(secret.slice(0, 16).padEnd(16, "0"));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  const hashBuffer = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    256
+  );
+  const hash = new Uint8Array(hashBuffer);
+  return Array.from(hash).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Legacy SHA-256 verification for backward compatibility during migration
+async function verifyLegacyPassword(password, secret, expectedHash) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + secret);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hash = new Uint8Array(hashBuffer);
-  const hex = [];
-  for (let i = 0; i < hash.length; i++) {
-    hex.push(("00" + hash[i].toString(16)).slice(-2));
-  }
-  return hex.join("");
+  const hex = Array.from(hash).map(b => b.toString(16).padStart(2, "0")).join("");
+  return hex === expectedHash;
 }
 
 function corsHeaders(origin) {
@@ -633,13 +651,18 @@ export default {
         return jsonResponse({ error: "Invalid request body" }, 400);
       }
 
-      const { name, email, company, service, message, phone } = parsed;
+       const { name, email, company, service, message, phone } = parsed;
 
-      if (!name || !email || !message) {
-        return jsonResponse({ error: "Name, email, and message are required" }, 400);
-      }
+       if (!name || !email || !message) {
+         return jsonResponse({ error: "Name, email, and message are required" }, 400);
+       }
 
-      const now = Math.floor(Date.now() / 1000);
+       // Validate email format (same regex as Next.js validation)
+       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+         return jsonResponse({ error: "Invalid email address" }, 400);
+       }
+
+       const now = Math.floor(Date.now() / 1000);
 
       // Log to admin_notifications D1 table
       try {
@@ -724,7 +747,7 @@ export default {
       const { email } = parsed;
 
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return jsonResponse({ error: "Valid email required" }, 400);
+        return jsonResponse({ error: "Invalid email address" }, 400);
       }
 
       const now = Math.floor(Date.now() / 1000);
@@ -815,6 +838,10 @@ export default {
       }
 
       const { items = [], successUrl, cancelUrl } = parsed;
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return jsonResponse({ error: "No items in cart" }, 400);
+      }
 
       if (!env.STRIPE_SECRET_KEY) {
         return jsonResponse({ error: "Checkout not configured" }, 503);

@@ -312,3 +312,5 @@ cloudless.gr / www.cloudless.gr
 | `workers/cloudless-failover/` | Workers fallback |
 | `k8s/cloudless-app-optimized.yaml` | Pi k3s deployment |
 | `k8s/search/meilisearch.yaml` | R21 search backend (4Gi PVC on OMV-MAIN SSD) |
+| `fly.toml` | Fly.io proxy configuration (external HA failover backup) |
+| `fly-proxy-app/` | Fly.io HA proxy implementation |

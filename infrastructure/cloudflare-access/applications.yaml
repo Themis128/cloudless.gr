@@ -1,0 +1,182 @@
+# Cloudflare Access Applications Configuration
+# Replaces Tailscale for secure remote access
+# Use with Terraform or manual creation in Cloudflare Zero Trust Dashboard
+
+# ==============================================================================
+# Application Configurations
+# ==============================================================================
+
+# --- Grafana Monitoring Dashboard ---
+grafana:
+  name: "Grafana Monitoring"
+  domain: "grafana.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "24h"
+  auto_redirect_https: true
+  http_only: false
+  logo_url: "https://grafana.com/static/assets/logo.png"
+  policies:
+    - name: "Admin Access Only"
+      decision: "allow"
+      include:
+        - email:
+          - "themisbaltzakis@gmail.com"
+        - email_domain:
+          - "baltzakis-themis.workers.dev"
+      exclude: []
+      require: []
+
+# --- n8n Workflow Automation ---
+n8n:
+  name: "n8n Workflows"
+  domain: "n8n.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "24h"
+  auto_redirect_https: true
+  http_only: false
+  policies:
+    - name: "Authenticated Users"
+      decision: "allow"
+      include:
+        - email_domain:
+          - "baltzakis-themis.workers.dev"
+        - email:
+          - "themisbaltzakis@gmail.com"
+
+# --- AppFlowy CMS ---
+appflowy:
+  name: "AppFlowy CMS"
+  domain: "appflowy.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "24h"
+  auto_redirect_https: true
+  http_only: false
+  policies:
+    - name: "Authenticated Users"
+      decision: "allow"
+      include:
+        - email_domain:
+          - "baltzakis-themis.workers.dev"
+        - email:
+          - "themisbaltzakis@gmail.com"
+
+# --- Postiz Social Publisher ---
+postiz:
+  name: "Postiz Publishing"
+  domain: "postiz.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "24h"
+  auto_redirect_https: true
+  http_only: false
+  policies:
+    - name: "Authenticated Users"
+      decision: "allow"
+      include:
+        - email_domain:
+          - "baltzakis-themis.workers.dev"
+        - email:
+          - "themisbaltzakis@gmail.com"
+
+# --- omv Web UI ---
+omv:
+  name: "OMV Admin"
+  domain: "omv.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "1h"
+  auto_redirect_https: true
+  http_only: false
+  policies:
+    - name: "Admin Only"
+      decision: "allow"
+      include:
+        - email:
+          - "themisbaltzakis@gmail.com"
+
+# --- Documentation Portal ---
+docs:
+  name: "Cloudless Docs"
+  domain: "docs.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "24h"
+  auto_redirect_https: true
+  http_only: false
+  policies:
+    - name: "Authenticated Users"
+      decision: "allow"
+      include:
+        - email_domain:
+          - "baltzakis-themis.workers.dev"
+
+# --- Meilisearch ---
+meilisearch:
+  name: "Search API"
+  domain: "meili.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "1h"
+  auto_redirect_https: true
+  http_only: false
+  policies:
+    - name: "Internal Services Only"
+      decision: "allow"
+      include:
+        - email_domain:
+          - "baltzakis-themis.workers.dev"
+
+# --- Uptime Kuma ---
+kuma:
+  name: "Uptime Monitoring"
+  domain: "kuma.cloudless.gr"
+  type: "self_hosted"
+  session_duration: "24h"
+  auto_redirect_https: true
+  http_only: false
+  policies:
+    - name: "Admin Access Only"
+      decision: "allow"
+      include:
+        - email:
+          - "themisbaltzakis@gmail.com"
+
+# ==============================================================================
+# Terraform Configuration Template
+# ==============================================================================
+
+terraform:
+  cloudflare_zone_id: "${CLOUDFLARE_ZONE_ID}"  # Get from Cloudflare dashboard
+  
+  # Access Groups
+  access_groups:
+    - name: "admins"
+      description: "Admin users with full access"
+      include:
+        - email:
+          - "themisbaltzakis@gmail.com"
+    
+    - name: "authenticated"
+      description: "All authenticated users"
+      include:
+        - email_domain:
+          - "baltzakis-themis.workers.dev"
+
+# ==============================================================================
+# Setup Instructions
+# ==============================================================================
+
+# Manual Setup:
+# 1. Go to https://dash.teams.cloudflare.com
+# 2. Navigate to Access → Applications → Add an application
+# 3. For each service above:
+#    - Select "Self-hosted" application type
+#    - Enter the domain (e.g., grafana.cloudless.gr)
+#    - Choose Identity Provider (GitHub recommended)
+#    - Configure session duration
+#    - Add policy with appropriate access group
+
+# GitHub OIDC Setup:
+# 1. In Cloudflare Zero Trust → Settings → Identity Providers
+# 2. Add GitHub as identity provider
+# 3. Configure OAuth app in GitHub with callback URL:
+#    - https://cloudflareaccess.com/cdn-cgi/access/callback
+
+# Test Access:
+# curl -I https://grafana.cloudless.gr  # Should return 403 before login

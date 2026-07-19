@@ -15,6 +15,9 @@
 - [x] Create Python unit tests for MCP server
 - [ ] Restart Cline to load MCP configuration changes
 
+### ETL Migration (SSM → D1)
+- [x] Migrate clients-to-r2.mjs to use D1 instead of SSM for config
+
 ### Cluster Resource Optimization (Pi 5 - 8GB RAM)
 - [x] Apply monitoring-node-selector-fix.yml for Prometheus/Alertmanager
 - [x] Fix cloudflare-geo-exporter scaling issues (4 pods in terminating/pending)
@@ -67,7 +70,7 @@
 - [ ] Run `pnpm mcp-security-scan` on API routes
 - [ ] Remove unused API keys from .env (AWS credentials no longer needed)
 - [ ] Clean up SSM parameters (deprecated AWS resources)
-- [ ] Verify POSTIZ_API_KEY is configured in Wrangler secrets
+- [ ] Verify POSTIZ_API_KEY, SLACK_WEBHOOK_URL are configured in Wrangler secrets
 
 ## 📊 ANALYTICS STACK COMPLETION
 

@@ -6,7 +6,6 @@
  */
 
 import { CognitoIdentityProviderClient, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetReader, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync, writeFileSync, mkdtempSync, rmSync } from "fs";
@@ -16,9 +15,9 @@ import { getS3Client, BUCKET } from "./_r2-config.mjs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID || "us-east-1_1Bq3Mpqer";
+const AUTH_DB_URL = process.env.AUTH_DB_URL || "http://localhost:8787/api/config";
 
 const cognito = new CognitoIdentityProviderClient({ region: REGION });
-const ssm = new SSMClient({ region: REGION });
 // R2 S3-compatible client (uses shared config helper)
 const s3 = getS3Client();
 const TMP = "/tmp/clients.parquet";
@@ -72,12 +71,27 @@ async function listCognitoUsers() {
 	return users;
 }
 
-async function loadSSMJson(key) {
+async function loadConfigFromD1(key) {
+	// Map SSM keys to D1 config keys
+	const keyMap = {
+		"/cloudless/PENDING_CLIENTS_JSON": "pending_clients",
+		"/cloudless/CLIENT_PORTALS_JSON": "client_portals",
+	};
+
+	const configKey = keyMap[key] || key.replace("/cloudless/", "");
+
 	try {
-		const res = await ssm.send(new GetParameterCommand({ Name: key }));
-		return JSON.parse(res.Parameter?.Value || "[]");
+		const res = await fetch(`${AUTH_DB_URL}?key=${encodeURIComponent(configKey)}`);
+		if (!res.ok) {
+			// Fallback to env var if D1 endpoint fails (for CI/testing)
+			const envData = process.env[configKey.toUpperCase().replace(/-/g, "_")];
+			if (envData) return JSON.parse(envData);
+			return [];
+		}
+		const json = await res.json();
+		return json.value ? JSON.parse(json.value) : [];
 	} catch (err) {
-		console.warn(`[etl/clients] SSM ${key} unavailable:`, err?.name || err?.message || "unknown");
+		console.warn(`[etl/clients] D1 config ${key} unavailable:`, err?.name || err?.message || "unknown");
 		return [];
 	}
 }
@@ -111,11 +125,11 @@ async function main() {
 	console.log(`  ${cognitoUsers.length} users`);
 
 	console.log("Loading pending clients...");
-	const pending = await loadSSMJson("/cloudless/PENDING_CLIENTS_JSON");
+	const pending = await loadConfigFromD1("/cloudless/PENDING_CLIENTS_JSON");
 	const pendingMap = new Map(pending.map(p => [p.email?.toLowerCase(), p]));
 
 	console.log("Loading portals...");
-	const portals = await loadSSMJson("/cloudless/CLIENT_PORTALS_JSON");
+	const portals = await loadConfigFromD1("/cloudless/CLIENT_PORTALS_JSON");
 	const portalMap = new Map(portals.map(p => [p.clientEmail?.toLowerCase(), p]));
 
 	console.log("Loading ML scores...");

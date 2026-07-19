@@ -1,16 +1,16 @@
 name: Deploy Tailscale Operator
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'infrastructure/tailscale/**'
   workflow_dispatch:
     inputs:
       namespace:
         description: 'Namespace to deploy to'
         required: false
         default: 'tailscale-operator'
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/tailscale/**'
 
 permissions:
   contents: read

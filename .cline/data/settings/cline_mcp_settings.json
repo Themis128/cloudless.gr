@@ -1,5 +1,19 @@
 {
   "mcpServers": {
+    "fast-markdown": {
+      "command": "npx",
+      "args": ["tsx", "fast-markdown-mcp/src/index.ts"],
+      "env": {
+        "DEVDOCS_STORAGE_PATH": "${DEVDOCS_STORAGE_PATH:-/home/tbaltzakis/DevDocs/storage/markdown}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "list_files",
+        "read_file",
+        "search_files",
+        "get_toc"
+      ]
+    },
     "cloudflare-pages": {
       "command": "npx",
       "args": ["tsx", "cloudflare-pages-mcp/src/index.ts"],

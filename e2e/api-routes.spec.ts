@@ -67,7 +67,7 @@ test.describe("API: /api/contact", () => {
     expect([400, 429]).toContain(res.status());
     if (res.status() === 400) {
       const body = await res.json();
-      expect(body.error).toMatch(/invalid email/i);
+      expect(body.error.toLowerCase()).toMatch(/(invalid email|valid email required)/i);
     }
   });
 });

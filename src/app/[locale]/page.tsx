@@ -70,6 +70,23 @@ export async function generateMetadata({
         "x-default": "https://cloudless.gr/en",
       },
     },
+    openGraph: {
+      title: meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing",
+      description:
+        meta?.home?.description ??
+        "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+      url: canonical,
+      siteName: "Cloudless",
+      locale: `${locale}_US`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing",
+      description:
+        meta?.home?.description ??
+        "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
+    },
   };
 }
 

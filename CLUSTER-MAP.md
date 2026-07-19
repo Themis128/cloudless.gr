@@ -118,14 +118,45 @@
 | monitoring | kube-prom-kube-state-metrics | 1/1 ready | Running on omv |
 | monitoring | kube-prom-operator | 1/1 ready | Running on omv |
 | monitoring | kube-prom-node-exporter | 2/2 ready | Running on both nodes |
+| monitoring | blackbox-exporter | 1/1 ready | Running on omv |
+| monitoring | promtail | 1/1 ready | Running on omv |
+| monitoring | loki | 1/1 ready | Running on omv |
+
+## AppFlowy Status
+
+| Namespace | Workload | Status | Node | Notes |
+|-----------|----------|--------|------|-------|
+| appflowy | appflowy-worker | 1/1 | omv-ha | ✅ Already offloaded to omv-ha |
+| appflowy | admin-frontend | 1/1 | omv | |
+| appflowy | appflowy-cloud | 1/1 | omv | |
+| appflowy | appflowy-web | 1/1 | omv | |
+| appflowy | gotrue | 1/1 | omv | |
+| appflowy | minio | 1/1 | omv | 10Gi PVC |
+| appflowy | nginx | 1/1 | omv | |
+| appflowy | postgres | 1/1 | omv | 20Gi PVC |
+| appflowy | redis | 1/1 | omv | |
+
+## Postiz Status
+
+| Namespace | Workload | Status | PVC Size | Notes |
+|-----------|----------|--------|----------|-------|
+| postiz | postiz-app | 1/1 | - | Port 30500 (NodePort) |
+| postiz | postiz-postgres | 1/1 | 2Gi | |
+| postiz | postiz-redis | 1/1 | 512Mi | |
+| postiz | postiz-uploads | 1/1 | 20Gi | ✅ Already updated from 2Gi |
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
 | **Nodes** | 2 (omv, omv-ha) |
-| **Running Pods** | 28 (in monitoring, appflowy, espocrm, n8n, analytics, database namespaces) |
-| **Helm Releases** | kube-prom (monitoring: deployed) |
+| **Running Pods** | 31 (all healthy) |
+| **Helm Releases** | kube-prom (monitoring: deployed), loki, promtail, tailscale-operator, traefik, postiz |
+
+## Cleanup Actions (2026-07-19)
+
+- ✅ Removed orphaned `duckdb-pv` (released, unbound)
+- ✅ Removed orphaned `database/postgres-data` PVC (WaitForFirstConsumer, no consumer)
 
 ## Changes Made
 

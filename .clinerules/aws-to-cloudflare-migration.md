@@ -27,12 +27,16 @@ This document tracks the migration of all AWS services to Cloudflare equivalents
 - **Note**: Deprecated - use `espocrm-to-r2.mjs` instead
 
 ### scripts/etl/clients-to-lake.mjs
-- Uses SSMClient for `PENDING_CLIENTS_JSON` and `CLIENT_PORTALS_JSON`
-- Uses S3Client for S3
-- **Status**: Pending migration (SSM → D1)
+- Uses SSMClient for `PENDING_CLIENTS_JSON` and `CLIENT_PORTALS_JSON` (legacy)
+- Uses S3Client for S3 (legacy)
+- **Status**: ⏳ Migrated to clients-to-r2.mjs (uses D1 via `/api/config` endpoint)
+
+### scripts/etl/clients-to-r2.mjs ✅ COMPLETE
+- Migrated SSM → D1 for config access (`loadConfigFromD1()` function)
+- Uses `getS3Client()` for R2-compatible storage
+- **Status**: Ready for deployment after `/api/config` endpoint is available
 
 ### scripts/etl/linkedin-ads-to-lake.mjs ✅ COMPLETE
-- Migrated in commit `e27470e3` - uses `getS3Client()` and `LINKEDIN_ACCESS_TOKEN` from env
 
 ### scripts/etl/postiz-to-lake.mjs ✅ COMPLETE
 - Migrated in commit `af41adec` - uses `getS3Client()` and `POSTIZ_API_KEY` from env
