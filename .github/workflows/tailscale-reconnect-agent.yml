@@ -36,10 +36,10 @@ jobs:
 
       - name: Check required secrets
         run: |
-          if [ -z "${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" ] || [ -z "${{ secrets.TAILSCALE_OAUTH_SECRET }}" ]; then
-            echo "::error::TAILSCALE_OAUTH_CLIENT_ID and/or TAILSCALE_OAUTH_SECRET secrets are missing"
+          if [ -z "${{ secrets.TS_CLIENT_ID }}" ] || [ -z "${{ secrets.TS_CLIENT_SECRET }}" ]; then
+            echo "::error::TS_CLIENT_ID and/or TS_CLIENT_SECRET secrets are missing"
             echo "Add Tailscale OAuth credentials to GitHub secrets"
-            echo "See: https://tailscale.com/s/oauth-clients"
+            echo "See: https://login.tailscale.com/admin/settings#oauth"
             exit 1
           fi
           echo "All required secrets available"
@@ -47,9 +47,9 @@ jobs:
       - name: Connect to tailnet
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
-          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
-          tags: tag:k8s
+          client-id: ${{ secrets.TS_CLIENT_ID }}
+          client-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s-operator
 
       - name: Setup kubectl
         run: |
@@ -116,8 +116,8 @@ jobs:
           helm upgrade --install tailscale-operator tailscale/tailscale-operator \
             --namespace tailscale-operator \
             --create-namespace \
-            --set-string oauth.clientID="${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
-            --set-string oauth.clientSecret="${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
+            --set-string oauth.clientID="${{ secrets.TS_CLIENT_ID }}" \
+            --set-string oauth.clientSecret="${{ secrets.TS_CLIENT_SECRET }}" \
             --set operatorLogLevel=info \
             --timeout 300s --wait=false || {
               echo "⚠️ Helm install queued - will deploy when cluster is online"
