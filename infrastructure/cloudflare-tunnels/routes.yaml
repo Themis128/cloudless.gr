@@ -144,7 +144,7 @@ tunnel:
 nodes:
   omv:
     ip: 192.168.1.128
-    tailscaleIp: 100.113.41.119
+    tailscaleIp: 100.74.191.58
     role: primary
     storage: ssd
   # Note: omv-ha is a k3s agent only (not control-plane)
