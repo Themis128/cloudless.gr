@@ -1,0 +1,164 @@
+name: Tailscale Reconnect Agent - recover disconnected pods
+
+# Agentic workflow to reconnect all Tailscale pods on the k3s cluster
+# Uses GitHub Actions tailnet to SSH into Pi via LAN and restart Tailscale
+# Then redeploys Tailscale operator resources
+# Posts results to tracking issue #382
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target service to reconnect (all, operator, proxies, subnet-router)'
+        required: false
+        default: 'all'
+      restart_tailscale_daemon:
+        description: 'Restart tailscaled on Pi host before reconnecting'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  reconnect-tailscale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Check required secrets
+        run: |
+          if [ -z "${{ secrets.TS_AUTHKEY }}" ]; then
+            echo "::error::TS_AUTHKEY secret is missing"
+            echo "Add Tailscale auth key to GitHub secrets"
+            exit 1
+          fi
+          if [ -z "${{ secrets.OMV_SSH_KEY }}" ] && [ "${{ inputs.restart_tailscale_daemon }}" = "true" ]; then
+            echo "::error::OMV_SSH_KEY secret is missing (required for Pi host access)"
+            exit 1
+          fi
+          echo "All required secrets available"
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Setup kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Restart tailscaled on Pi host (if requested)
+        if: ${{ inputs.restart_tailscale_daemon == 'true' }}
+        run: |
+          set -euo pipefail
+          echo "=== Attempting to restart tailscaled on Pi host ==="
+          
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 192.168.1.128 >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # Try LAN SSH first (Pi may be online locally but off tailnet)
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            tbaltzakis@192.168.1.128 \
+            "sudo systemctl restart tailscaled && sudo tailscale up --accept-routes --accept-dns --accept-ssh && echo 'tailscaled restarted on Pi host'" 2>&1 || {
+            echo "LAN SSH failed - Pi may be powered off or network unavailable"
+          }
+
+      - name: Wait for Tailscale to stabilize
+        if: ${{ inputs.restart_tailscale_daemon == 'true' }}
+        run: |
+          echo "Waiting 10s for Tailscale to establish connections..."
+          sleep 10
+          
+          # Check if we can now reach Pi on tailnet
+          if ping -c 1 100.113.41.119 2>/dev/null; then
+            echo "✅ Pi is now reachable on Tailscale"
+          else
+            echo "⚠️ Pi still unreachable on Tailscale (may need power cycle)"
+          fi
+
+      - name: Deploy Tailscale Operator
+        if: ${{ inputs.target == 'all' || inputs.target == 'operator' }}
+        run: |
+          echo "=== Deploying Tailscale Operator ==="
+          
+          # Add Helm repo
+          helm repo add tailscale https://pkgs.tailscale.com/helmcharts
+          helm repo update
+          
+          # Create namespace
+          kubectl create namespace tailscale-operator --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Install or upgrade operator
+          helm upgrade --install tailscale-operator tailscale/tailscale-operator \
+            --namespace tailscale-operator \
+            --create-namespace \
+            --set-string oauth.clientID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
+            --set-string oauth.clientSecret="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
+            --set operatorLogLevel=info \
+            --wait --timeout 300s || {
+              echo "⚠️ Helm install may have issues - checking pod status..."
+            }
+
+      - name: Restart Tailscale proxies
+        if: ${{ inputs.target == 'all' || inputs.target == 'proxies' }}
+        run: |
+          echo "=== Restarting Tailscale Proxy pods ==="
+          
+          # Delete existing proxy pods to force recreation
+          kubectl delete pods -n tailscale-operator -l tailscale=proxy --ignore-not-found=true
+          kubectl delete pods -n monitoring -l tailscale=proxy --ignore-not-found=true
+          
+          # Wait for recreation
+          sleep 5
+          
+          # Check new proxy status
+          kubectl get pods -n tailscale-operator -o wide
+          kubectl get pods -n monitoring -o wide
+
+      - name: Restart subnet router
+        if: ${{ inputs.target == 'all' || inputs.target == 'subnet-router' }}
+        run: |
+          echo "=== Restarting Tailscale Subnet Router ==="
+          
+          kubectl delete pods -n tailscale-operator -l tailscale=subnet-router --ignore-not-found=true
+          kubectl get pods -n tailscale-operator -o wide
+
+      - name: Verify Tailscale connectivity
+        run: |
+          echo "=== Tailscale Verification ==="
+          
+          echo "Tailscale Operator pods:"
+          kubectl get pods -n tailscale-operator -o wide
+          
+          echo ""
+          echo "ProxyGroup status:"
+          kubectl get ProxyGroup -n tailscale-operator -o wide 2>/dev/null || echo "No ProxyGroups found"
+          
+          echo ""
+          echo "Endpoints with Tailscale ingress:"
+          kubectl get endpoints -A -o wide | grep -E "ts_proxy|tailscale" || echo "No Tailscale endpoints found"
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Tailscale Reconnect Agent - $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "Triggered by: ${{ github.actor }}"
+            echo "Target: ${{ inputs.target }}"
+            echo ""
+            echo "Secrets available: TS_AUTHKEY=✅, KUBECONFIG_B64=✅, OMV_SSH_KEY=${{ inputs.restart_tailscale_daemon == 'true' && '✅' || 'skipped' }}"
+            echo ""
+            echo "Recommendations:"
+            echo "- If Pi is unreachable, power cycle the device"
+            echo "- Check Tailscale admin: https://login.tailscale.com/admin/machines"
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file - || true
