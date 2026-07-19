@@ -50,6 +50,7 @@
     "tools",
     "workers",
     "cloudless-campaigns-code",
-    "cloudflare-pages-mcp"
+    "cloudflare-pages-mcp",
+    "fast-markdown-mcp"
   ]
 }
