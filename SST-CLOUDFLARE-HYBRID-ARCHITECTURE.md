@@ -222,6 +222,28 @@ API routes use origin-based CORS allowing:
 | `AGENT_AUTH_TOKEN` | Wrangler Secret | Agent RPC authorization |
 | `NEXT_PUBLIC_SITE_URL` | Wrangler Vars | Public site URL for frontend |
 
+## 🚀 Fly.io HA Failover Proxy
+
+The Fly.io proxy (cloudless-proxy.fly.dev) provides automatic failover from Cloudflare Workers to the Pi k3s cluster.
+
+### Proxy Status
+```
+Endpoint: http://cloudless-proxy.fly.dev/health
+Response: {"status":"healthy","primary":"cloudless.gr","fallback":"omv.tail8eb71.ts.net","primary_healthy":true}
+```
+
+| Component | Detail |
+|-----------|--------|
+| **Primary** | cloudless.gr (Cloudflare Workers) |
+| **Fallback** | omv.tail8eb71.ts.net (Pi via Tailscale) |
+| **Region** | fra (Frankfurt) |
+| **Memory** | 256MB shared CPU |
+
+### Failover Behavior
+- Health checks run every 30s to primary backend
+- If primary returns non-200, traffic routes to fallback
+- HTTP endpoint working (HTTPS cert renewal in progress)
+
 ## 📚 Related Documentation
 
 - **ACTIONS-REQUIRED.md** - Current pending tasks and action items
