@@ -88,11 +88,7 @@ async function notifySlack(
 // Handler
 // ---------------------------------------------------------------------------
 
-export async function GET(request: NextRequest) {
-  if (!await isCronAuthorized(request)) {
-    return cronUnauthorized();
-  }
-
+async function handleVoiceBrief() {
   let text: string;
   let sources: SlackSourceSummary[] = [];
 
@@ -121,6 +117,24 @@ export async function GET(request: NextRequest) {
     sources,
     generatedAt: new Date().toISOString(),
   });
+}
+
+// GET endpoint for manual testing / browser access
+export async function GET(request: NextRequest) {
+  // Still require auth for GET requests from external sources
+  // Internal requests from SST Cron will use POST
+  if (!await isCronAuthorized(request)) {
+    return cronUnauthorized();
+  }
+  return handleVoiceBrief();
+}
+
+// POST endpoint for SST Cron triggers and programmatic access
+export async function POST(request: NextRequest) {
+  if (!await isCronAuthorized(request)) {
+    return cronUnauthorized();
+  }
+  return handleVoiceBrief();
 }
 
 export const runtime = "nodejs";

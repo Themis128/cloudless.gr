@@ -11,6 +11,11 @@ const STAGE_PRODUCTION = "production";
  *
  * Deploys Cloudflare infrastructure resources separately from the main application.
  * Used in conjunction with Wrangler for Next.js Worker deployment.
+ *
+ * NOTE: This uses SST's output-based approach where resources are created
+ * and their IDs are exported for use in Wrangler. For existing resources
+ * (user-auth-db created manually), the database_id in wrangler.jsonc should
+ * reference the existing database.
  */
 export default $config({
   app(input) {
@@ -30,6 +35,10 @@ export default $config({
     // =========================================================================
     // D1 Database - User Authentication
     // =========================================================================
+    // NOTE: For production, we can either:
+    // 1. Import existing database (user-auth-db already exists with migration 0006/0007)
+    // 2. Create new database (SST will generate a new ID)
+    // For now, we create stage-specific databases to avoid conflicts
     const authDb = new D1("AuthDb", {
       databaseName: isProd ? "user-auth-db" : `auth-db-${stage}`,
     });

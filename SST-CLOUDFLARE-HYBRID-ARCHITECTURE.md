@@ -1,6 +1,6 @@
 # SST Cloudflare Hybrid Architecture Implementation
 
-> **Status:** Implementation Complete ✅
+> **Status:** Implementation In Progress 🔄
 
 ## Overview
 
@@ -9,59 +9,60 @@ This hybrid approach leverages SST's Cloudflare provider for **infrastructure pr
 ## Architecture Diagram
 
 ```
-                      ┌─────────────────────────────────────────────────────────────┐
-                      │                    SST Infrastructure                        │
-                      │                      (sst.config.cf-infra.ts)               │
-                      │                                                             │
-                      │  ├── D1 Database (user-auth-db)                             │
-                      │  │     ├── auth tables (users, sessions, etc.)               │
-                      │  │     └── app_config table (runtime config)                 │
-                      │  ├── R2 Buckets                                           │
-                      │  │     ├── cloudless-assets                                  │
-                      │  │     ├── app-media-bucket                                  │
-                      │  │     ├── cloudless-analytics                               │
-                      │  │     └── datalake-bucket                                 │
-                      │  └── Scheduled Triggers (Cron Jobs)                          │
-                      └─────────────────────────────────────────────────────────────┘
-                                          │
-                                          ▼
-     ┌──────────────────────────────────────────────────────────────────────────────┐
-     │                    DNS & Edge (Cloudflare)                                    │
-     ┌──────────────────────────────────────────────────────────────────────────────┐
-     │                                                                               │
-     │  ├── cloudless.gr (Cloudflare Tunnel → Pi k3s)                                 │
-     │  ├── Worker Fallback (cloudless-gr.baltzakis-themis.workers.dev)              │
-     │  └── Analytics Worker (separate from main app)                                │
-     │                                                                               │
-     └──────────────────────────────────────────────────────────────────────────────┘
-                                          │
-                                          ▼
-     ┌──────────────────────────────────────────────────────────────────────────────┐
-     │              Application Layer (Wrangler)                                       │
-     │                                                                               │
-     │  ┌─────────────────────────────────────────────────────────────────────────┐ │
-     │  │  Worker Entry Point (src/index.ts)                                         │ │
-     │  │  ├── CRON_ROUTE detection (SST Cron triggers)                             │ │
-     │  │  ├── CRON_SECRET authorization                                          │ │
-     │  │  ├── Durable Objects (CounterAgent, EchoAgent, CodingAgent)              │ │
-     │  │  ├── Service Bindings (CHAT, ADMIN_API)                                  │ │
-     │  │  └── API Routes (via ASSETS.fetch)                                        │ │
-     │  └─────────────────────────────────────────────────────────────────────────┘ │
-     └──────────────────────────────────────────────────────────────────────────────┘
+                       ┌─────────────────────────────────────────────────────────────┐
+                       │                    SST Infrastructure                        │
+                       │                      (sst.config.cf-infra.ts)               │
+                       │                                                             │
+                       │  ├── D1 Database (user-auth-db)                             │
+                       │  │     ├── auth tables (users, sessions, etc.)               │
+                       │  │     └── app_config table (runtime config)                 │
+                       │  ├── R2 Buckets                                           │
+                       │  │     ├── cloudless-assets                                  │
+                       │  │     ├── app-media-bucket                                  │
+                       │  │     ├── cloudless-analytics                               │
+                       │  │     └── datalake-bucket                                 │
+                       │  └── Scheduled Triggers (Cron Jobs)                          │
+                       └─────────────────────────────────────────────────────────────┘
+                                           │
+                                           ▼
+      ┌──────────────────────────────────────────────────────────────────────────────┐
+      │                    DNS & Edge (Cloudflare)                                    │
+      ┌──────────────────────────────────────────────────────────────────────────────┐
+      │                                                                               │
+      │  ├── cloudless.gr (Cloudflare Tunnel → Pi k3s)                                 │
+      │  ├── Worker Fallback (cloudless-gr.baltzakis-themis.workers.dev)              │
+      │  └── Analytics Worker (separate from main app)                                │
+      │                                                                               │
+      └──────────────────────────────────────────────────────────────────────────────┘
+                                           │
+                                           ▼
+      ┌──────────────────────────────────────────────────────────────────────────────┐
+      │              Application Layer (Wrangler)                                       │
+      │                                                                               │
+      │  ┌─────────────────────────────────────────────────────────────────────────┐ │
+      │  │  Worker Entry Point (src/index.ts)                                         │ │
+      │  │  ├── CRON_ROUTE detection (SST Cron triggers)                             │ │
+      │  │  ├── CRON_SECRET authorization                                          │ │
+      │  │  ├── Durable Objects (CounterAgent, EchoAgent, CodingAgent)              │ │
+      │  │  ├── Service Bindings (CHAT, ADMIN_API)                                  │ │
+      │  │  └── API Routes (via ASSETS.fetch)                                        │ │
+      │  └─────────────────────────────────────────────────────────────────────────┘ │
+      └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Implementation Status
 
 ### ✅ Completed Components
 
-| Component | File | Description |
-|-----------|------|-------------|
-| SST Config | `sst.config.cf-infra.ts` | Cloudflare infrastructure with D1, R2, Cron |
-| Worker Entry | `src/index.ts` | Handles CRON_ROUTE triggers, internal routing |
-| D1 Config Module | `src/lib/ssm-config-d1.ts` | D1-based config for Workers environment |
-| Config Endpoint | `src/app/api/config/route.ts` | Runtime config API for ETL scripts |
-| Cron Invoker | `src/lambda/cron-invoker.ts` | Dual-environment cron handler (AWS SSM + Workers) |
-| GitHub Workflow | `.github/workflows/sst-infra-deploy.yml` | Automated SST deployment |
+| Component | File | Status |
+|-----------|------|--------|
+| SST Config | `sst.config.cf-infra.ts` | ✅ Defined with D1, R2, Cron |
+| Worker Entry | `src/index.ts` | ✅ Handles CRON_ROUTE triggers, internal routing |
+| D1 Config Module | `src/lib/ssm-config-d1.ts` | ✅ D1-based config for Workers environment |
+| Config Endpoint | `src/app/api/config/route.ts` | ✅ Runtime config API for ETL scripts |
+| Cron Invoker | `src/lambda/cron-invoker.ts` | ✅ AWS Lambda handler maintained |
+| GitHub Workflow | `.github/workflows/sst-infra-deploy.yml` | ✅ Automated SST deployment defined |
+| Cron Auth | `src/lib/cron-auth.ts` | ✅ Updated for Workers compatibility |
 
 ### 🔄 Cron Jobs Architecture
 
@@ -71,8 +72,7 @@ Workers Cron triggers invoke the Worker's `fetch()` handler directly with:
 
 The Worker detects `CRON_ROUTE` and:
 1. Verifies `CRON_SECRET` is available
-2. Creates an internal POST request to the target endpoint
-3. Routes through ASSETS to Next.js API handlers
+2. Routes through ASSETS to Next.js API handlers (via handleCronRoute in src/index.ts)
 
 ### 🔐 Secrets Required
 
@@ -126,28 +126,110 @@ const config = await fetch('https://cloudless.gr/api/config', {
 }).then(r => r.json());
 ```
 
-## Cron Job Migration
+## Cron Job Implementation
 
-| AWS Cron | Cloudflare Cron | Description |
-|----------|-----------------|-------------|
-| `cron(0 1 * * ? *)` | `0 1 * * *` | Daily 01:00 UTC - Analytics rollup |
-| `cron(0 6 ? * MON-FRI *)` | `0 6 * * 1-5` | Weekdays 06:00 UTC - Calendar digest |
-| `cron(0 2 ? * SUN *)` | `0 2 * * 0` | Sunday 02:00 UTC - Report cleanup |
-| `cron(0 5 ? * MON *)` | `0 5 * * 1` | Monday 05:00 UTC - Voice brief |
+| Job | Schedule | Endpoint | Status |
+|-----|----------|----------|--------|
+| Analytics Rollup | Daily 01:00 UTC | `/api/cron/analytics-rollup` | ✅ GET + POST |
+| Calendar Digest | Weekdays 06:00 UTC | `/api/cron/calendar-digest` | ✅ GET + POST |
+| Report Cleanup | Sunday 02:00 UTC | `/api/cron/report-cleanup` | ✅ GET + POST |
+| Voice Brief | Monday 05:00 UTC | `/api/cron/voice-brief` | ✅ GET + POST |
 
-## Next Steps
+All cron endpoints now support both GET (for manual testing) and POST (for SST Cron triggers).
 
-1. **Configure GitHub secrets** - Add CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, CRON_SECRET
-2. **Run initial deployment** - `pnpm sst:infra:deploy`
-3. **Apply D1 migrations** - `npx wrangler d1 migrations apply user-auth-db`
-4. **Set production secrets** - CRON_SECRET, SESSION_SECRET
-5. **Test cron triggers** - Verify via Cloudflare dashboard
+## Remaining Tasks
 
-## Rollback Procedure
+| Task | Status |
+|------|--------|
+| Configure GitHub secrets (CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID) | ⏳ Pending |
+| Deploy SST infrastructure | ⏳ Pending |
+| Apply D1 migration 0007 (app_config table) | ⏳ Pending |
+| Set CRON_SECRET in Wrangler | ⏳ Pending |
+| Set SESSION_SECRET in Wrangler | ⏳ Pending |
+| Verify Workers deployment | ⏳ Pending |
 
-If issues arise, the AWS-based SST config (`sst.config.ts`) remains available:
+## 🔧 Troubleshooting
+
+### Common Issues and Solutions
+
+| Issue | Solution |
+|-------|----------|
+| Cron jobs not firing | Verify CRON_SECRET is set in Wrangler secrets and tunnel is active |
+| D1 connection errors | Check AUTH_DB binding in wrangler.jsonc matches database ID |
+| R2 bucket access denied | Verify bucket names match between SST config and Wrangler config |
+| Service binding failures | Ensure ChatAgent and AdminApi are deployed as separate Workers |
+
+### Verification Commands
 
 ```bash
-# Rollback to AWS deployment
-pnpm sst:dev  # Use AWS configuration
-pnpm deploy   # Deploy to AWS
+# Check SST deployment status
+pnpm sst list --config sst.config.cf-infra.ts --stage production
+
+# Verify D1 binding
+npx wrangler d1 list --config wrangler.jsonc
+
+# Verify R2 buckets
+npx wrangler r2 bucket list --config wrangler.jsonc
+
+# Check Worker deployment
+npx wrangler deployments list --config wrangler.jsonc
+
+# Test cron endpoint (manual trigger)
+curl -X POST https://cloudless.gr/api/cron/analytics-rollup \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+## 📊 Monitoring & Alerts
+
+### Health Check Endpoints
+- `/api/health` - Basic health check (returns 200 OK)
+- `/api/auth/session` - Session validation endpoint
+- `/api/config` - Configuration endpoint with auth required
+
+### Key Metrics to Monitor
+1. **D1 Database**: Query count, storage usage (< 5GB free tier)
+2. **R2 Buckets**: Request count (< 10M ops/month free tier)
+3. **Workers Invocations**: Daily count (< 100K free tier)
+4. **Cron Success Rate**: All 4 cron jobs should execute successfully
+
+## 🔒 Security Considerations
+
+### Secret Management
+- **CRON_SECRET**: Shared secret for internal cron authorization
+- **SESSION_SECRET**: Used for session cookie signing (32+ bytes required)
+- **AGENT_AUTH_TOKEN**: RPC authorization for agent endpoints
+- **ADMIN_ALERT_SECRET**: API authentication for admin endpoints
+
+### Network Security
+- All traffic through Cloudflare Tunnel (encrypted)
+- CSP headers enforced on all responses
+- HSTS enabled with preload directive
+- X-Frame-Options: DENY to prevent clickjacking
+
+### CORS Configuration
+API routes use origin-based CORS allowing:
+- `https://cloudless.gr` (production)
+- `https://staging.cloudless.gr` (staging)
+- Cloudflare tunnel endpoints
+
+## 🔄 Environment Variables
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `CRON_ROUTE` | SST Cron | Set automatically when cron triggers fetch |
+| `CRON_SECRET` | Wrangler Secret | Authorization token for cron jobs |
+| `SESSION_SECRET` | Wrangler Secret | Session signing secret |
+| `AGENT_AUTH_TOKEN` | Wrangler Secret | Agent RPC authorization |
+| `NEXT_PUBLIC_SITE_URL` | Wrangler Vars | Public site URL for frontend |
+
+## 📚 Related Documentation
+
+- **ACTIONS-REQUIRED.md** - Current pending tasks and action items
+
+## 🔄 Next Review
+
+This architecture should be reviewed:
+- When Cloudflare free tier limits are approached
+- Before adding new cron jobs or scheduled tasks
+- When expanding to additional Workers service bindings
+- Quarterly for security audit and optimization opportunities

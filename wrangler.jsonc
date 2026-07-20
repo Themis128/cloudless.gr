@@ -59,7 +59,7 @@
   "d1_databases": [
     {
       "binding": "AUTH_DB",
-      "database_name": "auth-db",
+      "database_name": "user-auth-db",
       "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
     }
   ],
@@ -161,6 +161,7 @@
   },
   "vars": {
     "AGENT_AUTH_TOKEN": "placeholder-override-in-production",
-    "SESSION_SECRET": "${SESSION_SECRET}"
+    "SESSION_SECRET": "${SESSION_SECRET}",
+    "CRON_SECRET": "${CRON_SECRET}"
   }
 }

@@ -1,11 +1,18 @@
 /**
  * Cron Invoker - Works in both AWS (SSM) and Cloudflare (D1/Workers) environments
  *
- * In AWS Lambda (current): Fetches CRON_SECRET from SSM and calls the API route
- * In Cloudflare Workers (hybrid): CRON_SECRET is passed via environment variable
+ * This module handles cron job invocation in both environments:
  *
- * Workers Cron schedules invoke the Worker fetch handler directly - no separate
+ * - AWS Lambda (sst.config.ts): Fetches CRON_SECRET from SSM and calls the API route
+ * - Cloudflare Workers (sst.config.cf-infra.ts): CRON_SECRET is passed via environment variable
+ *
+ * Workers Cron schedules invoke the Worker's fetch() handler directly - no separate
  * invoker needed. The CRON_ROUTE env var indicates which cron job to run.
+ *
+ * For Workers: The routing happens in src/index.ts handleCronRoute() which:
+ * 1. Detects CRON_ROUTE environment variable
+ * 2. Verifies CRON_SECRET from Wrangler secrets
+ * 3. Routes to the appropriate /api/cron/* endpoint via ASSETS.fetch()
  */
 
 // Detect Cloudflare Workers environment
@@ -73,41 +80,4 @@ export async function handler(): Promise<{ statusCode: number; route: string; pa
 
   const payload = await res.json().catch(() => null);
   return { statusCode: res.status, route, payload };
-}
-
-/**
- * For Cloudflare Workers: Internal cron route invocation.
- * Workers Cron sets CRON_ROUTE env var and invokes fetch() directly.
- * This function handles internal routing based on the env var.
- */
-export async function handleCronInvocation(env: { AUTH_DB?: D1Database }): Promise<Response | null> {
-  const route = process.env.CRON_ROUTE;
-  
-  if (!route) {
-    return null; // Not a cron invocation
-  }
-
-  // Verify CRON_SECRET in Workers environment
-  if (isWorkersEnvironment()) {
-    const secret = process.env.CRON_SECRET;
-    if (!secret) {
-      console.error("[cron-invoker] CRON_SECRET not set in Workers environment");
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    // Create a request that looks like an authenticated cron call
-    const request = new Request("https://internal/cron", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${secret}`,
-        "x-cron-internal": "true",
-      },
-    });
-
-    // The worker will route this to the appropriate API endpoint
-    // Return null to let the worker's normal routing handle it
-    return null;
-  }
-
-  return null;
 }
