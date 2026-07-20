@@ -4,7 +4,7 @@ import type { CounterState } from "./agents/counter";
 
 // Extend the generated Env with bindings that wrangler doesn't generate types for
 // AGENT_AUTH_TOKEN is a secret, ASSETS is for static assets, CounterAgent is the DO namespace
-// CHAT is optional - service binding to dedicated chat worker
+// CHAT is optional - service binding to dedicated chat worker, CRON_SECRET for cron auth
 
 interface ChatService {
   chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
@@ -14,7 +14,9 @@ interface Env extends Cloudflare.Env {
   AGENT_AUTH_TOKEN: string;
   ASSETS: Fetcher;
   CounterAgent: DurableObjectNamespace<CounterAgent>;
+  AUTH_DB?: D1Database;
   CHAT?: ChatService;
+  CRON_SECRET?: string;
 }
 
 // Re-export agents for Durable Object registration
@@ -317,9 +319,56 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Cron Route Handler (Workers environment)
+// ---------------------------------------------------------------------------
+
+async function handleCronRoute(env: Env): Promise<Response | null> {
+  // Detect if this is a cron trigger (SST Cron sets CRON_ROUTE in env)
+  const cronRoute = process.env.CRON_ROUTE;
+  
+  if (!cronRoute) {
+    return null;
+  }
+
+  // Verify CRON_SECRET is available
+  if (!env.CRON_SECRET) {
+    console.error("[cron] CRON_SECRET not configured - cron jobs disabled");
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // Create internal POST request to the cron endpoint
+  const internalRequest = new Request(
+    `https://internal${cronRoute}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.CRON_SECRET}`,
+        "x-cron-internal": "true",
+      },
+    }
+  );
+
+  // Route to the appropriate API endpoint via ASSETS
+  // The cron API routes are handled by Next.js /api/cron/* endpoints
+  const response = await env.ASSETS.fetch(internalRequest);
+  addSecurityHeaders(response.headers);
+  return response;
+}
+
 const worker = {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    // Handle SST Cron triggers first (before any other routing)
+    // SST Cron invokes fetch() directly with CRON_ROUTE env var set
+    const isCronTrigger = !!process.env.CRON_ROUTE;
+    if (isCronTrigger) {
+      const cronResponse = await handleCronRoute(env);
+      if (cronResponse) {
+        return cronResponse;
+      }
+    }
 
     // Handle locale cascade redirects first
     const localeRedirect = fixLocaleCascade(url);

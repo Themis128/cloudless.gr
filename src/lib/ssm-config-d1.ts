@@ -1,135 +1,200 @@
 /**
- * D1-based configuration store — Cloudflare Workers migration path.
+ * D1-based configuration store for Workers environment.
  *
- * Replaces AWS SSM Parameter Store for Workers environment.
- * Reads configuration from D1 app_config table with env var fallback.
- * Sensitive secrets are still expected via Wrangler secrets or process.env.
+ * When running in Cloudflare Workers (detected by presence of caches global),
+ * this module reads configuration from the D1 app_config table instead of
+ * AWS SSM. Falls back to process.env in development.
  */
 
-import type { AuthDatabase } from "@/lib/auth-d1";
-
-// D1 binding interface
-interface Env {
-  AUTH_DB: AuthDatabase;
+// Detect if we're in a Cloudflare Workers environment
+function isWorkersEnvironment(): boolean {
+  return typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined";
 }
 
-function getAuthDb(): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  return env.AUTH_DB ?? null;
+// D1 configuration for Workers
+interface D1Config {
+  // D1 binding for the auth database
+  AUTH_DB: D1Database;
 }
-
-// Detect if running in Cloudflare Workers
-function isWorkers(): boolean {
-  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
-}
-
-// In-memory cache for D1 config (5 minute TTL)
-let cached: Record<string, string> | null = null;
-let cachedAt = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000;
 
 /**
- * Fetch all configuration from D1 app_config table.
+ * Fetch all configuration keys from D1 app_config table.
+ * Used by ETL scripts and Workers to get runtime configuration.
  */
-async function fetchD1Config(): Promise<Record<string, string>> {
-  const db = getAuthDb();
-  if (!db) {
-    throw new Error("AUTH_DB binding not available");
-  }
-
-  const rows = await db
-    .prepare("SELECT key, value FROM app_config")
-    .all<{ key: string; value: string }>();
-
+export async function getD1Config<T extends Record<string, string> = Record<string, string>>(
+  db: D1Database,
+): Promise<T> {
   const config: Record<string, string> = {};
-  for (const row of rows.results) {
-    config[row.key] = row.value;
-  }
 
-  return config;
-}
+  const results = await db.prepare(
+    "SELECT key, value FROM app_config WHERE value IS NOT NULL",
+  ).all<{ key: string; value: string }>();
 
-/**
- * Get a configuration value.
- * Priority:
- * 1. process.env (Wrangler secrets, SSM_DISABLED=1 mode)
- * 2. D1 app_config table (Workers primary)
- * 3. Default values
- */
-export async function getConfigValue(key: string, defaultValue?: string): Promise<string> {
-  const envKey = key.toUpperCase();
-
-  // 1. Check process.env first (secrets, SSM_DISABLED=1, test mode)
-  const envValue = process.env[envKey] || process.env[key];
-  if (envValue !== undefined && envValue !== "") {
-    return envValue;
-  }
-
-  // 2. In Workers environment, try D1
-  if (isWorkers()) {
-    const now = Date.now();
-    if (!cached || now - cachedAt > CACHE_TTL_MS) {
-      try {
-        cached = await fetchD1Config();
-        cachedAt = now;
-      } catch (err) {
-        console.warn("[ssm-config-d1] D1 fetch failed:", err);
-        cached = {};
-        cachedAt = now;
-      }
+  for (const row of results.results) {
+    if (row.key && row.value) {
+      config[row.key] = row.value;
     }
-
-    return cached[key] ?? defaultValue ?? "";
   }
 
-  // 3. Lambda environment: SSM will handle (don't use this module directly)
-  return defaultValue ?? "";
+  return config as T;
 }
 
 /**
- * Set a configuration value in D1.
- * Used by admin endpoints to update runtime configuration.
+ * Get a single configuration value from D1.
  */
-export async function setConfigValue(
+export async function getD1ConfigValue(
+  db: D1Database,
+  key: string,
+): Promise<string | undefined> {
+  const result = await db.prepare(
+    "SELECT value FROM app_config WHERE key = ?",
+  ).bind(key).first<{ value: string }>();
+
+  return result?.value;
+}
+
+/**
+ * Set a configuration value in D1 (for admin endpoints).
+ */
+export async function setD1ConfigValue(
+  db: D1Database,
   key: string,
   value: string,
-  description?: string
-): Promise<boolean> {
-  const db = getAuthDb();
-  if (!db) {
-    return false;
-  }
-
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    await db
-      .prepare(
-        `INSERT INTO app_config (key, value, description, updated_at)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(key) DO UPDATE SET
-           value = excluded.value,
-           description = excluded.description,
-           updated_at = excluded.updated_at`
-      )
-      .bind(key, value, description ?? null, now)
-      .run();
-
-    // Invalidate cache
-    cached = null;
-    cachedAt = 0;
-
-    return true;
-  } catch (err) {
-    console.error("[ssm-config-d1] Failed to set config:", err);
-    return false;
-  }
+  description?: string,
+): Promise<void> {
+  await db.prepare(
+    `INSERT OR REPLACE INTO app_config (key, value, description, updated_at)
+     VALUES (?, ?, ?, strftime('%s', 'now'))`,
+  ).bind(key, value, description ?? "").run();
 }
 
 /**
- * Clear the D1 config cache.
- * Used in tests or when configuration is updated.
+ * Build configuration object from environment variables (development fallback).
+ * This mirrors the buildConfigFromEnv from ssm-config.ts.
  */
-export function clearConfigCache(): void {
-  cached = null;
-  cachedAt = 0;
+function buildConfigFromEnv(): Record<string, string> {
+  return {
+    SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
+    SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
+    AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
+    NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
+    COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID || "",
+    COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID || "",
+    AUTH_SECRET: process.env.AUTH_SECRET || "",
+    SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL || "",
+    SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN || "",
+    SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || "",
+    HUBSPOT_API_KEY: process.env.HUBSPOT_API_KEY || process.env.HUBSPOT_PRIVATE_APP_TOKEN || "",
+    HUBSPOT_CLIENT_SECRET: process.env.HUBSPOT_CLIENT_SECRET || "",
+    NOTION_API_KEY: process.env.NOTION_API_KEY || "",
+    NOTION_BLOG_DB_ID: process.env.NOTION_BLOG_DB_ID || "",
+    NOTION_WEBHOOK_SECRET: process.env.NOTION_WEBHOOK_SECRET || "",
+    NOTION_SUBMISSIONS_DB_ID: process.env.NOTION_SUBMISSIONS_DB_ID || "",
+    NOTION_DOCS_DB_ID: process.env.NOTION_DOCS_DB_ID || "",
+    NOTION_PROJECTS_DB_ID: process.env.NOTION_PROJECTS_DB_ID || "",
+    NOTION_TASKS_DB_ID: process.env.NOTION_TASKS_DB_ID || "",
+    NOTION_ANALYTICS_DB_ID: process.env.NOTION_ANALYTICS_DB_ID || "",
+    NOTION_GSC_REPORTS_DB_ID: process.env.NOTION_GSC_REPORTS_DB_ID || "",
+    NOTION_CALENDAR_DB_ID: process.env.NOTION_CALENDAR_DB_ID || "",
+    NOTION_REPORTS_DB_ID: process.env.NOTION_REPORTS_DB_ID || "",
+    NOTION_TESTIMONIALS_DB_ID: process.env.NOTION_TESTIMONIALS_DB_ID || "",
+    NOTION_CASE_STUDIES_DB_ID: process.env.NOTION_CASE_STUDIES_DB_ID || "",
+    NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
+    NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID || "",
+    GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
+    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
+    GSC_SITE_URL: process.env.GSC_SITE_URL || "sc-domain:cloudless.gr",
+    SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN || "",
+    SENTRY_ORG: process.env.SENTRY_ORG || "baltzakisthemiscom",
+    SENTRY_PROJECT: process.env.SENTRY_PROJECT || "cloudless-gr",
+    ACTIVECAMPAIGN_API_URL: process.env.ACTIVECAMPAIGN_API_URL || "",
+    ACTIVECAMPAIGN_API_TOKEN: process.env.ACTIVECAMPAIGN_API_TOKEN || "",
+    GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || "",
+    GOOGLE_ADS_CUSTOMER_ID: process.env.GOOGLE_ADS_CUSTOMER_ID || "",
+    LINKEDIN_CLIENT_ID: process.env.LINKEDIN_CLIENT_ID || "",
+    LINKEDIN_CLIENT_SECRET: process.env.LINKEDIN_CLIENT_SECRET || "",
+    LINKEDIN_ACCESS_TOKEN: process.env.LINKEDIN_ACCESS_TOKEN || "",
+    LINKEDIN_AD_ACCOUNT_ID: process.env.LINKEDIN_AD_ACCOUNT_ID || "",
+    LINKEDIN_ORGANIZATION_URN: process.env.LINKEDIN_ORGANIZATION_URN || "",
+    TIKTOK_APP_ID: process.env.TIKTOK_APP_ID || "",
+    TIKTOK_APP_SECRET: process.env.TIKTOK_APP_SECRET || "",
+    TIKTOK_ACCESS_TOKEN: process.env.TIKTOK_ACCESS_TOKEN || "",
+    TIKTOK_ADVERTISER_ID: process.env.TIKTOK_ADVERTISER_ID || "",
+    X_API_KEY: process.env.X_API_KEY || "",
+    X_API_SECRET: process.env.X_API_SECRET || "",
+    X_ACCESS_TOKEN: process.env.X_ACCESS_TOKEN || "",
+    X_ACCESS_SECRET: process.env.X_ACCESS_SECRET || "",
+    X_AD_ACCOUNT_ID: process.env.X_AD_ACCOUNT_ID || "",
+    META_AD_ACCOUNT_ID: process.env.META_AD_ACCOUNT_ID || "",
+    META_PIXEL_ID: process.env.META_PIXEL_ID || "",
+    META_CAPI_ACCESS_TOKEN: process.env.META_CAPI_ACCESS_TOKEN || "",
+    META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN || "",
+    META_PAGE_ID: process.env.META_PAGE_ID || "",
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN || "",
+    CRON_SECRET: process.env.CRON_SECRET || "",
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
+    ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",
+    AI_GENERATE_SECRET: process.env.AI_GENERATE_SECRET || "",
+    GITHUB_DISPATCH_TOKEN: process.env.GITHUB_DISPATCH_TOKEN || "",
+    ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",
+    CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || "",
+    SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
+    SNS_PORTAL_TOPIC_ARN: process.env.SNS_PORTAL_TOPIC_ARN || "",
+    GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
+    GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
+    PROMETHEUS_URL: process.env.PROMETHEUS_URL || "",
+    KUMA_BASE_URL: process.env.KUMA_BASE_URL || "",
+    KUMA_STATUS_PAGE_SLUG: process.env.KUMA_STATUS_PAGE_SLUG || "",
+    KUMA_API_KEY: process.env.KUMA_API_KEY || "",
+    NTFY_BASE_URL: process.env.NTFY_BASE_URL || "",
+    NTFY_TOPIC: process.env.NTFY_TOPIC || "",
+    NTFY_TOKEN: process.env.NTFY_TOKEN || "",
+    ADMIN_PUSH_VIA_NTFY: process.env.ADMIN_PUSH_VIA_NTFY || "",
+    MQTT_BROKER_HOST: process.env.MQTT_BROKER_HOST || "",
+    MQTT_BROKER_PORT: process.env.MQTT_BROKER_PORT || "",
+    MQTT_USERNAME: process.env.MQTT_USERNAME || "",
+    MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
+    ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL || "",
+    ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY || "",
+    ESPOCRM_API_PASSWORD: process.env.ESPOCRM_API_PASSWORD || "",
+    ESPOCRM_API_USER: process.env.ESPOCRM_API_USER || "admin",
+    ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET || "",
+    APPFLOWY_API_URL: process.env.APPFLOWY_API_URL || "",
+    APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
+    APPFLOWY_EMAIL: process.env.APPFLOWY_EMAIL || "",
+    APPFLOWY_PASSWORD: process.env.APPFLOWY_PASSWORD || "",
+    POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
+    POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
+    POSTIZ_WEBHOOK_SECRET: process.env.POSTIZ_WEBHOOK_SECRET || "",
+    POSTIZ_SLACK_CHANNEL: process.env.POSTIZ_SLACK_CHANNEL || "",
+    ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: process.env.ACTIVECAMPAIGN_LEAD_AUTOMATION_ID || "",
+    LINKEDIN_CAPI_ACCESS_TOKEN: process.env.LINKEDIN_CAPI_ACCESS_TOKEN || "",
+    N8N_API_URL: process.env.N8N_API_URL || "",
+    N8N_API_KEY: process.env.N8N_API_KEY || "",
+    N8N_WORKFLOW_LEAD_ENRICH_ID: process.env.N8N_WORKFLOW_LEAD_ENRICH_ID || "",
+    N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: process.env.N8N_WORKFLOW_NEWSLETTER_NURTURE_ID || "",
+  };
+}
+
+/**
+ * Get configuration - Workers uses D1, Node.js uses SSM.
+ * This is a unified interface that works in both environments.
+ */
+export async function getConfig<T extends Record<string, string> = Record<string, string>>(
+  db?: D1Database,
+): Promise<T> {
+  // In Workers environment with D1 binding
+  if (isWorkersEnvironment() && db) {
+    const d1Config = await getD1Config(db);
+    // Merge with environment variables (secrets take precedence)
+    const envConfig = buildConfigFromEnv();
+    return { ...d1Config, ...envConfig } as T;
+  }
+
+  // In development or when no D1 binding, use environment
+  return buildConfigFromEnv() as T;
 }

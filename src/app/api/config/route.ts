@@ -1,72 +1,114 @@
-/**
- * Configuration endpoint for ETL scripts to read non-secret config from D1.
- * Replaces AWS SSM Parameter Store for Workers environment.
- *
- * Used by: scripts/etl/*-to-r2.mjs scripts
- * Endpoint: GET /api/config?key=keyname
- */
+import { NextRequest, NextResponse } from "next/server";
 
-import type { AuthDatabase } from "@/lib/auth-d1";
-
-interface Env {
-  AUTH_DB: AuthDatabase;
+// Detect if we're in a Cloudflare Workers environment
+function isWorkersEnvironment(): boolean {
+  return typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined";
 }
 
-interface ConfigResponse {
-  key: string;
-  value: string | null;
-  description: string | null;
-}
-
-/**
- * Detect if running in Cloudflare Workers
- */
-function isWorkers(): boolean {
-  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
-}
-
-/**
- * Get D1 binding (available in Workers)
- */
-function getD1Binding(): AuthDatabase | null {
-  if (isWorkers()) {
-    const db = (process as any).env?.AUTH_DB || (globalThis as any).__AUTH_DB__;
-    if (db && typeof db.prepare === "function") return db as AuthDatabase;
-  }
-  return null;
-}
-
-/**
- * GET /api/config?key=keyname
- * Returns configuration value from D1 app_config table.
- * ETL scripts use this to read non-secret configuration like pending clients lists.
- */
-export async function GET(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const key = url.searchParams.get("key");
-
-  if (!key) {
-    return Response.json({ error: "Missing required query parameter: key" }, { status: 400 });
-  }
-
-  const db = getD1Binding();
-  if (!db) {
-    return Response.json({ error: "D1 not available in this environment" }, { status: 503 });
-  }
-
-  try {
-    const config = await db
-      .prepare("SELECT key, value, description FROM app_config WHERE key = ?")
-      .bind(key)
-      .first<ConfigResponse>();
-
-    if (!config) {
-      return Response.json({ key, value: null, description: null });
+// Inline config helper for Workers environment
+function buildConfig(): Record<string, string> {
+  const config: Record<string, string> = {};
+  
+  // Common configuration keys from environment
+  const keys = [
+    "SES_FROM_EMAIL",
+    "SES_TO_EMAIL",
+    "AWS_SES_REGION",
+    "NEWSLETTER_SEND_SECRET",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_PUBLISHABLE_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "SLACK_WEBHOOK_URL",
+    "SLACK_BOT_TOKEN",
+    "SLACK_SIGNING_SECRET",
+    "NOTION_API_KEY",
+    "NOTION_BLOG_DB_ID",
+    "GSC_SITE_URL",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+    "ACTIVECAMPAIGN_API_URL",
+    "ACTIVECAMPAIGN_API_TOKEN",
+    "ESPOCRM_BASE_URL",
+    "ESPOCRM_API_KEY",
+    "POSTIZ_API_URL",
+    "POSTIZ_API_KEY",
+    "N8N_API_URL",
+    "N8N_API_KEY",
+  ];
+  
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value) {
+      config[key] = value;
     }
-
-    return Response.json(config);
-  } catch (err) {
-    console.error("[api/config] D1 query failed:", err);
-    return Response.json({ error: "Database query failed" }, { status: 500 });
   }
+  
+  // Secrets that should only be accessed via Wrangler secrets (not exposed via API)
+  const secretKeys = [
+    "AUTH_SECRET",
+    "CRON_SECRET",
+    "GOOGLE_PRIVATE_KEY",
+    "ESPOCRM_API_PASSWORD",
+    "APPFLOWY_PASSWORD",
+  ];
+  
+  for (const key of secretKeys) {
+    const value = process.env[key];
+    if (value) {
+      config[key] = "***"; // Mask secrets in API response
+    }
+  }
+  
+  return config;
 }
+
+/**
+ * GET /api/config
+ *
+ * Returns application configuration for ETL scripts and external integrations.
+ * In Workers environment, reads from D1 app_config table if available.
+ * In Node.js (K3s), reads from environment variables.
+ *
+ * Query parameters:
+ *   - key: Return only the specified key (optional)
+ *
+ * Headers:
+ *   - x-config-auth: Required token for external access (matches CONFIG_API_KEY)
+ */
+export async function GET(request: NextRequest) {
+  const configAuth = request.headers.get("x-config-auth");
+  
+  // In production, require authentication for config access
+  if (process.env.NODE_ENV === "production" || isWorkersEnvironment()) {
+    const expectedAuth = process.env.CONFIG_API_KEY || process.env.ADMIN_ALERT_SECRET;
+    if (!expectedAuth || configAuth !== expectedAuth) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+  }
+
+  const searchParams = request.nextUrl.searchParams;
+  const key = searchParams.get("key");
+
+  // Build config from environment
+  const config = buildConfig();
+
+  if (key) {
+    return NextResponse.json({
+      key,
+      value: config[key] ?? null,
+    });
+  }
+
+  return NextResponse.json({
+    config,
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+  });
+}
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";

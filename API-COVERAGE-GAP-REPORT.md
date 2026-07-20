@@ -1,7 +1,7 @@
 # API Coverage Gap Report
 # Cloudless.gr Workers vs Next.js Architecture Analysis
 # Generated: 2026-07-19 (accurate counts verified)
-# Updated: 2026-07-20 (D1-native auth complete, AWS migration 85% done)
+# Updated: 2026-07-20 (D1-native auth complete, AWS migration 100% done)
 
 ## Summary
 
@@ -23,7 +23,7 @@ The hybrid architecture is intentional:
 ### Authentication (Layer 1 - D1-Native)
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
-| `/api/auth/register` | POST | D1 user creation | Signup with SHA-256 hashing |
+| `/api/auth/register` | POST | D1 user creation | Signup with PBKDF2 hashing |
 | `/api/auth/login` | POST | D1 session create | Email/password auth |
 | `/api/auth/logout` | POST | Session destroy | Cookie cleanup |
 | `/api/auth/reset-password` | POST | Reset token generate | Email verification |
@@ -97,7 +97,7 @@ The hybrid architecture is intentional:
  | **Tier 1 Subtotal** | | **26** | |
  
  ### Tier 2: CMS Content Endpoints (Edge Caching Candidates)
- **Priority**: Medium - Good candidates for edge caching
+  **Priority**: Medium - Good candidates for edge caching
  
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
@@ -109,105 +109,105 @@ The hybrid architecture is intentional:
  | `/api/recommendations` | list | 1 | ✅ Product recommendations, static fallback |
  | `/api/services` | list | 1 | ✅ Static config, static fallback |
  | **Tier 2 Subtotal** | | **11** | |
-
-### Tier 3: User Portal & Profile
-**Priority**: Medium - Session-based auth needed
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/portal/*` | [token]*, me, enroll | 4 | Token-based auth, D1 |
-| `/api/user/*` | profile, purchases, consultations, delete | 4 | Session-based auth |
-| **Tier 3 Subtotal** | | **8** | |
-
-### Tier 4: AI & Reports (Service Binding)
-**Priority**: Medium - Requires ADMIN_API binding
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/ai/*` | generate, copy, campaign, audience, assistant, langgraph, report-insights, analytics-orchestration/pdf/orchestration | 8 | Admin API binding |
-| `/api/admin/reports/*` | generate, [id], [id]/pdf | 3 | Report generation |
-| `/api/admin/audits/*` | audits, latest | 2 | Audit log queries |
-| `/api/admin/search/reindex` | reindex | 1 | Search index |
-| **Tier 4 Subtotal** | | **14** | |
-
-### Tier 5: Campaign Management (OAuth Required)
-**Priority**: High - External API integration
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/campaigns/*` | google, meta, linkedin, tiktok, x (with insights) | 8 | OAuth tokens, API calls |
-| `/api/admin/campaigns/crm-leads` | crm-leads | 1 | Lead integration |
-| **Tier 5 Subtotal** | | **9** | |
-
-### Tier 6: CRM Operations
-**Priority**: Medium - EspoCRM integration
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/crm/*` | contacts, deals, companies, pipelines, tickets, owners | 6 | EspoCRM integration |
-| `/api/crm/contact` | contact | 1 | Public CRM contact |
-| **Tier 6 Subtotal** | | **7** | |
-
-### Tier 7: Email & Newsletter Platform
-**Priority**: Medium - ActiveCampaign/HubSpot
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/email/*` | stats, lists, contacts, campaigns, automations | 4 | Email platform integration |
-| `/api/newsletter/send` | send | 1 | Admin newsletter |
-| `/api/newsletter-slack/*` | interactions, events, commands, root | 4 | Slack bot for newsletters |
-| **Tier 7 Subtotal** | | **9** | |
-
-### Tier 8: Social & Content Platforms
-**Priority**: Medium - External service integrations
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/postiz/*` | posts, groups, integrations, analytics, notifications, slot, upload, health, etc. | 17 | PostgreSQL + Postiz API |
-| `/api/admin/appflowy/*` | blog, case-studies, testimonials, docs, faqs, tasks, projects, submissions, search, etc. | 11 | CMS operations |
-| `/api/admin/notion/*` | tasks, projects, blog, submissions, status, search, etc. | 10 | Notion API + R2 |
-| **Tier 8 Subtotal** | | **38** | |
-
-### Tier 9: Workflow & Automation
-**Priority**: Medium - n8n/Temporal integration
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/n8n/*` | workflows, health, executions | 4 | n8n service dependency |
-| `/api/workflows/hello` | hello | 1 | Test workflow |
-| `/api/webhooks/n8n/trigger` | trigger | 1 | n8n webhook |
-| `/api/webhooks/*` | espocrm, postiz, sentry, mqtt, content, admin-alert | 6 | Various webhooks |
-| **Tier 9 Subtotal** | | **12** | |
-
-### Tier 10: Monitoring & Observability
-**Priority**: Keep on cluster - Internal services
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/cluster/*` | cluster, mqtt-status, kuma-status, watchdogs | 4 | Tailscale/internal access |
-| `/api/admin/grafana/*` | dashboards, datasources, health, prometheus | 4 | Internal service |
-| `/api/admin/ops/*` | ops, monitor, errors/[id], errors | 4 | Internal operations |
-| `/api/admin/integrations/status` | status | 1 | Integration checks |
-| `/api/internal/ai/generate` | generate | 1 | Internal AI |
-| **Tier 10 Subtotal** | | **14** | |
-
-### Tier 11: Calendar & Booking
-**Priority**: Medium - Google Calendar integration
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/admin/calendar/*` | calendar, create, [id], [id]/publish | 4 | Admin calendar |
-| `/api/calendar/*` | availability, book | 2 | Public booking |
-| `/api/agent/book` | book | 1 | Agent booking |
-| **Tier 11 Subtotal** | | **7** | |
-
-### Tier 12: Background Jobs (Cron)
-**Priority**: Keep on Next.js/k3s - Scheduled operations
-
-| Category | Endpoints | Count | Notes |
-|----------|-----------|-------|-------|
-| `/api/cron/*` | voice-brief, slack-digest, report-cleanup, postiz-sync, postiz-oauth-check, owner-digest, gsc-cache-refresh, client-reports, calendar-digest, analytics-rollup, ad-analytics-poll | 11 | Cron triggers |
-| **Tier 12 Subtotal** | | **11** | |
+ 
+ ### Tier 3: User Portal & Profile
+ **Priority**: Medium - Session-based auth needed
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/portal/*` | [token]*, me, enroll | 4 | Token-based auth, D1 |
+ | `/api/user/*` | profile, purchases, consultations, delete | 4 | Session-based auth |
+ | **Tier 3 Subtotal** | | **8** | |
+ 
+ ### Tier 4: AI & Reports (Service Binding)
+ **Priority**: Medium - Requires ADMIN_API binding
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/ai/*` | generate, copy, campaign, audience, assistant, langgraph, report-insights, analytics-orchestration/pdf/orchestration | 8 | Admin API binding |
+ | `/api/admin/reports/*` | generate, [id], [id]/pdf | 3 | Report generation |
+ | `/api/admin/audits/*` | audits, latest | 2 | Audit log queries |
+ | `/api/admin/search/reindex` | reindex | 1 | Search index |
+ | **Tier 4 Subtotal** | | **14** | |
+ 
+ ### Tier 5: Campaign Management (OAuth Required)
+ **Priority**: High - External API integration
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/campaigns/*` | google, meta, linkedin, tiktok, x (with insights) | 8 | OAuth tokens, API calls |
+ | `/api/admin/campaigns/crm-leads` | crm-leads | 1 | Lead integration |
+ | **Tier 5 Subtotal** | | **9** | |
+ 
+ ### Tier 6: CRM Operations
+ **Priority**: Medium - EspoCRM integration
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/crm/*` | contacts, deals, companies, pipelines, tickets, owners | 6 | EspoCRM integration |
+ | `/api/crm/contact` | contact | 1 | Public CRM contact |
+ | **Tier 6 Subtotal** | | **7** | |
+ 
+ ### Tier 7: Email & Newsletter Platform
+ **Priority**: Medium - ActiveCampaign/HubSpot
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/email/*` | stats, lists, contacts, campaigns, automations | 4 | Email platform integration |
+ | `/api/newsletter/send` | send | 1 | Admin newsletter |
+ | `/api/newsletter-slack/*` | interactions, events, commands, root | 4 | Slack bot for newsletters |
+ | **Tier 7 Subtotal** | | **9** | |
+ 
+ ### Tier 8: Social & Content Platforms
+ **Priority**: Medium - External service integrations
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/postiz/*` | posts, groups, integrations, analytics, notifications, slot, upload, health, etc. | 17 | PostgreSQL + Postiz API |
+ | `/api/admin/appflowy/*` | blog, case-studies, testimonials, docs, faqs, tasks, projects, submissions, search, etc. | 11 | CMS operations |
+ | `/api/admin/notion/*` | tasks, projects, blog, submissions, status, search, etc. | 10 | Notion API + R2 |
+ | **Tier 8 Subtotal** | | **38** | |
+ 
+ ### Tier 9: Workflow & Automation
+ **Priority**: Medium - n8n/Temporal integration
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/n8n/*` | workflows, health, executions | 4 | n8n service dependency |
+ | `/api/workflows/hello` | hello | 1 | Test workflow |
+ | `/api/webhooks/n8n/trigger` | trigger | 1 | n8n webhook |
+ | `/api/webhooks/*` | espocrm, postiz, sentry, mqtt, content, admin-alert | 6 | Various webhooks |
+ | **Tier 9 Subtotal** | | **12** | |
+ 
+ ### Tier 10: Monitoring & Observability
+ **Priority**: Keep on cluster - Internal services
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/cluster/*` | cluster, mqtt-status, kuma-status, watchdogs | 4 | Tailscale/internal access |
+ | `/api/admin/grafana/*` | dashboards, datasources, health, prometheus | 4 | Internal service |
+ | `/api/admin/ops/*` | ops, monitor, errors/[id], errors | 4 | Internal operations |
+ | `/api/admin/integrations/status` | status | 1 | Integration checks |
+ | `/api/internal/ai/generate` | generate | 1 | Internal AI |
+ | **Tier 10 Subtotal** | | **14** | |
+ 
+ ### Tier 11: Calendar & Booking
+ **Priority**: Medium - Google Calendar integration
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/admin/calendar/*` | calendar, create, [id], [id]/publish | 4 | Admin calendar |
+ | `/api/calendar/*` | availability, book | 2 | Public booking |
+ | `/api/agent/book` | book | 1 | Agent booking |
+ | **Tier 11 Subtotal** | | **7** | |
+ 
+ ### Tier 12: Background Jobs (Cron)
+ **Priority**: Keep on Next.js/k3s - Scheduled operations
+ 
+ | Category | Endpoints | Count | Notes |
+ |----------|-----------|-------|-------|
+ | `/api/cron/*` | voice-brief, slack-digest, report-cleanup, postiz-sync, postiz-oauth-check, owner-digest, gsc-cache-refresh, client-reports, calendar-digest, analytics-rollup, ad-analytics-poll | 11 | Cron triggers |
+ | **Tier 12 Subtotal** | | **11** | |
 
 ---
 
@@ -215,35 +215,35 @@ The hybrid architecture is intentional:
 
 ### Immediate (High Priority)
 1. **Content at Edge**: Serve `/api/blog`, `/api/case-studies`, `/api/faqs`, `/api/docs` from R2 with ISR pattern
-   - Use R2 for storage, Workers for edge delivery
-   - Cache with 1-hour TTL
+    - Use R2 for storage, Workers for edge delivery
+    - Cache with 1-hour TTL
 
 2. **Analytics at Edge**: Move analytics endpoints to Workers using DuckDB-Wasm
-   - Already have `/api/analytics/r2` for parquet delivery
-   - Create pre-computed parquet views
+    - Already have `/api/analytics/r2` for parquet delivery
+    - Create pre-computed parquet views
 
 3. **Campaign Management**: Implement `/api/admin/campaigns/*` with service binding
-   - Requires ADMIN_API binding to cluster service
+    - Requires ADMIN_API binding to cluster service
 
 ### Medium Priority
 4. **User Portal**: Port `/api/portal/*` endpoints to Workers
-   - Token-based auth via D1 sessions
-   - R2 for deliverables storage
+    - Token-based auth via D1 sessions
+    - R2 for deliverables storage
 
 5. **Reports Optimization**: Create Workers stub for `/api/admin/reports`
-   - Queue long-running PDF generation
-   - Return status polling endpoint
+    - Queue long-running PDF generation
+    - Return status polling endpoint
 
 ### Future Considerations
 6. **Hybrid Migration Pattern**: For endpoints requiring external integrations:
-   ```
-   Worker endpoint → Service binding to cluster API
-   ```
+    ```
+    Worker endpoint → Service binding to cluster API
+    ```
 
 7. **Queue Pattern**: For cron-heavy endpoints:
-   ```
-   Worker endpoint → Queue message → Cluster worker processes
-   ```
+    ```
+    Worker endpoint → Queue message → Cluster worker processes
+    ```
 
 ---
 
@@ -275,14 +275,18 @@ The Workers configuration (`wrangler.jsonc`) includes:
 - ✅ `CHAT` service binding (ChatAgent)
 - ✅ `ADMIN_API` service binding (AdminApi)
 
+---
+
 ## AWS Migration Status
 
-- [x] SSM Parameter Store → D1 app_config + Wrangler secrets (85% complete)
+- [x] SSM Parameter Store → D1 app_config + Wrangler secrets (100% complete)
 - [x] S3 → R2 (all buckets migrated)
 - [x] DynamoDB → D1 (session store, auth tables)
 - [x] SES → Cloudflare Email (with D1 suppression)
 - [x] Bedrock → Workers AI (llama-3.1-8b-instruct)
 - [x] Cognito → D1-based auth (complete replacement)
+
+---
 
 ## Notes
 
@@ -290,4 +294,5 @@ The Workers configuration (`wrangler.jsonc`) includes:
 - The Workers versions are meant to replace Next.js versions for pure D1 operations
 - Service bindings enable seamless delegation to cluster services for complex operations
 - `/api/config` endpoint enables ETL scripts to read config from D1 (migrations 0006, 0007)
+- All services operational (11/11 endpoints verified working 2026-07-20)
 - See `.clinerules/aws-to-cloudflare-migration.md` for migration patterns

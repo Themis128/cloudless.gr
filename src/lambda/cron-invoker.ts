@@ -1,26 +1,67 @@
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+/**
+ * Cron Invoker - Works in both AWS (SSM) and Cloudflare (D1/Workers) environments
+ *
+ * In AWS Lambda (current): Fetches CRON_SECRET from SSM and calls the API route
+ * In Cloudflare Workers (hybrid): CRON_SECRET is passed via environment variable
+ *
+ * Workers Cron schedules invoke the Worker fetch handler directly - no separate
+ * invoker needed. The CRON_ROUTE env var indicates which cron job to run.
+ */
 
-const ssm = new SSMClient({ region: process.env.AWS_REGION ?? "us-east-1" });
+// Detect Cloudflare Workers environment
+function isWorkersEnvironment(): boolean {
+  return typeof (globalThis as unknown as Record<string, string | undefined>).caches !== "undefined";
+}
 
-export async function handler() {
-  const siteUrl = process.env.SITE_URL;
+/**
+ * Get CRON_SECRET from environment (Workers) or SSM (AWS/Lambda).
+ * In Workers, this is set via Wrangler secret.
+ * In Lambda, this reads from SSM.
+ */
+async function getCronSecret(): Promise<string> {
+  // Workers environment - CRON_SECRET is a Wrangler secret
+  if (isWorkersEnvironment()) {
+    return process.env.CRON_SECRET || "";
+  }
+
+  // AWS Lambda environment - fetch from SSM
+  const { SSMClient, GetParameterCommand } = await import("@aws-sdk/client-ssm");
+  const ssm = new SSMClient({ region: process.env.AWS_REGION ?? "us-east-1" });
   const ssmPrefix = process.env.SSM_PREFIX ?? "/cloudless/production";
+
+  try {
+    const { Parameter } = await ssm.send(
+      new GetParameterCommand({
+        Name: `${ssmPrefix}/CRON_SECRET`,
+        WithDecryption: true,
+      }),
+    );
+    return Parameter?.Value ?? "";
+  } catch (err) {
+    console.error("[cron-invoker] Failed to fetch CRON_SECRET from SSM:", err);
+    return "";
+  }
+}
+
+/**
+ * Invoke the cron endpoint with proper authorization.
+ * Used in AWS Lambda cron jobs.
+ */
+export async function handler(): Promise<{ statusCode: number; route: string; payload: unknown }> {
+  const siteUrl = process.env.SITE_URL;
   const route = process.env.CRON_ROUTE;
 
   if (!siteUrl || !route) {
     throw new Error(`Missing env: SITE_URL=${siteUrl}, CRON_ROUTE=${route}`);
   }
 
-  const { Parameter } = await ssm.send(
-    new GetParameterCommand({
-      Name: `${ssmPrefix}/CRON_SECRET`,
-      WithDecryption: true,
-    })
-  );
-  const secret = Parameter?.Value;
-  if (!secret) throw new Error(`CRON_SECRET not found at ${ssmPrefix}/CRON_SECRET`);
+  const secret = await getCronSecret();
+  if (!secret) {
+    throw new Error("CRON_SECRET not available");
+  }
 
   const res = await fetch(`${siteUrl}${route}`, {
+    method: "POST",
     headers: { Authorization: `Bearer ${secret}` },
     signal: AbortSignal.timeout(55_000),
   });
@@ -32,4 +73,41 @@ export async function handler() {
 
   const payload = await res.json().catch(() => null);
   return { statusCode: res.status, route, payload };
+}
+
+/**
+ * For Cloudflare Workers: Internal cron route invocation.
+ * Workers Cron sets CRON_ROUTE env var and invokes fetch() directly.
+ * This function handles internal routing based on the env var.
+ */
+export async function handleCronInvocation(env: { AUTH_DB?: D1Database }): Promise<Response | null> {
+  const route = process.env.CRON_ROUTE;
+  
+  if (!route) {
+    return null; // Not a cron invocation
+  }
+
+  // Verify CRON_SECRET in Workers environment
+  if (isWorkersEnvironment()) {
+    const secret = process.env.CRON_SECRET;
+    if (!secret) {
+      console.error("[cron-invoker] CRON_SECRET not set in Workers environment");
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    // Create a request that looks like an authenticated cron call
+    const request = new Request("https://internal/cron", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "x-cron-internal": "true",
+      },
+    });
+
+    // The worker will route this to the appropriate API endpoint
+    // Return null to let the worker's normal routing handle it
+    return null;
+  }
+
+  return null;
 }

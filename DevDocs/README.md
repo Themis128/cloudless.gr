@@ -18,7 +18,23 @@ All DevDocs follow a consistent structure:
 
 ## Related Documentation
 
+Core system documentation is maintained in `.clinerules/`:
+- `.clinerules/aws-to-cloudflare-migration.md` - Migration playbook
+- `.clinerules/migration-completion.md` - Completion report
+- `.clinerules/cloudless-architecture.md` - Architecture overview
+
+Operational status files:
+- `ACTIONS-REQUIRED.md` - Action items and verification status
+- `pending-actions-runbook.md` - Current runbook
+- `CLOUDFLARE-TUNNEL-MIGRATION.md` - Tunnel setup and fixes
+- `API-COVERAGE-GAP-REPORT.md` - API endpoint coverage analysis
+- `ARCHITECTURE-MAP.md` - Detailed architecture map
+
 See also:
 - `docs/` - General project documentation
 - `ops/` - Operational playbooks and scripts
 - `.github/workflows/` - CI/CD and deployment automation
+
+## Last Updated
+
+2026-07-20 - All services operational, tunnel active, DNS working

@@ -31,31 +31,48 @@
 
 ```
 Visitor → /contact form → [app]
-  ├─► SES: Email to tbaltzakis@cloudless.gr
+  ├─► Cloudflare Email: Email to tbaltzakis@cloudless.gr
   ├─► EspoCRM: Create Contact + Deal
   ├─► Slack #contacts: Notification with lead score
-  ├─► S3/R2: analytics event (contact_form_submit)
+  ├─► R2: analytics event (contact_form_submit)
   └─► ActiveCampaign: Lead enrollment (if configured)
 ```
 
 ## Migration Completion Status
 
 ### Completed (✓)
-- R2 buckets created: cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket
-- D1 database created: user-auth-db
-- Wrangler configuration ready: wrangler.jsonc, wrangler-cloudflare-free.json
-- Authentication routes implemented: register, login, logout, reset-password
-- Worker deployed and health endpoint confirmed
-- PostgreSQL secret created in k3s database namespace
-- Session endpoint returning 200
-- MCP server configuration fixed with run_main() async wrapper
-- DevDocs integration complete with migration-completion.md
+- [x] R2 buckets created: cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket
+- [x] D1 database created: user-auth-db
+- [x] Wrangler configuration ready: wrangler.jsonc, wrangler-cloudflare-free.json
+- [x] Authentication routes implemented: register, login, logout, reset-password
+- [x] Worker deployed and health endpoint confirmed
+- [x] PostgreSQL secret created in k3s database namespace
+- [x] Session endpoint returning 200
+- [x] MCP server configuration fixed with run_main() async wrapper
+- [x] DevDocs integration complete with migration-completion.md
 
 ### Remaining Tasks
-- Restart Cline to load MCP configuration changes
-- Apply monitoring stack node selector fixes
-- Complete Postiz deployment and PVC verification
-- Deploy AppFlowy worker to omv-ha node
+- [ ] Restart Cline to load MCP configuration changes
+- [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
+- [ ] Update MinIO credentials from `minioadmin` defaults (security risk)
+
+## Cloudflare Tunnel Status
+
+**Tunnel**: ✅ **ACTIVE** since 2026-07-20 01:25 EEST  
+**Tunnel ID**: e977a490-58c5-4fdb-9155-86832e3e636a
+
+### All Services Operational (11/11)
+| Service | Namespace | NodePort | Tunnel Host | Status |
+|---------|-----------|----------|-------------|--------|
+| grafana | monitoring | 30850 | grafana.cloudless.gr | ✅ Running + tunnel working |
+| kuma | uptime-kuma | 32501 | kuma.cloudless.gr | ✅ Running + tunnel working |
+| n8n | n8n | 30900 | n8n.cloudless.gr | ✅ Running + tunnel working (was 502) |
+| ntfy | ntfy | 30080 | ntfy.cloudless.gr | ✅ Running + tunnel working |
+| espocrm | espocrm | 30700 | espocrm.cloudless.gr | ✅ Running + tunnel working |
+| meili | meilisearch | 30902 | meili.cloudless.gr | ✅ Running + tunnel working |
+| postiz | postiz | 30500 | postiz.cloudless.gr | ✅ Running + tunnel working (307 redirect) |
+| appflowy | appflowy | 30810 | appflowy.cloudflow.gr | ✅ Running + tunnel working (302 redirect) |
+| docs | default | 30901 | docs.cloudless.gr | ✅ Running + tunnel working |
 
 ## MCP Tools Available
 

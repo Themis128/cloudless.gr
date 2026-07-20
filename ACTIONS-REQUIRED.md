@@ -1,6 +1,6 @@
 # Manual Actions Required - Cloudless.gr
 # Generated: 2026-07-19 16:44 UTC
-# Last Updated: 2026-07-20 01:43 EEST - All endpoints verified working
+# Last Updated: 2026-07-20 02:11 EEST - MinIO security fix applied
 
 ---
 
@@ -16,7 +16,7 @@
 
 ---
 
-## ✅ Current Status (as of 2026-07-20 01:43 EEST - VERIFIED)
+## ✅ Current Status (as of 2026-07-20 02:11 EEST - VERIFIED)
 
 ### ✅ All Endpoints Working (11/11)
 
@@ -74,12 +74,15 @@ ssh 192.168.1.128 "sudo cloudflared update"
 - [x] 11/11 tunnel endpoints working (DNS already functional)
 - [x] n8n 502 error fixed (cloudflared restart resolved)
 - [x] docs-server k8s.yaml nodePort configured (30901)
+- [x] MinIO credentials security fix - Changed from insecure "minioadmin" defaults to secure random credentials
 
 ---
 
 ## 📊 Configuration Status
 
-### ✅ Wrangler Secrets (ALL 5 CONFIGURED)
+### ✅ Wrangler Secrets (4/5 CONFIGURED - SLACK_BOT_TOKEN OPTIONAL)
+
+**Configured:**
 ```
 ADMIN_ALERT_SECRET ✅
 ESPOCRM_API_KEY ✅
@@ -87,6 +90,10 @@ ESPOCRM_API_PASSWORD ✅
 SLACK_WEBHOOK_URL ✅
 POSTIZ_API_KEY ✅
 ```
+
+**Note:** SLACK_BOT_TOKEN is optional - SLACK_WEBHOOK_URL provides sufficient functionality.
+SLACK_BOT_TOKEN would enable interactive Slash commands (/cloudless-status) but is not currently required.
+The belldog service (which would use `SLACK_TOKEN`) is not yet deployed, so this is not needed.
 
 ### ✅ Tailscale OAuth (ALL 4 CONFIGURED)
 ```
@@ -146,6 +153,7 @@ done
 3. **n8n 502 error was resolved** by cloudflared restart (QUIC connection cleared)
 4. **DNS is working correctly** - Endpoints reachable via Cloudflare proxy
 5. **Correct Tailscale IP is 100.74.191.58** - old IP 100.113.41.119/19 is stale
+6. **MinIO credentials updated** - Changed from "minioadmin:minioadmin" to secure random credentials on 2026-07-20
 
 ---
 

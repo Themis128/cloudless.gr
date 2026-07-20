@@ -81,6 +81,14 @@ OMV_SSH_KEY       — 2026-07-12 ✅
 
 ---
 
+## ✅ Security Fixes Applied
+
+### MinIO Credentials Updated (2026-07-20)
+- **Before:** `minioadmin` / `minioadmin` (insecure defaults)
+- **After:** Random hex credentials (`57b56c9b79e46f8fe467` / `1a8159f4574a94bd06e9dc3b33ba1dfe39a69e56`)
+- **Pod restarted:** minio-d8f9f74cb-smkmd successfully rolled out with new credentials
+- **Note:** Other secrets (POSTGRES_PASSWORD, GOTRUE_JWT_SECRET, etc.) preserved during update
+
 ## 📝 Notes
 
 1. **omv node is ONLINE** - Pi 5 at 192.168.1.128 (verified 2026-07-20)
@@ -88,3 +96,4 @@ OMV_SSH_KEY       — 2026-07-12 ✅
 3. **n8n 502 error resolved** - Fixed via cloudflared restart (QUIC connection cleared)
 4. **docs-server nodePort fixed** - Added missing nodePort specification (30901)
 5. **GitHub Actions workflow uses SSH** - No changes needed, already configured
+6. **MinIO security fix applied** - Changed from insecure defaults to secure random credentials
