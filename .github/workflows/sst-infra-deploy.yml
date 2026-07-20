@@ -31,9 +31,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Setup PNPM
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10
+        run: corepack enable && corepack prepare pnpm@10 --activate
 
       - name: Install dependencies
         run: pnpm install
