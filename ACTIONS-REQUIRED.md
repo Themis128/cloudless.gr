@@ -1,60 +1,96 @@
 # Manual Actions Required - Cloudless.gr
 # Generated: 2026-07-19 16:44 UTC
-# Last Updated: 2026-07-20 02:11 EEST - MinIO security fix applied
+# Last Updated: 2026-07-20 04:45 EEST - Added missing SST secrets
 
 ---
 
-## 🟢 CURRENT STATUS: All Services Operational
+## 🟡 CURRENT STATUS: Workflows Blocked - Missing Secrets
 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | omv node (192.168.1.128) | 🟢 ONLINE | Ping OK, SSH works, k3s running |
 | Cloudflare tunnel | 🟢 ACTIVE | Running, all endpoints accessible |
-| DNS records | 🟢 WORKING | All endpoints returning valid HTTP responses |
-| n8n service | 🟢 HEALTHY | Returning 200 (previously 502, fixed) |
-| GitHub Actions workflow | ⚠️ UNREACHABLE | kubectl can't reach k3s via Tailscale (SSH-based alternative works) |
+| GitHub Actions workflows | 🟢 OPERATIONAL after adding secrets | Failing due to missing `CLOUDFLARE_API_TOKEN`, `CF_ACCOUNT_ID`, `CRON_SECRET` |
 
 ---
 
-## ✅ Current Status (as of 2026-07-20 02:11 EEST - VERIFIED)
+## 🔴 WORKFLOW FAILURES - Missing GitHub Secrets
 
-### ✅ All Endpoints Working (11/11)
+### SST Infrastructure Deploy (`.github/workflows/sst-infra-deploy.yml`)
+**Status:** Failing - Requires secrets for SST deployment
 
-All tunnel endpoints verified returning 200 OK:
-- [200] https://cloudless.gr/api/health
-- [200] https://grafana.cloudless.gr/api/health
-- [200] https://kuma.cloudless.gr/
-- [200] https://n8n.cloudless.gr/ (previously 502, now fixed)
-- [200] https://ntfy.cloudless.gr/
-- [200] https://espocrm.cloudless.gr/
-- [307] https://postiz.cloudless.gr/ (redirect - expected)
-- [302] https://appflowy.cloudless.gr/ (redirect - expected)
-- [200] https://docs.cloudless.gr/
-- [200] https://meili.cloudless.gr/health
-- [200] https://omv.cloudless.gr/
+| Secret | Required | Use |
+|--------|----------|-----|
+| `CLOUDFLARE_API_TOKEN` | ✅ REQUIRED | SST deployment to Cloudflare |
+| `CF_ACCOUNT_ID` | ✅ REQUIRED | Cloudflare account identification |
+| `CRON_SECRET` | ✅ REQUIRED | Cron job authorization |
+
+### ETL EspoCRM to R2 (`.github/workflows/etl-espocrm-to-r2.yml`)
+**Status:** Failing - Missing Cloudflare R2 credentials
+
+| Secret | Required | Use |
+|--------|----------|-----|
+| `CF_R2_ACCESS_KEY_ID` | ✅ REQUIRED | R2 bucket access |
+| `CF_R2_SECRET_ACCESS_KEY` | ✅ REQUIRED | R2 bucket access secret |
+| `ESPOCRM_BASE_URL` | ✅ REQUIRED | EspoCRM API base URL |
 
 ---
 
 ## 🔧 Actions Required
 
-### 1. GitHub Actions Workflow Fix (HIGH - but has workaround)
+### 1. Configure Missing GitHub Secrets (CRITICAL)
 
-The k3s API is unreachable from GitHub Actions hosted runners via Tailscale IP `100.74.191.58:6443`.
+Add these secrets in **GitHub repo Settings → Secrets → Actions**:
 
-**Workaround - Use Direct SSH:**
-```bash
-# Fix tunnel config directly on omv
-ssh 192.168.1.128 "sudo systemctl restart cloudflared"
-
-# Or run the workflow and apply fixes manually if needed
-gh workflow run .github/workflows/fix-selfhosted-tunnels.yml --repo Themis128/cloudless.gr
+#### Step 1: Add CRON_SECRET (Ready to copy)
+Go to: https://github.com/Themis128/cloudless.gr/settings/secrets/actions/new
+```
+Name:     CRON_SECRET
+Value:      3a0761c6c112e74b0e9a9692f864eb071d3fe6638fb3e042a348d0d5ccd429c4
 ```
 
-**Alternative - Workflow Already Uses SSH:**
-The workflow `.github/workflows/fix-selfhosted-tunnels.yml` already uses SSH-based kubectl execution:
-- Connects via SSH using OMV_SSH_KEY secret
-- Runs kubectl commands on omv node over SSH
-- No changes needed to workflow
+#### Step 2: Get CF_ACCOUNT_ID
+1. Go to: https://dash.cloudflare.com
+2. Look at the right sidebar - **Account ID** is displayed there
+3. Click the copy icon next to it
+4. Add at: https://github.com/Themis128/cloudless.gr/settings/secrets/actions/new
+```
+Name:     CF_ACCOUNT_ID
+Value:      [paste your Account ID here]
+```
+
+#### Step 3: Create CLOUDFLARE_API_TOKEN
+Go to: https://dash.cloudflare.com/profile/api-tokens
+
+**Option A: Use Template (Recommended)**
+1. Click "Create Token"
+2. Select "Edit Cloudflare Workers" template
+3. Click "Continue to summary" → "Create Token"
+
+**Option B: Custom Token with Required Scopes**
+```
+Permissions:
+  - Account:Edit
+  - Zone:Edit  
+  - D1:Edit
+  - R2:Edit
+  - Workers:Edit
+  - KV:Edit (optional, for future use)
+```
+
+Then add at: https://github.com/Themis128/cloudless.gr/settings/secrets/actions/new
+```
+Name:     CLOUDFLARE_API_TOKEN
+Value:      [paste your API token here]
+```
+
+#### Step 4: (Optional) Add ETL R2 Secrets
+If you need EspoCRM ETL to run:
+```
+CF_R2_ACCESS_KEY_ID     - Create at: https://dash.cloudflare.com → R2 → Manage keys
+CF_R2_SECRET_ACCESS_KEY - Copy from the same R2 keys page
+ESPOCRM_BASE_URL         - https://espocrm.cloudless.gr
+```
 
 ### 2. Upgrade cloudflared (OPTIONAL)
 
@@ -62,6 +98,19 @@ Current version: 2026.6.1 (outdated)
 ```bash
 ssh 192.168.1.128 "sudo cloudflared update"
 ```
+
+---
+
+## 📊 ETL Secrets Status
+
+| Secret | Status | Notes |
+|--------|--------|-------|
+| `ESPOCRM_API_KEY` | ✅ Configured (Wrangler) | Available for workflow |
+| `ESPOCRM_API_PASSWORD` | ✅ Configured (Wrangler) | Available for workflow |
+| `CF_ACCOUNT_ID` | ⏳ NEEDS SECRET | Required for R2 access |
+| `CF_R2_ACCESS_KEY_ID` | ⏳ NEEDS SECRET | Required for ETL workflow |
+| `CF_R2_SECRET_ACCESS_KEY` | ⏳ NEEDS SECRET | Required for ETL workflow |
+| `ESPOCRM_BASE_URL` | ✅ Hardcoded | `https://espocrm.cloudless.gr` |
 
 ---
 
@@ -75,14 +124,14 @@ ssh 192.168.1.128 "sudo cloudflared update"
 - [x] n8n 502 error fixed (cloudflared restart resolved)
 - [x] docs-server k8s.yaml nodePort configured (30901)
 - [x] MinIO credentials security fix - Changed from insecure "minioadmin" defaults to secure random credentials
+- [x] Wrangler secrets configured (ADMIN_ALERT_SECRET, ESPOCRM_API_KEY, ESPOCRM_API_PASSWORD, SLACK_WEBHOOK_URL, POSTIZ_API_KEY)
+- [x] Tailscale OAuth configured (TS_CLIENT_ID, TS_CLIENT_SECRET, TS_AUTHKEY, OMV_SSH_KEY)
 
 ---
 
 ## 📊 Configuration Status
 
-### ✅ Wrangler Secrets (4/5 CONFIGURED - SLACK_BOT_TOKEN OPTIONAL)
-
-**Configured:**
+### Wrangler Secrets (5/5 CONFIGURED)
 ```
 ADMIN_ALERT_SECRET ✅
 ESPOCRM_API_KEY ✅
@@ -91,11 +140,7 @@ SLACK_WEBHOOK_URL ✅
 POSTIZ_API_KEY ✅
 ```
 
-**Note:** SLACK_BOT_TOKEN is optional - SLACK_WEBHOOK_URL provides sufficient functionality.
-SLACK_BOT_TOKEN would enable interactive Slash commands (/cloudless-status) but is not currently required.
-The belldog service (which would use `SLACK_TOKEN`) is not yet deployed, so this is not needed.
-
-### ✅ Tailscale OAuth (ALL 4 CONFIGURED)
+### Tailscale OAuth (4/4 CONFIGURED)
 ```
 TS_CLIENT_ID      — 2026-07-19 ✅
 TS_CLIENT_SECRET  — 2026-07-19 ✅
@@ -103,25 +148,23 @@ TS_AUTHKEY        — 2026-06-25 ✅
 OMV_SSH_KEY       — 2026-07-12 ✅
 ```
 
-### ✅ Services Deployed and Working
-
-| Service | File | Port | Status |
-|---------|------|------|--------|
-| grafana | infrastructure/monitoring/ | 30850 | ✅ Running + tunnel working |
-| kuma | infrastructure/uptime-kuma/ | 32501 | ✅ Running + tunnel working |
-| n8n | infrastructure/n8n/k8s.yaml | 30900 | ✅ Running + tunnel working |
-| ntfy | infrastructure/ntfy/ | 30080 | ✅ Running + tunnel working |
-| espocrm | infrastructure/espocrm/ | 30700 | ✅ Running + tunnel working |
-| meili | infrastructure/meilisearch/ | 30902 | ✅ Running + tunnel working |
-| postiz | infrastructure/postiz/ | 30500 | ✅ Running + tunnel working (307 redirect) |
-| appflowy | infrastructure/appflowy/ | 30810 | ✅ Running + tunnel working (302 redirect) |
-| docs | infrastructure/docs-server/ | 30901 | ✅ Running + tunnel working |
+### Services Deployed (9/9 operational)
+| Service | Port | Status |
+|---------|------|--------|
+| grafana | 30850 | ✅ Running + tunnel working |
+| kuma | 32501 | ✅ Running + tunnel working |
+| n8n | 30900 | ✅ Running + tunnel working |
+| ntfy | 30080 | ✅ Running + tunnel working |
+| espocrm | 30700 | ✅ Running + tunnel working |
+| meili | 30902 | ✅ Running + tunnel working |
+| postiz | 30500 | ✅ Running + tunnel working (307 redirect) |
+| appflowy | 30810 | ✅ Running + tunnel working (302 redirect) |
+| docs | 30901 | ✅ Running + tunnel working |
 
 ---
 
 ## 🔄 Workaround: Direct SSH (When Workflow Fails)
 
-The GitHub Actions workflow cannot reach k3s API via Tailscale. Use direct SSH instead:
 ```bash
 # Fix tunnel config directly on omv
 ssh 192.168.1.128 "sudo systemctl restart cloudflared"
@@ -148,8 +191,8 @@ done
 
 ## 📝 Notes
 
-1. **All services are deployed and operational** - No pending deployments needed
-2. **The workflows already use SSH-based kubectl execution** - No changes required
+1. **All Cloudflare secrets must be added to GitHub Actions secrets** - The workflows fail immediately without `CLOUDFLARE_API_TOKEN` and `CF_ACCOUNT_ID`
+2. **The workflows already use SSH-based kubectl execution** - No changes required to workflow files
 3. **n8n 502 error was resolved** by cloudflared restart (QUIC connection cleared)
 4. **DNS is working correctly** - Endpoints reachable via Cloudflare proxy
 5. **Correct Tailscale IP is 100.74.191.58** - old IP 100.113.41.119/19 is stale
@@ -159,7 +202,7 @@ done
 
 ## 🔗 Quick Links
 
-- [k3s-ssh-restart workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/k3s-ssh-restart.yml)
-- [fix-selfhosted-tunnels workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/fix-selfhosted-tunnels.yml)
+- [SST Infra Deploy workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/sst-infra-deploy.yml)
+- [ETL EspoCRM workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/etl-espocrm-to-r2.yml)
+- [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
 - [Tailscale admin console](https://login.tailscale.com/admin/machines)
-- [Cloudflare Zero Trust dashboard](https://dash.teams.cloudflare.com)
