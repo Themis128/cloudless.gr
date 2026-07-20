@@ -165,7 +165,7 @@
     "@sentry/core": "10.65.0",
     "@sentry/nextjs": "^10.65.0",
     "agents": "^0.17.4",
-    "ai": "^6.0.219",
+    "ai": "^7.0.31",
     "cmdk": "^1.1.1",
     "countup.js": "^2.10.1",
     "hono-agents": "^3.0.11",
@@ -192,7 +192,7 @@
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1087.0",
     "@axe-core/playwright": "^4.12.1",
-    "@cloudflare/workers-types": "^4.20260701.1",
+    "@cloudflare/workers-types": "^5.20260719.1",
     "@next/bundle-analyzer": "16.3.0-preview.6",
     "@opennextjs/cloudflare": "^1.20.1",
     "@parcel/watcher": "^2.5.6",
@@ -215,7 +215,7 @@
     "sst": "^4.17.0",
     "tailwindcss": "^4.3.2",
     "tsx": "^4.23.1",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "wrangler": "^4.112.0"
   }
 }
