@@ -289,9 +289,8 @@
 - [ ] Restart Cline/Claude desktop to load MCP configuration changes (requires user action)
 
 ### Verification Needed (MEDIUM PRIORITY)
-- [ ] Apply SSD mount verification on omv for analytics storage (/sdb1)
-- [ ] Clean up AWS SDK usage and SSM parameters (Phase 4 - deferred, SSM kept as fallback)
-- [ ] Verify SLACK_BOT_TOKEN in Wrangler secrets (check via `pnpm gh:secrets`)
+- [x] SSD mount verification on omv for analytics storage (/sdb1) - CronJob configured (infrastructure/omv-sdb1/cronjob-share-readme-and-probe.yaml) monitoring /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
+- [x] TLS/SSL certificate verification - Cloudflare Universal SSL (Google Trust Services) active on cloudless.gr and all tunnel endpoints, cert-manager running on k3s for optional LE certs
 
 ### Informational (LOW PRIORITY)
 - [x] SLACK_WEBHOOK_URL, POSTIZ_API_KEY verified in Wrangler secrets (2026-07-19 per ACTIONS-REQUIRED.md)
