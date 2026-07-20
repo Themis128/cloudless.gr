@@ -3,6 +3,7 @@
   "compilerOptions": {
     "noEmit": true,
     "skipLibCheck": true,
+    "types": ["node", "@cloudflare/workers-types"],
     "paths": {
       "~/*": ["./src/*"]
     }

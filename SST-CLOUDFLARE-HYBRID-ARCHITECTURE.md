@@ -76,45 +76,77 @@ The Worker detects `CRON_ROUTE` and:
 2. Routes through ASSETS to Next.js API handlers (via handleCronRoute in src/index.ts)
 
 ### 🔐 Secrets Required
-
-The following secrets must be configured in Wrangler:
-
-```bash
-# Run these commands to set production secrets
-npx wrangler secret put CRON_SECRET --config wrangler.jsonc
-npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
-npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
-```
-
-Or add to GitHub secrets:
-- `CLOUDFLARE_API_TOKEN` - API token for deployment
-- `CF_ACCOUNT_ID` - Cloudflare account ID
-- `CRON_SECRET` - Shared secret for cron job authorization
-- `SESSION_SECRET` - Session signing secret (32+ bytes)
-- `AGENT_AUTH_TOKEN` - Agent RPC authorization token
+ 
+ The following secrets must be configured in Wrangler:
+ 
+ ```bash
+ # Run these commands to set production secrets
+ npx wrangler secret put CRON_SECRET --config wrangler.jsonc
+ npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
+ npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
+ ```
+ 
+ Or add to GitHub secrets:
+ - `CLOUDFLARE_API_TOKEN` - API token for deployment
+ - `CF_ACCOUNT_ID` - Cloudflare account ID
+ - `CLOUDFLARE_ZONE_ID` - Zone ID for custom domain binding (found in Cloudflare dashboard Overview tab)
+ - `CRON_SECRET` - Shared secret for cron job authorization
+ - `SESSION_SECRET` - Session signing secret (32+ bytes)
+ - `AGENT_AUTH_TOKEN` - Agent RPC authorization token
+ 
+ ### 🌐 Zone ID Configuration
+ 
+ The `CLOUDFLARE_ZONE_ID` is required for custom domain binding. Find it in your Cloudflare dashboard:
+ 
+ 1. Go to **Cloudflare Dashboard** → Select your account → **cloudless.gr** zone
+ 2. The Zone ID appears on the **Overview** tab (format: `Zxxxxxxxxxxxxxxxxxxxxxxxxx`)
+ 3. Add to GitHub secrets or export before deployment:
+ 
+ ```bash
+ # Before deployment
+ export CLOUDFLARE_ZONE_ID="your_zone_id_here"
+ export CLOUDFLARE_API_TOKEN="your_api_token"
+ export CLOUDFLARE_ACCOUNT_ID="your_account_id"
+ 
+ pnpm deploy
+ ```
 
 ### 🚀 Deployment Pipeline
 
 ```bash
-# Step 1: Deploy infrastructure with SST
-pnpm sst:infra:deploy
+# Full Deploy (Infrastructure + Application)
+# Single command deployment with domain binding
+pnpm deploy     # Runs: cf:build && sst deploy --config sst.config.cloudflare.ts --stage production
 
-# Step 2: Apply D1 migrations
-npx wrangler d1 migrations apply user-auth-db --config wrangler.jsonc
-
-# Step 3: Set required secrets
-npx wrangler secret put CRON_SECRET --config wrangler.jsonc
-npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
-
-# Step 4: Build Next.js
-pnpm cf:build
-
-# Step 5: Deploy Worker with Wrangler
-pnpm cf:deploy
-
-# All-in-one
-pnpm deploy
+# Manual Infrastructure Deploy
+pnpm sst:infra:deploy                      # Step 1: Deploy infrastructure with SST
+npx wrangler d1 migrations apply user-auth-db  # Step 2: Apply D1 migrations
+npx wrangler secret put CRON_SECRET        # Step 3: Set required secrets
+npx wrangler secret put SESSION_SECRET
 ```
+
+### 🔗 Worker Linking
+
+The main Next.js Worker is linked to the Analytics Worker via SST's `link` property:
+
+```ts
+const analyticsWorker = new sst.cloudflare.Worker("AnalyticsWorker", {
+  handler: "./workers/index-analytics.ts",
+  url: true,
+});
+
+const mainApp = new sst.cloudflare.Worker("MainNextApp", {
+  handler: "./src/index.ts",
+  url: true,
+  link: [analyticsWorker], // Injects analyticsWorker.url automatically
+  domain: {
+    name: "cloudless.gr",
+    redirects: ["www.cloudless.gr"],
+  },
+});
+```
+
+This automatically makes `analyticsWorker.url` available in the main app via the `ANALYTICS_WORKER_URL` environment variable.
 
 ### ETL Integration
 

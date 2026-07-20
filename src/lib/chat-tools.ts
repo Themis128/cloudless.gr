@@ -1,9 +1,11 @@
 /**
  * Tool definitions for the Cloudless Assistant chat agent.
  *
- * Two read-only tools wired into /api/chat (Phase 2a of AGENTS_ROADMAP):
+ * Tools wired into /api/chat:
  *   - lookup_product:           query the live Stripe / default catalog.
+ *   - search_documentation:     semantic search via Cloudflare AI Search.
  *   - check_calendar_availability: query open consultation slots.
+ *   - book_slot:                confirm a consultation booking.
  *
  * Tool execution returns a plain-text string the model consumes as
  * tool_result content. Errors are converted to user-friendly messages —
@@ -16,6 +18,7 @@ import { isConfiguredAsync } from "@/lib/integrations";
 import { formatPrice } from "@/lib/format-price";
 import { slackBookingNotify } from "@/lib/slack-notify";
 import { sendBookingConfirmation } from "@/lib/email";
+import { searchAiDocs } from "@/lib/ai-search";
 import {
   MIN_DAYS_AHEAD,
   MAX_DAYS_AHEAD,
@@ -43,6 +46,26 @@ export const CHAT_TOOLS = [
           type: "string",
           description:
             "Free-text search query, e.g. 'serverless course', 'cloud audit', 'monthly retainer'.",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "search_documentation",
+    description:
+      "Search the Cloudless documentation and technical articles using semantic search. Use this when the visitor asks about technical topics, deployment guides, architecture patterns, or how-to questions that might be covered in our knowledge base.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description:
+            "Search query for documentation content, e.g. 'workers ai setup', 'cloudflare tunnel', 'nextjs deployment', 'aws migration'.",
+        },
+        namespace: {
+          type: "string",
+          description: "Optional namespace to search (default: docs).",
         },
       },
       required: ["query"],
@@ -110,6 +133,11 @@ interface LookupProductInput {
   query?: unknown;
 }
 
+interface SearchDocumentationInput {
+  query?: unknown;
+  namespace?: unknown;
+}
+
 interface CheckCalendarInput {
   days_ahead?: unknown;
 }
@@ -147,6 +175,32 @@ async function runLookupProduct(input: LookupProductInput): Promise<string> {
     return `- ${p.name} (${p.category}) — ${price}${recurring}. URL: ${SITE_BASE_URL}/store/${p.id}. ${p.description}`;
   });
   return `Found ${matches.length} match(es):\n${lines.join("\n")}`;
+}
+
+async function runSearchDocumentation(input: SearchDocumentationInput): Promise<string> {
+  const query = typeof input.query === "string" ? input.query.trim() : "";
+  if (!query) return "No search query provided.";
+
+  const namespace = typeof input.namespace === "string" ? input.namespace.trim() : undefined;
+
+  const result = await searchAiDocs(query, namespace);
+
+  if (!result) {
+    return "Documentation search is not yet configured. Suggest the visitor use the Contact page for technical questions.";
+  }
+
+  if (result.answer) {
+    return `Documentation search result: ${result.answer}`;
+  }
+
+  if (result.results && result.results.length > 0) {
+    const lines = result.results
+      .slice(0, 5)
+      .map((r, i) => `${i + 1}. ${r.text.slice(0, 150)}${r.text.length > 150 ? "..." : ""} (score: ${r.score.toFixed(2)})`);
+    return `Found ${result.results.length} relevant documents:\n${lines.join("\n")}`;
+  }
+
+  return `No documentation found for "${query}". Suggest checking the docs at https://docs.cloudless.gr or using the Contact page.`;
 }
 
 async function runCheckCalendarAvailability(input: CheckCalendarInput): Promise<string> {
@@ -230,10 +284,13 @@ async function runBookSlot(input: BookSlotInput): Promise<string> {
  */
 export async function runTool(name: string, input: unknown): Promise<string> {
   const safeInput = (typeof input === "object" && input !== null ? input : {}) as
-    LookupProductInput | CheckCalendarInput | BookSlotInput;
+    LookupProductInput | SearchDocumentationInput | CheckCalendarInput | BookSlotInput;
   try {
     if (name === "lookup_product") {
       return await runLookupProduct(safeInput as LookupProductInput);
+    }
+    if (name === "search_documentation") {
+      return await runSearchDocumentation(safeInput as SearchDocumentationInput);
     }
     if (name === "check_calendar_availability") {
       return await runCheckCalendarAvailability(safeInput as CheckCalendarInput);

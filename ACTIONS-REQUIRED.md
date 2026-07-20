@@ -140,6 +140,18 @@ SLACK_WEBHOOK_URL ✅
 POSTIZ_API_KEY ✅
 ```
 
+### For Calendar Integration (pending configuration)
+```
+GOOGLE_CLIENT_EMAIL - Not yet configured (required for calendar booking)
+GOOGLE_PRIVATE_KEY - Not yet configured (required for calendar booking)
+GOOGLE_CALENDAR_ID - Can use default "primary"
+```
+These enable:
+- `/api/calendar/availability` - Check available consultation slots
+- `/api/calendar/book` - Book a consultation
+- `/api/agent/book` - Authenticated booking agent
+- Chat tool `check_calendar_availability` and `book_slot`
+
 ### Tailscale OAuth (4/4 CONFIGURED)
 ```
 TS_CLIENT_ID      — 2026-07-19 ✅

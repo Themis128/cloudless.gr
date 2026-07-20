@@ -4,25 +4,7 @@
 from typing import Any
 
 class Resource:
-    class AdminNotifications:
-        name: str
-        type: str
-    class AnalyticsCache:
-        name: str
-        type: str
     class App:
         name: str
         stage: str
-    class CloudlessSite:
-        type: str
-        url: str
-    class SessionTokenStore:
-        name: str
-        type: str
-    class StripeTransactions:
-        name: str
-        type: str
-    class UserProfile:
-        name: str
-        type: str
 

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'migrations/*.sql'
+      - 'sst.config.cloudflare.ts'
       - '.github/workflows/sst-infra-deploy.yml'
   workflow_dispatch:
     inputs:
@@ -46,7 +47,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
+      - name: Deploy SST Cloudflare stack
+        run: pnpm deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+
 # Required secrets:
 # CLOUDFLARE_API_TOKEN - Cloudflare API token
-# CF_ACCOUNT_ID - Cloudflare account ID  
+# CF_ACCOUNT_ID - Cloudflare account ID
+# CLOUDFLARE_ZONE_ID - Cloudflare zone ID for custom domain binding
 # CRON_SECRET - Shared secret for cron job authorization

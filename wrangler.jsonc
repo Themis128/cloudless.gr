@@ -49,9 +49,8 @@
     }
   ],
   "assets": {
-    "directory": "./public",
-    "binding": "ASSETS",
-    "run_worker_first": true
+    "directory": "./out",
+    "binding": "ASSETS"
   },
   "ai": {
     "binding": "AI"
@@ -71,6 +70,10 @@
   "r2_buckets": [
     {
       "binding": "ASSETS_BUCKET",
+      "bucket_name": "cloudless-assets"
+    },
+    {
+      "binding": "CACHE_BUCKET",
       "bucket_name": "cloudless-assets"
     },
     {
@@ -114,6 +117,10 @@
           "bucket_name": "cloudless-assets-preview"
         },
         {
+          "binding": "CACHE_BUCKET",
+          "bucket_name": "cloudless-assets-preview"
+        },
+        {
           "binding": "MEDIA_BUCKET",
           "bucket_name": "app-media-bucket-preview"
         },
@@ -142,6 +149,10 @@
       "r2_buckets": [
         {
           "binding": "ASSETS_BUCKET",
+          "bucket_name": "cloudless-assets"
+        },
+        {
+          "binding": "CACHE_BUCKET",
           "bucket_name": "cloudless-assets"
         },
         {

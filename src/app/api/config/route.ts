@@ -8,7 +8,7 @@ function isWorkersEnvironment(): boolean {
 // Inline config helper for Workers environment
 function buildConfig(): Record<string, string> {
   const config: Record<string, string> = {};
-  
+
   // Common configuration keys from environment
   const keys = [
     "SES_FROM_EMAIL",
@@ -35,15 +35,17 @@ function buildConfig(): Record<string, string> {
     "POSTIZ_API_KEY",
     "N8N_API_URL",
     "N8N_API_KEY",
+    "GOOGLE_CLIENT_EMAIL",
+    "GOOGLE_CALENDAR_ID",
   ];
-  
+
   for (const key of keys) {
     const value = process.env[key];
     if (value) {
       config[key] = value;
     }
   }
-  
+
   // Secrets that should only be accessed via Wrangler secrets (not exposed via API)
   const secretKeys = [
     "AUTH_SECRET",
@@ -52,14 +54,14 @@ function buildConfig(): Record<string, string> {
     "ESPOCRM_API_PASSWORD",
     "APPFLOWY_PASSWORD",
   ];
-  
+
   for (const key of secretKeys) {
     const value = process.env[key];
     if (value) {
       config[key] = "***"; // Mask secrets in API response
     }
   }
-  
+
   return config;
 }
 
@@ -78,7 +80,7 @@ function buildConfig(): Record<string, string> {
  */
 export async function GET(request: NextRequest) {
   const configAuth = request.headers.get("x-config-auth");
-  
+
   // In production, require authentication for config access
   if (process.env.NODE_ENV === "production" || isWorkersEnvironment()) {
     const expectedAuth = process.env.CONFIG_API_KEY || process.env.ADMIN_ALERT_SECRET;

@@ -10,11 +10,28 @@ interface ChatService {
   chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
 }
 
-interface Env extends Cloudflare.Env {
+// Custom Env interface for this worker - extends base bindings with agent-specific ones
+// AUTH_DB, CHAT, and CRON_SECRET are optional to support multiple deployment targets
+interface Env {
+  // Base bindings from wrangler.jsonc
+  ASSETS_BUCKET: R2Bucket;
+  MEDIA_BUCKET: R2Bucket;
+  ANALYTICS_BUCKET: R2Bucket;
+  DATALAKE_BUCKET: R2Bucket;
+  AUTH_DB?: D1Database;
+  EMAIL: SendEmail;
+  ANALYTICS: AnalyticsEngineDataset;
+  AI: Ai;
+  ENVIRONMENT: "staging" | "production";
+  API_VERSION: string;
+  NEXT_PUBLIC_AUTH_PROVIDER: string;
+  NEXT_PUBLIC_SITE_URL: string;
+  APP_VERSION: string;
+  SESSION_SECRET: string;
+  // Custom bindings
   AGENT_AUTH_TOKEN: string;
   ASSETS: Fetcher;
   CounterAgent: DurableObjectNamespace<CounterAgent>;
-  AUTH_DB?: D1Database;
   CHAT?: ChatService;
   CRON_SECRET?: string;
 }
