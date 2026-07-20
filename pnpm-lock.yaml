@@ -199,8 +199,8 @@ importers:
         specifier: ^0.8.1
         version: 0.8.1(prettier@3.9.5)
       sst:
-        specifier: ^4.17.0
-        version: 4.17.0
+        specifier: ^4.17.1
+        version: 4.17.1
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -402,8 +402,8 @@ packages:
     resolution: {integrity: sha512-ePcQEiJ+ppv7H7DhwuSQ7BMSj5XDQ9WxkHPxw3YkFKHpKLSNZs/XHn9CnaW2H6wjKEP14TK3wqFtdvcPhsJX5A==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/client-lambda@3.1075.0':
-    resolution: {integrity: sha512-S+sy0L7WEouGGys0kJZJ+br0sQGxgWC+0nR/4ySsym/CSg/k+VHXBdD697WJLli+X5a76tFBshx5bjgVKgLg4Q==}
+  '@aws-sdk/client-lambda@3.1090.0':
+    resolution: {integrity: sha512-Gu4bEgTr+f859KLdPkjINhzBCxwQctSmoJ3I5XlVdFGt565w6UCI5tw4sEbC+qltq1RMoORTTRjrbL5jExANaA==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-lambda@3.984.0':
@@ -537,6 +537,10 @@ packages:
   '@aws-sdk/middleware-websocket@3.972.41':
     resolution: {integrity: sha512-LSbGvvYmjc4Br9BPYI2dTLnIclmrSiQbahkP4D6nRGVEv4qsCZ8csVuKBPVEEFCVD+EEngGh8ROls6XpumtwMg==}
     engines: {node: '>= 14.0.0'}
+
+  '@aws-sdk/nested-clients@3.997.33':
+    resolution: {integrity: sha512-dVZOroI/r3/ENvqNGgjMPul+jjlz9GddfVusgTXlVjfZj5isibOxecLkGQbRPp8XOuX+RAfjXLFgPkD1JS5xrw==}
+    engines: {node: '>=20.0.0'}
 
   '@aws-sdk/nested-clients@3.997.33':
     resolution: {integrity: sha512-dVZOroI/r3/ENvqNGgjMPul+jjlz9GddfVusgTXlVjfZj5isibOxecLkGQbRPp8XOuX+RAfjXLFgPkD1JS5xrw==}
@@ -2604,6 +2608,10 @@ packages:
     resolution: {integrity: sha512-3zpg8yqqyXzoK2TsRDdkqVOj2RDBFfLXwCczOZ5c7TWB4eiaebfSCsbMjDPYB3PJ9ihV62QaeadZ+wLadZtNGA==}
     engines: {node: '>=18.0.0'}
 
+  '@smithy/fetch-http-handler@5.6.7':
+    resolution: {integrity: sha512-3zpg8yqqyXzoK2TsRDdkqVOj2RDBFfLXwCczOZ5c7TWB4eiaebfSCsbMjDPYB3PJ9ihV62QaeadZ+wLadZtNGA==}
+    engines: {node: '>=18.0.0'}
+
   '@smithy/hash-blob-browser@4.4.10':
     resolution: {integrity: sha512-DFOpzjXqmxvGtR9i+MdjMduBsDg1l+szdg8vGzPdM3z6I+GA/9T1Y2snHP9LzIH0lVfbVPMOlUm2vlpmr9eAeQ==}
     engines: {node: '>=18.0.0'}
@@ -2650,6 +2658,10 @@ packages:
 
   '@smithy/node-config-provider@4.5.10':
     resolution: {integrity: sha512-8J0iQAEQ+WKwUh8NuR7SEr3wdSbXSvTQ2PLMcgWmL8TGqHsy0glEnaZvbuYCQr4RkZjxJ3mfSI2BsbPrxcsRIA==}
+    engines: {node: '>=18.0.0'}
+
+  '@smithy/node-http-handler@4.9.7':
+    resolution: {integrity: sha512-wCU8HCLjAtAVqxxe0j2xff9LcEPw3yjBbg5IdQDIYFnxnPxbxcSLc7rgex7kqm9L/WYOnJEgaWQlfDkZleozMA==}
     engines: {node: '>=18.0.0'}
 
   '@smithy/node-http-handler@4.9.7':
@@ -4864,6 +4876,26 @@ packages:
       ws:
         optional: true
 
+  langsmith@0.8.3:
+    resolution: {integrity: sha512-3y1PRTmY24wiN8NiMb0CcNI2LwgovsKAz+ymVmBSmUx4nXL+GlmPY6Ju7FGeaPV1DMfQs9SjceNZHIfY2XYMKQ==}
+    peerDependencies:
+      '@opentelemetry/api': '*'
+      '@opentelemetry/exporter-trace-otlp-proto': '*'
+      '@opentelemetry/sdk-trace-base': '*'
+      openai: '*'
+      ws: '>=7'
+    peerDependenciesMeta:
+      '@opentelemetry/api':
+        optional: true
+      '@opentelemetry/exporter-trace-otlp-proto':
+        optional: true
+      '@opentelemetry/sdk-trace-base':
+        optional: true
+      openai:
+        optional: true
+      ws:
+        optional: true
+
   language-subtag-registry@0.3.23:
     resolution: {integrity: sha512-0K65Lea881pHotoGEa5gDlMxt3pctLi2RplBb7Ezh4rRdLEOtgi7n4EwK9lamnUCkKBqaeKRVebTq6BAxSkpXQ==}
 
@@ -6023,48 +6055,48 @@ packages:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
 
-  sst-darwin-arm64@4.17.0:
-    resolution: {integrity: sha512-0aoQWA/W70MMrJjsiU5MwHt+uOXcPkx8SgHT3EteGflbaVLVB71PbNTTuoBzzoGBC/u3+yFA9PseVNsZCy0xcA==}
+  sst-darwin-arm64@4.17.1:
+    resolution: {integrity: sha512-Y9qZTBk4Fcwba+td+Dz3lz0wT9pQIbkJ5JqNfU4UwaVQtA58kz02F/BluhACi0vpI7PJULY7Tp1orHg86iy9+w==}
     cpu: [arm64]
     os: [darwin]
 
-  sst-darwin-x64@4.17.0:
-    resolution: {integrity: sha512-LRX0zcLPfckvawVmHDTXHROi7DBEn6cg3ud6O393UXtur34KF/8T2usgbTy36lkH9/rb/ekPQu501oA0OhdNZg==}
+  sst-darwin-x64@4.17.1:
+    resolution: {integrity: sha512-TCU/H51vhQo+5QwsPIsiODlM54OS3Xai8FThcmX9H4git9Z/gPRLdWGKO+KSRB5Mrbm4z1R+pLqWyuuoNA4W6g==}
     cpu: [x64]
     os: [darwin]
 
-  sst-linux-arm64@4.17.0:
-    resolution: {integrity: sha512-X83Hvs6ik5Atwvea8r4APc20b4sSnr6D/sLE70HjFK4wcgbVIpQTxu0L6whO6RLj7iSq7z8t21vqfFybBhxv7w==}
+  sst-linux-arm64@4.17.1:
+    resolution: {integrity: sha512-LwSl1hOEuRx1nODr9QRKZAo8hrTOS/BBhZdGoAIwsVArmZurqbY1VKaVk6DSbP+qUnGPPgdEMpb1PpfdJfX/Xw==}
     cpu: [arm64]
     os: [linux]
 
-  sst-linux-x64@4.17.0:
-    resolution: {integrity: sha512-TW9x02ksVbJAFyk3JmHufXl8INS7TErbABJ6+dGQZ4We9eJt7DYku1WmQeN5paFzoS2LYc/r/luNwHvHYWZOzQ==}
+  sst-linux-x64@4.17.1:
+    resolution: {integrity: sha512-DtIm3XkpzWb9yS4ZSgxg5KuOHRHhBk66y9lzVw6E/GBfUDdVOES2pbQUuFHuAq2tPJpbzuxGH7trdylAGD+TxA==}
     cpu: [x64]
     os: [linux]
 
-  sst-linux-x86@4.17.0:
-    resolution: {integrity: sha512-iUnsj1oyxxO5dZVWNgCqTQQXReMIHZ0IlgyZMLrUtbB+wgbtIB+fzZoYCuz/vmSH+nYOE88lcONlQVGKMGdBgQ==}
+  sst-linux-x86@4.17.1:
+    resolution: {integrity: sha512-I2dMWy9zU2V1H6NX3TE1ckl8BbXm/1rcPyxRJCe2TBYUgucqhT1q4je3OAOjBfUnBSv7arxm5tSrYZ0Z9I3bYQ==}
     cpu: [x86]
     os: [linux]
 
-  sst-win32-arm64@4.17.0:
-    resolution: {integrity: sha512-G56bcj+qa9cfPaGxdtdbRbg/2jcbv25ZI3AOeHZXLNgr+Z5Z5m9EdPcB9QmiTYxCLnLZHiK6EqC4Duk0yGJjRQ==}
+  sst-win32-arm64@4.17.1:
+    resolution: {integrity: sha512-iGWZC6vCI2verOnjLxRLeXNsZdxvVKJlgXO0zI4vtw3cbd+PbCU2Q7uj6miu0nlNHhsy+v0C3eL/aKu3Sk7V0A==}
     cpu: [arm64]
     os: [win32]
 
-  sst-win32-x64@4.17.0:
-    resolution: {integrity: sha512-JccfzRJYVWru8OuLj3diYryY+JbIcBgXLoPBdqcckCiFy1fwIVGeq01WVYZYZmR3p8ivCHlPkirRR4g8gKSsxQ==}
+  sst-win32-x64@4.17.1:
+    resolution: {integrity: sha512-S9vpQwF24syg2A2+Sb+STejN8pfVv/l2LIZTFHeQOrMeLPIld3Uz9fQPakXCa3FrT1/i+m/UWWORXIJUeNBe+g==}
     cpu: [x64]
     os: [win32]
 
-  sst-win32-x86@4.17.0:
-    resolution: {integrity: sha512-5Dp8znXfxpTmM8OpNpxfsuyM8BHkVRQ8wTP1jsDVzG1Pwxx59b4HUILTaYv3+CzE2AIZyW/V8LjC7fbhFE/yCQ==}
+  sst-win32-x86@4.17.1:
+    resolution: {integrity: sha512-CTniRCdMGKVBZ4RB4cJbwJS1YH2d9vmCEzrbETr8a6BtlZ7gD4DDHf3RuG7oZ9MumVerbTuxhi7faz7uJ0UjVw==}
     cpu: [x86]
     os: [win32]
 
-  sst@4.17.0:
-    resolution: {integrity: sha512-Bkdp1mBBnueNhU3FSPXip/OOL05VX4B/1NpWkMU7UpQcyo1UzpnzLal48iLZKghlNFH+JKJFafhpIj3fXeK7+Q==}
+  sst@4.17.1:
+    resolution: {integrity: sha512-06z0R8MICyvlsMAnPhQSga0JyijwlxwFXatnPtPA1h38PjSafrVR7bUhVIHFmUAtDLNC8hTlR/KMbKBlKGrRnQ==}
     hasBin: true
 
   stable-hash@0.0.5:
@@ -7024,7 +7056,7 @@ snapshots:
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
-  '@aws-sdk/client-lambda@3.1075.0':
+  '@aws-sdk/client-lambda@3.1090.0':
     dependencies:
       '@aws-crypto/sha256-browser': 5.2.0
       '@aws-crypto/sha256-js': 5.2.0
@@ -7445,6 +7477,17 @@ snapshots:
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
+  '@aws-sdk/nested-clients@3.997.33':
+    dependencies:
+      '@aws-sdk/core': 3.975.3
+      '@aws-sdk/signature-v4-multi-region': 3.996.41
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.29.5
+      '@smithy/fetch-http-handler': 5.6.7
+      '@smithy/node-http-handler': 4.9.7
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
   '@aws-sdk/region-config-resolver@3.972.37':
     dependencies:
       '@aws-sdk/core': 3.975.3
@@ -7518,7 +7561,7 @@ snapshots:
 
   '@aws/durable-execution-sdk-js@1.0.2':
     dependencies:
-      '@aws-sdk/client-lambda': 3.1075.0
+      '@aws-sdk/client-lambda': 3.1090.0
 
   '@aws/lambda-invoke-store@0.3.0': {}
 
@@ -9228,6 +9271,12 @@ snapshots:
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 
+  '@smithy/fetch-http-handler@5.6.7':
+    dependencies:
+      '@smithy/core': 3.29.5
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
   '@smithy/hash-blob-browser@4.4.10':
     dependencies:
       '@smithy/core': 3.29.5
@@ -9285,6 +9334,12 @@ snapshots:
   '@smithy/node-config-provider@4.5.10':
     dependencies:
       '@smithy/core': 3.29.5
+      tslib: 2.8.1
+
+  '@smithy/node-http-handler@4.9.7':
+    dependencies:
+      '@smithy/core': 3.29.5
+      '@smithy/types': 4.16.1
       tslib: 2.8.1
 
   '@smithy/node-http-handler@4.9.7':
@@ -13032,45 +13087,45 @@ snapshots:
 
   split2@4.2.0: {}
 
-  sst-darwin-arm64@4.17.0:
+  sst-darwin-arm64@4.17.1:
     optional: true
 
-  sst-darwin-x64@4.17.0:
+  sst-darwin-x64@4.17.1:
     optional: true
 
-  sst-linux-arm64@4.17.0:
+  sst-linux-arm64@4.17.1:
     optional: true
 
-  sst-linux-x64@4.17.0:
+  sst-linux-x64@4.17.1:
     optional: true
 
-  sst-linux-x86@4.17.0:
+  sst-linux-x86@4.17.1:
     optional: true
 
-  sst-win32-arm64@4.17.0:
+  sst-win32-arm64@4.17.1:
     optional: true
 
-  sst-win32-x64@4.17.0:
+  sst-win32-x64@4.17.1:
     optional: true
 
-  sst-win32-x86@4.17.0:
+  sst-win32-x86@4.17.1:
     optional: true
 
-  sst@4.17.0:
+  sst@4.17.1:
     dependencies:
       '@aws/durable-execution-sdk-js': 1.0.2
       aws4fetch: 1.0.18
       jose: 5.2.3
       openid-client: 5.6.4
     optionalDependencies:
-      sst-darwin-arm64: 4.17.0
-      sst-darwin-x64: 4.17.0
-      sst-linux-arm64: 4.17.0
-      sst-linux-x64: 4.17.0
-      sst-linux-x86: 4.17.0
-      sst-win32-arm64: 4.17.0
-      sst-win32-x64: 4.17.0
-      sst-win32-x86: 4.17.0
+      sst-darwin-arm64: 4.17.1
+      sst-darwin-x64: 4.17.1
+      sst-linux-arm64: 4.17.1
+      sst-linux-x64: 4.17.1
+      sst-linux-x86: 4.17.1
+      sst-win32-arm64: 4.17.1
+      sst-win32-x64: 4.17.1
+      sst-win32-x86: 4.17.1
 
   stable-hash@0.0.5: {}
 
