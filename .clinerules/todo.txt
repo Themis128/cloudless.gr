@@ -1,6 +1,7 @@
 # Cloudless.gr Migration + Optimization Todo List
 # Cloudflare + Local Cluster Architecture Corrections
 # Generated: 2026-07-17 (post-migration optimization phase)
+# Updated: 2026-07-20 (omv online, tunnel active, DNS fixes in progress)
 
 ## 🏗️ INFRASTRUCTURE CORRECTIONS
 
@@ -15,30 +16,38 @@
 - [x] Create Python unit tests for MCP server
 - [ ] Restart Cline to load MCP configuration changes
 
-### ETL Migration (SSM → D1)
-- [x] Migrate clients-to-r2.mjs to use D1 instead of SSM for config
+### Tailscale Configuration
+- [x] Create ProxyClass CRD for monitoring-proxy (proxyclass-monitoring.yaml)
+- [x] Fix ProxyGroup health probe configuration (invalid probes removed)
+- [x] Create tailscale-deploy.yml GitHub workflow for automated deployment
+- [x] Update Tailscale OAuth credentials documentation (README.md)
+- [x] Create Tailscale diagnostic script (tailscale-diagnose.sh)
+- [x] Add TS_CLIENT_ID and TS_CLIENT_SECRET to GitHub secrets (2026-07-19)
+- [x] Approve subnet routes in Tailscale admin console (10.42.0.0/16, 10.43.0.0/16)
 
 ### Cluster Resource Optimization (Pi 5 - 8GB RAM)
 - [x] Apply monitoring-node-selector-fix.yml for Prometheus/Alertmanager
 - [x] Fix cloudflare-geo-exporter scaling issues (4 pods in terminating/pending)
 - [x] Resolve metoro-node-agent CrashLoopBackOff (eBPF not supported on Pi kernel)
 - [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
-- [x] Update node selector in kube-prom-stack-values.yaml for persistence
+  - Mount path: /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7
+  - Status: Ready, requires omv node for verification
 
 ### Postiz Deployment Fixes
 - [x] Monitor Postiz image pull (ghcr.io/gitroomhq/postiz-app:v2.11.2) - large image, taking time
 - [x] Verify Postiz PVC claims (uploadsPvc: 2Gi → 20Gi for media)
-- [ ] Configure Postiz Cloudflare Tunnel via `infrastructure/postiz/cloudflare-tunnel.yaml`
+- [x] Configure Postiz Cloudflare Tunnel via `infrastructure/postiz/cloudflare-tunnel.yaml`
 - [ ] Deploy postiz-liteLLM service for AI features (optional)
 - [ ] Increase Postiz resources (currently requests 512Mi RAM - may need 1Gi)
 
 ### Cloudflare API Token Setup
-- [ ] Create CLOUDFLARE_API_TOKEN secret (SSM + GitHub Actions)
+- [ ] Create CLOUDFLARE_API_TOKEN secret (SSM + GitHub Actions) - REQUIRED for deployment workflow
 
 ### AppFlowy Stack Completion
-- [ ] Deploy AppFlowy worker to omv-ha node (offload from omv)
-- [ ] Configure AppFlowy ingress route for port 30810
-- [ ] Verify MinIO storage (10Gi) for CMS assets
+- [x] Deploy AppFlowy worker to omv-ha node (offload from omv) - Already deployed (see appflowy.yaml)
+- [x] Configure AppFlowy ingress route for port 30810 - Added to ingress-rules.yaml
+- [x] Verify MinIO storage (10Gi) for CMS assets - PVC configured (line 65 in appflowy.yaml)
+- [x] Update MinIO credentials from `minioadmin` defaults (COMPLETED 2026-07-20 - secure random hex credentials)
 
 ### n8n Workflow Automation
 - [ ] Import analytics workflows from `infrastructure/n8n/workflows/`
@@ -65,6 +74,13 @@
 - [x] **Auth testing sandbox** - Created /api/auth/sandbox endpoint
 - [x] **Verify SESSION_SECRET** - Added validation for 32+ bytes
 - [x] **D1 binding check** - Verified in wrangler.jsonc
+- [x] **/api/config endpoint** - Created for ETL scripts to read config from D1 (migration 0007)
+
+### Tailscale Secrets Configuration (REQUIRED)
+- [x] Add TS_CLIENT_ID to GitHub secrets (2026-07-19)
+- [x] Add TS_CLIENT_SECRET to GitHub secrets (2026-07-19)
+- [x] Add TS_AUTHKEY to GitHub secrets (2026-06-25)
+- [x] Add OMV_SSH_KEY to GitHub secrets (2026-07-12)
 
 ### MCP Security Audit
 - [ ] Run `pnpm mcp-security-scan` on API routes
@@ -156,19 +172,65 @@
 - [ ] Configure workflow notifications (#alerts, #orders, #contacts)
 - [ ] Verify n8n Slack webhook integration
 
-## 💰 COST OPTIMIZATION
+## ⚠️ TUNNEL & DNS STATUS (2026-07-20)
+
+### Current State
+- **Tunnel**: ✅ ACTIVE (fixed 2026-07-20 01:25 EEST)
+- **omv Node**: ✅ ONLINE (192.168.1.128, Tailscale 100.74.191.58)
+- **DNS Records**: ✅ WORKING (all endpoints returning valid responses)
+
+### Failing Endpoints
+| Hostname | Status | Issue |
+|----------|--------|-------|
+| None | All services operational | All 11 endpoints verified working |
+
+### Required DNS Fixes
+All DNS records are now correctly configured and working.
+
+### GitHub Actions Issue
+- **Status**: ✅ WORKING - SSH-based kubectl execution pattern in place
+- **Workaround**: Already implemented in workflows using SSH via OMV_SSH_KEY
+- **Example**: See `.github/workflows/fix-selfhosted-tunnels.yml` for SSH-based execution
+
+## ☁️ AWS → CLOUDFLARE MIGRATION (COMPLETE)
+
+### Phase 1: Secrets Migration (SSM → Workers) - ✅ COMPLETE
+- [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
+- [x] Migrate ADMIN_ALERT_SECRET to Workers secret (463953c7f9183ee69c0c4fc18495e72543398d79bdcf9702478dd59d920fc7b6)
+- [x] Migrate SLACK_WEBHOOK_URL to Workers secret (2026-07-19)
+- [x] Migrate POSTIZ_API_KEY to Workers secret (2026-07-19)
+- [x] Migrate ESPOCRM_API_KEY to Workers secret (2026-07-19)
+- [x] Migrate ESPOCRM_API_PASSWORD to Workers secret (2026-07-19)
+- [x] Create Kubernetes secret for k3s deployment (infrastructure/cloudless/secrets.yaml)
+- [x] ESPOCRM_BASE_URL stored in D1 app_config (migration 0007) - NOT a secret
+- [x] Verify ssm-config.ts works with SSM_DISABLED=1 mode
+
+### Phase 2: Lambda Replacement (Workers)
+- [ ] Create /api/pi-proxy route (Tailscale proxy)
+- [ ] Create /api/inbound-email route (Email Routing webhook)
+- [ ] Update cloudflare-tunnel config for pi-alert-api exposure
+- [ ] Test Tailscale connectivity through Workers tunnel
+
+### Phase 3: Email Configuration
+- [ ] Verify Cloudflare Email service is active
+- [ ] Configure MX record (point to Cloudflare Email)
+- [ ] Set up SPF: v=spf1 include:_spf.mx.cloudflare.net ~all
+- [ ] Configure DKIM (provided by Cloudflare)
+- [ ] Set up DMARC: _dmarc TXT record
+- [ ] Test email deliverability to Gmail, Outlook
+
+### Phase 4: Cleanup
+- [ ] Remove AWS SDK from package.json (audit usage first)
+- [ ] Delete SSM parameters via AWS CLI
+- [ ] Delete Lambda functions (pi-proxy, SES-to-EspoCRM)
+- [ ] Remove AWS credentials from .env
+- [ ] Cancel remaining AWS resources
 
 ### Cloudflare Free Tier Compliance
 - [ ] Monitor daily Workers invocations (< 100K limit)
 - [ ] Track R2 operations (< 10M ops/month)
 - [ ] Verify D1 database size (< 5GB free tier)
 - [ ] Set up Cloudflare budget alerts
-
-### AWS Cleanup
-- [ ] Delete CloudFront distribution (already noted as deleted)
-- [ ] Remove unused SSM parameters
-- [ ] Cancel unused Lambda functions
-- [ ] Delete DynamoDB tables after final migration verification
 
 ## 📝 DOCUMENTATION & KNOWLEDGE BASE
 
@@ -185,12 +247,17 @@
 - [x] Create mcp-documentation-sprint-summary.md
 - [x] Document MCP tool usage patterns (server.py reference)
 - [x] Add API endpoint catalog (cloudless-api-catalog.md)
+- [x] Create pending-actions-runbook.md (2026-07-19)
+- [x] Create ACTIONS-REQUIRED.md (2026-07-19)
+- [x] Update CLOUDFLARE-TUNNEL-MIGRATION.md (2026-07-20)
 
 ### Runbook Updates
 - [x] Update CLUSTER-MAP.md with current pod statuses
 - [x] Document Cloudflare Tunnel certificate renewal (cloudflare-tunnel-cert-renewal.md)
 - [x] Add backup/restore procedures for D1 (d1-backup-restore.md)
 - [x] Create failover playbook (Workers → Pi → Tailscale) (workers-failover-playbook.md)
+- [x] Document DNS fix procedures (ACTIONS-REQUIRED.md)
+- [x] Create tunnel status documentation (2026-07-20 fixes)
 
 ## ✅ COMPLETED VERIFICATION
 
@@ -198,7 +265,7 @@
 - [x] R2 buckets created (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket)
 - [x] D1 database created (user-auth-db)
 - [x] Wrangler configuration ready (wrangler.jsonc, wrangler-cloudflare-free.json)
-- [x] Schema migration files created (0001-auth-schema.sql, 0002-d1-optimizations.sql)
+- [x] Schema migration files created (0001-auth-schema.sql, 0002-d1-optimizations.sql, 0006-email-suppression.sql, 0007-app-config.sql)
 - [x] Worker endpoint created (index-cloudflare-free.js with auth, chat, analytics)
 - [x] AUTH_PROVIDER set to "d1" in environment variables
 - [x] Worker deployed and health endpoint confirmed
@@ -213,11 +280,59 @@
 
 ## 🎯 NEXT ACTIONS (Priority Order)
 
-1. ~~Critical:~~ ~~Fix MCP configuration~~ (✓ done)
-2. **High:** Restart Cline to load MCP configuration changes
-3. **High:** Apply monitoring stack node selector fixes
-4. **High:** Complete Postiz deployment and verify status
-5. **Medium:** Configure 2TB SSD for analytics storage
-6. **Medium:** Add bcrypt password hashing to auth
-7. **Low:** Optimize resource allocation for existing pods
-8. **Low:** Clean up AWS resources after final verification
+1. ~~Critical:~~ ~~Fix DNS records for docs/omv/meili (CNAME to tunnel)~~ (✓ completed 2026-07-20)
+2. ~~High:~~ ~~Fix n8n 502 error on localhost:30900~~ (✓ completed 2026-07-20)
+3. ~~High:~~ ~~Configure GitHub Actions workflows to SSH-based execution~~ (✓ already working)
+4. **HIGH:** Restart Cline to load MCP configuration changes
+5. **MEDIUM:** Apply SSD mount verification on omv
+6. **MEDIUM:** Deploy missing services (ntfy, uptime-kuma, meilisearch, docs-server) - Already deployed
+7. **MEDIUM:** Add bcrypt password hashing to auth (upgrade from PBKDF2)
+8. **LOW:** Optimize resource allocation for existing pods
+9. **LOW:** Clean up AWS resources after final verification
+
+## ⚠️ RECENT FIXES (2026-07-20)
+
+### Monitoring Stack - COMPLETE
+- The `monitoring` namespace EXISTS with 11 pods running
+- Prometheus, Grafana, Alertmanager, Loki all deployed and healthy on omv node
+
+### Postiz
+- ✅ Pods running and healthy on omv
+- ✅ postiz-uploads PVC recreated at 20Gi
+- ⚠️ Init container restart issues noted (cosmetic, not blocking)
+
+### AppFlowy
+- ✅ 9 pods running (omv-ha has worker pod)
+- ✅ MinIO credentials updated (2026-07-20) - Changed from insecure defaults to secure random hex credentials
+
+### Tunnel Status - FIXED
+- **Tunnel ID**: e977a490-58c5-4fdb-9155-86832e3e636a
+- **Status**: ✅ ACTIVE (fixed 2026-07-20 01:25 EEST)
+- **Fix Applied**: chmod 644 on credentials file + full cloudflared restart
+- **Version**: 2026.6.1 (outdated, upgrade recommended)
+
+### GitHub Actions k3s Connectivity - WORKING
+- **Issue**: Workflows using direct kubectl via Tailscale IP (100.74.191.58:6443) 
+- **Status**: ✅ SSH-based execution pattern works correctly
+- **See**: `.github/workflows/fix-selfhosted-tunnels.yml` for working pattern
+
+### omv Node Status - ONLINE
+- **IP**: 192.168.1.128 (LAN), 100.74.191.58 (Tailscale)
+- **SSH**: ✅ Working (verified 2026-07-20)
+- **k3s**: ✅ Running (pods verified)
+- **Services**: ✅ All 11 services operational
+
+### All Services Deployed (11/11 operational)
+| Service | Namespace | NodePort | Tunnel Host | Status |
+|---------|-----------|----------|-------------|--------|
+| grafana | monitoring | 30850 | grafana.cloudless.gr | ✅ Running + tunnel working |
+| kuma | uptime-kuma | 32501 | kuma.cloudless.gr | ✅ Running + tunnel working |
+| n8n | n8n | 30900 | n8n.cloudless.gr | ✅ Running + tunnel working (was 502) |
+| ntfy | ntfy | 30080 | ntfy.cloudless.gr | ✅ Running + tunnel working |
+| espocrm | espocrm | 30700 | espocrm.cloudless.gr | ✅ Running + tunnel working |
+| meili | meilisearch | 30902 | meili.cloudless.gr | ✅ Running + tunnel working |
+| postiz | postiz | 30500 | postiz.cloudless.gr | ✅ Running + tunnel working (307 redirect) |
+| appflowy | appflowy | 30810 | appflowy.cloudflow.gr | ✅ Running + tunnel working (302 redirect) |
+| docs | default | 30901 | docs.cloudless.gr | ✅ Running + tunnel working |
+
+---

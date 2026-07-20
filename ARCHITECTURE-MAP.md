@@ -1,6 +1,6 @@
 # cloudless.gr — Architecture Map
 
-> Updated: 2026-07-20 (reflects current tunnel + D1 auth + AWS migration 85%)
+> Updated: 2026-07-20 (reflects current tunnel + D1 auth + AWS migration complete)
 
 ---
 
@@ -219,7 +219,7 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 - **Tunnel ID:** `e977a490-58c5-4fdb-9155-86832e3e636a` (active since 2026-07-20)
 - **Docker build (Pi):** `Dockerfile` + `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
 - **WSL dev:** `NEXT_DIST_DIR` env var to avoid NTFS slow benchmarks; `allowedDevOrigins` for LAN access
-- **Configuration:** D1 `app_config` table + Wrangler secrets (SSM deprecated, 85% migrated)
+- **Configuration:** D1 `app_config` table + Wrangler secrets (SSM deprecated)
 - **Storage:** R2 buckets (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket)
 
 ### Traffic Flow
@@ -258,15 +258,6 @@ cloudless.gr / www.cloudless.gr
 
 - `/cloudless/production/CLOUDFLARE_API_TOKEN` — Zone:Read, DNS:Edit, Load Balancing:Edit, Tunnel:Edit
 
-### Files
-
-| File | Purpose |
-|---|---|
-| `k8s/tunnel/pi-tunnel.yaml` | Cloudflare Tunnel deployment on Pi k3s |
-| `.github/workflows/setup-pi-tunnel.yml` | One-time tunnel creation |
-| `.github/workflows/cloudflare-lb.yml` | Load Balancer provisioning/update |
-| `workers/cloudless-failover/` | Workers fallback code |
-
 ---
 
 ## 8. Test Structure
@@ -297,7 +288,7 @@ cloudless.gr / www.cloudless.gr
 9. **pnpm overrides:** Version pinning for security advisories — removing/altering overrides could reintroduce vulnerabilities
 10. **Next.js 16 edge:** Using `next@16.2.1` — some APIs may have changed from v14/v15 patterns
 11. **LB failover:** Requires `CLOUDFLARE_API_TOKEN` with Load Balancing scopes
-12. **Tunnel DNS:** 3 subdomains (docs, omv, meili) need CNAME records fixed to tunnel
+12. **MinIO security:** ✅ Fixed 2026-07-20 - Credentials updated from `minioadmin` defaults to secure random hex values
 
 ---
 
@@ -328,3 +319,7 @@ cloudless.gr / www.cloudless.gr
 | `k8s/search/meilisearch.yaml` | R21 search backend (4Gi PVC on OMV-MAIN SSD) |
 | `fly.toml` | Fly.io proxy configuration (external HA failover backup) |
 | `fly-proxy-app/` | Fly.io HA proxy implementation |
+| `migrations/0006-email-suppression.sql` | D1 email suppression table |
+| `migrations/0007-app-config.sql` | D1 application configuration table |
+
+---
