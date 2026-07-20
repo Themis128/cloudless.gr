@@ -333,3 +333,44 @@
 - uptime-kuma: ✅ Running (port 32501)
 - meilisearch: ✅ Running (port 30902)
 - docs-server: ✅ Running (port 30901)
+
+## 🚀 SST HYBRID ARCHITECTURE (COMPLETE - PENDING DEPLOY)
+
+### Implementation Status
+| Component | File | Status |
+|-----------|------|--------|
+| SST Config | `sst.config.cf-infra.ts` | ✅ Defined with D1, R2, Cron |
+| Cron Auth | `src/lib/cron-auth.ts` | ✅ Updated for Workers compatibility (dynamic crypto import) |
+| Cron Routes | `src/app/api/cron/*/route.ts` | ✅ GET + POST support for SST compatibility |
+| GitHub Workflow | `.github/workflows/sst-infra-deploy.yml` | ✅ Automated SST deployment defined |
+| SST Docs | `SST-CLOUDFLARE-HYBRID-ARCHITECTURE.md` | ✅ Updated with current status |
+
+### Cron Jobs (4/4 Ready)
+| Job | Schedule | Endpoint | Status |
+|-----|----------|----------|--------|
+| Analytics Rollup | Daily 01:00 UTC | `/api/cron/analytics-rollup` | ✅ Ready |
+| Calendar Digest | Weekdays 06:00 UTC | `/api/cron/calendar-digest` | ✅ Ready |
+| Report Cleanup | Sunday 02:00 UTC | `/api/cron/report-cleanup` | ✅ Ready |
+| Voice Brief | Monday 05:00 UTC | `/api/cron/voice-brief` | ✅ Ready |
+
+### Remaining Actions
+| Task | Status |
+|------|--------|
+| Configure CLOUDFLARE_API_TOKEN GitHub secret | ⏳ Pending |
+| Configure CF_ACCOUNT_ID GitHub secret | ⏳ Pending |
+| Configure CRON_SECRET GitHub secret | ⏳ Pending |
+| Deploy SST infrastructure via workflow | ⏳ Pending |
+| Verify Worker cron triggers fire | ⏳ Pending |
+
+### Deployment Commands
+```bash
+# Set secrets (secrets not yet configured in GitHub)
+npx wrangler secret put CRON_SECRET --config wrangler.jsonc
+npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
+npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
+
+# Deploy SST infrastructure
+pnpm sst deploy --config sst.config.cf-infra.ts --stage production
+
+# Apply D1 migrations
+npx wrangler d1 migrations apply user-auth-db --config wrangler.jsonc

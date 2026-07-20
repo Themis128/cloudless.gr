@@ -6,7 +6,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
 
 // Detect Cloudflare Workers environment (for runtime detection)
 function isWorkersEnvironment(): boolean {
@@ -31,10 +30,12 @@ export function safeEqual(a: string, b: string): boolean {
     return result === 0;
   }
 
-  // Node.js - use crypto's timingSafeEqual
+  // Node.js - use crypto's timingSafeEqual (dynamic import to avoid Workers issues)
   const aBuf = Buffer.from(a, "utf-8");
   const bBuf = Buffer.from(b, "utf-8");
-  return timingSafeEqual(aBuf, bBuf);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { timingSafeEqual: tse } = require("crypto") as typeof import("crypto");
+  return tse(aBuf, bBuf);
 }
 
 /**
