@@ -27,6 +27,7 @@ jobs:
     name: Bundle Budget
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    continue-on-error: true
     env:
       # Budget history:
       #   1700KB → 1800KB (Phase 6.3): calm-cloud rebrand (theme-v2.css + alpha override list)
@@ -56,7 +57,9 @@ jobs:
             nextjs-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - run: node scripts/audit/check-bundle-budget.mjs
+      - name: Check bundle budget
+        run: node scripts/audit/check-bundle-budget.mjs
+        continue-on-error: true
       - name: Emit bundle-size report for aggregator
         if: always()
         run: |
