@@ -61,7 +61,7 @@
     "cms:populate": "node scripts/populate-cms.mjs",
     "gh:secrets": "tsx --tsconfig scripts/tsconfig.json scripts/gh-secrets.ts",
     "domain:decommission": "bash scripts/domain-decommission.sh",
-    "gsc:sync": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-gsc-sync.ts",
+    "gsc:sync": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-gsc-sync-af.ts",
     "newsletter:draft": "tsx --tsconfig scripts/tsconfig.json scripts/generate-weekly-article.ts",
     "newsletter:send": "tsx --tsconfig scripts/tsconfig.json scripts/publish-and-send-newsletter.ts",
     "newsletter:report": "tsx --tsconfig scripts/tsconfig.json scripts/weekly-subscriber-report.ts",
