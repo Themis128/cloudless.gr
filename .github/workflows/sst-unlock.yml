@@ -1,0 +1,35 @@
+name: SST Unlock Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Stage to unlock'
+        required: false
+        default: 'production'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  SST_STAGE: ${{ inputs.stage }}
+
+jobs:
+  unlock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        run: npm install -g pnpm@10
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: SST Unlock Production
+        run: npx sst unlock --config sst.config.cloudflare.ts --stage production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
