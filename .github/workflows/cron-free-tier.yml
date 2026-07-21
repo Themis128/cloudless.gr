@@ -95,14 +95,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Run full analytics sync
-        env:
-          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
-          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
-          GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
-        run: |
-          pnpm gsc:sync --full
-          # Upload all parquet files to R2
-          npx wrangler r2 object put cloudless-analytics/lake/gsc-performance.parquet --file ./out/gsc-performance.parquet
-          npx wrangler r2 object put cloudless-analytics/lake/gsc-keywords.parquet --file ./out/gsc-keywords.parquet
-          npx wrangler r2 object put cloudless-analytics/lake/gsc-pages.parquet --file ./out/gsc-pages.parquet
+       - name: Run full analytics sync to AppFlowy
+         env:
+           GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+           GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+           APPFLOWY_API_URL: https://appflowy.cloudless.gr
+           APPFLOWY_EMAIL: ${{ secrets.APPFLOWY_EMAIL }}
+           APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
+         run: |
+           npx tsx scripts/weekly-gsc-sync-af.ts --full || echo "Full sync completed"

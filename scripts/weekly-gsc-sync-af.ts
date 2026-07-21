@@ -44,7 +44,11 @@ export function dateRange(): { startDate: string; endDate: string } {
 }
 
 async function getGoogleAccessToken(): Promise<string> {
-  const email = requireEnv("GOOGLE_SERVICE_ACCOUNT_EMAIL");
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL || "";
+  if (!email) {
+    console.error("[weekly-gsc-sync-af] missing env var: GOOGLE_SERVICE_ACCOUNT_EMAIL or GOOGLE_CLIENT_EMAIL");
+    process.exit(1);
+  }
   const rawKey = requireEnv("GOOGLE_PRIVATE_KEY").replace(/\\n/g, "\n");
   const privateKey = await importPKCS8(rawKey, "RS256");
   const now = Math.floor(Date.now() / 1000);
