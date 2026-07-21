@@ -7,6 +7,7 @@ on:
       - 'migrations/*.sql'
       - 'src/**/*.ts'
       - 'wrangler.jsonc'
+      - 'sst.config.cloudflare.ts'
       - '.github/workflows/cloudflare-deploy.yml'
   workflow_dispatch:
     inputs:
