@@ -16,4 +16,3 @@ module.exports = defineOpenNextConfig({
     disableCompression: true,
   },
 });
-```
