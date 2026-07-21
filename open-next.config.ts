@@ -26,9 +26,4 @@ export default defineCloudflareConfig({
   // Use in-memory queue for dev/local preview; SST overrides this with its
   // own durable-queue binding in the production deploy pipeline.
   queue: memoryQueue,
-
-  // Build command override: tell OpenNext to use the standard Next.js build
-  // with Turbopack disabled (our next.config.ts uses TypeScript CLI, which
-  // is incompatible with Turbopack during builds).
-  buildCommand: "next build",
 });

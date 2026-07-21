@@ -395,7 +395,7 @@ async function handlePostLoginRoute(
 
   // Also check unchunked cookie
   const sessionCookie = request.cookies.get(prodCookieName)?.value ??
-    req.cookies.get(devCookieName)?.value;
+    request.cookies.get(devCookieName)?.value;
 
   if (!sessionCookie && !chunkedCookie) {
     // No session cookie - redirect to login
