@@ -62,6 +62,13 @@ export default $config({
         ANALYTICS_WORKER_URL: analyticsWorker.url ?? "",
       },
       domain: domainConfig,
+      // Exclude problematic .bin font files from @vercel/og/Geist in Next.js 16.x
+      // These cause SST bundling errors: "No loader is configured for .bin files"
+      files: {
+        exclude: [
+          "**/*.bin",
+        ],
+      },
     });
 
     // =========================================================================
