@@ -1,5 +1,19 @@
 {
   "mcpServers": {
+    "fast-markdown": {
+      "command": "npx",
+      "args": ["tsx", "fast-markdown-mcp/src/index.ts"],
+      "env": {
+        "DEVDOCS_STORAGE_PATH": "${DEVDOCS_STORAGE_PATH:-/home/tbaltzakis/DevDocs/storage/markdown}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "list_files",
+        "read_file",
+        "search_files",
+        "get_toc"
+      ]
+    },
     "cloudflare-pages": {
       "command": "npx",
       "args": ["tsx", "cloudflare-pages-mcp/src/index.ts"],
@@ -67,6 +81,25 @@
         "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
       },
       "autoStart": false
+    },
+    "opennextjs-mcp": {
+      "command": "node",
+      "args": [
+        "/home/tbaltzakis/opennextjs-cli/packages/opennextjs-mcp/dist/index.js"
+      ],
+      "env": {
+        "PROJECT_ROOT": "/home/tbaltzakis/cloudless.gr"
+      },
+      "autoStart": false,
+      "alwaysAllow": [
+        "get_project_status",
+        "validate_configuration",
+        "deploy_to_cloudflare",
+        "start_preview_server",
+        "update_configuration",
+        "check_health",
+        "list_environments"
+      ]
     }
   }
 }

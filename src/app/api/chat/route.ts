@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { escapeHtml } from "@/lib/escape-html";
-import { runBedrockChatLoop } from "@/lib/bedrock-chat";
+import { generateGeminiResponse, isGeminiConfigured, getGeminiApiKey } from "@/lib/gemini-shared";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { slackChatNotify } from "@/lib/slack-notify";
 import { notifyTeam } from "@/lib/email";
 
-export const runtime = "nodejs";
+// Note: SSE streaming works with Edge runtime on Workers
 export const dynamic = "force-dynamic";
 
 const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency run by Themistoklis Baltzakis (AWS Certified Cloud Architect, 8+ years experience).
@@ -83,7 +83,7 @@ function parseMessages(body: unknown): { role: "user" | "assistant"; content: st
 }
 
 // ---------------------------------------------------------------------------
-// SSE response helpers — match the existing client contract
+// SSE response helpers
 // ---------------------------------------------------------------------------
 
 function chunkText(text: string, size = 80): string[] {
@@ -108,8 +108,14 @@ function sseStreamFromText(text: string): ReadableStream<Uint8Array> {
   });
 }
 
+// Type for Gemini API messages
+type GeminiMessage = {
+  role: "user" | "model";
+  content: string;
+};
+
 // ---------------------------------------------------------------------------
-// Route handler
+// Route handler - uses Gemini API (Workers AI removed due to error 1101)
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
@@ -124,7 +130,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // Notify on first message of a conversation (only 1 user message = new chat)
+  // Notify on first message of a conversation
   const userMessages = messages.filter((m) => m.role === "user");
   if (userMessages.length === 1) {
     const ip = getClientIp(request);
@@ -136,35 +142,33 @@ export async function POST(request: NextRequest) {
     ).catch(() => {});
   }
 
-  let finalText: string;
-  try {
-    finalText = await runBedrockChatLoop(SYSTEM_PROMPT, messages);
-  } catch (err) {
-    const name = err instanceof Error ? err.name : "";
-    // Log name + message only — never the full error object, which may carry
-    // SDK request context (region, model ARN, partial auth headers) into logs.
-    console.error(
-      "[chat] bedrock loop failed:",
-      name,
-      err instanceof Error ? err.message : String(err)
+  // Use Gemini API (Workers AI disabled due to error 1101)
+  const geminiKey = getGeminiApiKey();
+  if (!geminiKey) {
+    return Response.json(
+      { error: "Chat not configured. Please set GEMINI_API_KEY." },
+      { status: 503 }
     );
-    // Access/auth errors → config issue on our side; surface as 503.
-    // Transient errors (throttling, model unavailable, etc.) → 502.
-    if (name === "AccessDeniedException" || name === "UnauthorizedException") {
-      return Response.json(
-        { error: "Chat not available right now. Please use the Contact page." },
-        { status: 503 }
-      );
-    }
-    return Response.json({ error: "AI service unavailable." }, { status: 502 });
   }
 
-  return new Response(sseStreamFromText(finalText), {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
-  });
+  try {
+    // Convert to Gemini format with proper typing
+    const geminiMessages = messages.map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      content: m.content,
+    })) as GeminiMessage[];
+
+    const text = await generateGeminiResponse(geminiMessages, 600, undefined, SYSTEM_PROMPT);
+    return new Response(sseStreamFromText(text), {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (err) {
+    console.error("[chat] Gemini call failed:", err instanceof Error ? err.message : err);
+    return Response.json({ error: "AI service unavailable." }, { status: 502 });
+  }
 }

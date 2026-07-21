@@ -36,18 +36,6 @@ declare module "next-auth" {
   }
 }
 
-// Extend the JWT token type
-declare module "next-auth/jwt" {
-  interface JWT {
-    id?: string;
-    company?: string;
-    phone?: string;
-    groups?: string[];
-    accessToken?: string;
-    idToken?: string;
-  }
-}
-
 /**
  * Returns "credentials" for local auth
  */

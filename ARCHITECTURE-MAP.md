@@ -1,6 +1,6 @@
 # cloudless.gr — Architecture Map
 
-> Updated: 2026-07-20 (reflects current tunnel + D1 auth + AWS migration complete)
+> Updated: 2026-07-21 (reflects Cloudflare Workers + D1 auth + Gemini AI migration complete)
 
 ---
 
@@ -39,7 +39,7 @@
   - Rate limiting (max 10 attempts/minute)
   - Account lockout (>5 failed attempts in 15 minutes)
   - CSRF protection (migration 0004)
-  - Email verification (OTP via SES/Cloudflare Email)
+  - Email verification (OTP via Cloudflare Email)
   - Admin audit log (migration 0005)
   - Session activity logging
 - **Auth pages:** `/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/post-login`
@@ -132,7 +132,7 @@
 - **CRM:** Contacts, companies, deals, tickets, pipelines
 - **CMS:** Blog, case studies, FAQs, services, testimonials
 - **Operations:** Cluster monitor, ESP32 devices, Grafana, errors, audits, integrations
-- **Other:** AI assistant, AI generator, voice brief, email/ActiveCampaign, subscriptions, users, workspaces, calendar, client portals, Postiz, reports, settings, notifications
+- **Other:** AI assistant (Gemini), AI generator, voice brief, email/ActiveCampaign, subscriptions, users, workspaces, calendar, client portals, Postiz, reports, settings, notifications
 
 ### Client Portal (`src/app/portal/`)
 
@@ -169,22 +169,21 @@
 
 | Category | Variables |
 |---|---|
-| **AWS** | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SSM_PREFIX` |
-| **Auth** | `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`, Cognito OIDC vars |
-| **Email** | `SES_FROM_EMAIL`, `SES_TO_EMAIL`, `AWS_SES_REGION` |
+| **Auth** | `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST` |
+| **Email** | `SES_FROM_EMAIL`, `SES_TO_EMAIL`, `AWS_SES_REGION` (deprecated, using Cloudflare Email) |
 | **Stripe** | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` |
 | **Slack** | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_WEBHOOK_URL` |
 | **HubSpot** | `HUBSPOT_API_KEY`, `HUBSPOT_CLIENT_SECRET`, `HUBSPOT_PORTAL_ID` |
 | **Appflowy** | `APPFLOWY_API_URL`, `APPFLOWY_API_KEY`, workspace config |
 | **Google** | Calendar + Search Console service account + GSC site URL |
+| **Gemini AI** | `GEMINI_API_KEY` (primary AI provider, replaces Bedrock/Anthropic) |
 | **Sentry** | DSN, org, project, auth token |
-| **Anthropic** | API key + chat model config |
 | **ActiveCampaign** | API URL + token |
 | **Ad Platforms** | Google Ads, LinkedIn Ads, TikTok Ads, X Ads, Meta/Facebook Ads |
 | **CRON** | `CRON_SECRET` |
 | **App** | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PORTFOLIO_MODE`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_CLARITY_PROJECT_ID` |
 
-Production secrets hydrated from AWS SSM via Sentry/instrumentation.
+Production secrets hydrated from D1 `app_config` table + Wrangler secrets.
 
 ---
 
@@ -202,9 +201,10 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 | `pnpm format` | prettier |
 | `pnpm format:check` | prettier --check |
 | `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm test` | `vitest` (unit tests) |
-| `pnpm test:ci` | `vitest run` |
-| `pnpm test:e2e:*` | Various Playwright test runner scripts |
+| `pnpm cf:typecheck` | `tsc --noEmit -p tsconfig.worker.json` (Cloudflare Workers) |
+| `pnpm cf:build` | `next build` (for Cloudflare) |
+| `pnpm cloudflare-build` | `opennextjs-cloudflare build` |
+| `pnpm cf:deploy` | `wrangler deploy` |
 | `pnpm deploy` | `sst deploy --stage production` |
 | `pnpm analyze` | `ANALYZE=true next build` |
 
@@ -216,11 +216,12 @@ Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 
 - **Primary runtime:** Pi k3s cluster (self-hosted on omv, 192.168.1.128, exposed via **Cloudflare Tunnel**: `cloudless.gr`)
 - **HA failover:** Cloudflare Workers (`cloudless-failover.baltzakis-themis.workers.dev`) via Load Balancer
-- **Tunnel ID:** `e977a490-58c5-4fdb-9155-86832e3e636a` (active since 2026-07-20)
+- **Tunnel ID:** `e97a490-58c5-4fdb-9155-86832e3e636a` (active since 2026-07-20)
 - **Docker build (Pi):** `Dockerfile` + `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
 - **WSL dev:** `NEXT_DIST_DIR` env var to avoid NTFS slow benchmarks; `allowedDevOrigins` for LAN access
 - **Configuration:** D1 `app_config` table + Wrangler secrets (SSM deprecated)
 - **Storage:** R2 buckets (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket)
+- **AI Provider:** Google Gemini (gemini-1.5-flash) + Workers AI fallback (@cf/meta/llama-3.1-8b-instruct)
 
 ### Traffic Flow
 
@@ -231,7 +232,7 @@ cloudless.gr / www.cloudless.gr
  Cloudflare Load Balancer  (steering: off)
         │
         ├─► [PRIMARY]   cl-pi-<host>
-        │               cloudless.gr (via Cloudflare Tunnel e977a490...)
+        │               cloudless.gr (via Cloudflare Tunnel e97a490...)
         │               health: GET /api/health, expect 200, interval=60s
         │
         └─► [FALLBACK]  cl-worker-<host>
@@ -304,6 +305,8 @@ cloudless.gr / www.cloudless.gr
 | `playwright.config.mts` | E2E test runner config |
 | `postcss.config.mjs` | PostCSS config (Tailwind v4) |
 | `src/lib/auth.ts` | next-auth v5 with Cognito OIDC + DynamoDB token store |
+| `src/lib/gemini-shared.ts` | Gemini AI provider (replaces Bedrock) |
+| `src/lib/gemini-admin.ts` | Admin Gemini wrapper |
 | `src/i18n/routing.ts` | Locale definitions (en, el, fr, de) |
 | `src/i18n/request.ts` | Static locale message loader |
 | `sentry.client.config.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` | Sentry config |
@@ -323,3 +326,35 @@ cloudless.gr / www.cloudless.gr
 | `migrations/0007-app-config.sql` | D1 application configuration table |
 
 ---
+
+## 11. Deployment Plan (CLOUDFLARE-DEPLOYMENT-FINETUNING-PLAN.md)
+
+**CRITICAL Actions Required Before Production:**
+
+1. **Create KV Namespaces:**
+   ```bash
+   npx wrangler kv namespace create "TAG_CACHE" --config wrangler.jsonc
+   npx wrangler kv namespace create "REVALIDATION_QUEUE" --config wrangler.jsonc
+   ```
+   Update `wrangler.jsonc` with actual namespace IDs.
+
+2. **Set Secrets:**
+   ```bash
+   npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
+   npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
+   npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
+   npx wrangler secret put CRON_SECRET --config wrangler.jsonc
+   npx wrangler secret put STRIPE_SECRET_KEY --config wrangler.jsonc
+   npx wrangler secret put STRIPE_WEBHOOK_SECRET --config wrangler.jsonc
+   ```
+
+3. **Deploy:**
+   ```bash
+   pnpm cloudflare-build && pnpm cf:deploy
+   ```
+
+4. **Verify:**
+   - `curl -s https://cloudless.gr/api/health | jq`
+   - `pnpm cf:typecheck`
+
+See `CLOUDFLARE-DEPLOYMENT-FINETUNING-PLAN.md` for complete deployment workflow.

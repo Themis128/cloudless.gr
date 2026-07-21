@@ -7,6 +7,7 @@ This folder contains technical documentation for development operations, archite
 | File | Description |
 |------|-------------|
 | `AWS-CLOUDFLARE-MIGRATION.md` | Complete AWS to Cloudflare migration guide with status matrix, cleanup tasks, deployment instructions, and rollback procedures |
+| `FLY-IO-PROXY.md` | Fly.io HA failover proxy configuration, endpoints, and verification commands |
 
 ## Document Structure
 

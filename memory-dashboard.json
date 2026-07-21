@@ -1,6 +1,6 @@
 {
   "dashboard": {
-    "title": "Memory Anomaly Detection",
+    "title": "Cloudless Infrastructure Monitoring",
     "timezone": "browser",
     "schemaVersion": 38,
     "version": 1,
@@ -39,6 +39,42 @@
             "unit": "bytes"
           }
         }
+      },
+      {
+        "type": "stat",
+        "title": "Fly.io Proxy Status",
+        "gridPos": { "x": 0, "y": 20, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "up{job=\"fly-proxy\"}",
+            "legendFormat": "Fly.io Proxy",
+            "refId": "C"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Primary Backend Health",
+        "gridPos": { "x": 8, "y": 20, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "probe_success{target=\"cloudless.gr\"}",
+            "legendFormat": "cloudless.gr",
+            "refId": "D"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Fallback Backend Health",
+        "gridPos": { "x": 16, "y": 20, "w": 8, "h": 6 },
+        "targets": [
+          {
+            "expr": "probe_success{target=\"omv.tail8eb71.ts.net\"}",
+            "legendFormat": "Pi k3s",
+            "refId": "E"
+          }
+        ]
       }
     ]
   },

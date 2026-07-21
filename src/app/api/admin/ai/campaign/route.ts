@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
+import { callGemini, getGeminiApiKey, isGeminiConfigured } from "@/lib/gemini-admin";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -22,9 +22,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const apiKey = await getAnthropicApiKey();
+  if (!(await isGeminiConfigured())) {
+    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 503 });
+  }
+
+  const apiKey = await getGeminiApiKey();
   if (!apiKey) {
-    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
+    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 503 });
   }
 
   const prompt = `You are a digital marketing expert for Cloudless.gr, a Greek digital agency specialising in AI-powered marketing services.
@@ -56,7 +60,7 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
 }`;
 
   try {
-    const text = await callClaude(prompt, apiKey, { maxTokens: 1_500 });
+    const text = await callGemini(prompt, apiKey, 1500);
     let strategy: unknown;
     try {
       strategy = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
@@ -65,7 +69,7 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
     }
     return NextResponse.json({ strategy });
   } catch (e) {
-    console.error("[ai/campaign] Claude call failed:", e);
+    console.error("[ai/campaign] Gemini call failed:", e);
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

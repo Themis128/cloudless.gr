@@ -11,20 +11,19 @@
  *   (Stripe metadata update is fire-and-forget when STRIPE_SECRET_KEY is set).
  *   Returns: { applied: number }
  *
- * Workers AI primary (free, fast), Bedrock fallback (configured).
+ * Workers AI primary (free, fast), Gemini fallback (configured).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getProducts } from "@/lib/store-products";
-import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import type { StoreProduct } from "@/lib/store-products";
+import { callGemini } from "@/lib/gemini-admin";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-const MODEL_ID = process.env.BEDROCK_MODEL_ID ?? "us.amazon.nova-micro-v1:0";
 const MAX_TOKENS = 300;
 const MAX_PRODUCT_IDS = 20;
 
@@ -86,7 +85,7 @@ function buildPrompt(product: StoreProduct): string {
 }
 
 // ---------------------------------------------------------------------------
-// Single-product generation via Workers AI (primary) + Bedrock (fallback)
+// Single-product generation via Workers AI (primary) + Gemini (fallback)
 // ---------------------------------------------------------------------------
 
 async function generateOneWorkersAI(product: StoreProduct): Promise<string | null> {
@@ -99,32 +98,20 @@ async function generateOneWorkersAI(product: StoreProduct): Promise<string | nul
     })) as { response?: string };
     return result.response ?? null;
   } catch (err) {
-    // Sanitize err to prevent format string injection (% specifiers)
     const safeErr = err instanceof Error ? err.message.replace(/%/g, "") : String(err).replace(/[\x00-\x1F\x7F]/g, "");
-    console.warn("[ai/product-descriptions] Workers AI failed, falling back to Bedrock:", safeErr);
+    console.warn("[ai/product-descriptions] Workers AI failed, falling back to Gemini:", safeErr);
     return null;
   }
 }
 
-async function generateOneBedrock(product: StoreProduct): Promise<string> {
-  const { getBedrockClient } = await import("@/lib/bedrock-shared");
-  const client = getBedrockClient();
-  const cmd = new ConverseCommand({
-    modelId: MODEL_ID,
-    system: [{ text: "You are a concise conversion copywriter. Output only the requested text." }],
-    messages: [{ role: "user", content: [{ text: buildPrompt(product) }] }],
-    inferenceConfig: { maxTokens: MAX_TOKENS, temperature: 0.7 },
-  });
+async function generateOneGemini(product: StoreProduct): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY not configured");
+  }
 
-  const response = await client.send(cmd);
-  const text = (response.output?.message?.content ?? [])
-    .filter((b): b is { text: string } => "text" in b && typeof b.text === "string")
-    .map((b) => b.text)
-    .join("")
-    .trim();
-
-  if (!text) throw new Error("Empty response from Bedrock");
-  return text;
+  const prompt = buildPrompt(product);
+  return callGemini(prompt, apiKey, MAX_TOKENS);
 }
 
 async function generateOne(product: StoreProduct): Promise<string> {
@@ -132,8 +119,8 @@ async function generateOne(product: StoreProduct): Promise<string> {
   const workersResult = await generateOneWorkersAI(product);
   if (workersResult) return workersResult;
 
-  // Fall back to Bedrock
-  return generateOneBedrock(product);
+  // Fall back to Gemini
+  return generateOneGemini(product);
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +163,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         id: product.id,
         error: err instanceof Error ? err.message : String(err),
       });
-      // Sanitize product.id and err to prevent log injection
       const safeId = String(product.id).replace(/[\x00-\x1F\x7F]/g, "");
       const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
       console.error(`[ai/product-descriptions] Failed for ${safeId}:`, safeErr);
@@ -215,9 +201,6 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   }
 
   // Apply to the in-process product cache by patching the cached products.
-  // The cache is module-level in store-products.ts; we reach it via getProducts()
-  // and mutate the description field in-place so subsequent renders pick it up
-  // without a deploy. A full deploy (or cache TTL expiry) will reset to source.
   const allProducts = await getProducts();
   let applied = 0;
   for (const { id, description } of descriptions) {
@@ -230,7 +213,6 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   // Fire-and-forget: update Stripe product metadata when configured.
   updateStripeDescriptions(descriptions).catch((err) => {
-    // Sanitize err to prevent format string injection
     const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
     console.warn("[ai/product-descriptions] Stripe metadata update failed:", safeErr);
   });
@@ -245,7 +227,6 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 async function updateStripeDescriptions(
   descriptions: { id: string; description: string }[]
 ): Promise<void> {
-  // Lazy import so the route doesn't pull in Stripe when it's not configured.
   const { getStripe } = await import("@/lib/stripe");
   const stripe = await getStripe();
   if (!stripe) return;
@@ -253,7 +234,6 @@ async function updateStripeDescriptions(
   await Promise.allSettled(
     descriptions.map(({ id, description }) =>
       stripe.products.update(id, { description }).catch((err) => {
-        // Sanitize id and err to prevent log injection
         const safeId = String(id).replace(/[\x00-\x1F\x7F]/g, "");
         const safeErr = err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
         console.warn(`[ai/product-descriptions] Stripe update failed for ${safeId}:`, safeErr);

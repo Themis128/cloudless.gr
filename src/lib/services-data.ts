@@ -3,6 +3,10 @@
  * (Lighthouse Win #1 — reduces page bundle by ~45KB, +5 LH pts on /services).
  *
  * Translation keys are still passed in by the page (i18n stays per-render).
+ *
+ * v2 UPDATE: colorMap now provides CSS variable values for theme-aware styling.
+ * All classes use var(--accent), var(--secondary), var(--success), var(--info-strong)
+ * which automatically adapt to light/dark theme via theme-v2.css.
  */
 export const getServices = (t: (key: string, fallback: string) => string) => [
   {
@@ -332,52 +336,57 @@ export const bundleTerminal = [
   "  guarantee: results in 14 days",
 ];
 
-/* ── Color maps ───────────────────────────────────────────────── */
+/* ── Color maps ─────────────────────────────────────────────────
+ * v2 UPDATE: Uses CSS variables instead of hardcoded neon classes.
+ * Components should use style={{ ... }} with these values for theme-aware rendering.
+ * These map to: --accent (cyan), --secondary (magenta), --success (green), --info-strong (blue)
+ * which automatically adapt via theme-v2.css.
+ * ──────────────────────────────────────────────────────────────── */
 
 export const colorMap = {
   cyan: {
-    badge: "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan",
-    dot: "bg-neon-cyan",
-    tag: "text-neon-cyan/60 bg-neon-cyan/5",
-    stat: "border-neon-cyan/20 bg-neon-cyan/5",
-    statValue: "text-neon-cyan",
-    check: "text-neon-cyan",
-    num: "bg-neon-cyan/10 border-neon-cyan/20 text-neon-cyan",
-    price: "text-neon-cyan",
-    link: "text-neon-cyan hover:text-white",
+    badge: "bg-[var(--accent-soft)] border-[var(--border-subtle)] text-[var(--accent)]",
+    dot: "bg-[var(--accent)]",
+    tag: "text-[var(--accent)] bg-[var(--accent-soft)]",
+    stat: "border-[var(--border-subtle)] bg-[var(--accent-soft)]",
+    statValue: "text-[var(--accent)]",
+    check: "text-[var(--accent)]",
+    num: "bg-[var(--accent-soft)] border-[var(--border-subtle)] text-[var(--accent)]",
+    price: "text-[var(--accent)]",
+    link: "text-[var(--accent)] hover:text-[var(--ink-primary)]",
   },
   magenta: {
-    badge: "bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta",
-    dot: "bg-neon-magenta",
-    tag: "text-neon-magenta/60 bg-neon-magenta/5",
-    stat: "border-neon-magenta/20 bg-neon-magenta/5",
-    statValue: "text-neon-magenta",
-    check: "text-neon-magenta",
-    num: "bg-neon-magenta/10 border-neon-magenta/20 text-neon-magenta",
-    price: "text-neon-magenta",
-    link: "text-neon-magenta hover:text-white",
+    badge: "bg-[var(--secondary-soft)] border-[var(--border-subtle)] text-[var(--secondary)]",
+    dot: "bg-[var(--secondary)]",
+    tag: "text-[var(--secondary)] bg-[var(--secondary-soft)]",
+    stat: "border-[var(--border-subtle)] bg-[var(--secondary-soft)]",
+    statValue: "text-[var(--secondary)]",
+    check: "text-[var(--secondary)]",
+    num: "bg-[var(--secondary-soft)] border-[var(--border-subtle)] text-[var(--secondary)]",
+    price: "text-[var(--secondary)]",
+    link: "text-[var(--secondary)] hover:text-[var(--ink-primary)]",
   },
   green: {
-    badge: "bg-neon-green/10 border-neon-green/20 text-neon-green",
-    dot: "bg-neon-green",
-    tag: "text-neon-green/60 bg-neon-green/5",
-    stat: "border-neon-green/20 bg-neon-green/5",
-    statValue: "text-neon-green",
-    check: "text-neon-green",
-    num: "bg-neon-green/10 border-neon-green/20 text-neon-green",
-    price: "text-neon-green",
-    link: "text-neon-green hover:text-white",
+    badge: "bg-[var(--success-soft)] border-[var(--border-subtle)] text-[var(--success)]",
+    dot: "bg-[var(--success)]",
+    tag: "text-[var(--success)] bg-[var(--success-soft)]",
+    stat: "border-[var(--border-subtle)] bg-[var(--success-soft)]",
+    statValue: "text-[var(--success)]",
+    check: "text-[var(--success)]",
+    num: "bg-[var(--success-soft)] border-[var(--border-subtle)] text-[var(--success)]",
+    price: "text-[var(--success)]",
+    link: "text-[var(--success)] hover:text-[var(--ink-primary)]",
   },
   blue: {
-    badge: "bg-neon-blue/10 border-neon-blue/20 text-neon-blue",
-    dot: "bg-neon-blue",
-    tag: "text-neon-blue/60 bg-neon-blue/5",
-    stat: "border-neon-blue/20 bg-neon-blue/5",
-    statValue: "text-neon-blue",
-    check: "text-neon-blue",
-    num: "bg-neon-blue/10 border-neon-blue/20 text-neon-blue",
-    price: "text-neon-blue",
-    link: "text-neon-blue hover:text-white",
+    badge: "bg-[var(--info-soft)] border-[var(--border-subtle)] text-[var(--info-strong)]",
+    dot: "bg-[var(--info-strong)]",
+    tag: "text-[var(--info-strong)] bg-[var(--info-soft)]",
+    stat: "border-[var(--border-subtle)] bg-[var(--info-soft)]",
+    statValue: "text-[var(--info-strong)]",
+    check: "text-[var(--info-strong)]",
+    num: "bg-[var(--info-soft)] border-[var(--border-subtle)] text-[var(--info-strong)]",
+    price: "text-[var(--info-strong)]",
+    link: "text-[var(--info-strong)] hover:text-[var(--ink-primary)]",
   },
 };
 

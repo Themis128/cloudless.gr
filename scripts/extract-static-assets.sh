@@ -25,6 +25,12 @@ if [ -d "public" ]; then
     find public -type f ! -name "index.html" -exec cp {} ./out/ \; 2>/dev/null || true
 fi
 
+# Get the main CSS bundle filename (for styling)
+CSS_BUNDLE=$(find .next/static/chunks -name "*.css" 2>/dev/null | head -1 | sed 's|.next/||' || true)
+if [ -z "$CSS_BUNDLE" ]; then
+    CSS_BUNDLE="static/chunks/2p-z36o5ca_9e.css"
+fi
+
 # Get the main JS bundle filename
 MAIN_BUNDLE=$(find .next/static/chunks -name "*-e5fd6e*.js" -o -name "main-*.js" 2>/dev/null | head -1 || true)
 if [ -z "$MAIN_BUNDLE" ]; then
@@ -50,10 +56,11 @@ for locale in en el fr de; do
   <title>Cloudless — Cloud Computing, Serverless & AI Marketing</title>
   <meta name="theme-color" content="#0a7785" />
   <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/${CSS_BUNDLE}" />
 </head>
 <body>
   <div id="root">Loading...</div>
-  <script src="/static/chunks/1ualfx4277rj2.js" defer></script>
+  <script src="/${MAIN_BUNDLE}" defer></script>
 </body>
 </html>
 EOF
@@ -70,6 +77,7 @@ cat > ./out/index.html << EOF
   <title>Cloudless — Cloud Computing, Serverless & AI Marketing</title>
   <meta name="theme-color" content="#000000" />
   <link rel="icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/${CSS_BUNDLE}" />
   <script>
     // Root redirect to /en for locale routing
     if (typeof window !== 'undefined' && window.location.hostname === 'cloudless.gr') {

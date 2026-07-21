@@ -26,11 +26,11 @@ export async function GET(request: Request) {
     try {
       const hits = await searchProductsWithMeili(q, limit);
 
-      return Response.json({
-        query: q,
-        source: "meilisearch-bedrock",
-        hits,
-      });
+       return Response.json({
+         query: q,
+         source: "meilisearch",
+         hits,
+       });
     } catch (err) {
       console.warn("[api/search] Meilisearch/Bedrock search failed; using fallback:", err);
     }
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
 
       return Response.json({
         query: q,
-        source: "meilisearch-bedrock",
+        source: "meilisearch",
         hits,
       });
     } catch (err) {

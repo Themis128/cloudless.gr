@@ -11,14 +11,6 @@ AUTH_SECRET=your-next-auth-secret-here
 AUTH_URL=http://localhost:8787
 AUTH_TRUST_HOST=false
 
-# ─── AWS Cognito (CLOUD AUTH PROVIDER - optional) ───────────────────────
-# When NEXT_PUBLIC_AUTH_PROVIDER=d1 is set, D1 auth is used instead of Cognito
-COGNITO_ISSUER=https://cognito-idp.us-east-1.amazonaws.com/us-east-1_XXXXXXXXX
-COGNITO_USER_POOL_ID=us-east-1_XXXXXXXXX
-COGNITO_DOMAIN=your-domain.auth.us-east-1.amazoncognito.com
-COGNITO_CLIENT_ID=your-cognito-client-id
-COGNITO_CLIENT_SECRET=your-cognito-client-secret
-
 # ─── Stripe (for checkout) ───────────────────────────────────────────────
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
@@ -42,6 +34,11 @@ ANALYTICS_BUCKET=datalake-bucket
 # CF_R2_ACCESS_KEY_ID and CF_R2_SECRET_ACCESS_KEY are from R2 keys
 #   Console → R2 → Manage R2 API Tokens → Create token with read/write access
 
+# ─── Google AI (Gemini) ─────────────────────────────────────────────────────
+# Primary AI provider for chat and admin AI endpoints
+# Get API key from https://ai.google.dev/
+GEMINI_API_KEY=your-gemini-api-key-here
+
 # ─── Optional: External Services ───────────────────────────────────────────
 # LOCAL_LLM_BASE_URL=http://localhost:11434
 # LANGGRAPH_URL=http://localhost:8123
@@ -49,6 +46,4 @@ ANALYTICS_BUCKET=datalake-bucket
 # LANGSMITH_TRACING=false
 # LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 # TAVILY_API_KEY=your-tavily-api-key
-# ANTHROPIC_API_KEY=your-anthropic-api-key
-# GEMINI_API_KEY=your-gemini-api-key
 # GITHUB_PERSONAL_ACCESS_TOKEN=your-github-token

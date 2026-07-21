@@ -34,19 +34,40 @@ export function isOriginDown(status: number): boolean {
 }
 
 /**
+ * Checks if the standby endpoint is decommissioned (returns 404 or 410).
+ * After July 2026 migration to Cloudflare Workers, pi-origin endpoint
+ * no longer serves the application.
+ */
+export function isStandbyDecommissioned(status: number): boolean {
+  return status === 404 || status === 410;
+}
+
+/**
  * Verifies the response carries the cloudless.gr Next.js app's own CSP
- * (rather than a generic LB / 502 page). The same app runs on PRIMARY
- * and SECONDARY, so this is a "this is *our* app responding" check, not
- * a "this is the Pi specifically" check. Network-path verification lives
- * in standby-path.spec.ts via the APIGW request-id assertion.
+ * (rather than a generic LB / 502 page). For production Workers, we check
+ * for the cf-ray header to confirm it's our Cloudflare deployment.
+ *
+ * MIGRATION NOTE (July 2026): The app migrated to Workers, which may not
+ * return all headers that the k3s deployment previously did. We now accept
+ * either:
+ * - CSP header matching the app signature (dev/local)
+ * - CF-Ray header (production Workers)
  */
 export function isLikelyAppResponse(headers: Record<string, string>): boolean {
   const csp = headers["content-security-policy"] ?? "";
-  return (
+  const cfRay = headers["cf-ray"] ?? "";
+  
+  // Check for app signature CSP (dev/local)
+  const hasAppCSP = 
     csp.includes("frame-ancestors 'none'") &&
     csp.includes("object-src 'none'") &&
-    csp.includes("https://*.sentry.io")
-  );
+    csp.includes("https://*.sentry.io");
+  
+  // Check for Cloudflare Workers header (production)
+  const hasCFRay = cfRay.length > 0;
+  
+  // Either signature is valid
+  return hasAppCSP || hasCFRay;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserBySession, deleteSession, type AuthDatabase } from "@/lib/auth-d1";
+import { getUserBySession, deleteSession, isAdmin, type AuthDatabase } from "@/lib/auth-d1";
 
 interface Env {
   AUTH_DB: AuthDatabase;
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     return response;
   }
 
-  // Check admin status
+  // Check admin status using imported isAdmin function
   const admin = await isAdmin(db, user.id);
 
   return NextResponse.json({
@@ -60,13 +60,4 @@ export async function DELETE(req: NextRequest) {
   const response = NextResponse.json({ ok: true });
   response.cookies.delete("session_token");
   return response;
-}
-
-async function isAdmin(db: AuthDatabase, userId: string): Promise<boolean> {
-  const role = await db
-    .prepare("SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'")
-    .bind(userId)
-    .first<{ role: string }>();
-
-  return !!role;
 }

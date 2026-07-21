@@ -1,16 +1,11 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import {
-  BEDROCK_MODEL_ID,
-  buildBedrockToolConfig,
-  getBedrockClient,
-  type AnyBlock,
-  type BedrockMessage,
-  type TextBlock,
-  type ToolResultBlock,
-  type ToolUseBlock,
-} from "../../../src/lib/bedrock-shared";
-import { CHAT_TOOLS, runTool } from "../../../src/lib/chat-tools";
+  GEMINI_MODEL_ID,
+  generateGeminiResponse,
+  isGeminiConfigured,
+  getGeminiApiKey,
+} from "../../../src/lib/gemini-shared";
+import { CHAT_TOOLS } from "../../../src/lib/chat-tools";
 import { rateLimit, getClientIp } from "../../../src/lib/rate-limit";
 import { escapeHtml } from "../../../src/lib/escape-html";
 import { slackChatNotify } from "../../../src/lib/slack-notify";
@@ -49,21 +44,12 @@ Output format: respond with plain conversational text only. Do NOT include inter
 const MAX_USER_MESSAGE = 500;
 const MAX_TURNS = 10;
 const MAX_TOKENS = 600;
-const MAX_TOOL_ITERATIONS = 4;
-const WORKERS_AI_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
 const encoder = new TextEncoder();
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-}
-
-// Bedrock models occasionally emit internal reasoning wrapped in
-// <thinking>…</thinking> tags
-const THINKING_TAG_RE = /<thinking>[\s\S]*?<\/thinking>\s*/gi;
-function stripThinkingTags(text: string): string {
-  return text.replace(THINKING_TAG_RE, "").trim();
 }
 
 function chunkText(text: string, size = 80): string[] {
@@ -88,12 +74,17 @@ function sseStreamFromText(text: string): ReadableStream<Uint8Array> {
   });
 }
 
+// Type for Gemini API messages
+type GeminiMessage = {
+  role: "user" | "model";
+  content: string;
+};
+
 // ---------------------------------------------------------------------------
 // ChatEntrypoint - RPC-style service binding
 // ---------------------------------------------------------------------------
 
-export class ChatEntrypoint extends WorkerEntrypoint<Env> {
-  // Access AI binding via this.env in WorkerEntrypoint context
+export class ChatAgent extends WorkerEntrypoint<Env> {
   protected getAIBinding(): Ai | null {
     return this.env.AI ?? null;
   }
@@ -110,19 +101,18 @@ export class ChatEntrypoint extends WorkerEntrypoint<Env> {
       }
     }
 
-     const sanitizedMessages: ChatMessage[] = messages
-       .slice(-MAX_TURNS)
-       .map((m) => ({
-         role: m.role === "assistant" ? "assistant" : "user",
-         content: m.content.slice(0, MAX_USER_MESSAGE).trim(),
-       }) as ChatMessage)
-       .filter((m) => m.content.length > 0);
+    const sanitizedMessages = messages
+      .slice(-MAX_TURNS)
+      .map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content.slice(0, MAX_USER_MESSAGE).trim(),
+      }))
+      .filter((m) => m.content.length > 0);
 
     if (sanitizedMessages.length === 0) {
       throw new Error("No valid messages provided");
     }
 
-    // Notify on first message
     const userMessages = sanitizedMessages.filter((m) => m.role === "user");
     if (userMessages.length === 1 && clientIp) {
       const msg = userMessages[0].content;
@@ -130,9 +120,22 @@ export class ChatEntrypoint extends WorkerEntrypoint<Env> {
       notifyTeam("New Chat Conversation", `A visitor started a chat:\n\n"${msg.slice(0, 200)}"\n\nIP: ${clientIp}`).catch(() => {});
     }
 
-    // Run chat loop
-    const result = await this.runChatLoop(SYSTEM_PROMPT, sanitizedMessages);
-    return { response: result };
+    // Try Workers AI first
+    const ai = this.getAIBinding();
+    if (ai) {
+      try {
+        const geminiMessages = sanitizedMessages.map((m) => ({
+          role: m.role === "user" ? "user" : "model",
+          content: m.content,
+        })) as GeminiMessage[];
+        const result = await generateGeminiResponse(geminiMessages, MAX_TOKENS);
+        return { response: result, model: GEMINI_MODEL_ID };
+      } catch (err) {
+        console.warn("[chat] Gemini failed, falling back:", err instanceof Error ? err.message : err);
+      }
+    }
+
+    throw new Error("Gemini API key not configured");
   }
 
   async chatStream(
@@ -147,116 +150,35 @@ export class ChatEntrypoint extends WorkerEntrypoint<Env> {
       }
     }
 
-    const sanitizedMessages: ChatMessage[] = messages
+    const sanitizedMessages = messages
       .slice(-MAX_TURNS)
       .map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.content.slice(0, MAX_USER_MESSAGE).trim(),
-      }) as ChatMessage)
+      }))
       .filter((m) => m.content.length > 0);
 
     if (sanitizedMessages.length === 0) {
       throw new Error("No valid messages provided");
     }
 
-    const userMessages = sanitizedMessages.filter((m) => m.role === "user");
-    if (userMessages.length === 1 && clientIp) {
-      const msg = userMessages[0].content;
+    if (clientIp) {
+      const msg = sanitizedMessages.find((m) => m.role === "user")?.content ?? "";
       slackChatNotify({ message: msg, ip: clientIp }).catch(() => {});
       notifyTeam("New Chat Conversation", `A visitor started a chat:\n\n"${msg.slice(0, 200)}"\n\nIP: ${clientIp}`).catch(() => {});
     }
 
-    const result = await this.runChatLoop(SYSTEM_PROMPT, sanitizedMessages);
+    const geminiMessages = sanitizedMessages.map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      content: m.content,
+    })) as GeminiMessage[];
+    const result = await generateGeminiResponse(geminiMessages, MAX_TOKENS);
     return sseStreamFromText(result);
   }
 
   async healthCheck(): Promise<{ status: string; model: string }> {
-    return { status: "ok", model: "nova-micro-v1" };
-  }
-
-  // Core chat loop with Workers AI fallback
-  private async runChatLoop(
-    systemPrompt: string,
-    initialMessages: { role: "user" | "assistant"; content: string }[],
-  ): Promise<string> {
-    const ai = this.getAIBinding();
-    const bedrockMessages: BedrockMessage[] = initialMessages.map((m) => ({
-      role: m.role,
-      content: [{ text: m.content }],
-    }));
-
-    // Try Workers AI first (fast, free, no tool support yet)
-    if (ai) {
-      const workersAiMessages = bedrockMessages.map((m) => ({
-        role: m.role,
-        content: (m.content as TextBlock[])
-          .filter((b): b is TextBlock => "text" in b && typeof b.text === "string")
-          .map((b) => b.text)
-          .join(""),
-      }));
-
-      try {
-        const result = (await ai.run(WORKERS_AI_CHAT_MODEL, {
-          messages: [{ role: "system", content: systemPrompt }, ...workersAiMessages],
-        })) as { response?: string };
-        if (result.response) return result.response;
-      } catch (err) {
-        console.warn("[chat] Workers AI chat failed, falling back to Bedrock:", err instanceof Error ? err.message : err);
-      }
-    }
-
-    // Fall back to Bedrock Converse with tool-use loop
-    const client = getBedrockClient();
-    const messages: BedrockMessage[] = bedrockMessages;
-    const BEDROCK_TOOL_CONFIG = buildBedrockToolConfig(CHAT_TOOLS);
-
-    for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-      const cmd = new ConverseCommand({
-        modelId: BEDROCK_MODEL_ID,
-        system: [{ text: systemPrompt }],
-        messages,
-        toolConfig: BEDROCK_TOOL_CONFIG,
-        inferenceConfig: { maxTokens: MAX_TOKENS },
-      });
-
-      const response = await client.send(cmd);
-      const stopReason = response.stopReason;
-      const assistantContent: AnyBlock[] = (response.output?.message?.content as AnyBlock[]) ?? [];
-
-      if (stopReason !== "tool_use") {
-        const joined = (assistantContent as TextBlock[])
-          .filter((b) => typeof b.text === "string")
-          .map((b) => b.text)
-          .join("");
-        return stripThinkingTags(joined);
-      }
-
-      messages.push({ role: "assistant", content: assistantContent });
-
-      const toolUseBlocks = assistantContent.filter(
-        (b): b is ToolUseBlock =>
-          "toolUse" in b && typeof (b as ToolUseBlock).toolUse?.toolUseId === "string"
-      );
-
-      toolUseBlocks.forEach((b) => console.warn("[chat] tool_use", b.toolUse.name));
-
-      const toolResults: ToolResultBlock[] = await Promise.all(
-        toolUseBlocks.map(async (b) => {
-          const result = await runTool(b.toolUse.name, b.toolUse.input);
-          return {
-            toolResult: {
-              toolUseId: b.toolUse.toolUseId,
-              content: [{ text: result }] as [{ text: string }],
-            },
-          };
-        })
-      );
-
-      messages.push({ role: "user", content: toolResults });
-    }
-
-    console.warn("[chat] hit MAX_TOOL_ITERATIONS without a final response");
-    return "I'm having trouble pulling that together right now. Could you share a bit more detail or use the Contact page to reach Themis directly?";
+    const configured = isGeminiConfigured();
+    return { status: configured ? "ok" : "needs-gemini-key", model: GEMINI_MODEL_ID };
   }
 }
 
@@ -265,17 +187,35 @@ interface Env {
   SITE_BASE_URL: string;
 }
 
-// Default export for HTTP fetch compatibility (also useful for local dev)
+// Default export for HTTP fetch compatibility
 const chatWorker = {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/chat" && request.method === "POST") {
-      return handleChatStream(request, env);
+      const headers = Object.fromEntries(request.headers.entries());
+      const body = (await request.json()) as { messages?: ChatMessage[] };
+      if (!body.messages?.length) {
+        return Response.json({ error: "Invalid request: messages array required" }, { status: 400 });
+      }
+
+      try {
+        const geminiMessages = body.messages.map((m) => ({
+          role: m.role === "user" ? "user" : "model",
+          content: m.content,
+        })) as GeminiMessage[];
+        const result = await generateGeminiResponse(geminiMessages, 600);
+        return new Response(sseStreamFromText(result), {
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Chat failed";
+        return Response.json({ error: message }, { status: 500 });
+      }
     }
 
     if (url.pathname === "/health" && request.method === "GET") {
-      return Response.json({ status: "ok", worker: "cloudless-gr-chat" });
+      return Response.json({ status: "ok", worker: "cloudless-gr-chat", model: GEMINI_MODEL_ID });
     }
 
     return Response.json({ error: "Not Found" }, { status: 404 });
@@ -283,154 +223,3 @@ const chatWorker = {
 };
 
 export default chatWorker;
-
-// Helper to run chat without WorkerEntrypoint (for HTTP fallback)
-async function runChat(
-  messages: ChatMessage[],
-  headers: Record<string, string>,
-  env: Env,
-): Promise<string> {
-  // Use the same logic as ChatEntrypoint.chat but without RPC context
-  const clientIp = headers ? getClientIp({ headers: { get: (k: string) => headers[k.toLowerCase()] } } as Request) : undefined;
-  if (clientIp) {
-    const rl = rateLimit(`chat:${clientIp}`, 10, 60_000);
-    if (!rl.ok) {
-      throw new Error("Rate limit exceeded");
-    }
-  }
-
-  const sanitizedMessages: ChatMessage[] = messages
-    .slice(-MAX_TURNS)
-    .map((m) => ({
-      role: m.role === "assistant" ? "assistant" : "user",
-      content: m.content.slice(0, MAX_USER_MESSAGE).trim(),
-    }) as ChatMessage)
-    .filter((m) => m.content.length > 0);
-
-  if (sanitizedMessages.length === 0) {
-    throw new Error("No valid messages provided");
-  }
-
-  const userMessages = sanitizedMessages.filter((m) => m.role === "user");
-  if (userMessages.length === 1 && clientIp) {
-    const msg = userMessages[0].content;
-    slackChatNotify({ message: msg, ip: clientIp }).catch(() => {});
-    notifyTeam("New Chat Conversation", `A visitor started a chat:\n\n"${msg.slice(0, 200)}"\n\nIP: ${clientIp}`).catch(() => {});
-  }
-
-  return runChatLoopInternal(SYSTEM_PROMPT, sanitizedMessages, env);
-}
-
-// Extracted chat loop logic for reuse
-async function runChatLoopInternal(
-  systemPrompt: string,
-  initialMessages: { role: "user" | "assistant"; content: string }[],
-  env: Env,
-): Promise<string> {
-  const ai = env.AI;
-  const bedrockMessages: BedrockMessage[] = initialMessages.map((m) => ({
-    role: m.role,
-    content: [{ text: m.content }],
-  }));
-
-  if (ai) {
-    const workersAiMessages = bedrockMessages.map((m) => ({
-      role: m.role,
-      content: (m.content as TextBlock[])
-        .filter((b): b is TextBlock => "text" in b && typeof b.text === "string")
-        .map((b) => b.text)
-        .join(""),
-    }));
-
-    try {
-      const result = (await ai.run(WORKERS_AI_CHAT_MODEL, {
-        messages: [{ role: "system", content: systemPrompt }, ...workersAiMessages],
-      })) as { response?: string };
-      if (result.response) return result.response;
-    } catch (err) {
-      console.warn("[chat] Workers AI chat failed, falling back to Bedrock:", err instanceof Error ? err.message : err);
-    }
-  }
-
-  const client = getBedrockClient();
-  const messages: BedrockMessage[] = bedrockMessages;
-  const BEDROCK_TOOL_CONFIG = buildBedrockToolConfig(CHAT_TOOLS);
-
-  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-    const cmd = new ConverseCommand({
-      modelId: BEDROCK_MODEL_ID,
-      system: [{ text: systemPrompt }],
-      messages,
-      toolConfig: BEDROCK_TOOL_CONFIG,
-      inferenceConfig: { maxTokens: MAX_TOKENS },
-    });
-
-    const response = await client.send(cmd);
-    const stopReason = response.stopReason;
-    const assistantContent: AnyBlock[] = (response.output?.message?.content as AnyBlock[]) ?? [];
-
-    if (stopReason !== "tool_use") {
-      const joined = (assistantContent as TextBlock[])
-        .filter((b) => typeof b.text === "string")
-        .map((b) => b.text)
-        .join("");
-      return stripThinkingTags(joined);
-    }
-
-    messages.push({ role: "assistant", content: assistantContent });
-
-    const toolUseBlocks = assistantContent.filter(
-      (b): b is ToolUseBlock =>
-        "toolUse" in b && typeof (b as ToolUseBlock).toolUse?.toolUseId === "string"
-    );
-
-    toolUseBlocks.forEach((b) => console.warn("[chat] tool_use", b.toolUse.name));
-
-    const toolResults: ToolResultBlock[] = await Promise.all(
-      toolUseBlocks.map(async (b) => {
-        const result = await runTool(b.toolUse.name, b.toolUse.input);
-        return {
-          toolResult: {
-            toolUseId: b.toolUse.toolUseId,
-            content: [{ text: result }] as [{ text: string }],
-          },
-        };
-      })
-    );
-
-    messages.push({ role: "user", content: toolResults });
-  }
-
-  console.warn("[chat] hit MAX_TOOL_ITERATIONS without a final response");
-  return "I'm having trouble... Could you share a bit more detail or use the Contact page to reach Themis directly?";
-}
-
-async function handleChatStream(request: Request, env: Env): Promise<Response> {
-  const headers = Object.fromEntries(request.headers.entries());
-
-  let messages: ChatMessage[];
-  try {
-    const body = (await request.json()) as { messages?: ChatMessage[] };
-    if (!body.messages || !Array.isArray(body.messages)) {
-      return Response.json({ error: "Invalid request: messages array required" }, { status: 400 });
-    }
-    messages = body.messages;
-  } catch {
-    return Response.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  try {
-    const result = await runChat(messages, headers, env);
-    return new Response(sseStreamFromText(result), {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Chat failed";
-    return Response.json({ error: message }, { status: 500 });
-  }
-}

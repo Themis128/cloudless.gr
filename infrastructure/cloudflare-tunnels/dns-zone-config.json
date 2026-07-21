@@ -1,0 +1,29 @@
+{
+  "zone_id": "7025298073d6a5c645a6ad9add0cbf0e",
+  "name": "cloudless.gr",
+  "dns_records": [
+    {
+      "type": "A",
+      "name": "cloudless.gr",
+      "content": "192.0.2.1",
+      "ttl": 1,
+      "proxied": true,
+      "comment": "Placeholder - Cloudflare Workers route will override"
+    }
+  ],
+  "worker_routes": [
+    {
+      "pattern": "cloudless.gr",
+      "script": "cloudless-gr"
+    },
+    {
+      "pattern": "www.cloudless.gr",
+      "script": "cloudless-gr"
+    }
+  ],
+  "apply_instructions": [
+    "Option A: Deploy Worker - pnpm cf:deploy creates route automatically",
+    "Option B: Cloudflare API - curl -X POST https://api.cloudflare.com/client/v4/zones/7025298073d6a5c645a6ad9add0cbf0e/dns_records",
+    "Option C: Cloudflare Dashboard - DNS > Add Record > Type A > Name: @ > Proxy: ON"
+  ]
+}

@@ -105,6 +105,7 @@ function buildConfigFromEnv(): Record<string, string> {
     NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
     NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
     GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
     GSC_SITE_URL: process.env.GSC_SITE_URL || "sc-domain:cloudless.gr",

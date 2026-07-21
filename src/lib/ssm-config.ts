@@ -92,6 +92,7 @@ interface AppConfig {
   // AI
   ANTHROPIC_API_KEY: string;
   ANTHROPIC_CHAT_MODEL: string;
+  GEMINI_API_KEY: string;
   // Internal AI generate endpoint auth
   AI_GENERATE_SECRET: string;
   // GitHub Actions dispatch
@@ -271,6 +272,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
+    GEMINI_API_KEY: params.get("GEMINI_API_KEY") ?? "",
     AI_GENERATE_SECRET: params.get("AI_GENERATE_SECRET") ?? "",
     GITHUB_DISPATCH_TOKEN: params.get("GITHUB_DISPATCH_TOKEN") ?? "",
     ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
@@ -383,6 +385,7 @@ function buildConfigFromEnv(): AppConfig {
     CRON_SECRET: process.env.CRON_SECRET || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     ANTHROPIC_CHAT_MODEL: process.env.ANTHROPIC_CHAT_MODEL || "",
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
     AI_GENERATE_SECRET: process.env.AI_GENERATE_SECRET || "",
     GITHUB_DISPATCH_TOKEN: process.env.GITHUB_DISPATCH_TOKEN || "",
     ADMIN_ALERT_SECRET: process.env.ADMIN_ALERT_SECRET || "",

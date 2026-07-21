@@ -11,7 +11,7 @@ interface ChatService {
 }
 
 // Custom Env interface for this worker - extends base bindings with agent-specific ones
-// AUTH_DB, CHAT, and CRON_SECRET are optional to support multiple deployment targets
+// AUTH_DB, CHAT, ADMIN_API, and CRON_SECRET are optional to support multiple deployment targets
 interface Env {
   // Base bindings from wrangler.jsonc
   ASSETS_BUCKET: R2Bucket;
@@ -32,6 +32,10 @@ interface Env {
   AGENT_AUTH_TOKEN: string;
   ASSETS: Fetcher;
   CounterAgent: DurableObjectNamespace<CounterAgent>;
+  // OpenNext.js cache/queue bindings
+  TAG_CACHE?: KVNamespace;
+  REVALIDATION_QUEUE?: KVNamespace;
+  // Service bindings (optional for development)
   CHAT?: ChatService;
   CRON_SECRET?: string;
 }
@@ -294,11 +298,16 @@ async function handleCspReport(request: Request): Promise<Response> {
   return new Response(null, { status: 204 });
 }
 
-// ---------------------------------------------------------------------------
-// Chat service routing - delegates to cloudless-gr-chat via service binding
-// ---------------------------------------------------------------------------
-
 async function handleChatRoute(request: Request, env: Env): Promise<Response> {
+  // Check if CHAT service binding exists - if not, fall through to ASSETS
+  if (!env.CHAT) {
+    // Fall back to ASSETS fetch for Next.js route
+    const response = await env.ASSETS.fetch(request);
+    const headers = new Headers(response.headers);
+    addSecurityHeaders(headers);
+    return new Response(response.body, { ...response, headers });
+  }
+
   try {
     // For RPC-style call, extract messages and call directly
     const body = (await request.json().catch(() => ({}))) as { messages?: { role: "user" | "assistant"; content: string }[] };
@@ -331,8 +340,9 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
     }
     // Fall back to ASSETS fetch for Next.js route
     const response = await env.ASSETS.fetch(request);
-    addSecurityHeaders(response.headers);
-    return response;
+    const headers = new Headers(response.headers);
+    addSecurityHeaders(headers);
+    return new Response(response.body, { ...response, headers });
   }
 }
 
@@ -446,10 +456,30 @@ const worker = {
       return agentResponse;
     }
 
-    // Fallback to ASSETS fetch for all other requests
-    const response = await env.ASSETS.fetch(request);
-    addSecurityHeaders(response.headers);
-    return response;
+    // ==========================================
+    // SECURITY: Reject unauthenticated admin API requests
+    // ==========================================
+    const isAdminApi = url.pathname.startsWith("/api/admin");
+    const isAuthApi = url.pathname.startsWith("/api/auth") || url.pathname === "/api/auth/session";
+    
+    if (isAdminApi && !isAuthApi) {
+      // Check for valid session cookie or Bearer token
+      const sessionId = request.headers.get("Cookie")?.match(/session_token=([^;]+)/)?.[1];
+      const authHeader = request.headers.get("Authorization");
+      const hasValidAuth = sessionId || (authHeader?.startsWith("Bearer ") && authHeader.slice(7).trim());
+      
+      if (!hasValidAuth) {
+        const response = Response.json({ error: "Authentication required" }, { status: 401 });
+        addSecurityHeaders(response.headers);
+        return response;
+      }
+    }
+
+     // Fallback to ASSETS fetch for all other requests
+     const response = await env.ASSETS.fetch(request);
+     const headers = new Headers(response.headers);
+     addSecurityHeaders(headers);
+     return new Response(response.body, { ...response, headers });
   },
 };
 

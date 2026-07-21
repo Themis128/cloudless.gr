@@ -34,7 +34,6 @@ export default $config({
     // =========================================================================
     // 2. Deploy the Main Next.js App using OpenNext outputs
     // =========================================================================
-    // Uses SST's built-in domain handling with redirects support
     const domainConfig = $app.stage === STAGE_PRODUCTION
       ? {
           name: "cloudless.gr",
@@ -43,13 +42,14 @@ export default $config({
       : undefined;
 
     // Build the Next.js app with OpenNext before SST deploys
+    // Using $cli.run() - SST will invoke the build command
     await $cli.run("pnpm exec opennextjs-cloudflare build --skipWranglerConfigCheck", {
       stage: $app.stage,
     });
 
-    const mainApp = new sst.cloudflare.Worker("MainNextApp", {
-      // OpenNext outputs to _worker-next directory
-      handler: "./_worker-next/_worker.js",
+     const mainApp = new sst.cloudflare.Worker("MainNextApp", {
+       // OpenNext outputs to .open-next directory
+       handler: "./.open-next/worker.js",
       url: true,
       link: [analyticsWorker], // Injects analytics URL into Next.js edge runtime
       compatibility: {
@@ -62,7 +62,7 @@ export default $config({
           ? "https://cloudless.gr"
           : `https://${$app.stage}.cloudless.gr`,
         // Analytics worker URL passed to main app for API integration
-        ANALYTICS_WORKER_URL: analyticsWorker.url,
+        ANALYTICS_WORKER_URL: analyticsWorker.url ?? "",
       },
       domain: domainConfig,
     });
@@ -73,7 +73,7 @@ export default $config({
     if ($app.stage === STAGE_PRODUCTION) {
       // Daily 01:00 UTC — flush event queue, weekly rollup, archive old events
       new sst.cloudflare.Cron("AnalyticsRollup", {
-        schedule: "0 1 * * *",
+        schedules: [{ schedule: "0 1 * * *" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -81,7 +81,7 @@ export default $config({
 
       // Weekdays 06:00 UTC (≈08:00-09:00 Athens) — Google Calendar daily agenda to Slack
       new sst.cloudflare.Cron("CalendarDigest", {
-        schedule: "0 6 ? * MON-FRI *",
+        schedules: [{ schedule: "0 6 ? * MON-FRI *" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -89,7 +89,7 @@ export default $config({
 
       // Sunday 02:00 UTC — delete generated reports older than 90 days
       new sst.cloudflare.Cron("ReportCleanup", {
-        schedule: "0 2 ? * SUN *",
+        schedules: [{ schedule: "0 2 ? * SUN *" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -97,7 +97,7 @@ export default $config({
 
       // Monday 05:00 UTC (≈07:00-08:00 Athens) — assemble + store weekly voice brief
       new sst.cloudflare.Cron("VoiceBrief", {
-        schedule: "0 5 ? * MON *",
+        schedules: [{ schedule: "0 5 ? * MON *" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -110,4 +110,4 @@ export default $config({
       workerUrl: mainApp.url,
     };
   },
-}) satisfies sst.Config;
+});

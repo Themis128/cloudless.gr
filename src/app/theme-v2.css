@@ -44,20 +44,21 @@
   --accent-soft: #e0f2f5;
   --accent-on: #fff;
 
-  /* Semantic */
-  --success: #0a8a52;
-  --warning: #b56e00;
-  --danger: #c0392b;
-  --info: var(--accent);
+   /* Semantic */
+   --success: #0a8a52;
+   --success-soft: #e0f5ea;
+   --warning: #b56e00;
+   --danger: #c0392b;
+   --info: var(--accent);
 
-  /* Secondary (violet) — used for neon-magenta. #7c3aed on white = 9.1:1 WCAG AA. */
-  --secondary: #7c3aed;
-  --secondary-hover: #6d28d9;
-  --secondary-soft: #ede9fe;
+   /* Secondary (violet) — used for neon-magenta. #7c3aed on white = 9.1:1 WCAG AA. */
+   --secondary: #7c3aed;
+   --secondary-hover: #6d28d9;
+   --secondary-soft: #ede9fe;
 
-  /* Info strong (blue) — used for neon-blue. #1d4ed8 on white = 9.3:1 WCAG AA. */
-  --info-strong: #1d4ed8;
-  --info-soft: #dbeafe;
+   /* Info strong (blue) — used for neon-blue. #1d4ed8 on white = 9.3:1 WCAG AA. */
+   --info-strong: #1d4ed8;
+   --info-soft: #dbeafe;
 
   /* Shadows — light-mode-visible elevation */
   --shadow-sm: 0 1px 2px rgb(15 24 34 / 0.04), 0 1px 1px rgb(15 24 34 / 0.06);
@@ -100,6 +101,7 @@
 
   /* Semantic */
   --success: #1fa56e;
+  --success-soft: rgb(31 165 110 / 0.12);
   --warning: #e09530;
   --danger: #e85f4d;
   --info: var(--accent);
@@ -146,6 +148,7 @@
     --accent-soft: #0e3a40;
     --accent-on: #06222a;
     --success: #1fa56e;
+    --success-soft: rgb(31 165 110 / 0.12);
     --warning: #e09530;
     --danger: #e85f4d;
     --secondary: #a78bfa;
@@ -156,12 +159,13 @@
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 12px rgb(0 0 0 / 0.35);
     --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
-    --gradient-hero:
-      radial-gradient(circle at 20% 0%, rgb(34 211 230 / 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 80% 10%, rgb(99 102 241 / 0.08) 0%, transparent 50%),
-      radial-gradient(circle at 50% 100%, rgb(168 85 247 / 0.04) 0%, transparent 60%),
-      var(--surface-canvas);
+  --gradient-hero:
+    radial-gradient(circle at 20% 0%, rgb(34 211 230 / 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 10%, rgb(99 102 241 / 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 100%, rgb(168 85 247 / 0.04) 0%, transparent 60%),
+    var(--surface-canvas);
   }
+
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -316,6 +320,25 @@
 [data-theme="light"] .bg-slate-800\/50,
 [data-theme="light"] .bg-slate-900\/50 {
   background-color: color-mix(in sRGB, var(--surface-subtle) 50%, transparent);
+}
+
+/* bg-void and bg-void-light overrides — map to v2 surfaces on light theme.
+   These are heavily used on /services, /contact, and other marketing pages. */
+[data-theme="light"] .bg-void {
+  background-color: var(--surface-canvas);
+}
+
+[data-theme="light"] .bg-void\/90,
+[data-theme="light"] .bg-void-light,
+[data-theme="light"] .bg-void-light\/20,
+[data-theme="light"] .bg-void-light\/30,
+[data-theme="light"] .bg-void-light\/50,
+[data-theme="light"] .bg-void-lighter {
+  background-color: var(--surface-subtle);
+}
+
+[data-theme="light"] .bg-void-lighter\/20 {
+  background-color: var(--surface-raised);
 }
 
 /* Borders */

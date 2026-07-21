@@ -18,17 +18,12 @@ const nextConfig: NextConfig = {
   output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
   // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
   // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
-  // clients so Next uses Node's native resolver instead of bundling them.
+  // client-s3 for R2 compatibility and next-intl to fix Turbopack bundling.
   // Also externalize next-intl to fix Turbopack bundling issue where all
   // NextResponse static methods (next, rewrite, redirect, json) are not
   // properly bound in the bundled module context.
   serverExternalPackages: [
-    "@aws-sdk/client-bedrock-runtime",
-    "@aws-sdk/client-cognito-identity-provider",
-    "@aws-sdk/client-dynamodb",
-    "@aws-sdk/client-ses",
-    "@aws-sdk/client-sesv2",
-    "@aws-sdk/client-ssm",
+    "@aws-sdk/client-s3",
   ],
   // In WSL dev, set NEXT_DIST_DIR to a native Linux path (e.g. ~/next-cloudless)
   // to avoid the slow NTFS→WSL filesystem benchmark warning.
@@ -86,6 +81,9 @@ const nextConfig: NextConfig = {
     // helpers loaded via the second — surfacing "Auth UserPool not configured"
     // at signIn time even when configure provably ran.
     optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
+    // Use TypeScript CLI instead of compiler API for TS 7.x compatibility
+    // https://nextjs.org/docs/app/building-your-application/upgrading/version-16#typescript-cli
+    useTypeScriptCli: true,
   },
 };
 

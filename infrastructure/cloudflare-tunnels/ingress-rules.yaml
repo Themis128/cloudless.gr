@@ -7,6 +7,15 @@
 # Insert BEFORE the catch-all "http_status:404" rule.
 # Last Updated: 2026-07-20 - All endpoints verified working
 
+# cloudless.gr - Main website (Workers.dev) - Apex domain
+# Routes to cloudless-gr.baltzakis-themis.workers.dev
+# Status: ✅ Workers deployed, apex domain DNS should resolve
+- hostname: cloudless.gr
+  service: https://cloudless-gr.baltzakis-themis.workers.dev
+  originRequest:
+    connectTimeout: 15s
+    tcpKeepAlive: 30s
+
 # grafana.cloudless.gr - Monitoring dashboard
 # Runs on omv-main NodePort 30850 (fixed from 18443 which was internal container port)
 - hostname: grafana.cloudless.gr
@@ -117,6 +126,7 @@
 #   4. sudo systemctl reload cloudflared
 #
 # Verify:
+#   curl -I https://cloudless.gr/
 #   curl -I https://grafana.cloudless.gr/api/health
 #   curl -I https://kuma.cloudless.gr/
 #   curl -I https://n8n.cloudless.gr/

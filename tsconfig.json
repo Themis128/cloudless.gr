@@ -41,6 +41,8 @@
   "exclude": [
     "node_modules",
     "sst.config.ts",
+    "sst.config.cloudflare.ts",
+    "sst.config.cf-infra.ts",
     "playwright.config.mts",
     "playwright.production.config.mts",
     "e2e",

@@ -1,0 +1,24 @@
+# Traefik IngressRoute for cloudless.gr main site
+# Routes cloudless.gr and www.cloudless.gr to the k3s app
+# Uses Traefik's websecure entry point with Let's Encrypt SSL
+#
+# Apply: kubectl apply -f k8s/ingressroute-main.yaml
+
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: cloudless-main
+  namespace: cloudless
+  annotations:
+    traefik.io/v1alpha1: "true"
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - kind: Rule
+    match: Host(`cloudless.gr`) || Host(`www.cloudless.gr`)
+    services:
+    - name: cloudless-app
+      port: 80
+  tls:
+    certResolver: letsencrypt-cloudflare

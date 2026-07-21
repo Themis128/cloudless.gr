@@ -1,7 +1,9 @@
 {
   "name": "cloudless-gr",
-  "main": "src/index-cloudflare-free.js",
+  "main": "src/index.ts",
   "compatibility_date": "2026-07-09",
+  "minify": true,
+  "compatibility_flags": ["nodejs_compat"],
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "routes": [
     { "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e", "custom_domain": true },
@@ -15,6 +17,27 @@
       "0 * * * *",
       "0 2 * * 7",
       "0 5 * * 1"
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["CounterAgent"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["EchoAgent"]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["CodingAgent"]
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "CounterAgent", "class_name": "CounterAgent" },
+      { "name": "EchoAgent", "class_name": "EchoAgent" },
+      { "name": "CodingAgent", "class_name": "CodingAgent" }
     ]
   },
   "observability": {
@@ -37,7 +60,7 @@
     }
   ],
   "assets": {
-    "directory": "./public",
+    "directory": "./out",
     "binding": "ASSETS",
     "run_worker_first": true
   },
@@ -50,6 +73,10 @@
     { "binding": "MEDIA_BUCKET", "bucket_name": "app-media-bucket" },
     { "binding": "ANALYTICS_BUCKET", "bucket_name": "cloudless-analytics" },
     { "binding": "DATALAKE_BUCKET", "bucket_name": "datalake-bucket" }
+  ],
+  "kv_namespaces": [
+    { "binding": "TAG_CACHE", "id": "e81bb5dcf84b452b978323f09a3f7428" },
+    { "binding": "REVALIDATION_QUEUE", "id": "b5b95ab1caed42a8b6e14f5db869bbc6" }
   ],
   "d1_databases": [
     { "binding": "AUTH_DB", "database_name": "user-auth-db", "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d" }
@@ -65,6 +92,10 @@
         "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr",
         "APP_VERSION": "staging"
       },
+      "kv_namespaces": [
+        { "binding": "TAG_CACHE", "id": "4acd41f02601469097d2f447f8a86e11" },
+        { "binding": "REVALIDATION_QUEUE", "id": "9af1742d16af429f96f75e8228706bd8" }
+      ],
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",
@@ -95,6 +126,10 @@
         "NEXT_PUBLIC_SITE_URL": "https://cloudless.gr",
         "APP_VERSION": "1.0.0"
       },
+      "kv_namespaces": [
+        { "binding": "TAG_CACHE", "id": "e81bb5dcf84b452b978323f09a3f7428" },
+        { "binding": "REVALIDATION_QUEUE", "id": "b5b95ab1caed42a8b6e14f5db869bbc6" }
+      ],
       "analytics_engine_datasets": [
         {
           "binding": "ANALYTICS",

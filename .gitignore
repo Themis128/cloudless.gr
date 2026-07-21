@@ -12,9 +12,11 @@ cloudflare-pages-mcp/node_modules/
 # Build outputs
 /.next/
 /.open-next/
+/_worker-next/
 /out/
 /dist/
 /build/
+```
 
 # Testing artifacts
 /coverage/
