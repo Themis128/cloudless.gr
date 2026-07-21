@@ -53,102 +53,9 @@ const CHAT_PATH_PREFIX = "/api/chat";
 const LOCALES = ["en", "el", "fr", "de"];
 
 // ---------------------------------------------------------------------------
-// Security headers for all responses
+// NOTE: Locale cascade and security headers are handled by middleware.ts
+// to avoid duplication. The worker delegates to middleware via ASSETS.fetch.
 // ---------------------------------------------------------------------------
-
-function addSecurityHeaders(headers: Headers): void {
-  headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("X-Frame-Options", "DENY");
-  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  headers.set(
-    "Permissions-Policy",
-    [
-      "accelerometer=()",
-      "autoplay=(self)",
-      "camera=()",
-      "display-capture=()",
-      "encrypted-media=()",
-      "fullscreen=(self)",
-      "geolocation=()",
-      "gyroscope=()",
-      "hid=()",
-      "idle-detection=()",
-      "magnetometer=()",
-      "microphone=()",
-      "midi=()",
-      "payment=(self)",
-      "picture-in-picture=()",
-      "publickey-credentials-get=(self)",
-      "screen-wake-lock=()",
-      "serial=()",
-      "usb=()",
-      "web-share=(self)",
-      "xr-spatial-tracking=()",
-    ].join(", "),
-  );
-  // Report-To header for CSP endpoint group
-  headers.set(
-    "Report-To",
-    JSON.stringify({
-      group: "csp-endpoint",
-      max_age: 86400,
-      endpoints: [{ url: "/api/csp-report" }],
-      include_subdomains: true,
-    }),
-  );
-  // CSP header - must include all expected directives for tests
-  headers.set(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
-      "connect-src 'self' https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://auth.cloudless.gr https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com",
-      "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
-      "worker-src 'self' blob:",
-      "media-src 'self'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self' https://www.facebook.com https://connect.facebook.net",
-      "frame-ancestors 'none'",
-      "report-uri /api/csp-report",
-      "report-to csp-endpoint",
-    ].join("; "),
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Locale cascade fix: handle /en/en/en/... paths and redirect properly
-// ---------------------------------------------------------------------------
-
-function fixLocaleCascade(url: URL): Response | null {
-  const path = url.pathname;
-  
-  // Check for locale cascade: multiple consecutive locale prefixes (e.g., /en/en/en/...)
-  const localePattern = new RegExp(`^/(${LOCALES.join("|")})/(${LOCALES.join("|")})/(${LOCALES.join("|")}/)+`);
-  
-  if (localePattern.test(path)) {
-    // Extract the actual path after removing duplicate locale prefixes
-    // e.g., /en/en/en/blog -> /blog
-    let cleanPath = path.replace(localePattern, "/");
-    // Handle case like /en/en/en (no trailing path) -> redirect to /en
-    if (cleanPath === "/" && path !== "/") {
-      cleanPath = "/en";
-    }
-    
-    // Preserve query string
-    const cleanUrl = cleanPath === "/" ? 
-      (url.search ? `${cleanPath}?${url.search}` : cleanPath) : 
-      (url.search ? `${cleanPath}?${url.search}` : cleanPath);
-    
-    return Response.redirect(`${url.origin}${cleanPath}`, 301);
-  }
-  
-  return null;
-}
 
 function unauthorized() {
   return Response.json(
@@ -302,10 +209,8 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
   // Check if CHAT service binding exists - if not, fall through to ASSETS
   if (!env.CHAT) {
     // Fall back to ASSETS fetch for Next.js route
-    const response = await env.ASSETS.fetch(request);
-    const headers = new Headers(response.headers);
-    addSecurityHeaders(headers);
-    return new Response(response.body, { ...response, headers });
+    // Security headers are added by middleware.ts
+    return await env.ASSETS.fetch(request);
   }
 
   try {
@@ -321,7 +226,7 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
       chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
     };
     const stream = await chatStub.chatStream(body.messages || [], headers);
-    const response = new Response(stream, {
+    return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
@@ -329,20 +234,14 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
         "X-Accel-Buffering": "no",
       },
     });
-    addSecurityHeaders(response.headers);
-    return response;
   } catch (err) {
     // If stream fails, try regular fetch as fallback
     if (err instanceof Error && err.message.includes("Rate limit")) {
-      const response = Response.json({ error: err.message }, { status: 429 });
-      addSecurityHeaders(response.headers);
-      return response;
+      return Response.json({ error: err.message }, { status: 429 });
     }
     // Fall back to ASSETS fetch for Next.js route
-    const response = await env.ASSETS.fetch(request);
-    const headers = new Headers(response.headers);
-    addSecurityHeaders(headers);
-    return new Response(response.body, { ...response, headers });
+    // Security headers are added by middleware.ts
+    return await env.ASSETS.fetch(request);
   }
 }
 
@@ -378,9 +277,8 @@ async function handleCronRoute(env: Env): Promise<Response | null> {
 
   // Route to the appropriate API endpoint via ASSETS
   // The cron API routes are handled by Next.js /api/cron/* endpoints
-  const response = await env.ASSETS.fetch(internalRequest);
-  addSecurityHeaders(response.headers);
-  return response;
+  // Security headers are added by middleware.ts
+  return await env.ASSETS.fetch(internalRequest);
 }
 
 const worker = {
@@ -397,12 +295,6 @@ const worker = {
       }
     }
 
-    // Handle locale cascade redirects first
-    const localeRedirect = fixLocaleCascade(url);
-    if (localeRedirect) {
-      return localeRedirect;
-    }
-
     const isCustomAgentRoute = url.pathname.startsWith(AGENT_PATH_PREFIX + "/");
     const isDefaultAgentRoute = url.pathname.startsWith(DEFAULT_AGENT_PATH_PREFIX + "/");
     const isServerCounterRoute = url.pathname.startsWith(SERVER_COUNTER_PREFIX + "/");
@@ -410,16 +302,12 @@ const worker = {
     const isCspReport = url.pathname === "/api/csp-report" && request.method === "POST";
 
     if ((isCustomAgentRoute || isServerCounterRoute) && !isAuthorized(request, env)) {
-      const response = unauthorized();
-      addSecurityHeaders(response.headers);
-      return response;
+      return unauthorized();
     }
 
     // CSP report endpoint
     if (isCspReport) {
-      const response = await handleCspReport(request);
-      addSecurityHeaders(response.headers);
-      return response;
+      return await handleCspReport(request);
     }
 
     // Route chat to dedicated service worker via RPC binding
@@ -429,12 +317,11 @@ const worker = {
 
     if (isServerCounterRoute) {
       const response = await handleServerCounterRoute(request, env);
-      addSecurityHeaders(response.headers);
       return response;
     }
 
     if (isDefaultAgentRoute) {
-      const response = Response.json(
+      return Response.json(
         {
           ok: false,
           error: "Use custom Agent path prefix",
@@ -444,15 +331,12 @@ const worker = {
           status: 404,
         }
       );
-      addSecurityHeaders(response.headers);
-      return response;
     }
 
     const routedRequest = rewriteAgentPrefix(request);
     const agentResponse = await routeAgentRequest(routedRequest, env);
 
     if (agentResponse) {
-      addSecurityHeaders(agentResponse.headers);
       return agentResponse;
     }
 
@@ -469,17 +353,34 @@ const worker = {
       const hasValidAuth = sessionId || (authHeader?.startsWith("Bearer ") && authHeader.slice(7).trim());
       
       if (!hasValidAuth) {
-        const response = Response.json({ error: "Authentication required" }, { status: 401 });
-        addSecurityHeaders(response.headers);
-        return response;
+        return Response.json({ error: "Authentication required" }, { status: 401 });
       }
     }
 
-     // Fallback to ASSETS fetch for all other requests
-     const response = await env.ASSETS.fetch(request);
-     const headers = new Headers(response.headers);
-     addSecurityHeaders(headers);
-     return new Response(response.body, { ...response, headers });
+    // ==========================================
+    // HEALTH ENDPOINT
+    // ==========================================
+    if (url.pathname === "/api/health" && request.method === "GET") {
+      let dbOk: boolean = false;
+      try {
+        const result = await env.AUTH_DB?.prepare("SELECT 1 as ok").all();
+        dbOk = !!(result && result.results && result.results.length > 0 && (result.results[0] as { ok?: number })?.ok === 1);
+      } catch {
+        dbOk = false;
+      }
+      return Response.json({
+        status: dbOk ? "ok" : "degraded",
+        version: process.env.APP_VERSION || "1.0.0",
+        authProvider: "d1",
+        dbConnected: dbOk,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Fallback to ASSETS fetch for all other requests
+    // Security headers are added by middleware.ts, not here
+    const response = await env.ASSETS.fetch(request);
+    return new Response(response.body, { ...response, headers: response.headers });
   },
 };
 

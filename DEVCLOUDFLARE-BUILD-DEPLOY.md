@@ -33,19 +33,19 @@
 ```
 
 ## Available Scripts
-
-| Script | Command | Description |
-|--------|---------|-------------|
-| `pnpm cf:build` | `opennextjs-cloudflare build` | Full OpenNext build → `.open-next/` |
-| `pnpm cf:deploy` | `opennextjs-cloudflare deploy` | Deploy built worker to Cloudflare |
-| `pnpm cf:preview` | `opennextjs-cloudflare preview` | Preview worker locally |
-| `pnpm cf:upload` | `opennextjs-cloudflare upload` | Upload to Cloudflare without deploying |
-| `pnpm deploy` | Build + `sst deploy` (production) | Full production deploy via SST |
-| `pnpm deploy:staging` | Build + `sst deploy` (staging) | Full staging deploy via SST |
-| `pnpm cf:deploy:free` | `wrangler deploy` (free tier config) | Legacy free-tier deploy |
-| `pnpm cf:dev` | `wrangler dev` | Local Wrangler dev server |
-| `pnpm cf:types` | `wrangler types` | Generate Cloudflare env types |
-| `pnpm cloudflare-build` | `opennextjs-cloudflare build` | Alias for cf:build |
+ 
+ | Script | Command | Description |
+ |--------|---------|-------------|
+ | `pnpm cf:build` | `bash scripts/cf-build-wrapper.sh` | Full OpenNext build → `.open-next/` |
+ | `pnpm cf:deploy` | `opennextjs-cloudflare deploy` | Deploy built worker to Cloudflare (requires `.open-next/worker.js`) |
+ | `pnpm cf:preview` | `opennextjs-cloudflare preview` | Preview worker locally |
+ | `pnpm cf:upload` | `opennextjs-cloudflare upload` | Upload to Cloudflare without deploying |
+ | `pnpm deploy` | Build + `sst deploy` (production) | Full production deploy via SST (OpenNext) |
+ | `pnpm deploy:staging` | Build + `sst deploy` (staging) | Full staging deploy via SST (OpenNext) |
+ | `pnpm cf:deploy:free` | `wrangler deploy --config wrangler.cloudflare-free.json` | Free-tier deploy (custom worker) |
+ | `pnpm cf:dev` | `wrangler dev` | Local Wrangler dev server |
+ | `pnpm cf:types` | `wrangler types` | Generate Cloudflare env types |
+ | `pnpm cloudflare-build` | `bash scripts/cf-build-wrapper.sh` | Alias for cf:build |
 
 ## Configuration Files
 
@@ -181,6 +181,40 @@ OPEN_NEXT_CONFIG_FILE=open-next.config.ts
   - Added `cf:preview` and `cf:upload` scripts
 - **wrangler.jsonc changes**: Added `NEXT_INC_CACHE_R2_BUCKET` (R2) and `NEXT_CACHE_D1_BINDING` (D1) bindings
 
+### Middleware Stub Workaround
+
+The OpenNext build requires middleware stubs to be pre-created to avoid ENOENT errors:
+
+```bash
+mkdir -p .next/server
+echo '{}' > .next/server/middleware.js.nft.json
+touch .next/server/middleware.js .next/server/middleware.js.map
+```
+
+This is handled by `scripts/cf-build-wrapper.sh` before running `opennextjs-cloudflare build`.
+
 ### KV Legacy
 
 The existing `TAG_CACHE` and `REVALIDATION_QUEUE` KV namespaces are preserved for backward compatibility but are no longer the primary cache path. OpenNext.js now uses R2 + D1 directly.
+
+## Workers Architecture: Two Entry Points
+
+### SST/OpenNext Worker (`src/index.ts` + `.open-next/worker.js`)
+- **Primary deploy target** via `pnpm deploy`
+- Built by OpenNext.js, handles Next.js SSR/SSG routes
+- Uses `wrangler.jsonc` configuration
+- Health endpoint: `/api/health` (handled by SST/OpenNext)
+
+### Free-Tier Worker (`src/index-cloudflare-free.js`)
+- **Alternative deploy** for Cloudflare Free Tier (no paid add-ons)
+- Custom worker with inline auth, analytics, and chat endpoints
+- Uses `wrangler.cloudflare-free.json` configuration
+- Contains its own `/api/health` endpoint with D1 connectivity check
+
+## Troubleshooting: Empty Health Response
+
+If `/api/health` returns HTTP 200 with empty body:
+1. The SST/OpenNext build may not have completed (`.open-next/worker.js` missing)
+2. Check deployment logs: `npx wrangler tail --config wrangler.jsonc`
+3. Verify wrangler.cloudflare-free.json main path points to `./src/index-cloudflare-free.js`
+4. For SST deploy: ensure `sst.config.cloudflare.ts` references correct worker path
