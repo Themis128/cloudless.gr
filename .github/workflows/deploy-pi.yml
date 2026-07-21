@@ -13,8 +13,10 @@ on:
       - "patches/**"
       - "Dockerfile"
       - ".dockerignore"
+      - "opennext.config.js"
       - ".github/workflows/deploy-pi.yml"
       - ".github/workflows/build-pi-image.yml"
+```
   workflow_dispatch:
 
 concurrency:

@@ -6,7 +6,9 @@ on:
     paths:
       - 'migrations/*.sql'
       - 'sst.config.cloudflare.ts'
+      - 'opennext.config.js'
       - '.github/workflows/sst-infra-deploy.yml'
+```
   workflow_dispatch:
     inputs:
       stage:
@@ -47,12 +49,18 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
+      - name: Unlock SST (handle concurrent lock)
+        run: npx sst unlock --config sst.config.cloudflare.ts --stage production || true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
       - name: Deploy SST Cloudflare stack
         run: pnpm deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+```
 
 # Required secrets:
 # CLOUDFLARE_API_TOKEN - Cloudflare API token

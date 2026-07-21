@@ -17,6 +17,9 @@ permissions:
 jobs:
   etl:
     name: Run EspoCRM → R2 sync
+    # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
+    # Override RUNNER_GENERIC repo variable to '"ubuntu-latest"' only for testing
+    # (will fail due to Cloudflare bot detection in production).
     runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"self-hosted,omv,build"') }}
     timeout-minutes: 20
 

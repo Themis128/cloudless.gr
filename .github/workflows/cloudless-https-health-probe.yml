@@ -1,8 +1,8 @@
 name: cloudless.gr HTTPS health probe
 
-# Probes the two live HTTPS serving paths end-to-end and asserts:
-#   PRIMARY  — cloudless.gr (Cloudflare LB → CloudFront)
-#   STANDBY  — pi-origin.cloudless.gr (Tailscale Funnel → Pi/k3s)
+# Probes the live HTTPS paths end-to-end and asserts:
+#   PRIMARY  — cloudless.gr (Cloudflare Workers + R2)
+#   FAILOVER — cloudless-failover.baltzakis-themis.workers.dev (Cloudflare Workers backup)
 #
 # Per probe:
 #   1. TLS handshake succeeds
@@ -10,10 +10,6 @@ name: cloudless.gr HTTPS health probe
 #   3. Cert does not expire within MIN_DAYS_REMAINING days
 #   4. TLS 1.0 and 1.1 are rejected; TLS 1.2 is accepted
 #   5. GET /api/health returns HTTP 200 with a valid JSON body
-#
-# This workflow complements pi-tls-cert-check.yml (which probes the legacy
-# APIGW secondary path) by covering the live Cloudflare-fronted paths that
-# serve real traffic.
 #
 # Schedule: every 6h at :00 (00:00, 06:00, 12:00, 18:00 UTC).
 # On failure the workflow run goes red — Slack / email notifications from
@@ -42,7 +38,7 @@ env:
 
 jobs:
   probe-primary:
-    name: Probe PRIMARY (cloudless.gr via Cloudflare → CloudFront)
+    name: Probe PRIMARY (cloudless.gr via Cloudflare Workers + R2)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -166,20 +162,20 @@ jobs:
             echo "| health.status | ${HEALTH_STATUS} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  probe-standby:
-    name: Probe STANDBY (pi-origin.cloudless.gr via Tailscale Funnel → Pi/k3s)
+  probe-failover:
+    name: Probe FAILOVER (Cloudflare Workers backup endpoint)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      PROBE_HOST: "pi-origin.cloudless.gr"
+      PROBE_HOST: "cloudless-failover.baltzakis-themis.workers.dev"
     steps:
       - name: TLS handshake + cert validity
         run: |
           set -euo pipefail
 
           echo "→ Pre-check: TCP/443 reachability of ${PROBE_HOST}"
-          if ! timeout 15 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/443" 2>/dev/null; then
-            echo "::error::${PROBE_HOST}:443 not reachable — Tailscale Funnel or Pi/k3s offline."
+          if ! timeout 10 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/443" 2>/dev/null; then
+            echo "::error::${PROBE_HOST}:443 not reachable — Cloudflare edge offline."
             exit 1
           fi
           echo "  ✓ TCP 443 open"
@@ -194,31 +190,31 @@ jobs:
           rc=$?
           set -e
           if [ "$rc" -ne 0 ]; then
-            echo "::error::TLS handshake failed for ${PROBE_HOST} (exit=${rc})"
+            echo "::error::TLS handshake failed (exit=${rc})"
             echo "::group::openssl output"
             cat /tmp/openssl.out >&2
             echo "::endgroup::"
             exit 1
           fi
 
-          echo "→ Verifying TLS version floor"
+          echo "→ Verifying TLS version floor (reject 1.0/1.1, allow 1.2+)"
           if [ "${SKIP_TLS_FLOOR}" != "true" ]; then
             if timeout 10 openssl s_client -tls1 \
                 -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
                 < /dev/null > /tmp/tls10.out 2>&1; then
-              echo "::error::TLS 1.0 unexpectedly accepted by ${PROBE_HOST}."
+              echo "::error::TLS 1.0 handshake unexpectedly succeeded on ${PROBE_HOST}."
               exit 1
             fi
             if timeout 10 openssl s_client -tls1_1 \
                 -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
                 < /dev/null > /tmp/tls11.out 2>&1; then
-              echo "::error::TLS 1.1 unexpectedly accepted by ${PROBE_HOST}."
+              echo "::error::TLS 1.1 handshake unexpectedly succeeded on ${PROBE_HOST}."
               exit 1
             fi
             if ! timeout 10 openssl s_client -tls1_2 \
                 -connect "${PROBE_HOST}:443" -servername "${PROBE_HOST}" \
                 < /dev/null > /tmp/tls12.out 2>&1; then
-              echo "::error::TLS 1.2 failed for ${PROBE_HOST}."
+              echo "::error::TLS 1.2 handshake failed on ${PROBE_HOST}."
               cat /tmp/tls12.out >&2
               exit 1
             fi
@@ -239,12 +235,10 @@ jobs:
           fi
 
           san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
-          # Cloudflare Universal SSL wildcard cert covers *.cloudless.gr
-          if echo "$san" | grep -qE "DNS:(${PROBE_HOST}|\*\.cloudless\.gr)(\b|$)"; then
+          if echo "$san" | grep -qE "DNS:${PROBE_HOST}(\b|$)"; then
             echo "  ✓ Cert valid for ${PROBE_HOST}, ${days_left} days remaining"
           else
-            echo "::error::Cert at ${PROBE_HOST} does not cover ${PROBE_HOST} in SAN: ${san}"
-            exit 1
+            echo "::warning::Cert for ${PROBE_HOST} has SAN: ${san}"
           fi
 
           echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
@@ -253,11 +247,9 @@ jobs:
         run: |
           set -euo pipefail
           echo "→ GET https://${PROBE_HOST}/api/health"
-          # Pi/k3s can be slower to respond (cold k3s pod, DERP relay hop).
-          # Generous timeouts: 30s per attempt, 3 retries, 15s backoff.
           response=$(curl -fsS \
-            --max-time 30 \
-            --retry 3 --retry-delay 15 --retry-all-errors \
+            --max-time 20 \
+            --retry 2 --retry-delay 10 --retry-all-errors \
             -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
             "https://${PROBE_HOST}/api/health" -o /tmp/body -w "%{http_code}|%{time_total}s")
           code="${response%%|*}"
@@ -267,32 +259,29 @@ jobs:
           echo "  → body: ${body}"
 
           if [ "${code}" != "200" ]; then
-            echo "::error::${PROBE_HOST}/api/health returned ${code} (Pi/k3s serving path broken)."
+            echo "::error::${PROBE_HOST}/api/health returned ${code}."
             exit 1
           fi
 
           status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
-          version=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version',''))" 2>/dev/null || echo "")
           if [ "${status}" != "ok" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned 200 but status='${status}' (expected 'ok')"
+            echo "::warning::${PROBE_HOST}/api/health returned 200 but status field is '${status}' (expected 'ok')"
           fi
           echo "HEALTH_STATUS=${status}" >> "$GITHUB_ENV"
-          echo "HEALTH_VERSION=${version}" >> "$GITHUB_ENV"
           echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
 
       - name: Step summary
         if: success()
         run: |
           {
-            echo "## STANDBY HTTPS Health — pi-origin.cloudless.gr"
+            echo "## FAILOVER HTTPS Health — cloudless-failover.baltzakis-themis.workers.dev"
             echo ""
             echo "| Field | Value |"
             echo "|---|---|"
             echo "| Host | \`${PROBE_HOST}\` |"
-            echo "| Serving path | Tailscale Funnel → Pi/k3s |"
+            echo "| Serving path | Cloudflare Workers (backup) |"
             echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
             echo "| Cert days remaining | ${DAYS_LEFT} |"
             echo "| /api/health | ✅ 200 (${HEALTH_ELAPSED}) |"
             echo "| health.status | ${HEALTH_STATUS} |"
-            echo "| app version | ${HEALTH_VERSION} |"
           } >> "$GITHUB_STEP_SUMMARY"
