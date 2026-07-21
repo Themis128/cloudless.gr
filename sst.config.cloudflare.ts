@@ -34,10 +34,11 @@ export default $config({
     // =========================================================================
     // 2. Deploy the Main Next.js App using OpenNext outputs
     // =========================================================================
+    // Domain configuration - redirects handled by separate Cloudflare page rules
+    // to avoid API permission issues during deploy
     const domainConfig = $app.stage === STAGE_PRODUCTION
       ? {
           name: "cloudless.gr",
-          redirects: ["www.cloudless.gr"],
         }
       : undefined;
 
@@ -69,7 +70,7 @@ export default $config({
     if ($app.stage === STAGE_PRODUCTION) {
       // Daily 01:00 UTC — flush event queue, weekly rollup, archive old events
       new sst.cloudflare.Cron("AnalyticsRollup", {
-        schedules: [{ schedule: "0 1 * * *" }],
+        schedules: [{ cron: "0 1 * * *" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -77,7 +78,7 @@ export default $config({
 
       // Weekdays 06:00 UTC (≈08:00-09:00 Athens) — Google Calendar daily agenda to Slack
       new sst.cloudflare.Cron("CalendarDigest", {
-        schedules: [{ schedule: "0 6 ? * MON-FRI *" }],
+        schedules: [{ cron: "0 6 * * 1-5" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -85,7 +86,7 @@ export default $config({
 
       // Sunday 02:00 UTC — delete generated reports older than 90 days
       new sst.cloudflare.Cron("ReportCleanup", {
-        schedules: [{ schedule: "0 2 ? * SUN *" }],
+        schedules: [{ cron: "0 2 * * 0" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -93,7 +94,7 @@ export default $config({
 
       // Monday 05:00 UTC (≈07:00-08:00 Athens) — assemble + store weekly voice brief
       new sst.cloudflare.Cron("VoiceBrief", {
-        schedules: [{ schedule: "0 5 ? * MON *" }],
+        schedules: [{ cron: "0 5 * * 1" }],
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
