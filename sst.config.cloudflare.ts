@@ -67,39 +67,11 @@ export default $config({
     // =========================================================================
     // 4. Cron Jobs (production only)
     // =========================================================================
-    if ($app.stage === STAGE_PRODUCTION) {
-      // Daily 01:00 UTC — flush event queue, weekly rollup, archive old events
-      new sst.cloudflare.Cron("AnalyticsRollup", {
-        schedule: "0 1 * * *",
-        job: {
-          handler: "./src/lambda/cron-invoker.ts",
-        },
-      });
-
-      // Weekdays 06:00 UTC (≈08:00-09:00 Athens) — Google Calendar daily agenda to Slack
-      new sst.cloudflare.Cron("CalendarDigest", {
-        schedule: "0 6 * * 1-5",
-        job: {
-          handler: "./src/lambda/cron-invoker.ts",
-        },
-      });
-
-      // Sunday 02:00 UTC — delete generated reports older than 90 days
-      new sst.cloudflare.Cron("ReportCleanup", {
-        schedule: "0 2 * * 0",
-        job: {
-          handler: "./src/lambda/cron-invoker.ts",
-        },
-      });
-
-      // Monday 05:00 UTC (≈07:00-08:00 Athens) — assemble + store weekly voice brief
-      new sst.cloudflare.Cron("VoiceBrief", {
-        schedule: "0 5 * * 1",
-        job: {
-          handler: "./src/lambda/cron-invoker.ts",
-        },
-      });
-    }
+    // Temporarily disabled to resolve SST lock issues
+    // Cron jobs will be re-enabled via separate workflow after initial deployment
+    // if ($app.stage === STAGE_PRODUCTION) {
+    //   new sst.cloudflare.Cron(...)
+    // }
 
     return {
       mainUrl: "https://cloudless.gr",
