@@ -596,7 +596,7 @@ function slackEscape(text: string): string {
 // Customer Interaction Notifications (Phase: full coverage)
 // ---------------------------------------------------------------------------
 
-const interactionsClient = new SlackClient({ channel: "#notifications" });
+const interactionsClient = new SlackClient({ channel: "#general" });
 
 /** Notify when a user starts a chat conversation with the AI assistant. */
 export async function slackChatNotify(data: { message: string; ip?: string }): Promise<boolean> {
