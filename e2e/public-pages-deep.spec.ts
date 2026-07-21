@@ -2,7 +2,7 @@
  * Deep coverage for every public page route.
  * Each route gets: 200 status, h1 present, no console errors, basic a11y, locale prefix preserved.
  */
-import { test, expect } from "./coverage";
+import { test, expect } from "@playwright/test";
 import { PUBLIC_PAGES, DYNAMIC_PUBLIC_PAGES, AUTH_PAGES } from "./helpers/coverage-routes";
 
 test.describe.configure({ mode: "serial" }); // serial due to /mnt/d compile cost

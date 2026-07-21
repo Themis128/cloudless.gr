@@ -5,7 +5,7 @@
  *   - With correct CRON_SECRET: must return 200/202 (or 503 if downstream)
  *   - Method gating: GET-only or POST-only as designed
  */
-import { test, expect } from "./coverage";
+import { test, expect } from "@playwright/test";
 import { CRON_APIS } from "./helpers/coverage-routes";
 
 const CRON_SECRET = process.env.CRON_SECRET || "";

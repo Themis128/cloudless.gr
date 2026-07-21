@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudless-gr-free",
-  "main": "./index-cloudflare-free.js",
+  "main": "./src/index-cloudflare-free.js",
   "compatibility_date": "2026-07-20",
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "routes": [

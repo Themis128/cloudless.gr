@@ -7,7 +7,7 @@
  *   - Authenticated access renders without 5xx.
  *   - User APIs return correct shape with auth.
  */
-import { test, expect } from "./coverage";
+import { test, expect } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { DASHBOARD_PAGES, USER_APIS } from "./helpers/coverage-routes";
