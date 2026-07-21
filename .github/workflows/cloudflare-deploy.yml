@@ -10,7 +10,6 @@ on:
       - 'sst.config.cloudflare.ts'
       - 'opennext.config.js'
       - '.github/workflows/cloudflare-deploy.yml'
-```
   workflow_dispatch:
     inputs:
       stage:
@@ -50,6 +49,12 @@ jobs:
         run: echo "${{ secrets.CRON_SECRET }}" | npx wrangler secret put CRON_SECRET --config wrangler.jsonc || echo "CRON_SECRET already set"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Build Next.js app with OpenNext
+        run: pnpm run cf:build:opennext
+
+      - name: Remove .bin font files (fixes SST loader error)
+        run: find .open-next -name "*.bin" -delete || echo "No .bin files found"
 
       - name: Build and deploy Worker
         run: |
