@@ -70,7 +70,7 @@ export default $config({
     if ($app.stage === STAGE_PRODUCTION) {
       // Daily 01:00 UTC — flush event queue, weekly rollup, archive old events
       new sst.cloudflare.Cron("AnalyticsRollup", {
-        schedules: [{ cron: "0 1 * * *" }],
+        schedule: "0 1 * * *",
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -78,7 +78,7 @@ export default $config({
 
       // Weekdays 06:00 UTC (≈08:00-09:00 Athens) — Google Calendar daily agenda to Slack
       new sst.cloudflare.Cron("CalendarDigest", {
-        schedules: [{ cron: "0 6 * * 1-5" }],
+        schedule: "0 6 * * 1-5",
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -86,7 +86,7 @@ export default $config({
 
       // Sunday 02:00 UTC — delete generated reports older than 90 days
       new sst.cloudflare.Cron("ReportCleanup", {
-        schedules: [{ cron: "0 2 * * 0" }],
+        schedule: "0 2 * * 0",
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
@@ -94,7 +94,7 @@ export default $config({
 
       // Monday 05:00 UTC (≈07:00-08:00 Athens) — assemble + store weekly voice brief
       new sst.cloudflare.Cron("VoiceBrief", {
-        schedules: [{ cron: "0 5 * * 1" }],
+        schedule: "0 5 * * 1",
         job: {
           handler: "./src/lambda/cron-invoker.ts",
         },
