@@ -42,14 +42,10 @@ export default $config({
       : undefined;
 
     // Build the Next.js app with OpenNext before SST deploys
-    // Using $cli.run() - SST will invoke the build command
-    await $cli.run("pnpm exec opennextjs-cloudflare build --skipWranglerConfigCheck", {
-      stage: $app.stage,
-    });
-
-     const mainApp = new sst.cloudflare.Worker("MainNextApp", {
-       // OpenNext outputs to .open-next directory
-       handler: "./.open-next/worker.js",
+    // The workflow runs `pnpm run cloudflare-build` before SST deploy
+    const mainApp = new sst.cloudflare.Worker("MainNextApp", {
+      // OpenNext outputs to .open-next directory
+      handler: "./.open-next/worker.js",
       url: true,
       link: [analyticsWorker], // Injects analytics URL into Next.js edge runtime
       compatibility: {
