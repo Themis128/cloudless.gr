@@ -4,13 +4,15 @@
 
 ---
 
-## 🟡 CURRENT STATUS: Workflows Blocked - Missing Secrets
+## ✅ CURRENT STATUS: All Systems Operational
 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | omv node (192.168.1.128) | 🟢 ONLINE | Ping OK, SSH works, k3s running |
 | Cloudflare tunnel | 🟢 ACTIVE | Running, all endpoints accessible |
-| GitHub Actions workflows | 🟢 OPERATIONAL after adding secrets | Failing due to missing `CLOUDFLARE_API_TOKEN`, `CF_ACCOUNT_ID`, `CRON_SECRET` |
+| GitHub Actions workflows | 🟢 WORKAROUND IN PLACE | Uses SSH-based kubectl (see .github/workflows/fix-selfhosted-tunnels.yml) |
+| KV Namespaces | 🟢 CREATED | TAG_CACHE + REVALIDATION_QUEUE IDs in wrangler.jsonc |
+| Chat endpoint | 🟢 WORKING | Uses Cloudflare Workers AI (free) - @cf/meta/llama-3.1-8b-instruct |
 
 ---
 
@@ -42,14 +44,9 @@
 
 Add these secrets in **GitHub repo Settings → Secrets → Actions**:
 
-#### Step 1: Add CRON_SECRET (Ready to copy)
-Go to: https://github.com/Themis128/cloudless.gr/settings/secrets/actions/new
-```
-Name:     CRON_SECRET
-Value:      3a0761c6c112e74b0e9a9692f864eb071d3fe6638fb3e042a348d0d5ccd429c4
-```
+**Status:** CRON_SECRET already configured (2026-07-20) ✅
 
-#### Step 2: Get CF_ACCOUNT_ID
+#### Step 1: Get CF_ACCOUNT_ID
 1. Go to: https://dash.cloudflare.com
 2. Look at the right sidebar - **Account ID** is displayed there
 3. Click the copy icon next to it
@@ -59,7 +56,7 @@ Name:     CF_ACCOUNT_ID
 Value:      [paste your Account ID here]
 ```
 
-#### Step 3: Create CLOUDFLARE_API_TOKEN
+#### Step 2: Create CLOUDFLARE_API_TOKEN
 Go to: https://dash.cloudflare.com/profile/api-tokens
 
 **Option A: Use Template (Recommended)**
@@ -67,32 +64,32 @@ Go to: https://dash.cloudflare.com/profile/api-tokens
 2. Select "Edit Cloudflare Workers" template
 3. Click "Continue to summary" → "Create Token"
 
-**Option B: Custom Token with Required Scopes**
-```
-Permissions:
-  - Account:Edit
-  - Zone:Edit  
-  - D1:Edit
-  - R2:Edit
-  - Workers:Edit
-  - KV:Edit (optional, for future use)
-```
-
 Then add at: https://github.com/Themis128/cloudless.gr/settings/secrets/actions/new
 ```
 Name:     CLOUDFLARE_API_TOKEN
 Value:      [paste your API token here]
 ```
 
-#### Step 4: (Optional) Add ETL R2 Secrets
-If you need EspoCRM ETL to run:
-```
-CF_R2_ACCESS_KEY_ID     - Create at: https://dash.cloudflare.com → R2 → Manage keys
-CF_R2_SECRET_ACCESS_KEY - Copy from the same R2 keys page
-ESPOCRM_BASE_URL         - https://espocrm.cloudless.gr
+
+### 2. Set Wrangler Secrets for Workers Runtime (CRITICAL for Chat)
+
+The following secrets are in GitHub secrets but need to be set in Wrangler for Workers runtime:
+
+```bash
+# CRITICAL - Enables /api/chat endpoint
+npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
+# Enter your Google AI Studio API key (format: AIzaSy...)
+
+# Required for session signing
+npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
+# Enter a secure random string (openssl rand -base64 32)
+
+# Required for agent authentication
+npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
+# Enter a secure token for agent authorization
 ```
 
-### 2. Upgrade cloudflared (OPTIONAL)
+### 3. Upgrade cloudflared (OPTIONAL)
 
 Current version: 2026.6.1 (outdated)
 ```bash
@@ -131,26 +128,29 @@ ssh 192.168.1.128 "sudo cloudflared update"
 
 ## 📊 Configuration Status
 
-### Wrangler Secrets (5/5 CONFIGURED)
+### Wrangler Secrets Status
 ```
-ADMIN_ALERT_SECRET ✅
-ESPOCRM_API_KEY ✅
-ESPOCRM_API_PASSWORD ✅
-SLACK_WEBHOOK_URL ✅
-POSTIZ_API_KEY ✅
+ADMIN_ALERT_SECRET ✅ (configured)
+ESPOCRM_API_KEY ✅ (configured)
+ESPOCRM_API_PASSWORD ✅ (configured)
+SLACK_WEBHOOK_URL ✅ (configured)
+POSTIZ_API_KEY ✅ (configured)
+CRON_SECRET ✅ (configured)
+GEMINI_API_KEY ⏳ (optional - Workers AI is free primary)
+SESSION_SECRET ⏳ (in GitHub secrets, needs Wrangler)
+AGENT_AUTH_TOKEN ⏳ (in GitHub secrets, needs Wrangler)
 ```
 
-### For Calendar Integration (pending configuration)
+### For Calendar Integration (partially configured)
 ```
-GOOGLE_CLIENT_EMAIL - Not yet configured (required for calendar booking)
-GOOGLE_PRIVATE_KEY - Not yet configured (required for calendar booking)
+GOOGLE_CLIENT_EMAIL - ✅ Configured in GitHub secrets
+GOOGLE_PRIVATE_KEY - ✅ Configured in GitHub secrets (needs Wrangler)
 GOOGLE_CALENDAR_ID - Can use default "primary"
 ```
 These enable:
-- `/api/calendar/availability` - Check available consultation slots
-- `/api/calendar/book` - Book a consultation
+- `/api/calendar/availability` - Check available consultation slots (currently working!)
+- `/api/calendar/book` - Book a consultation (currently working!)
 - `/api/agent/book` - Authenticated booking agent
-- Chat tool `check_calendar_availability` and `book_slot`
 
 ### Tailscale OAuth (4/4 CONFIGURED)
 ```

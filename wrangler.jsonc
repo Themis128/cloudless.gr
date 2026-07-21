@@ -29,6 +29,11 @@
       "binding": "AUTH_DB",
       "database_name": "user-auth-db",
       "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
+    },
+    {
+      "binding": "NEXT_CACHE_D1_BINDING",
+      "database_name": "user-auth-db",
+      "database_id": "7ca74513-23c3-412a-b9ca-b0c55835973d"
     }
   ],
   "kv_namespaces": [
@@ -66,6 +71,10 @@
     {
       "binding": "DATALAKE_BUCKET",
       "bucket_name": "datalake-bucket"
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "cloudless-assets"
     }
   ],
   "env": {
@@ -74,6 +83,11 @@
       "d1_databases": [
         {
           "binding": "AUTH_DB",
+          "database_name": "auth-db-preview",
+          "database_id": "70d90155-12de-46d7-a0ea-113b3e7127cf"
+        },
+        {
+          "binding": "NEXT_CACHE_D1_BINDING",
           "database_name": "auth-db-preview",
           "database_id": "70d90155-12de-46d7-a0ea-113b3e7127cf"
         }
@@ -108,6 +122,10 @@
         {
           "binding": "DATALAKE_BUCKET",
           "bucket_name": "datalake-bucket-preview"
+        },
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "cloudless-assets-preview"
         }
       ],
       "vars": {

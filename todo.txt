@@ -41,7 +41,7 @@
 - [ ] Increase Postiz resources (currently requests 512Mi RAM - may need 1Gi)
 
 ### Cloudflare API Token Setup
-- [ ] Create CLOUDFLARE_API_TOKEN secret (SSM + GitHub Actions) - REQUIRED for deployment workflow
+- [ ] Create CLOUDFLARE_API_TOKEN secret (GitHub Actions) - REQUIRED for SST deployment workflow
 
 ### AppFlowy Stack Completion
 - [x] Deploy AppFlowy worker to omv-ha node (offload from omv) - Already deployed (see appflowy.yaml)
@@ -358,7 +358,7 @@
 |------|--------|
 | Configure CLOUDFLARE_API_TOKEN GitHub secret | ⏳ Pending |
 | Configure CF_ACCOUNT_ID GitHub secret | ⏳ Pending |
-| Configure CRON_SECRET GitHub secret | ⏳ Pending |
+| CRON_SECRET GitHub secret (already configured 2026-07-20) | ✅ Done |
 | Deploy SST infrastructure via workflow | ⏳ Pending |
 | Verify Worker cron triggers fire | ⏳ Pending |
 

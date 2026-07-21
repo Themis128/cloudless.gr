@@ -115,7 +115,7 @@ type GeminiMessage = {
 };
 
 // ---------------------------------------------------------------------------
-// Route handler - uses Gemini API (Workers AI removed due to error 1101)
+// Route handler - Workers AI primary (free), Gemini fallback
 // ---------------------------------------------------------------------------
 
 export async function POST(request: NextRequest) {
@@ -142,33 +142,80 @@ export async function POST(request: NextRequest) {
     ).catch(() => {});
   }
 
-  // Use Gemini API (Workers AI disabled due to error 1101)
-  const geminiKey = getGeminiApiKey();
-  if (!geminiKey) {
-    return Response.json(
-      { error: "Chat not configured. Please set GEMINI_API_KEY." },
-      { status: 503 }
-    );
-  }
+// Workers AI binding (provided by wrangler)
+interface AiBinding {
+  run(model: string, inputs: Record<string, unknown>): Promise<unknown>;
+}
 
+interface AiEnv {
+  AI: AiBinding;
+}
+
+function getAiBinding(): AiBinding | null {
+  return (process.env as unknown as AiEnv).AI ?? null;
+}
+
+const WORKERS_AI_CHAT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+
+// Try Workers AI first (free, no API key needed)
+const ai = getAiBinding();
+
+async function runWorkersAiChat(
+  systemPrompt: string,
+  msgs: { role: "user" | "assistant"; content: string }[]
+): Promise<string | null> {
+  if (!ai) return null;
   try {
-    // Convert to Gemini format with proper typing
-    const geminiMessages = messages.map((m) => ({
-      role: m.role === "user" ? "user" : "model",
-      content: m.content,
-    })) as GeminiMessage[];
-
-    const text = await generateGeminiResponse(geminiMessages, 600, undefined, SYSTEM_PROMPT);
-    return new Response(sseStreamFromText(text), {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
+    const result = (await ai.run(WORKERS_AI_CHAT_MODEL, {
+      messages: [{ role: "system", content: systemPrompt }, ...msgs],
+    })) as { response?: string };
+    return result.response ?? null;
   } catch (err) {
-    console.error("[chat] Gemini call failed:", err instanceof Error ? err.message : err);
-    return Response.json({ error: "AI service unavailable." }, { status: 502 });
+    console.warn("[chat] Workers AI failed:", err instanceof Error ? err.message : err);
+    return null;
   }
+}
+
+// Try Workers AI first (free on Cloudflare free tier)
+const workersAiResponse = await runWorkersAiChat(SYSTEM_PROMPT, messages);
+if (workersAiResponse) {
+  return new Response(sseStreamFromText(workersAiResponse), {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+// Fallback to Gemini if configured
+const geminiKey = getGeminiApiKey();
+if (!geminiKey) {
+  // Both Workers AI and Gemini failed - return service unavailable
+  return Response.json(
+    { error: "AI service not configured. Set GEMINI_API_KEY or use Workers runtime." },
+    { status: 503 }
+  );
+}
+
+try {
+  const geminiMessages = messages.map((m) => ({
+    role: m.role === "user" ? "user" : "model",
+    content: m.content,
+  })) as GeminiMessage[];
+
+  const text = await generateGeminiResponse(geminiMessages, 600, undefined, SYSTEM_PROMPT);
+  return new Response(sseStreamFromText(text), {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+} catch (err) {
+  console.error("[chat] Gemini call failed:", err instanceof Error ? err.message : err);
+  return Response.json({ error: "AI service unavailable." }, { status: 502 });
+}
 }

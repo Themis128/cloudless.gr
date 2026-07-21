@@ -11,43 +11,30 @@ This plan covers the complete deployment workflow for cloudless.gr on Cloudflare
 
 ---
 
-## Phase 1: Resource Provisioning (REQUIRED)
+## Phase 1: Resource Provisioning (ALREADY COMPLETE)
 
-### 1.1 Create Missing KV Namespaces
+### 1.1 KV Namespaces - ALREADY CREATED ✅
 
-The wrangler.jsonc currently has placeholder IDs for these bindings:
-- `TAG_CACHE` - For on-demand cache invalidation
-- `REVALIDATION_QUEUE` - For scheduled ISR revalidation
+Both TAG_CACHE and REVALIDATION_QUEUE have valid IDs in wrangler.jsonc:
+- TAG_CACHE: `e81bb5dcf84b452b978323f09a3f7428`
+- REVALIDATION_QUEUE: `b5b95ab1caed42a8b6e14f5db869bbc6`
 
-```bash
-# Production KV namespaces
-npx wrangler kv namespace create "TAG_CACHE" --config wrangler.jsonc
-npx wrangler kv namespace create "REVALIDATION_QUEUE" --config wrangler.jsonc
-
-# Preview/staging KV namespaces
-npx wrangler kv namespace create "TAG_CACHE" --config wrangler.jsonc --preview
-npx wrangler kv namespace create "REVALIDATION_QUEUE" --config wrangler.jsonc --preview
-```
-
-**Expected Output Format:**
-```
-🌀 Creating KV namespace TAG_CACHE... 
-✅ Created KV namespace TAG_CACHE
-{"namespace_id":"<ID_TO_COPY>","title":"TAG_CACHE"}
-```
-
-**Action Required:** Update `wrangler.jsonc` with the actual namespace IDs in both the main config and the `staging` environment section.
+No action needed unless IDs are incorrect.
 
 ### 1.2 Set Missing Secrets
 
-Two secrets are currently placeholders and must be set before production deployment:
+Three secrets need to be set in Wrangler for Workers runtime:
 
 ```bash
-# Generate secure SESSION_SECRET (32+ bytes)
+# CRITICAL - Enables /api/chat endpoint
+npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
+# Enter your Google AI Studio API key (format: AIzaSy...)
+
+# Required for session signing
 npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
 # Value: Use `openssl rand -base64 32` or similar
 
-# Generate AGENT_AUTH_TOKEN for chat service authentication
+# Required for agent authentication
 npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
 # Value: Secure token for agent authorization
 ```
@@ -238,12 +225,12 @@ Already configured in `src/index.ts`:
 
 ### 6.1 Pre-Deploy Checklist
 
-- [ ] KV namespaces created and IDs updated in wrangler.jsonc
+- [x] KV namespaces created and IDs in wrangler.jsonc
+- [ ] GEMINI_API_KEY set (>32 bytes) - **CRITICAL for chat**
 - [ ] SESSION_SECRET set (>32 bytes)
 - [ ] AGENT_AUTH_TOKEN set
 - [ ] Typecheck passes (`pnpm cf:typecheck`)
 - [ ] Chat service wrangler.jsonc verified
-- [ ] Backup of current production worker (if exists)
 
 ### 6.2 Post-Deploy Verification
 
@@ -302,24 +289,23 @@ npx wrangler rollback cloudless-gr-chat
 
 ## Phase 8: Deployment Commands Summary
 
-### Quick Deploy (After Resource Setup)
+### Quick Deploy (Current Status)
 
 ```bash
-# 1. Create KV namespaces (run once)
-npx wrangler kv namespace create "TAG_CACHE" --config wrangler.jsonc
-npx wrangler kv namespace create "REVALIDATION_QUEUE" --config wrangler.jsonc
+# 1. KV Namespaces already created - no action needed
+# TAG_CACHE: e81bb5dcf84b452b978323f09a3f7428
+# REVALIDATION_QUEUE: b5b95ab1caed42a8b6e14f5db869bbc6
 
-# 2. Set secrets (run once)
+# 2. Set required secrets
+npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc   # CRITICAL for chat
 npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
 npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
 
 # 3. Build and deploy main worker
-pnpm cloudflare-build
-pnpm cf:deploy
+pnpm cf:build && pnpm cf:deploy
 
 # 4. Deploy chat service
-cd services/chat
-npx wrangler deploy
+cd services/chat && npx wrangler deploy
 ```
 
 ### Verification Commands
@@ -464,6 +450,7 @@ After running `npx wrangler kv namespace create`, update wrangler.jsonc:
 
 | Variable | Source | Status |
 |----------|--------|--------|
+| `GEMINI_API_KEY` | Secret | ❌ **CRITICAL** - Not set (needed for chat) |
 | `AGENT_AUTH_TOKEN` | Secret | ❌ Not set |
 | `SESSION_SECRET` | Secret | ❌ Not set |
 | `CRON_SECRET` | Secret | ✅ Set |
@@ -496,8 +483,8 @@ After running `npx wrangler kv namespace create`, update wrangler.jsonc:
 
 ## Next Steps Priority
 
-1. **🔴 CRITICAL** - Create KV namespaces and update wrangler.jsonc
-2. **🔴 CRITICAL** - Set SESSION_SECRET and AGENT_AUTH_TOKEN secrets
-3. **🟡 HIGH** - Deploy chat service worker
-4. **🟢 MEDIUM** - Verify ISR/cache functionality
+1. **🔴 CRITICAL** - Set GEMINI_API_KEY secret (enables /api/chat endpoint)
+2. **🔴 HIGH** - Set SESSION_SECRET secret for Workers runtime
+3. **🔴 HIGH** - Set AGENT_AUTH_TOKEN secret for Agent authentication
+4. **🟡 MEDIUM** - Verify KV namespace IDs in wrangler.jsonc
 5. **⚪ LOW** - Clean up orphaned resources (optional)

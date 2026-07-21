@@ -102,7 +102,15 @@ INSERT OR REPLACE INTO app_config (key, value, description) VALUES
 ## 📊 Summary
 
 - **Total variables in .env.example**: ~50
-- **Present in GitHub secrets**: ~35
-- **Missing (Critical)**: 2 (GEMINI_API_KEY, ADMIN_ALERT_SECRET)
+- **Present in GitHub secrets**: ~37
+- **Missing (Critical)**: 1 (GEMINI_API_KEY for chat endpoint - ADMIN_ALERT_SECRET now configured)
 - **Missing (Optional/Ad Platforms)**: ~15
-- **Already in Wrangler**: 5 (AUTH_DB binding provides D1 access)
+- **Already in Wrangler**: 6 (ESPOCRM_API_KEY, ESPOCRM_API_PASSWORD, SLACK_WEBHOOK_URL, POSTIZ_API_KEY, ADMIN_ALERT_SECRET, CRON_SECRET)
+
+### Secrets Status Matrix
+| Secret | GitHub | Wrangler | Priority | Action Needed |
+|--------|--------|----------|----------|---------------|
+| GEMINI_API_KEY | ✅ | ❌ | 🔴 CRITICAL | `npx wrangler secret put GEMINI_API_KEY` |
+| ADMIN_ALERT_SECRET | ✅ | ✅ | ✅ Done | No action needed |
+| SESSION_SECRET | ✅ | ⏳ | 🟡 High | `npx wrangler secret put SESSION_SECRET` |
+| AGENT_AUTH_TOKEN | ⏳ | ⏳ | 🟡 High | Set in GitHub + Wrangler |

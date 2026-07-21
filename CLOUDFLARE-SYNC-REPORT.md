@@ -57,19 +57,20 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 | auth-db-preview | ✅ In use (staging) |
 | cloudless-auth | ❌ ORPHANED - should delete |
 
-### KV Namespaces (❌ Missing)
+### KV Namespaces (✅ Ready)
 | Binding | Status |
 |---------|--------|
-| TAG_CACHE | ❌ Needs creation |
-| REVALIDATION_QUEUE | ❌ Needs creation |
+| TAG_CACHE | ✅ Created with valid ID |
+| REVALIDATION_QUEUE | ✅ Created with valid ID |
 | HEALTH_CACHE | ❌ ORPHANED - should delete |
 
-### Secrets (⚠️ Partial)
+### Secrets (⚠️ GEMINI_API_KEY Critical)
 | Name | Status |
 |------|--------|
 | CRON_SECRET | ✅ Set |
-| SESSION_SECRET | ❌ Not set (placeholder in config) |
-| AGENT_AUTH_TOKEN | ❌ Not set (placeholder in config) |
+| SESSION_SECRET | ⏳ In GitHub secrets, needs Wrangler |
+| AGENT_AUTH_TOKEN | ⏳ In GitHub secrets, needs Wrangler |
+| GEMINI_API_KEY | ❌ **CRITICAL** - Not in Wrangler (needed for chat) |
 
 ### Service Workers
 | Name | Status |
@@ -82,25 +83,22 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 
 ## Next Steps Required (Run these commands)
 
-### 1. Create Missing KV Namespaces
+### 1. KV Namespaces - ALREADY CREATED ✅
+Both TAG_CACHE and REVALIDATION_QUEUE have valid IDs in wrangler.jsonc:
+- TAG_CACHE: `e81bb5dcf84b452b978323f09a3f7428`
+- REVALIDATION_QUEUE: `b5b95ab1caed42a8b6e14f5db869bbc6`
+
+No action needed unless IDs are incorrect.
+
+### 2. Set Critical Secrets (GEMINI_API_KEY Required)
 ```bash
-# Production
-npx wrangler kv namespace create "TAG_CACHE" --config wrangler.jsonc
-npx wrangler kv namespace create "REVALIDATION_QUEUE" --config wrangler.jsonc
+# CRITICAL: This enables the /api/chat endpoint
+npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
+# Enter your Google AI Studio API key (format: AIzaSy...)
 
-# Preview
-npx wrangler kv namespace create "TAG_CACHE" --config wrangler.jsonc --preview
-npx wrangler kv namespace create "REVALIDATION_QUEUE" --config wrangler.jsonc --preview
-```
-
-### 2. Update wrangler.jsonc with Actual KV IDs
-After creating the namespaces, update the `id` fields in `wrangler.jsonc`.
-
-### 3. Set Missing Secrets
-```bash
 # Generate secure tokens
 npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
-# Enter a 32+ byte random string
+# Enter a 32+ byte random string (or use openssl rand -base64 32)
 
 npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
 # Enter your agent authentication token
