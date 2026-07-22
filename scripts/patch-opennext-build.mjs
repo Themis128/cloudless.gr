@@ -62,6 +62,25 @@ const patchCode = `
     try {
         execSync("node scripts/opennext-middleware-fix.mjs", { cwd: process.cwd(), stdio: "ignore" });
     } catch {}
+
+    // Next.js 16 emits edge/chunks but OpenNext expects legacy middleware.js + .nft.json.
+    // Patch the OpenNext config after build to point to the edge wrapper if needed.
+    try {
+        const fs = require("fs");
+        const path = require("path");
+        const middlewareManifestPath = path.join(process.cwd(), ".next", "server", "middleware-manifest.json");
+        if (fs.existsSync(middlewareManifestPath)) {
+          const manifest = JSON.parse(fs.readFileSync(middlewareManifestPath, "utf8"));
+          const mw = manifest?.middleware?.["/"];
+          if (mw && mw.entrypoint && mw.entrypoint.includes("edge/chunks/")) {
+            // Create legacy middleware.js.nft.json stub if missing
+            const nftPath = path.join(process.cwd(), ".next", "server", "middleware.js.nft.json");
+            if (!fs.existsSync(nftPath)) {
+              fs.writeFileSync(nftPath, "{}");
+            }
+          }
+        }
+    } catch {}
 `;
 
 // The pattern in the Cloudflare build.js is:

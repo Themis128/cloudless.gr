@@ -1,10 +1,4 @@
-import {
-  ConditionalCheckFailedException,
-  DynamoDBClient,
-  PutItemCommand,
-  UpdateItemCommand,
-  type AttributeValue,
-} from "@aws-sdk/client-dynamodb";
+import type { AttributeValue } from "@aws-sdk/client-dynamodb";
 import type { AuthDatabase } from "@/lib/auth-d1";
 import type Stripe from "stripe";
 
@@ -12,7 +6,7 @@ const REGION = process.env.AWS_REGION || "us-east-1";
 const APP_SOURCE_TAG = "cloudless.gr";
 const ANALYTICS_RETENTION_DAYS = 400;
 
-let dynamoClient: DynamoDBClient | null = null;
+let dynamoClient: any = null;
 
 export function resolveDynamoEndpoint(): string | undefined {
   const endpoint = process.env.DYNAMODB_ENDPOINT?.trim();
@@ -38,8 +32,9 @@ function getAuthDb(): AuthDatabase | null {
   return env.AUTH_DB ?? null;
 }
 
-function getDynamoClient(): DynamoDBClient {
+async function getDynamoClient() {
   if (!dynamoClient) {
+    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
     dynamoClient = new DynamoDBClient({
       region: REGION,
       endpoint: resolveDynamoEndpoint(),
@@ -186,7 +181,8 @@ export async function persistStripeEvent(event: Stripe.Event): Promise<PersistSt
 
   const tableName = getTransactionsTableName();
   if (!tableName) throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
-  const client = getDynamoClient();
+  const { PutItemCommand, ConditionalCheckFailedException } = await import("@aws-sdk/client-dynamodb");
+  const client = await getDynamoClient();
 
   try {
     await client.send(
@@ -231,7 +227,8 @@ export async function markStripeEventProcessed(eventId: string): Promise<void> {
 
   const tableName = getTransactionsTableName();
   if (!tableName) return;
-  const client = getDynamoClient();
+  const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
+  const client = await getDynamoClient();
   await client.send(
     new UpdateItemCommand({
       TableName: tableName,
@@ -267,7 +264,8 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
 
   const tableName = getTransactionsTableName();
   if (!tableName) return;
-  const client = getDynamoClient();
+  const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
+  const client = await getDynamoClient();
   await client.send(
     new UpdateItemCommand({
       TableName: tableName,

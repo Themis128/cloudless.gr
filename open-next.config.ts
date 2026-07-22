@@ -23,13 +23,7 @@ export default defineCloudflareConfig({
   incrementalCache: r2IncrementalCache,
   tagCache: d1TagCache,
 
-  // Explicitly set buildCommand to "next build" instead of the npm lifecycle
-  // script (pnpm run build). Without this, OpenNext falls back to "pnpm run build"
-  // which invokes cf-build-wrapper.sh → creating an infinite recursion loop
-  // that never reaches the actual Next.js compilation step.
-  buildCommand: "next build",
-
   // Use in-memory queue for dev/local preview; SST overrides this with its
   // own durable-queue binding in the production deploy pipeline.
   queue: memoryQueue,
-});
+} as any);

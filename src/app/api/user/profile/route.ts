@@ -30,11 +30,11 @@ export async function GET() {
   try {
     const profile = await getUserProfile(userId);
     return NextResponse.json({
-      name: profile.name ?? session.user.name ?? undefined,
+      name: (profile as any)?.name ?? session.user.name ?? undefined,
       email: session.user.email ?? undefined,
-      company: profile.company,
-      phone: profile.phone,
-      preferences: profile.preferences,
+      company: (profile as any)?.company,
+      phone: (profile as any)?.phone,
+      preferences: (profile as any)?.preferences,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

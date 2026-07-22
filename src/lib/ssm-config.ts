@@ -1,14 +1,15 @@
-import { GetParametersByPathCommand, SSMClient } from "@aws-sdk/client-ssm";
-
 // || (not ??) so that SSM_PREFIX="" falls back to the default instead of fetching from "/"
 const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
 const REGION = process.env.AWS_REGION || "us-east-1";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Module-level singleton — avoids re-creating the connection pool on every cache miss
-let ssmClient: SSMClient | null = null;
-function getSsmClient(): SSMClient {
-  if (!ssmClient) ssmClient = new SSMClient({ region: REGION });
+let ssmClient: any = null;
+async function getSsmClient(): Promise<any> {
+  if (!ssmClient) {
+    const { SSMClient } = await import("@aws-sdk/client-ssm");
+    ssmClient = new SSMClient({ region: REGION });
+  }
   return ssmClient;
 }
 
@@ -156,10 +157,11 @@ export function resetSsmCache(): void {
 }
 
 async function fetchSsmParams(): Promise<Map<string, string>> {
-  const ssm = getSsmClient();
+  const ssm = await getSsmClient();
   const params = new Map<string, string>();
   let nextToken: string | undefined;
   do {
+    const { GetParametersByPathCommand } = await import("@aws-sdk/client-ssm");
     const res = await ssm.send(
       new GetParametersByPathCommand({
         Path: SSM_PREFIX,

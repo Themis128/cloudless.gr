@@ -5,8 +5,8 @@
  * Fallback: Bedrock Titan + DynamoDB
  */
 
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import type { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
+import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import type { AuthDatabase } from "@/lib/auth-d1";
 import type { StoreProduct } from "@/lib/store-products";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
@@ -48,8 +48,9 @@ let _embeddingCache: EmbeddingCache | null = null;
 let _bedrockClient: BedrockRuntimeClient | null = null;
 let _dynamoClient: DynamoDBClient | null = null;
 
-function getBedrockClient(): BedrockRuntimeClient {
+async function getBedrockClient() {
   if (!_bedrockClient) {
+    const { BedrockRuntimeClient } = await import("@aws-sdk/client-bedrock-runtime");
     _bedrockClient = new BedrockRuntimeClient({
       region: process.env.AWS_REGION ?? "us-east-1",
     });
@@ -57,8 +58,9 @@ function getBedrockClient(): BedrockRuntimeClient {
   return _bedrockClient;
 }
 
-function getDynamoClient(): DynamoDBClient {
+async function getDynamoClient() {
   if (!_dynamoClient) {
+    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
     _dynamoClient = new DynamoDBClient({
       region: process.env.AWS_REGION ?? "us-east-1",
       endpoint: resolveDynamoEndpoint(),
@@ -112,7 +114,8 @@ async function generateWorkersAiEmbedding(text: string): Promise<number[] | null
 
 async function generateBedrockEmbedding(text: string): Promise<number[] | null> {
   try {
-    const client = getBedrockClient();
+    const { InvokeModelCommand } = await import("@aws-sdk/client-bedrock-runtime");
+    const client = await getBedrockClient();
     const cmd = new InvokeModelCommand({
       modelId: BEDROCK_EMBED_MODEL,
       contentType: "application/json",
@@ -232,7 +235,8 @@ export async function getTrendingProducts(days = 30, limit = 6): Promise<StorePr
   try {
     const tableName = getTransactionsTableName();
     if (!tableName) throw new Error("STRIPE_TRANSACTIONS_TABLE not configured");
-    const client = getDynamoClient();
+    const { QueryCommand } = await import("@aws-sdk/client-dynamodb");
+    const client = await getDynamoClient();
     const threshold = Date.now() - days * 24 * 60 * 60 * 1000;
 
     const cmd = new QueryCommand({

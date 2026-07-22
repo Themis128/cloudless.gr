@@ -1,11 +1,4 @@
-import {
-  DynamoDBClient,
-  PutItemCommand,
-  QueryCommand,
-  UpdateItemCommand,
-  BatchWriteItemCommand,
-  type AttributeValue,
-} from "@aws-sdk/client-dynamodb";
+import type { AttributeValue } from "@aws-sdk/client-dynamodb";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { AuthDatabase } from "@/lib/auth-d1";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
@@ -75,12 +68,15 @@ function getAuthDb(): AuthDatabase | null {
   return env.AUTH_DB ?? null;
 }
 
-let dynamoClient: DynamoDBClient | null = null;
-function getDynamoClient(): DynamoDBClient {
-  dynamoClient ??= new DynamoDBClient({
-    region: REGION,
-    endpoint: resolveDynamoEndpoint(),
-  });
+let dynamoClient: any = null;
+async function getDynamoClient() {
+  if (!dynamoClient) {
+    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
+    dynamoClient = new DynamoDBClient({
+      region: REGION,
+      endpoint: resolveDynamoEndpoint(),
+    });
+  }
   return dynamoClient;
 }
 
@@ -243,7 +239,9 @@ export async function recordNotification(input: {
   const table = getTableName();
   if (!table) return notif; // lake-only mode
   try {
-    await getDynamoClient().send(
+    const { PutItemCommand } = await import("@aws-sdk/client-dynamodb");
+    const c = await getDynamoClient();
+    await c.send(
       new PutItemCommand({
         TableName: table,
         Item: toItem(notif),
@@ -361,7 +359,9 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
     exprNames["#archivedAt"] = "archivedAt";
   }
 
-  const out = await getDynamoClient().send(
+  const { QueryCommand } = await import("@aws-sdk/client-dynamodb");
+  const c = await getDynamoClient();
+  const out = await c.send(
     new QueryCommand({
       TableName: table,
       IndexName: useCategoryIndex ? CAT_INDEX : undefined,
@@ -418,7 +418,9 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
   // We can't UpdateItem without the full sort key, so fetch + update.
   // For small batches this is fine. (Optimization: store an idIndex GSI.)
   for (const id of ids) {
-    const matches = await getDynamoClient().send(
+        const { QueryCommand } = await import("@aws-sdk/client-dynamodb");
+    const c = await getDynamoClient();
+    const matches = await c.send(
       new QueryCommand({
         TableName: table,
         KeyConditionExpression: "#pk = :pk",
@@ -433,7 +435,9 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
     );
     const item = matches.Items?.[0];
     if (!item) continue;
-    await getDynamoClient().send(
+    const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
+    const client2 = await getDynamoClient();
+    await client2.send(
       new UpdateItemCommand({
         TableName: table,
         Key: { pk: item.pk, sk: item.sk },
@@ -498,30 +502,34 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
   // Walk in batches of 25 (BatchWriteItem max).
   let lastKey: Record<string, AttributeValue> | undefined;
   do {
-    const page: QueryCommand = new QueryCommand({
-      TableName: table,
-      KeyConditionExpression: "#pk = :pk AND #sk < :until",
-      FilterExpression: "attribute_exists(#archivedAt) AND #archivedAt < :until",
-      ExpressionAttributeNames: {
-        "#pk": "pk",
-        "#sk": "sk",
-        "#archivedAt": "archivedAt",
-      },
-      ExpressionAttributeValues: {
-        ":pk": { S: PK_ALL },
-        ":until": { S: `${olderThan}~` },
-      },
-      ExclusiveStartKey: lastKey,
-      Limit: 25,
-    });
-    const res = await getDynamoClient().send(page);
+     const { QueryCommand } = await import("@aws-sdk/client-dynamodb");
+     const c = await getDynamoClient();
+     const page = new QueryCommand({
+       TableName: table,
+       KeyConditionExpression: "#pk = :pk AND #sk < :until",
+       FilterExpression: "attribute_exists(#archivedAt) AND #archivedAt < :until",
+       ExpressionAttributeNames: {
+         "#pk": "pk",
+         "#sk": "sk",
+         "#archivedAt": "archivedAt",
+       },
+       ExpressionAttributeValues: {
+         ":pk": { S: PK_ALL },
+         ":until": { S: `${olderThan}~` },
+       },
+       ExclusiveStartKey: lastKey,
+       Limit: 25,
+     });
+     const res = await c.send(page);
     const items = res.Items ?? [];
     if (items.length) {
-      await getDynamoClient().send(
+      const { BatchWriteItemCommand } = await import("@aws-sdk/client-dynamodb");
+      const c = await getDynamoClient();
+      await c.send(
         new BatchWriteItemCommand({
           RequestItems: {
-            [table]: items.map((it) => ({
-              DeleteRequest: { Key: { pk: it.pk, sk: it.sk } },
+            [table]: items.map((item: any) => ({
+              DeleteRequest: { Key: { pk: item.pk, sk: item.sk } },
             })),
           },
         })
