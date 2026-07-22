@@ -58,7 +58,7 @@ if (content.includes("Cloudless middleware patch")) {
 // Inject middleware fix after the Next.js build completes (after buildNextjsApp(options);)
 const patchCode = `
     // Cloudless middleware patch: bridge Next.js 16 edge/chunks output to legacy middleware.js path
-    import { execSync } from "node:child_process";
+    var { execSync } = require("node:child_process");
     try {
         execSync("node scripts/opennext-middleware-fix.mjs", { cwd: process.cwd(), stdio: "ignore" });
     } catch {}
