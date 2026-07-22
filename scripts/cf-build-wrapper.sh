@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Guard against recursion: OpenNext calls `buildCommand` internally,
+# and if it falls back to `pnpm run build` we'd loop forever.
+# Safety net: detect the re-entry and delegate directly to next build.
+if [ -n "${OPEN_NEXT_BUILD_ACTIVE:-}" ]; then
+  echo "⚠ Recursive build detected — delegating directly to next build..."
+  exec pnpm exec next build
+fi
+export OPEN_NEXT_BUILD_ACTIVE=1
+
 # Clean previous OpenNext output to avoid stale artifacts
 rm -rf .open-next
 
