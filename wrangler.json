@@ -1,5 +1,5 @@
 {
-  "name": "cloudless",
+  "name": "cloudless1",
   "main": "src/index-cloudflare-free.js",
   "compatibility_date": "2026-07-09",
   "assets": { "directory": "./out" },
