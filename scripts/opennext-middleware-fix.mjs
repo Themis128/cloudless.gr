@@ -19,6 +19,13 @@ const edgeDir = path.join(nextDir, "edge", "chunks");
 
 let patched = false;
 
+// Ensure the .next/server directory exists before we try to write files into it.
+// Next.js build may clean this directory, and the pre-build call to this script
+// runs before .next/server exists at all.
+try {
+  fs.mkdirSync(nextDir, { recursive: true });
+} catch {}
+
 function copyIfMissing(target, source) {
   if (fs.existsSync(target)) {
     return false;
@@ -26,9 +33,13 @@ function copyIfMissing(target, source) {
   if (!fs.existsSync(source)) {
     return false;
   }
-  fs.copyFileSync(source, target);
-  patched = true;
-  return true;
+  try {
+    fs.copyFileSync(source, target);
+    patched = true;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Locate middleware wrapper bundle(s) emitted by Next 16 in edge/chunks.
@@ -59,8 +70,12 @@ if (candidates.length > 0) {
 // If the JSON file is missing, create a stub so OpenNext does not ENOENT.
 const nftPath = path.join(nextDir, "middleware.js.nft.json");
 if (!fs.existsSync(nftPath)) {
-  fs.writeFileSync(nftPath, "{}");
-  patched = true;
+  try {
+    fs.writeFileSync(nftPath, "{}");
+    patched = true;
+  } catch (err) {
+    console.error("[opennext-middleware-fix] Failed to write middleware.js.nft.json:", err.message);
+  }
 }
 
 if (patched) {

@@ -68,13 +68,16 @@ const patchCode = `
     try {
         const fs = require("fs");
         const path = require("path");
-        const middlewareManifestPath = path.join(process.cwd(), ".next", "server", "middleware-manifest.json");
+        const nextServerDir = path.join(process.cwd(), ".next", "server");
+        // Ensure the directory exists before writing (Next.js build may clean it)
+        fs.mkdirSync(nextServerDir, { recursive: true });
+        const middlewareManifestPath = path.join(nextServerDir, "middleware-manifest.json");
         if (fs.existsSync(middlewareManifestPath)) {
           const manifest = JSON.parse(fs.readFileSync(middlewareManifestPath, "utf8"));
           const mw = manifest?.middleware?.["/"];
           if (mw && mw.entrypoint && mw.entrypoint.includes("edge/chunks/")) {
             // Create legacy middleware.js.nft.json stub if missing
-            const nftPath = path.join(process.cwd(), ".next", "server", "middleware.js.nft.json");
+            const nftPath = path.join(nextServerDir, "middleware.js.nft.json");
             if (!fs.existsSync(nftPath)) {
               fs.writeFileSync(nftPath, "{}");
             }

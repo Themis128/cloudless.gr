@@ -6,6 +6,15 @@ set -euo pipefail
 # Safety net: detect the re-entry and delegate directly to next build.
 if [ -n "${OPEN_NEXT_BUILD_ACTIVE:-}" ]; then
   echo "⚠ Recursive build detected — delegating directly to next build..."
+  # OpenNext sets NEXT_PRIVATE_STANDALONE=true via setStandaloneBuildMode()
+  # before calling buildCommand. In standalone mode, Next.js 16.3.0-preview.6
+  # tries to write middleware.js.nft.json during finalization, but the file
+  # doesn't exist (Next 16 uses edge/chunks/ instead). This causes ENOENT.
+  # Unset it so next build runs the same as the first build (non-standalone).
+  unset NEXT_PRIVATE_STANDALONE
+  unset NEXT_PRIVATE_OUTPUT_TRACE_ROOT
+  # Pre-create middleware.js.nft.json stub BEFORE next build runs.
+  node scripts/opennext-middleware-fix.mjs || true
   pnpm exec next build
   # Re-create middleware stub after inner next build (which cleans .next/server)
   node scripts/opennext-middleware-fix.mjs || true
@@ -26,11 +35,6 @@ export SSM_DISABLED=1
 echo "▶ Patching OpenNext for Next.js 16.3.0-preview.6 middleware compatibility..."
 # Patch the OpenNext build to inject middleware fix after Next.js build
 node scripts/patch-opennext-build.mjs
-
-# Pre-patch the Next.js build output directory so the build itself doesn't
-# ENOENT on .next/server/middleware.js.nft.json. The post-build patch runs
-# again after opennextjs-cloudflare finishes to ensure consistency.
-node scripts/opennext-middleware-fix.mjs || true
 
 echo "▶ Running Next.js build..."
 NEXT_TELEMETRY_DISABLED=1 pnpm exec next build
