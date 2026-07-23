@@ -7,6 +7,8 @@
  *
  * This script patches @opennextjs/cloudflare/dist/cli/build/build.js to run the middleware fix
  * AFTER the Next.js build completes (after buildNextjsApp(options)).
+ *
+ * NOTE: The build.js is an ES module, so we use `await import()` instead of `require()`.
  */
 
 import fs from "node:fs";
@@ -56,18 +58,19 @@ if (content.includes("Cloudless middleware patch")) {
 }
 
 // Inject middleware fix after the Next.js build completes (after buildNextjsApp(options);)
+// Use await import() because build.js is an ES module (require() is not available)
 const patchCode = `
     // Cloudless middleware patch: bridge Next.js 16 edge/chunks output to legacy middleware.js path
-    var { execSync } = require("node:child_process");
     try {
+        const { execSync } = await import("node:child_process");
         execSync("node scripts/opennext-middleware-fix.mjs", { cwd: process.cwd(), stdio: "ignore" });
     } catch {}
 
     // Next.js 16 emits edge/chunks but OpenNext expects legacy middleware.js + .nft.json.
     // Patch the OpenNext config after build to point to the edge wrapper if needed.
     try {
-        const fs = require("fs");
-        const path = require("path");
+        const fs = (await import("node:fs")).default ?? await import("node:fs");
+        const path = (await import("node:path")).default ?? await import("node:path");
         const nextServerDir = path.join(process.cwd(), ".next", "server");
         // Ensure the directory exists before writing (Next.js build may clean it)
         fs.mkdirSync(nextServerDir, { recursive: true });
