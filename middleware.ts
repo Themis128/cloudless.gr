@@ -497,6 +497,7 @@ async function handlePageRoute(
 // - Auth checks for protected routes
 //
 // OpenNext.js converts this to Edge runtime; use Web Crypto API instead of Node.js
+export const runtime = 'edge';
 export default async function middleware(request: NextRequest) {
   // One nonce per request — used both in the CSP header and forwarded to
   // layout.tsx via x-nonce so <Script nonce={nonce}> matches the policy.
