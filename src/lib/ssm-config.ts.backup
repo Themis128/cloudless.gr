@@ -256,53 +256,40 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     SENTRY_AUTH_TOKEN: params.get("SENTRY_AUTH_TOKEN") ?? "",
     SENTRY_ORG: params.get("SENTRY_ORG") ?? "baltzakisthemiscom",
     SENTRY_PROJECT: params.get("SENTRY_PROJECT") ?? "cloudless-gr",
-    // ActiveCampaign
     ACTIVECAMPAIGN_API_URL: params.get("ACTIVECAMPAIGN_API_URL") ?? "",
     ACTIVECAMPAIGN_API_TOKEN: params.get("ACTIVECAMPAIGN_API_TOKEN") ?? "",
-    // Google Ads
     GOOGLE_ADS_DEVELOPER_TOKEN: params.get("GOOGLE_ADS_DEVELOPER_TOKEN") ?? "",
     GOOGLE_ADS_CUSTOMER_ID: params.get("GOOGLE_ADS_CUSTOMER_ID") ?? "",
-    // LinkedIn
     LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",
     LINKEDIN_CLIENT_SECRET: params.get("LINKEDIN_CLIENT_SECRET") ?? "",
     LINKEDIN_ACCESS_TOKEN: params.get("LINKEDIN_ACCESS_TOKEN") ?? "",
     LINKEDIN_AD_ACCOUNT_ID: params.get("LINKEDIN_AD_ACCOUNT_ID") ?? "",
     LINKEDIN_ORGANIZATION_URN: params.get("LINKEDIN_ORGANIZATION_URN") ?? "",
-    // TikTok
     TIKTOK_APP_ID: params.get("TIKTOK_APP_ID") ?? "",
     TIKTOK_APP_SECRET: params.get("TIKTOK_APP_SECRET") ?? "",
     TIKTOK_ACCESS_TOKEN: params.get("TIKTOK_ACCESS_TOKEN") ?? "",
     TIKTOK_ADVERTISER_ID: params.get("TIKTOK_ADVERTISER_ID") ?? "",
-    // X (Twitter)
     X_API_KEY: params.get("X_API_KEY") ?? "",
     X_API_SECRET: params.get("X_API_SECRET") ?? "",
     X_ACCESS_TOKEN: params.get("X_ACCESS_TOKEN") ?? "",
     X_ACCESS_SECRET: params.get("X_ACCESS_SECRET") ?? "",
     X_AD_ACCOUNT_ID: params.get("X_AD_ACCOUNT_ID") ?? "",
-    // Meta
     META_AD_ACCOUNT_ID: params.get("META_AD_ACCOUNT_ID") ?? "",
     META_PIXEL_ID: params.get("META_PIXEL_ID") ?? "",
     META_CAPI_ACCESS_TOKEN: params.get("META_CAPI_ACCESS_TOKEN") ?? "",
     META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
     META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
-    // GitHub Actions
     GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
-    // Cron auth
     CRON_SECRET: params.get("CRON_SECRET") ?? "",
-    // AI
     ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
     ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
     GEMINI_API_KEY: params.get("GEMINI_API_KEY") ?? "",
-    // Internal AI generate endpoint auth
     AI_GENERATE_SECRET: params.get("AI_GENERATE_SECRET") ?? "",
-    // GitHub Actions dispatch
     GITHUB_DISPATCH_TOKEN: params.get("GITHUB_DISPATCH_TOKEN") ?? "",
-    // Admin alerts / webhooks
     ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
     CONTENT_WEBHOOK_SECRET: params.get("CONTENT_WEBHOOK_SECRET") ?? "",
     SENTRY_WEBHOOK_SECRET: params.get("SENTRY_WEBHOOK_SECRET") ?? "",
     SNS_PORTAL_TOPIC_ARN: params.get("SNS_PORTAL_TOPIC_ARN") ?? "",
-    // Monitoring / observability
     GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
     GRAFANA_API_TOKEN: params.get("GRAFANA_API_TOKEN") ?? "",
     PROMETHEUS_URL: params.get("PROMETHEUS_URL") ?? "",
@@ -313,64 +300,37 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
     NTFY_TOKEN: params.get("NTFY_TOKEN") ?? "",
     ADMIN_PUSH_VIA_NTFY: params.get("ADMIN_PUSH_VIA_NTFY") ?? "",
-    // MQTT broker
     MQTT_BROKER_HOST: params.get("MQTT_BROKER_HOST") ?? "",
     MQTT_BROKER_PORT: params.get("MQTT_BROKER_PORT") ?? "",
     MQTT_USERNAME: params.get("MQTT_USERNAME") ?? "",
     MQTT_PASSWORD: params.get("MQTT_PASSWORD") ?? "",
-    // EspoCRM (self-hosted on omv k3s) - supports both API key and Basic Auth
     ESPOCRM_BASE_URL: params.get("ESPOCRM_BASE_URL") ?? "",
     ESPOCRM_API_KEY: params.get("ESPOCRM_API_KEY") ?? "",
     ESPOCRM_API_PASSWORD: params.get("ESPOCRM_API_PASSWORD") ?? "",
     ESPOCRM_API_USER: params.get("ESPOCRM_API_USER") ?? "admin",
     ESPOCRM_WEBHOOK_SECRET: params.get("ESPOCRM_WEBHOOK_SECRET") ?? "",
-    // AppFlowy CMS
     APPFLOWY_API_URL: params.get("APPFLOWY_API_URL") ?? "",
     APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
     APPFLOWY_EMAIL: params.get("APPFLOWY_EMAIL") ?? "",
     APPFLOWY_PASSWORD: params.get("APPFLOWY_PASSWORD") ?? "",
-    // Postiz social scheduler
     POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
     POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
     POSTIZ_WEBHOOK_SECRET: params.get("POSTIZ_WEBHOOK_SECRET") ?? "",
     POSTIZ_SLACK_CHANNEL: params.get("POSTIZ_SLACK_CHANNEL") ?? "",
-    // ActiveCampaign
     ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: params.get("ACTIVECAMPAIGN_LEAD_AUTOMATION_ID") ?? "",
-    // LinkedIn CAPI
     LINKEDIN_CAPI_ACCESS_TOKEN: params.get("LINKEDIN_CAPI_ACCESS_TOKEN") ?? "",
-    // n8n
     N8N_API_URL: params.get("N8N_API_URL") ?? "",
     N8N_API_KEY: params.get("N8N_API_KEY") ?? "",
-    // n8n workflow IDs
     N8N_WORKFLOW_LEAD_ENRICH_ID: params.get("N8N_WORKFLOW_LEAD_ENRICH_ID") ?? "",
     N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: params.get("N8N_WORKFLOW_NEWSLETTER_NURTURE_ID") ?? "",
   };
 }
 
 /**
- * Get configuration - Workers uses D1, Node.js uses SSM.
- * This is a unified interface that works in both environments.
+ * Builds an AppConfig purely from process.env - used in test environments
+ * so tests never touch AWS SSM.
  */
-export async function getConfig<T extends Record<string, string> = Record<string, string>>(
-  db?: D1Database,
-): Promise<T> {
-  // In Workers environment with D1 binding
-  if (isWorkersEnvironment() && db) {
-    const d1Config = await getD1Config(db);
-    // Merge with environment variables (secrets take precedence)
-    const envConfig = buildConfigFromParams(new Map(Object.entries(buildConfigFromEnv())));
-    return { ...d1Config, ...envConfig } as T;
-  }
-
-  // In development or when no D1 binding, use environment
-  return buildConfigFromEnv() as T;
-}
-
-/**
- * Build configuration object from environment variables (development fallback).
- * This mirrors the buildConfigFromEnv from ssm-config.ts.
- */
-function buildConfigFromEnv(): Record<string, string> {
+function buildConfigFromEnv(): AppConfig {
   return {
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
@@ -403,7 +363,7 @@ function buildConfigFromEnv(): Record<string, string> {
     NOTION_SERVICES_DB_ID: process.env.NOTION_SERVICES_DB_ID || "",
     NOTION_FAQS_DB_ID: process.env.NOTION_FAQS_DB_ID || "",
     GOOGLE_CLIENT_EMAIL: process.env.GOOGLE_CLIENT_EMAIL || "",
-    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replaceAll(String.raw`\n`, "\n"),
+    GOOGLE_PRIVATE_KEY: (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
     GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID || "",
     GSC_SITE_URL: process.env.GSC_SITE_URL || "sc-domain:cloudless.gr",
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN || "",
@@ -477,4 +437,88 @@ function buildConfigFromEnv(): Record<string, string> {
     N8N_WORKFLOW_LEAD_ENRICH_ID: process.env.N8N_WORKFLOW_LEAD_ENRICH_ID || "",
     N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: process.env.N8N_WORKFLOW_NEWSLETTER_NURTURE_ID || "",
   };
+}
+
+/**
+ * Fetches all /cloudless/production/* parameters from SSM.
+ * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
+ * In test environments (NODE_ENV=test), reads from process.env directly.
+ * When SSM_DISABLED=1 (e.g. K3s Pi deployment where all config is injected
+ * via Kubernetes secret), skips SSM entirely and reads from process.env.
+ * In Workers environment, tries D1 first, then falls back to environment variables.
+ */
+export async function getConfig(): Promise<AppConfig> {
+  // 1. Check if we're in Workers environment
+  if (isWorkersEnvironment()) {
+    // 2. Try D1 first if available
+    try {
+      // In a real Workers environment, we'd get the D1 binding from env
+      // For now, we'll check if we can access it through global scope
+      // This is a simplified check - in practice, the D1 binding would be passed in
+      const maybeEnv = typeof process !== "undefined" ? process.env : {};
+      const db = maybeEnv.AUTH_DB as unknown as D1Config["AUTH_DB"];
+      
+      if (db) {
+        // Try to get config from D1
+        const d1Config = await getD1Config(db);
+        // Merge with environment variables (secrets take precedence)
+        const envConfig = buildConfigFromEnv();
+        return { ...d1Config, ...envConfig } as AppConfig;
+      }
+    } catch (err) {
+      // Fall back to environment if D1 fails
+      console.warn("[SSM] D1 lookup failed, falling back to environment:", err);
+    }
+    
+    // Fallback to environment variables in Workers environment
+    return buildConfigFromEnv();
+  }
+
+  // 3. Fall back to AWS SSM for non-Worker environments (existing logic)
+  
+  // In tests, skip SSM entirely and read from process.env. Still cache the
+  // result so successive getConfig() calls return the same object reference;
+  // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.
+  if (process.env.NODE_ENV === "test" || process.env.SSM_DISABLED === "1") {
+    if (cached) return cached;
+    cached = buildConfigFromEnv();
+    cachedAt = Date.now();
+    return cached;
+  }
+
+  if (cached && Date.now() - cachedAt < CACHE_TTL_MS) return cached;
+
+  let params: Map<string, string>;
+  try {
+    params = await fetchSsmParams();
+  } catch (err) {
+    // Transient SSM failure - serve stale cache rather than crashing all requests
+    if (cached) {
+      console.warn("[SSM] Fetch failed, serving stale config:", err);
+      return cached;
+    }
+    // Dev-only fallback: when AWS creds aren't available locally (no
+    // ~/.aws/credentials, no SSO session, no env keys), don't crash every
+    // API route. Build config from .env.local directly. In production,
+    // throwing is correct - Lambda always has IAM role creds, so a failure
+    // there is real.
+    if (process.env.NODE_ENV !== "production") {
+      const errName = (err as { name?: string })?.name ?? "Error";
+      console.warn(
+        `[SSM] ${errName} in dev - falling back to .env.local. ` +
+          "Set AWS_PROFILE or use IAM env keys to talk to real SSM."
+      );
+      cached = buildConfigFromEnv();
+      cachedAt = Date.now();
+      return cached;
+    }
+    throw err;
+  }
+
+  validateRequiredKeys(params);
+
+  cached = buildConfigFromParams(params);
+  cachedAt = Date.now();
+
+  return cached;
 }

@@ -7,7 +7,7 @@
  */
 
 // Detect if we're in a Cloudflare Workers environment
-function isWorkersEnvironment(): boolean {
+export function isWorkersEnvironment(): boolean {
   return typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined";
 }
 

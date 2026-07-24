@@ -21,7 +21,6 @@
 - [x] Fix ProxyGroup health probe configuration (invalid probes removed)
 - [x] Create tailscale-deploy.yml GitHub workflow for automated deployment
 - [x] Update Tailscale OAuth credentials documentation (README.md)
-- [x] Create Tailscale diagnostic script (tailscale-diagnose.sh)
 - [x] Add TS_CLIENT_ID and TS_CLIENT_SECRET to GitHub secrets (2026-07-19)
 - [x] Approve subnet routes in Tailscale admin console (10.42.0.0/16, 10.43.0.0/16)
 
@@ -212,10 +211,10 @@
 - [x] Create Kubernetes secret for k3s deployment (infrastructure/cloudless/secrets.yaml)
 
 ### Phase 2: Lambda Replacement (Workers)
-- [ ] Create /api/pi-proxy route (Tailscale proxy)
-- [ ] Create /api/inbound-email route (Email Routing webhook)
-- [ ] Update cloudflare-tunnel config for pi-alert-api exposure
-- [ ] Test Tailscale connectivity through Workers tunnel
+- [x] Create /api/pi-proxy route (Tailscale proxy)
+- [x] Create /api/inbound-email route (Email Routing webhook)
+- [x] Update cloudflare-tunnel config for pi-alert-api exposure
+- [x] Test Tailscale connectivity through Workers tunnel
 
 ### Phase 3: Email Configuration
 - [ ] Verify Cloudflare Email service is active

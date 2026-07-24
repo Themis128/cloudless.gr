@@ -77,3 +77,5 @@ minimumReleaseAgeExclude:
   - '@next/swc-linux-x64-musl@16.3.0-canary.89'
   - '@next/swc-win32-arm64-msvc@16.3.0-canary.89'
   - '@next/swc-win32-x64-msvc@16.3.0-canary.89'
+  - miniflare@4.20260722.0
+  - wrangler@4.114.0
