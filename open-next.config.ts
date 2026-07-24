@@ -1,18 +1,6 @@
 /**
  * OpenNext.js Cloudflare configuration for cloudless.gr
- *
- * Based on official @opennextjs/cloudflare best practices:
- * - Incremental Cache → R2 (consistent, cost-effective for large objects)
- * - Tag Cache → D1 (strongly consistent, good for revalidation)
- * - Queue → MemoryQueue (dev/preview) / Durable Queue (production via SST)
- *
- * NOTE: @opennextjs/cloudflare v1.20.x exports map (./* → ./dist/api/*.js)
- * doesn't resolve the shorthand paths (e.g. "r2-incremental-cache") correctly
- * because the actual files live under ./dist/api/overrides/ subdirectories.
- * We import from the full override paths which resolve at runtime.
- *
- * R2 binding: NEXT_INC_CACHE_R2_BUCKET (must exist in wrangler.jsonc)
- * D1 binding: NEXT_CACHE_D1_BINDING  (must exist in wrangler.jsonc)
+ * Consolidated layout supporting Next.js 16 compilation splits.
  */
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
@@ -20,10 +8,19 @@ import d1TagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-tag-c
 import memoryQueue from "@opennextjs/cloudflare/overrides/queue/memory-queue";
 
 export default defineCloudflareConfig({
-  incrementalCache: r2IncrementalCache,
-  tagCache: d1TagCache,
+  default: {
+    placement: "server",
+    incrementalCache: r2IncrementalCache,
+    tagCache: d1TagCache,
+    queue: memoryQueue,
+  },
 
-  // Use in-memory queue for dev/local preview; SST overrides this with its
-  // own durable-queue binding in the production deploy pipeline.
-  queue: memoryQueue,
+  // Direct OpenNext's build engine to map the middleware as an external 
+  // compilation tier, preventing esbuild from encountering Edge exceptions.
+  functions: {
+    middleware: {
+      placement: "edge",
+      routes: ["middleware"],
+    }
+  }
 } as any);

@@ -22,7 +22,8 @@
     }
   ],
   "ai": {
-    "binding": "AI"
+    "binding": "AI",
+    "remote": true
   },
   "d1_databases": [
     {
@@ -133,5 +134,5 @@
         "NEXT_PUBLIC_SITE_URL": "https://staging.cloudless.gr"
       }
     }
-  },
+  }
 }

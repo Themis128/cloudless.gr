@@ -495,9 +495,7 @@ async function handlePageRoute(
 // - Rate limiting
 // - Locale routing
 // - Auth checks for protected routes
-//
-// OpenNext.js converts this to Edge runtime; use Web Crypto API instead of Node.js
-export const runtime = 'edge';
+
 export default async function middleware(request: NextRequest) {
   // One nonce per request — used both in the CSP header and forwarded to
   // layout.tsx via x-nonce so <Script nonce={nonce}> matches the policy.
@@ -529,6 +527,6 @@ export default async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all request paths except static files, Next.js internals, and PWA assets
-    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
+    "/((?!_next/static/_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
   ],
 };

@@ -24,7 +24,9 @@ let patched = false;
 // runs before .next/server exists at all.
 try {
   fs.mkdirSync(nextDir, { recursive: true });
-} catch {}
+} catch (e) {
+  // Directory might already exist or be created by Next.js build
+}
 
 function copyIfMissing(target, source) {
   if (fs.existsSync(target)) {
@@ -71,6 +73,11 @@ if (candidates.length > 0) {
 const nftPath = path.join(nextDir, "middleware.js.nft.json");
 if (!fs.existsSync(nftPath)) {
   try {
+    // Ensure parent directory exists (extra safety)
+    const parentDir = path.dirname(nftPath);
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true });
+    }
     fs.writeFileSync(nftPath, "{}");
     patched = true;
   } catch (err) {

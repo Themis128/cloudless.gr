@@ -5,33 +5,11 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
-  // Compression of HTTP responses (gzip via the Next.js server). On Lambda
-  // the compression is applied before CloudFront passes through; on the Pi
-  // the in-process compression is what users actually receive (Pi nginx
-  // doesn't recompress what's already compressed). Default is true; set
-  // explicitly so anyone reading config sees that compression is on.
   compress: true,
-  // Strip the X-Powered-By: Next.js header — small attack-surface reduction.
   poweredByHeader: false,
-  // For Docker builds (Pi HA standby): emit a self-contained .next/standalone
-  // bundle. SST/Vercel deploys leave this unset.
-  output: process.env.NEXT_OUTPUT_STANDALONE === "1" ? "standalone" : undefined,
-  // Turbopack (Next 16) fails to resolve `@smithy/core/*` subpath exports
-  // through pnpm's hoisted layout on Windows. Externalize the AWS SDK
-  // client-s3 for R2 compatibility and next-intl to fix Turbopack bundling.
-  // Also externalize next-intl to fix Turbopack bundling issue where all
-  // NextResponse static methods (next, rewrite, redirect, json) are not
-  // properly bound in the bundled module context.
-  serverExternalPackages: [
-    "@aws-sdk/client-s3",
-  ],
-  // In WSL dev, set NEXT_DIST_DIR to a native Linux path (e.g. ~/next-cloudless)
-  // to avoid the slow NTFS→WSL filesystem benchmark warning.
-  // Production and CI leave this unset so the default .next dir is used.
+  output: "standalone",
+  serverExternalPackages: [],
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
-  // Allow WSL2 LAN-side IP to access the dev server (cross-origin HMR).
-  // Without this, accessing the dev server via http://172.x.x.x:4000 blocks
-  // the webpack-hmr endpoint with "Blocked cross-origin request".
   allowedDevOrigins: [
     "localhost",
     "127.0.0.1",
@@ -39,7 +17,6 @@ const nextConfig: NextConfig = {
     "10.255.255.254",
     "*.local",
   ],
-  // Turbopack resolve alias for next-intl config
   turbopack: {
     root: resolve(import.meta.dirname),
     resolveAlias: {
@@ -48,47 +25,22 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "files.stripe.com" },
-      { protocol: "https", hostname: "images.unsplash.com" },
-      // Appflowy cover images: Appflowy assets land on R2; external URLs
-      // set via Appflowy properties can be any subdomain of these two.
+      { protocol: "https", hostname: "stripe.com" },
+      { protocol: "https", hostname: "unsplash.com" },
       { protocol: "https", hostname: "**.r2.cloudflarestorage.com" },
       { protocol: "https", hostname: "**.appflowy.com" },
       { protocol: "https", hostname: "appflowy.com" },
     ],
-    // AVIF first, WebP fallback. AVIF is ~20-30% smaller than WebP at the
-    // same perceptual quality and ~50% smaller than JPEG. Browsers that
-    // don't accept AVIF (Safari < 16.4, ancient Firefox) get WebP. The
-    // few left after that get the original via Next.js' content
-    // negotiation. On every <Image> request the optimizer picks the
-    // smallest format the client accepts.
     formats: ["image/avif", "image/webp"],
-    // Drop the 3840 ladder rung (8K). On real traffic almost nothing hits
-    // it (laptops cap at 2560, phones at ~1440), so removing it just
-    // saves one generation per image without anyone noticing. The default
-    // is [640, 750, 828, 1080, 1200, 1920, 2048, 3840].
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
-    // Cache optimized variants for 30 days at the edge.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   experimental: {
-    // Tree-shake heavy barrel packages — reduces client bundle for GSAP, cmdk, etc.
-    // NOTE: aws-amplify is intentionally NOT in this list. Turbopack's
-    // optimizePackageImports rewrites `import { Amplify } from "aws-amplify"`
-    // and `import { signIn } from "aws-amplify/auth"` to different submodule
-    // paths whose Amplify singletons can end up *separate*, so the
-    // configure() that ran via the first path is invisible to the auth
-    // helpers loaded via the second — surfacing "Auth UserPool not configured"
-    // at signIn time even when configure provably ran.
     optimizePackageImports: ["gsap", "cmdk", "lenis", "lucide-react", "three", "@react-three/drei"],
-    // Use TypeScript CLI instead of compiler API for TS 7.x compatibility
-    // https://nextjs.org/docs/app/building-your-application/upgrading/version-16#typescript-cli
     useTypeScriptCli: true,
   },
 };
 
-// Bypass Turbopack dev-mode bug where [locale] catches special metadata routes
-// in the App Router before next/manifest.ts can handle them.
 nextConfig.rewrites = async () => ({
   beforeFiles: [
     { source: "/manifest.webmanifest", destination: "/api/pwa-manifest" },
