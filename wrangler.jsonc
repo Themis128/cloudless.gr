@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudless2",
   "main": "src/index.ts",
-  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "account_id": "c6d6b805741159c062a3e0b0d7f9d89a",
   "routes": [
     { "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" }
   ],
@@ -52,6 +52,21 @@
       "name": "EMAIL"
     }
   ],
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
   "r2_buckets": [
     {
       "binding": "ASSETS_BUCKET",

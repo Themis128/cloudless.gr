@@ -1,0 +1,13 @@
+# Cloudflare API Token Fix - Task List
+
+## Issue
+Build failed: "The build token selected for this build has been deleted or rolled and cannot be used for this build. Please update your build token in the Worker Builds settings and retry the build."
+
+## Root Cause
+The `CLOUDFLARE_API_TOKEN` GitHub secret has been deleted or rotated and needs to be recreated.
+
+## Tasks
+- [ ] Create new Cloudflare API Token with "Edit Cloudflare Workers" template
+- [ ] Add token as `CLOUDFLARE_API_TOKEN` GitHub repository secret
+- [ ] Verify `CLOUDFLARE_ACCOUNT_ID` secret exists (fb7dc7b69b662480cd5961a4d1913c78)
+- [ ] Trigger a new build to verify the fix works
