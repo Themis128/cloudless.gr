@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cloudless-gr",
+  "name": "cloudless2",
   "main": "src/index.ts",
   "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
   "routes": [
