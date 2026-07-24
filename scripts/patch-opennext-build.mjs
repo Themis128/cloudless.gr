@@ -79,11 +79,16 @@ const patchCode = `
           const manifest = JSON.parse(fs.readFileSync(middlewareManifestPath, "utf8"));
           const mw = manifest?.middleware?.["/"];
           if (mw && mw.entrypoint && mw.entrypoint.includes("edge/chunks/")) {
-            // Create legacy middleware.js.nft.json stub if missing
+            // Create a proper middleware.js.nft.json with a files array so that
+            // OpenNext's processNftFile() doesn't throw a TypeError on undefined .files.
+            // The old stub "{}" caused computeCopyFilesForPage to catch the TypeError,
+            // find middleware.js on disk, and throw "middleware cannot use the edge runtime".
             const nftPath = path.join(nextServerDir, "middleware.js.nft.json");
-            if (!fs.existsSync(nftPath)) {
-              fs.writeFileSync(nftPath, "{}");
-            }
+            const middlewareJsPath = path.join(nextServerDir, "middleware.js");
+            const nftContent = fs.existsSync(middlewareJsPath)
+              ? JSON.stringify({ files: ["middleware.js"] })
+              : JSON.stringify({ files: [] });
+            fs.writeFileSync(nftPath, nftContent);
           }
         }
     } catch {}
