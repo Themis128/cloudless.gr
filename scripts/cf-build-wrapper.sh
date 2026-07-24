@@ -59,6 +59,10 @@ if [ -d ".next/server" ]; then
   cp -rf .next/server/. .next/standalone/.next/server/ 2>/dev/null || true
 fi
 # Copy other essential directories/files
+# Copy BUILD_ID for OpenNext
+  if [ -e ".next/BUILD_ID" ]; then
+    cp -rf ".next/BUILD_ID" ".next/standalone/.next/BUILD_ID" 2>/dev/null || true
+  fi
 for dir in app chunks edge functions-config-manifest.json middleware middleware-build-manifest.js middleware-manifest.json next-font-manifest.js pages-manifest.json prefetch-hints.json server-reference-manifest.js required-server-files.json; do
   if [ -e ".next/$dir" ]; then
     cp -rf ".next/$dir" ".next/standalone/.next/$dir" 2>/dev/null || true
