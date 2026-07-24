@@ -1,17 +1,11 @@
-// || (not ??) so that SSM_PREFIX="" falls back to the default instead of fetching from "/"
-const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
-const REGION = process.env.AWS_REGION || "us-east-1";
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-// Module-level singleton — avoids re-creating the connection pool on every cache miss
-let ssmClient: any = null;
-async function getSsmClient(): Promise<any> {
-  if (!ssmClient) {
-    const { SSMClient } = await import("@aws-sdk/client-ssm");
-    ssmClient = new SSMClient({ region: REGION });
-  }
-  return ssmClient;
-}
+// Import D1 configuration functions
+import {
+  isWorkersEnvironment,
+  getD1Config,
+  getD1ConfigValue,
+  setD1ConfigValue,
+  type D1Config
+} from "./ssm-config-d1.ts";
 
 interface AppConfig {
   SES_FROM_EMAIL: string;
@@ -147,15 +141,6 @@ interface AppConfig {
   N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: string;
 }
 
-// Import D1 configuration functions
-import {
-  isWorkersEnvironment,
-  getD1Config,
-  getD1ConfigValue,
-  setD1ConfigValue,
-  type D1Config
-} from "./ssm-config-d1.ts";
-
 let cached: AppConfig | null = null;
 let cachedAt = 0;
 
@@ -165,190 +150,8 @@ export function resetSsmCache(): void {
   cachedAt = 0;
 }
 
-async function fetchSsmParams(): Promise<Map<string, string>> {
-  const ssm = await getSsmClient();
-  const params = new Map<string, string>();
-  let nextToken: string | undefined;
-  do {
-    const { GetParametersByPathCommand } = await import("@aws-sdk/client-ssm");
-    const res = await ssm.send(
-      new GetParametersByPathCommand({
-        Path: SSM_PREFIX,
-        WithDecryption: true,
-        NextToken: nextToken,
-      })
-    );
-    for (const p of res.Parameters ?? []) {
-      const key = p.Name?.replace(`${SSM_PREFIX}/`, "") ?? "";
-      if (key && p.Value) params.set(key, p.Value);
-    }
-    nextToken = res.NextToken;
-  } while (nextToken);
-  return params;
-}
-
-function validateRequiredKeys(params: Map<string, string>): void {
-  const required = [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "COGNITO_USER_POOL_ID",
-    "COGNITO_CLIENT_ID",
-  ] as const;
-  const missing: string[] = [];
-  for (const key of required) {
-    if (!params.get(key)) {
-      missing.push(`${SSM_PREFIX}/${key}`);
-    }
-  }
-  if (missing.length > 0) {
-    console.warn(
-      `[SSM] Missing required parameters (some features may be disabled): ${missing.join(", ")}`
-    );
-  }
-}
-
-function buildConfigFromParams(params: Map<string, string>): AppConfig {
-  const sesFrom = params.get("SES_FROM_EMAIL") || "noreply@cloudless.gr";
-  const sesTo = params.get("SES_TO_EMAIL") || "tbaltzakis@cloudless.gr";
-  const sesRegion = params.get("AWS_SES_REGION") || "us-east-1";
-
-  if (!sesFrom.includes("@") || !sesTo.includes("@")) {
-    console.warn(
-      `[SSM] SES email addresses look invalid - FROM: ${sesFrom}, TO: ${sesTo}. Using defaults.`
-    );
-  }
-
-  return {
-    SES_FROM_EMAIL: sesFrom,
-    SES_TO_EMAIL: sesTo,
-    AWS_SES_REGION: sesRegion,
-    NEWSLETTER_SEND_SECRET: params.get("NEWSLETTER_SEND_SECRET") ?? "",
-    STRIPE_SECRET_KEY: params.get("STRIPE_SECRET_KEY") ?? "",
-    STRIPE_PUBLISHABLE_KEY: params.get("STRIPE_PUBLISHABLE_KEY") ?? "",
-    STRIPE_WEBHOOK_SECRET: params.get("STRIPE_WEBHOOK_SECRET") ?? "",
-    COGNITO_USER_POOL_ID: params.get("COGNITO_USER_POOL_ID") ?? "",
-    COGNITO_CLIENT_ID: params.get("COGNITO_CLIENT_ID") ?? "",
-    AUTH_SECRET: params.get("AUTH_SECRET") ?? "",
-    SLACK_WEBHOOK_URL: params.get("SLACK_WEBHOOK_URL") ?? "",
-    SLACK_BOT_TOKEN: params.get("SLACK_BOT_TOKEN") ?? "",
-    SLACK_SIGNING_SECRET: params.get("SLACK_SIGNING_SECRET") ?? "",
-    HUBSPOT_API_KEY: params.get("HUBSPOT_API_KEY") ?? "",
-    HUBSPOT_CLIENT_SECRET: params.get("HUBSPOT_CLIENT_SECRET") ?? "",
-    NOTION_API_KEY: params.get("NOTION_API_KEY") ?? "",
-    NOTION_BLOG_DB_ID: params.get("NOTION_BLOG_DB_ID") ?? "",
-    NOTION_WEBHOOK_SECRET: params.get("NOTION_WEBHOOK_SECRET") ?? "",
-    NOTION_SUBMISSIONS_DB_ID: params.get("NOTION_SUBMISSIONS_DB_ID") ?? "",
-    NOTION_DOCS_DB_ID: params.get("NOTION_DOCS_DB_ID") ?? "",
-    NOTION_PROJECTS_DB_ID: params.get("NOTION_PROJECTS_DB_ID") ?? "",
-    NOTION_TASKS_DB_ID: params.get("NOTION_TASKS_DB_ID") ?? "",
-    NOTION_ANALYTICS_DB_ID: params.get("NOTION_ANALYTICS_DB_ID") ?? "",
-    NOTION_GSC_REPORTS_DB_ID: params.get("NOTION_GSC_REPORTS_DB_ID") ?? "",
-    NOTION_CALENDAR_DB_ID: params.get("NOTION_CALENDAR_DB_ID") ?? "",
-    NOTION_REPORTS_DB_ID: params.get("NOTION_REPORTS_DB_ID") ?? "",
-    NOTION_TESTIMONIALS_DB_ID: params.get("NOTION_TESTIMONIALS_DB_ID") ?? "",
-    NOTION_CASE_STUDIES_DB_ID: params.get("NOTION_CASE_STUDIES_DB_ID") ?? "",
-    NOTION_SERVICES_DB_ID: params.get("NOTION_SERVICES_DB_ID") ?? "",
-    NOTION_FAQS_DB_ID: params.get("NOTION_FAQS_DB_ID") ?? "",
-    GOOGLE_CLIENT_EMAIL: params.get("GOOGLE_CLIENT_EMAIL") ?? "",
-    GOOGLE_PRIVATE_KEY: (params.get("GOOGLE_PRIVATE_KEY") ?? "").replaceAll(String.raw`\n`, "\n"),
-    GOOGLE_CALENDAR_ID: params.get("GOOGLE_CALENDAR_ID") ?? "",
-    GSC_SITE_URL: params.get("GSC_SITE_URL") ?? "sc-domain:cloudless.gr",
-    SENTRY_AUTH_TOKEN: params.get("SENTRY_AUTH_TOKEN") ?? "",
-    SENTRY_ORG: params.get("SENTRY_ORG") ?? "baltzakisthemiscom",
-    SENTRY_PROJECT: params.get("SENTRY_PROJECT") ?? "cloudless-gr",
-    // ActiveCampaign
-    ACTIVECAMPAIGN_API_URL: params.get("ACTIVECAMPAIGN_API_URL") ?? "",
-    ACTIVECAMPAIGN_API_TOKEN: params.get("ACTIVECAMPAIGN_API_TOKEN") ?? "",
-    // Google Ads
-    GOOGLE_ADS_DEVELOPER_TOKEN: params.get("GOOGLE_ADS_DEVELOPER_TOKEN") ?? "",
-    GOOGLE_ADS_CUSTOMER_ID: params.get("GOOGLE_ADS_CUSTOMER_ID") ?? "",
-    // LinkedIn
-    LINKEDIN_CLIENT_ID: params.get("LINKEDIN_CLIENT_ID") ?? "",
-    LINKEDIN_CLIENT_SECRET: params.get("LINKEDIN_CLIENT_SECRET") ?? "",
-    LINKEDIN_ACCESS_TOKEN: params.get("LINKEDIN_ACCESS_TOKEN") ?? "",
-    LINKEDIN_AD_ACCOUNT_ID: params.get("LINKEDIN_AD_ACCOUNT_ID") ?? "",
-    LINKEDIN_ORGANIZATION_URN: params.get("LINKEDIN_ORGANIZATION_URN") ?? "",
-    // TikTok
-    TIKTOK_APP_ID: params.get("TIKTOK_APP_ID") ?? "",
-    TIKTOK_APP_SECRET: params.get("TIKTOK_APP_SECRET") ?? "",
-    TIKTOK_ACCESS_TOKEN: params.get("TIKTOK_ACCESS_TOKEN") ?? "",
-    TIKTOK_ADVERTISER_ID: params.get("TIKTOK_ADVERTISER_ID") ?? "",
-    // X (Twitter)
-    X_API_KEY: params.get("X_API_KEY") ?? "",
-    X_API_SECRET: params.get("X_API_SECRET") ?? "",
-    X_ACCESS_TOKEN: params.get("X_ACCESS_TOKEN") ?? "",
-    X_ACCESS_SECRET: params.get("X_ACCESS_SECRET") ?? "",
-    X_AD_ACCOUNT_ID: params.get("X_AD_ACCOUNT_ID") ?? "",
-    // Meta
-    META_AD_ACCOUNT_ID: params.get("META_AD_ACCOUNT_ID") ?? "",
-    META_PIXEL_ID: params.get("META_PIXEL_ID") ?? "",
-    META_CAPI_ACCESS_TOKEN: params.get("META_CAPI_ACCESS_TOKEN") ?? "",
-    META_ACCESS_TOKEN: params.get("META_ACCESS_TOKEN") ?? "",
-    META_PAGE_ID: params.get("META_PAGE_ID") ?? "",
-    // GitHub Actions
-    GITHUB_TOKEN: params.get("GITHUB_TOKEN") ?? "",
-    // Cron auth
-    CRON_SECRET: params.get("CRON_SECRET") ?? "",
-    // AI
-    ANTHROPIC_API_KEY: params.get("ANTHROPIC_API_KEY") ?? "",
-    ANTHROPIC_CHAT_MODEL: params.get("ANTHROPIC_CHAT_MODEL") ?? "",
-    GEMINI_API_KEY: params.get("GEMINI_API_KEY") ?? "",
-    // Internal AI generate endpoint auth
-    AI_GENERATE_SECRET: params.get("AI_GENERATE_SECRET") ?? "",
-    // GitHub Actions dispatch
-    GITHUB_DISPATCH_TOKEN: params.get("GITHUB_DISPATCH_TOKEN") ?? "",
-    // Admin alerts / webhooks
-    ADMIN_ALERT_SECRET: params.get("ADMIN_ALERT_SECRET") ?? "",
-    CONTENT_WEBHOOK_SECRET: params.get("CONTENT_WEBHOOK_SECRET") ?? "",
-    SENTRY_WEBHOOK_SECRET: params.get("SENTRY_WEBHOOK_SECRET") ?? "",
-    SNS_PORTAL_TOPIC_ARN: params.get("SNS_PORTAL_TOPIC_ARN") ?? "",
-    // Monitoring / observability
-    GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
-    GRAFANA_API_TOKEN: params.get("GRAFANA_API_TOKEN") ?? "",
-    PROMETHEUS_URL: params.get("PROMETHEUS_URL") ?? "",
-    KUMA_BASE_URL: params.get("KUMA_BASE_URL") ?? "",
-    KUMA_STATUS_PAGE_SLUG: params.get("KUMA_STATUS_PAGE_SLUG") ?? "",
-    KUMA_API_KEY: params.get("KUMA_API_KEY") ?? "",
-    NTFY_BASE_URL: params.get("NTFY_BASE_URL") ?? "",
-    NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
-    NTFY_TOKEN: params.get("NTFY_TOKEN") ?? "",
-    ADMIN_PUSH_VIA_NTFY: params.get("ADMIN_PUSH_VIA_NTFY") ?? "",
-    // MQTT broker
-    MQTT_BROKER_HOST: params.get("MQTT_BROKER_HOST") ?? "",
-    MQTT_BROKER_PORT: params.get("MQTT_BROKER_PORT") ?? "",
-    MQTT_USERNAME: params.get("MQTT_USERNAME") ?? "",
-    MQTT_PASSWORD: params.get("MQTT_PASSWORD") ?? "",
-    // EspoCRM (self-hosted on omv k3s) - supports both API key and Basic Auth
-    ESPOCRM_BASE_URL: params.get("ESPOCRM_BASE_URL") ?? "",
-    ESPOCRM_API_KEY: params.get("ESPOCRM_API_KEY") ?? "",
-    ESPOCRM_API_PASSWORD: params.get("ESPOCRM_API_PASSWORD") ?? "",
-    ESPOCRM_API_USER: params.get("ESPOCRM_API_USER") ?? "admin",
-    ESPOCRM_WEBHOOK_SECRET: params.get("ESPOCRM_WEBHOOK_SECRET") ?? "",
-    // AppFlowy CMS
-    APPFLOWY_API_URL: params.get("APPFLOWY_API_URL") ?? "",
-    APPFLOWY_JWT_SECRET: params.get("APPFLOWY_JWT_SECRET") ?? "",
-    APPFLOWY_EMAIL: params.get("APPFLOWY_EMAIL") ?? "",
-    APPFLOWY_PASSWORD: params.get("APPFLOWY_PASSWORD") ?? "",
-    // Postiz social scheduler
-    POSTIZ_API_URL: params.get("POSTIZ_API_URL") ?? "",
-    POSTIZ_API_KEY: params.get("POSTIZ_API_KEY") ?? "",
-    POSTIZ_WEBHOOK_SECRET: params.get("POSTIZ_WEBHOOK_SECRET") ?? "",
-    POSTIZ_SLACK_CHANNEL: params.get("POSTIZ_SLACK_CHANNEL") ?? "",
-    // ActiveCampaign
-    ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: params.get("ACTIVECAMPAIGN_LEAD_AUTOMATION_ID") ?? "",
-    // LinkedIn CAPI
-    LINKEDIN_CAPI_ACCESS_TOKEN: params.get("LINKEDIN_CAPI_ACCESS_TOKEN") ?? "",
-    // n8n
-    N8N_API_URL: params.get("N8N_API_URL") ?? "",
-    N8N_API_KEY: params.get("N8N_API_KEY") ?? "",
-    // n8n workflow IDs
-    N8N_WORKFLOW_LEAD_ENRICH_ID: params.get("N8N_WORKFLOW_LEAD_ENRICH_ID") ?? "",
-    N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: params.get("N8N_WORKFLOW_NEWSLETTER_NURTURE_ID") ?? "",
-  };
-}
-
 /**
- * Get configuration - Workers uses D1, Node.js uses SSM.
+ * Get configuration - Workers uses D1, Node.js uses environment variables.
  * This is a unified interface that works in both environments.
  */
 export async function getConfig<T extends Record<string, string> = Record<string, string>>(
@@ -358,7 +161,7 @@ export async function getConfig<T extends Record<string, string> = Record<string
   if (isWorkersEnvironment() && db) {
     const d1Config = await getD1Config(db);
     // Merge with environment variables (secrets take precedence)
-    const envConfig = buildConfigFromParams(new Map(Object.entries(buildConfigFromEnv())));
+    const envConfig = buildConfigFromEnv();
     return { ...d1Config, ...envConfig } as T;
   }
 
@@ -368,7 +171,6 @@ export async function getConfig<T extends Record<string, string> = Record<string
 
 /**
  * Build configuration object from environment variables (development fallback).
- * This mirrors the buildConfigFromEnv from ssm-config.ts.
  */
 function buildConfigFromEnv(): Record<string, string> {
   return {
@@ -443,6 +245,7 @@ function buildConfigFromEnv(): Record<string, string> {
     CONTENT_WEBHOOK_SECRET: process.env.CONTENT_WEBHOOK_SECRET || "",
     SENTRY_WEBHOOK_SECRET: process.env.SENTRY_WEBHOOK_SECRET || "",
     SNS_PORTAL_TOPIC_ARN: process.env.SNS_PORTAL_TOPIC_ARN || "",
+    // Monitoring / observability
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
     GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
     PROMETHEUS_URL: process.env.PROMETHEUS_URL || "",
@@ -453,25 +256,32 @@ function buildConfigFromEnv(): Record<string, string> {
     NTFY_TOPIC: process.env.NTFY_TOPIC || "",
     NTFY_TOKEN: process.env.NTFY_TOKEN || "",
     ADMIN_PUSH_VIA_NTFY: process.env.ADMIN_PUSH_VIA_NTFY || "",
+    // MQTT broker
     MQTT_BROKER_HOST: process.env.MQTT_BROKER_HOST || "",
     MQTT_BROKER_PORT: process.env.MQTT_BROKER_PORT || "",
     MQTT_USERNAME: process.env.MQTT_USERNAME || "",
     MQTT_PASSWORD: process.env.MQTT_PASSWORD || "",
+    // EspoCRM (self-hosted on omv k3s) - supports both API key and Basic Auth
     ESPOCRM_BASE_URL: process.env.ESPOCRM_BASE_URL || "",
     ESPOCRM_API_KEY: process.env.ESPOCRM_API_KEY || "",
     ESPOCRM_API_PASSWORD: process.env.ESPOCRM_API_PASSWORD || "",
     ESPOCRM_API_USER: process.env.ESPOCRM_API_USER || "admin",
     ESPOCRM_WEBHOOK_SECRET: process.env.ESPOCRM_WEBHOOK_SECRET || "",
+    // AppFlowy CMS
     APPFLOWY_API_URL: process.env.APPFLOWY_API_URL || "",
     APPFLOWY_JWT_SECRET: process.env.APPFLOWY_JWT_SECRET || "",
     APPFLOWY_EMAIL: process.env.APPFLOWY_EMAIL || "",
     APPFLOWY_PASSWORD: process.env.APPFLOWY_PASSWORD || "",
+    // Postiz social scheduler
     POSTIZ_API_URL: process.env.POSTIZ_API_URL || "",
     POSTIZ_API_KEY: process.env.POSTIZ_API_KEY || "",
     POSTIZ_WEBHOOK_SECRET: process.env.POSTIZ_WEBHOOK_SECRET || "",
     POSTIZ_SLACK_CHANNEL: process.env.POSTIZ_SLACK_CHANNEL || "",
+    // ActiveCampaign
     ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: process.env.ACTIVECAMPAIGN_LEAD_AUTOMATION_ID || "",
+    // LinkedIn CAPI
     LINKEDIN_CAPI_ACCESS_TOKEN: process.env.LINKEDIN_CAPI_ACCESS_TOKEN || "",
+    // n8n
     N8N_API_URL: process.env.N8N_API_URL || "",
     N8N_API_KEY: process.env.N8N_API_KEY || "",
     N8N_WORKFLOW_LEAD_ENRICH_ID: process.env.N8N_WORKFLOW_LEAD_ENRICH_ID || "",

@@ -15,7 +15,7 @@
  * threw) — callers already tolerate that.
  */
 
-import { runAthenaQuery } from "@/lib/athena";
+import { runAthenaQuery } from "@/lib/athena-r2";
 
 export interface GscTopKeyword {
   q: string;

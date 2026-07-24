@@ -1,12 +1,8 @@
 /**
- * Email suppression list management — D1 primary + SES fallback.
+ * Email suppression list management — D1 primary.
  *
  * In Cloudflare Workers: uses D1 email_suppression table.
- * In AWS Lambda: uses SESv2 account-level suppression list.
- *
- * Cloudflare Email Service lacks a native suppression API, so we manage
- * suppression at the application layer in D1. The functions try D1 first
- * and fall back to SES when needed (e.g., during transition or in Lambda).
+ * AWS SES fallback has been removed as part of migration to Cloudflare.
  *
  * @see https://docs.aws.amazon.com/ses/latest/dg/sending-email-suppression-list.html
  */
@@ -66,100 +62,15 @@ async function removeFromSuppressionListD1(email: string): Promise<boolean> {
   }
 }
 
-// SES operations (lazy loaded)
-async function getSESv2Client() {
-  const [{ SESv2Client }, { getConfig }] = await Promise.all([
-    import("@aws-sdk/client-sesv2"),
-    import("@/lib/ssm-config"),
-  ]);
-  const config = await getConfig();
-  return new SESv2Client({ region: config.AWS_SES_REGION || "us-east-1" });
-}
-
-async function addToSuppressionListSES(email: string): Promise<boolean> {
-  try {
-    const { PutSuppressedDestinationCommand } = await import("@aws-sdk/client-sesv2");
-    const client = await getSESv2Client();
-    await client.send(
-      new PutSuppressedDestinationCommand({
-        EmailAddress: email,
-        Reason: "COMPLAINT",
-      })
-    );
-    const safeDomain = logSafeDomain(email);
-    console.warn(`[SES] Added to suppression list: *@${safeDomain}`);
-    return true;
-  } catch (err) {
-    const safeDomain = logSafeDomain(email);
-    const msg = logSafeMessage(err);
-    console.error(`[SES] Failed to suppress *@${safeDomain}: ${msg}`);
-    return false;
-  }
-}
-
-async function removeFromSuppressionListSES(email: string): Promise<boolean> {
-  try {
-    const { DeleteSuppressedDestinationCommand } = await import("@aws-sdk/client-sesv2");
-    const client = await getSESv2Client();
-    await client.send(new DeleteSuppressedDestinationCommand({ EmailAddress: email }));
-    const safeDomain = logSafeDomain(email);
-    console.warn(`[SES] Removed from suppression list: *@${safeDomain}`);
-    return true;
-  } catch (err) {
-    // SES throws NotFoundException when the address was never suppressed;
-    // for a brand-new subscriber that is the normal case, treat as success.
-    if ((err as { name?: string })?.name === "NotFoundException") return true;
-    const safeDomain = logSafeDomain(email);
-    const msg = logSafeMessage(err);
-    console.error(`[SES] Failed to remove *@${safeDomain} from suppression: ${msg}`);
-    return false;
-  }
-}
-
-/**
- * Domain portion of an email, reduced to an allowlisted [a-z0-9.-] slug for
- * safe logging. Anything outside the allowlist (including CR/LF used in log
- * forging) is dropped so the value cannot inject log entries or control
- * sequences.
- */
-function logSafeDomain(email: string): string {
-  const raw = email.includes("@") ? email.split("@")[1] : "";
-  const slug = raw.toLowerCase().replace(/[^a-z0-9.-]/g, "");
-  return slug.slice(0, 253) || "(no-domain)";
-}
-
-/** Reduce an arbitrary error message to a printable-ASCII single line. */
-function logSafeMessage(err: unknown): string {
-  const raw = (err as Error)?.message ?? "unknown error";
-  return raw.replace(/[^\x20-\x7E]/g, " ").slice(0, 200);
-}
-
 /**
  * Add an email address to the suppression list.
  * In Workers: uses D1 email_suppression table.
- * In Lambda: uses SESv2 account-level suppression list.
  *
  * Returns true on success, false on failure (logged, not thrown).
  */
 export async function addToSuppressionList(email: string): Promise<boolean> {
-  // Prefer D1 in Workers environment
-  if (isWorkers()) {
-    const d1Result = await addToSuppressionListD1(email);
-    if (d1Result) return true;
-    // Fall back to SES if D1 failed
-    return addToSuppressionListSES(email);
-  }
-
-  // Lambda environment: prefer SES first (primary for legacy)
-  // Check if D1 is available and use it as primary if so
-  const db = getD1Binding();
-  if (db) {
-    const d1Result = await addToSuppressionListD1(email);
-    if (d1Result) return true;
-  }
-
-  // SES fallback
-  return addToSuppressionListSES(email);
+  // We are only using D1 now
+  return addToSuppressionListD1(email);
 }
 
 /**
@@ -170,18 +81,6 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
  * false on failure (logged, not thrown).
  */
 export async function removeFromSuppressionList(email: string): Promise<boolean> {
-  // Prefer D1 in Workers environment
-  if (isWorkers()) {
-    const d1Result = await removeFromSuppressionListD1(email);
-    if (d1Result) return true;
-  }
-
-  // Lambda environment: also clear from D1 if available
-  const db = getD1Binding();
-  if (db) {
-    await removeFromSuppressionListD1(email);
-  }
-
-  // SES fallback
-  return removeFromSuppressionListSES(email);
+  // We are only using D1 now
+  return removeFromSuppressionListD1(email);
 }
