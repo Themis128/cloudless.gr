@@ -1,6 +1,38 @@
-# Cloudflare Token & Observability Config Update
-# Task: Update Wrangler configs with new token and consistent observability settings
+# Cloudless.gr Migration - Comprehensive Todo List
+# Generated: 2026-07-24 | Based on all migration docs and existing todo files
 
-- [x] Update wrangler.jsonc with new Cloudflare token and observability settings
-- [x] Update wrangler-cloudflare-free.json with new Cloudflare token and observability settings
-- [x] Verify both configs are consistent
+## 🔴 HIGH PRIORITY - Blocking Production
+
+### Cloudflare API Token Fix (Blocks Deploy)
+- [ ] Create new Cloudflare API Token with "Edit Cloudflare Workers" template
+- [ ] Add token as `CLOUDFLARE_API_TOKEN` GitHub repository secret
+- [ ] Verify `CLOUDFLARE_ACCOUNT_ID` secret exists (fb7dc7b69b662480cd5961a4d1913c78)
+- [ ] Trigger a new build to verify the fix works
+
+### Google Calendar Configuration (Blocks Calendar Booking)
+- [ ] Add `GOOGLE_CLIENT_EMAIL` as Wrangler secret for Workers
+- [ ] Add `GOOGLE_PRIVATE_KEY` as Wrangler secret (with \n for newlines)
+- [ ] Add `GOOGLE_CALENDAR_ID` as Wrangler secret (defaults to "primary")
+- [ ] OR: Add `GOOGLE_CLIENT_EMAIL` and `GOOGLE_CALENDAR_ID` to D1 `app_config` table for k3s
+
+## 🟡 MEDIUM PRIORITY - Migration Completion
+
+### ETL Script Migration (2 Remaining from AWS→Cloudflare)
+- [ ] `scripts/etl/clients-to-lake.mjs` - Migrate SSM → D1 `app_config`
+- [ ] `scripts/etl/portals-to-lake.mjs` - Migrate SSM → D1 `app_config`
+
+### Infrastructure & Operations
+- [ ] Restart Cline/Claude desktop to load MCP configuration changes
+- [ ] Configure 2TB SSD mount for analytics storage (/sdb1 on omv)
+
+## 🟢 LOW PRIORITY - Nice to Have
+
+### Testing & Verification
+- [ ] Verify `clients-to-r2.mjs` deployment works end-to-end
+- [ ] Run full ETL pipeline on Pi runners to verify no SSM/AWS dependencies
+- [ ] Run Playwright E2E tests against production (cloudless.gr and pi-origin.cloudless.gr)
+
+### Code Quality
+- [ ] Clean up legacy ETL scripts once new versions verified
+- [ ] Remove AWS SDK imports from fully migrated files
+- [ ] Update any remaining docs referencing old AWS architecture

@@ -162,6 +162,43 @@
         "hyperdrive_config_get",
         "hyperdrive_config_edit"
       ]
+    },
+    "github.com/upstash/context7-mcp": {
+      "command": "npx",
+      "args": ["tsx", "/home/tbaltzakis/Cline/MCP/context7-mcp/packages/mcp/src/index.ts"],
+      "env": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      },
+      "autoStart": false,
+      "alwaysAllow": []
+    },
+    "github.com/AgentDeskAI/browser-tools-mcp": {
+      "command": "npx",
+      "args": ["tsx", "/home/tbaltzakis/Cline/MCP/browser-tools-mcp/node_modules/@agentdeskai/browser-tools-mcp/src/index.ts"],
+      "autoStart": true,
+      "alwaysAllow": [
+        "runAccessibilityAudit",
+        "runPerformanceAudit",
+        "runSEOAudit",
+        "runBestPracticesAudit",
+        "runAuditMode",
+        "runNextJSAudit",
+        "runDebuggerMode"
+      ]
+    },
+    "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking": {
+      "command": "node",
+      "args": ["/home/tbaltzakis/Cline/MCP/sequentialthinking/src/sequentialthinking/dist/index.js"],
+      "autoStart": true,
+      "alwaysAllow": []
+    },
+    "github.com/modelcontextprotocol/servers/tree/main/src/git": {
+      "command": "/home/tbaltzakis/.local/bin/uvx",
+      "args": ["mcp-server-git", "--repository", "/home/tbaltzakis/cloudless.gr"],
+      "disabled": false,
+      "autoApprove": [],
+      "autoStart": true,
+      "alwaysAllow": []
     }
   }
 }

@@ -101,6 +101,14 @@
         "list_environments"
       ]
     },
+    "sequentialthinking": {
+      "command": "node",
+      "args": [
+        "/home/tbaltzakis/Cline/MCP/sequentialthinking/src/sequentialthinking/dist/index.js"
+      ],
+      "autoStart": true,
+      "alwaysAllow": ["sequentialthinking"]
+    },
     "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": {
       "command": "npx",
       "args": [

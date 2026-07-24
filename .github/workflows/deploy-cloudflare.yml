@@ -36,6 +36,7 @@ jobs:
       - name: Upload static assets to R2
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
           cp -r .next/static ./out/ 2>/dev/null || true
           cp -r public/* ./out/ 2>/dev/null || true
@@ -68,18 +69,16 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
           command: deploy -c wrangler-cloudflare-free.json
           wranglerVersion: "4.15.0"
 
-      - name: Health check
+      - name: Validate Cloudflare account ID secret
         if: always()
         run: |
-          # Single check - Cloudflare bot detection may block GitHub Actions IPs
-          # The warning is non-fatal because the deployment already succeeded
-          if curl -sf -A "GitHub-Actions/cloudless-deploy" "https://cloudless.gr/api/health" 2>/dev/null; then
-            echo "✅ Worker health check passed"
-          else
-            echo "⚠️ Health check skipped (Cloudflare bot protection blocks GitHub Actions IPs)"
-            echo "Deployment completed successfully - verify manually: https://cloudless.gr/api/health"
+          if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
+            echo "❌ Missing required secret: CF_ACCOUNT_ID"
+            echo "Please add this GitHub repository secret with your Cloudflare account ID"
+            exit 1
           fi
+          echo "✅ CF_ACCOUNT_ID secret is configured"
