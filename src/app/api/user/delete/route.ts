@@ -4,11 +4,6 @@
  * Deletes the authenticated user from D1 (primary) or Cognito/DynamoDB (fallback).
  */
 import { NextRequest, NextResponse } from "next/server";
-import {
-  CognitoIdentityProviderClient,
-  AdminDeleteUserCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
-import { DynamoDBClient, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
 import { requireAuth } from "@/lib/api-auth";
 import type { AuthDatabase } from "@/lib/auth-d1";
 
