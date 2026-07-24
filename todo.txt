@@ -1,7 +1,7 @@
 # Cloudless.gr Migration + Optimization Todo List
 # Cloudflare + Local Cluster Architecture Corrections
 # Generated: 2026-07-17 (post-migration optimization phase)
-# Updated: 2026-07-20 (All services operational - see ACTIONS-REQUIRED.md)
+# Updated: 2026-07-24 (Started removing completed items)
 
 ## 🏗️ INFRASTRUCTURE CORRECTIONS
 
@@ -70,7 +70,7 @@
 - [x] **Multi-session support** - Concurrent sessions supported via sessions table
 - [x] **Admin audit log** - Log auth actions for compliance (migration 0005 + auth-audit.ts)
 - [x] **Auth middleware utility** - Created auth-middleware.ts with requireAuth, requireAdmin, optionalAuth
-- [x] **OpenAPI documentation** - Created auth-openapi.ts
+- [x] **OpenAPI documentation**OpenAPI documentation**] - Created auth-openapi.ts
 - [x] **Auth testing sandbox** - Created /api/auth/sandbox endpoint
 - [x] **Verify SESSION_SECRET** - Added validation for 32+ bytes
 - [x] **D1 binding check** - Verified in wrangler.jsonc
@@ -83,7 +83,7 @@
 - [x] Add OMV_SSH_KEY to GitHub secrets (2026-07-12)
 
 ### MCP Security Audit
-- [x] Run `pnpm mcp-security-scan` on API routes (no findings - verified 2026-07-20)
+- [x] Run `pnpm mcp-security-scan` on API routes on API routes) (no findings - verified 2026-07-20)
 - [ ] Remove unused API keys from .env (AWS credentials no longer needed)
 - [ ] Clean up SSM parameters (deprecated AWS resources)
 
@@ -101,7 +101,7 @@
 - [ ] Set up Metabase queries for R2 parquet analysis
 
 ### Cloudflare analytics
-- [ ] Replace Google Analytics with Plausible (already configured)
+- [x] Replace Google Analytics with Plausible (already configured)
 - [ ] Verify analytics-engine-datasets binding in wrangler.jsonc
 - [ ] Set up analytics ingestion for Workers AI calls
 
@@ -201,15 +201,15 @@
 ## ☁️ AWS → CLOUDFLARE MIGRATION (COMPLETE - SEE .clinerules/aws-to-cloudflare-migration.md)
 
 ### Phase 1: Secrets Migration (SSM → Workers)
-  - [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
-  - [x] Migrate ADMIN_ALERT_SECRET to Workers secret (463953c7f9183ee69c0c4fc18495e72543398d79bdcf9702478dd59d920fc7b6)
-  - [x] Migrate SLACK_WEBHOOK_URL to Workers secret (2026-07-19)
-  - [x] Migrate POSTIZ_API_KEY to Workers secret (2026-07-19)
-  - [x] Migrate ESPOCRM_API_KEY to Workers secret (2026-07-19)
-  - [x] Migrate ESPOCRM_API_PASSWORD to Workers secret (2026-07-19)
-  - [x] ESPOCRM_BASE_URL stored in D1 app_config (migration 0007) - NOT a secret
-  - [x] Verify ssm-config.ts works with SSM_DISABLED=1 mode
-  - [x] Create Kubernetes secret for k3s deployment (infrastructure/cloudless/secrets.yaml)
+- [x] Created scripts/save-secrets-to-cloudflare.sh for secret migration
+- [x] Migrate ADMIN_ALERT_SECRET to Workers secret (463953c7f9183ee69c0c4fc18495e72543398d79bdcf9702478dd59d920fc7b6)
+- [x] Migrate SLACK_WEBHOOK_URL to Workers secret (2026-07-19)
+- [x] Migrate POSTIZ_API_KEY to Workers secret (2026-07-19)
+- [x] Migrate ESPOCRM_API_KEY to Workers secret (2026-07-19)
+- [x] Migrate ESPOCRM_API_PASSWORD to Workers secret (2026-07-19)
+- [x] ESPOCRM_BASE_URL stored in D1 app_config (migration 0007) - NOT a secret
+- [x] Verify ssm-config.ts works with SSM_DISABLED=1 mode
+- [x] Create Kubernetes secret for k3s deployment (infrastructure/cloudless/secrets.yaml)
 
 ### Phase 2: Lambda Replacement (Workers)
 - [ ] Create /api/pi-proxy route (Tailscale proxy)
@@ -310,7 +310,7 @@
 
 ### AppFlowy - COMPLETE ✅
 - ✅ 9 pods running (omv-ha has worker pod)
-- ✅ MinIO credentials updated (2026-07-20) - Secure random hex credentials
+- [x] ✅ MinIO credentials updated (2026-07-20) - Secure random hex credentials
 
 ### Tunnel Status - OPERATIONAL ✅
 - **Tunnel ID**: e977a490-58c5-4fdb-9155-86832e3e636a

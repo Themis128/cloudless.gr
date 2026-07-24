@@ -1,11 +1,10 @@
 /**
- * Unified Email Sender — Cloudflare Email Service (primary) + AWS SES (fallback)
+ * Unified Email Sender — Cloudflare Email Service (primary)
  *
  * In Cloudflare Workers: uses the `env.EMAIL` binding (no API keys needed).
- * In AWS Lambda: falls back to AWS SESv2.
+ * AWS SES fallback has been removed as part of migration to Cloudflare.
  *
- * This module is the migration bridge; once fully on Workers, the SES fallback
- * can be removed.
+ * This module is now Workers-only; SES code has been removed.
  */
 
 import { sanitizeError, sanitizeLog } from "@/lib/log-sanitizer";
@@ -22,7 +21,6 @@ export interface SendEmailPayload {
 
 // Module-level binding set by the Worker entry point
 let _emailBinding: any | null = null;
-let _sesFallback: any | null = null;
 
 /** Called by the Worker fetch handler to inject the EMAIL binding. */
 export function setEmailBinding(binding: any): void {
@@ -68,59 +66,14 @@ async function sendViaCloudflare(
   });
 }
 
-async function getSESFallback() {
-  if (_sesFallback) return _sesFallback;
-  const [{ SESv2Client }, { SendEmailCommand }] = await Promise.all([
-    import("@aws-sdk/client-sesv2"),
-    import("@aws-sdk/client-sesv2"),
-  ]);
-  const { getConfig } = await import("@/lib/ssm-config");
-  const cfg = await getConfig();
-  _sesFallback = new SESv2Client({ region: cfg.AWS_SES_REGION || "us-east-1" });
-  return { client: _sesFallback, SendEmailCommand, cfg };
-}
-
-async function sendViaSES(payload: SendEmailPayload, fromAddress: string): Promise<void> {
-  const { client, SendEmailCommand, cfg } = await getSESFallback();
-
-  const extraHeaders = payload.listUnsubscribeUrl
-    ? [
-        { Name: "List-Unsubscribe", Value: `<${payload.listUnsubscribeUrl}>` },
-        { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
-      ]
-    : [];
-
-  try {
-    await client.send(
-      new SendEmailCommand({
-        FromEmailAddress: fromAddress,
-        Destination: { ToAddresses: [payload.to] },
-        ...(payload.replyTo ? { ReplyToAddresses: payload.replyTo } : {}),
-        Content: {
-          Simple: {
-            Subject: { Data: payload.subject, Charset: "UTF-8" },
-            Body: {
-              Html: { Data: payload.html, Charset: "UTF-8" },
-              Text: { Data: payload.text, Charset: "UTF-8" },
-            },
-            ...(extraHeaders.length ? { Headers: extraHeaders } : {}),
-          },
-        },
-      })
-    );
-  } catch (err: unknown) {
-    const meta = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata;
-    if (meta?.httpStatusCode !== 200) throw err;
-  }
-}
-
 /**
  * Check if an email address is suppressed before sending.
  * In Workers: checks D1 email_suppression table.
- * In Lambda: skips (SES handles suppression natively).
+ * In Lambda: skips (SES handles suppression natively - but we removed SES, so always false in Node).
  */
 async function checkSuppression(toEmail: string): Promise<boolean> {
-  // In Lambda/SES, suppression is handled by AWS - no need to check D1
+  // In Node (local dev or Lambda without SES), we don't have suppression checking
+  // since we removed SES. This is safe for development.
   if (isNode() && !_emailBinding && !(globalThis as any).__EMAIL_BINDING__) {
     return false;
   }
@@ -135,13 +88,12 @@ async function checkSuppression(toEmail: string): Promise<boolean> {
 }
 
 /**
- * Send an email using the best available transport.
+ * Send an email using Cloudflare Email binding.
  *
  * Priority:
  * 1. Check suppression list (skip if suppressed)
  * 2. Cloudflare Email binding (Workers, no API key)
- * 3. AWS SES (Lambda / local dev with AWS creds)
- * 4. Log-and-skip (if nothing is configured — e.g. test environments)
+ * 3. Log-and-skip (if no binding is configured — e.g. test environments)
  */
 export async function sendEmail(payload: SendEmailPayload): Promise<void> {
   // Check suppression list first
@@ -175,20 +127,8 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
     return;
   }
 
-  // 3. SES fallback — Lambda or local dev
-  if (isNode()) {
-    try {
-      await sendViaSES(payload, fromAddress);
-      return;
-    } catch (err) {
-      // Sanitize err to prevent format string injection (% specifiers)
-      const safeErr = err instanceof Error ? err.message.replace(/%/g, "") : String(err).replace(/[\x00-\x1F\x7F]/g, "");
-      console.warn("[email-sender] SES failed, logging only:", safeErr);
-    }
-  }
-
-  // 4. Log mode — no transport available (tests, unconfigured environments)
-  console.log("[email-sender] No email transport configured. Skipping send.");
+  // 3. No transport available (tests, unconfigured environments)
+  console.warn("[email-sender] No email binding available. Skipping send.");
   // Sanitize email fields to prevent log injection attacks
   console.log("  To:", String(payload.to).replace(/[\x00-\x1F\x7F]/g, ""), "Subject:", String(payload.subject).replace(/[\x00-\x1F\x7F]/g, ""));
 }
