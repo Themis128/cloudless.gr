@@ -109,6 +109,47 @@
       "autoStart": true,
       "alwaysAllow": ["sequentialthinking"]
     },
+    "github": {
+      "command": "/home/tbaltzakis/.local/share/github-mcp-server/github-mcp-server",
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "autoStart": true,
+      "alwaysAllow": [
+        "search_repos",
+        "search_code",
+        "search_issues",
+        "search_users",
+        "get_file_contents",
+        "get_issue",
+        "list_issues",
+        "create_issue",
+        "update_issue",
+        "get_pull_request",
+        "list_pull_requests",
+        "create_pull_request",
+        "get_repo",
+        "list_repos",
+        "create_repo",
+        "fork_repo",
+        "get_branch",
+        "list_branches",
+        "create_branch",
+        "delete_branch",
+        "get_commit",
+        "list_commits",
+        "get_workflow_run",
+        "list_workflow_runs",
+        "get_workflow_run_logs",
+        "get_workflow_run_usage",
+        "get_actions_secrets",
+        "create_actions_secret",
+        "delete_actions_secret",
+        "get_actions_variables",
+        "create_actions_variable",
+        "delete_actions_variable"
+      ]
+    },
     "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": {
       "command": "npx",
       "args": [

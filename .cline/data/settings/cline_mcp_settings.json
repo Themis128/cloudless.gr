@@ -199,6 +199,23 @@
       "autoApprove": [],
       "autoStart": true,
       "alwaysAllow": []
+    },
+    "github.com/github/github-mcp-server": {
+      "command": "/home/tbaltzakis/.local/share/github-mcp-server/github-mcp-server",
+      "args": ["stdio"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "autoStart": false,
+      "alwaysAllow": [
+        "get_me",
+        "get_file_contents",
+        "list_repositories",
+        "list_issues",
+        "search_issues",
+        "get_commit",
+        "list_commits"
+      ]
     }
   }
 }
