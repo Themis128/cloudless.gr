@@ -1,4 +1,3 @@
-import type { AttributeValue } from "@aws-sdk/client-dynamodb";
 import type { AuthDatabase } from "@/lib/auth-d1";
 import type Stripe from "stripe";
 
@@ -34,7 +33,6 @@ function getAuthDb(): AuthDatabase | null {
 
 async function getDynamoClient() {
   if (!dynamoClient) {
-    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
     dynamoClient = new DynamoDBClient({
       region: REGION,
       endpoint: resolveDynamoEndpoint(),
@@ -181,7 +179,6 @@ export async function persistStripeEvent(event: Stripe.Event): Promise<PersistSt
 
   const tableName = getTransactionsTableName();
   if (!tableName) throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
-  const { PutItemCommand, ConditionalCheckFailedException } = await import("@aws-sdk/client-dynamodb");
   const client = await getDynamoClient();
 
   try {
@@ -227,7 +224,6 @@ export async function markStripeEventProcessed(eventId: string): Promise<void> {
 
   const tableName = getTransactionsTableName();
   if (!tableName) return;
-  const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
   const client = await getDynamoClient();
   await client.send(
     new UpdateItemCommand({
@@ -264,7 +260,6 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
 
   const tableName = getTransactionsTableName();
   if (!tableName) return;
-  const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
   const client = await getDynamoClient();
   await client.send(
     new UpdateItemCommand({
@@ -285,7 +280,6 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
 // Data Lake sink — writes Stripe events to R2 (primary) or S3 (fallback).
 // ---------------------------------------------------------------------------
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 interface R2Env {
   DATALAKE_BUCKET: R2Bucket;

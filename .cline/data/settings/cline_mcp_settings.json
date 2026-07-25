@@ -201,11 +201,17 @@
       "alwaysAllow": []
     },
     "github.com/github/github-mcp-server": {
-      "command": "/home/tbaltzakis/.local/share/github-mcp-server/github-mcp-server",
-      "args": ["stdio"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      },
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "-e",
+        "GITHUB_READ_ONLY",
+        "ghcr.io/github/github-mcp-server:latest"
+      ],
       "autoStart": false,
       "alwaysAllow": [
         "get_me",
