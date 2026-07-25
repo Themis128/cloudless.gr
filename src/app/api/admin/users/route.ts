@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  CognitoIdentityProviderClient,
   ListUsersCommand,
   AdminListGroupsForUserCommand,
   AdminEnableUserCommand,
@@ -15,7 +14,6 @@ const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID ?? "";
 const REGION = process.env.AWS_REGION ?? "us-east-1";
 const ADMIN_GROUP = process.env.COGNITO_ADMIN_GROUP ?? "admin";
 
-const client = new CognitoIdentityProviderClient({ region: REGION });
 
 function attr(user: UserType, name: string): string {
   return user.Attributes?.find((a) => a.Name === name)?.Value ?? "";

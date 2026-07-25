@@ -1,1 +1,0 @@
-// Type stub for AWS Bedrock Runtime client\ndeclare module "@aws-sdk/client-bedrock-runtime" {\n export class BedrockRuntimeClient {\n constructor(config?: any);\n send(command: any): Promise<any>;\n }\n\nexport class InvokeModelCommand {\n constructor(params: any);\n}\n}\n

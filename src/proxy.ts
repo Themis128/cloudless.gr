@@ -6,7 +6,6 @@ import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
 // Cognito JWKS — primary for both k3s (Pi) and Lambda deployments.
 const _upId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? "";
-const _reg = process.env.AWS_REGION || _upId.split("_")[0] || "us-east-1";
 
 const JWKS = _upId
   ? createRemoteJWKSet(

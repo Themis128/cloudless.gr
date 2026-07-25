@@ -133,12 +133,9 @@ export async function POST(req: NextRequest) {
   // Always succeed-or-look-like-success to defeat account enumeration.
 
   try {
-    const { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand } =
-      await import("@aws-sdk/client-cognito-identity-provider");
     const { createHmac, randomBytes } = await import("crypto");
     const issuer = process.env.COGNITO_ISSUER ?? "";
     const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";
-    const client = new CognitoIdentityProviderClient({ region });
     await client.send(
       new AdminCreateUserCommand({
         UserPoolId: userPoolId,

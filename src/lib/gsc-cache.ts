@@ -10,11 +10,10 @@
  */
 
 import {
-  DynamoDBClient,
   GetItemCommand,
   PutItemCommand,
   type AttributeValue,
-} from "@/types/aws-sdk/client-dynamodb";
+} ;
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
 // ---------------------------------------------------------------------------
@@ -73,11 +72,8 @@ export async function setCachedD1<T>(route: string, hash: string, payload: T, tt
 // DynamoDB helpers
 // ---------------------------------------------------------------------------
 
-let dynamoClient: DynamoDBClient | null = null;
 
-export function getDynamoClient(): DynamoDBClient {
   if (!dynamoClient) {
-    dynamoClient = new DynamoDBClient({
       region: process.env.AWS_REGION || "us-east-1",
       endpoint: resolveDynamoEndpoint(),
     });

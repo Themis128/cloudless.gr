@@ -1,5 +1,4 @@
-import type { AttributeValue } from "@/types/aws-sdk/client-dynamodb";
-import { S3Client, PutObjectCommand } from "@/types/aws-sdk/client-s3";
+import type { AttributeValue } ;
 import type { AuthDatabase } from "@/lib/auth-d1";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
@@ -71,8 +70,6 @@ function getAuthDb(): AuthDatabase | null {
 let dynamoClient: any = null;
 async function getDynamoClient() {
   if (!dynamoClient) {
-    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
-    dynamoClient = new DynamoDBClient({
       region: REGION,
       endpoint: resolveDynamoEndpoint(),
     });
@@ -239,7 +236,6 @@ export async function recordNotification(input: {
   const table = getTableName();
   if (!table) return notif; // lake-only mode
   try {
-    const { PutItemCommand } = await import("@aws-sdk/client-dynamodb");
     const c = await getDynamoClient();
     await c.send(
       new PutItemCommand({
@@ -359,7 +355,6 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
     exprNames["#archivedAt"] = "archivedAt";
   }
 
-  const { QueryCommand } = await import("@aws-sdk/client-dynamodb");
   const c = await getDynamoClient();
   const out = await c.send(
     new QueryCommand({
@@ -418,7 +413,6 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
   // We can't UpdateItem without the full sort key, so fetch + update.
   // For small batches this is fine. (Optimization: store an idIndex GSI.)
   for (const id of ids) {
-        const { QueryCommand } = await import("@aws-sdk/client-dynamodb");
     const c = await getDynamoClient();
     const matches = await c.send(
       new QueryCommand({
@@ -435,7 +429,6 @@ export async function markNotificationsRead(ids: string[]): Promise<void> {
     );
     const item = matches.Items?.[0];
     if (!item) continue;
-    const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
     const client2 = await getDynamoClient();
     await client2.send(
       new UpdateItemCommand({
@@ -502,7 +495,6 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
   // Walk in batches of 25 (BatchWriteItem max).
   let lastKey: Record<string, AttributeValue> | undefined;
   do {
-     const { QueryCommand } = await import("@aws-sdk/client-dynamodb");
      const c = await getDynamoClient();
      const page = new QueryCommand({
        TableName: table,
@@ -523,7 +515,6 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
      const res = await c.send(page);
     const items = res.Items ?? [];
     if (items.length) {
-      const { BatchWriteItemCommand } = await import("@aws-sdk/client-dynamodb");
       const c = await getDynamoClient();
       await c.send(
         new BatchWriteItemCommand({
@@ -556,9 +547,6 @@ function getLakeR2(): R2Bucket | null {
 
 const LAKE_BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
 
-let s3Client: S3Client | null = null;
-function getS3(): S3Client {
-  s3Client ??= new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
   return s3Client;
 }
 

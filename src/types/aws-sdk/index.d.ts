@@ -1,1 +1,0 @@
-// AWS SDK type stubs index\ndeclare module "@/types/aws-sdk" {\n export * from "@aws-sdk/client-dynamodb";\n export * from "@aws-sdk/client-s3";\n export * from "@aws-sdk/client-cognito-identity-provider";\n export * from "@aws-sdk/client-ssm";\n}\n

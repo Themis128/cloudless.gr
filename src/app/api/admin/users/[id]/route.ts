@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
-  CognitoIdentityProviderClient,
   AdminGetUserCommand,
   AdminUpdateUserAttributesCommand,
   type UserType,
@@ -16,7 +15,6 @@ import {
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID ?? "";
 const REGION = process.env.AWS_REGION ?? "us-east-1";
 
-const client = new CognitoIdentityProviderClient({ region: REGION });
 
 function attr(user: UserType, name: string): string | undefined {
   return user.Attributes?.find((a) => a.Name === name)?.Value;

@@ -92,11 +92,8 @@ async function confirmUserD1(db: AuthDatabase, email: string): Promise<boolean> 
 
 async function confirmUserCognito(userPoolId: string, email: string): Promise<boolean> {
   try {
-    const { CognitoIdentityProviderClient, AdminConfirmSignUpCommand } =
-      await import("@aws-sdk/client-cognito-identity-provider");
     const issuer = process.env.COGNITO_ISSUER ?? "";
     const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";
-    const client = new CognitoIdentityProviderClient({ region });
     await client.send(new AdminConfirmSignUpCommand({ UserPoolId: userPoolId, Username: email }));
     return true;
   } catch (err: unknown) {
