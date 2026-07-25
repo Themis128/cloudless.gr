@@ -14,13 +14,15 @@
 
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
-const REGION = "auto";
+const REGION = process.env.AWS_REGION || "us-east-1";
 const TTL_DAYS = 30;
 
 let client: any = null;
 
 async function getClient() {
   if (!client) {
+    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
+    client = new DynamoDBClient({ region: REGION, endpoint: resolveDynamoEndpoint() });
   }
   return client;
 }
@@ -37,6 +39,7 @@ export interface StoredTokens {
 }
 
 export async function getTokens(userId: string): Promise<StoredTokens | null> {
+  const { GetItemCommand } = await import("@aws-sdk/client-dynamodb");
   const c = await getClient();
   const res = await c.send(
     new GetItemCommand({
@@ -51,6 +54,7 @@ export async function getTokens(userId: string): Promise<StoredTokens | null> {
 }
 
 export async function putTokens(userId: string, tokens: StoredTokens): Promise<void> {
+  const { PutItemCommand } = await import("@aws-sdk/client-dynamodb");
   const c = await getClient();
   const now = Math.floor(Date.now() / 1000);
   await c.send(
@@ -68,6 +72,7 @@ export async function putTokens(userId: string, tokens: StoredTokens): Promise<v
 }
 
 export async function deleteTokens(userId: string): Promise<void> {
+  const { DeleteItemCommand } = await import("@aws-sdk/client-dynamodb");
   const c = await getClient();
   await c.send(
     new DeleteItemCommand({

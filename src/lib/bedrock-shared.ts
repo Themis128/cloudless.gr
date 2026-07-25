@@ -10,9 +10,10 @@
  * (and SonarCloud's duplication detector stays happy).
  */
 import {
+  BedrockRuntimeClient,
   ConverseCommand,
   type ToolConfiguration,
-} from "@/types/aws-sdk/client-bedrock-runtime";
+} from "@aws-sdk/client-bedrock-runtime";
 
 const DEFAULT_REGION = "us-east-1";
 // Switched 2026-06-19 from us.anthropic.claude-haiku-4-5-20251001-v1:0 to Nova
@@ -58,7 +59,10 @@ export interface BedrockMessage {
 // Lazy singleton — created once per Lambda cold start.
 // ---------------------------------------------------------------------------
 
+let _client: BedrockRuntimeClient | null = null;
 
+export function getBedrockClient(): BedrockRuntimeClient {
+  _client ??= new BedrockRuntimeClient({ region: BEDROCK_REGION });
   return _client;
 }
 
@@ -98,6 +102,7 @@ export function buildBedrockToolConfig(
 // ---------------------------------------------------------------------------
 
 export interface RunBedrockTurnOptions {
+  client: BedrockRuntimeClient;
   system: string;
   messages: BedrockMessage[];
   /** Omit (or pass an empty tools array) for plain text generation —

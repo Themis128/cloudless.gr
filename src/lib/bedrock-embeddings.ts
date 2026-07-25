@@ -1,5 +1,6 @@
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
-const REGION = "auto";
+const REGION = process.env.AWS_REGION || "us-east-1";
 
 export const BEDROCK_TITAN_EMBED_MODEL_ID =
   process.env.BEDROCK_EMBED_MODEL_ID || "amazon.titan-embed-text-v2:0";
@@ -9,7 +10,10 @@ export const BEDROCK_EMBED_DIMENSIONS = Number.parseInt(
   10,
 );
 
+let client: BedrockRuntimeClient | null = null;
 
+function getBedrockClient(): BedrockRuntimeClient {
+  client ??= new BedrockRuntimeClient({ region: REGION });
   return client;
 }
 

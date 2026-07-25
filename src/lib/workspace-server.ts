@@ -1,20 +1,35 @@
-/** * Multi-tenant workspace plumbing. * * D1 primary (Cloudflare Workers) - D1 config table with key "WORKSPACES_JSON" * SSM fallback (AWS Lambda) - Legacy support during transition * * Note: This file now uses D1 as primary storage. SSM fallback remains for AWS Lambda compatibility. */import { cookies } from "next/headers";
+/**
+ * Multi-tenant workspace plumbing.
+ *
+ * D1 primary (Cloudflare Workers) + SSM fallback (AWS Lambda).
+ * D1: config table with key "WORKSPACES_JSON"
+ * SSM legacy: /cloudless/WORKSPACES_JSON
+ */
+
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import type { AuthDatabase } from "@/lib/auth-d1";
-import { isAdmin, requireAuth, type AuthResult, type DecodedToken } from "@/lib/api-auth";
 
 /** Cookie key that carries the active workspace id between client/server.
- * Mirrors `localStorage[cloudless_workspace_id]` set by WorkspaceContext.
- * Browser sends it on same-origin requests; route handlers + RSC reads it.
- */
+ *  Mirrors `localStorage[cloudless_workspace_id]` set by WorkspaceContext.
+ *  Browser sends it on same-origin requests; route handlers + RSC reads it. */
 export const WORKSPACE_COOKIE = "cloudless_workspace_id";
-/** Configuration key for workspaces list in D1 config table. */
-export const D1_KEY = "WORKSPACES_JSON";
 
+/** SSM parameter that stores the entire workspaces list as a JSON array. */
+export const SSM_KEY = "/cloudless/WORKSPACES_JSON";
+const D1_KEY = "WORKSPACES_JSON";
+
+const REGION = process.env.AWS_REGION ?? "eu-central-1";
 const CACHE_TTL_MS = 30_000;
 
+// D1 binding interface - provided by Worker context
+interface Env {
+  AUTH_DB: AuthDatabase;
+}
+
 function getAuthDb(): AuthDatabase | null {
-  const env = process.env as unknown as { AUTH_DB: AuthDatabase };
+  const env = process.env as unknown as Env;
   return env.AUTH_DB ?? null;
 }
 
@@ -25,9 +40,14 @@ export interface Workspace {
   description: string;
   adminEmails: string[];
   createdAt: string;
-  /** Optional Postiz "group" (customer) id this workspace maps to. When set, * Postiz API calls automatically filter integrations + posts by this group * so each workspace sees only its own connected channels. Created/edited * via the workspaces PATCH route. */
+  /** Optional Postiz "group" (customer) id this workspace maps to. When set,
+   *  Postiz API calls automatically filter integrations + posts by this group
+   *  so each workspace sees only its own connected channels. Created/edited
+   *  via the workspaces PATCH route. */
   postizGroupId?: string;
-  /** Optional Notion tag string written into the `WorkspaceID` column on * content-calendar rows. When set, the calendar API filters its query by * this id so each workspace sees only its own calendar items. */
+  /** Optional Notion tag string written into the `WorkspaceID` column on
+   *  content-calendar rows. When set, the calendar API filters its query by
+   *  this id so each workspace sees only its own calendar items. */
   notionTag?: string;
 }
 
@@ -38,7 +58,7 @@ interface WorkspaceCache {
 
 let cached: WorkspaceCache | null = null;
 
-/** Reset the cache — primarily for tests. */
+/** Reset the SSM cache — primarily for tests. */
 export function resetWorkspaceCache(): void {
   cached = null;
 }
@@ -70,26 +90,50 @@ async function writeToD1(workspaces: Workspace[]): Promise<void> {
   await db
     .prepare(
       "INSERT INTO config (key, value, updated_at) VALUES (?, ?, ?) " +
-      "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
     )
     .bind(D1_KEY, JSON.stringify(workspaces), Math.floor(Date.now() / 1000))
     .run();
 }
 
+async function readFromSSM(): Promise<Workspace[]> {
+  try {
+    const client = new SSMClient({ region: REGION });
+    const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
+    const data = JSON.parse(res.Parameter?.Value ?? "[]") as Workspace[];
+    cached = { data: Array.isArray(data) ? data : [], expiresAt: Date.now() + CACHE_TTL_MS };
+    return cached.data;
+  } catch {
+    return cached?.data ?? [];
+  }
+}
+
+async function writeToSSM(workspaces: Workspace[]): Promise<void> {
+  const client = new SSMClient({ region: REGION });
+  await client.send(
+    new PutParameterCommand({
+      Name: SSM_KEY,
+      Value: JSON.stringify(workspaces),
+      Type: "String",
+      Overwrite: true,
+    })
+  );
+}
+
 export async function readWorkspaces(): Promise<Workspace[]> {
-  // Try D1 first (Cloudflare Workers - primary storage)
+  // Try D1 first (Cloudflare Workers)
   const db = getAuthDb();
   if (db) {
     const d1Result = await readFromD1();
     if (d1Result) return d1Result;
   }
 
-  // Fallback to empty array if D1 unavailable
-  return cached?.data ?? [];
+  // Fall back to SSM
+  return readFromSSM();
 }
 
 export async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
-  // Try D1 first (Cloudflare Workers - primary storage)
+  // Try D1 first (Cloudflare Workers)
   const db = getAuthDb();
   if (db) {
     try {
@@ -98,22 +142,20 @@ export async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
       return;
     } catch (err) {
       console.warn(
-        "[workspace-server] D1 write failed, cache updated:",
+        "[workspace-server] D1 write failed, falling back to SSM:",
         err instanceof Error ? err.message : err
       );
-      // Continue with cache update
+      // Fall through to SSM
     }
   }
 
-  // Update cache even if D1 unavailable
+  await writeToSSM(workspaces);
   cached = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
 }
 
-/***
- * Resolve the active workspace id from the request cookie. Falls back to the
- * RSC cookies() store when no NextRequest is provided (server-component
- * usage). Returns `null` when no cookie is present.
- */
+/** Resolve the active workspace id from the request cookie. Falls back to the
+ *  RSC cookies() store when no NextRequest is provided (server-component
+ *  usage). Returns `null` when no cookie is present. */
 export async function getActiveWorkspaceId(request?: NextRequest): Promise<string | null> {
   if (request) {
     return request.cookies.get(WORKSPACE_COOKIE)?.value ?? null;
@@ -126,10 +168,8 @@ export async function getActiveWorkspaceId(request?: NextRequest): Promise<strin
   }
 }
 
-/***
- * Resolve the full active workspace (cookie id + D1/SSM lookup). Returns `null`
- * when the cookie is missing OR the id no longer exists.
- */
+/** Resolve the full active workspace (cookie id + D1/SSM lookup). Returns `null`
+ *  when the cookie is missing OR the id no longer exists. */
 export async function getActiveWorkspace(request?: NextRequest): Promise<Workspace | null> {
   const id = await getActiveWorkspaceId(request);
   if (!id) return null;
@@ -140,7 +180,7 @@ export async function getActiveWorkspace(request?: NextRequest): Promise<Workspa
 export type WorkspaceAuthResult =
   { ok: true; user: DecodedToken; workspace: Workspace } | { ok: false; response: NextResponse };
 
-/***
+/**
  * Pure authorization decision: determine if a user has access to a workspace.
  * Returns "granted" | "no_workspace" | "forbidden".
  * Exported for testability — the actual gate wraps this with I/O.
@@ -157,26 +197,26 @@ export function checkWorkspaceAccess(
   return "forbidden";
 }
 
-/***
+/**
  * Workspace-scoped admin gate.
  *
  * Decision tree:
- * 1. Caller must pass `requireAuth` (valid session or Bearer JWT).
- * 2. The active workspace cookie must point at an existing workspace.
- * 3. EITHER the caller is a global admin (Cognito `admin` group) —
- * access granted to ANY workspace — OR the caller's email is listed
- * in `workspace.adminEmails` — access granted to THIS workspace.
- * 4. Otherwise 403.
+ *   1. Caller must pass `requireAuth` (valid session or Bearer JWT).
+ *   2. The active workspace cookie must point at an existing workspace.
+ *   3. EITHER the caller is a global admin (Cognito `admin` group) —
+ *      access granted to ANY workspace — OR the caller's email is listed
+ *      in `workspace.adminEmails` — access granted to THIS workspace.
+ *   4. Otherwise 403.
  *
  * `requireAdmin` (the global gate) is unchanged; this is purely additive.
  * Routes opt in by calling `requireWorkspaceAdmin` instead.
  */
 export async function requireWorkspaceAdmin(request: NextRequest): Promise<WorkspaceAuthResult> {
-  const authResult = await requireAuth(request);
+  const authResult: AuthResult = await requireAuth(request);
   if (!authResult.ok) return authResult;
 
   const workspace = await getActiveWorkspace(request);
-  const decision = checkWorkspaceAccess(authResult.user, workspace, authResult.user.isAdmin);
+  const decision = checkWorkspaceAccess(authResult.user, workspace, isAdmin(authResult.user));
 
   if (decision === "no_workspace") {
     return {
@@ -197,3 +237,6 @@ export async function requireWorkspaceAdmin(request: NextRequest): Promise<Works
 
   return { ok: true, user: authResult.user, workspace: workspace! };
 }
+
+// Import for DecodedToken and AuthResult types
+import { isAdmin, requireAuth, type AuthResult, type DecodedToken } from "@/lib/api-auth";

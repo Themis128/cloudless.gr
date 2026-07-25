@@ -6,9 +6,6 @@ export async function POST(request: NextRequest) {
   const prepared = await prepareOrchestration(request, "Analytics PDF export failed.");
   if (!prepared.ok) return prepared.response;
 
-const auth = await requireAdmin(request);
-if (!auth.ok) return auth.response;
-
   const { snapshot, orchestration, reportTitle } = prepared.data;
   const pdf = await renderAnalyticsReportPdf({
     reportTitle,

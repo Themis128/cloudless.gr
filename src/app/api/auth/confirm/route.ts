@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  CognitoIdentityProviderClient,
   ConfirmSignUpCommand,
-} from "@/types/aws-sdk/client-cognito-identity-provider";
+} from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac } from "crypto";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
+function makeClient(): CognitoIdentityProviderClient {
   const issuer = process.env.COGNITO_ISSUER ?? "";
   const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";
+  return new CognitoIdentityProviderClient({ region });
 }
 
 function secretHash(username: string): string | undefined {

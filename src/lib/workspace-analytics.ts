@@ -1,5 +1,5 @@
 import { readWorkspaces, type Workspace } from "@/lib/workspace-server";
-import { readPortals, type ClientPortal } from "@/types/aws-sdk";
+import { readPortals, type ClientPortal } from "@/lib/client-portals";
 import { getCalendarItems, type CalendarItem } from "@/lib/content-calendar";
 import { scoreClientHealth } from "@/lib/client-health";
 

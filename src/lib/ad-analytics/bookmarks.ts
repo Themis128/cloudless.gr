@@ -21,6 +21,7 @@
  * digests).
  */
 
+import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
 // ---------------------------------------------------------------------------
 // In-memory fallback store
@@ -58,8 +59,11 @@ export function getBookmarkStore(): BookmarkStore {
 // DynamoDB store
 // ---------------------------------------------------------------------------
 
+let dynamoClient: DynamoDBClient | null = null;
 
+async function getDynamoClient(): Promise<DynamoDBClient> {
   if (!dynamoClient) {
+    const { DynamoDBClient: DC } = await import("@aws-sdk/client-dynamodb");
     dynamoClient = new DC({
       region: process.env.AWS_REGION || "us-east-1",
       endpoint: process.env.DYNAMODB_ENDPOINT?.trim() || undefined,
@@ -84,6 +88,7 @@ export function bookmarkKeyOf(opts: {
 }
 
 export async function getBookmark(key: string): Promise<BookmarkRow | null> {
+  const { GetItemCommand } = await import("@aws-sdk/client-dynamodb");
   const c = await getDynamoClient();
   const res = await c.send(
     new GetItemCommand({
@@ -103,6 +108,7 @@ export async function putBookmark(
   key: string,
   _snapshotOrRow: Record<string, unknown> | BookmarkRow
 ): Promise<void> {
+  const { PutItemCommand } = await import("@aws-sdk/client-dynamodb");
   const c = await getDynamoClient();
   const now = Date.now();
   const snapshot = "snapshot" in _snapshotOrRow ? _snapshotOrRow.snapshot : _snapshotOrRow;

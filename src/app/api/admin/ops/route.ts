@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       command?: string;
       target?: string;
-       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       [key: string]: any;
     };
 
