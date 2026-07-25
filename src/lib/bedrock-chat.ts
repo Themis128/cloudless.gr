@@ -15,7 +15,7 @@
  * Region: us-east-1 (Lambda deployment region; falls back to AWS_REGION env var)
  */
 
-import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
+import { ConverseCommand } from "@/types/aws-sdk/client-bedrock-runtime";
 import { CHAT_TOOLS, runTool } from "@/lib/chat-tools";
 import {
   BEDROCK_MODEL_ID,

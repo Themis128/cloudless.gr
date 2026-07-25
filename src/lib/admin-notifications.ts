@@ -1,5 +1,5 @@
-import type { AttributeValue } from "@aws-sdk/client-dynamodb";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import type { AttributeValue } from "@/types/aws-sdk/client-dynamodb";
+import { S3Client, PutObjectCommand } from "@/types/aws-sdk/client-s3";
 import type { AuthDatabase } from "@/lib/auth-d1";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 

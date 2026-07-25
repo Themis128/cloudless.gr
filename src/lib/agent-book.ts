@@ -11,7 +11,7 @@
  *   - two-phase (propose → confirm) so the model can't fire the booking solo
  *   - tighter system prompt scoped to scheduling only
  */
-import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
+import { ConverseCommand } from "@/types/aws-sdk/client-bedrock-runtime";
 import { getAvailableSlots } from "@/lib/google-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import {

@@ -1,0 +1,1 @@
+// Type stub for Prisma client\nexport interface PrismaClient {\n findMany(): Promise<any[]>;\n findUnique(): Promise<any>;\n create(): Promise<any>;\n update(): Promise<any>;\n delete(): Promise<any>;\n}\n

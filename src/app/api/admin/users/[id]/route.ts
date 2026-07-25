@@ -11,7 +11,7 @@ import {
   AdminGetUserCommand,
   AdminUpdateUserAttributesCommand,
   type UserType,
-} from "@aws-sdk/client-cognito-identity-provider";
+} from "@/types/aws-sdk/client-cognito-identity-provider";
 
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID ?? "";
 const REGION = process.env.AWS_REGION ?? "us-east-1";

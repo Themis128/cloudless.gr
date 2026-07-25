@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   CognitoIdentityProviderClient,
   ConfirmSignUpCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
+} from "@/types/aws-sdk/client-cognito-identity-provider";
 import { createHmac } from "crypto";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 

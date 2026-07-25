@@ -1,0 +1,1 @@
+// Type stub for athena-r2 module\ndeclare module "@/lib/athena-r2" {\n export function runAthenaQuery(sql: string, options?: { ttlMs?: number }): Promise<{ rows: any[] }>;\n}\n

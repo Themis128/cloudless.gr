@@ -1,0 +1,1 @@
+// Type stub for Prisma client module\ndeclare module "@/lib/prisma" {\n export const prisma: any;\n}\n\ndeclare module "@prisma/client" {\n export const prisma: any;\n}\n

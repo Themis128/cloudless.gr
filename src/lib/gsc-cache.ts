@@ -14,7 +14,7 @@ import {
   GetItemCommand,
   PutItemCommand,
   type AttributeValue,
-} from "@aws-sdk/client-dynamodb";
+} from "@/types/aws-sdk/client-dynamodb";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
 // ---------------------------------------------------------------------------

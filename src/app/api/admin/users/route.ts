@@ -8,7 +8,7 @@ import {
   AdminAddUserToGroupCommand,
   AdminRemoveUserFromGroupCommand,
   type UserType,
-} from "@aws-sdk/client-cognito-identity-provider";
+} from "@/types/aws-sdk/client-cognito-identity-provider";
 import { requireAdmin } from "@/lib/api-auth";
 
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID ?? "";

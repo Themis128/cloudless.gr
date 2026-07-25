@@ -9,7 +9,7 @@
  * Gracefully no-ops when the topic ARN is not configured (SSM key missing).
  * All publishes are fire-and-forget — never block the caller.
  */
-import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
+import { SNSClient, PublishCommand } from "@/types/aws-sdk/client-sns";
 import { getConfig } from "@/lib/ssm-config";
 
 // ---------------------------------------------------------------------------

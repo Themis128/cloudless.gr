@@ -12,7 +12,7 @@
  * persisted parameter was never visible to the reader. The constants here
  * keep them aligned forever.
  */
-import { SSMClient, PutParameterCommand } from "@aws-sdk/client-ssm";
+import { SSMClient, PutParameterCommand } from "@/types/aws-sdk/client-ssm";
 import type { AuthDatabase } from "@/lib/auth-d1";
 
 export const VOICE_BRIEF_SSM_NAME = "/cloudless/production/VOICE_BRIEF_LATEST";

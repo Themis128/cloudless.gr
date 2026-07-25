@@ -1,0 +1,1 @@
+// Type stub for AWS S3 client\ndeclare module "@aws-sdk/client-s3" {\n export class S3Client {\n constructor(config?: any);\n send(command: any): Promise<any>;\n }\n\nexport class HeadObjectCommand {\n constructor(params: any);\n}\n\nexport class PutObjectCommand {\n constructor(params: any);\n}\n\nexport class GetObjectCommand {\n constructor(params: any);\n}\n}\n

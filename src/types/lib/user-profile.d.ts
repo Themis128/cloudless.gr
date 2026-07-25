@@ -1,0 +1,1 @@
+// Type stub for user-profile module\ndeclare module "@/lib/user-profile" {\n export function getUserProfile(email: string): Promise<any>;\n export function putUserProfile(email: string, data: any): Promise<void>;\n}\n

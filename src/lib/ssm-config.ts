@@ -1,11 +1,5 @@
 // Import D1 configuration functions
-import {
-  isWorkersEnvironment,
-  getD1Config,
-  getD1ConfigValue,
-  setD1ConfigValue,
-  type D1Config
-} from "./ssm-config-d1.ts";
+import { isWorkersEnvironment, getD1Config, getD1ConfigValue, setD1ConfigValue, type D1Config } from "./ssm-config-d1";
 
 interface AppConfig {
   SES_FROM_EMAIL: string;

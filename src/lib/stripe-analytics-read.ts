@@ -1,4 +1,4 @@
-import type { AttributeValue } from "@aws-sdk/client-dynamodb";
+import type { AttributeValue } from "@/types/aws-sdk/client-dynamodb";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
 const REGION = process.env.AWS_REGION || "us-east-1";

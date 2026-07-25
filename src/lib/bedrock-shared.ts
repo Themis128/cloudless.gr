@@ -13,7 +13,7 @@ import {
   BedrockRuntimeClient,
   ConverseCommand,
   type ToolConfiguration,
-} from "@aws-sdk/client-bedrock-runtime";
+} from "@/types/aws-sdk/client-bedrock-runtime";
 
 const DEFAULT_REGION = "us-east-1";
 // Switched 2026-06-19 from us.anthropic.claude-haiku-4-5-20251001-v1:0 to Nova

@@ -21,7 +21,7 @@
  * digests).
  */
 
-import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import type { DynamoDBClient } from "@/types/aws-sdk/client-dynamodb";
 
 // ---------------------------------------------------------------------------
 // In-memory fallback store
