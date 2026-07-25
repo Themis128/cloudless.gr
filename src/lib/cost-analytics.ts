@@ -103,7 +103,8 @@ export async function getYesterdayCost(): Promise<number> {
  */
 export async function getLastEtlAt(): Promise<string | null> {
   try {
-    const { S3Client, HeadObjectCommand } = await import("@aws-sdk/client-s3");
+    const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
+    const s3 = createR2ClientFromEnv();
     const s3 = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
     const out = await s3.send(
       new HeadObjectCommand({
