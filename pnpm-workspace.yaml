@@ -10,6 +10,7 @@ allowBuilds:
   '@sentry/cli': true
   '@swc/core': true
   core-js-pure: true
+  duckdb: set this to true or false
   esbuild: true
   sharp: true
   unrs-resolver: true
