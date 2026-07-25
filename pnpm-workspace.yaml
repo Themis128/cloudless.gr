@@ -79,3 +79,6 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.3.0-canary.89'
   - miniflare@4.20260722.0
   - wrangler@4.114.0
+  - postcss@8.5.23
+  - electron-to-chromium@1.5.396
+  - langsmith@0.8.7
