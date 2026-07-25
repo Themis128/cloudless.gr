@@ -1,5 +1,5 @@
 # Cloudless.gr Migration - Comprehensive Todo List
-# Generated: 2026-07-24 | Based on all migration docs and existing todo files
+# Generated: 2026-07-25 | Updated based on ETL analysis
 
 ## 🔴 HIGH PRIORITY - Blocking Production
 
@@ -17,9 +17,12 @@
 
 ## 🟡 MEDIUM PRIORITY - Migration Completion
 
-### ETL Script Migration (2 Remaining from AWS→Cloudflare)
-- [ ] `scripts/etl/clients-to-lake.mjs` - Migrate SSM → D1 `app_config`
-- [ ] `scripts/etl/portals-to-lake.mjs` - Migrate SSM → D1 `app_config`
+### ETL Script Migration Status
+- [x] `scripts/etl/clients-to-lake.mjs` - Already migrated to R2 with D1 config (verified)
+- [x] `scripts/etl/portals-to-lake.mjs` - Already migrated to R2 with D1 config (verified)
+- [x] `scripts/etl/clients-to-r2.mjs` - Fully migrated to R2 with D1 config
+- [x] `scripts/etl/portals-to-r2.mjs` - Fully migrated to R2 with D1 config
+- [ ] Remove legacy AWS versions: `clients-to-lake.mjs.bak` and `portals-to-lake.mjs`
 
 ### Infrastructure & Operations
 - [ ] Restart Cline/Claude desktop to load MCP configuration changes
@@ -28,8 +31,7 @@
 ## 🟢 LOW PRIORITY - Nice to Have
 
 ### Testing & Verification
-- [ ] Verify `clients-to-r2.mjs` deployment works end-to-end
-- [ ] Run full ETL pipeline on Pi runners to verify no SSM/AWS dependencies
+- [ ] Verify ETL pipeline runs end-to-end on Pi runners
 - [ ] Run Playwright E2E tests against production (cloudless.gr and pi-origin.cloudless.gr)
 
 ### Code Quality
