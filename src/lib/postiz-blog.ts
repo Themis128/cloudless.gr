@@ -1,6 +1,6 @@
 /**
  * postiz-blog — auto-post a blog post to connected social channels when its
- * Status flips to `Published`. Wired from `src/app/api/webhooks/content/route.ts`
+ * Status flips to `Published`. Wired from `src/app/api/webhooks/notion/route.ts`
  * on the `database=blog`, `type=page.updated` event.
  *
  * Opt-in: only fires when the env flag `AUTO_POST_BLOG_TO_SOCIAL=1` is set

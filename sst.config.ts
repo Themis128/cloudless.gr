@@ -7,16 +7,24 @@ const STAGE_PRODUCTION = "production";
 /**
  * Lambda runtime environment for the Next.js site.
  *
- * Hoisted out of run() so the function stays under the cyclomatic /
- * line-count limit. Returned object is passed verbatim to
- * sst.aws.Nextjs.environment — no Pulumi inputs are wrapped here, so
- * the Output<string> for the DynamoDB table name is passed through.
+ * Auth provider: Cognito (always-up AWS), activated by passing the `cognito`
+ * argument so the Lambda env carries the COGNITO_* variables.
  */
 function buildSiteEnvironment(
   stage: string,
   isProd: boolean,
   stripeTransactionsTableName: $util.Output<string>,
+  userProfileTableName: $util.Output<string>,
+  adminNotificationsTableName: $util.Output<string>,
+  analyticsCacheTableName: $util.Output<string>,
+  sessionTokenStoreTableName: $util.Output<string>,
   authSecret?: $util.Output<string>,
+  cognito?: {
+    issuer: $util.Output<string>;
+    clientId: $util.Output<string>;
+    clientSecret: $util.Output<string>;
+    domain: string;
+  }
 ) {
   return {
     // next-auth requires AUTH_SECRET as an env var (reads synchronously at
@@ -29,32 +37,49 @@ function buildSiteEnvironment(
     NODE_ENV: "production",
     SSM_PREFIX: isProd ? "/cloudless/production" : `/cloudless/${stage}`,
     // AWS_REGION is set automatically by Lambda — do not override it
-    NEXT_PUBLIC_SITE_URL: isProd
-      ? "https://cloudless.gr"
-      : `https://${stage}.cloudless.gr`,
+    NEXT_PUBLIC_SITE_URL: isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`,
     NEXT_PUBLIC_STAGE: stage,
     // Carry the deploy SHA into runtime so /api/health.version reports
-    // what's actually deployed (instead of the static "0.1.0" fallback
-    // in src/app/api/health/route.ts). Used by scripts/detect-sha-drift
-    // to compare cloud actual vs SSM expected.
+    // what's actually deployed.
     APP_VERSION: process.env.GITHUB_SHA ?? "local",
+    // R14: tag this surface in Sentry as "production" so events route
+    // separately from Pi-side events (which use SENTRY_ENVIRONMENT=pi-standby
+    // via the k8s container env). Lets Sentry dashboards filter by surface
+    // during failover incidents.
+    SENTRY_ENVIRONMENT: isProd ? "prod" : `staging-${stage}`,
     STRIPE_TRANSACTIONS_TABLE: stripeTransactionsTableName,
-    // AWS Cognito — replaces Keycloak. Public values baked into the client
-    // bundle; the user pool ID and Hosted UI domain are non-secret constants.
-    // The app client ID is injected at deploy time (process.env, sourced from
-    // the NEXT_PUBLIC_COGNITO_CLIENT_ID GitHub secret / SSM) because it is
-    // provisioned per-environment.
-    NEXT_PUBLIC_COGNITO_USER_POOL_ID: "us-east-1_1Bq3Mpqer",
-    NEXT_PUBLIC_COGNITO_DOMAIN:
-      "https://cloudless-auth.auth.us-east-1.amazoncognito.com",
-    NEXT_PUBLIC_COGNITO_CLIENT_ID:
-      process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "",
-    // Server-side only (JWT issuer for proxy.ts + api-auth.ts + next-auth
-    // Cognito provider). AWS_REGION is set automatically by Lambda.
-    COGNITO_USER_POOL_ID: "us-east-1_1Bq3Mpqer",
-    // COGNITO_CLIENT_ID and COGNITO_CLIENT_SECRET loaded from SSM at runtime
-    // by ssm-config.ts (the app client is provisioned per-environment).
-    // AUTH_SECRET injected from SSM at deploy time (above).
+    USER_PROFILE_TABLE: userProfileTableName,
+    ADMIN_NOTIFICATIONS_TABLE: adminNotificationsTableName,
+    ANALYTICS_CACHE_TABLE: analyticsCacheTableName,
+    SESSION_TOKEN_STORE_TABLE: sessionTokenStoreTableName,
+    // Analytics datalake bucket — consumed by src/lib/analytics.ts,
+    // src/lib/admin-notifications.ts (LAKE_BUCKET), and
+    // src/lib/stripe-transactions.ts. Writes events/year=…/month=…/day=…/*.ndjson
+    // and lake/{clients,notifications,portals,transactions}/*. Before this
+    // env was set the libs defaulted to "cloudless-analytics-data" but the
+    // Lambda had no S3 IAM grant, so every PutObject was silently caught
+    // and dropped — the lake had 0 objects under events/ as of 2026-06-20
+    // (datalake audit). The matching `s3:PutObject` permission is granted
+    // below in the `permissions` array.
+    ANALYTICS_S3_BUCKET: "cloudless-analytics-data",
+    // Cloudflare Workers AI — consumed by /api/admin/ai/generate. Passed from
+    // the deploy workflow env; the route returns 503 when absent.
+    ...(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
+      ? {
+          CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+          CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+        }
+      : {}),
+    // Auth provider — Cognito (AWS). NEXT_PUBLIC_AUTH_PROVIDER drives the login button label.
+    ...(cognito
+      ? {
+          COGNITO_ISSUER: cognito.issuer,
+          COGNITO_CLIENT_ID: cognito.clientId,
+          COGNITO_CLIENT_SECRET: cognito.clientSecret,
+          COGNITO_DOMAIN: cognito.domain,
+          NEXT_PUBLIC_AUTH_PROVIDER: "cognito",
+        }
+      : {}),
     // Notion database IDs (non-secret, safe to inline)
     NOTION_BLOG_DB_ID: "0ac591657ee44063bbbc8004ea7ccd6c",
     NOTION_SUBMISSIONS_DB_ID: "9abe0a5614d64b759d44a45cee2d0bbc",
@@ -62,10 +87,8 @@ function buildSiteEnvironment(
     NOTION_PROJECTS_DB_ID: "a9bab34b945e484fb6b0aa6034086e5c",
     NOTION_TASKS_DB_ID: "14ce4ff6c400437597b13e70ac909354",
     NOTION_ANALYTICS_DB_ID: "cc4287fcb42a42dc92a7053d6f1199c7",
-    // Google Search Console site ownership verification — public token, safe to
-    // inline here; moved out of layout.tsx to keep source files config-free.
-    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION:
-      "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
+    // Google Search Console site ownership verification — public token, safe to inline.
+    NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: "LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w",
     // CMS databases (Testimonials, Case Studies, Services, FAQs)
     NOTION_TESTIMONIALS_DB_ID: "157ceb35d0b44661a6c67798f6d87e7b",
     NOTION_CASE_STUDIES_DB_ID: "7c50dc2403054f4a81f85b0a251ac4d7",
@@ -104,7 +127,6 @@ export default {
     // --- SSM secrets are loaded at runtime by src/lib/ssm-config.ts ---
     // Exception: AUTH_SECRET must be a Lambda env var because next-auth reads
     // it synchronously at module load before ssm-config can async-fetch from SSM.
-    // We fetch it from SSM at deploy time and inject it directly.
     const authSecretParam = aws.ssm.getParameterOutput({
       name: "/cloudless/production/AUTH_SECRET",
       withDecryption: true,
@@ -144,12 +166,165 @@ export default {
       },
     });
 
+    // Provider-agnostic user-profile store (name/company/phone/preferences),
+    // keyed by the OIDC `sub`. Decouples the dashboard profile from the IdP so
+    // it works identically for any OIDC provider (see src/lib/user-profile.ts).
+    const userProfileTable = new sst.aws.Dynamo("UserProfile", {
+      fields: { userId: "string" },
+      primaryIndex: { hashKey: "userId" },
+    });
+
+    // Durable admin notifications store — audit + analytics for every
+    // client-facing interaction (contact, subscribe, booking, order, error,
+    // auth, portal). 90-day hot retention, then archived to S3 via the
+    // notifications-archive cron (see src/lib/admin-notifications.ts).
+    //
+    // pk = "NOTIF", sk = "<createdAt-ISO8601>#<id>"
+    // GSI categoryIndex: catPk = "CAT#<category>", catSk = "<createdAt-ISO8601>#<id>"
+    const adminNotificationsTable = new sst.aws.Dynamo("AdminNotifications", {
+      fields: {
+        pk: "string",
+        sk: "string",
+        catPk: "string",
+        catSk: "string",
+      },
+      primaryIndex: { hashKey: "pk", rangeKey: "sk" },
+      globalIndexes: {
+        categoryIndex: { hashKey: "catPk", rangeKey: "catSk" },
+      },
+    });
+
+    // Read-through cache for Google Search Console responses.
+    //
+    // GSC has per-minute / per-day / 50k-rows-per-day quotas, and every
+    // admin tab open today calls 1-2 endpoints directly. This table caches
+    // each (route, params) combination keyed by a deterministic hash, with
+    // TTL enforced application-side. See src/lib/gsc-cache.ts.
+    //
+    // pk = "<route>"  e.g. "seo", "keywords", "ctr-opportunities"
+    // sk = "<params-hash>"  deterministic for a given query-string
+    //
+    // Refreshed hourly by /api/cron/gsc-cache-refresh (PR C3).
+    const analyticsCacheTable = new sst.aws.Dynamo("AnalyticsCache", {
+      fields: {
+        pk: "string",
+        sk: "string",
+      },
+      primaryIndex: { hashKey: "pk", rangeKey: "sk" },
+    });
+
+    // Session token store — keeps idToken + refreshToken out of the JWT cookie
+    // to avoid hitting the 4KB cookie / CloudFront header size limit (Issue #933).
+    // Keyed by userId (OIDC sub). TTL via `expiresAt` attribute (DynamoDB TTL).
+    const sessionTokenStoreTable = new sst.aws.Dynamo("SessionTokenStore", {
+      fields: { userId: "string" },
+      primaryIndex: { hashKey: "userId" },
+      ttl: "expiresAt",
+    });
+
+    // -------------------------------------------------------------------------
+    // Cognito User Pool — always-up AWS auth
+    //
+    // Active when COGNITO_ISSUER is set in the Lambda env
+    // (passed via `cognito` to buildSiteEnvironment below).
+    // -------------------------------------------------------------------------
+    const userPool = new aws.cognito.UserPool("CloudlessAuth", {
+      name: isProd ? "cloudless-auth" : `cloudless-auth-${stage}`,
+      usernameAttributes: ["email"],
+      autoVerifiedAttributes: ["email"],
+      passwordPolicy: {
+        minimumLength: 8,
+        requireLowercase: false,
+        requireUppercase: false,
+        requireNumbers: false,
+        requireSymbols: false,
+        temporaryPasswordValidityDays: 7,
+      },
+      accountRecoverySetting: {
+        recoveryMechanisms: [{ name: "verified_email", priority: 1 }],
+      },
+      // Self-registration enabled — Hosted UI shows "Create account" link.
+      adminCreateUserConfig: { allowAdminCreateUserOnly: false },
+      mfaConfiguration: "OFF",
+      tags: {
+        Project: "cloudless",
+        Environment: stage || "unknown",
+        Owner: "tbaltzakis",
+        ManagedBy: "sst",
+      },
+    });
+
+    // Admin group — membership gives admin access in the app.
+    // isAdmin() in api-auth.ts checks cognito:groups claim for "admin".
+    new aws.cognito.UserGroup("CloudlessAdminGroup", {
+      userPoolId: userPool.id,
+      name: "admin",
+      description: "Cloudless administrators",
+    });
+
+    // Hosted UI domain (globally unique within us-east-1 Cognito).
+    const hostedUiPrefix = isProd ? "cloudless-auth" : `cloudless-auth-${stage}`;
+    new aws.cognito.UserPoolDomain("CloudlessAuthDomain", {
+      domain: hostedUiPrefix,
+      userPoolId: userPool.id,
+    });
+
+    const cognitoHostedDomain = `https://${hostedUiPrefix}.auth.us-east-1.amazoncognito.com`;
+
+    // Compute the site base URL without a Pulumi dependency — we know it from
+    // the domain config above, so we can use it in the callback URLs below
+    // without creating a circular dependency between the client and the site.
+    const siteBaseUrl = isProd ? "https://cloudless.gr" : `https://${stage}.cloudless.gr`;
+    // Deduplicate: in production siteBaseUrl === "https://cloudless.gr".
+    // localhost:4000 is included so `pnpm dev` works against the prod
+    // Cognito client (we have one user pool / one app client; no separate
+    // local pool). Cognito allows http://localhost callbacks as an exception
+    // to the HTTPS-only rule. Removing this would re-introduce the
+    // "error=redirect_mismatch" we hit on 2026-06-20 when ExplicitAuthFlows
+    // was updated via SDK and silently nulled the callback list.
+    const callbackUrls = [
+      ...new Set([
+        `${siteBaseUrl}/api/auth/callback/cognito`,
+        "https://cloudless.gr/api/auth/callback/cognito",
+        "http://localhost:4000/api/auth/callback/cognito",
+      ]),
+    ];
+    const logoutUrls = [
+      ...new Set([`${siteBaseUrl}/`, "https://cloudless.gr/", "http://localhost:4000/"]),
+    ];
+
+    // Confidential app client — next-auth Cognito provider requires a secret.
+    const userPoolClient = new aws.cognito.UserPoolClient("CloudlessAuthClient", {
+      userPoolId: userPool.id,
+      name: "cloudless-app",
+      generateSecret: true,
+      allowedOauthFlows: ["code"],
+      allowedOauthScopes: ["openid", "email", "profile"],
+      allowedOauthFlowsUserPoolClient: true,
+      supportedIdentityProviders: ["COGNITO"],
+      callbackUrls,
+      logoutUrls,
+      explicitAuthFlows: ["ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_SRP_AUTH"],
+      accessTokenValidity: 1,
+      idTokenValidity: 1,
+      refreshTokenValidity: 30,
+      tokenValidityUnits: {
+        accessToken: "hours",
+        idToken: "hours",
+        refreshToken: "days",
+      },
+    });
+
+    // Issuer URL: https://cognito-idp.<region>.amazonaws.com/<poolId>
+    const cognitoIssuer = $util.interpolate`https://cognito-idp.us-east-1.amazonaws.com/${userPool.id}`;
+
     const site = new sst.aws.Nextjs("CloudlessSite", {
-      // Domain: cloudless.gr with existing Route53 zone + ACM cert.
-      // dns: false — we manage Route 53 records explicitly below to support
-      // failover routing (PRIMARY=CloudFront, SECONDARY=Pi). If we left this
-      // as `sst.aws.dns()`, SST would create plain alias records and clobber
-      // the failover SetIdentifier on every deploy.
+      // Domain: cloudless.gr, fronted by an ACM cert on CloudFront.
+      // dns: false — cloudless.gr is delegated to Cloudflare (ns: fay/jihoon
+      // .ns.cloudflare.com), NOT Route 53. Cloudflare owns the apex/www records
+      // and HA failover (a Cloudflare Load Balancer steers AWS→Pi; see
+      // scripts/setup-cloudflare-lb.sh). SST must therefore never touch DNS,
+      // or it would try to create alias records in a zone it doesn't control.
       domain: {
         name: isProd ? "cloudless.gr" : `${stage}.cloudless.gr`,
         redirects: isProd ? ["www.cloudless.gr"] : [],
@@ -160,22 +335,101 @@ export default {
         stage,
         isProd,
         stripeTransactionsTable.name,
+        userProfileTable.name,
+        adminNotificationsTable.name,
+        analyticsCacheTable.name,
+        sessionTokenStoreTable.name,
         authSecret,
+        {
+          issuer: cognitoIssuer,
+          clientId: userPoolClient.id,
+          clientSecret: userPoolClient.clientSecret.apply((s) => s ?? ""),
+          domain: cognitoHostedDomain,
+        }
       ),
-      link: [stripeTransactionsTable],
+      link: [stripeTransactionsTable, userProfileTable, adminNotificationsTable, analyticsCacheTable, sessionTokenStoreTable],
       permissions: [
+        {
+          // Datalake write grant — Lambda writes NDJSON events to
+          // s3://cloudless-analytics-data/events/year=…/month=…/day=…/*.ndjson
+          // (src/lib/analytics.ts) plus lake/{notifications,transactions}/* from
+          // the matching libs. Scoped tight: PutObject ONLY, and ONLY on the
+          // two prefixes the app actually writes. No List, no Delete, no Get —
+          // those are reserved for Athena (different principal) and the ETL
+          // scripts (run from local laptop / CI via long-lived creds).
+          // Audited 2026-06-20: before this grant, the libs silently caught
+          // the AccessDenied and the lake had 0 objects under events/.
+          actions: ["s3:PutObject"],
+          resources: [
+            "arn:aws:s3:::cloudless-analytics-data/events/*",
+            "arn:aws:s3:::cloudless-analytics-data/lake/*",
+          ],
+        },
+        {
+          // Datalake read grant — Lambda runs Athena queries from the admin
+          // /analytics/datalake dashboard (src/lib/athena.ts). Athena needs:
+          //   - athena:* on the workgroup to start + poll + read results
+          //   - glue:Get* on the catalog/database/tables to resolve table refs
+          //   - s3:GetObject + s3:ListBucket on lake/* + athena-results/* so
+          //     Athena can read the source data and write/read query results
+          // Locked-down to the cloudless-analytics-data bucket only.
+          actions: [
+            "athena:StartQueryExecution",
+            "athena:GetQueryExecution",
+            "athena:GetQueryResults",
+            "athena:GetWorkGroup",
+            "athena:StopQueryExecution",
+            "glue:GetDatabase",
+            "glue:GetDatabases",
+            "glue:GetTable",
+            "glue:GetTables",
+            "glue:GetPartition",
+            "glue:GetPartitions",
+          ],
+          resources: ["*"],
+        },
+        {
+          actions: ["s3:GetObject", "s3:ListBucket", "s3:PutObject"],
+          resources: [
+            "arn:aws:s3:::cloudless-analytics-data",
+            "arn:aws:s3:::cloudless-analytics-data/athena-results/*",
+            "arn:aws:s3:::cloudless-analytics-data/lake/*",
+            "arn:aws:s3:::cloudless-analytics-data/events/*",
+          ],
+        },
         {
           // Allow the Lambda server to invoke Bedrock Converse for the chat widget.
           // The us.* prefix is required for cross-region inference profiles.
+          //
+          // Model: Amazon Nova Micro (switched from Claude Haiku 4.5 on
+          // 2026-06-19). Haiku 4.5 needed a Bedrock Marketplace subscription
+          // that was never enabled on this account; Nova Micro is already
+          // active and is ~30x cheaper. See src/lib/bedrock-shared.ts for
+          // the matching DEFAULT_MODEL_ID — keep these in sync.
           actions: ["bedrock:InvokeModel", "bedrock:Converse"],
           resources: [
             // Foundation model — all US regions (cross-region inference routes through any of these)
-            "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-            "arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
-            "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+            "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0",
+            "arn:aws:bedrock:us-east-2::foundation-model/amazon.nova-micro-v1:0",
+            "arn:aws:bedrock:us-west-2::foundation-model/amazon.nova-micro-v1:0",
             // Cross-region inference profile (us.* prefix routes to any US region)
-            "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0",
+            "arn:aws:bedrock:us-east-1:278585680617:inference-profile/us.amazon.nova-micro-v1:0",
           ],
+        },
+        {
+          // Admin Users page (/api/admin/users) manages Cognito accounts via the
+          // AWS SDK: list users, read group membership, enable/disable, and
+          // promote/demote (admin group). Scoped to this pool only. Without
+          // these the route 500s with AccessDenied in Cognito production.
+          actions: [
+            "cognito-idp:ListUsers",
+            "cognito-idp:AdminListGroupsForUser",
+            "cognito-idp:AdminEnableUser",
+            "cognito-idp:AdminDisableUser",
+            "cognito-idp:AdminAddUserToGroup",
+            "cognito-idp:AdminRemoveUserFromGroup",
+          ],
+          resources: [userPool.arn],
         },
       ],
       warm: isProd ? 5 : 0,
@@ -184,6 +438,24 @@ export default {
         architecture: "arm64",
         runtime: "nodejs22.x",
         timeout: "30 seconds",
+        // X-Ray active tracing — captures cold-start frequency + duration,
+        // p50/p95/p99 by route, and downstream call latency (Bedrock, DDB,
+        // SSM). Documented as Phase 2 in docs/SECURITY_ENHANCEMENTS_ROADMAP.md.
+        // The CloudWatch SERVERLESS-APP_MAIN-Errors alarm only counts errors;
+        // X-Ray segments are what actually explain them. AWS bills $5 / 1M
+        // traces — at our volume that's <$0.01/mo. Sampled 5% by default;
+        // bump if more detail is needed via aws xray put-sampling-rule.
+        tracing: "active",
+      },
+      transform: {
+        // Force arm64 on SST-internal functions (warmer + revalidation).
+        // The server function above is already arm64; these default to x86_64.
+        warmer: (args) => {
+          args.architectures = ["arm64"];
+        },
+        revalidation: (args) => {
+          args.architectures = ["arm64"];
+        },
       },
       transform: {
         // Force arm64 on SST-internal functions (warmer + revalidation).
@@ -224,9 +496,7 @@ export default {
         permissions: [
           {
             actions: ["ssm:GetParameter"],
-            resources: [
-              `arn:aws:ssm:us-east-1:278585680617:parameter${ssmPrefix}/CRON_SECRET`,
-            ],
+            resources: [`arn:aws:ssm:us-east-1:278585680617:parameter${ssmPrefix}/CRON_SECRET`],
           },
         ],
       });
@@ -254,228 +524,43 @@ export default {
         schedule: "cron(0 5 ? * MON *)",
         job: cronJobConfig("/api/cron/voice-brief"),
       });
+
+      // Hourly — pre-warm the GSC AnalyticsCache for the two most common
+      // ranges (7d, 28d) so the first user to open /admin/analytics on a
+      // given hour gets a cache hit instead of a 2-4 s fresh GSC query.
+      // See src/app/api/cron/gsc-cache-refresh/route.ts.
+      new sst.aws.Cron("CronGscCacheRefresh", {
+        schedule: "cron(0 * * * ? *)",
+        job: cronJobConfig("/api/cron/gsc-cache-refresh"),
+      });
     }
 
     // ---------------------------------------------------------------------
-    // Route 53 failover records (production only)
+    // HA / failover
     // ---------------------------------------------------------------------
-    // Architecture: cloudless.gr is dual-homed.
-    //   - PRIMARY: CloudFront distributions (this SST stack), health-checked
-    //     against https://cloudless.gr/api/health
-    //   - SECONDARY: API Gateway HTTP API → Lambda IPv6 proxy → Pi 5
+    // cloudless.gr is dual-homed for high availability:
+    //   - PRIMARY:   this SST stack (CloudFront -> Lambda).
+    //   - SECONDARY: the Pi/k3s cluster, reachable on the public Tailscale
+    //                Funnel (omv.tail8eb71.ts.net:443), serving the SAME
+    //                Next.js image.
     //
-    // Starlink/CGNAT pivot (2026-05-02): the Pi has no public IPv4 (Starlink
-    // CGNAT) but has a global IPv6. The SECONDARY path is now an APIGW HTTP
-    // API (`cloudless-pi-frontend`, id `dwtp9xt4dd`) with custom domains for
-    // cloudless.gr + www.cloudless.gr, fronted by a Lambda function
-    // (`cloudless-pi-proxy`) that runs in a dual-stack VPC and forwards each
-    // request to the Pi over IPv6 on port 18443. The Pi's current global v6
-    // is kept fresh in SSM by `cloudless-ddns-updater` (every 5 min); the
-    // Lambda caches the lookup with a 5 min TTL.
+    // Failover is owned by Cloudflare (where the domain DNS lives), NOT by
+    // Route 53. A Cloudflare Load Balancer health-checks /api/health and steers
+    // traffic AWS -> Pi automatically. Provision/update it with
+    // scripts/setup-cloudflare-lb.sh (CI: .github/workflows/cloudflare-lb.yml).
     //
-    // SECONDARY records are bound to a dedicated R53 health check that
-    // probes the APIGW frontend (NOT CloudFront) so an outage on the AWS
-    // SECONDARY path itself doesn't get masked by the PRIMARY health check.
-    //
-    // Route 53 returns the primary while it's healthy and flips to the
-    // secondary when the PRIMARY health check fails. CloudFront's hosted zone
-    // ID is the well-known constant Z2FDTNDATAQYW2 for all alias records.
-    // APIGW regional has its own well-known zone ID Z1UJRXOUMOOFQ8.
-    if (isProd) {
-      const zoneId = "Z079608614L53CC4EAZM3"; // cloudless.gr hosted zone
-      const healthCheckId = "e239ad5c-dd17-40d7-8045-a153715168cf"; // PRIMARY (CloudFront)
-      const secondaryHealthCheckId = "30a69f1c-8d48-49bd-9067-cabec979478b"; // SECONDARY (APIGW frontend)
-      const cfZoneId = "Z2FDTNDATAQYW2";
-      const apigwZoneId = "Z1UJRXOUMOOFQ8"; // APIGW regional, us-east-1
-      const apexCfDomain = "d3k7muo3c6lw6s.cloudfront.net";
-      const wwwCfDomain = "dgrxxatzrgxfi.cloudfront.net";
-      const apexApigwDomain =
-        "d-uy6dmk95il.execute-api.us-east-1.amazonaws.com";
-      const wwwApigwDomain = "d-2msx2z5q7d.execute-api.us-east-1.amazonaws.com";
-
-      // IMPORTANT — pre-deploy migration required.
-      // The Route 53 records below are *adopted*, not *created*, on first
-      // deploy. The `import:` resource option tells Pulumi to read state from
-      // R53 instead of creating duplicates. Pulumi import ID format for
-      // Route 53 records: ZONEID_NAME_TYPE_SETIDENTIFIER (underscore-sep).
-      //
-      // SECONDARY records (apex+www × A+AAAA, all 4 alias to APIGW) MUST be
-      // pre-applied to Route 53 before `sst deploy` runs against this branch.
-      // The orchestrator will land them via aws-cli prior to merging this PR.
-      //
-      // PRIMARY records were already migrated by PR #90.
-
-      // Apex — PRIMARY A (CloudFront alias)
-      new aws.route53.Record(
-        "ApexPrimary",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "A",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: apexCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_A_primary` },
-      );
-
-      // Apex — SECONDARY A (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "ApexSecondary",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "A",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: apexApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_A_secondary` },
-      );
-
-      // Apex — SECONDARY AAAA (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "ApexSecondaryAAAA",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: apexApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_AAAA_secondary` },
-      );
-
-      // Apex — PRIMARY AAAA (CloudFront alias).
-      new aws.route53.Record(
-        "ApexPrimaryAAAA",
-        {
-          zoneId,
-          name: "cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: apexCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_cloudless.gr_AAAA_primary` },
-      );
-
-      // www — PRIMARY A (CloudFront alias)
-      new aws.route53.Record(
-        "WwwPrimary",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "A",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: wwwCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_A_primary` },
-      );
-
-      // www — SECONDARY A (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "WwwSecondary",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "A",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: wwwApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_A_secondary` },
-      );
-
-      // www — SECONDARY AAAA (alias to APIGW custom domain, dual-stack)
-      new aws.route53.Record(
-        "WwwSecondaryAAAA",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "secondary",
-          failoverRoutingPolicies: [{ type: "SECONDARY" }],
-          healthCheckId: secondaryHealthCheckId,
-          aliases: [
-            {
-              name: wwwApigwDomain,
-              zoneId: apigwZoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_AAAA_secondary` },
-      );
-
-      // www — PRIMARY AAAA (CloudFront alias).
-      new aws.route53.Record(
-        "WwwPrimaryAAAA",
-        {
-          zoneId,
-          name: "www.cloudless.gr",
-          type: "AAAA",
-          setIdentifier: "primary",
-          failoverRoutingPolicies: [{ type: "PRIMARY" }],
-          healthCheckId,
-          aliases: [
-            {
-              name: wwwCfDomain,
-              zoneId: cfZoneId,
-              evaluateTargetHealth: false,
-            },
-          ],
-        },
-        { import: `${zoneId}_www.cloudless.gr_AAAA_primary` },
-      );
-    }
+    // HISTORY: a Route 53 PRIMARY/SECONDARY record set used to live here, but
+    // the domain has never actually been delegated to Route 53 (it resolves via
+    // Cloudflare), so those records served no real traffic. The hosted zone
+    // Z079608614L53CC4EAZM3 was then deleted out-of-band on 2026-06-02, which
+    // broke every sst deploy (pulumi could no longer refresh the imported
+    // records). The dead block was removed in favour of the Cloudflare LB.
 
     return {
       url: site.url,
+      cognitoUserPoolId: userPool.id,
+      cognitoClientId: userPoolClient.id,
+      cognitoHostedDomain,
     };
   },
 } satisfies sst.Config;

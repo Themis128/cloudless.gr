@@ -60,12 +60,6 @@ spec:
                       key: AWS_SECRET_ACCESS_KEY
                 - name: AWS_DEFAULT_REGION
                   value: "us-east-1"
-                - name: KUMA_PUSH_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: cluster-alerts-kuma
-                      key: KUMA_PUSH_BACKUP_APPFLOWY
-                      optional: true
               command:
                 - /bin/sh
                 - -c
@@ -84,12 +78,8 @@ spec:
                   echo "✅ uploaded ${SIZE} bytes"
                   if [ "${SIZE}" -lt 10000 ]; then
                     echo "❌ backup suspiciously small (<10KB) — failing job for retry"
-                    [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
-                      wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=appflowy+backup+too+small" >/dev/null 2>&1 || true
                     exit 1
                   fi
-                  [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
-                    wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=appflowy+backup+ok+${SIZE}+bytes" >/dev/null 2>&1 || true
               resources:
                 requests:
                   memory: "128Mi"

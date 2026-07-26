@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Audit the production Lambda's env vars vs. expected post-Keycloak baseline.
+# Audit the production Lambda's env vars vs. expected baseline.
 # Flags missing/stale vars that cause 500s on /api/auth/*.
 #
 # Usage: bash scripts/lambda-env-audit.sh
@@ -73,16 +73,11 @@ echo "▸ Required for next-auth (Cognito):"
 check "AUTH_SECRET" required "next-auth JWT encryption — 500 if missing"
 check "AUTH_TRUST_HOST" required "must be 'true' behind CloudFront"
 check "AUTH_URL" required "callback URL construction"
-check "COGNITO_USER_POOL_ID" required "server-side JWT verify (proxy.ts + api-auth.ts)"
-check "COGNITO_CLIENT_ID" required "next-auth Cognito provider"
-check "NEXT_PUBLIC_COGNITO_USER_POOL_ID" required "client OIDC init + USE_HOSTED_UI gate"
-check "NEXT_PUBLIC_COGNITO_CLIENT_ID" required "client OIDC init"
-check "NEXT_PUBLIC_COGNITO_DOMAIN" required "Hosted UI signup / forgot-password redirects"
 
 echo ""
 echo "▸ Required for SSM-loaded secrets:"
 check "SSM_PREFIX" required "where ssm-config.ts looks"
-check "NEXT_PUBLIC_SITE_URL" required "Stripe/HubSpot callback URLs"
+check "NEXT_PUBLIC_SITE_URL" required "Stripe/EspoCRM callback URLs"
 
 echo ""
 echo "▸ Deploy traceability:"

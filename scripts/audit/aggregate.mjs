@@ -167,9 +167,6 @@ async function fetchArtifact(runId, prefix, fileName) {
   if (!ct.includes("zip") && !ct.includes("octet-stream")) {
     throw new Error(`Unexpected artifact content-type: ${ct}`);
   }
-  // CodeQL #1802: Intermediate ZIP archive from trusted GitHub artifact sources only
-  // (validated by assertSafeFetchUrl + content-type check + magic header).
-  // The JSON content is sanitized via stripCtrl before writing to dashboard files.
   const buf = await readBoundedBody(zipRes, MAX_ARTIFACT_BYTES);
   if (buf.length < 4 || buf[0] !== 0x50 || buf[1] !== 0x4b) {
     throw new Error(`Artifact does not have a ZIP magic header`);
@@ -230,8 +227,8 @@ for (const a of AUDITS) {
     const detail = entry.note ?? (entry.summary ? "see artifact" : "—");
     md.push(`| [${a.name}](${entry.lastRun?.url ?? "#"}) | ${icon} | ${when} | ${detail} |`);
   } catch (err) {
-    entry.note = "upstream error";
-    md.push(`| ${a.name} | ⚠️ error | — | upstream error |`);
+    entry.note = String(err?.message ?? err);
+    md.push(`| ${a.name} | ⚠️ error | — | ${entry.note} |`);
   }
   dashboard.audits[a.key] = entry;
 }
@@ -243,6 +240,6 @@ md.push("> Live page: `/admin/audits` reads the latest `audits-dashboard-*` arti
 const CTRL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const stripCtrl = (s) => String(s).replace(CTRL_RE, "");
 const safeMd = md.map(stripCtrl).join("\n") + "\n";
+const safeJson = stripCtrl(JSON.stringify(dashboard, null, 2));
 await writeFile(safeWriteTarget(outDir, "dashboard.md"), safeMd);
-await writeFile(safeWriteTarget(outDir, "dashboard.json"), stripCtrl(JSON.stringify(dashboard, null, 2)));
 console.log(`\nDashboard → ${outDir}/dashboard.{json,md}`);

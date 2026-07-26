@@ -1,0 +1,144 @@
+name: k3s restart — recover API server after crash
+
+# Triggered by pushing a change to this file. Connects to the Pi via
+# Tailscale + SSH, restarts k3s, waits for the API to become healthy,
+# then posts the result to tracking issue #382.
+#
+# ONLY use this when the k3s API server is unresponsive (connection refused
+# on port 6443). Safe to re-run — `systemctl restart k3s` is idempotent.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/k3s-restart.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  restart-k3s:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PI_HOST: "100.113.41.119"
+      PI_USER: "tbaltzakis"
+    steps:
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Install SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Check current k3s status
+        run: |
+          echo "=== k3s status BEFORE restart ===" | tee k3s.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status k3s --no-pager 2>&1 | head -20; \
+             echo ''; ss -tlnp 2>/dev/null | grep 6443 || echo '(6443 not listening)'" \
+            2>&1 | tee -a k3s.log || true
+
+      - name: Get k3s crash logs
+        run: |
+          echo "" | tee -a k3s.log
+          echo "=== k3s journal (last 80 lines) ===" | tee -a k3s.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo journalctl -xeu k3s.service --no-pager --lines=80 2>&1" \
+            2>&1 | tee -a k3s.log || true
+
+      - name: Check data disk
+        run: |
+          echo "" | tee -a k3s.log
+          echo "=== data disk / mount check ===" | tee -a k3s.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "df -h /srv 2>&1 || echo '(df failed)'; \
+             echo ''; \
+             ls -la /srv/ 2>&1 | head -10 || echo '(ls /srv failed)'; \
+             echo ''; \
+             DATA_DIR=\$(ls -d /srv/dev-disk-by-uuid-*/k3s 2>/dev/null | head -1); \
+             if [ -n \"\$DATA_DIR\" ]; then
+               echo \"data dir: \$DATA_DIR\";
+               ls \"\$DATA_DIR\" 2>&1 | head -10;
+             else
+               echo 'WARNING: k3s data dir not found under /srv/dev-disk-by-uuid-*/';
+             fi" \
+            2>&1 | tee -a k3s.log || true
+
+      - name: Restart k3s
+        run: |
+          echo "" | tee -a k3s.log
+          echo "=== restarting k3s ===" | tee -a k3s.log
+          # Only evict stale port holder when 6443 is actually down — never kill a running k3s.
+          if nc -zv -w3 "$PI_HOST" 6443 2>/dev/null; then
+            echo "(port 6443 is already up — skipping fuser, doing clean restart)" | tee -a k3s.log
+            FUSER_CMD="echo '(fuser skipped)'"
+          else
+            FUSER_CMD="sudo fuser -k 6443/tcp 2>/dev/null || true"
+          fi
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl reset-failed k3s 2>/dev/null || true; \
+             $FUSER_CMD; \
+             sudo systemctl restart k3s 2>&1; echo restart_exit=\$?" \
+            2>&1 | tee -a k3s.log
+
+      - name: Wait for API server to become healthy
+        run: |
+          echo "" | tee -a k3s.log
+          echo "=== waiting for port 6443 (up to 60s) ===" | tee -a k3s.log
+          for i in $(seq 1 12); do
+            if nc -zv -w3 "$PI_HOST" 6443 2>/dev/null; then
+              echo "API server listening after ${i}×5s" | tee -a k3s.log
+              break
+            fi
+            echo "  ${i}/12 — waiting 5s..." | tee -a k3s.log
+            sleep 5
+          done
+
+          echo "" | tee -a k3s.log
+          echo "=== k3s status AFTER restart ===" | tee -a k3s.log
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "sudo systemctl status k3s --no-pager 2>&1 | head -20; \
+             echo ''; \
+             sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes 2>&1 | head -10" \
+            2>&1 | tee -a k3s.log || true
+
+      - name: Stability check (30s post-restart)
+        run: |
+          sleep 30
+          echo "" | tee -a k3s.log
+          echo "=== stability check (30s after restart) ===" | tee -a k3s.log
+          if nc -zv -w3 "$PI_HOST" 6443 2>/dev/null; then
+            echo "STABLE: port 6443 still up after 30s" | tee -a k3s.log
+          else
+            echo "UNSTABLE: port 6443 down again — journal follows:" | tee -a k3s.log
+            ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+              "$PI_USER@$PI_HOST" \
+              "sudo journalctl -xeu k3s.service --no-pager --lines=40 2>&1" \
+              2>&1 | tee -a k3s.log || true
+          fi
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# k3s restart — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo '```'
+            cat k3s.log 2>/dev/null || echo "(no log)"
+            echo '```'
+          } | gh issue comment 382 --repo "$GITHUB_REPOSITORY" --body-file -
+# re-triggered 2026-06-05 — API server down since 2026-06-04; added journal + disk checks
+# re-triggered 2026-06-05T07:00Z — k3s crash-looped again 16min after restart; adding fuser+reset-failed+30s stability check

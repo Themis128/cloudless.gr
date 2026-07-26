@@ -1,20 +1,21 @@
 /**
- * ETL: Client Portals (D1 app_config) → R2 Data Lake (Parquet)
+ * ETL: Client Portals (SSM) → S3 Data Lake (Parquet)
  *
- * Reads client_portals from D1 app_config table via /api/config endpoint,
- * computes per-portal metrics, writes to R2://datalake-bucket/lake/portals/portals.parquet.
+ * Reads /cloudless/CLIENT_PORTALS_JSON from SSM, computes per-portal
+ * metrics, writes to s3://BUCKET/lake/portals/portals.parquet.
  * Full refresh daily.
- *
- * MIGRATED: SSM → D1, S3 → R2
  */
 
+import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
 
+const REGION = process.env.AWS_REGION || "us-east-1";
+const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
+const ssm = new SSMClient({ region: REGION });
+const s3 = new S3Client({ region: REGION });
 const TMP = "/tmp/portals.parquet";
-const AUTH_DB_URL = process.env.AUTH_DB_URL || "http://localhost:8787/api/config";
 
 const schema = new ParquetSchema({
   token: { type: "UTF8" },
@@ -36,38 +37,16 @@ const schema = new ParquetSchema({
   health_score: { type: "INT32" },
 });
 
-async function loadConfigFromD1(key) {
-  // Map SSM keys to D1 config keys
-  const keyMap = {
-    "/cloudless/CLIENT_PORTALS_JSON": "client_portals",
-  };
-
-  const configKey = keyMap[key] || key.replace("/cloudless/", "");
-
-  try {
-    const res = await fetch(`${AUTH_DB_URL}?key=${encodeURIComponent(configKey)}`);
-    if (!res.ok) {
-      // Fallback to env var if D1 endpoint fails (for CI/testing)
-      const envData = process.env[configKey.toUpperCase().replace(/-/g, "_")];
-      if (envData) return JSON.parse(envData);
-      return [];
-    }
-    const json = await res.json();
-    return json.value ? JSON.parse(json.value) : [];
-  } catch (err) {
-    console.warn(`[etl/portals] D1 config ${key} unavailable:`, err?.name || err?.message || "unknown");
-    return [];
-  }
-}
-
 async function loadPortals() {
   try {
-    const portals = await loadConfigFromD1("/cloudless/CLIENT_PORTALS_JSON");
-    console.log(`Loaded ${portals.length} portals from D1 app_config`);
-    return portals;
+    const res = await ssm.send(new GetParameterCommand({ Name: "/cloudless/CLIENT_PORTALS_JSON" }));
+    return JSON.parse(res.Parameter?.Value || "[]");
   } catch (err) {
+    // Log but degrade gracefully — fresh env may not have any portals
+    // configured yet. Previous silent catch masked AccessDenied vs
+    // ParameterNotFound vs JSON parse equally.
     console.warn(
-      "[etl/portals] D1 client_portals unavailable:",
+      "[etl/portals] SSM /cloudless/CLIENT_PORTALS_JSON unavailable:",
       err?.name || err?.message || "unknown"
     );
     return [];
@@ -99,11 +78,9 @@ function lastCommentAt(portal) {
   return latest;
 }
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
-
 async function main() {
   const portals = await loadPortals();
+  console.log(`Loaded ${portals.length} portals from SSM`);
 
   const writer = await ParquetWriter.openFile(schema, TMP);
   for (const p of portals) {
@@ -135,7 +112,7 @@ async function main() {
   const body = readFileSync(TMP);
   await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: "lake/portals/portals.parquet", Body: body }));
   unlinkSync(TMP);
-  console.log(`✅ Uploaded ${portals.length} portals → R2://${BUCKET}/lake/portals/portals.parquet`);
+  console.log(`✅ Uploaded ${portals.length} portals → s3://${BUCKET}/lake/portals/portals.parquet`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

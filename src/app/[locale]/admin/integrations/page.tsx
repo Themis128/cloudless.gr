@@ -29,9 +29,9 @@ interface ApiResponse {
 const SETUP_URLS = {
   ses: "https://console.aws.amazon.com/ses",
   stripe: "https://dashboard.stripe.com/apikeys",
-  espocrm: "https://espocrm.cloudless.gr/#User/list",
+  hubspot: "https://app.hubspot.com/private-apps",
   slack: "https://api.slack.com/apps",
-  appflowy: "https://appflowy.cloudless.gr/console",
+  notion: "https://www.notion.so/my-integrations",
   google: "https://console.cloud.google.com/iam-admin/serviceaccounts",
   sentry: "https://sentry.io/settings/auth-tokens/",
   anthropic: "https://console.anthropic.com/settings/keys",
@@ -136,7 +136,7 @@ export default function IntegrationsPage() {
       try {
         const res = await fetchWithAuth("/api/admin/integrations/status");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: ApiResponse = (await res.json()) as any as any;
+        const data: ApiResponse = await res.json();
         if (!cancelled) {
           setApiMap(new Map(data.integrations.map((i) => [i.id, i])));
           setSummary(data.summary);

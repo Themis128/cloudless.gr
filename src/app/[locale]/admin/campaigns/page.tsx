@@ -160,7 +160,7 @@ async function fetchStatusMap(): Promise<
   try {
     const res = await fetchWithAuth("/api/admin/integrations/status");
     if (!res.ok) return {};
-    const data = (await res.json()) as any as any as {
+    const data = (await res.json()) as {
       integrations?: Array<{
         id: string;
         status: ConnectionStatus;
@@ -191,7 +191,7 @@ async function fetchPlatformStats(
 
   if (campaignsRes.status === "fulfilled" && campaignsRes.value.ok) {
     try {
-      const data = (await campaignsRes.value.json()) as any as any as any;
+      const data = await campaignsRes.value.json();
       stats.activeCampaigns = countActive(pickCount(data, "campaigns"));
     } catch {
       stats.error = "Failed to parse campaigns";
@@ -200,7 +200,7 @@ async function fetchPlatformStats(
 
   if (insightsRes.status === "fulfilled" && insightsRes.value.ok) {
     try {
-      const data = (await insightsRes.value.json()) as any as any as any;
+      const data = await insightsRes.value.json();
       applyInsights(platform.id, data, stats);
     } catch {
       stats.error = "Failed to parse insights";
@@ -216,7 +216,8 @@ function applyInsights(id: PlatformId, data: unknown, stats: PlatformStats): voi
 
   if (id === "google") {
     const m = root.metrics as
-      { impressions?: number; clicks?: number; costMicros?: number } | undefined;
+      | { impressions?: number; clicks?: number; costMicros?: number }
+      | undefined;
     if (m) {
       stats.impressions = m.impressions ?? 0;
       stats.clicks = m.clicks ?? 0;
@@ -243,7 +244,8 @@ function applyInsights(id: PlatformId, data: unknown, stats: PlatformStats): voi
     }
   } else if (id === "tiktok") {
     const i = root.insights as
-      { impressions?: string; clicks?: string; spend?: string } | undefined;
+      | { impressions?: string; clicks?: string; spend?: string }
+      | undefined;
     if (i) {
       stats.impressions = Number.parseInt(i.impressions ?? "0", 10) || 0;
       stats.clicks = Number.parseInt(i.clicks ?? "0", 10) || 0;
@@ -254,7 +256,8 @@ function applyInsights(id: PlatformId, data: unknown, stats: PlatformStats): voi
     }
   } else if (id === "x") {
     const s = root.stats as
-      { impressions?: number; clicks?: number; spend_micro?: number } | undefined;
+      | { impressions?: number; clicks?: number; spend_micro?: number }
+      | undefined;
     if (s) {
       stats.impressions = s.impressions ?? 0;
       stats.clicks = s.clicks ?? 0;
@@ -326,6 +329,7 @@ function useCampaignsHub() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAll().catch(() => {});
     const interval = setInterval(() => {
       fetchAll().catch(() => {});

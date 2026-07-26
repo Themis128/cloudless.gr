@@ -29,55 +29,10 @@
 #   - 4 grafana-dashboard-cloudflare-* dashboards (we removed Cloudflare
 #     analytics monitoring from the scope per the 2026-06-21 cleanup)
 
-# Node selector for all monitoring workloads — required because omv-ha has
-# node-type=standby:NoSchedule taint. All StatefulSet/Deployment templates
-# in this chart inherit nodeSelector from prometheus.prometheusSpec and
-# alertmanager.alertmanagerSpec sections.
-prometheus:
-  prometheusSpec:
-    nodeSelector:
-      kubernetes.io/hostname: omv
-    # Memory tuned for Pi 5 (avoids OOMKills)
-    resources:
-      limits:
-        memory: 750Mi
-      requests:
-        memory: 512Mi
-
-alertmanager:
-  alertmanagerSpec:
-    nodeSelector:
-      kubernetes.io/hostname: omv
-    resources:
-      limits:
-        memory: 128Mi
-      requests:
-        memory: 64Mi
-
 grafana:
-  # Expose Grafana as NodePort 30850 so the Cloudflare tunnel can reach it.
-  # omv-main LAN IP is 192.168.1.128 — same pattern as postiz/espocrm/appflowy.
-  service:
-    type: NodePort
-    nodePort: 30850
-    port: 80
-    targetPort: 3000
-
   # Don't render any of the default dashboards into ConfigMaps. If you
   # ever want them back, set this to `true` and `helm upgrade`.
   defaultDashboardsEnabled: false
-
-  # Auto-provision Prometheus datasource so dashboards work immediately after
-  # helm upgrade — no manual API call required.
-  additionalDataSources:
-    - name: Prometheus
-      type: prometheus
-      url: http://kube-prom-stack-kube-prome-prometheus.monitoring.svc.cluster.local:9090
-      access: proxy
-      isDefault: true
-      jsonData:
-        httpMethod: POST
-        timeInterval: 15s
 
   # Keep the sidecar that watches grafana_dashboard=1 ConfigMaps so our
   # custom dashboards in this directory + the new self-hosted ones still
@@ -92,39 +47,3 @@ grafana:
         foldersFromFilesStructure: true
         disableDelete: false
         allowUiUpdates: false
-
-kube-state-metrics:
-  # Pin kube-state-metrics to omv node (same reason: omv-ha taint)
-  nodeSelector:
-    kubernetes.io/hostname: omv
-  resources:
-    limits:
-      memory: 128Mi
-    requests:
-      memory: 64Mi
-
-# Set global node selector for all kube-prometheus-stack components
-# This ensures all chart workloads run on omv to avoid the NoSchedule taint on omv-ha.
-# Note: Some components still need explicit nodeSelector in their specific sections.
-global:
-  nodeSelector:
-    kubernetes.io/hostname: omv
-
-# Operator pod node selector (kube-prometheus-stack prometheus-operator)
-# This controls the deployment that manages CRDs and the alerting rules.
-prometheusOperator:
-  nodeSelector:
-    kubernetes.io/hostname: omv
-  resources:
-    limits:
-      memory: 128Mi
-    requests:
-      memory: 64Mi
-
-# Disable default rules to avoid template errors
-defaultRules:
-  enabled: false
-
-# Disable additional prometheus rules that may create extra workloads
-additionalPrometheusRules:
-  enabled: false

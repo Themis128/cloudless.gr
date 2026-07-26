@@ -54,9 +54,9 @@ export default function AdminCaseStudiesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/case-studies");
+      const res = await fetchWithAuth("/api/admin/notion/case-studies");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as { caseStudies: CaseStudy[] };
+      const data = (await res.json()) as { caseStudies: CaseStudy[] };
       setItems(data.caseStudies ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -66,7 +66,7 @@ export default function AdminCaseStudiesPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [load]);
 
   const openCreate = () => {
@@ -120,13 +120,13 @@ export default function AdminCaseStudiesPage() {
         .filter(Boolean);
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/appflowy/case-studies", {
+      const res = await fetchWithAuth("/api/admin/notion/case-studies", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (await res.json()) as any as any as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);
@@ -143,7 +143,7 @@ export default function AdminCaseStudiesPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/appflowy/case-studies?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/notion/case-studies?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

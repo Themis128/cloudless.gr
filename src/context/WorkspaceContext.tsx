@@ -44,14 +44,14 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_KEY);
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setCurrentId(stored);
   }, []);
 
   useEffect(() => {
     fetchWithAuth("/api/admin/workspaces")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: any) => {
+      .then((data) => {
         if (data?.workspaces?.length) {
           setWorkspaces(data.workspaces as Workspace[]);
         }
@@ -68,6 +68,7 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
     const stored = localStorage.getItem(LS_KEY);
     const valid = workspaces.some((w) => w.id === stored) ? stored : (workspaces[0]?.id ?? null);
     if (valid) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentId(valid);
       localStorage.setItem(LS_KEY, valid);
       writeCookie(valid);

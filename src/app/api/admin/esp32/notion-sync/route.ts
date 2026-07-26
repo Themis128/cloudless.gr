@@ -13,6 +13,8 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { safeEqual } from "@/lib/cron-auth";
+import { getConfig } from "@/lib/ssm-config";
 import {
   isEsp32NotionConfigured,
   getEsp32NotionConfig,
@@ -21,8 +23,7 @@ import {
   type Esp32Status,
 } from "@/lib/notion-esp32";
 
-// Internal Pi cluster endpoint — HTTP is intentional (LAN-only, not public internet). // NOSONAR
-const ALERT_API_URL = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800"; // NOSONAR
+const ALERT_API_URL = process.env.ALERT_API_URL ?? "http://192.168.1.128:30800";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -45,17 +46,21 @@ export async function GET(request: NextRequest) {
     const devices = await readEsp32DevicesFromNotion();
     return NextResponse.json({ configured: true, devices });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Notion read failed";
-    return NextResponse.json({ error: msg }, { status: 502 });
+    console.error("[esp32/notion-sync] Notion read failed:", err);
+    return NextResponse.json({ error: "Notion read failed" }, { status: 502 });
   }
 }
 
 export async function POST(request: NextRequest) {
   // Allow either an authenticated admin OR a server-to-server cron call with
   // the shared secret. Cron path is used by cron-invoker.ts in Lambda.
-  const cronSecret = process.env.CRON_SECRET;
+  const ssmCfg = await getConfig().catch(() => null);
+  const cronSecret = ssmCfg?.CRON_SECRET ?? process.env.CRON_SECRET;
   const headerSecret = request.headers.get("x-cron-secret");
-  const isCron = cronSecret && headerSecret && headerSecret === cronSecret;
+  const isCron =
+    cronSecret &&
+    headerSecret &&
+    safeEqual(headerSecret, cronSecret);
 
   if (!isCron) {
     const auth = await requireAdmin(request);
@@ -91,8 +96,8 @@ export async function POST(request: NextRequest) {
     }
     status = (await res.json()) as Esp32Status;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Alert API unreachable";
-    return NextResponse.json({ error: msg, offline: true }, { status: 503 });
+    console.error("[esp32/notion-sync] Alert API unreachable:", err);
+    return NextResponse.json({ error: "Alert API unreachable", offline: true }, { status: 503 });
   }
 
   // 2) Push into Notion
@@ -105,7 +110,7 @@ export async function POST(request: NextRequest) {
       last_heartbeat: status.last_heartbeat,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Notion write failed";
-    return NextResponse.json({ error: msg }, { status: 502 });
+    console.error("[esp32/notion-sync] Notion write failed:", err);
+    return NextResponse.json({ error: "Notion write failed" }, { status: 502 });
   }
 }

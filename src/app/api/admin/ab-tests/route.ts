@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getABFlags, saveFlagsToD1, DEFAULT_FLAGS, type ABFlag } from "@/lib/ab-flags";
+import { getABFlags, DEFAULT_FLAGS, type ABFlag } from "@/lib/ab-flags";
+import { SSMClient, PutParameterCommand } from "@aws-sdk/client-ssm";
+
+const SSM_KEY = "/cloudless/AB_FLAGS_JSON";
+
+async function putSSMParam(value: string): Promise<void> {
+  const region = process.env.AWS_REGION ?? "eu-central-1";
+  const client = new SSMClient({ region });
+  await client.send(
+    new PutParameterCommand({
+      Name: SSM_KEY,
+      Value: value,
+      Type: "String",
+      Overwrite: true,
+    })
+  );
+}
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -16,7 +32,7 @@ export async function PATCH(request: NextRequest) {
 
   let updates: Partial<ABFlag> & { id: string };
   try {
-    updates = (await request.json()) as Partial<ABFlag> & { id: string };
+    updates = await request.json();
     if (!updates.id) throw new Error("id required");
   } catch (e) {
     return NextResponse.json(
@@ -34,14 +50,12 @@ export async function PATCH(request: NextRequest) {
   flags[idx] = { ...flags[idx], ...updates, id: flags[idx].id };
 
   try {
-    await saveFlagsToD1(flags);
-  } catch (err) {
-    console.warn("[ab-tests] D1 save failed:", err instanceof Error ? err.message : err);
-    // Return the updated flags but warn that they weren't persisted to D1
-    // (SSM fallback would require re-implementing SSM write in this route)
+    await putSSMParam(JSON.stringify(flags));
+  } catch {
+    // SSM not available in dev — return updated flags anyway
     return NextResponse.json({
       flags,
-      warning: "D1 unavailable — changes not persisted",
+      warning: "SSM unavailable — changes not persisted",
     });
   }
 
@@ -54,19 +68,18 @@ export async function POST(request: NextRequest) {
 
   let body: { action: "reset" };
   try {
-    body = (await request.json()) as { action: "reset" };
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
   if (body.action === "reset") {
     try {
-      await saveFlagsToD1(DEFAULT_FLAGS);
-    } catch (err) {
-      console.warn("[ab-tests] D1 reset failed:", err instanceof Error ? err.message : err);
+      await putSSMParam(JSON.stringify(DEFAULT_FLAGS));
+    } catch {
       return NextResponse.json({
         flags: DEFAULT_FLAGS,
-        warning: "D1 unavailable — changes not persisted",
+        warning: "SSM unavailable — changes not persisted",
       });
     }
     return NextResponse.json({ flags: DEFAULT_FLAGS });

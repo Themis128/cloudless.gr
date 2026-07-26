@@ -5,11 +5,9 @@ test.describe("Dashboard", () => {
     await page.goto("/auth/login");
     await expect(page).toHaveURL(/\/auth\/login/);
     await page.waitForLoadState("networkidle").catch(() => {});
-    // When Keycloak is configured, the login page shows an SSO button instead
-    // of email/password fields.
-    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
     const hasEmail = await page.getByLabel(/email/i).isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasKeycloak || hasEmail, "login page must show either Keycloak SSO button or email field").toBeTruthy();
+    expect(hasAws || hasEmail, "login page must show Continue with AWS button or email field").toBeTruthy();
   });
 
   test("/dashboard redirects unauthenticated users to login", async ({ page }) => {

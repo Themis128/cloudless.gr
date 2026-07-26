@@ -1,0 +1,21 @@
+name = "cloudless-failover"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ── Route ──────────────────────────────────────────────────────────────────────
+# The Worker intercepts ALL requests to cloudless.gr and routes them:
+#   1. Try Pi origin first (pi-origin.cloudless.gr via Cloudflare Tunnel)
+#   2. If Pi returns >= 400 OR times out (10s) → fall through to AWS CloudFront
+routes = [
+  { pattern = "cloudless.gr/*", zone_name = "cloudless.gr" },
+  { pattern = "www.cloudless.gr/*", zone_name = "cloudless.gr" }
+]
+
+[vars]
+# AWS CloudFront distribution — the fallback origin
+AWS_FALLBACK_HOST = "d3k7muo3c6lw6s.cloudfront.net"
+# Pi origin (served via Cloudflare Tunnel, not directly exposed)
+PI_ORIGIN_HOST = "pi-origin.cloudless.gr"
+# Timeout for Pi origin requests (milliseconds)
+PI_TIMEOUT_MS = "10000"

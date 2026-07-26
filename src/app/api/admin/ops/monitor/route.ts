@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data: unknown = (await res.json()) as any;
+    const data: unknown = await res.json();
     return NextResponse.json(data);
   } catch (err) {
     console.error("[ops/monitor] Alert API unreachable:", err);

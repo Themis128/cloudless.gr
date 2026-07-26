@@ -32,9 +32,9 @@ export default function AdminTestimonialsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/testimonials");
+      const res = await fetchWithAuth("/api/admin/notion/testimonials");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as { testimonials: Testimonial[] };
+      const data = (await res.json()) as { testimonials: Testimonial[] };
       setItems(data.testimonials ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -44,7 +44,7 @@ export default function AdminTestimonialsPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [load]);
 
   const openCreate = () => {
@@ -80,13 +80,13 @@ export default function AdminTestimonialsPage() {
       const { pageId, ...input } = form;
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/appflowy/testimonials", {
+      const res = await fetchWithAuth("/api/admin/notion/testimonials", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (await res.json()) as any as any as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);
@@ -103,7 +103,7 @@ export default function AdminTestimonialsPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/appflowy/testimonials?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/notion/testimonials?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

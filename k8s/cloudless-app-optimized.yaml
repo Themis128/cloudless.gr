@@ -28,35 +28,7 @@ data:
   ENABLE_PARALLEL_QUERIES: "true"
   QUERY_TIMEOUT_MS: "5000"
 ---
-# PersistentVolume for DuckDB analytics data
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: duckdb-pv
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-  - ReadWriteOnce
-  hostPath:
-    path: /var/lib/duckdb
-  storageClassName: ""
----
-# PersistentVolumeClaim for DuckDB
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: duckdb-pvc
-  namespace: cloudless
-spec:
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: ""
-  resources:
-    requests:
-      storage: 10Gi
----
-# Deployment with Resource Optimization and Quick Wins
+# Deployment with Resource Optimization
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,7 +38,7 @@ metadata:
     app: cloudless-app
     version: v1
 spec:
-  replicas: 1  # Run single pod on omv (main node with NVMe)
+  replicas: 3  # Minimum 3 for HA; HPA scales up under load
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -87,26 +59,24 @@ spec:
         prometheus.io/path: "/metrics"
 
     spec:
-      # ECR authentication - pull images from AWS ECR
-      imagePullSecrets:
-      - name: regcred-ecr
-
-      # Node Affinity: Prefer omv for performance (main node with NVMe)
+      # Affinity: Spread pods across nodes for HA
       affinity:
-        nodeAffinity:
+        podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
-            preference:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - omv
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - cloudless-app
+              topologyKey: kubernetes.io/hostname
 
       # Container Configuration
       containers:
       - name: app
-        image: 278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:f4470f73af40
+        image: 278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest
         imagePullPolicy: Always
 
         # Port Configuration
@@ -115,48 +85,62 @@ spec:
           name: http
           protocol: TCP
 
-        # AWS credentials for SSM access at runtime
+        # Environment Variables for Performance
         envFrom:
-        - secretRef:
-            name: pi-standby-aws-creds
         - configMapRef:
             name: app-performance-config
 
-        # Sentry environment tagging for failover
+        # Environment Secrets (auth, DB credentials)
         env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: database-url
+        - name: AUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: auth-secret
+        - name: COGNITO_ISSUER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: cognito-issuer
+        # R14: tag Pi-served Sentry events so they're distinguishable from
+        # AWS Lambda's "production" environment. Operator can filter by env
+        # in the Sentry dashboard to see which surface produced an error
+        # during failover, instead of both showing as "production".
         - name: SENTRY_ENVIRONMENT
           value: "pi-standby"
 
-        # Resource Requests & Limits - Optimized
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 256Mi
+        # Resource Requests & Limits
+        # Problem: Underpowered pods cause slow TTFB and TBT
+        # Solution: 512Mi memory minimum (was 256Mi), 500m CPU (was 250m)
+        requests:
+          cpu: 500m              # Request 0.5 CPU cores
+          memory: 512Mi          # Request 512MB RAM
+        limits:
+          cpu: 1000m             # Allow burst to 1.0 CPU
+          memory: 1Gi            # Hard limit 1GB (prevent OOM)
 
-        # Persistent storage for analytics
-        volumeMounts:
-        - name: duckdb-data
-          mountPath: /app/data
-          subPath: duckdb
-
-        # Startup Probe
+        # Startup Probe (wait for app to be ready)
+        # Prevents traffic before app is ready, reducing 502 errors
         startupProbe:
           httpGet:
-            path: /api/health
+            path: /health
             port: 3000
             scheme: HTTP
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 5
-          failureThreshold: 24
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          timeoutSeconds: 3
+          failureThreshold: 15  # 30s total before failure
 
-        # Readiness Probe
+        # Readiness Probe (detect when app can handle traffic)
+        # Removes pods from load balancer if slow
         readinessProbe:
           httpGet:
-            path: /api/health
+            path: /health
             port: 3000
             scheme: HTTP
           initialDelaySeconds: 3
@@ -164,10 +148,11 @@ spec:
           timeoutSeconds: 2
           failureThreshold: 3
 
-        # Liveness Probe
+        # Liveness Probe (restart dead containers)
+        # Recover from hangs/deadlocks
         livenessProbe:
           httpGet:
-            path: /api/health
+            path: /health
             port: 3000
             scheme: HTTP
           initialDelaySeconds: 30
@@ -179,13 +164,8 @@ spec:
         lifecycle:
           preStop:
             exec:
+              # Graceful shutdown: wait for in-flight requests (max 30s)
               command: ["/bin/sh", "-c", "sleep 15"]
-
-      # Volumes for persistent analytics storage
-      volumes:
-      - name: duckdb-data
-        persistentVolumeClaim:
-          claimName: duckdb-pvc
 ---
 # Service Configuration
 apiVersion: v1
@@ -205,13 +185,16 @@ spec:
   selector:
     app: cloudless-app
 
-  # Session Affinity for cache hit rate
+  # Session Affinity: Route requests from same client to same pod
+  # Improves cache hit rate (local memory cache shared across requests)
   sessionAffinity: ClientIP
   sessionAffinityConfig:
     clientIP:
-      timeoutSeconds: 3600
+      timeoutSeconds: 3600  # 1 hour idle timeout
 ---
-# Horizontal Pod Autoscaler - Increased max for traffic spikes
+# Horizontal Pod Autoscaler
+# Problem: Traffic spikes cause slow response times
+# Solution: Auto-scale to 5-10 pods based on CPU/memory
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -223,16 +206,19 @@ spec:
     kind: Deployment
     name: cloudless-app
 
-  minReplicas: 1
-  maxReplicas: 5      # Increased from 3 for better traffic handling
+  minReplicas: 3      # Minimum 3 pods always running
+  maxReplicas: 10     # Scale up to 10 under heavy load
 
   metrics:
+  # CPU-based autoscaling (scale when CPU > 70%)
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
         averageUtilization: 70
+
+  # Memory-based autoscaling (scale when memory > 75%)
   - type: Resource
     resource:
       name: memory
@@ -240,15 +226,16 @@ spec:
         type: Utilization
         averageUtilization: 75
 
+  # Behavior: Gradual scale-down to avoid flapping
   behavior:
     scaleDown:
-      stabilizationWindowSeconds: 300
+      stabilizationWindowSeconds: 300  # Wait 5 min before scaling down
       policies:
       - type: Percent
         value: 50
         periodSeconds: 60
     scaleUp:
-      stabilizationWindowSeconds: 0
+      stabilizationWindowSeconds: 0  # Scale up immediately
       policies:
       - type: Percent
         value: 100
@@ -258,19 +245,20 @@ spec:
         periodSeconds: 15
       selectPolicy: Max
 ---
-# PodDisruptionBudget
+# PodDisruptionBudget: Protect app during node maintenance
+# Ensures at least 2 pods are always running
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: cloudless-app-pdb
   namespace: cloudless
 spec:
-  minAvailable: 1
+  minAvailable: 2
   selector:
     matchLabels:
       app: cloudless-app
 ---
-# NetworkPolicy
+# NetworkPolicy: Limit inbound/outbound traffic
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -289,38 +277,64 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: kube-system
-    - namespaceSelector: {}
+          name: ingress-nginx  # Allow from nginx ingress
+    - namespaceSelector:
+        matchLabels:
+          name: cloudless  # Allow from same namespace (Prometheus, etc.)
     ports:
     - protocol: TCP
       port: 3000
 
   egress:
+  # Allow DNS (port 53)
   - to:
     - namespaceSelector: {}
     ports:
     - protocol: UDP
       port: 53
+
+  # Allow to database (adjust IP/port to your DB)
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres  # If DB is in cluster
+    ports:
     - protocol: TCP
-      port: 443
+      port: 5432
+
+  # Allow to external services (Cognito, payment processors, etc.)
+  - to:
+    - namespaceSelector: {}
+    ports:
     - protocol: TCP
-      port: 80
+      port: 443  # HTTPS
+    - protocol: TCP
+      port: 80   # HTTP
 ---
-# Ingress Configuration
+# Ingress Configuration with Caching Headers
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: cloudless-app-ingress
   namespace: cloudless
   annotations:
+    # nginx ingress controller annotations
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Cache static assets (1 year)
     nginx.ingress.kubernetes.io/proxy-cache: "on"
     nginx.ingress.kubernetes.io/proxy-cache-valid: "200 1y"
     nginx.ingress.kubernetes.io/proxy-cache-path: "/var/cache/nginx"
+
+    # Compression (Gzip reduces LCP by 30-40%)
     nginx.ingress.kubernetes.io/compress: "true"
+
+    # Keep-alive to origin (reuse connections)
     nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
     nginx.ingress.kubernetes.io/upstream-keepalive-connections: "32"
+
+    # Timeouts: Reduce to fail fast if app is slow
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "10"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "10"

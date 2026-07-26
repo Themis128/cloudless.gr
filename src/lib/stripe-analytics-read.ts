@@ -1,13 +1,17 @@
-import type { AttributeValue } from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBClient,
+  QueryCommand,
+  ScanCommand,
+  type AttributeValue,
+} from "@aws-sdk/client-dynamodb";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
-let dynamoClient: any = null;
+let dynamoClient: DynamoDBClient | null = null;
 
-async function getDynamoClient() {
+function getDynamoClient(): DynamoDBClient {
   if (!dynamoClient) {
-    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
     dynamoClient = new DynamoDBClient({
       region: REGION,
       endpoint: resolveDynamoEndpoint(),
@@ -160,8 +164,7 @@ function isMissingIndexError(error: unknown): boolean {
 
 async function queryByDayOrScan(days: number): Promise<Array<Record<string, AttributeValue>>> {
   const tableName = getTransactionsTableName();
-  const { QueryCommand, ScanCommand } = await import("@aws-sdk/client-dynamodb");
-  const client = await getDynamoClient();
+  const client = getDynamoClient();
   const dayRange = getDayRange(days);
   const allItems: Array<Record<string, AttributeValue>> = [];
 

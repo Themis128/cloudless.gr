@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { getAnthropicApiKey, isAnthropicConfigured } from "@/lib/anthropic";
 import { ASSISTANT_TOOLS, runAssistantTool } from "@/lib/admin-assistant-tools";
-import { callGemini, getGeminiApiKey, isGeminiConfigured } from "@/lib/gemini-admin";
 
 const MAX_ITERATIONS = 4;
 
@@ -37,55 +37,25 @@ interface AssistantMessage {
   content: string | ContentBlock[];
 }
 
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: GeminiPart[];
-    };
-  }>;
-}
-
-type GeminiPart = {
-  text?: string;
-  functionCall?: { name: string; args: Record<string, unknown> };
-};
-
-function convertToGeminiHistory(messages: AssistantMessage[]) {
-  return messages.map((m) => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }],
-  }));
-}
-
-function extractFunctionCalls(parts: GeminiPart[]): ToolUseBlock[] {
-  const calls: ToolUseBlock[] = [];
-  for (const part of parts ?? []) {
-    if (part?.functionCall) {
-      calls.push({
-        type: "tool_use",
-        id: `fc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        name: part.functionCall.name,
-        input: part.functionCall.args,
-      });
-    }
-  }
-  return calls;
+interface AnthropicResponse {
+  stop_reason: "end_turn" | "tool_use" | "max_tokens" | string;
+  content: ContentBlock[];
 }
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  if (!(await isGeminiConfigured())) {
+  if (!(await isAnthropicConfigured())) {
     return NextResponse.json(
-      { error: "GEMINI_API_KEY is not configured." },
+      { error: "ANTHROPIC_API_KEY is not configured in AWS SSM." },
       { status: 503 }
     );
   }
 
   let messages: AssistantMessage[];
   try {
-    const body = (await req.json()) as any as { messages: AssistantMessage[] };
+    const body = (await req.json()) as { messages: AssistantMessage[] };
     messages = body.messages;
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "messages array is required" }, { status: 400 });
@@ -94,7 +64,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const apiKey = await getGeminiApiKey();
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
     return NextResponse.json({ error: "API key unavailable" }, { status: 503 });
   }
@@ -102,66 +72,56 @@ export async function POST(req: NextRequest) {
   const toolsUsed: string[] = [];
   const currentMessages = [...messages];
 
-  // Build function declarations for Gemini tool use
-  const functionDeclarations = ASSISTANT_TOOLS.map((t) => ({
-    name: t.name,
-    description: t.description,
-    parameters: t.input_schema,
-  }));
-
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const history = convertToGeminiHistory(currentMessages);
-    
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: SYSTEM_PROMPT,
-          contents: history,
-          generationConfig: { maxOutputTokens: 2000 },
-          tools: [{ functionDeclarations: functionDeclarations }],
-        }),
-        signal: AbortSignal.timeout(30000),
-      }
-    );
+    const res = await globalThis.fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        tools: ASSISTANT_TOOLS,
+        messages: currentMessages,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
 
-    if (!response.ok) {
-      const err = await response.text().catch(() => "");
-      console.error("[assistant] Gemini error", response.status, err);
+    if (!res.ok) {
+      const err = await res.text().catch(() => "");
+      console.error("[assistant] Anthropic error", res.status, err);
       return NextResponse.json({ error: "AI service error" }, { status: 502 });
     }
 
-    const data = (await response.json()) as GeminiResponse;
-    const parts = data.candidates?.[0]?.content?.parts ?? [];
+    const data = (await res.json()) as AnthropicResponse;
 
-    // Check if there are function calls
-    const functionCalls = extractFunctionCalls(parts);
-
-    if (functionCalls.length === 0) {
-      // No function calls - return the text response
-      const text = parts.find((p) => p.text)?.text ?? "";
+    if (data.stop_reason === "end_turn") {
+      const text =
+        (data.content.find((b) => b.type === "text") as TextBlock | undefined)?.text ?? "";
       return NextResponse.json({ response: text, toolsUsed });
     }
 
-    // Process function calls
-    for (const fc of functionCalls) {
-      const name = fc.name;
-      const input = fc.input;
-      if (!toolsUsed.includes(name)) toolsUsed.push(name);
-      const result = await runAssistantTool(name, input);
-      
-      // Add function response to conversation
-      currentMessages.push({
-        role: "assistant",
-        content: `Called tool ${name} with result: ${result}`,
-      });
+    if (data.stop_reason === "tool_use") {
+      currentMessages.push({ role: "assistant", content: data.content });
+
+      const toolResults: ToolResultBlock[] = [];
+      for (const block of data.content) {
+        if (block.type !== "tool_use") continue;
+        const { id, name, input } = block as ToolUseBlock;
+        if (!toolsUsed.includes(name)) toolsUsed.push(name);
+        const result = await runAssistantTool(name, input);
+        toolResults.push({ type: "tool_result", tool_use_id: id, content: result });
+      }
+      currentMessages.push({ role: "user", content: toolResults });
     }
   }
 
   return NextResponse.json({
-    response: "I hit the tool-use limit without a final answer. Please try rephrasing your request.",
+    response:
+      "I hit the tool-use limit without a final answer. Please try rephrasing your request.",
     toolsUsed,
   });
 }

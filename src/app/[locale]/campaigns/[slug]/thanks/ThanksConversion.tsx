@@ -45,15 +45,6 @@ export default function ThanksConversion({
         }
       : null;
 
-    // Capture LinkedIn first-party click ID from the current URL's query string.
-    // LinkedIn appends ?li_fat_id=… when a visitor arrives via a LinkedIn ad;
-    // forwarding it to CAPI allows LinkedIn to dedupe the server-side event
-    // against the browser Insight Tag hit using this shared identifier.
-    const liFatId =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("li_fat_id")
-        : null;
-
     fetch("/api/campaigns/conversion", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,7 +55,6 @@ export default function ThanksConversion({
         conversionId,
         url: typeof window !== "undefined" ? window.location.href : null,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-        liFatId,
         utm,
       }),
     }).catch(() => {

@@ -45,7 +45,7 @@ export function createGoogleAuth(scope: string): () => Promise<string> {
     });
 
     if (!res.ok) throw new Error(`Google token error: ${res.status}`);
-    const data = (await res.json()) as any as {
+    const data = (await res.json()) as {
       access_token: string;
       expires_in: number;
     };

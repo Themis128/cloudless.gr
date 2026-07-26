@@ -1,28 +1,54 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Link, useRouter } from "@/i18n/navigation";
+import { signIn as nextAuthSignIn } from "next-auth/react";
+import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
+/**
+ * Returns true when `path` is a safe same-origin internal path that the
+ * router can push to. Defeats open-redirect attempts via:
+ *   //evil.example/x        (protocol-relative URL — browsers treat as cross-origin)
+ *   /\evil.example/x        (backslash-prefix — Chrome interprets as protocol-relative)
+ *   non-/-prefixed URLs     (relative-to-current — surprising semantics)
+ *   embedded \r\n           (header smuggling)
+ * Also bounds length so we don't ship a /portal/waiting?... gigaparam.
+ */
+function isSafeRedirectPath(path: string | null | undefined): path is string {
+  if (typeof path !== "string" || path.length === 0 || path.length > 2048) return false;
+  if (!path.startsWith("/")) return false;
+  // Defang protocol-relative URLs ("//evil") and Chrome's backslash variant.
+  if (path.startsWith("//") || path.startsWith("/\\")) return false;
+  // Defang header-injection / control codepoints.
+  if (/[ -]/.test(path)) return false;
+  return true;
+}
+
 function normalizeRedirectPath(path: string): string {
-  if (!path.startsWith("/")) return path;
+  if (!isSafeRedirectPath(path)) return "/";
+
   const match = path.match(/^\/([^/]+)(\/.*|$)/);
   if (!match) return path;
+
   const potentialLocale = match[1] as Locale;
   const suffix = match[2] || "/";
+
   return isSupportedLocale(potentialLocale) ? suffix : path;
 }
 
 function LoginContent() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const { user, isAdmin, isLoading, signIn } = useAuth();
+  const { user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  // ?next= (preferred) or ?redirect= (legacy / AdminLayoutClient compat)
   const nextParam = searchParams.get("next") ?? searchParams.get("redirect");
+  const activated = searchParams.get("activated") === "1";
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [email, setEmail] = useState("");
@@ -30,7 +56,7 @@ function LoginContent() {
 
   useEffect(() => {
     if (!isLoading && user) {
-      if (nextParam && nextParam.startsWith("/")) {
+      if (isSafeRedirectPath(nextParam)) {
         router.push(normalizeRedirectPath(nextParam));
       } else {
         router.push(isAdmin ? "/admin" : "/dashboard");
@@ -38,12 +64,16 @@ function LoginContent() {
     }
   }, [user, isAdmin, isLoading, router, nextParam]);
 
+  const callbackUrl = isSafeRedirectPath(nextParam)
+    ? normalizeRedirectPath(nextParam)
+    : "/auth/post-login";
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      await signIn(email, password);
+      await nextAuthSignIn("cognito", { callbackUrl });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -76,6 +106,11 @@ function LoginContent() {
         </div>
 
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8">
+          {activated && (
+            <div className="bg-neon-green/10 border-neon-green/30 text-neon-green mb-6 rounded-lg border p-3 font-mono text-sm">
+              Account activated — you can now sign in.
+            </div>
+          )}
           {error && (
             <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta mb-6 rounded-lg border p-3 font-mono text-sm">
               {error}
@@ -83,37 +118,6 @@ function LoginContent() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label htmlFor="login-email" className="mb-2 block font-mono text-sm text-slate-400">
-                {t("auth.email", "Email")}
-              </label>
-              <input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm text-white transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
-                placeholder="your@email.com"
-              />
-            </div>
-            <div>
-              <label htmlFor="login-password" className="mb-2 block font-mono text-sm text-slate-400">
-                {t("auth.password", "Password")}
-              </label>
-              <input
-                id="login-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                autoComplete="current-password"
-                className="bg-void focus:border-neon-cyan/50 w-full rounded-lg border border-slate-700 px-4 py-3 font-mono text-sm text-white transition-all focus:shadow-[0_0_10px_rgba(0,255,245,0.1)] focus:outline-none"
-                placeholder={t("auth.minChars", "Min. 8 characters")}
-              />
-            </div>
             <button
               type="submit"
               disabled={submitting}
@@ -121,23 +125,16 @@ function LoginContent() {
             >
               {submitting
                 ? t("auth.signingIn", "Signing In...")
-                : t("auth.login", "Sign In")}
+                : t("auth.continueWithCognito", "Continue with AWS")}
             </button>
           </form>
 
-          <div className="mt-6 space-y-4 text-center">
-            <p className="font-mono text-sm text-slate-500">
-              {t("auth.noAccount", "Don't have an account?")}{" "}
-              <Link href="/auth/signup" className="text-neon-cyan hover:underline">
-                {t("auth.signup", "Create Account")}
-              </Link>
-            </p>
-            <p className="font-mono text-sm text-slate-500">
-              <Link href="/auth/forgot-password" className="text-neon-cyan hover:underline">
-                {t("auth.forgotPassword", "Forgot password?")}
-              </Link>
-            </p>
-          </div>
+          <p className="mt-6 text-center font-mono text-sm text-slate-500">
+            {t("auth.noAccount", "Don't have an account?")}{" "}
+            <Link href="/auth/signup" className="text-neon-cyan hover:underline">
+              {t("auth.signup", "Create Account")}
+            </Link>
+          </p>
         </div>
       </div>
     </div>

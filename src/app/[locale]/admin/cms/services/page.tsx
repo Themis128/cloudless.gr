@@ -35,9 +35,9 @@ export default function AdminServicesPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/services");
+      const res = await fetchWithAuth("/api/admin/notion/services");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as { services: CloudlessService[] };
+      const data = (await res.json()) as { services: CloudlessService[] };
       setItems(data.services ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -47,7 +47,7 @@ export default function AdminServicesPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [load]);
 
   const openCreate = () => {
@@ -89,13 +89,13 @@ export default function AdminServicesPage() {
         .filter(Boolean);
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/appflowy/services", {
+      const res = await fetchWithAuth("/api/admin/notion/services", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (await res.json()) as any as any as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);
@@ -112,7 +112,7 @@ export default function AdminServicesPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/appflowy/services?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/notion/services?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

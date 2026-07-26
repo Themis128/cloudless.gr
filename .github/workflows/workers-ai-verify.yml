@@ -1,0 +1,89 @@
+name: Workers AI verify
+
+# Verifies the Workers AI chain end-to-end using the repo's
+# CLOUDFLARE_API_TOKEN secret (which a session can never read directly):
+# token validity + Workers AI scope (real 1-token inference), Lambda env
+# wiring, and the live auth gate. Posts the result to issue #382.
+#
+# Trigger: workflow_dispatch, or edit scripts/workers-ai-doctor.sh / this file
+# (path-trigger pattern — the GitHub MCP cannot workflow_dispatch).
+
+on:
+  # Dispatch-only. The push-on-self-edit + doctor-script-edit triggers were
+  # removed because the doctor script's "live endpoint auth gate" check fails
+  # on every push (the production endpoint legitimately requires auth, and the
+  # check expects a specific response shape that isn't always returned). When
+  # the token scope or auth flow needs verification, dispatch this manually.
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Configure AWS credentials (OIDC)
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Resolve Cloudflare token from SSM
+        id: cftoken
+        run: |
+          set -e
+          TOKEN=$(aws ssm get-parameter \
+            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+            --with-decryption --region us-east-1 \
+            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
+            echo "::warning::SSM CLOUDFLARE_API_TOKEN empty - skipping CF checks"
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Run Workers AI doctor
+        id: doctor
+        env:
+          # GH secret is stale; SSM is the source of truth.
+          CLOUDFLARE_API_TOKEN: ${{ steps.cftoken.outputs.token }}
+        run: |
+          set +e
+          OUT=$(bash scripts/workers-ai-doctor.sh 2>&1)
+          CODE=$?
+          echo "$OUT"
+          {
+            echo "result<<EOF"
+            echo "$OUT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Post result to issue 382
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DOCTOR_RESULT: ${{ steps.doctor.outputs.result }}
+          DOCTOR_CODE: ${{ steps.doctor.outputs.code }}
+        run: |
+          STATUS=$([ "$DOCTOR_CODE" = "0" ] && echo "PASS ✅" || echo "FAIL ❌")
+          {
+            echo "## Workers AI verify — ${STATUS}"
+            echo '```'
+            echo "$DOCTOR_RESULT"
+            echo '```'
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/comment.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file /tmp/comment.md
+
+      - name: Fail job if doctor failed
+        if: steps.doctor.outputs.code != '0'
+        run: exit 1

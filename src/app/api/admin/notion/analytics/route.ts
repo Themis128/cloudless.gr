@@ -1,80 +1,82 @@
-/**
- * /api/admin/notion/analytics — backed by Athena (via notion-analytics)
- */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { isConfiguredAsync } from "@/lib/integrations";
 import {
   getAnalyticsSummary,
   getRecentEvents,
   createWeeklyRollup,
   archiveOldEvents,
 } from "@/lib/notion-analytics";
+import type { AnalyticsEventType } from "@/lib/notion-analytics";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // Check configuration
-  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_ANALYTICS_DB_ID");
-  if (!configured) {
+  // NOTION_ANALYTICS_DB_ID was decommissioned 2026-06-20. The notion-analytics
+  // lib is a no-op shim; only require NOTION_API_KEY so other Notion-backed
+  // surfaces still gate correctly. This route returns empty data until the
+  // Athena replacement is wired.
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
     return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const days = Number(searchParams.get("days") ?? 7);
+  const _rawDays = parseInt(request.nextUrl.searchParams.get("days") ?? "7", 10);
+  const days = Math.max(1, Math.min(isNaN(_rawDays) ? 7 : _rawDays, 365));
+  const type = request.nextUrl.searchParams.get("type") as AnalyticsEventType | null;
 
-  try {
-    // Check if type param provided for filtered events
-    const type = searchParams.get("type") as
-      "page_view" | "form_submit" | "blog_view" | "doc_view" | "signup" | "order" | "error" | null;
-
-    if (type) {
-      const events = await getRecentEvents(type);
-      return NextResponse.json({ events });
-    }
-
-    const summary = await getAnalyticsSummary(days);
-    return NextResponse.json(summary);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
-    console.error("[Notion Analytics] Failed to fetch analytics:", msg);
-    return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
+  if (type) {
+    const events = await getRecentEvents(type);
+    return NextResponse.json({ events, count: events.length });
   }
+
+  const summary = await getAnalyticsSummary(days);
+  return NextResponse.json(summary);
 }
 
+/**
+ * POST /api/admin/notion/analytics
+ *
+ * Actions:
+ *   { action: "rollup" }   → Create a weekly rollup entry
+ *   { action: "archive" }  → Archive old granular events (default 30 days)
+ *   { action: "maintain" } → Rollup + archive in one call
+ */
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  try {
-    const body: { action?: string; daysToKeep?: number } = await request.json();
-
-    if (!body.action) {
-      return NextResponse.json({ error: "action required" }, { status: 400 });
-    }
-
-    const { action } = body;
-    if (action === "rollup") {
-      const rollupId = await createWeeklyRollup();
-      return NextResponse.json({ ok: true, rollupId });
-    }
-
-    if (action === "archive") {
-      const result = await archiveOldEvents(body.daysToKeep ?? 90);
-      return NextResponse.json({ ok: true, archived: result.archived });
-    }
-
-    if (action === "maintain") {
-      const rollupId = await createWeeklyRollup();
-      const result = await archiveOldEvents(body.daysToKeep ?? 90);
-      return NextResponse.json({ ok: true, rollupId, archived: result.archived });
-    }
-
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
-    console.error("[Notion Analytics] Failed:", msg);
-    return NextResponse.json({ error: "Failed to process action" }, { status: 500 });
+  // NOTION_ANALYTICS_DB_ID was decommissioned 2026-06-20. The notion-analytics
+  // lib is a no-op shim; only require NOTION_API_KEY so other Notion-backed
+  // surfaces still gate correctly. This route returns empty data until the
+  // Athena replacement is wired.
+  if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
+    return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
+
+  const body = await request.json().catch(() => ({}));
+  const action = body.action as string;
+  const _rawDtk = typeof body.daysToKeep === "number" ? body.daysToKeep : 30;
+  const daysToKeep = Math.max(1, Math.min(isNaN(_rawDtk) ? 30 : _rawDtk, 3650));
+
+  if (action === "rollup") {
+    const rollupId = await createWeeklyRollup();
+    return NextResponse.json({ ok: true, rollupId });
+  }
+
+  if (action === "archive") {
+    const result = await archiveOldEvents(daysToKeep);
+    return NextResponse.json({ ok: true, ...result });
+  }
+
+  if (action === "maintain") {
+    const rollupId = await createWeeklyRollup();
+    const archiveResult = await archiveOldEvents(daysToKeep);
+    return NextResponse.json({ ok: true, rollupId, ...archiveResult });
+  }
+
+  return NextResponse.json(
+    { error: 'Unknown action. Use "rollup", "archive", or "maintain".' },
+    { status: 400 }
+  );
 }

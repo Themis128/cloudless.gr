@@ -291,7 +291,7 @@ async function fetchHeadlineMetrics(
       },
     });
     if (!res.ok) return empty;
-    const data = (await res.json()) as any as {
+    const data = (await res.json()) as {
       elements?: Array<{
         impressions?: number;
         clicks?: number;
@@ -332,7 +332,7 @@ async function fetchPivotBreakdown(
       },
     });
     if (!res.ok) return [];
-    const data = (await res.json()) as any as {
+    const data = (await res.json()) as {
       elements?: Array<{ clicks?: number; pivotValues?: string[] }>;
     };
     const rows = (data.elements ?? [])

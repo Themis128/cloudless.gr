@@ -19,7 +19,6 @@ import { listRecentCheckoutSessions, formatPrice } from "@/lib/stripe";
 import { SlackClient } from "@/lib/slack-notify";
 import { dispatchWorkflow } from "@/lib/github-dispatch";
 import { getSlackOpsUsers } from "@/lib/slack-ops-users";
-import { getSlackConfigAsync } from "@/lib/integrations";
 
 /**
  * Action IDs registered in this route that map to a workflow_dispatch
@@ -201,12 +200,7 @@ function priorityEmoji(priority: string): string {
   }
 }
 
-async function postTicketAsync(
-  payload: SlackInteractionPayload,
-): Promise<void> {
-  const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
-  if (!token) return;
-
+async function postTicketAsync(payload: SlackInteractionPayload): Promise<void> {
   const values = payload.view?.state.values ?? {};
   const email = slackEscape(values.ticket_email?.ticket_email_input?.value ?? "");
   const issueType =
@@ -258,12 +252,7 @@ async function postTicketAsync(
   });
 }
 
-async function postDeployAsync(
-  payload: SlackInteractionPayload,
-): Promise<void> {
-  const { SLACK_BOT_TOKEN: token } = await getSlackConfigAsync();
-  if (!token) return;
-
+async function postDeployAsync(payload: SlackInteractionPayload): Promise<void> {
   const values = payload.view?.state.values ?? {};
   const releaseNotes = values.deploy_notes?.deploy_notes_input?.value ?? null;
 

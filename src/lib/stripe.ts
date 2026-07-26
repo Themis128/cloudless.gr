@@ -7,9 +7,7 @@ export async function getStripe(): Promise<Stripe | null> {
   if (stripeInstance) return stripeInstance;
 
   const config = await getConfig();
-  if (!config.STRIPE_SECRET_KEY) {
-    return null;
-  }
+  if (!config.STRIPE_SECRET_KEY) return null;
 
   stripeInstance = new Stripe(config.STRIPE_SECRET_KEY);
   return stripeInstance;
@@ -44,9 +42,7 @@ export async function listRecentCheckoutSessions(
   limit: number = 10
 ): Promise<{ orders: RecentOrder[]; hasMore: boolean }> {
   const stripe = await getStripe();
-  if (!stripe) {
-    return { orders: [], hasMore: false };
-  }
+  if (!stripe) return { orders: [], hasMore: false };
 
   const sessions = await stripe.checkout.sessions.list({
     limit,
@@ -91,11 +87,10 @@ export interface StripeProduct {
  * Returns null if Stripe is not configured (caller should fall back to demo data).
  */
 export async function listStripeProducts(): Promise<StripeProduct[] | null> {
-  const stripe = await getStripe();
-  if (!stripe) {
-    return null;
-  }
   try {
+    const stripe = await getStripe();
+    if (!stripe) return null;
+
     const products = await stripe.products.list({
       active: true,
       limit: 100,

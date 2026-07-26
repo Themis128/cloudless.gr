@@ -10,7 +10,11 @@ const STATUS_EMOJI: Record<string, string> = {
   cancelled: ":x:",
 };
 
-async function handleCalendarDigest() {
+export async function GET(request: NextRequest) {
+  if (!(await isCronAuthorized(request))) {
+    return cronUnauthorized();
+  }
+
   const today = new Date().toISOString().slice(0, 10);
   const items = await getCalendarItems(today, today);
 
@@ -64,24 +68,6 @@ async function handleCalendarDigest() {
     count: items.length,
     date: today,
   });
-}
-
-// GET endpoint for manual testing / browser access
-export async function GET(request: NextRequest) {
-  // Still require auth for GET requests from external sources
-  // Internal requests from SST Cron will use POST
-  if (!await isCronAuthorized(request)) {
-    return cronUnauthorized();
-  }
-  return handleCalendarDigest();
-}
-
-// POST endpoint for SST Cron triggers and programmatic access
-export async function POST(request: NextRequest) {
-  if (!await isCronAuthorized(request)) {
-    return cronUnauthorized();
-  }
-  return handleCalendarDigest();
 }
 
 export const runtime = "nodejs";

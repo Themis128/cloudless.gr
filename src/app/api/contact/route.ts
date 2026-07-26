@@ -12,7 +12,6 @@ import {
 } from "@/lib/espocrm";
 import { saveSubmission } from "@/lib/notion-forms";
 import { trackEvent } from "@/lib/notion-analytics";
-import { trackS3Event } from "@/lib/analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
@@ -32,7 +31,7 @@ export async function POST(request: Request) {
   // or reported to Sentry as an exception (CLOUDLESS-GR-3).
   let parsed;
   try {
-    parsed = (await request.json()) as any;
+    parsed = await request.json();
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -104,9 +103,33 @@ export async function POST(request: Request) {
     const lead = scoreLead({ email, service, company, message: String(message), attribution });
     const attributionSummary = attribution ? formatAttribution(attribution) : undefined;
 
-    // EspoCRM runs first so we have the contact ID for the Slack deep-link.
-    const espoContactId = await (async () => {
-      try {
+    Promise.allSettled([
+      slackContactNotify({
+        name,
+        email,
+        phone,
+        company,
+        service,
+        message,
+        leadScore: lead.score,
+        leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
+        attributionSummary,
+      }),
+      recordNotification({
+        category: "contact",
+        type: "info",
+        title: `New contact: ${String(name)}`,
+        message: String(message).slice(0, 500),
+        actor: String(email),
+        route: "/api/contact",
+        metadata: {
+          company: company || null,
+          service: service || null,
+          leadScore: lead.score,
+          leadBand: lead.band,
+        },
+      }),
+      (async () => {
         const contactId = await upsertContact({
           email,
           firstname: nameParts[0] ?? "",
@@ -128,7 +151,7 @@ export async function POST(request: Request) {
         }
         const dealId = await createDeal({
           dealname: `Lead – ${String(name).slice(0, 80)} (${service || "General"})`,
-          dealstage: "Prospecting",
+          dealstage: "qualifiedtobuy",
           lead_source: "contact_form",
           description: String(message).slice(0, 500),
           service_interest: serviceSlug,
@@ -136,41 +159,7 @@ export async function POST(request: Request) {
         if (dealId && contactId) {
           await associateDealWithContact(dealId, contactId);
         }
-        return contactId;
-      } catch (err) {
-        console.error("[Contact] EspoCRM sync failed:", err);
-        return null;
-      }
-    })();
-
-    Promise.allSettled([
-      slackContactNotify({
-        name,
-        email,
-        phone,
-        company,
-        service,
-        message,
-        leadScore: lead.score,
-        leadBand: `${bandEmoji(lead.band)} ${lead.band}`,
-        attributionSummary,
-        espoContactId,
-        utmSource: attribution?.utmSource ?? null,
-      }),
-      recordNotification({
-        category: "contact",
-        type: "info",
-        title: `New contact: ${String(name)}`,
-        message: String(message).slice(0, 500),
-        actor: String(email),
-        route: "/api/contact",
-        metadata: {
-          company: company || null,
-          service: service || null,
-          leadScore: lead.score,
-          leadBand: lead.band,
-        },
-      }),
+      })(),
       saveSubmission({
         name,
         email,
@@ -188,7 +177,7 @@ export async function POST(request: Request) {
       }),
     ])
       .then((results) => {
-        const labels = ["slack", "notification", "notion", "activecampaign"];
+        const labels = ["slack", "hubspot", "notion", "activecampaign"];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);
@@ -206,22 +195,6 @@ export async function POST(request: Request) {
       page: "/contact",
       source: service ?? "website_contact_form",
     }).catch(() => {});
-
-    // S3 datalake event — server-side, no cookie consent required (legitimate interest)
-    trackS3Event({
-      event: "contact",
-      email,
-      service: service || undefined,
-      source: attribution?.utmSource ?? undefined,
-      campaign: attribution?.utmCampaign ?? undefined,
-      medium: attribution?.utmMedium ?? undefined,
-      ip: ip === "unknown" ? undefined : ip,
-      properties: {
-        company: company || undefined,
-        leadScore: lead.score,
-        leadBand: lead.band,
-      },
-    });
 
     // Meta CAPI — Lead event. Only read fbp/fbc marketing cookies when the
     // visitor has granted marketing consent (GDPR Art.6(1)(a)).

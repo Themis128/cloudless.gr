@@ -74,7 +74,32 @@ function logViolation(
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  // Accept all CSP violation reports and always return 204.
-  // Actual logging is deferred to avoid breaking the request pipeline.
+  // Both content types end up as JSON; just parse and dispatch by shape.
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return new Response(null, { status: 204 });
+  }
+
+  if (Array.isArray(payload)) {
+    // Modern Reporting-API payload
+    for (const entry of payload as CspReportModernEntry[]) {
+      if (entry?.type !== "csp-violation") continue;
+      const b = entry.body ?? {};
+      logViolation(b.effectiveDirective, b.blockedURL, b.sourceFile, b.documentURL, b.disposition);
+    }
+  } else if (payload && typeof payload === "object" && "csp-report" in payload) {
+    // Legacy report-uri payload
+    const r = (payload as CspReportLegacy)["csp-report"] ?? {};
+    logViolation(
+      r["effective-directive"] ?? r["violated-directive"],
+      r["blocked-uri"],
+      r["source-file"],
+      r["document-uri"],
+      r.disposition
+    );
+  }
+
   return new Response(null, { status: 204 });
 }

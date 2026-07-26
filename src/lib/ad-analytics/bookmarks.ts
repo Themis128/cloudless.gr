@@ -18,109 +18,143 @@
  *    "+everything" digest after a redeploy, which is harmless.
  *
  * See `skills/ad-analytics/SKILL.md` operating principle #8 (idempotent
- * digests).
+ * bookmarks) and the Notion architecture page §3.
  */
 
-import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 
-// ---------------------------------------------------------------------------
-// In-memory fallback store
-// ---------------------------------------------------------------------------
+import type { AdMetrics, Bookmark, AdPlatformId } from "./types";
+import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 
-interface BookmarkRow {
-  snapshot: Record<string, unknown>;
-  updatedAt: number;
+const REGION = process.env.AWS_REGION || "us-east-1";
+
+export interface BookmarkKeyOpts {
+  campaignSlug: string;
+  platform: AdPlatformId;
+  /** "metrics" (headline) or one of the demographic pivot names like
+   *  "MEMBER_INDUSTRY" — keep these stable; bookmark keys are forever. */
+  metric: string;
+  /** "15m" / "1h" / "1d" / "rolling-7d" — whatever the caller polls on. */
+  window: string;
 }
 
-const memoryStore = new Map<string, BookmarkRow>();
-
-export function getMemoryBookmark(key: string): BookmarkRow | undefined {
-  return memoryStore.get(key);
+export function bookmarkKeyOf(opts: BookmarkKeyOpts): string {
+  return `ad-analytics:${opts.campaignSlug}:${opts.platform}:${opts.metric}:${opts.window}`;
 }
 
-export function putMemoryBookmark(key: string, row: BookmarkRow | Record<string, unknown>): void {
-  memoryStore.set(key, row as BookmarkRow);
-}
-
-export interface BookmarkStore {
-  getBookmark(key: string): BookmarkRow | undefined;
-  putBookmark(key: string, row: BookmarkRow | Record<string, unknown>): void;
-}
-
-// Backward-compatible alias for src/lib/ad-analytics/runtime.ts
-export function getBookmarkStore(): BookmarkStore {
-  return {
-    getBookmark: getMemoryBookmark,
-    putBookmark: putMemoryBookmark,
-  };
+export interface IBookmarkStore {
+  getBookmark(key: string): Promise<Bookmark | null>;
+  putBookmark(key: string, snapshot: AdMetrics): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
-// DynamoDB store
+// In-memory store — used when the DynamoDB table is not configured.
+// ---------------------------------------------------------------------------
+
+class InMemoryBookmarkStore implements IBookmarkStore {
+  private store = new Map<string, Bookmark>();
+
+  async getBookmark(key: string): Promise<Bookmark | null> {
+    return this.store.get(key) ?? null;
+  }
+
+  async putBookmark(key: string, snapshot: AdMetrics): Promise<void> {
+    this.store.set(key, {
+      key,
+      lastPostedAt: new Date().toISOString(),
+      snapshot,
+    });
+  }
+
+  /** Test hook. */
+  clear(): void {
+    this.store.clear();
+  }
+}
+
+const inMemoryFallback = new InMemoryBookmarkStore();
+
+// ---------------------------------------------------------------------------
+// DynamoDB store — production backend.
 // ---------------------------------------------------------------------------
 
 let dynamoClient: DynamoDBClient | null = null;
-
-async function getDynamoClient(): Promise<DynamoDBClient> {
-  if (!dynamoClient) {
-    const { DynamoDBClient: DC } = await import("@aws-sdk/client-dynamodb");
-    dynamoClient = new DC({
-      region: process.env.AWS_REGION || "us-east-1",
-      endpoint: process.env.DYNAMODB_ENDPOINT?.trim() || undefined,
-    });
-  }
+function getDynamoClient(): DynamoDBClient {
+  dynamoClient ??= new DynamoDBClient({
+    region: REGION,
+    endpoint: resolveDynamoEndpoint(),
+  });
   return dynamoClient;
 }
 
-function getTableName(): string {
-  const name = process.env.AD_ANALYTICS_BOOKMARKS_TABLE?.trim();
-  if (!name) throw new Error("AD_ANALYTICS_BOOKMARKS_TABLE is not configured");
-  return name;
+class DynamoBookmarkStore implements IBookmarkStore {
+  constructor(private readonly tableName: string) {}
+
+  async getBookmark(key: string): Promise<Bookmark | null> {
+    try {
+      const res = await getDynamoClient().send(
+        new GetItemCommand({
+          TableName: this.tableName,
+          Key: { pk: { S: key } },
+        })
+      );
+      const item = res.Item;
+      if (!item) return null;
+      const lastPostedAt = item.lastPostedAt?.S;
+      const snapshotJson = item.snapshot?.S;
+      if (!lastPostedAt || !snapshotJson) return null;
+      try {
+        const snapshot = JSON.parse(snapshotJson) as AdMetrics;
+        return { key, lastPostedAt, snapshot };
+      } catch {
+        // Corrupt row — treat as missing so the next poll re-seeds.
+        return null;
+      }
+    } catch (err) {
+      console.error(
+        `[ad-analytics/bookmarks] DynamoDB GetItem failed for ${key}:`,
+        (err as Error)?.message ?? err
+      );
+      return null;
+    }
+  }
+
+  async putBookmark(key: string, snapshot: AdMetrics): Promise<void> {
+    try {
+      await getDynamoClient().send(
+        new PutItemCommand({
+          TableName: this.tableName,
+          Item: {
+            pk: { S: key },
+            lastPostedAt: { S: new Date().toISOString() },
+            snapshot: { S: JSON.stringify(snapshot) },
+          },
+        })
+      );
+    } catch (err) {
+      console.error(
+        `[ad-analytics/bookmarks] DynamoDB PutItem failed for ${key}:`,
+        (err as Error)?.message ?? err
+      );
+    }
+  }
 }
 
-export function bookmarkKeyOf(opts: {
-  campaign: string;
-  platform: string;
-  metric: string;
-  window: string;
-}): string {
-  return `${opts.campaign}\x00${opts.platform}\x00${opts.metric}\x00${opts.window}`;
+// ---------------------------------------------------------------------------
+// Factory: pick the backend based on env.
+// ---------------------------------------------------------------------------
+
+let cached: IBookmarkStore | null = null;
+
+export function getBookmarkStore(): IBookmarkStore {
+  if (cached) return cached;
+  const table = (process.env.AD_ANALYTICS_BOOKMARKS_TABLE ?? "").trim();
+  cached = table ? new DynamoBookmarkStore(table) : inMemoryFallback;
+  return cached;
 }
 
-export async function getBookmark(key: string): Promise<BookmarkRow | null> {
-  const { GetItemCommand } = await import("@aws-sdk/client-dynamodb");
-  const c = await getDynamoClient();
-  const res = await c.send(
-    new GetItemCommand({
-      TableName: getTableName(),
-      Key: { bookmarkKey: { S: key } },
-    })
-  );
-  const item = res.Item;
-  if (!item?.snapshot?.M || !item?.updatedAt?.N) return null;
-  return {
-    snapshot: JSON.parse(item.snapshot.S ?? "{}"),
-    updatedAt: Number(item.updatedAt.N),
-  };
-}
-
-export async function putBookmark(
-  key: string,
-  _snapshotOrRow: Record<string, unknown> | BookmarkRow
-): Promise<void> {
-  const { PutItemCommand } = await import("@aws-sdk/client-dynamodb");
-  const c = await getDynamoClient();
-  const now = Date.now();
-  const snapshot = "snapshot" in _snapshotOrRow ? _snapshotOrRow.snapshot : _snapshotOrRow;
-  await c.send(
-    new PutItemCommand({
-      TableName: getTableName(),
-      Item: {
-        bookmarkKey: { S: key },
-        snapshot: { S: JSON.stringify(snapshot) },
-        updatedAt: { N: String(now) },
-        ttl: { N: String(Math.floor(now / 1000) + 90 * 24 * 60 * 60) },
-      },
-    })
-  );
+/** Test hook — drop the cached store + clear in-memory state. */
+export function _resetBookmarkStore(): void {
+  cached = null;
+  inMemoryFallback.clear();
 }

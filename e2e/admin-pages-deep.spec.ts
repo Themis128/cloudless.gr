@@ -10,7 +10,7 @@
  *
  * Also: every admin page redirects unauthenticated users away.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./coverage";
 import fs from "fs";
 import path from "path";
 import { ADMIN_PAGES } from "./helpers/coverage-routes";

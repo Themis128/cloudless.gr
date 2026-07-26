@@ -66,9 +66,9 @@ const adminGroups: AdminGroup[] = [
   {
     label: "EspoCRM",
     links: [
-      { href: "/admin/crm", label: "Overview", Icon: LayoutGrid },
+      { href: "/admin/hubspot", label: "Overview", Icon: LayoutGrid },
       { href: "/admin/leads", label: "Lead Inbox", Icon: Inbox },
-      { href: "/admin/crm/contacts", label: "Contacts", Icon: Users },
+      { href: "/admin/crm", label: "Contacts", Icon: Users },
       { href: "/admin/crm/companies", label: "Companies", Icon: Building2 },
       { href: "/admin/crm/tickets", label: "Tickets", Icon: Ticket },
     ],
@@ -91,7 +91,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/blog", label: "Blog", Icon: PenLine },
       { href: "/admin/docs", label: "Docs", Icon: FileText },
       { href: "/admin/projects", label: "Projects", Icon: FolderKanban },
-      { href: "/admin/appflowy", label: "AppFlowy", Icon: Inbox },
+      { href: "/admin/notion", label: "Submissions", Icon: Inbox },
     ],
   },
   {
@@ -115,8 +115,6 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/reports", label: "Reports", Icon: ClipboardList },
       { href: "/admin/ai-assistant", label: "AI Assistant", Icon: Bot },
       { href: "/admin/ai-generator", label: "AI Generator", Icon: Bot },
-      { href: "/admin/langgraph", label: "LangGraph Agent", Icon: Bot },
-      { href: "/admin/local-agent", label: "Local Agent (vLLM)", Icon: Bot },
       { href: "/admin/voice-brief", label: "Voice Brief", Icon: Mic },
     ],
   },
@@ -131,7 +129,6 @@ const adminGroups: AdminGroup[] = [
         Icon: CreditCard,
       },
       { href: "/admin/ab-tests", label: "A/B Tests", Icon: FlaskConical },
-      { href: "/admin/automation", label: "Automation", Icon: GitMerge },
       { href: "/admin/integrations", label: "Integrations", Icon: Plug },
       { href: "/admin/errors", label: "Errors", Icon: AlertTriangle },
       { href: "/admin/notifications", label: "Notifications", Icon: Bell },
@@ -210,7 +207,7 @@ export default function AdminLayoutClient({ children }: { readonly children: Rea
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    // Close drawer when route changes (mobile UX)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDrawerOpen(false);
   }, [pathname]);
 

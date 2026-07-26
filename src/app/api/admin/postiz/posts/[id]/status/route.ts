@@ -15,7 +15,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   let body: { status?: unknown };
   try {
-    body = (await req.json()) as any as { status?: unknown };
+    body = (await req.json()) as { status?: unknown };
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }

@@ -1,0 +1,84 @@
+name: Cloudflare HA load balancer
+
+# Provision / reconcile the cloudless.gr HA failover at the Cloudflare layer
+# (where the domain's DNS actually lives — it is NOT delegated to Route 53).
+# Builds a Load Balancer per hostname that health-checks /api/health and steers
+# AWS(primary) -> Pi/k3s(secondary) automatically. See scripts/setup-cloudflare-lb.sh.
+#
+# SAFE BY DEFAULT: a push to this file / the script runs in REPORT mode (validates
+# the token + LB entitlement, prints the live account/zone/DNS/LB state and the
+# plan, writes nothing). To apply — including the apex/www DNS cutover — dispatch
+# with apply=true.
+# Last triggered: 2026-06-03 (status check — verifying token + LB state)
+#
+# Auth: Cloudflare token from the CLOUDFLARE_API_TOKEN repo secret (add in the
+# GitHub UI), falling back to SSM /cloudless/production/CLOUDFLARE_API_TOKEN via
+# the OIDC deploy role. Token scopes: Zone:Read, Load Balancing Monitors/Pools
+# Edit, Load Balancing Load Balancers Edit, DNS:Edit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Actually create/update the LB + cut DNS over (true) or report only (false)"
+        type: boolean
+        required: false
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudflare-lb.yml"
+      - "scripts/setup-cloudflare-lb.sh"
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: cloudflare-lb
+  cancel-in-progress: false
+
+jobs:
+  load-balancer:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      # Best-effort: only needed for the SSM token fallback. Do not fail the job
+      # if OIDC isn't configured — the repo secret path covers the common case.
+      - name: Configure AWS credentials (OIDC)
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Cloudflare LB
+        id: run
+        env:
+          AWS_REGION: us-east-1
+          # push trigger => always report-only; dispatch => honour the apply input.
+          MODE: ${{ github.event.inputs.apply == 'true' && 'apply' || 'report' }}
+          CONFIRM: ${{ github.event.inputs.apply == 'true' && '1' || '0' }}
+          # GH secret is stale; script reads SSM. See cloudflare-token-rotate.yml.
+        run: |
+          set -o pipefail
+          bash scripts/setup-cloudflare-lb.sh 2>&1 | tee cloudflare-lb.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Cloudflare HA load balancer — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Mode:** ${{ github.event.inputs.apply == 'true' && 'apply (creates LB + DNS cutover)' || 'report-only' }}"
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat cloudflare-lb.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md

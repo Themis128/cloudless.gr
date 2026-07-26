@@ -49,7 +49,7 @@ async function fetchPurchasesData(
       if (res.status === 503) throw new Error("Stripe not configured");
       throw new Error(`HTTP ${res.status}`);
     }
-    const data = (await res.json()) as any as any;
+    const data = await res.json();
     setPurchases(data.purchases ?? []);
     setSubscriptions(data.subscriptions ?? []);
   } catch (err) {
@@ -71,6 +71,7 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     if (!user?.email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }

@@ -86,6 +86,7 @@ export const staticTestimonials: Testimonial[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function mapPage(page: any): Testimonial {
   const p = page.properties ?? {};
   const rating = p.Rating?.number;
@@ -101,6 +102,7 @@ function mapPage(page: any): Testimonial {
     featured: p.Featured?.checkbox ?? false,
   };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Public API

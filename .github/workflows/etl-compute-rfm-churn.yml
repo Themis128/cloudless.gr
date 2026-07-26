@@ -1,0 +1,54 @@
+name: ETL — Compute RFM + churn scores
+
+on:
+  schedule:
+    # 03:45 UTC — after Stripe ETL (03:30 UTC) finishes loading transactions
+    # but before clients-to-lake (04:00 UTC) joins the scores in.
+    - cron: '45 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: us-east-1
+  BUCKET: cloudless-analytics-data
+
+jobs:
+  rfm-compute:
+    name: Compute RFM + churn from transactions parquet
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: scripts/etl
+
+      - name: Compute scores
+        run: node scripts/etl/compute-rfm-churn.mjs
+        env:
+          ANALYTICS_BUCKET: ${{ env.BUCKET }}
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": ":x: ETL — Compute RFM + churn failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). Downstream clients-to-lake will fall back to no scores. See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
+            }'

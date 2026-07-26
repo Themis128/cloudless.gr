@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
   let input: Omit<CalendarItem, "id">;
   try {
-    input = (await request.json()) as any;
+    input = await request.json();
     if (!input.title || !input.type || !input.platform || !input.date) {
       throw new Error("title, type, platform, date are required");
     }

@@ -1,4 +1,4 @@
-name: AppFlowy → Sitemap Sync
+name: Notion → Sitemap Sync
 
 on:
   schedule:
@@ -11,14 +11,14 @@ permissions:
   pull-requests: write
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_V2_TO_NODE24: "true"
-  APPFLOWY_API_URL: ${{ secrets.APPFLOWY_API_URL }}
-  APPFLOWY_EMAIL: ${{ secrets.APPFLOWY_EMAIL }}
-  APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+  NOTION_DOCS_DB_ID: ${{ secrets.NOTION_DOCS_DB_ID }}
+  NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
 
 jobs:
   sync:
-    name: Sync AppFlowy docs & blog slugs into sitemap
+    name: Sync Notion docs & blog slugs into sitemap
     runs-on: ubuntu-latest
 
     steps:
@@ -26,88 +26,62 @@ jobs:
         with:
           ref: main
 
-      - name: Fetch published slugs from AppFlowy
+      - name: Fetch published slugs from Notion
         id: slugs
         run: |
-          BASE="${APPFLOWY_API_URL%/}"
+          NOTION_VERSION="2022-06-28"
+          HEADERS=(-H "Authorization: Bearer ${NOTION_API_KEY}" -H "Notion-Version: ${NOTION_VERSION}" -H "Content-Type: application/json")
 
-          # Login via GoTrue password grant
-          TOKEN=$(curl -sS "${BASE}/gotrue/token?grant_type=password" \
-            -H "Content-Type: application/json" \
-            -d "{\"email\":\"${APPFLOWY_EMAIL}\",\"password\":\"${APPFLOWY_PASSWORD}\"}" \
-            | jq -r '.access_token')
+          DOCS_SLUGS="[]"
+          BLOG_SLUGS="[]"
 
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "AppFlowy login failed" >&2
-            exit 1
+          # --- Docs ---
+          if [ -n "${NOTION_DOCS_DB_ID}" ]; then
+            DOCS_RAW=$(curl -sS "https://api.notion.com/v1/databases/${NOTION_DOCS_DB_ID}/query" \
+              "${HEADERS[@]}" \
+              -d '{"filter":{"property":"Published","checkbox":{"equals":true}},"page_size":100}')
+
+            DOCS_SLUGS=$(echo "$DOCS_RAW" | jq -r '[.results[]? | (.properties.Slug?.rich_text // [] | map(.plain_text) | join("")) // .id | select(. != "")]')
           fi
 
-          # Get primary workspace
-          WORKSPACE_ID=$(curl -sS "${BASE}/api/workspace" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            | jq -r '.data[0].workspace_id')
+          # --- Blog ---
+          if [ -n "${NOTION_BLOG_DB_ID}" ]; then
+            BLOG_RAW=$(curl -sS "https://api.notion.com/v1/databases/${NOTION_BLOG_DB_ID}/query" \
+              "${HEADERS[@]}" \
+              -d '{"filter":{"property":"Published","checkbox":{"equals":true}},"page_size":100}')
 
-          if [ -z "$WORKSPACE_ID" ] || [ "$WORKSPACE_ID" = "null" ]; then
-            echo "No workspace found" >&2
-            exit 1
+            BLOG_SLUGS=$(echo "$BLOG_RAW" | jq -r '[.results[]? | (.properties.Slug?.rich_text // [] | map(.plain_text) | join("")) // .id | select(. != "")]')
           fi
 
-          # Walk the workspace folder tree (depth=5 covers nested spaces).
-          # Pages prefixed "[Docs]" → /docs/*, "[Blog]" → /blog/*.
-          # code -2 means workspace is empty — emit empty arrays and continue.
-          FOLDER_JSON=$(curl -sS "${BASE}/api/workspace/${WORKSPACE_ID}/folder?depth=5" \
-            -H "Authorization: Bearer ${TOKEN}")
-
-          FOLDER_CODE=$(echo "$FOLDER_JSON" | jq -r '.code // 0')
-          if [ "$FOLDER_CODE" != "0" ]; then
-            echo "AppFlowy workspace has no content yet (code=${FOLDER_CODE})"
-            ALL_VIEWS="[]"
-            DOCS_VIEWS="[]"
-            BLOG_VIEWS="[]"
-          else
-            ALL_VIEWS=$(echo "$FOLDER_JSON" \
-              | jq '[.. | objects | select(.name? and .layout? == "Document") | .name]' 2>/dev/null || echo "[]")
-            DOCS_VIEWS=$(echo "$FOLDER_JSON" \
-              | jq '[.. | objects | select(.name? and .layout? == "Document" and (.name | startswith("[Docs]"))) | .name | ltrimstr("[Docs] ")]' 2>/dev/null || echo "[]")
-            BLOG_VIEWS=$(echo "$FOLDER_JSON" \
-              | jq '[.. | objects | select(.name? and .layout? == "Document" and (.name | startswith("[Blog]"))) | .name | ltrimstr("[Blog] ")]' 2>/dev/null || echo "[]")
-          fi
-
-          DOCS_COUNT=$(echo "$DOCS_VIEWS" | jq 'length')
-          BLOG_COUNT=$(echo "$BLOG_VIEWS" | jq 'length')
-
-          echo "docs_views<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$ALL_VIEWS" >> "$GITHUB_OUTPUT"
+          echo "docs_slugs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$DOCS_SLUGS" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
-          echo "blog_views<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$BLOG_VIEWS" >> "$GITHUB_OUTPUT"
+          echo "blog_slugs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$BLOG_SLUGS" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
+          DOCS_COUNT=$(echo "$DOCS_SLUGS" | jq 'length')
+          BLOG_COUNT=$(echo "$BLOG_SLUGS" | jq 'length')
           echo "docs_count=${DOCS_COUNT}" >> "$GITHUB_OUTPUT"
           echo "blog_count=${BLOG_COUNT}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate sitemap fragment
+      - name: Generate Notion sitemap fragment
         env:
-          DOCS_VIEWS: ${{ steps.slugs.outputs.docs_views }}
-          BLOG_VIEWS: ${{ steps.slugs.outputs.blog_views }}
+          DOCS_SLUGS: ${{ steps.slugs.outputs.docs_slugs }}
+          BLOG_SLUGS: ${{ steps.slugs.outputs.blog_slugs }}
         run: |
           TODAY=$(date -u +%Y-%m-%d)
 
-          slugify() {
-            echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/ /-/g' | sed 's/[^a-z0-9-]//g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//'
-          }
+          # Write JSON fragment for reference
+          jq -n --argjson docs "$DOCS_SLUGS" --argjson blog "$BLOG_SLUGS" \
+            '{docs: $docs, blog: $blog}' > /tmp/notion-sitemap.json
 
+          # Build a TSV of path + lastmod for the dynamic sitemap helper
           {
-            echo "$DOCS_VIEWS" | jq -r '.[]?' | while read -r name; do
-              slug=$(slugify "$name")
-              [ -n "$slug" ] && echo "/docs/${slug}	${TODAY}"
-            done
-            echo "$BLOG_VIEWS" | jq -r '.[]?' | while read -r name; do
-              slug=$(slugify "$name")
-              [ -n "$slug" ] && echo "/blog/${slug}	${TODAY}"
-            done
-          } | sort -u > src/data/notion-sitemap-entries.tsv
+            echo "$DOCS_SLUGS" | jq -r --arg d "$TODAY" '.[] | "/docs/" + . + "\t" + $d'
+            echo "$BLOG_SLUGS" | jq -r --arg d "$TODAY" '.[] | "/blog/" + . + "\t" + $d'
+          } > src/data/notion-sitemap-entries.tsv
 
       - name: Check for changes
         id: diff
@@ -123,10 +97,10 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git add src/data/notion-sitemap-entries.tsv
-          git commit -m "chore: sync AppFlowy docs/blog slugs into sitemap entries
+          git commit -m "chore: sync Notion docs/blog slugs into sitemap entries
 
-          Docs: ${{ steps.slugs.outputs.docs_count }} views
-          Blog: ${{ steps.slugs.outputs.blog_count }} views"
+          Docs: ${{ steps.slugs.outputs.docs_count }} published
+          Blog: ${{ steps.slugs.outputs.blog_count }} published"
           git push --force origin "$BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
@@ -134,14 +108,17 @@ jobs:
         if: steps.diff.outputs.changed == 'true'
         id: pr
         env:
+          # A PAT (not GITHUB_TOKEN) is required here so that GitHub triggers
+          # CI workflows on the created PR. GITHUB_TOKEN-created events are
+          # intentionally suppressed by GitHub to prevent infinite loops.
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           BRANCH="${{ steps.push.outputs.branch }}"
           EXISTING=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number')
           if [ -z "$EXISTING" ]; then
             gh pr create \
-              --title "chore: sync AppFlowy sitemap entries $(date -u +%Y-%m-%d)" \
-              --body "Automated PR — updates \`src/data/notion-sitemap-entries.tsv\` from AppFlowy.
+              --title "chore: sync Notion sitemap entries $(date -u +%Y-%m-%d)" \
+              --body "Automated PR – updates \`src/data/notion-sitemap-entries.tsv\` from Notion.
           Docs: ${{ steps.slugs.outputs.docs_count }} | Blog: ${{ steps.slugs.outputs.blog_count }}" \
               --base main \
               --head "$BRANCH"
@@ -159,10 +136,10 @@ jobs:
 
       - name: Summary
         run: |
-          echo "### 📄 AppFlowy → Sitemap Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 📄 Notion → Sitemap Sync" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Source | Views |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|--------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Source | Published Pages |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|--------|-----------------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| Docs   | ${{ steps.slugs.outputs.docs_count }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Blog   | ${{ steps.slugs.outputs.blog_count }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"

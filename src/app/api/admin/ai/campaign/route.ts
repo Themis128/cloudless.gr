@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { callGemini, getGeminiApiKey, isGeminiConfigured } from "@/lib/gemini-admin";
+import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   let budget: string;
   let targetAudience: string;
   try {
-    const body = (await request.json()) as any;
+    const body = await request.json();
     brief = String(body.brief ?? "").slice(0, 2000);
     budget = String(body.budget ?? "unspecified").slice(0, 200);
     targetAudience = String(body.targetAudience ?? "unspecified").slice(0, 500);
@@ -22,13 +22,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!(await isGeminiConfigured())) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 503 });
-  }
-
-  const apiKey = await getGeminiApiKey();
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 503 });
+    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
   }
 
   const prompt = `You are a digital marketing expert for Cloudless.gr, a Greek digital agency specialising in AI-powered marketing services.
@@ -60,7 +56,7 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
 }`;
 
   try {
-    const text = await callGemini(prompt, apiKey, 1500);
+    const text = await callClaude(prompt, apiKey, { maxTokens: 1_500 });
     let strategy: unknown;
     try {
       strategy = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
@@ -69,7 +65,7 @@ Respond with a JSON object (no markdown fences, just the raw JSON) with this str
     }
     return NextResponse.json({ strategy });
   } catch (e) {
-    console.error("[ai/campaign] Gemini call failed:", e);
+    console.error("[ai/campaign] Claude call failed:", e);
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

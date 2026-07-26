@@ -44,16 +44,16 @@ export default function EmailCampaignsPage() {
         fetchWithAuth("/api/admin/email/campaigns"),
       ]);
       if (statsRes.ok) {
-        setTotalSubscribers(((await statsRes.json()) as any as any).totalSubscribers ?? null);
+        setTotalSubscribers((await statsRes.json()).totalSubscribers ?? null);
       }
       if (listsRes.ok) {
-        setLists(((await listsRes.json()) as any as any).lists ?? []);
+        setLists((await listsRes.json()).lists ?? []);
       } else if (listsRes.status === 503) {
         setListsConfigured(false);
       }
-      if (autoRes.ok) setAutomations(((await autoRes.json()) as any as any).automations ?? []);
+      if (autoRes.ok) setAutomations((await autoRes.json()).automations ?? []);
       if (!campRes.ok) {
-        const body = (await campRes.json().catch(() => null)) as any as {
+        const body = (await campRes.json().catch(() => null)) as {
           error?: string;
           instructions?: string;
           setupUrl?: string;
@@ -74,6 +74,7 @@ export default function EmailCampaignsPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

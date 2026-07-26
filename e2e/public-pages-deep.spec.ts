@@ -2,7 +2,7 @@
  * Deep coverage for every public page route.
  * Each route gets: 200 status, h1 present, no console errors, basic a11y, locale prefix preserved.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./coverage";
 import { PUBLIC_PAGES, DYNAMIC_PUBLIC_PAGES, AUTH_PAGES } from "./helpers/coverage-routes";
 
 test.describe.configure({ mode: "serial" }); // serial due to /mnt/d compile cost
@@ -22,19 +22,23 @@ for (const route of PUBLIC_PAGES) {
       }
     });
 
-    const resp = await page.goto(route, { waitUntil: "networkidle" });
+    const resp = await page.goto(route, { waitUntil: "domcontentloaded" });
     expect(resp, `expected response for ${route}`).not.toBeNull();
     const status = resp?.status() ?? 0;
     expect(isAcceptableStatus(status), `got HTTP ${status} for ${route}`).toBeTruthy();
 
-    // Check for content: h1, main, or SPA root div (for client-side rendered pages)
-    const hasH1 = await page.locator("h1").first().isVisible({ timeout: 10_000 }).catch(() => false);
-    const hasMain = await page.locator("main").first().isVisible({ timeout: 5_000 }).catch(() => false);
-    const hasRoot = await page.locator("#root").first().isVisible({ timeout: 2_000 }).catch(() => false);
-    const hasBody = await page.locator("body").first().isVisible({ timeout: 2_000 }).catch(() => false);
-
-    // Either h1/main (SSR) or root div (SPA) should be present
-    expect(hasH1 || hasMain || hasRoot || hasBody, `${route} has no h1, main, or root`).toBeTruthy();
+    // Either an h1 or main content exists. waitFor() actively waits for the
+    // element to appear rather than sampling visibility at a fixed deadline,
+    // which avoids racing Turbopack's first-compile streaming of a cold dev
+    // route. Dev first compiles + Suspense streaming can keep the route-level
+    // loading.tsx fallback visible past 15s, so use a generous 30s deadline.
+    const hasContent = await page
+      .locator("h1, main")
+      .first()
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
+    expect(hasContent, `${route} has no h1 or main`).toBeTruthy();
 
     // Title present
     const title = await page.title();
@@ -64,13 +68,10 @@ for (const route of AUTH_PAGES) {
     await page.goto(route);
     await page.waitForLoadState("networkidle").catch(() => {});
     await expect(page.locator("body")).toBeVisible();
-    // login page shows Keycloak SSO button when NEXT_PUBLIC_KEYCLOAK_ISSUER is set;
-    // signup and forgot-password always show an email field.
-    // Also accept SPA root element for client-rendered pages
-    const hasEmail = await page.getByLabel(/email/i).first().isVisible({ timeout: 5_000 }).catch(() => false);
-    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 5_000 }).catch(() => false);
-    const hasRoot = await page.locator("#root").first().isVisible({ timeout: 2_000 }).catch(() => false);
-    expect(hasEmail || hasKeycloak || hasRoot, `${route} has no email input, Keycloak SSO button, or SPA root`).toBeTruthy();
+    // login page shows "Continue with AWS" SSO button; signup/forgot-password show an email field.
+    const hasEmail = await page.getByLabel(/email/i).first().isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 5_000 }).catch(() => false);
+    expect(hasEmail || hasAws, `${route} has no email input or Continue with AWS button`).toBeTruthy();
   });
 }
 
@@ -90,9 +91,5 @@ test("favicon.ico returns image", async ({ request }) => {
 test("/en redirects to expected locale homepage", async ({ page }) => {
   const resp = await page.goto("/en");
   expect(resp?.status()).toBeLessThan(400);
-  // Check for content - either h1/main (SSR) or root div (SPA)
-  const hasH1 = await page.locator("h1").first().isVisible({ timeout: 10_000 }).catch(() => false);
-  const hasMain = await page.locator("main").first().isVisible({ timeout: 5_000 }).catch(() => false);
-  const hasRoot = await page.locator("#root").first().isVisible({ timeout: 2_000 }).catch(() => false);
-  expect(hasH1 || hasMain || hasRoot, "homepage has no h1, main, or root").toBeTruthy();
+  await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
 });

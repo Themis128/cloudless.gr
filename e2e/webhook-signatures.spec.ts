@@ -43,8 +43,8 @@ test.describe("webhook signature gates", () => {
   // (PR #1043 — EspoCRM decom). EspoCRM webhook auth is URL-secret-based,
   // not HMAC; covered by `/api/webhooks/espocrm` tests elsewhere.
 
-  test("/api/webhooks/content rejects missing signature", async ({ request }) => {
-    const r = await request.post("/api/webhooks/content", {
+  test("/api/webhooks/notion rejects missing signature", async ({ request }) => {
+    const r = await request.post("/api/webhooks/notion", {
       data: FAKE_BODY,
       headers: { "Content-Type": "application/json" },
     });

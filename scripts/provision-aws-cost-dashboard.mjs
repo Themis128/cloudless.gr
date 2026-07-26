@@ -14,33 +14,17 @@
  */
 
 import { readFileSync } from "fs";
-import { spawnSync } from "child_process";
+import { execSync } from "child_process";
 import { resolve } from "path";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
-// Use spawnSync (arg array, no shell) to avoid shell injection via SSM key names.
 function getSsm(name) {
   try {
-    const result = spawnSync(
-      "aws",
-      [
-        "ssm",
-        "get-parameter",
-        "--name",
-        `/cloudless/production/${name}`,
-        "--with-decryption",
-        "--query",
-        "Parameter.Value",
-        "--output",
-        "text",
-        "--region",
-        REGION,
-      ],
+    return execSync(
+      `aws ssm get-parameter --name /cloudless/production/${name} --with-decryption --query Parameter.Value --output text --region ${REGION}`,
       { encoding: "utf8" }
-    );
-    if (result.status !== 0) throw new Error(result.stderr || "non-zero exit");
-    return result.stdout.trim();
+    ).trim();
   } catch (e) {
     if (process.env.DEBUG) console.warn(`SSM ${name} not readable:`, e.message);
     return "";
@@ -56,13 +40,6 @@ async function main() {
   }
 
   const dashPath = resolve(process.cwd(), "infrastructure/grafana/dashboards/aws-cost.json");
-  // Verify the resolved path stays within the project root (guards against
-  // path traversal if the cwd is ever set to an unexpected location).
-  const projectRoot = resolve(process.cwd());
-  if (!dashPath.startsWith(projectRoot + "/")) {
-    console.error("Dashboard path escaped project root:", dashPath);
-    process.exit(1);
-  }
   const dashboard = JSON.parse(readFileSync(dashPath, "utf8"));
   const body = {
     dashboard,
@@ -70,9 +47,6 @@ async function main() {
     message: "Provisioned via scripts/provision-aws-cost-dashboard.mjs (R9)",
   };
 
-  // Path-traversal guard above ensures dashPath is within the project root.
-  // Sending local dashboard JSON to the configured Grafana instance is intentional.
-  // lgtm[js/file-data-in-outbound-request]
   const res = await fetch(`${baseUrl}/api/dashboards/db`, {
     method: "POST",
     headers: {

@@ -1,0 +1,89 @@
+name: Domain decommission (Route 53 + Cloudflare)
+
+# Retire a domain's Route 53 health checks + Cloudflare DNS records, scoped
+# strictly to that domain. Built to wind down cloudless.online (migrated to
+# cloudless.gr) and stop the recurring DNS-monitor alerts.
+# report-trigger: 2026-06-07
+#
+# SAFE BY DEFAULT: a push to this file / the script runs in REPORT mode (lists
+# what would be removed, deletes nothing). To actually delete, dispatch with
+# apply=true — and even then the protected cloudless.gr HA secondary health
+# check (30a69f1c) is never touched (guarded in the script).
+#
+# Auth: OIDC deploy role (AWS_DEPLOY_ROLE_ARN) for Route 53. Cloudflare token
+# comes from the CLOUDFLARE_API_TOKEN repo secret (add in the GitHub UI — no AWS
+# needed), falling back to SSM /cloudless/production/CLOUDFLARE_API_TOKEN.
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: "Domain to decommission"
+        required: false
+        default: "cloudless.online"
+      apply:
+        description: "Actually delete (true) or report only (false)"
+        type: boolean
+        required: false
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/domain-decommission.yml"
+      - "scripts/domain-decommission.sh"
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+concurrency:
+  group: domain-decommission
+  cancel-in-progress: false
+
+jobs:
+  decommission:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Configure AWS credentials (OIDC)
+        continue-on-error: true  # Cloudflare cleanup runs even when OIDC is broken
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Decommission
+        id: run
+        env:
+          AWS_REGION: us-east-1
+          # push trigger → always report-only; dispatch → honour the apply input.
+          DOMAIN: ${{ github.event.inputs.domain || 'cloudless.online' }}
+          MODE: ${{ github.event.inputs.apply == 'true' && 'apply' || 'report' }}
+          CONFIRM: ${{ github.event.inputs.apply == 'true' && '1' || '0' }}
+          # Cloudflare token: prefer a repo secret (add it in the GitHub UI — no
+          # AWS access needed); the script falls back to SSM
+          # /cloudless/production/CLOUDFLARE_API_TOKEN if this is empty.
+          # GH secret is stale; script reads SSM. See cloudflare-token-rotate.yml.
+        run: |
+          set -o pipefail
+          bash scripts/domain-decommission.sh 2>&1 | tee decommission.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Domain decommission — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Domain:** ${{ github.event.inputs.domain || 'cloudless.online' }}"
+            echo "**Mode:** ${{ github.event.inputs.apply == 'true' && 'apply (deletes)' || 'report-only' }}"
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat decommission.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md

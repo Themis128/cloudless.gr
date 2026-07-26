@@ -8,10 +8,11 @@ import {
   getDocBySlug,
   getDocContentWithToc,
   groupDocsByCategory,
-} from "@/lib/appflowy-docs";
-import { isAppFlowyConfigured } from "@/lib/appflowy";
+} from "@/lib/notion-docs";
+import { isConfiguredAsync } from "@/lib/integrations";
 import JsonLd from "@/components/JsonLd";
 import { getBreadcrumbSchema } from "@/lib/structured-data";
+import { trackEvent } from "@/lib/notion-analytics";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -20,7 +21,7 @@ type Props = {
 export const dynamicParams = true; // Allow new slugs added after build
 
 export async function generateStaticParams() {
-  if (!(await isAppFlowyConfigured())) return [];
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID"))) return [];
 
   const docs = await getDocs();
   return docs.flatMap((doc) => ["en", "el", "fr"].map((locale) => ({ locale, slug: doc.slug })));
@@ -45,14 +46,22 @@ export default async function DocPage({ params }: Props) {
 
   if (!doc) notFound();
 
-  // Fetch content with TOC — gracefully degrade if AppFlowy fails
+  // Track doc view (fire-and-forget — never blocks render)
+  trackEvent({
+    event: `doc_view:${slug}`,
+    type: "doc_view",
+    page: `/docs/${slug}`,
+    source: "organic",
+  }).catch(() => {});
+
+  // Fetch content with TOC (enhanced) — gracefully degrade if Notion fails
   let content = null;
   try {
     content = await getDocContentWithToc(doc.id);
   } catch (err) {
     console.error("[Docs] Failed to fetch content:", err);
   }
-  const grouped = await groupDocsByCategory(allDocs);
+  const grouped = groupDocsByCategory(allDocs);
   const categories = Object.keys(grouped);
 
   return (

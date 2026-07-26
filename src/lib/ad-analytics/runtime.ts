@@ -149,7 +149,6 @@ export async function dispatchConversion(event: AdConversionEvent): Promise<Disp
           emailSha256: event.customer?.email
             ? await sha256(event.customer.email.toLowerCase().trim())
             : undefined,
-          liFatId: event.liFatId ?? undefined,
         },
         pageUrl: event.url,
       });
@@ -293,7 +292,7 @@ export async function runScheduledPoll(opts?: {
       const windowHours = Math.max(1, Math.round(windowMs / 3_600_000));
       for (const current of metrics) {
         const key = bookmarkKeyOf({
-          campaign: campaign.slug,
+          campaignSlug: campaign.slug,
           platform: platformConfig.platform,
           metric: "headline",
           window: `${Math.round(windowMs / 60000)}m`,
@@ -302,7 +301,7 @@ export async function runScheduledPoll(opts?: {
         const blocks = renderDigest({
           campaignSlug: campaign.slug,
           current,
-          previous: (bookmark?.snapshot as any) ?? null,
+          previous: bookmark?.snapshot ?? null,
           windowLabel: `rolling ${Math.round(windowMs / 60000)} min`,
         });
         for (const { config, channel } of digestChannels) {
@@ -330,7 +329,7 @@ export async function runScheduledPoll(opts?: {
         if (anomalyChannels.length > 0) {
           const findings = evaluateAnomalies({
             current,
-            previous: (bookmark?.snapshot as any) ?? null,
+            previous: bookmark?.snapshot ?? null,
             rules: campaign.anomalyRules,
             windowHours,
           });
@@ -377,7 +376,7 @@ export async function runScheduledPoll(opts?: {
         // accepted the post — otherwise a Slack outage would silently drop a
         // window.
         if (posted.some((p) => p.ok)) {
-          await store.putBookmark(key, current as any);
+          await store.putBookmark(key, current);
         }
       }
 
@@ -435,7 +434,7 @@ async function markFindingsSent(
       rule: f.rule,
       windowEnd: ctx.windowEnd,
     });
-    await store.putBookmark(key, ctx.snapshot as any);
+    await store.putBookmark(key, ctx.snapshot);
   }
 }
 

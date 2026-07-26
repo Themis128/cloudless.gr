@@ -5,9 +5,9 @@
 #  - 9 pods on omv (Pi 5, 16K page kernel):
 #       postgres (pgvector/pgvector:pg16) + redis + minio + gotrue
 #     + appflowy-cloud + appflowy-web + admin-frontend + nginx
-#  - 1 pod on omv-ha (Pi 3, 4K page kernel, 1 GiB RAM) to save RAM on omv.
-#       Worker image is ghcr.io/themis128/appflowy-worker:lg-page-14-a53
-#       (built for 16K pages + A53 baseline) — runs on both nodes:
+#  - 1 pod on omv-ha (Pi 4, 4K page kernel) because the worker image's
+#       jemalloc is built for 4K pages and fails on Pi 5 with
+#       "<jemalloc>: Unsupported system page size":
 #       appflowy-worker
 #  - Cloudflare tunnel: appflowy.cloudless.gr → 192.168.1.128:30810
 #       (NodePort on omv, path-routed by the in-cluster nginx).
@@ -250,9 +250,7 @@ spec:
             - { name: APPFLOWY_S3_PRESIGNED_URL_ENDPOINT, value: "https://appflowy.cloudless.gr/minio-api" }
             - { name: APPFLOWY_BASE_URL, value: "https://appflowy.cloudless.gr" }
             - { name: APPFLOWY_WEB_URL, value: "https://appflowy.cloudless.gr" }
-            - { name: AI_ENABLED, value: "true" }
-             - { name: AI_BASE_URL, value: "http://postiz-litellm.postiz.svc.cluster.local:4000/v1" }
-             - { name: AI_MODEL, value: "gpt-4.1" }
+            - { name: AI_ENABLED, value: "false" }
             - { name: APPFLOWY_ACCESS_CONTROL, value: "true" }
             - { name: APPFLOWY_DATABASE_MAX_CONNECTIONS, value: "20" }
           ports: [{ containerPort: 8000 }]
@@ -276,14 +274,13 @@ spec:
   template:
     metadata: { labels: { app: appflowy-worker } }
     spec:
-      # Pinned to omv-ha to save RAM on omv (Pi 5 / 8 GiB carries more
-      # load). The custom image (lg-page-14-a53) boots on BOTH nodes:
-      # jemalloc built for 16K pages + A53 baseline ISA.
+      # Pinned to omv-ha (Pi 4, 4K page kernel) — the worker image's
+      # jemalloc was built for 4K pages and panics with "Unsupported
+      # system page size" on omv (Pi 5, 16K kernel `2712`).
       nodeSelector: { kubernetes.io/hostname: omv-ha }
       containers:
         - name: appflowy-worker
-          image: ghcr.io/themis128/appflowy-worker:lg-page-14-a53
-          imagePullPolicy: IfNotPresent
+          image: appflowyinc/appflowy_worker:latest
           env:
             - name: POSTGRES_PASSWORD
               valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }

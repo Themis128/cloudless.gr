@@ -33,8 +33,6 @@ type Body = {
   conversionId?: number | null;
   url?: string | null;
   userAgent?: string | null;
-  /** LinkedIn first-party click ID from `?li_fat_id=…` on the landing page. */
-  liFatId?: string | null;
   utm?: {
     source?: string;
     medium?: string;
@@ -47,7 +45,7 @@ type Body = {
 export async function POST(request: NextRequest) {
   let body: Body;
   try {
-    body = (await request.json()) as any as Body;
+    body = (await request.json()) as Body;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -113,7 +111,6 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       undefined,
     utm: body.utm ?? undefined,
-    liFatId: body.liFatId ?? null,
     customer,
   });
 

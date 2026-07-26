@@ -1,5 +1,3 @@
-import { traceable } from "langsmith/traceable";
-
 import { getProducts, type StoreProduct } from "@/lib/store-products";
 import { BEDROCK_EMBED_DIMENSIONS, embedTextWithTitan } from "@/lib/bedrock-embeddings";
 import {
@@ -9,21 +7,6 @@ import {
   isMeilisearchConfigured,
   meiliRequest,
 } from "@/lib/meilisearch";
-
-const SEARCH_TRACE_METADATA = {
-  app: "cloudless.gr",
-  feature: "R21-search",
-  searchBackend: "meilisearch",
-  embeddingProvider: "aws-bedrock",
-  embeddingModel: "amazon.titan-embed-text-v2:0",
-  runtime: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? "unknown",
-};
-
-const tracedEmbedTextWithTitan = traceable(embedTextWithTitan, {
-  name: "cloudless_bedrock_titan_embedding",
-  run_type: "chain",
-  metadata: SEARCH_TRACE_METADATA,
-});
 
 export interface ProductSearchDocument {
   id: string;
@@ -55,12 +38,6 @@ function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function optionalSearchString(value: unknown): string | undefined {
-  if (typeof value === "string" && value.trim()) return value;
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return undefined;
-}
-
 function productHref(id: string): string {
   return `/store/${encodeURIComponent(id)}`;
 }
@@ -86,7 +63,7 @@ export function productToSearchDocument(product: StoreProduct): ProductSearchDoc
     name: str(p.name),
     category: str(p.category),
     description: str(p.description),
-    price: optionalSearchString(p.price),
+    price: str(p.price) || undefined,
     href: productHref(id),
     text: productToSearchText(product),
   };
@@ -217,7 +194,7 @@ export async function reindexProductsWithEmbeddings(): Promise<{
   const docs = await Promise.all(
     products.map(async (product) => {
       const doc = productToSearchDocument(product);
-      const embedding = await tracedEmbedTextWithTitan(doc.text || doc.name);
+      const embedding = await embedTextWithTitan(doc.text || doc.name);
 
       return {
         ...doc,
@@ -246,11 +223,11 @@ export async function reindexProductsWithEmbeddings(): Promise<{
   };
 }
 
-async function searchProductsWithMeiliCore(
+export async function searchProductsWithMeili(
   query: string,
   limit = 8,
 ): Promise<ProductSearchHit[]> {
-  const vector = await tracedEmbedTextWithTitan(query);
+  const vector = await embedTextWithTitan(query);
 
   const res = await meiliRequest<{ hits?: ProductSearchHit[] }>(
     `/indexes/${PRODUCTS_INDEX}/search`,
@@ -273,23 +250,7 @@ async function searchProductsWithMeiliCore(
   return res.hits ?? [];
 }
 
-const tracedSearchProductsWithMeili = traceable(searchProductsWithMeiliCore, {
-  name: "cloudless_meilisearch_hybrid_product_search",
-  run_type: "chain",
-  metadata: {
-    ...SEARCH_TRACE_METADATA,
-    mode: "hybrid",
-  },
-});
-
-export async function searchProductsWithMeili(
-  query: string,
-  limit = 8,
-): Promise<ProductSearchHit[]> {
-  return tracedSearchProductsWithMeili(query, limit);
-}
-
-async function searchProductsFallbackCore(
+export async function searchProductsFallback(
   query: string,
   limit = 8,
 ): Promise<ProductSearchHit[]> {
@@ -302,20 +263,4 @@ async function searchProductsFallbackCore(
       [p.name, p.category, p.description, p.text].join(" ").toLowerCase().includes(q),
     )
     .slice(0, limit);
-}
-
-const tracedSearchProductsFallback = traceable(searchProductsFallbackCore, {
-  name: "cloudless_product_search_fallback",
-  run_type: "chain",
-  metadata: {
-    ...SEARCH_TRACE_METADATA,
-    mode: "fallback",
-  },
-});
-
-export async function searchProductsFallback(
-  query: string,
-  limit = 8,
-): Promise<ProductSearchHit[]> {
-  return tracedSearchProductsFallback(query, limit);
 }

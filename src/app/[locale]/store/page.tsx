@@ -4,7 +4,6 @@ import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";
 import { getMessages, isSupportedLocale, type Locale } from "@/lib/i18n";
-import RecommendationGrid from "@/components/store/RecommendationGrid";
 
 // Lighthouse Win — let Next.js statically generate the shell + ISR-refresh
 // every hour. The product grid is client-side (StoreGrid uses defaultProducts),
@@ -20,7 +19,8 @@ export async function generateMetadata({
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
-    Record<string, Record<string, string>> | undefined;
+    | Record<string, Record<string, string>>
+    | undefined;
   return {
     title: meta?.store?.title ?? "Store",
     description:
@@ -94,7 +94,7 @@ export default function StorePage() {
       {/* Header */}
       <section className="bg-void scanlines relative overflow-hidden py-16 text-white md:py-20">
         <div className="cyber-grid absolute inset-0 opacity-30" />
-        <div className="bg-neon-magenta/5 animate-float-slow absolute top-0 right-0 h-100 w-100 translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
+        <div className="bg-neon-magenta/5 animate-float-slow absolute top-0 right-0 h-[400px] w-[400px] translate-x-1/3 -translate-y-1/2 rounded-full blur-3xl" />
         <div className="relative z-10 mx-auto max-w-6xl px-6">
           <p className="animate-shimmer-text mb-3 font-mono text-xs font-medium tracking-[0.3em]">
             [ STORE ]

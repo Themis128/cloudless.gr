@@ -6,7 +6,6 @@
  * Cloudflare tunnel edge-cert gaps before they page anyone at 3 AM.
  */
 import { test, expect } from "../coverage";
-import { isNetworkError } from "./_helpers";
 
 const K3S_HOST = globalThis.process?.env["K3S_HOST"] ?? "cloudless.gr";
 
@@ -35,8 +34,9 @@ test.describe("TLS certificates", () => {
           timeout: 15_000,
         });
       } catch (e) {
-        if (isNetworkError(e)) {
-          test.skip(true, `${host} not reachable from runner: ${e}`);
+        const msg = e instanceof Error ? e.message : String(e);
+        if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT/i.test(msg)) {
+          test.skip(true, `${host} DNS not reachable from runner: ${msg}`);
           return;
         }
         throw e;

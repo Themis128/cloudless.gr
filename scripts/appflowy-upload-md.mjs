@@ -68,13 +68,6 @@ try {
 
 async function main() {
   const filePath = resolve(args.file);
-  // Guard against path traversal: only allow files within the current working
-  // directory tree. The AppFlowy endpoint receives this content directly, so
-  // an attacker-controlled path could exfiltrate arbitrary host files.
-  const safeRoot = resolve(process.cwd());
-  if (!filePath.startsWith(safeRoot + "/") && filePath !== safeRoot) {
-    throw new Error(`File path escapes working directory: ${filePath}`);
-  }
   const markdown = await readFile(filePath, "utf8");
   const title = args.title || derivePageTitle(filePath, markdown);
 
@@ -186,9 +179,6 @@ async function createPage({ token, workspaceId, parentViewId, title, blocks, vie
     collab_id: viewId, // MUST equal view_id — see weironz/appflowy_mcp importer.py
   };
 
-  // Working-directory boundary check above ensures filePath is within cwd.
-  // Uploading parsed markdown blocks to the configured AppFlowy instance is intentional.
-  // lgtm[js/file-data-in-outbound-request]
   const res = await fetch(`${baseUrl}/api/workspace/${workspaceId}/page-view`, {
     method: "POST",
     headers: {

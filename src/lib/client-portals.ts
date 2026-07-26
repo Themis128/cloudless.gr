@@ -1,13 +1,10 @@
 /**
  * Client portals — shared store + types (Phase 3 of the one-stop-shop roadmap).
  *
- * D1 primary (Cloudflare Workers) + SSM fallback (AWS Lambda).
- * D1: config table with key "CLIENT_PORTALS_JSON"
- * SSM legacy: /cloudless/CLIENT_PORTALS_JSON
- *
- * Portals are stored as a JSON array in D1 config table (same pattern as SSM).
- * This module is the single owner of that parameter; the admin route and the
- * public token route both go through it.
+ * Portals are stored in SSM under /cloudless/CLIENT_PORTALS_JSON as a JSON
+ * array (same pattern as pending-clients). This module is the single owner of
+ * that parameter; the admin route and the public token route both go through
+ * it.
  *
  * Phase 3 additions on top of the original timeline (steps):
  *   - deliverables: links the client reviews and approves/requests changes on
@@ -17,26 +14,14 @@
 
 import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID, timingSafeEqual } from "node:crypto";
-import type { AuthDatabase } from "@/lib/auth-d1";
 
 const SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
-const D1_KEY = "CLIENT_PORTALS_JSON";
 const REGION = process.env.AWS_REGION ?? "eu-central-1";
 
 let ssm: SSMClient | null = null;
-function getSsmClient(): SSMClient {
+function getClient(): SSMClient {
   if (!ssm) ssm = new SSMClient({ region: REGION });
   return ssm;
-}
-
-// D1 binding interface - provided by Worker context
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
-function getAuthDb(): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  return env.AUTH_DB ?? null;
 }
 
 export interface PortalComment {
@@ -104,16 +89,14 @@ export interface ClientPortal {
    * accessible to global admins (org-wide), so this is a non-breaking
    * additive change. Industry pattern: organization_id / workspace_id as
    * an indexed FK on every tenant-scoped resource (clockwise / Northflank /
-   * flightcontrol 2026 multi-tenant guides).
-   */
+   * flightcontrol 2026 multi-tenant guides). */
   workspaceId?: string;
   /**
    * Token expiry (ISO 8601). When set and in the past, `findPortalByToken`
    * refuses to resolve the portal. Magic-link best practice — tokens are the
    * sole client credential, so long-lived ones are dangerous. Existing
    * portals without an expiry stay valid forever (back-compat); newly
-   * created portals default to 90 days.
-   */
+   * created portals default to 90 days. */
   expiresAt?: string;
 }
 
@@ -141,41 +124,9 @@ function normalizePortal(raw: ClientPortal): ClientPortal {
   };
 }
 
-async function readFromD1(): Promise<ClientPortal[]> {
-  const db = getAuthDb();
-  if (!db) return [];
+export async function readPortals(): Promise<ClientPortal[]> {
   try {
-    const row = await db
-      .prepare("SELECT value FROM config WHERE key = ?")
-      .bind(D1_KEY)
-      .first<{ value: string }>();
-    if (row?.value) {
-      const parsed: unknown = JSON.parse(row.value);
-      if (Array.isArray(parsed)) {
-        return parsed.map((p) => normalizePortal(p as ClientPortal));
-      }
-    }
-  } catch (err) {
-    console.warn("[client-portals] D1 read failed:", err instanceof Error ? err.message : err);
-  }
-  return [];
-}
-
-async function writeToD1(portals: ClientPortal[]): Promise<void> {
-  const db = getAuthDb();
-  if (!db) throw new Error("D1 not available");
-  await db
-    .prepare(
-      "INSERT INTO config (key, value, updated_at) VALUES (?, ?, ?) " +
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
-    )
-    .bind(D1_KEY, JSON.stringify(portals), Math.floor(Date.now() / 1000))
-    .run();
-}
-
-async function readFromSSM(): Promise<ClientPortal[]> {
-  try {
-    const res = await getSsmClient().send(new GetParameterCommand({ Name: SSM_KEY }));
+    const res = await getClient().send(new GetParameterCommand({ Name: SSM_KEY }));
     const parsed: unknown = JSON.parse(res.Parameter?.Value ?? "[]");
     if (!Array.isArray(parsed)) return [];
     return parsed.map((p) => normalizePortal(p as ClientPortal));
@@ -184,8 +135,8 @@ async function readFromSSM(): Promise<ClientPortal[]> {
   }
 }
 
-async function writeToSSM(portals: ClientPortal[]): Promise<void> {
-  await getSsmClient().send(
+export async function writePortals(portals: ClientPortal[]): Promise<void> {
+  await getClient().send(
     new PutParameterCommand({
       Name: SSM_KEY,
       Value: JSON.stringify(portals),
@@ -199,34 +150,6 @@ async function writeToSSM(portals: ClientPortal[]): Promise<void> {
       Tier: "Intelligent-Tiering",
     })
   );
-}
-
-export async function readPortals(): Promise<ClientPortal[]> {
-  // Try D1 first (Cloudflare Workers)
-  const db = getAuthDb();
-  if (db) {
-    const d1Result = await readFromD1();
-    if (d1Result.length > 0) return d1Result;
-  }
-  return readFromSSM();
-}
-
-export async function writePortals(portals: ClientPortal[]): Promise<void> {
-  // Try D1 first (Cloudflare Workers)
-  const db = getAuthDb();
-  if (db) {
-    try {
-      await writeToD1(portals);
-      return;
-    } catch (err) {
-      console.warn(
-        "[client-portals] D1 write failed, falling back to SSM:",
-        err instanceof Error ? err.message : err
-      );
-      // Fall through to SSM
-    }
-  }
-  await writeToSSM(portals);
 }
 
 /** Constant-time token comparison — the token is the portal's sole credential. */
@@ -332,18 +255,6 @@ export function applyClientResponse(
 }
 
 /** Deliverables visible to the client (drafts are internal). */
-export type PortalHealthBand = "healthy" | "at-risk" | "critical";
-
-export type PortalSummary = {
-  token: string;
-  label: string;
-  clientEmail: string;
-  clientName: string;
-  deliverables: PortalDeliverable[];
-  paymentLinks: PortalPaymentLink[];
-  health?: { band: PortalHealthBand };
-};
-
 export function clientVisibleDeliverables(portal: ClientPortal): PortalDeliverable[] {
   return (portal.deliverables ?? []).filter((d) => d.status !== "draft");
 }

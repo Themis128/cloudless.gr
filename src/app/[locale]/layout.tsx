@@ -16,6 +16,12 @@ import GoogleAnalyticsConsent from "@/components/GoogleAnalyticsConsent";
 import ClientCartSlideOver from "@/components/ClientCartSlideOver";
 import ClientChatWidget from "@/components/ClientChatWidget";
 import ClientDecorators from "@/components/ClientDecorators";
+import AttributionCapture from "@/components/AttributionCapture";
+import ConsentGatedPixel from "@/components/ConsentGatedPixel";
+import LinkedInInsightTag from "@/components/LinkedInInsightTag";
+
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "";
+const LINKEDIN_PARTNER_ID = process.env.NEXT_PUBLIC_LINKEDIN_PARTNER_ID ?? "";
 
 type Props = {
   children: React.ReactNode;
@@ -35,17 +41,29 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>;
 }): Promise<import("next").Metadata> {
-  await params;
+  const { locale } = await params;
+
+  const ogLocaleMap: Record<string, string> = {
+    en: "en_US",
+    el: "el_GR",
+    fr: "fr_FR",
+    de: "de_DE",
+  };
 
   return {
     alternates: {
       languages: {
-        en: `${BASE_URL}`,
+        en: `${BASE_URL}/en`,
         el: `${BASE_URL}/el`,
         fr: `${BASE_URL}/fr`,
         de: `${BASE_URL}/de`,
-        "x-default": `${BASE_URL}`,
+        "x-default": `${BASE_URL}/en`,
       },
+    },
+    openGraph: {
+      url: `${BASE_URL}/${locale}`,
+      siteName: "Cloudless",
+      locale: ogLocaleMap[locale] ?? "en_US",
     },
   };
 }
@@ -71,6 +89,9 @@ export default async function LocaleLayout({ children, params }: Props) {
           <CartProvider>
             <CookieConsentProvider>
               <GoogleAnalyticsConsent />
+              {META_PIXEL_ID && <ConsentGatedPixel pixelId={META_PIXEL_ID} />}
+              {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
+              <AttributionCapture />
               <JsonLd data={getOrganizationSchema()} />
               <Navbar />
               <main id="main-content" className="flex-1">

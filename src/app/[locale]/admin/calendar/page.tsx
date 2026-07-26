@@ -45,7 +45,7 @@ export default function CalendarPage() {
     try {
       const res = await fetchWithAuth(`/api/admin/calendar?from=${firstDay}&to=${lastDay}`);
       if (!res.ok) return;
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setItems(data.items ?? []);
     } catch {
       /* silent */
@@ -55,6 +55,7 @@ export default function CalendarPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month]);
@@ -98,7 +99,7 @@ export default function CalendarPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const data = (await res.json().catch(() => null)) as any;
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
         window.alert(data?.error ?? `Publish failed (HTTP ${res.status}).`);
         return;

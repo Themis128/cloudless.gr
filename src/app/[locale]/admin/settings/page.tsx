@@ -19,7 +19,7 @@ export default function AdminSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prefix }),
       });
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       setCacheMsg({
         ok: true,

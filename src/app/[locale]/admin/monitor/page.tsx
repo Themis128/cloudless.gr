@@ -170,7 +170,7 @@ export default function AdminMonitorPage() {
       ]);
 
       if (!statusRes.ok) {
-        const d = (await statusRes.json().catch(() => ({}))) as any;
+        const d = await statusRes.json().catch(() => ({}));
         if (d.offline) {
           setOffline(true);
           setLoading(false);
@@ -179,12 +179,12 @@ export default function AdminMonitorPage() {
         throw new Error(`HTTP ${statusRes.status}`);
       }
 
-      const statusData: StatusPayload = (await statusRes.json()) as any as any;
+      const statusData: StatusPayload = await statusRes.json();
       setStatus(statusData);
       setOffline(false);
 
       if (alertsRes.ok) {
-        const alertData = (await alertsRes.json()) as any as any as any;
+        const alertData = await alertsRes.json();
         setAlerts(Array.isArray(alertData) ? alertData : []);
       } else {
         console.warn(

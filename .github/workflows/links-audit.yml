@@ -37,7 +37,7 @@ jobs:
           args: >-
             --verbose
             --no-progress
-            --accept 200,202,206,301,302,303,307,308,400,401,403,405,429,503
+            --accept 200,206,301,302,303,307,308,400,401,403,405,429,503
             --exclude "^https://claude\.ai/code/routines"
             --exclude "^https://hooks\.slack\.com/"
             --exclude "^https://[a-zA-Z0-9-]+\.ngrok-free\.app"

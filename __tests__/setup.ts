@@ -1,0 +1,132 @@
+/**
+ * Global Vitest setup — runs once per worker thread before any test file.
+ *
+ * Sets all integration env vars to safe test defaults so tests never need
+ * to mock @/lib/integrations or @/lib/ssm-config.  Individual tests can
+ * override specific vars with vi.stubEnv() and call resetIntegrationCache()
+ * / resetSsmCache() to pick up the change.
+ */
+
+import { beforeEach, afterEach, vi } from "vitest";
+import {
+  resetIntegrationCache,
+  resetIntegrationCacheAsync,
+  resetSlackConfigCache,
+} from "@/lib/integrations";
+import { resetSsmCache } from "@/lib/ssm-config";
+import { resetJwksCache } from "@/lib/api-auth";
+
+// ── Notion ────────────────────────────────────────────────────────────────────
+process.env.NOTION_API_KEY = "secret_test_key_12345";
+process.env.NOTION_BLOG_DB_ID = "blog-db-123";
+process.env.NOTION_SUBMISSIONS_DB_ID = "submissions-db-123";
+process.env.NOTION_DOCS_DB_ID = "docs-db-123";
+process.env.NOTION_PROJECTS_DB_ID = "projects-db-123";
+process.env.NOTION_TASKS_DB_ID = "tasks-db-123";
+process.env.NOTION_ANALYTICS_DB_ID = "analytics-db-123";
+process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";
+process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
+process.env.NOTION_WEBHOOK_SECRET = "whsec_notion_test";
+
+// ── EspoCRM ───────────────────────────────────────────────────────────────────
+process.env.HUBSPOT_API_KEY = "test-hs-token";
+
+// ── ActiveCampaign ────────────────────────────────────────────────────────────
+process.env.ACTIVECAMPAIGN_API_URL = "https://test.api-us1.com";
+process.env.ACTIVECAMPAIGN_API_TOKEN = "test-ac-token";
+
+// ── TikTok ────────────────────────────────────────────────────────────────────
+process.env.TIKTOK_ACCESS_TOKEN = "test-tiktok-token";
+process.env.TIKTOK_ADVERTISER_ID = "test-tiktok-advertiser";
+
+// ── LinkedIn ──────────────────────────────────────────────────────────────────
+process.env.LINKEDIN_ACCESS_TOKEN = "test-li-token";
+process.env.LINKEDIN_AD_ACCOUNT_ID = "test-li-account";
+process.env.LINKEDIN_ORGANIZATION_URN = "urn:li:organization:123";
+
+// ── X (Twitter) Ads ──────────────────────────────────────────────────────────
+process.env.X_API_KEY = "test-x-api-key";
+process.env.X_API_SECRET = "test-x-api-secret";
+process.env.X_ACCESS_TOKEN = "test-x-access-token";
+process.env.X_ACCESS_SECRET = "test-x-access-secret";
+process.env.X_AD_ACCOUNT_ID = "test-x-ad-account";
+
+// ── Google Ads ────────────────────────────────────────────────────────────────
+process.env.GOOGLE_ADS_DEVELOPER_TOKEN = "test-gads-devtoken";
+process.env.GOOGLE_ADS_CUSTOMER_ID = "test-gads-customer";
+
+// ── Anthropic ─────────────────────────────────────────────────────────────────
+process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+
+// ── Slack ─────────────────────────────────────────────────────────────────────
+process.env.SLACK_BOT_TOKEN = "xoxb-test-token";
+process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
+// SLACK_WEBHOOK_URL intentionally NOT set globally — tests that need it use
+// vi.stubEnv("SLACK_WEBHOOK_URL", "...") in their own beforeEach, so that
+// the "when neither configured" SlackClient tests see no webhook by default.
+
+// ── Stripe ────────────────────────────────────────────────────────────────────
+process.env.STRIPE_SECRET_KEY = "sk_test_123";
+process.env.STRIPE_PUBLISHABLE_KEY = "pk_test_123";
+process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
+
+// ── AWS SES ───────────────────────────────────────────────────────────────────
+process.env.SES_FROM_EMAIL = "test@cloudless.gr";
+process.env.SES_TO_EMAIL = "inbox@cloudless.gr";
+process.env.AWS_SES_REGION = "us-east-1";
+
+// ── Google / GSC ─────────────────────────────────────────────────────────────
+process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";
+process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
+process.env.GOOGLE_CALENDAR_ID = "calendar@cloudless.gr";
+process.env.GSC_SITE_URL = "sc-domain:cloudless.gr";
+
+// ── Cognito (kept for legacy fallback path in proxy.ts) ──────────────────────
+process.env.COGNITO_USER_POOL_ID = "us-east-1_TestPool";
+process.env.COGNITO_CLIENT_ID = "test-client-id";
+process.env.COGNITO_CLIENT_SECRET = "test-client-secret";
+
+// ── next-auth ─────────────────────────────────────────────────────────────────
+process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
+process.env.SESSION_TOKEN_STORE_TABLE = "test-session-token-store";
+
+// ── Cache resets ──────────────────────────────────────────────────────────────
+// Reset all in-memory caches before each test and restore env vars that tests
+// may clear to trigger 503 "not configured" responses.
+beforeEach(() => {
+  // Prevent the CI job-level SLACK_WEBHOOK_URL secret from leaking into tests.
+  // Tests that need it set use process.env assignment directly.
+  delete process.env.SLACK_WEBHOOK_URL;
+  // Restore credentials that 503 "not configured" tests may clear.
+  process.env.GOOGLE_CLIENT_EMAIL = "svc@project.iam.gserviceaccount.com";
+  process.env.GOOGLE_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\nMOCK\n-----END PRIVATE KEY-----";
+  process.env.HUBSPOT_API_KEY = "test-hs-token";
+  process.env.NOTION_API_KEY = "secret_test_key_12345";
+  process.env.NOTION_CALENDAR_DB_ID = "calendar-db-123";
+  process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
+  process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
+  // Clear COGNITO_ISSUER so api-auth.ts uses the decode-only fallback
+  // for fake-sig test tokens. Without this, CI (where COGNITO_ISSUER may be
+  // set as a GH secret) tries real JWKS verification and rejects them.
+  // Tests that need JWKS verification set the issuer explicitly.
+  delete process.env.COGNITO_ISSUER;
+  resetIntegrationCache();
+  resetIntegrationCacheAsync();
+  resetSlackConfigCache();
+  resetSsmCache();
+  resetJwksCache();
+});
+
+afterEach(() => {
+  // Restore any env vars stubbed via vi.stubEnv() so per-test env stubs never
+  // bleed into subsequent tests.
+  // NOTE: vi.unstubAllGlobals() is intentionally omitted — some test files
+  // (e.g. notion-client.test.ts) stub globals at module level and expect those
+  // stubs to persist across all tests in the file.
+  vi.unstubAllEnvs();
+  resetIntegrationCache();
+  resetIntegrationCacheAsync();
+  resetSlackConfigCache();
+  resetSsmCache();
+});

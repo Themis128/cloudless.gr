@@ -18,7 +18,6 @@
     "jsx": "react-jsx",
     "incremental": true,
     "strictBuiltinIteratorReturn": false,
-    "allowImportingTsExtensions": true,
     "plugins": [
       {
         "name": "next"
@@ -41,8 +40,6 @@
   "exclude": [
     "node_modules",
     "sst.config.ts",
-    "sst.config.cloudflare.ts",
-    "sst.config.cf-infra.ts",
     "playwright.config.mts",
     "playwright.production.config.mts",
     "e2e",
@@ -51,8 +48,6 @@
     "scripts",
     "tools",
     "workers",
-    "cloudless-campaigns-code",
-    "cloudflare-pages-mcp",
-    "fast-markdown-mcp"
+    "cloudless-campaigns-code"
   ]
 }

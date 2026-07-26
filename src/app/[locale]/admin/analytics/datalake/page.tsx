@@ -10,12 +10,8 @@
  *   - LinkedIn ads campaign rollup (90d)
  *   - Sentry top unresolved issues (14d)
  *   - EspoCRM lifecycle funnel
- *   - EspoCRM pipeline (per-stage opportunity rollup)
- *   - Lead-to-customer journey with RFM scores
- *   - Self-hosted app health (AppFlowy, n8n, Postiz)
- *   - n8n per-workflow success rate (30d)
  *
- * Fetches all from /api/admin/analytics/datalake. Each card
+ * Fetches all six in parallel from /api/admin/analytics/datalake. Each card
  * renders independently — a section with an error (e.g. ETL hasn't run yet)
  * shows that error inline rather than blanking the whole dashboard.
  */
@@ -109,10 +105,10 @@ const SECTION_META: Record<
       { key: "last_seen", label: "Last seen" },
     ],
   },
-  espocrm_funnel: {
+  hubspot_funnel: {
     title: "EspoCRM lifecycle funnel",
     subtitle:
-      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_espocrm_funnel.",
+      "Contact count × closed-won deals + revenue, split by lead_source. Sourced from v_hubspot_funnel.",
     columns: [
       { key: "lifecycle_stage", label: "Stage" },
       { key: "lead_source", label: "Source" },
@@ -147,7 +143,7 @@ export default function DatalakeDashboardPage() {
         `/api/admin/analytics/datalake${refresh ? "?refresh=1" : ""}`
       );
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const body = (await res.json()) as any as any as DatalakeResponse;
+      const body = (await res.json()) as DatalakeResponse;
       setData(body);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));

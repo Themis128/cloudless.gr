@@ -150,9 +150,9 @@ export const campaigns: Campaign[] = [
       },
     ],
     notifyChannels: [
-      { channel: "slack", target: "#campaigns", level: "event" },
-      { channel: "slack", target: "#campaigns", level: "digest" },
-      { channel: "slack", target: "#campaigns", level: "anomaly" },
+      { channel: "slack", target: "#ads-realtime", level: "event" },
+      { channel: "slack", target: "#ads-realtime", level: "digest" },
+      { channel: "slack", target: "#ads-realtime", level: "anomaly" },
     ],
     tiers: [
       {

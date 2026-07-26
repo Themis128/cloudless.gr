@@ -1,0 +1,95 @@
+name: Analytics ETL
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # daily at 02:00 UTC, after events settle
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # OIDC → AWS
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: us-east-1
+  ANALYTICS_BUCKET: cloudless-analytics-data
+
+jobs:
+  etl:
+    name: Repair Athena partitions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Repair Athena partitions
+        run: |
+          QID=$(aws athena start-query-execution \
+            --query-string "MSCK REPAIR TABLE cloudless_analytics.events;" \
+            --result-configuration "OutputLocation=s3://$ANALYTICS_BUCKET/athena-results/" \
+            --query "QueryExecutionId" --output text)
+          echo "QueryExecutionId: $QID"
+
+          # Poll until complete (max 5 min)
+          for i in $(seq 1 30); do
+            STATE=$(aws athena get-query-execution --query-execution-id "$QID" \
+              --query "QueryExecution.Status.State" --output text)
+            echo "[$i] state=$STATE"
+            if [ "$STATE" = "SUCCEEDED" ]; then
+              echo "✅ Partition repair complete" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATE" = "FAILED" ] || [ "$STATE" = "CANCELLED" ]; then
+              REASON=$(aws athena get-query-execution --query-execution-id "$QID" \
+                --query "QueryExecution.Status.StateChangeReason" --output text)
+              echo "::error::Athena query $STATE: $REASON"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "::error::Timed out waiting for Athena partition repair"
+          exit 1
+
+      - name: Summary — yesterday's event counts
+        run: |
+          YESTERDAY=$(date -u -d 'yesterday' '+%Y-%m-%d')
+          QID=$(aws athena start-query-execution \
+            --query-string "SELECT event, COUNT(*) AS n FROM cloudless_analytics.events WHERE year='$(date -u -d yesterday +%Y)' AND month='$(date -u -d yesterday +%m)' AND day='$(date -u -d yesterday +%d)' GROUP BY event ORDER BY n DESC;" \
+            --result-configuration "OutputLocation=s3://$ANALYTICS_BUCKET/athena-results/" \
+            --query "QueryExecutionId" --output text)
+
+          for i in $(seq 1 18); do
+            STATE=$(aws athena get-query-execution --query-execution-id "$QID" \
+              --query "QueryExecution.Status.State" --output text)
+            [ "$STATE" = "SUCCEEDED" ] && break
+            [ "$STATE" = "FAILED" ] && exit 0   # non-fatal: summary is best-effort
+            sleep 10
+          done
+
+          RESULTS=$(aws athena get-query-results --query-execution-id "$QID" \
+            --query "ResultSet.Rows[1:].Data[*][0].VarCharValue" --output text 2>/dev/null || true)
+
+          {
+            echo "## 📊 Analytics — $YESTERDAY"
+            echo "| Event | Count |"
+            echo "|-------|-------|"
+            # tab-separated pairs from the flattened query output
+            aws athena get-query-results --query-execution-id "$QID" \
+              --query "ResultSet.Rows[1:]" --output json 2>/dev/null \
+            | jq -r '.[] | "| \(.Data[0].VarCharValue) | \(.Data[1].VarCharValue) |"' || echo "_(no data yet)_"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": ":x: Analytics ETL (Athena partition repair) failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). New events/* partitions will not be queryable until this is fixed. See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
+            }'

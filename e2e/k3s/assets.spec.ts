@@ -1,10 +1,7 @@
 /**
  * Static asset coverage — verifies the Next.js app's `_next/static/*`
- * chunks load cleanly through Workers. Image chunks are usually
- * the canary for Workers response-size limits.
- *
- * MIGRATION NOTE (July 2026): Application migrated from k3s/Lambda to Cloudflare
- * Workers. Static assets are now served from Workers or R2.
+ * chunks load cleanly through Lambda + Funnel. Image chunks are usually
+ * the canary for Lambda response-size limits (6 MB hard cap for binary).
  */
 import { test, expect } from "../coverage";
 
@@ -31,7 +28,6 @@ test.describe("k3s static assets", () => {
     // Distinguish:
     //   - pageerror events (uncaught JS exceptions — always fatal)
     //   - console.error from 3rd-party scripts (expected noise; ignored)
-    //   - console.error from CSP warnings (dev-only, ignore in testing)
     //   - console.error from app code (fatal)
     const fatal: string[] = [];
     page.on("pageerror", (e) => fatal.push(`pageerror: ${e.message}`));
@@ -45,9 +41,6 @@ test.describe("k3s static assets", () => {
       const thirdParty =
         /(stripe|hubspot|sentry|facebook|hsforms|hs-scripts|googletagmanager|google-analytics)/i;
       if (thirdParty.test(url) || thirdParty.test(t)) return;
-      // Ignore CSP warnings from dev server (invalid source patterns like http://172.*)
-      const cspWarning = /content security policy.*invalid source/i;
-      if (cspWarning.test(t)) return;
       fatal.push(`console.error: ${t}`);
     });
     await page.goto("/en", { waitUntil: "networkidle" });

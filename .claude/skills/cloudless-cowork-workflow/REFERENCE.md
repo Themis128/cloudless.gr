@@ -15,6 +15,7 @@ Each Edit returned a success message. Each file looked correct via `Read`. `git 
 ## What works and what doesn't (summary table)
 
 See SKILL.md table. Short version:
+
 - `Write` new files: always safe.
 - `Edit` existing files: 0% success rate, ~100% corruption.
 - `git checkout HEAD -- <file>` from sandbox: blocked by `.git/index.lock` perm-denied.
@@ -58,7 +59,7 @@ Real engineering: needs auth, request size limits, audit log, command allow-list
 
 ## Quick refs
 
-- The Notion KB page for this issue: https://www.notion.so/3687d82c410a8114931bed213e486474
-- The session log that documents all four follow-ups: https://www.notion.so/3687d82c410a8172866ce06bf3ee1e0f
+- The Notion KB page for this issue: <https://www.notion.so/3687d82c410a8114931bed213e486474>
+- The session log that documents all four follow-ups: <https://www.notion.so/3687d82c410a8172866ce06bf3ee1e0f>
 - Patch-script template: `scripts/patch-script-template.ps1` in this skill
 - Pre-flight check: `scripts/cowork-preflight.sh` in this skill

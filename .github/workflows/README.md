@@ -1,6 +1,6 @@
 # `.github/workflows/` — catalogue index
 
-**119 active** workflow files (10 one-shot workflows archived in this sweep to `.github/workflows.archived/`). Curated by category per
+**115 active** workflow files (down from 124 — 9 one-shot/obsolete ones archived to `.github/workflows.archived/`). Curated by category per
 `feedback_organize_gh_workflows` memory. Every new workflow MUST follow
 the naming taxonomy here + carry the comment/timeout/concurrency/alert
 conventions listed in that memory.
@@ -51,15 +51,15 @@ Conventions in use today (consolidated retroactively):
 | `cloudless-https-health-probe.yml` | HTTPS reachability | every 5 min |
 | `sha-drift-detector.yml` | SSM SHA == Lambda SHA == Pi SHA | every 6h |
 | `sha-drift-watchdog.yml` | Re-runs detector on failure | workflow_run |
-| `admin-login-probe.yml` | Self-hosted apps admin login | every 6h |
-| `app-auth-doctor.yml` | D1 auth config + SESSION_SECRET | daily |
+| `admin-login-probe.yml` | Cognito login still works | hourly |
+| `app-auth-doctor.yml` | NextAuth config + JWKS | daily |
 | `notion-integration-health.yml` | All 13 DBs reachable | daily |
 | `notion-schema-check.yml` | Schema vs code expectations | weekly |
 | `notion-schema-drift.yml` | Diff vs last-known schema | daily |
 | `ad-readiness.yml` | LinkedIn pixel + CAPI smoke | daily |
 | `link-health-audit.yml` | Cross-site link checker | weekly |
 
-## 🛡️ Security (7)
+## 🛡️ Security (5)
 
 `codacy.yml` · `codeql.yml` · `mcp-security-scan.yml` · `secret-scan.yml` · `secrets-check.yml` · `monthly-security-audit.yml` · `security-headers-audit.yml`
 
@@ -93,9 +93,9 @@ Conventions in use today (consolidated retroactively):
 
 ## ☁️ Cloudflare ops (6)
 
-`cloudflare-lb.yml` · `store-cloudflare-token.yml` ·
+`cloudflare-lb.yml` · `apply-cloudflare-lb.yml` ·
 `cloudflare-disable-email-obfuscation.yml` · `cloudflare-token-rotate.yml` ·
-`verify-cloudflare-token.yml` · `cloudflared-restart.yml`
+`store-cloudflare-token.yml` · `verify-cloudflare-token.yml`
 
 ## 📚 CMS / Notion (4)
 
@@ -116,7 +116,7 @@ Conventions in use today (consolidated retroactively):
 `stale.yml` · `stale-gate-sweeper.yml` · `cache-cleanup.yml` ·
 `teardown-staging.yml` · `ecr-lifecycle.yml`
 
-## 🔧 Dev tooling (8)
+## 🔧 Dev tooling (6)
 
 `ci.yml` · `dependabot-automerge.yml` · `dependency-review.yml` ·
 `labeler.yml` · `preview.yml` · `pr-review.yml` ·
@@ -133,11 +133,12 @@ plausibly re-needed):
   Cognito creds rotation
 - `slack-manifest-apply.yml` — actively used by `scripts/seed-slack-*`
 - `domain-decommission.yml` — driver for future decommissions
-- `ntfy-restore.yml`, `analytics-restore.yml` — recovery procedures
+- `grafana-esp32-query.yml`, `ntfy-restore.yml`, `analytics-restore.yml`
+  — recovery procedures
 - `linkedin-poll.yml`, `platform-crons.yml`, `workers-ai-verify.yml`
   — scheduled/manual ops surfaces
 
-### ✅ Archived 2026-07-09 (moved to `.github/workflows.archived/<name>.yml.disabled`)
+### ✅ Archived 2026-06-21 (moved to `.github/workflows.archived/<name>.yml.disabled`)
 
 Truly one-shot workflows whose work is permanently done:
 
@@ -150,17 +151,6 @@ Truly one-shot workflows whose work is permanently done:
 - `oidc-diagnostic.yml` — OIDC config diagnostic ✅ ran + info captured
 - `test-indexing.yml` — indexing pipeline smoke test ✅ done
 - `deploy-infrastructure-workaround.yml` — "GPG Workaround" for an old Terraform GPG issue, superseded by the `terraform-doctor` skill ✅ obsolete
-- `grafana-esp32-query.yml` — ESP32 hub query fix ✅ done
-- `fix-pihole-lighttpd-restart.yml` — Pi-hole port 80 fix ✅ done
-- `fix-pihole-nginx-conflict.yml` — Pi-hole nginx conflict fix ✅ done
-- `fix-pihole-port-nsenter.yml` — Pi-hole port nsenter fix ✅ done
-- `fix-selfhosted-tunnels.yml` — Self-hosted app tunnels port fix ✅ done
-- `fix-loki-cache.yml` — Loki cache memory limit fix ✅ done
-- `fix-maintenance-cronjob.yml` — Cluster health cronjob suspension ✅ done
-- `fix-nginx-port80.yml` — Nginx port 80 fix ✅ done
-- `fix-omv-nginx-port.yml` — OMV nginx port fix ✅ done
-- `fix-health-check-log.yml` — Health check log fix ✅ done
-- `fix-health-check-log-path.yml` — Health check log path fix ✅ done
 
 **To unarchive** if ever needed: rename `.disabled` back to `.yml` and
 move to `.github/workflows/`. Git history preserves the full content.
@@ -177,9 +167,10 @@ nudge until the underlying gap is closed.
 
 | Workflow | Last failure | Root cause | Fix |
 |----------|-------------|------------|-----|
-| `ad-readiness.yml` | 2026-06-20 | LinkedIn ad secrets not all set | Operator: set `LINKEDIN_*` SSM keys |
+| `apply-cloudflare-lb.yml` | 2026-06-14 | Cloudflare API token in SSM is stale (Phase 0 blocker) | Rotate via `cloudflare-token-doctor` skill |
+| `ad-readiness.yml` | 2026-06-20 | LinkedIn ad secrets not all set | Operator: confirm `LINKEDIN_*` SSM keys are non-empty |
 
-When the underlying issue is fixed, remove its row from this table.
+When either of these is fixed, remove its row from this table.
 
 ## Failure routing matrix
 

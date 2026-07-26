@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { signIn as nextAuthSignIn, signOut as nextAuthSignOut } from "next-auth/react";
+import { clearSessionCache } from "@/lib/fetch-with-auth";
 
 interface UserPreferences {
   theme: "system" | "dark" | "light";
@@ -18,6 +19,11 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   emailNewsletter: false,
   emailMarketing: false,
 };
+
+/** Same-origin route that reads (GET) and writes (POST) user profile attributes. */
+const PROFILE_ENDPOINT = "/api/user/profile";
+
+const OIDC_PROVIDER = "cognito";
 
 export interface AuthUser {
   username: string;
@@ -67,71 +73,121 @@ const DEFAULT_AUTH_CONTEXT: AuthContextType = {
   refreshProfile: async () => {},
 };
 
-const COGNITO_ERROR_MESSAGES: Record<string, string> = {
-  UserAlreadyAuthenticatedException: "You are already signed in.",
-  NotAuthorizedException: "Incorrect email or password.",
-  UserNotFoundException: "No account found with that email.",
-  UsernameExistsException: "An account with that email already exists.",
-  CodeMismatchException: "Invalid verification code. Please try again.",
-  ExpiredCodeException: "Verification code has expired. Please request a new one.",
-  LimitExceededException: "Too many attempts. Please wait a moment and try again.",
-  TooManyRequestsException: "Too many attempts. Please wait a moment and try again.",
-  InvalidPasswordException:
-    "Password does not meet requirements (min. 8 characters, include uppercase, lowercase, and a number).",
-  UserNotConfirmedException:
-    "Your email has not been verified. Please check your inbox for a verification code.",
-};
-
-/** Map raw error messages to user-friendly strings. */
-function friendlyAuthError(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err);
-  const name = err instanceof Error ? err.name : "";
-  const mapped = COGNITO_ERROR_MESSAGES[name];
-  if (mapped) return mapped;
-  if (message.includes("password")) {
-    return "Password does not meet requirements (min. 8 characters, include uppercase, lowercase, and a number).";
-  }
-  return message.replace(/^[A-Za-z]+Exception:\s*/, "");
-}
-
 const AuthContext = createContext<AuthContextType>(DEFAULT_AUTH_CONTEXT);
 
+function isAdminFromSession(user: { groups?: string[] }): boolean {
+  return (user.groups ?? []).includes("admin");
+}
+
+/**
+ * Pull the user's stored profile attributes (company/phone/preferences) that
+ * the session token does not carry, merging them onto the base user. Served by
+ * the provider-agnostic /api/user/profile route (DynamoDB, keyed by sub).
+ * Returns the base unchanged on any failure so auth state never depends on it.
+ * Without this, the Profile/Settings forms render blank on every load.
+ */
+async function enrichWithProfile(base: AuthUser): Promise<AuthUser> {
+  try {
+    const res = await globalThis.fetch(PROFILE_ENDPOINT);
+    if (!res.ok) return base;
+    const p = (await res.json()) as {
+      name?: string;
+      company?: string;
+      phone?: string;
+      preferences?: Partial<UserPreferences>;
+    };
+    return {
+      ...base,
+      name: p.name ?? base.name,
+      company: p.company ?? base.company,
+      phone: p.phone ?? base.phone,
+      preferences: { ...base.preferences, ...(p.preferences ?? {}) },
+    };
+  } catch {
+    return base;
+  }
+}
+
 interface AuthProviderProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [configError, setConfigError] = useState<string | null>(null);
+  const configError = null;
 
-  const loadUserProfile = useCallback(async (): Promise<void> => {
+  const checkAuth = useCallback(async () => {
+    // E2E test bypass: when running under Playwright with NEXT_PUBLIC_E2E=1
+    // AND a cookie e2e_admin=1 is present, short-circuit to an admin session.
+    // Production never sets NEXT_PUBLIC_E2E, so this branch is dead code in prod.
+    if (
+      typeof window !== "undefined" &&
+      process.env.NEXT_PUBLIC_E2E === "1" &&
+      document.cookie.includes("e2e_admin=1")
+    ) {
+      setUser({
+        username: "e2e-admin",
+        email: "e2e-admin@cloudless.test",
+        preferences: DEFAULT_PREFERENCES,
+      });
+      setIsAdmin(true);
+      setIsLoading(false);
+      return;
+    }
     try {
-      const res = await fetch("/api/auth/session");
-      if (res.ok) {
-        const data = (await res.json()) as {
-          user?: { id?: string; email?: string; name?: string; company?: string; phone?: string };
-          isAdmin?: boolean;
-        } | null;
-        if (data?.user) {
-          const { id, email, name, company, phone } = data.user;
-          setUser({
-            username: id ?? email ?? "",
-            email: email ?? undefined,
-            name: name ?? undefined,
-            company: company ?? undefined,
-            phone: phone ?? undefined,
-            preferences: { ...DEFAULT_PREFERENCES },
-          });
-          setIsAdmin(data.isAdmin ?? false);
-          return;
-        }
+      const res = await globalThis.fetch("/api/auth/session");
+      if (!res.ok) {
+        setUser(null);
+        setIsAdmin(false);
+        return;
       }
-      setUser(null);
-      setIsAdmin(false);
-    } catch (err) {
-      console.error("[AuthProvider] loadUserProfile error:", err);
+      const data = (await res.json()) as {
+        user?: {
+          id?: string;
+          name?: string;
+          email?: string;
+          groups?: string[];
+          roles?: string[];
+        };
+        error?: string;
+      } | null;
+
+      if (data?.error === "RefreshTokenError") {
+        // Refresh token expired — clear session so login page shows
+        await nextAuthSignOut({ redirect: false });
+        setUser(null);
+        setIsAdmin(false);
+        return;
+      }
+
+      if (data?.user) {
+        const base: AuthUser = {
+          username: data.user.id ?? data.user.email ?? "",
+          email: data.user.email ?? undefined,
+          name: data.user.name ?? undefined,
+          preferences: { ...DEFAULT_PREFERENCES },
+        };
+        setIsAdmin(isAdminFromSession(data.user));
+        // Render the session-only user immediately so isLoading flips false
+        // and the admin layout stops showing the centred spinner. The profile
+        // enrichment (company/phone/preferences) runs without await — when it
+        // resolves it patches the state in. Avoids blocking the whole admin
+        // boot on /api/user/profile, which returns 413 today because the
+        // Cognito-cookie + headers combo exceeds the edge header limit
+        // (documented in src/lib/auth.ts:172). The 413 itself is harmless —
+        // enrichWithProfile swallows it and returns the base — but awaiting
+        // it added a full request RTT to every admin page load.
+        setUser(base);
+        void enrichWithProfile(base).then((enriched) => {
+          if (enriched !== base) setUser(enriched);
+        });
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
+    } catch {
       setUser(null);
       setIsAdmin(false);
     } finally {
@@ -140,81 +196,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    void loadUserProfile();
-  }, [loadUserProfile]);
+    checkAuth().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [checkAuth]);
 
-  const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
-    try {
-      const result = await nextAuthSignIn("credentials", {
-        email,
-        password,
-        redirect: false,
-        callbackUrl: "/auth/post-login",
-      });
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
-      await loadUserProfile();
-      return {};
-    } catch (err: unknown) {
-      throw new Error(friendlyAuthError(err));
-    }
+  // Sign-in delegates to Cognito's hosted flow. The email/password arguments
+  // are ignored — Cognito Hosted UI shows its own login page. They're kept in
+  // the signature for interface compat with any callers that pass them.
+  const handleSignIn = async (_email: string, _password: string): Promise<SignInResult> => {
+    await nextAuthSignIn(OIDC_PROVIDER, { redirect: true });
+    return {};
   };
 
-  const handleSignUp = async (email: string, password: string, name?: string) => {
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName: name }),
-      });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
-        throw new Error(data.error || "Sign up failed");
-      }
-    } catch (err) {
-      throw new Error(friendlyAuthError(err));
-    }
+  const handleSignUp = async (_email: string, _password: string, _name?: string) => {
+    // Cognito Hosted UI handles registration. Route through next-auth so it
+    // manages the OAuth state/PKCE on the callback.
+    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
   };
 
   const handleSignOut = async () => {
-    await nextAuthSignOut({ callbackUrl: "/" });
     setUser(null);
     setIsAdmin(false);
+    clearSessionCache();
+    await nextAuthSignOut({ callbackUrl: "/" });
   };
 
   const handleConfirmSignUp = async (_email: string, _code: string) => {
-    throw new Error("Email verification not implemented for local auth");
+    // The provider handles email verification via its own hosted flow.
   };
 
-  const handleForgotPassword = async (email: string) => {
-    try {
-      await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-    } catch (err) {
-      throw new Error(friendlyAuthError(err));
-    }
+  const handleForgotPassword = async (_email: string) => {
+    // Cognito Hosted UI carries the "Forgot your password?" link.
+    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
   };
 
-  const handleConfirmForgotPassword = async (email: string, code: string, newPassword: string) => {
-    try {
-      await fetch("/api/auth/reset-confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code, newPassword }),
-      });
-    } catch (err) {
-      throw new Error(friendlyAuthError(err));
-    }
+  const handleConfirmForgotPassword = async (
+    _email: string,
+    _code: string,
+    _newPassword: string
+  ) => {
+    // Handled by Cognito Hosted UI — no client-side step needed.
   };
 
   const handleCompleteNewPassword = async (_newPassword: string) => {
-    throw new Error("New password setup not implemented for local auth");
+    // Handled by Cognito Hosted UI.
   };
 
   const handleUpdateProfile = async (attrs: {
@@ -222,31 +246,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
     company?: string;
     phone?: string;
   }) => {
-    try {
-      const res = await fetch("/api/auth/profile", {
-        method: "PUT",
+    // Go through our own same-origin API route, which persists the profile in
+    // DynamoDB keyed by the Cognito user sub. Retry once on 502/503 (Pi origin
+    // may lack DynamoDB; retry hits AWS via Cloudflare Worker failover).
+    const doFetch = () =>
+      globalThis.fetch(PROFILE_ENDPOINT, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(attrs),
       });
-      if (!res.ok) {
-        throw new Error("Failed to update profile");
-      }
-      await loadUserProfile();
-    } catch (err) {
-      throw new Error(friendlyAuthError(err));
+
+    let res = await doFetch();
+    if (
+      (res.status === 502 || res.status === 503) &&
+      res.headers.get("x-served-by") !== "aws-fallback"
+    ) {
+      // Retry once — the Worker may route to AWS on the second attempt
+      res = await doFetch();
     }
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error ?? `Failed to update profile: ${res.status}`);
+    }
+
+    setUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            name: attrs.name ?? prev.name,
+            company: attrs.company ?? prev.company,
+            phone: attrs.phone ?? prev.phone,
+          }
+        : prev
+    );
   };
 
   const handleUpdatePreferences = async (prefs: Partial<UserPreferences>) => {
+    const merged = {
+      ...(user?.preferences ?? DEFAULT_PREFERENCES),
+      ...prefs,
+    };
+    setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
+    // Persist via our same-origin route.
     try {
-      setUser((prev) => (prev ? { ...prev, preferences: { ...prev.preferences, ...prefs } } : prev));
+      await globalThis.fetch(PROFILE_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: merged }),
+      });
     } catch {
-      throw new Error("Failed to update preferences");
+      // Non-fatal — preferences are kept in local state
     }
   };
 
   const handleRefreshProfile = async () => {
-    await loadUserProfile();
+    await checkAuth();
   };
 
   return (

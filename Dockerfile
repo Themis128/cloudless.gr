@@ -9,7 +9,7 @@
 #   docker run --rm -p 3000:3000 --env-file .env.local cloudless-pi-app:dev
 
 ARG NODE_VERSION=22-alpine
-ARG PNPM_VERSION=11.9.0
+ARG PNPM_VERSION=10.33.2
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 1) deps — install all production+dev deps (cached on lockfile only)
@@ -34,29 +34,29 @@ WORKDIR /app
 # Pass via --build-arg (NEXT_PUBLIC_*) — they're not secrets.
 ARG NEXT_PUBLIC_SITE_URL=https://cloudless.gr
 ARG NEXT_PUBLIC_STAGE=production
-ARG NEXT_PUBLIC_COGNITO_USER_POOL_ID
-ARG NEXT_PUBLIC_COGNITO_CLIENT_ID
-ARG NEXT_PUBLIC_COGNITO_DOMAIN=https://cloudless-auth.auth.us-east-1.amazoncognito.com
 ARG NEXT_PUBLIC_HUBSPOT_PORTAL_ID
 ARG NEXT_PUBLIC_SENTRY_DSN
+ARG SENTRY_ENVIRONMENT=prod
+ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT=prod
 ARG NEXT_PUBLIC_META_PIXEL_ID
+ARG NEXT_PUBLIC_LINKEDIN_PARTNER_ID
 ARG NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
 # APP_VERSION is the deployed commit SHA — exposed via /api/health so the
 # HA speed-sync orchestrator can compare cloud vs Pi served versions.
 ARG APP_VERSION=dev
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL} \
     NEXT_PUBLIC_STAGE=${NEXT_PUBLIC_STAGE} \
-    NEXT_PUBLIC_COGNITO_USER_POOL_ID=${NEXT_PUBLIC_COGNITO_USER_POOL_ID} \
-    NEXT_PUBLIC_COGNITO_CLIENT_ID=${NEXT_PUBLIC_COGNITO_CLIENT_ID} \
-    NEXT_PUBLIC_COGNITO_DOMAIN=${NEXT_PUBLIC_COGNITO_DOMAIN} \
     NEXT_PUBLIC_HUBSPOT_PORTAL_ID=${NEXT_PUBLIC_HUBSPOT_PORTAL_ID} \
     NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN} \
+    SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT} \
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT} \
     NEXT_PUBLIC_META_PIXEL_ID=${NEXT_PUBLIC_META_PIXEL_ID} \
+    NEXT_PUBLIC_LINKEDIN_PARTNER_ID=${NEXT_PUBLIC_LINKEDIN_PARTNER_ID} \
     NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=${NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION} \
     APP_VERSION=${APP_VERSION} \
     NEXT_OUTPUT_STANDALONE=1 \
     NEXT_TELEMETRY_DISABLED=1 \
-    NODE_OPTIONS="--max-old-space-size=1536"
+    NODE_OPTIONS="--max-old-space-size=8192"
 
 COPY --from=deps /app/node_modules ./node_modules
 # Recursive copy of the build context. Safe because .dockerignore excludes

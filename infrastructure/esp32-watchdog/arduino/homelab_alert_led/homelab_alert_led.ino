@@ -12,24 +12,15 @@
  * LED PATTERNS
  * ────────────────────────────────────────────────────────────────────────────
  * severity    color   pattern
- * ok          Green   Solid                       ← "all OK" — no active alerts
- * debug       Blue    Solid                       (mapped to info)
+ * ok          Green   Solid
  * info        Blue    Solid
- * low         Blue    Solid                       (mapped to info)
  * warning     Amber   Slow sine pulse (2 s period)
- * medium      Amber   Slow sine pulse (2 s period) (mapped to warning)
  * error       Orange  Blink 500 ms on / 500 ms off
  * high        Red     Fast blink 200 ms on / 200 ms off
  * critical    Red     Strobe 80 ms on / 80 ms off
  * disconnected White  Slow sine pulse (3 s period)
  * muted        Blue   Rare blink every 5 s (dim)
  * ────────────────────────────────────────────────────────────────────────────
- *
- * Severity source: pi-alert-api mqtt_publish.py publishes the worst active
- * alert severity to homelab/alerts/status (retained). The AlertIn model
- * allows critical|high|medium|low|info, so ALL of those must map to a
- * non-green LED state — otherwise a medium/low alert would incorrectly read
- * as "all OK" (green). medium→warning(amber), low/debug→info(blue).
  *
  * IMPORTANT — Core 1 pinning:
  *   FastLED uses the ESP32 RMT peripheral which shares interrupt priority with
@@ -103,10 +94,7 @@ static Severity parseSeverity(const char* s) {
   if (strcmp(s, "high")     == 0) return SEV_HIGH;
   if (strcmp(s, "error")    == 0) return SEV_ERROR;
   if (strcmp(s, "warning")  == 0) return SEV_WARNING;
-  if (strcmp(s, "medium")   == 0) return SEV_WARNING;  // medium → amber pulse
   if (strcmp(s, "info")     == 0) return SEV_INFO;
-  if (strcmp(s, "low")      == 0) return SEV_INFO;     // low → blue solid
-  if (strcmp(s, "debug")    == 0) return SEV_INFO;     // debug → blue solid
   return SEV_OK;
 }
 

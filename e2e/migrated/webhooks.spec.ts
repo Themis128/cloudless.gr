@@ -29,8 +29,8 @@ test.describe("Webhook signature gates", () => {
     expect(r.status()).toBeLessThan(500);
   });
 
-  test("POST /api/webhooks/content without signature → 4xx", async ({ request }) => {
-    const r = await request.post("/api/webhooks/content", { data: {} });
+  test("POST /api/webhooks/notion without signature → 4xx", async ({ request }) => {
+    const r = await request.post("/api/webhooks/notion", { data: {} });
     expect(r.status()).toBeGreaterThanOrEqual(400);
     expect(r.status()).toBeLessThan(500);
   });

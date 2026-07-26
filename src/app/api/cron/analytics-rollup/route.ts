@@ -3,7 +3,11 @@ import { createWeeklyRollup, archiveOldEvents } from "@/lib/notion-analytics";
 import { SlackClient } from "@/lib/slack-notify";
 import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
-async function handleAnalyticsRollup() {
+export async function GET(request: NextRequest) {
+  if (!(await isCronAuthorized(request))) {
+    return cronUnauthorized();
+  }
+
   const [rollupId, archiveResult] = await Promise.all([createWeeklyRollup(), archiveOldEvents(30)]);
 
   const lines = [
@@ -47,24 +51,6 @@ async function handleAnalyticsRollup() {
     archived: archiveResult.archived,
     errors: archiveResult.errors,
   });
-}
-
-// GET endpoint for manual testing / browser access
-export async function GET(request: NextRequest) {
-  // Still require auth for GET requests from external sources
-  // Internal requests from SST Cron will use POST
-  if (!await isCronAuthorized(request)) {
-    return cronUnauthorized();
-  }
-  return handleAnalyticsRollup();
-}
-
-// POST endpoint for SST Cron triggers and programmatic access
-export async function POST(request: NextRequest) {
-  if (!await isCronAuthorized(request)) {
-    return cronUnauthorized();
-  }
-  return handleAnalyticsRollup();
 }
 
 export const runtime = "nodejs";

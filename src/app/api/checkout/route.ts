@@ -21,7 +21,7 @@ function pickLocale(request: NextRequest): string {
 export async function POST(request: NextRequest) {
   let parsed: { items?: CheckoutItem[] };
   try {
-    parsed = (((await request.json()) as any)) as { items?: CheckoutItem[] };
+    parsed = (await request.json()) as { items?: CheckoutItem[] };
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }

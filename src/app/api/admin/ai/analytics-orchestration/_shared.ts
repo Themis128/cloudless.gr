@@ -19,7 +19,8 @@ export interface PreparedOrchestration {
 }
 
 export type PrepareResult =
-  { ok: true; data: PreparedOrchestration } | { ok: false; response: NextResponse };
+  | { ok: true; data: PreparedOrchestration }
+  | { ok: false; response: NextResponse };
 
 const DEFAULT_CONNECTORS: AnalyticsConnector[] = ["quicksight", "powerbi"];
 
@@ -37,7 +38,7 @@ export async function prepareOrchestration(
 
   try {
     ({ windowDays, connectors, goals, reportTitle } = parseAnalyticsOrchestrationRequestBody(
-      (await request.json()) as any
+      await request.json()
     ));
   } catch (error) {
     return {

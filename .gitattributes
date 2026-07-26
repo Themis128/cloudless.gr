@@ -13,5 +13,3 @@
 *.eot binary
 *.webp binary
 *.avif binary
-
-.github/workflows/*.lock.yml linguist-generated=true merge=ours

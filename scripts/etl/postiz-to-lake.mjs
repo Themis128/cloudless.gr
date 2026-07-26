@@ -1,5 +1,5 @@
 /**
- * ETL: Postiz → R2 Data Lake (Parquet)
+ * ETL: Postiz → S3 Data Lake (Parquet)
  *
  * Pulls scheduled / published posts + connected integrations from the
  * self-hosted Postiz via its public API. Two parquet files:
@@ -9,18 +9,17 @@
  *
  * Auth: Authorization header with raw API key (Postiz uses non-standard
  * scheme — no "Bearer " prefix). Key from Postiz Settings → Public API.
- * Storage: R2 via getS3Client() - no AWS dependency.
  *
- * Runs daily via .github/workflows/etl-selfhosted-to-r2.yml. Posts are
+ * Runs daily via .github/workflows/etl-selfhosted-to-lake.yml. Posts are
  * fetched for a configurable rolling window (default 90d) to bound size;
  * integrations are a small snapshot.
  */
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client } from "./_r2-config.mjs";
 
-const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";
+const REGION = process.env.AWS_REGION || "us-east-1";
+const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const BASE = (process.env.POSTIZ_API_URL || "").replace(/\/$/, "");
 const KEY = process.env.POSTIZ_API_KEY;
 const DAYS = Math.max(1, Math.min(Number(process.env.POSTIZ_DAYS) || 90, 365));
@@ -30,8 +29,7 @@ if (!BASE || !KEY) {
   process.exit(1);
 }
 
-// R2 S3-compatible client (auto-detects credentials)
-const s3 = getS3Client();
+const s3 = new S3Client({ region: REGION });
 
 async function postizFetch(path) {
   const res = await fetch(`${BASE}/api/public/v1${path}`, {
@@ -83,7 +81,7 @@ async function uploadToS3(key, body) {
       ContentType: "application/octet-stream",
     })
   );
-  console.log(`✓ uploaded R2://${BUCKET}/${key} (${body.length} bytes)`);
+  console.log(`✓ uploaded s3://${BUCKET}/${key} (${body.length} bytes)`);
 }
 
 async function syncPosts() {
@@ -151,4 +149,4 @@ async function syncIntegrations() {
 
 await syncPosts();
 await syncIntegrations();
-console.log("✓ Postiz → R2 sync complete");
+console.log("✓ Postiz → S3 sync complete");

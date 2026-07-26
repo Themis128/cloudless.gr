@@ -1,79 +1,55 @@
 /**
- * Smoke tests — fastest possible "is the app alive" gate.
+ * Smoke tests — fastest possible "is the standby alive" gate.
  *
- * MIGRATION NOTE (July 2026): The application has migrated from k3s to Cloudflare
- * Workers. These tests now verify the primary Workers deployment.
- *
- * These hit the public surface of the Workers deployment.
- * If any of these fail, every other test in this suite will too — so they're the canary.
+ * These hit the public surface of the standby host
+ * (always routes APIGW → Lambda → Funnel → Pi). If any of these
+ * fail, every other test in this suite will too — so they're the canary.
  */
-import { test, expect } from "@playwright/test";
-import { isHealthBody, isLikelyAppResponse, isNetworkError, isOriginDown, probeHealth, PRIMARY_HOST } from "./_helpers";
+import { test, expect } from "../coverage";
+import { isHealthBody, isLikelyAppResponse, probeHealth, STANDBY_HOST } from "./_helpers";
 
-test.describe("k3s smoke (Workers primary)", () => {
+test.describe("k3s smoke", () => {
   test("/api/health returns 200 with valid app body", async ({ request }) => {
-    let r: Awaited<ReturnType<typeof probeHealth>>;
-    try {
-      r = await probeHealth(request, PRIMARY_HOST);
-    } catch (e) {
-      if (isNetworkError(e)) { test.skip(true, `cloudless.gr not reachable: ${e}`); return; }
-      throw e;
-    }
-    if (isOriginDown(r.status)) { test.skip(true, `origin returned ${r.status}`); return; }
+    const r = await probeHealth(request);
     expect(r.status, "health endpoint must return 200").toBe(200);
-    // Body validation - may be empty in some edge cases but status 200 is sufficient
-    expect(isHealthBody(r.body) || r.body.length === 0, `unexpected body: ${r.body.slice(0, 200)}`).toBe(true);
+    expect(isHealthBody(r.body), `unexpected body: ${r.body.slice(0, 200)}`).toBe(true);
   });
 
   test("response carries expected security headers", async ({ request }) => {
-    // NOTE: Security headers are added by the app middleware on the dev server.
-    // Production Workers may not return all headers depending on deployment config.
-    // We check for the presence of any security headers to verify the app is responding.
-    let r: Awaited<ReturnType<typeof probeHealth>>;
-    try {
-      r = await probeHealth(request, PRIMARY_HOST);
-    } catch (e) {
-      if (isNetworkError(e)) { test.skip(true, `cloudless.gr not reachable: ${e}`); return; }
-      throw e;
-    }
-    if (isOriginDown(r.status)) { test.skip(true, `origin returned ${r.status}`); return; }
-    // At minimum, check that we got a valid response
-    expect(r.status).toBe(200);
-    // Security headers may vary between dev and production
-    const hasSecurityHeaders = 
-      r.headers["x-content-type-options"] || 
-      r.headers["x-frame-options"] || 
-      r.headers["strict-transport-security"];
-    // Log warning but don't fail if headers missing in production
-    if (!hasSecurityHeaders) {
-      console.log("Warning: security headers not present (may be expected in production)");
-    }
+    const r = await probeHealth(request);
+    expect(r.headers["strict-transport-security"]).toBeTruthy();
+    expect(r.headers["x-content-type-options"]).toBe("nosniff");
+    expect(r.headers["x-frame-options"]).toBe("DENY");
+    expect(r.headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+    expect(r.headers["permissions-policy"]).toContain("camera=()");
   });
 
   test("response signature is the cloudless.gr Next.js app", async ({ request }) => {
-    let r: Awaited<ReturnType<typeof probeHealth>>;
-    try {
-      r = await probeHealth(request, PRIMARY_HOST);
-    } catch (e) {
-      if (isNetworkError(e)) { test.skip(true, `cloudless.gr not reachable: ${e}`); return; }
-      throw e;
-    }
-    if (isOriginDown(r.status)) { test.skip(true, `origin returned ${r.status}`); return; }
+    const r = await probeHealth(request);
     expect(
       isLikelyAppResponse(r.headers),
       "expected app's CSP; got something else (proxy/LB error page?)",
     ).toBe(true);
   });
 
-  test("homepage loads (SPA with client-side redirect)", async ({ page }) => {
+  test("homepage loads (i18n redirect to /en|/el|/fr)", async ({ page }) => {
     const r = await page.goto("/", { waitUntil: "domcontentloaded" });
     expect(r?.status(), "homepage navigation must succeed").toBeLessThan(400);
-    // The app uses client-side JavaScript redirect to /en for locale routing
-    // Test runs in headless browser so redirect won't execute - just verify we got HTML
-    const content = await page.content();
-    expect(content).toContain("Loading..."); // Initial state before JS redirect
-    // Alternative: navigate to /en directly and verify it loads
-    await page.goto("/en", { waitUntil: "networkidle" });
-    expect(page.url()).toContain("/en");
+    // After i18n redirect, URL should land on a locale-prefixed path.
+    expect(page.url()).toMatch(/\/(en|el|fr)(\/|$)/);
+  });
+
+  test("standby front door resolves to AWS range, not Pi LAN", async ({ request }) => {
+    // The standby always goes via APIGW. Any AWS-owned IPv4 range works
+    // (3.x, 13.x, 18.x, 50.x, 52.x, 54.x). A LAN/CGNAT IP would mean DNS
+    // resolution somehow bypassed Route 53 — that's a misconfiguration.
+    const r = await request.get(`https://${STANDBY_HOST}/api/health`);
+    expect(r.status()).toBe(200);
+    // Server header from APIGW or Lambda integration usually contains
+    // "AmazonS3"/"awselb"/"Server: ..." — we just verify it's not nginx
+    // or pihole-FTL (which would mean LAN bypass).
+    const server = (r.headers()["server"] ?? "").toLowerCase();
+    expect(server).not.toContain("nginx");
+    expect(server).not.toContain("pihole");
   });
 });

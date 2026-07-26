@@ -60,6 +60,7 @@ export interface Task {
 // Mappers
 // ---------------------------------------------------------------------------
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function mapProject(page: any): Project {
   const p = page.properties ?? {};
   return {
@@ -102,6 +103,7 @@ function mapTask(page: any): Task {
     url: page.url,
   };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Projects API

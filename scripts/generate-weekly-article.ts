@@ -1,18 +1,17 @@
 /**
  * Weekly Article Generator
  *
- * Picks the least-recently-used Category from AppFlowy blog pages,
+ * Picks the least-recently-used Category from the Notion Blog database,
  * asks our /api/internal/ai/generate endpoint to author a fresh article in
  * that category (avoiding topic repetition with recent posts), and inserts
- * the result as a Draft page in AppFlowy for human review. Slack-pings the
- * editor with a link.
+ * the result as a Draft for human review. Slack-pings the editor with a link.
  *
  * The generation endpoint tries Cloudflare Workers AI first (free tier) and
  * falls back to AWS Bedrock Claude — so this cron does NOT depend on an
  * Anthropic.com account or its credit balance.
  *
  * Designed to run from .github/workflows/weekly-article-draft.yml on
- * Monday 06:00 UTC. Self-contained — reads env directly, talks to AppFlowy
+ * Monday 06:00 UTC. Self-contained — reads env directly, talks to Notion
  * via raw fetch and to Cloudflare Workers AI over HTTPS.
  *
  * AI generation strategy:
@@ -26,9 +25,8 @@
  *      runner cannot hold CF creds.
  *
  * Required env:
- *   APPFLOWY_API_URL             AppFlowy self-hosted base URL
- *   APPFLOWY_EMAIL               AppFlowy login email
- *   APPFLOWY_PASSWORD            AppFlowy login password
+ *   NOTION_API_KEY               Notion integration token
+ *   NOTION_BLOG_DB_ID            Blog database id
  *
  * Path A (direct, preferred) — supply both:
  *   CLOUDFLARE_ACCOUNT_ID        Account id (currently inlined in deploy.yml)
@@ -42,21 +40,23 @@
  *
  * Exit codes:
  *   0  draft created (or Slack-pinged failure that we want to surface)
- *   1  hard failure (config error, AppFlowy API down, bad JSON)
+ *   1  hard failure (config error, Anthropic/Notion API down, bad JSON)
  *
  * Quality gates (Layer 1 + Layer 2 — see scripts/article-quality-gates.ts):
  *   After generation we run deterministic gates (word count, structure,
  *   slug uniqueness, banned phrases, title novelty, forbidden topics) and
  *   an LLM critic (Cloudflare llama-3.1-8b). If ALL gates pass AND the
- *   critic verdict is "pass" with overall ≥ 7.0, the draft is created with
- *   the name prefix "[Review]" — this is the auto-promote path; the Monday
- *   09:00 UTC publisher cron sends it without any human touch. Otherwise the
- *   draft is created with the plain title and the operator is DM'd with the
+ *   critic verdict is "pass" with overall ≥ 7.0, the draft is inserted as
+ *   Status="In Review" — this is the auto-promote path; the Monday 09:00
+ *   UTC publisher cron sends it without any human touch. Otherwise the
+ *   draft is inserted as Status="Draft" and the operator is DM'd with the
  *   exact reasons + critic feedback.
  */
 
 import { runGates, type AutoPromoteVerdict } from "./article-quality-gates";
 
+const NOTION_API = "https://api.notion.com/v1";
+const NOTION_VERSION = "2022-06-28";
 const SITE_URL_DEFAULT = "https://cloudless.gr";
 /** Cloudflare Workers AI model. Route will fall back to llama-3-70b and then
  *  Bedrock Claude 3.5 Haiku if this model errors or is rate-limited. */
@@ -77,87 +77,52 @@ function requireEnv(name: string): string {
 export interface RecentPost {
   title: string;
   category: Category;
-  /** ISO date the publisher set, falls back to created_at */
+  /** ISO date the publisher set, falls back to created_time */
   date: string;
   slug: string;
 }
 
-// ── AppFlowy (self-hosted Notion replacement) ─────────────────────────────────
-
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
-}
-
-async function appflowyLogin(): Promise<{ token: string; workspaceId: string; base: string }> {
-  const base = requireEnv("APPFLOWY_API_URL").replace(/\/$/, "");
-  const email = requireEnv("APPFLOWY_EMAIL");
-  const password = requireEnv("APPFLOWY_PASSWORD");
-  const res = await fetch(`${base}/gotrue/token?grant_type=password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+async function notionFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const token = requireEnv("NOTION_API_KEY");
+  return fetch(`${NOTION_API}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Notion-Version": NOTION_VERSION,
+      "Content-Type": "application/json",
+      ...init.headers,
+    },
   });
-  if (!res.ok) throw new Error(`AppFlowy login failed: ${res.status}`);
-  const data = (await res.json()) as { access_token: string };
-  const token = data.access_token;
-  const wsRes = await fetch(`${base}/api/workspace`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!wsRes.ok) throw new Error(`AppFlowy workspace fetch failed: ${wsRes.status}`);
-  const wsData = (await wsRes.json()) as { data: Array<{ workspace_id: string }> };
-  const workspaceId = wsData.data[0]?.workspace_id ?? "";
-  if (!workspaceId) throw new Error("No AppFlowy workspace found");
-  return { token, workspaceId, base };
 }
 
 /**
- * Pull the 12 most-recent blog Document pages from AppFlowy for:
- *   1. computing LRU category
- *   2. sending recent titles to Claude so it doesn't repeat topics
+ * Pull the 12 most-recent posts (Published or otherwise) for two purposes:
+ *   1. compute LRU category
+ *   2. send recent titles to Claude so it doesn't repeat topics
  *
- * AppFlowy pages don't have typed Category/Date properties.
- * Category is inferred from the page name (first matching keyword wins).
- * Date is the page's last_edited_time.
- * Returns [] if the workspace is empty (no spaces created yet).
+ * "Recently used" = max(Date, PublishedAt, created_time).
  */
 async function fetchRecentPosts(): Promise<RecentPost[]> {
-  const { token, workspaceId, base } = await appflowyLogin();
-  const res = await fetch(
-    `${base}/api/workspace/${workspaceId}/folder?depth=5`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!res.ok) throw new Error(`AppFlowy folder fetch failed: ${res.status}`);
-  const data = (await res.json()) as { code?: number; data?: Record<string, unknown> };
-  // code -2 = workspace is empty (no spaces created yet) — treat as no recent posts
-  if (data.code !== 0) {
-    console.log("[generate-weekly-article] AppFlowy workspace has no content yet — starting fresh");
-    return [];
+  const dbId = requireEnv("NOTION_BLOG_DB_ID");
+  const res = await notionFetch(`/databases/${dbId}/query`, {
+    method: "POST",
+    body: JSON.stringify({
+      page_size: 12,
+      sorts: [{ timestamp: "created_time", direction: "descending" }],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Notion query failed: ${res.status} ${await res.text().catch(() => "")}`);
   }
-
-  // Flatten the nested view tree
-  const views: Array<{ view_id: string; name: string; layout: string; created_at: string; last_edited_time: string }> = [];
-  function walk(node: Record<string, unknown>) {
-    if (node.view_id && node.name) {
-      views.push(node as typeof views[0]);
-    }
-    const children = (node.children as { views?: Record<string, unknown>[] })?.views ?? [];
-    for (const child of children) walk(child);
-  }
-  walk(data.data ?? {});
-
-  return views
-    .filter((v) => v.layout === "Document")
-    .slice(0, 12)
-    .map((v) => {
-      const lower = v.name.toLowerCase();
-      const cat = CATEGORIES.find((c) => lower.includes(c.toLowerCase())) ?? "Cloud";
-      return {
-        title: v.name,
-        category: cat as Category,
-        date: v.last_edited_time ?? v.created_at ?? "",
-        slug: slugify(v.name),
-      };
-    });
+  const data = (await res.json()) as { results: NotionPage[] };
+  return data.results.map((page) => {
+    const p = page.properties ?? {};
+    const title = (p.Title?.title ?? p.Name?.title ?? []).map((t) => t.plain_text ?? "").join("");
+    const cat = (p.Category?.select?.name ?? "Cloud") as Category;
+    const date = p.PublishedAt?.date?.start ?? p.Date?.date?.start ?? page.created_time ?? "";
+    const slug = (p.Slug?.rich_text ?? []).map((t) => t.plain_text ?? "").join("");
+    return { title, category: cat, date, slug };
+  });
 }
 
 /**
@@ -422,7 +387,7 @@ async function generateArticle(
 }
 
 /**
- * Convert markdown into a flat list of block objects (kept for compatibility).
+ * Convert markdown into a flat list of Notion blocks.
  * Handles: H1/H2/H3, paragraphs, bullet/numbered lists. Anything more exotic
  * collapses to a paragraph — fine for AI-generated articles which we keep
  * to a constrained set.
@@ -505,57 +470,59 @@ function numberedBlock(text: string): NotionBlock {
 
 async function createDraftPage(
   article: GeneratedArticle,
-  _category: Category,
+  category: Category,
   initialStatus: "Draft" | "In Review" = "Draft"
 ): Promise<{ id: string; url: string }> {
-  const { token, workspaceId, base } = await appflowyLogin();
+  const dbId = requireEnv("NOTION_BLOG_DB_ID");
+  const blocks = markdownToNotionBlocks(article.content);
 
-  // Get root view to parent the new page under.
-  // If the workspace is empty (code -2), use the workspace_id as the parent —
-  // AppFlowy will create the first space automatically.
-  const folderRes = await fetch(
-    `${base}/api/workspace/${workspaceId}/folder?depth=1`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!folderRes.ok) throw new Error(`AppFlowy folder fetch failed: ${folderRes.status}`);
-  const folderData = (await folderRes.json()) as {
-    code?: number;
-    data?: { view_id?: string; views?: Array<{ view_id: string }> };
-  };
-  // code -2 = empty workspace — fall back to workspace_id as parent
-  const parentId =
-    folderData.code === 0
-      ? (folderData.data?.view_id ?? folderData.data?.views?.[0]?.view_id ?? workspaceId)
-      : workspaceId;
+  // Notion caps children at 100 per request — split if needed.
+  const initialChildren = blocks.slice(0, 100);
+  const remainingChildren = blocks.slice(100);
 
-  // Convention: "[Review] <title>" queues the page for newsletter publication.
-  // "Draft" status means the page name is just the plain title.
-  const pageName = initialStatus === "In Review"
-    ? `[Review] ${article.title}`
-    : article.title;
+  const createRes = await notionFetch("/pages", {
+    method: "POST",
+    body: JSON.stringify({
+      parent: { database_id: dbId },
+      properties: {
+        Title: { title: [{ text: { content: article.title } }] },
+        Slug: { rich_text: [{ text: { content: article.slug } }] },
+        Excerpt: { rich_text: [{ text: { content: article.excerpt } }] },
+        Category: { select: { name: category } },
+        Status: { select: { name: initialStatus } },
+        // Notion DB schema notes (verified 2026-06-14):
+        //   - "Read Time" has a space; the script previously wrote `ReadTime`.
+        //   - "Author" is a People property — cannot be set to a string from
+        //     an integration token, so leave it empty for the human reviewer.
+        //   - There is no `GeneratedBy` property in the DB.
+        "Read Time": { rich_text: [{ text: { content: article.readTime } }] },
+        Published: { checkbox: false },
+      },
+      children: initialChildren,
+    }),
+  });
 
-  const createRes = await fetch(
-    `${base}/api/workspace/${workspaceId}/page-view`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        parent_view_id: parentId,
-        layout: 0,
-        name: pageName,
-      }),
-    }
-  );
   if (!createRes.ok) {
     throw new Error(
-      `AppFlowy create page failed: ${createRes.status} ${await createRes.text().catch(() => "")}`
+      `Notion create failed: ${createRes.status} ${await createRes.text().catch(() => "")}`
     );
   }
-  const created = (await createRes.json()) as { data: { view_id: string } };
-  const viewId = created.data?.view_id ?? "";
+  const created = (await createRes.json()) as { id: string; url: string };
 
-  const afUrl = `${requireEnv("APPFLOWY_API_URL").replace(/\/$/, "")}/view/${viewId}`;
-  return { id: viewId, url: afUrl };
+  if (remainingChildren.length) {
+    // Append in chunks of 100 — should never exceed 200 for an 800-1200 word article.
+    for (let i = 0; i < remainingChildren.length; i += 100) {
+      const chunk = remainingChildren.slice(i, i + 100);
+      const appendRes = await notionFetch(`/blocks/${created.id}/children`, {
+        method: "PATCH",
+        body: JSON.stringify({ children: chunk }),
+      });
+      if (!appendRes.ok) {
+        console.warn(`[generate-weekly-article] block append failed: ${appendRes.status}`);
+      }
+    }
+  }
+  return created;
 }
 
 /**
@@ -715,8 +682,8 @@ async function main(): Promise<void> {
   const article = await generateArticle(category, avoidTitles);
   console.log(`[generate-weekly-article] generated: "${article.title}" (${article.slug})`);
 
-  // Run quality gates BEFORE creating the AppFlowy page so we know which
-  // status prefix to use. This avoids needing a rename after-create.
+  // Run quality gates BEFORE creating the Notion page so we know which
+  // Status to insert with. This avoids needing a second PATCH after-create.
   console.log("[generate-weekly-article] running quality gates...");
   const verdict = await runGates({
     draft: {
@@ -734,7 +701,7 @@ async function main(): Promise<void> {
 
   const initialStatus = verdict.promote ? "In Review" : "Draft";
   console.log(
-    `[generate-weekly-article] gates verdict: ${verdict.promote ? "AUTO-PROMOTE" : `HOLD (${verdict.reason})`} — page name prefix will be "${initialStatus}"`
+    `[generate-weekly-article] gates verdict: ${verdict.promote ? "AUTO-PROMOTE" : `HOLD (${verdict.reason})`} — Notion Status will be "${initialStatus}"`
   );
 
   const page = await createDraftPage(article, category, initialStatus);
@@ -759,10 +726,10 @@ async function main(): Promise<void> {
     formatVerdict(verdict),
     "",
     verdict.promote
-      ? ":information_source: No action needed. To cancel, rename the page in AppFlowy to remove the `[Review]` prefix before Mon 09:00 UTC, or run `/cloudless-newsletter unpublish " +
+      ? ":information_source: No action needed. To cancel, flip Notion Status to `Archived` before Mon 09:00 UTC, or run `/cloudless-newsletter unpublish " +
         article.slug +
         "` after send."
-      : ":pencil2: To approve manually: open the AppFlowy page, edit if needed, rename it to add the `[Review]` prefix. The publisher will pick it up on Mon 09:00 UTC OR you can run `/cloudless-newsletter send " +
+      : ":pencil2: To approve manually: open the Notion page, edit if needed, flip Status to `In Review`. The publisher will pick it up on Mon 09:00 UTC OR you can run `/cloudless-newsletter send " +
         article.slug +
         "` to send immediately.",
   ].join("\n");
@@ -783,5 +750,22 @@ if (process.argv[1]?.includes("generate-weekly-article")) {
   });
 }
 
-// NotionBlock kept as alias so markdownToNotionBlocks return type compiles unchanged.
+// ── Notion shape declarations (kept inline so the script stays self-contained) ──
+
+interface NotionRichText {
+  plain_text?: string;
+}
+interface NotionPage {
+  id: string;
+  created_time?: string;
+  properties: Record<string, NotionProperty>;
+}
+interface NotionProperty {
+  title?: NotionRichText[];
+  rich_text?: NotionRichText[];
+  select?: { name?: string };
+  date?: { start?: string };
+  // Allow indexing for "Name" fallback
+  [key: string]: unknown;
+}
 type NotionBlock = Record<string, unknown>;

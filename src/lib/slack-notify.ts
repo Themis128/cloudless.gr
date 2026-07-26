@@ -12,8 +12,7 @@ import { getSlackConfigAsync } from "@/lib/integrations";
 // Types
 // ---------------------------------------------------------------------------
 
-export type BlockKitBlock =
-  // NOSONAR — discriminated union type annotations
+export type BlockKitBlock = // NOSONAR — discriminated union type annotations
   | {
       type: "section"; // NOSONAR
       text: { type: "mrkdwn" | "plain_text"; text: string }; // NOSONAR
@@ -251,8 +250,7 @@ const bookingsClient = new SlackClient({ channel: "#bookings" });
 const ordersClient = new SlackClient({ channel: "#orders" });
 const errorsClient = new SlackClient({ channel: "#errors" });
 const deploymentsClient = new SlackClient({ channel: "#deployments" });
-const contactsClient = new SlackClient({ channel: "#contacts" });
-const campaignsClient = new SlackClient({ channel: "#campaigns" });
+const contactsClient = new SlackClient({ channel: "#notifications" });
 const subscribersClient = new SlackClient({ channel: "#subscribers" });
 
 /**
@@ -399,23 +397,6 @@ export async function slackDeployNotify(opts: {
   });
 }
 
-/** UTM sources that indicate a paid social/search campaign origin. */
-const CAMPAIGN_UTM_SOURCES = new Set([
-  "linkedin",
-  "linkedin_ads",
-  "linkedin-ads",
-  "meta",
-  "facebook",
-  "instagram",
-  "google",
-  "google-ads",
-  "google_ads",
-  "tiktok",
-  "tiktok-ads",
-  "twitter",
-  "x-ads",
-]);
-
 /** Pre-formatted notification for new contact form submissions */
 export async function slackContactNotify(data: {
   name: string;
@@ -430,10 +411,6 @@ export async function slackContactNotify(data: {
   leadBand?: string;
   /** One-line attribution summary (UTM/referrer/landing page). */
   attributionSummary?: string;
-  /** EspoCRM Contact ID \u2014 used to build a deep-link button. */
-  espoContactId?: string | null;
-  /** UTM source \u2014 when it's a paid social/search origin, also posts to #campaigns. */
-  utmSource?: string | null;
 }): Promise<boolean> {
   const safeName = slackEscape(data.name);
   const safeEmail = slackEscape(data.email);
@@ -454,47 +431,18 @@ export async function slackContactNotify(data: {
   if (data.attributionSummary) {
     detailLines.push(`*Attribution:* ${slackEscape(data.attributionSummary).slice(0, 500)}`);
   }
-
-  const blocks: BlockKitBlock[] = [
-    headerBlock("\ud83d\udce8 New Contact Form Submission"),
-    sectionBlock(detailLines.join("\n")),
-    divider,
-    sectionBlock(`*Message:*\n${safeMessage}`),
-  ];
-
-  if (data.espoContactId) {
-    const espoUrl = `https://espocrm.cloudless.gr/#Contact/view/${data.espoContactId}`;
-    blocks.push({
-      type: "actions",
-      elements: [
-        {
-          type: "button",
-          text: { type: "plain_text", text: "Open in EspoCRM", emoji: true },
-          url: espoUrl,
-          style: "primary",
-        },
-      ],
-    });
-  }
-
-  blocks.push(contextBlock(slackTimestamp(), "cloudless.gr contact form"));
-
-  const payload = {
+  return contactsClient.post({
     text: `New contact from ${safeName} (${safeEmail})`,
-    blocks,
+    blocks: [
+      headerBlock("\ud83d\udce8 New Contact Form Submission"),
+      sectionBlock(detailLines.join("\n")),
+      divider,
+      sectionBlock(`*Message:*\n${safeMessage}`),
+      contextBlock(slackTimestamp(), "cloudless.gr contact form"),
+    ],
     icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,
-  };
-
-  const isCampaignLead = data.utmSource && CAMPAIGN_UTM_SOURCES.has(data.utmSource.toLowerCase());
-
-  const sends: Promise<boolean>[] = [contactsClient.post(payload)];
-  if (isCampaignLead) {
-    sends.push(campaignsClient.post(payload));
-  }
-
-  const results = await Promise.all(sends);
-  return results[0];
+  });
 }
 
 /** Pre-formatted notification for a new consultation booking */
@@ -596,7 +544,7 @@ function slackEscape(text: string): string {
 // Customer Interaction Notifications (Phase: full coverage)
 // ---------------------------------------------------------------------------
 
-const interactionsClient = new SlackClient({ channel: "#general" });
+const interactionsClient = new SlackClient({ channel: "#notifications" });
 
 /** Notify when a user starts a chat conversation with the AI assistant. */
 export async function slackChatNotify(data: { message: string; ip?: string }): Promise<boolean> {
@@ -626,7 +574,7 @@ export async function slackTicketNotify(data: {
     blocks: [
       headerBlock("🎫 Support Ticket"),
       sectionBlock(lines.join("\n")),
-      contextBlock(slackTimestamp(), "cloudless.gr espocrm"),
+      contextBlock(slackTimestamp(), "cloudless.gr hubspot"),
     ],
     icon_url: BOT_ICON_URL,
     username: BOT_USERNAME,

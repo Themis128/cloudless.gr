@@ -13,7 +13,6 @@ import ProductIcon from "@/components/store/ProductIcon";
 import JsonLd from "@/components/JsonLd";
 import { formatPrice } from "@/lib/format-price";
 import { getProductSchema, getBreadcrumbSchema } from "@/lib/structured-data";
-import { recommendProductsForProduct } from "@/lib/product-recommendations";
 
 export async function generateMetadata({
   params,

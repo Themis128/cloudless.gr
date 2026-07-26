@@ -1,59 +1,61 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-middleware";
-import { deleteSession } from "@/lib/auth-d1";
-
 /**
- * DELETE /api/user/delete
- * Delete the current user's account and all associated data.
- * Requires authentication via session cookie.
+ * POST /api/user/delete
+ * GDPR Art.17 — Right to Erasure ("right to be forgotten").
+ * Deletes the authenticated user from Cognito and their DynamoDB profile.
  */
-export async function DELETE(request: NextRequest): Promise<NextResponse> {
-  const auth = await requireAuth(request);
-  
-  if (auth instanceof NextResponse) {
-    return auth; // 401 or 503 response
+import { NextRequest, NextResponse } from "next/server";
+import {
+  CognitoIdentityProviderClient,
+  AdminDeleteUserCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
+import { DynamoDBClient, DeleteItemCommand } from "@aws-sdk/client-dynamodb";
+import { requireAuth } from "@/lib/api-auth";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (!auth.ok) return auth.response;
+
+  const { sub: userId, email } = auth.user;
+  const userPoolId = process.env.COGNITO_USER_POOL_ID;
+  const region = process.env.AWS_REGION || "us-east-1";
+  const errors: string[] = [];
+
+  // 1. Delete Cognito account
+  if (userPoolId && email) {
+    try {
+      await new CognitoIdentityProviderClient({ region }).send(
+        new AdminDeleteUserCommand({ UserPoolId: userPoolId, Username: email })
+      );
+    } catch (e) {
+      const name = (e as { name?: string }).name;
+      if (name !== "UserNotFoundException") {
+        errors.push("cognito");
+        console.error("[user/delete] Cognito delete failed:", e);
+      }
+    }
   }
 
-  const { userId, email } = auth;
-
-  // Get the session token to delete it
-  const sessionId = request.cookies.get("session_token")?.value;
-
-  try {
-    // Get the D1 database binding
-    const env = process.env as unknown as { AUTH_DB?: any };
-    const db = env.AUTH_DB;
-    
-    if (!db) {
-      return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  // 2. Delete DynamoDB profile
+  const table = process.env.USER_PROFILE_TABLE;
+  if (table && userId) {
+    try {
+      await new DynamoDBClient({ region }).send(
+        new DeleteItemCommand({ TableName: table, Key: { userId: { S: userId } } })
+      );
+    } catch (e) {
+      errors.push("profile");
+      console.error("[user/delete] DynamoDB delete failed:", e);
     }
-
-    // Delete the session first
-    if (sessionId) {
-      await deleteSession(db, sessionId);
-    }
-
-    // Delete user data (cascades to user_role, session, session_log via foreign keys)
-    // Note: This assumes foreign key constraints with ON DELETE CASCADE are set up
-    const result = await db
-      .prepare("DELETE FROM user WHERE id = ?")
-      .bind(userId)
-      .run();
-
-    if (result.meta?.changes === 0) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Clear the session cookie
-    const response = NextResponse.json({ 
-      success: true, 
-      message: "Account deleted successfully" 
-    });
-    response.cookies.delete("session_token");
-    
-    return response;
-  } catch (error) {
-    console.error("[user/delete] Error deleting user:", error);
-    return NextResponse.json({ error: "Failed to delete account" }, { status: 500 });
   }
+
+  if (errors.length) {
+    return NextResponse.json(
+      { error: `Partial deletion failure: ${errors.join(", ")}` },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
 }

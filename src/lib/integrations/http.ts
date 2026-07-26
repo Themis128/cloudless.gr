@@ -14,14 +14,14 @@
  *
  *   import { integrationFetch } from "@/lib/integrations/http";
  *
- *   const data = await integrationFetch<MyResponse>("espocrm", url, {
+ *   const data = await integrationFetch<MyResponse>("hubspot", url, {
  *     method: "POST",
  *     headers: { "Content-Type": "application/json" },
  *     body: JSON.stringify(payload),
  *   });
  *
  * This is phase 1 of the Integration Improvement Plan. Subsequent phases
- * migrate existing clients (notion.ts, espocrm*, sentry.ts, gsc.ts, …)
+ * migrate existing clients (notion.ts, hubspot*, sentry.ts, gsc.ts, …)
  * to use this wrapper.
  */
 
@@ -124,15 +124,8 @@ async function handleFinalResponse<T>(
 ): Promise<IntegrationFetchResult<T>> {
   if (!res.ok) {
     if (passthroughErrors) {
-      // Try to parse JSON, fall back to null on parse error
-      let data: T;
-      try {
-        data = (await res.json()) as T;
-      } catch {
-        data = null as unknown as T;
-      }
       return {
-        data,
+        data: (await res.json().catch(() => null)) as T,
         status: res.status,
         latencyMs,
         retries,

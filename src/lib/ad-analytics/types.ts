@@ -122,10 +122,6 @@ export interface AdConversionEvent {
     term?: string;
     content?: string;
   };
-  /** LinkedIn first-party click ID captured from the `?li_fat_id=…` query
-   *  param on the landing page. Used for server-side CAPI user matching so
-   *  LinkedIn can dedupe against the browser Insight Tag hit. */
-  liFatId?: string | null;
 }
 
 /** Snapshot of per-platform metrics for a campaign over a window. */
@@ -153,7 +149,10 @@ export interface AdMetrics {
  *  same `pivot=` query-param the LinkedIn `adAnalytics` endpoint accepts, so
  *  the adapter can pass them through verbatim. */
 export type DemographicPivot =
-  "MEMBER_INDUSTRY" | "MEMBER_SENIORITY" | "MEMBER_JOB_TITLE" | "MEMBER_COMPANY_SIZE";
+  | "MEMBER_INDUSTRY"
+  | "MEMBER_SENIORITY"
+  | "MEMBER_JOB_TITLE"
+  | "MEMBER_COMPANY_SIZE";
 
 /** Bucket-label → click-count map for one pivot. Label is whatever the
  *  platform returned (resolved against LinkedIn's lookups when available,

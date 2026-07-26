@@ -6,15 +6,13 @@ test.describe("Authentication", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("login page exposes email and password fields", async ({ page }) => {
+  test("login page shows Continue with AWS button", async ({ page }) => {
     await page.goto("/auth/login");
     await expect(page).toHaveURL(/\/auth\/login/);
-    // When Keycloak is configured, the login page shows a single SSO button
-    // instead of email/password fields.
     await page.waitForLoadState("networkidle").catch(() => {});
-    const hasKeycloak = await page.getByRole("button", { name: /continue with keycloak/i }).isVisible({ timeout: 10_000 }).catch(() => false);
+    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
     const hasEmail = await page.getByLabel(/email/i).isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasKeycloak || hasEmail, "login page must show either Keycloak SSO button or email field").toBeTruthy();
+    expect(hasAws || hasEmail, "login page must show Continue with AWS button or email field").toBeTruthy();
   });
 
   test("signup page exposes name, email and password fields", async ({ page }) => {
@@ -28,8 +26,7 @@ test.describe("Authentication", () => {
   test("forgot-password page is reachable from login", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    // When Keycloak is active there is no forgot-password link on the login page;
-    // navigate directly instead.
+    // With Cognito there is no forgot-password link on the login page; navigate directly.
     const forgotLink = page.getByRole("link", { name: /forgot/i });
     const hasLink = await forgotLink.isVisible({ timeout: 5_000 }).catch(() => false);
     if (hasLink) {

@@ -1,10 +1,12 @@
-/**
- * /api/admin/notion/comments — backed by Notion
- */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { listComments, addComment } from "@/lib/notion-comments";
+import { mapIntegrationError } from "@/lib/api-errors";
 
+/**
+ * GET /api/admin/notion/comments?page_id=...
+ * POST /api/admin/notion/comments { page_id, text }
+ */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -13,45 +15,48 @@ export async function GET(request: NextRequest) {
   const pageId = searchParams.get("page_id");
 
   if (!pageId) {
-    return NextResponse.json({ error: "page_id required" }, { status: 400 });
+    return NextResponse.json({ error: "page_id is required" }, { status: 400 });
   }
 
   try {
     const comments = await listComments(pageId);
     return NextResponse.json({ comments });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
-    console.error("[Notion Comments] Failed to list comments:", msg);
-    return NextResponse.json({ error: "Failed to list comments" }, { status: 500 });
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
+    console.error("[API] Comments error:", err);
+    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
-  if (!auth.ok) return auth.response;
+  const authPost = await requireAdmin(request);
+  if (!authPost.ok) return authPost.response;
 
   try {
-    const body: { page_id?: string; text?: string } = await request.json();
+    const { page_id, text } = await request.json();
 
-    if (!body.page_id || !body.text) {
-      return NextResponse.json({ error: "page_id and text required" }, { status: 400 });
+    if (!page_id || !text) {
+      return NextResponse.json({ error: "page_id and text are required" }, { status: 400 });
     }
 
-    const { page_id, text } = body;
-    if (text.length > 5000) {
-      return NextResponse.json({ error: "Text exceeds 5000 characters" }, { status: 400 });
+    if (typeof text !== "string" || text.length > 5000) {
+      return NextResponse.json(
+        { error: "text must be a string no longer than 5000 characters" },
+        { status: 400 }
+      );
     }
 
-    const result = await addComment(page_id, text);
-
-    if (!result) {
+    const comment = await addComment(page_id, text);
+    if (!comment) {
       return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });
     }
 
-    return NextResponse.json({ comment: { id: result.id, text: result.text } }, { status: 201 });
+    return NextResponse.json({ comment }, { status: 201 });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "unknown error";
-    console.error("[Notion Comments] Failed to add comment:", msg);
+    const _r = mapIntegrationError(err);
+    if (_r) return _r;
+    console.error("[API] Add comment error:", err);
     return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });
   }
 }

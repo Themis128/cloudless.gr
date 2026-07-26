@@ -11,13 +11,11 @@ These require access outside GitHub and cannot be automated from a cloud session
 | Item                             | Status              | Action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `OMV_SSH_KEY`                    | **SET** ✅          | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active.                                                                                                                                                                                                                                                                                                                                                                          |
+| ESP32 page content               | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore.                                                                                                                                                                                                                                                                                                               |
 | Admin password                   | **N/A**             | Auth is Cognito (PR #677, 2026-06-08). Manage admin users in the Cognito User Pool console; there is no separate IdP admin to bootstrap.                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Cloudflare HA LB                 | **TOKEN NEEDED**    | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — use the `cloudflare-token-doctor` skill, mint a token with the full scope set (skill Stage 1), then `gh workflow run store-cloudflare-token.yml -f cloudflare_token=… -f apply=true`.                                                                                                                                                                                                                                                                                                    |
 | Cloudflare Email Obfuscation fix | **TOKEN NEEDED**    | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors. Same token as HA LB above.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Cloudflare infra MCP token       | **NEEDS ROTATION**  | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. SSM half **is set ✅** as of 2026-06-13; only the Cowork session-secret store half is pending — see `cowork-session-secrets` skill. |
-| HubSpot → EspoCRM migration      | **DONE** ✅ 2026-06-25 | 96 contacts, 49 companies, 230 deals migrated. Script at `scripts/migrate-hubspot-to-espocrm.mjs` is idempotent — re-run with `HUBSPOT_API_KEY=pat-eu1-...` to pick up new HubSpot records. |
-| Notion → AppFlowy migration      | **DONE** ✅ 2026-06-25 | 22 databases, 412 pages migrated. Script at `scripts/migrate-notion-to-appflowy.mjs` is idempotent — re-run to pick up new Notion rows. |
-| Grafana public exposure          | **PENDING operator** | Values updated: NodePort 30850 + Prometheus datasource auto-provisioned in `infrastructure/monitoring/kube-prom-stack-values.yaml`. Run `helm upgrade kube-prom prometheus-community/kube-prometheus-stack -n monitoring --values infrastructure/monitoring/kube-prom-stack-values.yaml` on omv-main. Append tunnel rule from `infrastructure/monitoring/grafana-tunnel.yaml` to `/etc/cloudflared/config.yml`, restart cloudflared, add DNS CNAME `grafana.cloudless.gr → e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com`. SSM keys `GRAFANA_BASE_URL` and `PROMETHEUS_URL` already stored. |
 
 ## omv-main Storage Layout (post-2026-06-13 migration)
 
@@ -106,31 +104,7 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
 - **Mobile-viewport specs**: navbar controls (contact link, theme/locale switcher) live inside the hamburger drawer (`button[aria-label*="menu" i]`) and the desktop instances stay hidden in the DOM — open the drawer first and select with `.filter({ visible: true })`, never bare `.first()`.
 - A broken `node_modules` (missing `@auth/core`, stale nested `@aws-sdk/*` requiring removed `@smithy/property-provider`) makes API routes 500 en masse while the lockfile is fine — fix with a clean `pnpm install --frozen-lockfile` after deleting `node_modules`, never by touching code.
 - **Verify load artifacts solo before changing code.** Under full-suite load the dev server can transiently 404 a real API route (seen once on `POST /api/admin/ai/analytics-orchestration/pdf`, both projects + retries). Re-run the failing spec alone first — if it passes (route verified: unauth → 401), it's a dev-server race, not a regression. Never widen a security assertion (e.g. adding 404 to "unauth must be 401/403") to absorb such flakes.
-- Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/notion-integration-reshare.md`](docs/notion-integration-reshare.md). **Note:** The content-publishing workflows (sitemap sync, newsletter, article draft) were migrated from Notion to AppFlowy on 2026-06-25 — see section below.
-
-## AppFlowy-Backed Workflows (live 2026-06-25)
-
-Three GitHub Actions workflows use AppFlowy (self-hosted at `appflowy.cloudless.gr`) as their content source. All three passed end-to-end on 2026-06-25.
-
-| Workflow | File | Schedule | What it does |
-|----------|------|----------|--------------|
-| AppFlowy → Sitemap Sync | `.github/workflows/notion-docs-sitemap.yml` | Every 6h | Walks the folder tree; pages prefixed `[Docs]` → `/docs/*`, `[Blog]` → `/blog/*` in `src/data/notion-sitemap-entries.tsv`. Opens a PR if changed. |
-| Weekly Newsletter | `.github/workflows/weekly-newsletter.yml` | `workflow_dispatch` | Finds pages prefixed `[Review]` and sends them as newsletter emails via Resend. |
-| Weekly Article Draft | `.github/workflows/weekly-article-draft.yml` | `workflow_dispatch` | Generates a blog draft via Cloudflare Workers AI (llama-3.3-70b), creates a Draft page in AppFlowy, pings Slack. |
-
-**GitHub secrets required** (all set ✅ as of 2026-06-25): `APPFLOWY_API_URL`, `APPFLOWY_EMAIL`, `APPFLOWY_PASSWORD`.
-
-**AppFlowy API quirks — read before touching these scripts:**
-
-- **Auth:** `POST /gotrue/token?grant_type=password` → returns `access_token`. Use as `Authorization: Bearer <token>`.
-- **Workspaces:** `GET /api/workspace` → `data[0].workspace_id`.
-- **No search endpoint:** `/api/workspace/{id}/search` returns 404 on this AppFlowy Cloud version. Use the folder tree instead: `GET /api/workspace/{id}/folder?depth=5`.
-- **Empty workspace:** Folder endpoint returns `{"code": -2, "message": "Record not found..."}` when no spaces have been created via the AppFlowy UI yet. Treat code ≠ 0 as "no content" and return `[]` — do not throw.
-- **Page creation layout is a `u8`, not a string:** `POST /api/workspace/{id}/page-view` requires `layout: 0` (Document), NOT `layout: "Document"`. Using the string causes a 400 `Json deserialize error: invalid type: string "Document", expected u8`. (PR #1157, 2026-06-25).
-- **Page naming convention:** `[Docs] <title>` = docs page, `[Blog] <title>` = blog page, `[Review] <title>` = queued for newsletter, plain title = draft.
-- **Creating pages in an empty workspace:** Pass `workspace_id` as `parent_view_id` when the folder endpoint returns code ≠ 0 (no root view exists yet).
-
-**Operator action needed before workflows are fully functional:** Log into AppFlowy UI at `https://appflowy.cloudless.gr` and create at least one Space. Until then, all three workflows exit 0 with "no content yet" — the sitemap stays empty, newsletter sends nothing, and article draft creates pages at the workspace root.
+- Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/notion-integration-reshare.md`](docs/notion-integration-reshare.md). AppFlowy was evaluated as a self-host alternative on 2026-06-21 and rejected: 7-pod arm64 stack + new client lib is multi-day work, the runbook fixes drift in 3 minutes per occurrence.
 
 ## Git Workflow
 
@@ -267,7 +241,7 @@ Env: `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` (client, build-time) and
 unset the corresponding fire becomes a no-op — the route stays wired so the
 rest of the flow still works.
 
-## CRM: Self-hosted EspoCRM (live 2026-06-20, HubSpot fully decommissioned)
+## CRM migration: EspoCRM → EspoCRM (in progress 2026-06-20)
 
 EspoCRM's `content` scope is locked behind a paid Marketing Hub plan we don't
 have, breaking `/api/admin/email/campaigns` (501) — see the live probe in
@@ -554,58 +528,6 @@ which automates Stages 0-3 from the Pi.
 - `hashicorp/aws`: `~> 5.80.0`
 - `aws-actions/configure-aws-credentials`: `v4.x`
 - `hashicorp/setup-terraform`: prefer `v3.x` (v2 nears Node 20 EOL)
-
-## Fly.io Deployment (live 2026-06-13)
-
-Fly.io provides backup services for cloudless.gr with free-tier deployments:
-
-| App | Purpose | Region | Status |
-|-----|---------|--------|--------|
-| cloudless-proxy | HA failover proxy | fra | Deployed Jul 13 2026 |
-| cloudless-analytics | Metabase dashboard | fra | Pending deployment |
-| cloudless-cron-analytics | Analytics rollup cron | fra | Pending deployment |
-
-### Proxy Deployment (fly.toml)
-- **Primary backend:** `cloudless.gr` (Cloudflare Workers on Pi k3s)
-- **Fallback backend:** `omv.tail8eb71.ts.net` (Tailscale Funnel to omv-ha)
-- **Health check:** `/health` endpoint returns primary health status
-- **Configuration:** In `fly.toml` at repository root
-
-### Analytics Deployment (fly-analytics.toml)
-- **Metabase v0.53.3** for SQL analytics on R2 parquet data
-- **Volume:** `metabase_data` (1GB persistent) for SQLite database
-- **Secrets required:** `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
-- **Deploy:**
-  ```bash
-  fly volumes create metabase_data --size 1 --app cloudless-analytics
-  fly deploy --app cloudless-analytics --config fly-analytics.toml
-  ```
-
-### Cron Deployment (fly-cron-apps/)
-- **cron-runner.js** - Pure JavaScript Node 20-alpine image
-- **Secret:** `CRON_SECRET` (32 bytes, set via `fly secrets set`)
-- **Schedule:** Hourly via Fly.io Machines API
-- **Config:** `fly-cron-apps/analytics-rollup/fly.toml`
-- **Route:** `POST /api/cron/analytics-rollup` (requires CRON_SECRET authorization)
-
-### Deployment Commands
-```bash
-# Check Fly.io status
-fly apps list  # shows: cloudless-proxy
-
-# Deploy analytics
-fly deploy --app cloudless-analytics --config fly-analytics.toml
-
-# Deploy cron (after creating app)
-fly apps create cloudless-cron-analytics
-fly secrets set CRON_SECRET=$(openssl rand -hex 32) --app cloudless-cron-analytics
-fly deploy --app cloudless-cron-analytics --config fly-cron-apps/analytics-rollup/fly.toml
-```
-
-### Notes
-- **No organization "cloudless"** exists in Fly.io - uses personal account
-- **No placeholders** - all secrets must be actual values
-- ARM64 compatible for potential future Pi deployment
 
 ## OpenClaudia Marketing Skills
 

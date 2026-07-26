@@ -12,12 +12,6 @@ postiz:
   frontendUrl: "https://postiz.cloudless.gr"
   backendUrl: "https://postiz.cloudless.gr/api"
   disableRegistration: "true"
-  # AI routes to the in-cluster LiteLLM proxy → Ollama on Office WSL
-  litellmUrl: "http://postiz-litellm:4000"
-  aiSecretName: "postiz-openai"
-  # Override uploads PVC size - needed for media storage
-  uploadsPvc:
-    size: 20Gi
 
 service:
   type: NodePort
@@ -28,4 +22,4 @@ ingress:
   enabled: false
 
 nodeSelector:
-  kubernetes.io/hostname: "omv"
+  kubernetes.io/hostname: "omv-main"

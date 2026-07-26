@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   let body: { tool?: unknown; data?: unknown };
   try {
-    body = (await req.json()) as any as { tool?: unknown; data?: unknown };
+    body = (await req.json()) as { tool?: unknown; data?: unknown };
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }

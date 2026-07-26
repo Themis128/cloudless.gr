@@ -51,7 +51,6 @@ export function LinkedInInsightTag() {
         }}
       />
       <noscript>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           height="1"
           width="1"
@@ -71,10 +70,7 @@ export function LinkedInInsightTag() {
  * Example: lintrkConversion(1234567);
  */
 export function lintrkConversion(conversionId: number) {
-  const w = window as Window & {
-    lintrk?: (action: string, opts: { conversion_id: number }) => void;
-  };
-  if (typeof window !== "undefined" && w.lintrk) {
-    w.lintrk("track", { conversion_id: conversionId });
+  if (typeof window !== "undefined" && (window as any).lintrk) {
+    (window as any).lintrk("track", { conversion_id: conversionId });
   }
 }

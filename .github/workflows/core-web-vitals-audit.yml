@@ -5,7 +5,7 @@ env:
 
 on:
   workflow_run:
-    workflows: ['Deploy to Cloudflare Workers + k3s']
+    workflows: ['Deploy to Production']
     types: [completed]
   workflow_dispatch:
 
@@ -115,14 +115,11 @@ jobs:
 
           # Fail if any route's median falls below thresholds.
           # The bare `https://cloudless.gr/` triggers a locale redirect (307 → /en)
-          # which penalizes Lighthouse perf by ~20-30 points and can report
-          # inconsistent a11y/SEO scores for the intermediate redirect state.
-          # Skip strict failure checks for that URL — `/en` already covers the
-          # actual page performance and quality.
+          # which penalizes Lighthouse perf by ~20-30 points. Skip perf check for
+          # that URL — `/en` already covers the actual page performance.
           FAILED=$(echo "$MEDIANS" | jq --arg root "https://cloudless.gr/" '[.[] | select(
-            if .url == $root then false else (
-              .perf < 0.60 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
-            ) end
+            (if .url == $root then false else .perf < 0.60 end) or
+            .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
 
           if [ "$FAILED" -gt 0 ]; then

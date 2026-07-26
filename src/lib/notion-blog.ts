@@ -80,6 +80,7 @@ export interface NotionPostWithContent extends NotionPost {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function mapPage(page: any): NotionPost {
   const p = page.properties ?? {};
   return {

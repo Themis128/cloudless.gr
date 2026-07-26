@@ -29,7 +29,8 @@ export async function generateMetadata({
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
-    Record<string, Record<string, string>> | undefined;
+    | Record<string, Record<string, string>>
+    | undefined;
   const title = meta?.services?.title ?? "Cloud Consulting & Serverless Services in Greece";
   const description =
     meta?.services?.description ??
@@ -129,7 +130,7 @@ export default async function ServicesPage() {
               {t("servicesPage.titleHighlight", "Real results.")}
             </span>
           </h1>
-          <p className="mt-4 max-w-xl text-lg text-slate-300">
+          <p className="mt-4 max-w-xl text-lg text-slate-400">
             {t(
               "servicesPage.subtitle",
               "Pick what you need or bundle everything for 30% savings. No lock-in contracts — your code is always yours."
@@ -157,7 +158,7 @@ export default async function ServicesPage() {
                 01
               </div>
               <span className="text-neon-cyan font-mono text-xs font-semibold">Free Audit</span>
-              <span className="mt-1 text-xs text-slate-400">30-min strategy call</span>
+              <span className="mt-1 text-xs text-slate-500">30-min strategy call</span>
             </a>
 
             {/* Step 2 — active (this page) */}
@@ -171,7 +172,7 @@ export default async function ServicesPage() {
               <span className="text-neon-magenta font-mono text-xs font-semibold">
                 Choose Your Scope
               </span>
-              <span className="mt-1 text-xs text-slate-400">Services or bundle</span>
+              <span className="mt-1 text-xs text-slate-500">Services or bundle</span>
               <span className="bg-neon-magenta/10 text-neon-magenta mt-1.5 rounded-full px-2 py-0.5 font-mono text-[9px]">
                 You are here
               </span>
@@ -188,7 +189,7 @@ export default async function ServicesPage() {
               <span className="text-neon-green font-mono text-xs font-semibold">
                 Results in 14 Days
               </span>
-              <span className="mt-1 text-xs text-slate-400">Measurable progress</span>
+              <span className="mt-1 text-xs text-slate-500">Measurable progress</span>
             </a>
           </div>
         </div>
@@ -212,7 +213,7 @@ export default async function ServicesPage() {
                 <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
                   Start with a free 30-min strategy call
                 </h2>
-                <p className="mt-3 leading-relaxed text-slate-300">
+                <p className="mt-3 leading-relaxed text-slate-400">
                   No pitch. No commitment. We review your current setup, identify quick wins, and
                   give you a concrete action plan — completely free.
                 </p>
@@ -456,7 +457,7 @@ export default async function ServicesPage() {
                   {t("servicesPage.compareTitleHighlight", "full bundle?")}
                 </span>
               </h2>
-              <p className="mt-3 text-slate-300">
+              <p className="mt-3 text-slate-400">
                 {t(
                   "servicesPage.compareSubtitle",
                   "All four services. One team. One engagement. 30% less."
@@ -609,7 +610,7 @@ export default async function ServicesPage() {
               <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
                 {t("servicesPage.bundleTitle", "Full-Stack Growth Engine")}
               </h2>
-              <p className="mt-3 leading-relaxed text-slate-300">
+              <p className="mt-3 leading-relaxed text-slate-400">
                 {t(
                   "servicesPage.bundleDesc",
                   "Get all four services bundled together. Cloud infrastructure, serverless apps, analytics dashboards, and AI marketing — everything your business needs to scale."

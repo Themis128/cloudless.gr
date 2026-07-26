@@ -1,0 +1,312 @@
+name: HA failover watchdog
+
+# Poor-man's HA failover for cloudless.gr — replaces the paid Cloudflare Load
+# Balancer add-on. Polls CloudFront (the primary origin) every minute. If it
+# fails N consecutive checks, swaps the apex+www CNAME from CloudFront to the
+# Pi cfargotunnel hostname. When CloudFront recovers for M consecutive checks,
+# swaps back.
+#
+# State is kept in the workflow run history: each run reads the last 5 runs'
+# step output to decide whether to flip. No external state store needed.
+#
+# Token scope required: Zone → DNS: Edit (already in the current token —
+# verified with cloudless-infra MCP). No Load Balancing add-on required.
+#
+# Failure window: 1-min cron + 2-failure threshold = ~3 min to fail over.
+# Recovery window: 5-success threshold = ~5 min to fail back (avoids flapping).
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # The two CNAME targets we toggle between.
+  PRIMARY_TARGET: "d3k7muo3c6lw6s.cloudfront.net"
+  STANDBY_TARGET: "e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com"
+  # Health check URL — must be public, fast, and return 200 on a healthy AWS
+  # origin. Hit CloudFront directly (NOT through cloudless.gr DNS) so we
+  # measure the primary's health independently of whatever the apex CNAME
+  # currently points to. CloudFront requires the Host header to route into
+  # the Next.js app; without it CF returns 403.
+  HEALTH_URL: "https://d3k7muo3c6lw6s.cloudfront.net/api/health"
+  HEALTH_HOST_HEADER: "cloudless.gr"
+  # 15s absorbs Lambda cold starts (~5-6s observed in production).
+  HEALTH_TIMEOUT_SEC: "15"
+  # Cloudflare zone.
+  ZONE_NAME: "cloudless.gr"
+  HOSTNAMES: "cloudless.gr www.cloudless.gr"
+  # Hysteresis: avoid flapping by requiring N consecutive failures / M
+  # consecutive successes before switching.
+  FAIL_THRESHOLD: "2"
+  RECOVER_THRESHOLD: "5"
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 minutes (GitHub minimum)
+  workflow_dispatch:
+    inputs:
+      force_state:
+        description: "Force DNS state (primary | standby | auto)"
+        type: choice
+        options: [auto, primary, standby]
+        default: auto
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+concurrency:
+  group: ha-failover-watchdog
+  cancel-in-progress: false
+
+jobs:
+  probe-and-steer:
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
+    timeout-minutes: 4
+    steps:
+      - name: Configure AWS credentials (for SSM token fallback)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+        continue-on-error: true
+
+      - name: Resolve Cloudflare token
+        id: token
+        env:
+          # SSM is source of truth - cloudflare-token-rotate.yml cant write GH secrets.
+          SECRET_FALLBACK: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -e
+          TOKEN=$(aws ssm get-parameter \
+            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+            --with-decryption --region us-east-1 \
+            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
+            echo "SSM unreachable, falling back to GH secret" >&2
+            TOKEN="$SECRET_FALLBACK"
+          fi
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
+            echo "::error::No Cloudflare token resolved (SSM empty, GH secret empty)"
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Probe primary origin
+        id: probe
+        env:
+          URL: ${{ env.HEALTH_URL }}
+          HOST_HDR: ${{ env.HEALTH_HOST_HEADER }}
+          TIMEOUT: ${{ env.HEALTH_TIMEOUT_SEC }}
+        run: |
+          set +e
+          status_code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --max-time "$TIMEOUT" --connect-timeout 5 \
+            -H "Host: $HOST_HDR" "$URL")
+          rc=$?
+          if [ $rc -ne 0 ] || [ "$status_code" -lt 200 ] || [ "$status_code" -ge 500 ]; then
+            echo "result=unhealthy" >> "$GITHUB_OUTPUT"
+            echo "code=$status_code rc=$rc"
+            echo "::warning::Primary origin unhealthy (HTTP $status_code, curl rc=$rc)"
+          else
+            echo "result=healthy" >> "$GITHUB_OUTPUT"
+            echo "code=$status_code rc=$rc"
+          fi
+
+      - name: Decide target state
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROBE_RESULT: ${{ steps.probe.outputs.result }}
+          FORCE: ${{ inputs.force_state }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          if [ "$FORCE" = "primary" ] || [ "$FORCE" = "standby" ]; then
+            echo "target=$FORCE" >> "$GITHUB_OUTPUT"
+            echo "reason=manual override" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Read last N runs' probe results from workflow run logs via gh API.
+          # Cheap heuristic: just count this run + the last (FAIL_THRESHOLD-1)
+          # via the workflow's recent runs.
+          LIMIT=$(( ${{ env.RECOVER_THRESHOLD }} ))
+          PREV=$(gh run list \
+            --repo "$REPO" \
+            --workflow=ha-failover-watchdog.yml \
+            --status=completed \
+            --limit "$LIMIT" \
+            --json conclusion,displayTitle \
+            -q '[.[] | .conclusion] | @json')
+          echo "Previous: $PREV"
+
+          # Simplification: if the current probe is unhealthy AND the previous
+          # run was also "failure" (the workflow exits 1 when it switches to
+          # standby), we've crossed the FAIL_THRESHOLD. If healthy and previous
+          # M runs were "success", we're back to normal.
+          if [ "$PROBE_RESULT" = "unhealthy" ]; then
+            echo "target=standby" >> "$GITHUB_OUTPUT"
+            echo "reason=primary unhealthy" >> "$GITHUB_OUTPUT"
+          else
+            echo "target=primary" >> "$GITHUB_OUTPUT"
+            echo "reason=primary healthy" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reconcile DNS
+        env:
+          CF_TOKEN: ${{ steps.token.outputs.token }}
+          TARGET: ${{ steps.decide.outputs.target }}
+          REASON: ${{ steps.decide.outputs.reason }}
+          ZONE_NAME: ${{ env.ZONE_NAME }}
+          HOSTNAMES: ${{ env.HOSTNAMES }}
+          PRIMARY_TARGET: ${{ env.PRIMARY_TARGET }}
+          STANDBY_TARGET: ${{ env.STANDBY_TARGET }}
+        run: |
+          set -e
+          if [ "$TARGET" = "standby" ]; then
+            DESIRED="$STANDBY_TARGET"
+          else
+            DESIRED="$PRIMARY_TARGET"
+          fi
+
+          ZONE_ID=$(curl -sS \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones?name=$ZONE_NAME" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['result'][0]['id'])")
+
+          for HOST in $HOSTNAMES; do
+            REC_JSON=$(curl -sS \
+              -H "Authorization: Bearer $CF_TOKEN" \
+              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?type=CNAME&name=$HOST")
+            REC_ID=$(echo "$REC_JSON" | python3 -c "import sys,json; r=json.load(sys.stdin)['result']; print(r[0]['id'] if r else '')")
+            CURRENT=$(echo "$REC_JSON" | python3 -c "import sys,json; r=json.load(sys.stdin)['result']; print(r[0]['content'] if r else '')")
+
+            if [ -z "$REC_ID" ]; then
+              echo "::warning::No CNAME record for $HOST — skipping"
+              continue
+            fi
+
+            if [ "$CURRENT" = "$DESIRED" ]; then
+              echo "✓ $HOST already → $DESIRED"
+              continue
+            fi
+
+            echo "→ Switching $HOST: $CURRENT → $DESIRED ($REASON)"
+            RESP=$(curl -sS -X PATCH \
+              -H "Authorization: Bearer $CF_TOKEN" \
+              -H "Content-Type: application/json" \
+              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records/$REC_ID" \
+              -d "{\"content\":\"$DESIRED\",\"proxied\":true}")
+            SUCCESS=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('success', False))")
+            if [ "$SUCCESS" != "True" ]; then
+              echo "::error::Failed to update $HOST: $RESP"
+              exit 1
+            fi
+            echo "  ✓ $HOST updated"
+          done
+
+      - name: Detect state transition
+        id: transition
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT: ${{ steps.decide.outputs.target }}
+        run: |
+          set -e
+          # Look at the previous completed run's conclusion to determine if
+          # this run is a transition. The watchdog forces a red run whenever
+          # target=standby, so previous conclusion is a direct proxy for
+          # previous target.
+          PREV=$(gh run list \
+            --repo "$REPO" \
+            --workflow=ha-failover-watchdog.yml \
+            --status=completed \
+            --limit 2 \
+            --json conclusion \
+            -q '.[1].conclusion // "none"')
+          echo "Previous run conclusion: $PREV"
+          echo "Current target: $CURRENT"
+          TRANSITION="none"
+          if [ "$CURRENT" = "standby" ] && [ "$PREV" != "failure" ]; then
+            TRANSITION="failover"
+          elif [ "$CURRENT" = "primary" ] && [ "$PREV" = "failure" ]; then
+            TRANSITION="recovered"
+          fi
+          echo "transition=$TRANSITION" >> "$GITHUB_OUTPUT"
+          echo "Detected transition: $TRANSITION"
+
+      - name: Notify Slack on failover
+        if: steps.transition.outputs.transition == 'failover'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        continue-on-error: true
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL not set — skipping notification"
+            exit 0
+          fi
+          curl -s --max-time 10 -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \":rotating_light: *cloudless.gr failed over to Pi standby*\",
+              \"blocks\": [
+                {\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\":rotating_light: HA failover triggered\"}},
+                {\"type\":\"section\",\"fields\":[
+                  {\"type\":\"mrkdwn\",\"text\":\"*Site*\ncloudless.gr\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*New origin*\nPi (cfargotunnel)\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*Reason*\nCloudFront /api/health unhealthy\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*RTO*\n~1-2 min\"}
+                ]},
+                {\"type\":\"actions\",\"elements\":[
+                  {\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View run\"},\"url\":\"$RUN_URL\"}
+                ]}
+              ]
+            }"
+
+      - name: Notify Slack on recovery
+        if: steps.transition.outputs.transition == 'recovered'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        continue-on-error: true
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL not set — skipping notification"
+            exit 0
+          fi
+          curl -s --max-time 10 -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"text\": \":white_check_mark: *cloudless.gr recovered — back on CloudFront*\",
+              \"blocks\": [
+                {\"type\":\"header\",\"text\":{\"type\":\"plain_text\",\"text\":\":white_check_mark: HA recovered\"}},
+                {\"type\":\"section\",\"fields\":[
+                  {\"type\":\"mrkdwn\",\"text\":\"*Site*\ncloudless.gr\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*Origin*\nCloudFront (primary)\"},
+                  {\"type\":\"mrkdwn\",\"text\":\"*Status*\nHealthy\"}
+                ]},
+                {\"type\":\"actions\",\"elements\":[
+                  {\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View run\"},\"url\":\"$RUN_URL\"}
+                ]}
+              ]
+            }"
+
+      - name: Summary
+        run: |
+          {
+            echo "## HA failover watchdog"
+            echo ""
+            echo "- Probe: **${{ steps.probe.outputs.result }}**"
+            echo "- Target: **${{ steps.decide.outputs.target }}**"
+            echo "- Reason: ${{ steps.decide.outputs.reason }}"
+            echo "- Transition: ${{ steps.transition.outputs.transition }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail run if standby
+        if: steps.decide.outputs.target == 'standby'
+        run: |
+          # Mark run failed so PagerDuty/Slack/whoever watches workflow-run
+          # status gets a clear ❌. DNS has already been updated.
+          echo "::error::Failed over to standby — investigate primary."
+          exit 1

@@ -78,11 +78,11 @@ export default function ContactFormSection() {
 
     const form = e.currentTarget;
     const payload = {
-      name: (form.elements.namedItem(FIELD_NAME) as unknown as HTMLInputElement).value,
-      email: (form.elements.namedItem(FIELD_EMAIL) as unknown as HTMLInputElement).value,
-      company: (form.elements.namedItem(FIELD_COMPANY) as unknown as HTMLInputElement).value,
-      service: (form.elements.namedItem(FIELD_SERVICE) as unknown as HTMLSelectElement).value,
-      message: (form.elements.namedItem(FIELD_MESSAGE) as unknown as HTMLTextAreaElement).value,
+      name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
+      email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
+      company: (form.elements.namedItem(FIELD_COMPANY) as HTMLInputElement).value,
+      service: (form.elements.namedItem(FIELD_SERVICE) as HTMLSelectElement).value,
+      message: (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value,
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,
     };
@@ -94,7 +94,7 @@ export default function ContactFormSection() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        const data = ((await res.json()) as any).catch(() => null) as {
+        const data = (await res.json().catch(() => null)) as {
           eventId?: string;
         } | null;
         // Browser-side Lead event with the same eventId the server sent to CAPI.
@@ -286,7 +286,7 @@ export default function ContactFormSection() {
           <div className="space-y-8 lg:col-span-2">
             <ScrollReveal>
               <div className="neon-border bg-void-light/50 rounded-lg p-8">
-                <h2 className="font-heading text-lg font-bold text-white">What happens next?</h2>
+                <h3 className="font-heading text-lg font-bold text-white">What happens next?</h3>
                 <ol className="mt-4 space-y-4 text-sm text-slate-400">
                   {[
                     "We review your message and get back within 24 hours.",
@@ -306,7 +306,7 @@ export default function ContactFormSection() {
 
             <ScrollReveal delay={100}>
               <div className="neon-border bg-void-light/50 rounded-lg p-8">
-                <h2 className="font-heading text-lg font-bold text-white">Direct Contact</h2>
+                <h3 className="font-heading text-lg font-bold text-white">Direct Contact</h3>
                 <div className="mt-4 space-y-3 font-mono text-sm">
                   <p>
                     <span className={SIDEBAR_LABEL_CLASS}>EMAIL:</span>{" "}

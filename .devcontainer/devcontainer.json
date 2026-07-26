@@ -86,18 +86,12 @@
 
   "remoteEnv": {
     "NEXT_PUBLIC_COGNITO_USER_POOL_ID": "${localEnv:NEXT_PUBLIC_COGNITO_USER_POOL_ID}",
-    "NEXT_PUBLIC_COGNITO_CLIENT_ID": "${localEnv:NEXT_PUBLIC_COGNITO_CLIENT_ID}",
-    "CLOUDFLARE_API_TOKEN": "${localEnv:CLOUDFLARE_API_TOKEN}",
-    "CLOUDFLARE_ACCOUNT_ID": "${localEnv:CLOUDFLARE_ACCOUNT_ID}",
-    "TAILSCALE_API_KEY": "${localEnv:TAILSCALE_API_KEY}",
-    "BRAVE_API_KEY": "${localEnv:BRAVE_API_KEY}",
-    "POSTIZ_API_KEY": "${localEnv:POSTIZ_API_KEY}",
-    "BRAND_SYSTEM_API_KEY": "${localEnv:BRAND_SYSTEM_API_KEY}"
+    "NEXT_PUBLIC_COGNITO_CLIENT_ID": "${localEnv:NEXT_PUBLIC_COGNITO_CLIENT_ID}"
   },
 
-  "forwardPorts": [4000],
+  "forwardPorts": [3000],
   "portsAttributes": {
-    "4000": {
+    "3000": {
       "label": "Next.js dev server",
       "onAutoForward": "openPreview"
     }

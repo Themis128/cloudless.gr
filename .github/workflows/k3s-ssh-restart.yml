@@ -5,12 +5,12 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # API server to come back, and posts the full log to tracking issue #382.
 #
 # Use this when:
-#   - cluster-doctor shows "connection refused" on 100.74.191.58:6443
+#   - cluster-doctor shows "connection refused" on 100.113.41.119:6443
 #   - cluster-doctor shows "ServiceUnavailable" for all kubectl commands
 #   - PrometheusKubernetesListWatchFailures alert is firing
 #   - k3s-restart.yml (self-hosted runner path) queued forever (Pi runners offline)
 #
-# Requires: OMV_SSH_KEY repo secret — the private key for tbaltzakis@100.74.191.58.
+# Requires: OMV_SSH_KEY repo secret — the private key for tbaltzakis@100.113.41.119.
 # To add: GitHub → Settings → Secrets → Actions → New secret → OMV_SSH_KEY
 # Value: the private key contents (same as OMV_SSH_KEY_CONTENTS session secret).
 #
@@ -26,17 +26,12 @@ name: k3s-ssh-restart — recover k3s API server via SSH when cluster tools fail
 # Re-triggered 2026-06-03T01:13Z — prior SSH restart failed: SSH handshake timeout
 # on port 22 despite TCP connection accepted; port 6443 never came back after 90s.
 # Pi may be under extreme load; retrying. If same failure, Pi needs power cycle.
-# re-triggered 2026-07-09T14:01Z — k3s unstable: deployments oscillating (coredns/traefik flipping), kubectl unreachable
-# re-triggered 2026-07-09T14:20Z — triggering to stabilize cluster after version flip-flops
-# re-triggered 2026-07-19T17:52Z — k3s SSH restart triggered via incident response (k3s API timeout + runners offline)
-#
 
 on:
   push:
     branches: [main]
     paths:
       - ".github/workflows/k3s-ssh-restart.yml"
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -48,7 +43,7 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      PI_HOST: "100.74.191.58"
+      PI_HOST: "100.113.41.119"
       PI_USER: "tbaltzakis"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
@@ -60,13 +55,13 @@ jobs:
             echo "Add the Pi private key as a GitHub repo secret named OMV_SSH_KEY:"
             echo "  GitHub → Settings → Secrets → Actions → New repository secret"
             echo "  Name: OMV_SSH_KEY"
-            echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.74.191.58)"
+            echo "  Value: cat ~/.ssh/id_ed25519  (on the Pi, omv@100.113.41.119)"
             exit 1
           fi
           echo "OMV_SSH_KEY is set — proceeding"
 
       - name: Connect to tailnet
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 

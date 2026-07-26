@@ -31,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   let body: { content?: string; asDraft?: boolean } = {};
   try {
-    body = (await request.json()) as any;
+    body = await request.json();
   } catch {
     // Empty body is fine — all fields are optional.
   }

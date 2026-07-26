@@ -1,12 +1,12 @@
 # cloudless.gr — Architecture Map
 
-> Updated: 2026-07-21 (reflects Cloudflare Workers + D1 auth + Gemini AI migration complete)
+> Generated: 2026-06-23 (read-only inspection)
 
 ---
 
 ## 1. Framework & App Structure
 
-- **Framework:** Next.js 16.2.1 (App Router)
+- **Framework:** Next.js 16.2.9 (App Router), deployed via SST v4.15.2
 - **Runtime:** Node.js >=20, pnpm >=10 (lock: pnpm-lock.yaml)
 - **Package manager:** pnpm 10.33.2 (workspaces defined in `pnpm-workspace.yaml`)
 - **Language:** TypeScript 6.0.3 (strict mode via tsconfig.json)
@@ -29,33 +29,22 @@
 
 ## 2. Auth Flow
 
-- **Auth library:** next-auth v5.0.0-beta.31 (`src/lib/auth.ts`) + D1-native Workers auth
-- **Provider:** D1 database (Cloudflare) — complete Cognito replacement
-- **Token storage:** D1 `sessions` table + `user_sessions` table
-- **Session strategy:** JWT with D1-backed session validation
-- **Roles:** D1 `user_roles` table (54 roles synced from PostgreSQL)
-- **Password hashing:** PBKDF2 (upgraded from SHA-256, backward compatible)
-- **Security features:**
-  - Rate limiting (max 10 attempts/minute)
-  - Account lockout (>5 failed attempts in 15 minutes)
-  - CSRF protection (migration 0004)
-  - Email verification (OTP via Cloudflare Email)
-  - Admin audit log (migration 0005)
-  - Session activity logging
+- **Auth library:** next-auth v5.0.0-beta.31 (`src/lib/auth.ts`)
+- **Provider:** Cognito OIDC (custom issuer derivation from `COGNITO_USER_POOL_ID`)
+- **Token storage:** DynamoDB `SessionTokenStore` table — keeps session cookie under 4KB (avoids CloudFront/Lambda 413s)
+- **Session strategy:** JWT, with refresh-token rotation (pattern from authjs.dev)
+- **Groups:** Cognito `cognito:groups` claim → `session.user.groups`
+- **Lazy initialization:** All `process.env` reads are deferred per-request; `instrumentation.register()` hydrates SSM secrets before first request
+- **Graceful fallback:** Returns 200/null when auth env vars are absent (safe for local dev without AWS)
 - **Auth pages:** `/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/post-login`
-- **Route handlers:**
-  - Next.js: `src/app/api/auth/[...nextauth]/route.ts`
-  - Workers: `index-cloudflare-free.js` (D1-native auth)
+- **Route handlers:** `src/app/api/auth/[...nextauth]/route.ts` (destructures `handlers.GET` / `handlers.POST`)
 - **Other auth-related APIs:**
-  - `/api/auth/register` — user registration (Next.js + Workers D1)
-  - `/api/auth/login` — email/password auth (Next.js + Workers D1)
-  - `/api/auth/logout` — session destroy
-  - `/api/auth/reset-password` — reset token generate
-  - `/api/auth/reset-confirm` — password update
-  - `/api/auth/session` — session validation
-  - `/api/admin/users/promote` — admin role assignment
-  - `/api/admin/auth-audit` — compliance audit log
-- **API auth helper:** `src/lib/api-auth.ts` — validates API requests
+  - `/api/auth/register` — user registration
+  - `/api/auth/confirm` — email verification
+  - `/api/auth/activate` — account activation
+  - `/api/auth/resend-verification`
+  - `/api/admin/autologin` — admin impersonation/login
+- **API auth helper:** `src/lib/api-auth.ts` — validates API requests via Cognito JWT
 - **Context:** `src/context/AuthContext.tsx` — client-side auth state
 - **Provider component:** `src/components/NextAuthProvider.tsx`
 
@@ -81,7 +70,6 @@
 ## 4. Main Pages & Components
 
 ### Public Pages (`src/app/[locale]/`)
-
 | Route | Description |
 |---|---|
 | `/` | Landing page (hero, services summary, stats, testimonials, CTA) |
@@ -90,7 +78,7 @@
 | `/store` | Product listing ("cloud consulting store") |
 | `/store/[id]` | Product detail |
 | `/store/success` | Post-purchase success |
-| `/blog` | Blog listing (Appflowy-powered CMS) |
+| `/blog` | Blog listing (Notion-powered CMS) |
 | `/blog/[slug]` | Blog article |
 | `/case-studies` | Case study listing |
 | `/case-studies/[slug]` | Case study detail |
@@ -104,7 +92,6 @@
 | `/accessibility` | Accessibility statement |
 
 ### Auth Pages (`src/app/[locale]/auth/`)
-
 | Route | Description |
 |---|---|
 | `/auth/login` | Sign in (next-auth custom page) |
@@ -112,8 +99,8 @@
 | `/auth/forgot-password` | Password reset |
 | `/auth/post-login` | Post-authentication redirect |
 
-### Dashboard Pages (`src/app/[locale]/dashboard/`)
 
+### Dashboard Pages (`src/app/[locale]/dashboard/`)
 | Route | Description |
 |---|---|
 | `/dashboard` | User dashboard home |
@@ -124,25 +111,23 @@
 | `/dashboard/settings` | Account settings |
 
 ### Admin Pages (`src/app/[locale]/admin/`)
-
 ~40+ admin sub-routes — the full admin cockpit covering:
 
 - **Analytics:** datalake, SEO, unified dashboards, workspaces, ROI
 - **Campaigns:** Google Ads, Meta Ads, LinkedIn Ads, TikTok Ads, X Ads
 - **CRM:** Contacts, companies, deals, tickets, pipelines
 - **CMS:** Blog, case studies, FAQs, services, testimonials
+- **Notion:** All Notion-backed views (projects, tasks, submissions, status, analytics, docs)
 - **Operations:** Cluster monitor, ESP32 devices, Grafana, errors, audits, integrations
-- **Other:** AI assistant (Gemini), AI generator, voice brief, email/ActiveCampaign, subscriptions, users, workspaces, calendar, client portals, Postiz, reports, settings, notifications
+- **Other:** AI assistant, AI generator, voice brief, email/ActiveCampaign, subscriptions, users, workspaces, calendar, client portals, Postiz, reports, settings, notifications
 
 ### Client Portal (`src/app/portal/`)
-
 | Route | Description |
 |---|---|
 | `/portal/[token]` | Token-authenticated client portal |
 | `/portal/waiting` | Waiting room for pending clients |
 
 ### Core Components (`src/components/`)
-
 - **Layout:** `Navbar`, `Footer`, `Logo`, `ThemeProvider`, `ThemeSwitcher`, `LocaleSwitcher`, `CookieConsent`
 - **UI:** `CommandPalette`, `TierTable`, `HolographicCard`, `TerminalBlock`, `StatCounter`, `ScrollReveal`, `NeonCursor`, `TypingText`, `ParticleField`
 - **Store:** `StoreGrid`, `CartButton`, `CartSlideOver`, `AddToCartButton`, `ProductIcon`
@@ -153,10 +138,10 @@
 - **Contexts:** `AuthContext`, `CartContext`, `WorkspaceContext`, `CookieConsentContext`
 
 ### API Routes (`src/app/api/`) — Key Groups
-
 - `auth/*` — Authentication handlers
-- `admin/*` — Full admin API (AI, analytics, campaigns, CRM, CMS, Appflowy, Postiz, etc.)
+- `admin/*` — Full admin API (AI, analytics, campaigns, CRM, CMS, Notion, Postiz, etc.)
 - `cron/*` — Scheduled tasks (ad-analytics-poll, gsc-cache-refresh, client-reports, etc.)
+- `webhooks/*` — External webhooks (Stripe, Notion, Sentry, Postiz, EspoCRM, n8n, MQTT, admin-alerts)
 - `slack/*`, `newsletter-slack/*` — Slack bot endpoints
 - `health`, `analytics/*`, `blog/*`, `docs/*`, `contact`, `calendar/*`, `chat`, `checkout`, `subscribe`, `unsubscribe`
 - `services`, `testimonials`, `case-studies/*`, `faqs`, `user/*`, `crm/*`, `campaigns/conversion`
@@ -169,21 +154,22 @@
 
 | Category | Variables |
 |---|---|
-| **Auth** | `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST` |
-| **Email** | `SES_FROM_EMAIL`, `SES_TO_EMAIL`, `AWS_SES_REGION` (deprecated, using Cloudflare Email) |
+| **AWS** | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SSM_PREFIX` |
+| **Auth** | `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST`, Cognito OIDC vars |
+| **Email** | `SES_FROM_EMAIL`, `SES_TO_EMAIL`, `AWS_SES_REGION` |
 | **Stripe** | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` |
 | **Slack** | `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_WEBHOOK_URL` |
 | **HubSpot** | `HUBSPOT_API_KEY`, `HUBSPOT_CLIENT_SECRET`, `HUBSPOT_PORTAL_ID` |
-| **Appflowy** | `APPFLOWY_API_URL`, `APPFLOWY_API_KEY`, workspace config |
+| **Notion** | `NOTION_API_KEY`, 10+ DB IDs, webhook secret |
 | **Google** | Calendar + Search Console service account + GSC site URL |
-| **Gemini AI** | `GEMINI_API_KEY` (primary AI provider, replaces Bedrock/Anthropic) |
 | **Sentry** | DSN, org, project, auth token |
+| **Anthropic** | API key + chat model config |
 | **ActiveCampaign** | API URL + token |
 | **Ad Platforms** | Google Ads, LinkedIn Ads, TikTok Ads, X Ads, Meta/Facebook Ads |
 | **CRON** | `CRON_SECRET` |
 | **App** | `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_PORTFOLIO_MODE`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`, `NEXT_PUBLIC_CLARITY_PROJECT_ID` |
 
-Production secrets hydrated from D1 `app_config` table + Wrangler secrets.
+Production secrets hydrated from AWS SSM via Sentry/instrumentation.
 
 ---
 
@@ -201,70 +187,35 @@ Production secrets hydrated from D1 `app_config` table + Wrangler secrets.
 | `pnpm format` | prettier |
 | `pnpm format:check` | prettier --check |
 | `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm cf:typecheck` | `tsc --noEmit -p tsconfig.worker.json` (Cloudflare Workers) |
-| `pnpm cf:build` | `next build` (for Cloudflare) |
-| `pnpm cloudflare-build` | `opennextjs-cloudflare build` |
-| `pnpm cf:deploy` | `wrangler deploy` |
+| `pnpm test` | `vitest` (unit tests) |
+| `pnpm test:ci` | `vitest run` |
+| `pnpm test:e2e:*` | Various Playwright test runner scripts |
 | `pnpm deploy` | `sst deploy --stage production` |
 | `pnpm analyze` | `ANALYZE=true next build` |
 
 ---
 
-## 7. Deployment & Build Assumptions & HA Architecture
+## 7. Deployment & Build Assumptions
 
-### Cloudflare-Only Architecture (Primary)
-
-- **Primary runtime:** Pi k3s cluster (self-hosted on omv, 192.168.1.128, exposed via **Cloudflare Tunnel**: `cloudless.gr`)
-- **HA failover:** Cloudflare Workers (`cloudless-failover.baltzakis-themis.workers.dev`) via Load Balancer
-- **Tunnel ID:** `e97a490-58c5-4fdb-9155-86832e3e636a` (active since 2026-07-20)
-- **Docker build (Pi):** `Dockerfile` + `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
+- **Production deploy:** SST v4 (`sst deploy --stage production`) → AWS Lambda + CloudFront
+- **Pi cluster (k3s):** Docker-based with `NEXT_OUTPUT_STANDALONE=1` for self-contained bundle
 - **WSL dev:** `NEXT_DIST_DIR` env var to avoid NTFS slow benchmarks; `allowedDevOrigins` for LAN access
-- **Configuration:** D1 `app_config` table + Wrangler secrets (SSM deprecated)
-- **Storage:** R2 buckets (cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket)
-- **AI Provider:** Google Gemini (gemini-1.5-flash) + Workers AI fallback (@cf/meta/llama-3.1-8b-instruct)
-
-### Traffic Flow
-
-```
-cloudless.gr / www.cloudless.gr
-        │
-        ▼
- Cloudflare Load Balancer  (steering: off)
-        │
-        ├─► [PRIMARY]   cl-pi-<host>
-        │               cloudless.gr (via Cloudflare Tunnel e97a490...)
-        │               health: GET /api/health, expect 200, interval=60s
-        │
-        └─► [FALLBACK]  cl-worker-<host>
-                         cloudless-failover.baltzakis-themis.workers.dev
-                         (serves cached/static during Pi maintenance)
-```
-
-### Cloudflare HTTPS/TLS
-
-**Automatic - no manual certificate management required.**
-
-- `cloudless.gr` / `www.cloudless.gr` — HTTPS via Cloudflare Universal SSL
-- Subdomains (grafana, n8n, postiz, etc.) — HTTPS via Cloudflare Tunnel
-- Edge certificates auto-provisioned and auto-renewed
-
-### Setup
-
-- **Tunnel setup:** `infrastructure/cloudflare-tunnels/` (config.yml, ingress-rules.yaml)
-- **LB setup:** `.github/workflows/cloudflare-lb.yml` → dispatch with `apply=true`
-- **Pi deploy:** `.github/workflows/deploy-pi.yml` (builds to ECR, rolls out to k3s)
-- **Tunnel manifest:** Deployed on omv node (systemd cloudflared service)
-
-### Token Required
-
-- `/cloudless/production/CLOUDFLARE_API_TOKEN` — Zone:Read, DNS:Edit, Load Balancing:Edit, Tunnel:Edit
+- **SSM hydration:** Secrets loaded via `instrumentation.ts` → SST SSM parameter store (`/cloudless/production/*`)
+- **Server external packages:** AWS SDK clients externalized (Turbopack resolver workaround for pnpm hoisting)
+- **next-auth** is transpiled (not externalized) — avoids ESM import errors
+- **Coverage mode:** E2E coverage via V8 native coverage (server `NODE_V8_COVERAGE` + browser CDP), forced `source-map` devtool
+- **Source maps:** Only in coverage mode (production maps uploaded to Sentry via SST)
+- **Docker build:** `Dockerfile` present, `.dockerignore` configured
+- **K8s manifests:** `k8s/` directory for Pi cluster deployments
+- **Workers (Cloudflare):** `workers/` directory present
+- **Infrastructure:** `infrastructure/` directory with IaC
 
 ---
 
 ## 8. Test Structure
 
 - **Unit tests:** Vitest v4 (`__tests__/*.test.ts/tsx`) — ~30+ test files covering:
-  - Auth callbacks, admin APIs, analytics, Appflowy, Slack, Sentry, client portals
+  - Auth callbacks, admin APIs, analytics, Notion, Slack, Sentry, client portals
   - Locale defaults, canonical origin, article quality gates, etc.
 - **E2E tests:** Playwright v1.61 (`e2e/*.spec.ts`) — multiple configs:
   - `playwright.config.mts` — main config
@@ -278,22 +229,20 @@ cloudless.gr / www.cloudless.gr
 
 ## 9. Risks Before Production Changes
 
-1. **Auth availability:** D1 auth is now primary; AWS Cognito deprecated but still in code (backward compatibility mode)
+1. **Auth availability:** Auth config resolves lazily; changes to `COGNITO_*` env vars could break sign-in/session flow
 2. **i18n completeness:** 4 locale JSON files must stay in sync — missing keys = blank UI text
-3. **External API dependencies:** Appflowy, Stripe, Slack, ActiveCampaign, HubSpot — all must be available or gracefully degraded
-4. **D1 vs SSM config:** `ssm-config.ts` falls back to D1 when `SSM_DISABLED=1`; missing D1 migrations will break config
+3. **External API dependencies:** Notion, Stripe, Slack, ActiveCampaign, HubSpot, AWS SDK — all must be available or gracefully degraded
+4. **SSM hydration timing:** `instrumentation.register()` runs async; any route handler that accesses `process.env` before hydration gets empty/fallback values
 5. **Turbopack vs Webpack:** Some configs differ between dev (Turbopack) and prod (Webpack) — `serverExternalPackages` only applies to Turbopack
 6. **Locale redirects:** next-intl middleware intercepts before Next.js `rewrites()` — any new public route must be tested for locale redirect behavior
 7. **Coverage config:** `next.config.ts` has conditional webpack overrides when `COVERAGE=1` — editing next.config.ts could break the coverage pipeline
 8. **Secrets in .env.local:** Contains real credentials — never commit, never expose in logs
 9. **pnpm overrides:** Version pinning for security advisories — removing/altering overrides could reintroduce vulnerabilities
-10. **Next.js 16 edge:** Using `next@16.2.1` — some APIs may have changed from v14/v15 patterns
-11. **LB failover:** Requires `CLOUDFLARE_API_TOKEN` with Load Balancing scopes
-12. **MinIO security:** ✅ Fixed 2026-07-20 - Credentials updated from `minioadmin` defaults to secure random hex values
+10. **Next.js 16 edge:** Using `next@16.2.9` — some APIs may have changed from v14/v15 patterns
 
 ---
 
-## 10. File Reference
+## File Reference
 
 | File | Purpose |
 |---|---|
@@ -305,56 +254,10 @@ cloudless.gr / www.cloudless.gr
 | `playwright.config.mts` | E2E test runner config |
 | `postcss.config.mjs` | PostCSS config (Tailwind v4) |
 | `src/lib/auth.ts` | next-auth v5 with Cognito OIDC + DynamoDB token store |
-| `src/lib/gemini-shared.ts` | Gemini AI provider (replaces Bedrock) |
-| `src/lib/gemini-admin.ts` | Admin Gemini wrapper |
 | `src/i18n/routing.ts` | Locale definitions (en, el, fr, de) |
 | `src/i18n/request.ts` | Static locale message loader |
 | `sentry.client.config.ts` / `sentry.server.config.ts` / `sentry.edge.config.ts` | Sentry config |
-| `sst.config.ts` | SST v4 deploy config (Cognito + SSM) |
+| `sst.config.ts` | SST v4 deploy config |
 | `instrumentation.ts` | SSM hydration on cold start |
 | `.env.example` | All environment variables |
 | `Dockerfile` | Self-hosted Docker build (Pi/k3s) |
-| `.github/workflows/cloudflare-lb.yml` | Cloudflare HA failover setup |
-| `.github/workflows/setup-pi-tunnel.yml` | Cloudflare Tunnel creation |
-| `k8s/tunnel/pi-tunnel.yaml` | Pi Cloudflare Tunnel manifest |
-| `workers/cloudless-failover/` | Workers fallback |
-| `k8s/cloudless-app-optimized.yaml` | Pi k3s deployment |
-| `k8s/search/meilisearch.yaml` | R21 search backend (4Gi PVC on OMV-MAIN SSD) |
-| `fly.toml` | Fly.io proxy configuration (external HA failover backup) |
-| `fly-proxy-app/` | Fly.io HA proxy implementation |
-| `migrations/0006-email-suppression.sql` | D1 email suppression table |
-| `migrations/0007-app-config.sql` | D1 application configuration table |
-
----
-
-## 11. Deployment Plan (CLOUDFLARE-DEPLOYMENT-FINETUNING-PLAN.md)
-
-**CRITICAL Actions Required Before Production:**
-
-1. **Create KV Namespaces:**
-   ```bash
-   npx wrangler kv namespace create "TAG_CACHE" --config wrangler.jsonc
-   npx wrangler kv namespace create "REVALIDATION_QUEUE" --config wrangler.jsonc
-   ```
-   Update `wrangler.jsonc` with actual namespace IDs.
-
-2. **Set Secrets:**
-   ```bash
-   npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
-   npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
-   npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
-   npx wrangler secret put CRON_SECRET --config wrangler.jsonc
-   npx wrangler secret put STRIPE_SECRET_KEY --config wrangler.jsonc
-   npx wrangler secret put STRIPE_WEBHOOK_SECRET --config wrangler.jsonc
-   ```
-
-3. **Deploy:**
-   ```bash
-   pnpm cloudflare-build && pnpm cf:deploy
-   ```
-
-4. **Verify:**
-   - `curl -s https://cloudless.gr/api/health | jq`
-   - `pnpm cf:typecheck`
-
-See `CLOUDFLARE-DEPLOYMENT-FINETUNING-PLAN.md` for complete deployment workflow.

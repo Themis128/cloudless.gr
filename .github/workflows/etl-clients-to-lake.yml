@@ -1,0 +1,61 @@
+name: ETL — Clients & Portals to Data Lake
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # daily 04:00 UTC (after Stripe ETL)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: us-east-1
+  BUCKET: cloudless-analytics-data
+
+jobs:
+  clients-sync:
+    name: Sync Clients & Portals → S3 Parquet
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        # `npm ci` uses scripts/etl/package-lock.json so portals + clients
+        # ETLs run against pinned deps every day. Previous `npm install`
+        # would resolve latest of each AWS SDK on every run.
+        run: npm ci
+        working-directory: scripts/etl
+
+      - name: Sync portals to lake
+        run: node scripts/etl/portals-to-lake.mjs
+        env:
+          ANALYTICS_BUCKET: ${{ env.BUCKET }}
+
+      - name: Sync clients to lake
+        run: node scripts/etl/clients-to-lake.mjs
+        env:
+          ANALYTICS_BUCKET: ${{ env.BUCKET }}
+          COGNITO_USER_POOL_ID: us-east-1_1Bq3Mpqer
+
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "text": ":x: ETL — Clients & Portals to Data Lake failed on '"$GITHUB_REF_NAME"' (#'"$GITHUB_RUN_NUMBER"'). See https://github.com/'"$GITHUB_REPOSITORY"'/actions/runs/'"$GITHUB_RUN_ID"'"
+            }'

@@ -20,46 +20,14 @@ export default function ForgotPasswordPage() {
     setError("");
     setSubmitting(true);
     try {
+      // Hands off to the active provider's hosted reset flow (Cognito Hosted UI
+      // Cognito reset-credentials); the browser navigates away.
       await forgotPassword(email);
-      setSuccess(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Request failed");
       setSubmitting(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="bg-void flex min-h-screen items-center justify-center px-4 py-20">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center">
-            <div className="bg-neon-green/10 border-neon-green/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
-              <span className="bg-neon-green h-2 w-2 animate-pulse rounded-full" />
-              <span className="text-neon-green font-mono text-xs">EMAIL_SENT</span>
-            </div>
-            <h1 className="font-heading text-3xl font-bold text-white">
-              {t("auth.resetEmailSent", "Email Sent")}
-            </h1>
-            <p className="font-body mt-2 text-slate-400">
-              {t("auth.resetEmailDesc", "Check your email for password reset instructions")}
-            </p>
-          </div>
-
-          <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8 text-center">
-            <p className="font-mono text-sm text-slate-300">
-              {t("auth.checkEmail", "Check your email for the reset link.")}
-            </p>
-            <Link
-              href="/auth/login"
-              className="text-neon-cyan mt-6 block font-mono text-sm hover:underline"
-            >
-              {t("auth.backToLogin", "Back to Sign In")}
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-void flex min-h-screen items-center justify-center px-4 py-20">
@@ -106,7 +74,7 @@ export default function ForgotPasswordPage() {
               className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
             >
               {submitting
-                ? t("auth.redirecting", "Sending...")
+                ? t("auth.redirecting", "Redirecting...")
                 : t("auth.sendResetLink", "Send Reset Link")}
             </button>
           </form>

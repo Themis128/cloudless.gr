@@ -50,7 +50,7 @@ postiz:
       cpu: "1"
       memory: "1536Mi"
   uploadsPvc:
-    size: 20Gi
+    size: 2Gi
     storageClassName: "local-path"
   # Secret with JWT_SECRET + POSTGRES_PASSWORD, created out-of-band by the
   # secret-bootstrap.sh script. The chart does NOT template this — keeping
@@ -61,14 +61,6 @@ postiz:
   # TIKTOK_CLIENT_ID/SECRET). Marked optional in the Deployment so a fresh
   # cluster boots before this exists.
   providersSecretName: "postiz-providers"
-  # Optional secret with AI API key (OPENAI_API_KEY, OPENAI_BASE_URL).
-  # Created out-of-band — holds the LiteLLM master key so Postiz's
-  # Copilot / AI caption features can reach the in-cluster LiteLLM proxy.
-  # If absent, AI features are disabled (Postiz still works).
-  aiSecretName: "postiz-openai"
-  # LiteLLM proxy endpoint for OpenAI-compatible AI completions.
-  litellmUrl: "http://postiz-litellm:4000"
-
 
 postgres:
   user: "postiz"
@@ -117,4 +109,4 @@ ingress:
 
 # Pin the entire stack to omv-main — local-path PVs are node-bound.
 nodeSelector:
-  kubernetes.io/hostname: "omv"
+  kubernetes.io/hostname: "omv-main"

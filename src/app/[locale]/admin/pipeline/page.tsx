@@ -57,8 +57,8 @@ export default function PipelinePage() {
       ]);
       if (!boardRes.ok) throw new Error("Failed to load board");
       if (!statsRes.ok) throw new Error("Failed to load stats");
-      const boardData = (await boardRes.json()) as any as any as any;
-      const statsData = (await statsRes.json()) as any as any as any;
+      const boardData = await boardRes.json();
+      const statsData = await statsRes.json();
       setDealsByStage(boardData.dealsByStage ?? {});
       setPipelines(boardData.pipelines ?? []);
       setStats(statsData);
@@ -70,6 +70,7 @@ export default function PipelinePage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

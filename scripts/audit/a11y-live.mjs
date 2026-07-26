@@ -45,7 +45,7 @@ for (const route of ROUTES) {
   const url = base.replace(/\/$/, "") + route;
   console.log(`→ ${url}`);
   const page = await ctx.newPage();
-  const r = { route, url, error: null, violations: [] };
+  let r = { route, url, error: null, violations: [] };
   try {
     const resp = await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
     if (!resp || !resp.ok()) {

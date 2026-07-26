@@ -25,14 +25,16 @@ jobs:
       SITE_URL: ${{ secrets.SITE_URL }}
       CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      # AppFlowy (self-hosted Notion replacement) — scripts/generate-weekly-article.ts
-      # reads APPFLOWY_API_URL + APPFLOWY_EMAIL + APPFLOWY_PASSWORD to write drafts.
-      APPFLOWY_API_URL: ${{ secrets.APPFLOWY_API_URL }}
-      APPFLOWY_EMAIL: ${{ secrets.APPFLOWY_EMAIL }}
-      APPFLOWY_PASSWORD: ${{ secrets.APPFLOWY_PASSWORD }}
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      NOTION_BLOG_DB_ID: ${{ secrets.NOTION_BLOG_DB_ID }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # When both are set, the script posts to #newsletter via the bot
+      # instead of falling back to the generic SLACK_WEBHOOK_URL.
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       NEWSLETTER_SLACK_CHANNEL_ID: ${{ secrets.NEWSLETTER_SLACK_CHANNEL_ID }}
+      # Operator Slack user id — when set together with SLACK_BOT_TOKEN
+      # the generator DMs the full gate verdict + critic feedback to the
+      # operator, keeping #newsletter tidy.
       SLACK_OPS_USER_ID: ${{ secrets.SLACK_OPS_USER_ID }}
 
     steps:

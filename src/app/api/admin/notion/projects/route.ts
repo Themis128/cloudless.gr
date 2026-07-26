@@ -1,124 +1,83 @@
-/**
- * /api/admin/notion/projects — backed by AppFlowy
- */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import {
-  listAllWorkspaces,
-  listWorkspaceViews,
-  createPage,
-  AppFlowyNotConfiguredError,
-} from "@/lib/appflowy";
-
-interface Project {
-  id: string;
-  name: string;
-  status: string;
-  owner: string;
-  progress: number;
-  url: string;
-}
-
-function viewToProject(v: {
-  view_id: string;
-  name: string;
-  layout: string;
-  created_at: string;
-  last_edited_time: string;
-}): Project {
-  return {
-    id: v.view_id,
-    name: v.name,
-    status: "In Progress",
-    owner: "",
-    progress: 0,
-    url: `/appflowy/view/${v.view_id}`,
-  };
-}
-
-async function getPrimaryWorkspaceId(): Promise<string | null> {
-  const workspaces = await listAllWorkspaces();
-  return workspaces[0]?.workspace_id ?? null;
-}
-
-async function getRootViewId(workspaceId: string): Promise<string | null> {
-  const views = await listWorkspaceViews(workspaceId);
-  return views[0]?.view_id ?? null;
-}
+  listProjects,
+  createProject,
+  updateProjectStatus,
+  updateProjectProgress,
+} from "@/lib/notion-projects";
+import type { ProjectStatus } from "@/lib/notion-projects";
+import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const statusFilter = request.nextUrl.searchParams.get("status");
-
-  try {
-    const workspaceId = await getPrimaryWorkspaceId();
-    if (!workspaceId) {
-      return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 503 });
-    }
-
-    const views = await listWorkspaceViews(workspaceId);
-    let projects = views.filter((v) => v.layout === "Document").map(viewToProject);
-
-    if (statusFilter) {
-      projects = projects.filter((p) => p.status === statusFilter);
-    }
-
-    return NextResponse.json({ projects, count: projects.length });
-  } catch (err) {
-    if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 503 });
-    }
-    return NextResponse.json({ error: "Failed to list projects" }, { status: 500 });
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID"))) {
+    return NextResponse.json({ error: "Notion Projects not configured" }, { status: 503 });
   }
+
+  const status = request.nextUrl.searchParams.get("status") as ProjectStatus | null;
+  const projects = await listProjects(status ?? undefined);
+  return NextResponse.json({ projects, count: projects.length });
 }
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  try {
-    const body: { name?: string } = await request.json();
+  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID"))) {
+    return NextResponse.json({ error: "Notion Projects not configured" }, { status: 503 });
+  }
 
-    if (!body.name) {
-      return NextResponse.json({ error: "name required" }, { status: 400 });
-    }
+  const body = await request.json();
+  if (!body.name) {
+    return NextResponse.json({ error: "name is required" }, { status: 400 });
+  }
 
-    const name = body.name;
-    if (typeof name !== "string" || name.length > 200) {
-      return NextResponse.json(
-        { error: "name must be a non-empty string no longer than 200 characters" },
-        { status: 400 }
-      );
-    }
+  if (typeof body.name !== "string" || body.name.trim().length === 0 || body.name.length > 200) {
+    return NextResponse.json(
+      {
+        error: "name must be a non-empty string no longer than 200 characters",
+      },
+      { status: 400 }
+    );
+  }
 
-    const workspaceId = await getPrimaryWorkspaceId();
-    if (!workspaceId) {
-      return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 503 });
-    }
-
-    const rootViewId = await getRootViewId(workspaceId);
-    const parentViewId = rootViewId ?? workspaceId;
-
-    const result = await createPage(workspaceId, parentViewId, name);
-
-    return NextResponse.json({ id: result.view_id }, { status: 201 });
-  } catch (err) {
-    if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 503 });
-    }
+  const id = await createProject(body);
+  if (!id) {
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
   }
+  return NextResponse.json({ id }, { status: 201 });
 }
 
 export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // AppFlowy doesn't support status updates via API, acknowledge gracefully
-  return NextResponse.json({
-    ok: true,
-    note: "Status updates are managed inside AppFlowy directly.",
-  });
+  const body = await request.json();
+  const { pageId, status, progress } = body;
+
+  if (!pageId) {
+    return NextResponse.json({ error: "pageId is required" }, { status: 400 });
+  }
+
+  if (status) {
+    const valid: ProjectStatus[] = ["Planning", "In Progress", "On Hold", "Completed", "Cancelled"];
+    if (!valid.includes(status)) {
+      return NextResponse.json(
+        { error: `Invalid status. Must be one of: ${valid.join(", ")}` },
+        { status: 400 }
+      );
+    }
+    const ok = await updateProjectStatus(pageId, status);
+    if (!ok) return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
+
+  if (typeof progress === "number" && progress >= 0 && progress <= 100) {
+    const ok = await updateProjectProgress(pageId, progress);
+    if (!ok) return NextResponse.json({ error: "Failed to update progress" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { callGemini, getGeminiApiKey, isGeminiConfigured } from "@/lib/gemini-admin";
+import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   let objective: string;
   let language: string;
   try {
-    const body = (await request.json()) as any;
+    const body = await request.json();
     service = String(body.service ?? "").slice(0, 2000);
     platform = String(body.platform ?? "Meta").slice(0, 50);
     objective = String(body.objective ?? "awareness").slice(0, 200);
@@ -24,23 +24,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!(await isGeminiConfigured())) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 503 });
-  }
-
-  const apiKey = await getGeminiApiKey();
+  const apiKey = await getAnthropicApiKey();
   if (!apiKey) {
-    return NextResponse.json({ error: "GEMINI_API_KEY not configured." }, { status: 503 });
+    return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured." }, { status: 503 });
   }
 
   const CHAR_LIMITS: Record<string, { headline: number; body: number }> = {
-    Meta: { headline: 40, body: 125 },
-    LinkedIn: { headline: 70, body: 150 },
-    TikTok: { headline: 50, body: 100 },
-    X: { headline: 0, body: 280 },
-    Google: { headline: 30, body: 90 },
+    Meta: { headline: 40, body: 125 }, // NOSONAR — platform-defined character limits
+    LinkedIn: { headline: 70, body: 150 }, // NOSONAR
+    TikTok: { headline: 50, body: 100 }, // NOSONAR
+    X: { headline: 0, body: 280 }, // NOSONAR
+    Google: { headline: 30, body: 90 }, // NOSONAR
   };
-  const DEFAULT_CHAR_LIMIT = { headline: 50, body: 150 };
+  const DEFAULT_CHAR_LIMIT = { headline: 50, body: 150 }; // NOSONAR
   const limits = CHAR_LIMITS[platform] ?? DEFAULT_CHAR_LIMIT;
 
   const prompt = `Generate 5 ad copy variants for this service:
@@ -64,7 +60,7 @@ Respond with raw JSON only (no markdown fences):
 }`;
 
   try {
-    const text = await callGemini(prompt, apiKey, 1000);
+    const text = await callClaude(prompt, apiKey, { maxTokens: 1_000 });
     let variants: unknown;
     try {
       variants = JSON.parse(text.replaceAll(/```json\n?|\n?```/g, "").trim());
@@ -73,7 +69,7 @@ Respond with raw JSON only (no markdown fences):
     }
     return NextResponse.json({ variants });
   } catch (e) {
-    console.error("[ai/copy] Gemini call failed:", e);
+    console.error("[ai/copy] Claude call failed:", e);
     return NextResponse.json({ error: "AI generation failed." }, { status: 500 });
   }
 }

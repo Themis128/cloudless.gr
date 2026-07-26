@@ -21,7 +21,7 @@ export default function ReportViewPage() {
         setError("Report not found.");
         return;
       }
-      const data = (((((await res.json()) as any)) as any)) as any;
+      const data = await res.json();
       setReport(data.report);
     } catch {
       setError("Failed to load report.");
@@ -32,7 +32,7 @@ export default function ReportViewPage() {
 
   useEffect(() => {
     if (!id) return;
-     
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);

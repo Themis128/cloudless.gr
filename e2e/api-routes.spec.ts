@@ -14,7 +14,7 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
 let testCounter = 0;
 function uniqueIp() {
   testCounter += 1;
-  return `203.0.113.${(testCounter % 200) + 10}`;
+  return `203.0.113.${testCounter % 254}`;
 }
 
 async function postJson(
@@ -67,7 +67,7 @@ test.describe("API: /api/contact", () => {
     expect([400, 429]).toContain(res.status());
     if (res.status() === 400) {
       const body = await res.json();
-      expect(body.error.toLowerCase()).toMatch(/(invalid email|valid email required)/i);
+      expect(body.error).toMatch(/invalid email/i);
     }
   });
 });

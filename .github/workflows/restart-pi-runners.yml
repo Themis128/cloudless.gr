@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
       - name: Connect to tailnet
-        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
@@ -38,14 +38,12 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          # Use the documented LAN hostname from skills/pi-runner-failover/SKILL.md
-          # (192.168.1.128 on LAN, not the stale tailnet IP 100.113.41.119).
-          ssh-keyscan -H 192.168.1.128 >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H 100.113.41.119 >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: List and restart inactive runner services
         run: |
           set -euo pipefail
-          SSH="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@192.168.1.128"
+          SSH="ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=15 tbaltzakis@100.113.41.119"
 
           echo "=== Runner service status (before) ==="
           $SSH "sudo systemctl list-units 'actions.runner.*' --no-pager --all" || true

@@ -312,8 +312,8 @@ async function handleTabFetch<T>(
   setLoading(true);
   setError(null);
   try {
-    const json = (await fetchJson(url)) as Record<string, any>;
-    setData(extractFn(json as any));
+    const json = await fetchJson(url);
+    setData(extractFn(json));
   } catch (err) {
     setError(err instanceof Error ? err.message : `Failed to load ${tab}`);
   } finally {
@@ -340,14 +340,14 @@ async function loadOverviewData(days: number): Promise<{
   let overviewError: string | null = null;
 
   if (seoRes.status === "fulfilled" && seoRes.value.ok) {
-    const d = (await seoRes.value.json()) as any as any as any;
+    const d = await seoRes.value.json();
     snapshot = d.snapshot ?? null;
   } else {
     overviewError = "Failed to load GSC overview";
   }
 
   if (webRes.status === "fulfilled" && webRes.value.ok) {
-    const d = (await webRes.value.json()) as any as any as any;
+    const d = await webRes.value.json();
     analytics = d.analytics ?? null;
   }
 
@@ -605,7 +605,7 @@ export default function AdminAnalyticsPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`min-h-9 rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
+            className={`min-h-[36px] rounded-lg px-4 py-1.5 font-mono text-xs transition-all ${
               tab === t.id
                 ? "bg-neon-magenta/10 text-neon-magenta border-neon-magenta/20 border"
                 : "border border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"

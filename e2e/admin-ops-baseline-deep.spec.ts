@@ -55,8 +55,9 @@ test.describe(`${CLUSTER}: authenticated reads return documented shapes`, () => 
   test("GET /api/admin/users returns { users, provider, ... }", async ({ request }) => {
     const a = await adminRequest(request);
     const r = await a.get("/api/admin/users");
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([200, 401, 403]).toContain(r.status());
+    expect([401, 403]).not.toContain(r.status());
+    // 200 OK (Cognito configured) or 5xx (dev without AWS creds) — both prove
+    // the auth gate flowed through.
     if (r.status() === 200) {
       const body = await r.json();
       expect(body).toHaveProperty("users");
@@ -67,8 +68,7 @@ test.describe(`${CLUSTER}: authenticated reads return documented shapes`, () => 
   test("GET /api/admin/integrations/status returns { integrations, summary, checkedAt }", async ({ request }) => {
     const a = await adminRequest(request);
     const r = await a.get("/api/admin/integrations/status");
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([200, 401, 403]).toContain(r.status());
+    expect([401, 403]).not.toContain(r.status());
     if (r.status() === 200) {
       const body = await r.json();
       expect(body).toHaveProperty("integrations");
@@ -81,8 +81,7 @@ test.describe(`${CLUSTER}: authenticated reads return documented shapes`, () => 
   test("GET /api/admin/notifications returns { notifications: [] }", async ({ request }) => {
     const a = await adminRequest(request);
     const r = await a.get("/api/admin/notifications");
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([200, 401, 403]).toContain(r.status());
+    expect([401, 403]).not.toContain(r.status());
     if (r.status() === 200) {
       const body = await r.json();
       expect(body).toHaveProperty("notifications");
@@ -93,8 +92,7 @@ test.describe(`${CLUSTER}: authenticated reads return documented shapes`, () => 
   test("GET /api/admin/workspaces returns { workspaces: [] }", async ({ request }) => {
     const a = await adminRequest(request);
     const r = await a.get("/api/admin/workspaces");
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([200, 401, 403]).toContain(r.status());
+    expect([401, 403]).not.toContain(r.status());
     if (r.status() === 200) {
       const body = await r.json();
       expect(body).toHaveProperty("workspaces");
@@ -109,38 +107,28 @@ test.describe(`${CLUSTER}: write-side methods accept admin-token`, () => {
     const r = await a.post("/api/admin/cache", {});
     // 200 OK on success, 5xx if Notion cache module errors. We just verify
     // the auth gate let us through and the route is wired.
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([200, 401, 403]).toContain(r.status());
-    if (r.status() === 200) {
-      expect(r.status()).toBeGreaterThanOrEqual(200);
-    }
+    expect([401, 403]).not.toContain(r.status());
+    expect(r.status()).toBeGreaterThanOrEqual(200);
   });
 
   test("PATCH /api/admin/notifications accepts admin-token", async ({ request }) => {
     const a = await adminRequest(request);
     const r = await a.patch("/api/admin/notifications", { ids: [] });
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([200, 401, 403]).toContain(r.status());
+    expect([401, 403]).not.toContain(r.status());
   });
 
   test("POST /api/admin/workspaces with empty body returns 4xx (validation)", async ({ request }) => {
     const a = await adminRequest(request);
     const r = await a.post("/api/admin/workspaces", {});
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([401, 403, 400]).toContain(r.status());
-    if (r.status() === 400) {
-      expect(r.status()).toBeGreaterThanOrEqual(400);
-    }
+    expect([401, 403]).not.toContain(r.status());
+    expect(r.status()).toBeGreaterThanOrEqual(400);
   });
 
   test("POST /api/admin/users with empty body returns 4xx (validation)", async ({ request }) => {
     const a = await adminRequest(request);
     const r = await a.post("/api/admin/users", {});
-    // Accept 401/403 in environments where the bare token isn't recognized.
-    expect([401, 403, 400]).toContain(r.status());
-    if (r.status() === 400) {
-      expect(r.status()).toBeGreaterThanOrEqual(400);
-    }
+    expect([401, 403]).not.toContain(r.status());
+    expect(r.status()).toBeGreaterThanOrEqual(400);
   });
 });
 

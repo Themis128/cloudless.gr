@@ -1,0 +1,69 @@
+name: Wire Pi → Cognito auth
+
+# Patches the k3s `cloudless` deployment's cloudless-app-auth Secret with
+# Cognito runtime env vars (COGNITO_ISSUER / CLIENT_ID / SECRET / DOMAIN
+# + AUTH_SECRET + AUTH_TRUST_HOST), so the Pi standby uses Cognito after the
+# SST deploy has created the User Pool and App Client.
+#
+# Run this ONCE after the Pi comes back online (omv reachable via Tailscale).
+#
+# Requires: TS_AUTHKEY, KUBECONFIG_B64 (system:admin).
+# Cognito pool/client are discovered by name from AWS (no hard-coded IDs).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  wire:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Wait for cluster API
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if kubectl get ns cloudless >/dev/null 2>&1; then
+              echo "cluster reachable (attempt $i)"; break
+            fi
+            echo "not reachable (attempt $i) — retry in ${i}0s"; sleep "${i}0"
+          done
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Wire Cognito auth onto Pi deployment
+        run: bash scripts/wire-pi-cognito.sh 2>&1 | tee wire.log
+
+      - name: Post result to tracking issue
+        if: always()
+        run: |
+          {
+            echo "# Wire Pi → Cognito — $(date -u '+%F %T')Z"
+            echo ""
+            echo "**Job:** ${{ job.status }}"
+            echo ""
+            echo '```'
+            cat wire.log 2>/dev/null || echo '(no log)'
+            echo '```'
+          } > c.md
+          gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md

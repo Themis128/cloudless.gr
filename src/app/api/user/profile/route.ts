@@ -30,37 +30,19 @@ export async function GET() {
   try {
     const profile = await getUserProfile(userId);
     return NextResponse.json({
-      name: (profile as any)?.name ?? session.user.name ?? undefined,
+      name: profile.name ?? session.user.name ?? undefined,
       email: session.user.email ?? undefined,
-      company: (profile as any)?.company,
-      phone: (profile as any)?.phone,
-      preferences: (profile as any)?.preferences,
+      company: profile.company,
+      phone: profile.phone,
+      preferences: profile.preferences,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-
-    const isProfileStoreUnavailable =
-      msg.includes("USER_PROFILE_TABLE") ||
-      msg.includes("UnrecognizedClientException") ||
-      msg.includes("The security token included in the request is invalid") ||
-      msg.includes("DynamoDB unavailable") ||
-      msg.includes("CredentialsProviderError") ||
-      msg.includes("Missing credentials");
-
-    if (isProfileStoreUnavailable) {
-      console.warn("[user/profile] Profile store unavailable; returning session fallback:", msg);
-
+    if (err instanceof Error && err.message.includes("USER_PROFILE_TABLE")) {
       return NextResponse.json({
         name: session.user.name ?? undefined,
         email: session.user.email ?? undefined,
-        company: undefined,
-        phone: undefined,
-        preferences: undefined,
-        storage: "session-fallback",
       });
     }
-
-    console.error("[user/profile] GET failed:", msg);
     return NextResponse.json({ error: "Could not read profile" }, { status: 502 });
   }
 }
@@ -80,7 +62,7 @@ export async function POST(req: Request) {
 
   let body: ProfileBody;
   try {
-    body = (await req.json()) as any as ProfileBody;
+    body = (await req.json()) as ProfileBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }

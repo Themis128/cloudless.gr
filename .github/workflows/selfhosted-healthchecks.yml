@@ -1,23 +1,28 @@
-name: Self-hosted apps health ping (Uptime Kuma)
+name: Self-hosted apps healthchecks.io ping
 
-# Probes 6 self-hosted apps every 5 minutes and sends the result to an
-# Uptime Kuma push monitor per app. Kuma alerts when a monitor goes silent
-# past its grace period.
+# Pings 6 healthchecks.io check URLs every 5 minutes — one per self-hosted
+# app. Each check first probes the app's public health endpoint; on success,
+# pings healthchecks.io with /<uuid> (mark healthy). On failure, pings
+# /<uuid>/fail (mark unhealthy). healthchecks.io alerts via its dashboard
+# (email/Slack/PagerDuty) only when the check is unhealthy for > grace
+# period.
 #
-# Kuma push monitor setup (repeat for each app):
-#   1. Kuma UI → + New Monitor → Type: Push
-#   2. Name the monitor (e.g. "AppFlowy"), interval: 5 min, grace: 2 min
-#   3. Copy the push token
-#   4. Add to repo secrets:
-#        KUMA_PUSH_APPFLOWY   ← token for AppFlowy
-#        KUMA_PUSH_ESPOCRM    ← token for EspoCRM
-#        KUMA_PUSH_POSTIZ     ← token for Postiz
-#        KUMA_PUSH_N8N        ← token for n8n
-#        KUMA_PUSH_GRAFANA    ← token for Grafana
-#        KUMA_PUSH_NTFY       ← token for ntfy
+# Setup per app:
+#   1. Create check at https://healthchecks.io with:
+#        Period:  5 min
+#        Grace:   2 min  (alert fires after 7 min unhealthy)
+#        Alert:   your preferred destination (Slack, email, ntfy, etc.)
+#   2. Copy the ping URL https://hc-ping.com/<uuid>
+#   3. Add to repo secrets:
+#        HEALTHCHECKS_APPFLOWY_URL
+#        HEALTHCHECKS_ESPOCRM_URL
+#        HEALTHCHECKS_POSTIZ_URL
+#        HEALTHCHECKS_N8N_URL
+#        HEALTHCHECKS_GRAFANA_URL
+#        HEALTHCHECKS_NTFY_URL
 #
-# Alert fires after 7 min of silence (5 min period + 2 min grace).
-# Configure alert channels per monitor in Kuma UI → Edit Monitor → Notifications.
+# The existing HEALTHCHECKS_CLUSTER_URL is unchanged — covered by
+# cluster-healthcheck.yml (k3s API liveness over tailnet).
 
 on:
   schedule:
@@ -41,65 +46,49 @@ jobs:
         include:
           - app: appflowy
             url: https://appflowy.cloudless.gr/api/health
-            secret_var: KUMA_PUSH_APPFLOWY
+            secret_var: HEALTHCHECKS_APPFLOWY_URL
             expect_codes: "200"
           - app: espocrm
             url: https://espocrm.cloudless.gr/
-            secret_var: KUMA_PUSH_ESPOCRM
+            secret_var: HEALTHCHECKS_ESPOCRM_URL
             expect_codes: "200 302"
           - app: postiz
             url: https://postiz.cloudless.gr/
-            secret_var: KUMA_PUSH_POSTIZ
+            secret_var: HEALTHCHECKS_POSTIZ_URL
             expect_codes: "200 307 308"
           - app: n8n
             url: https://n8n.cloudless.gr/healthz
-            secret_var: KUMA_PUSH_N8N
+            secret_var: HEALTHCHECKS_N8N_URL
             expect_codes: "200"
           - app: grafana
             url: https://grafana.cloudless.gr/api/health
-            secret_var: KUMA_PUSH_GRAFANA
+            secret_var: HEALTHCHECKS_GRAFANA_URL
             expect_codes: "200"
           - app: ntfy
             url: https://ntfy.cloudless.gr/v1/health
-            secret_var: KUMA_PUSH_NTFY
-            expect_codes: "200 401"
+            secret_var: HEALTHCHECKS_NTFY_URL
+            expect_codes: "200 401"   # 401 if auth required but service is up
     steps:
-      - name: Probe ${{ matrix.app }} and ping Kuma
+      - name: Probe ${{ matrix.app }} and ping healthchecks.io
         env:
           APP: ${{ matrix.app }}
           URL: ${{ matrix.url }}
           EXPECT: ${{ matrix.expect_codes }}
           SECRET_NAME: ${{ matrix.secret_var }}
-          KUMA_PUSH_TOKEN: ${{ secrets[matrix.secret_var] }}
-          KUMA_BASE_URL: "https://kuma.cloudless.gr"
+          HC_URL: ${{ secrets[matrix.secret_var] }}
         run: |
           set -e
-          if [ -z "$KUMA_PUSH_TOKEN" ]; then
-            echo "::warning::Repo secret $SECRET_NAME not set — skipping $APP ping."
-            echo "Create a Push monitor in Kuma UI and add its token as repo secret $SECRET_NAME."
+          if [ -z "$HC_URL" ]; then
+            echo "::warning::Repo secret $SECRET_NAME not set — skipping $APP ping. Create the check at healthchecks.io and add its URL as a repo secret."
             exit 0
           fi
-
-          START=$(date +%s%3N)
           CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || echo 000)
-          PING_MS=$(( $(date +%s%3N) - START ))
-          echo "$APP HTTP $CODE (expected: $EXPECT) ping=${PING_MS}ms"
-
+          echo "$APP HTTP $CODE (expected: $EXPECT)"
           if echo " $EXPECT " | grep -q " $CODE "; then
-            STATUS="up"
-            MSG="$APP healthy (HTTP $CODE)"
-            echo "✓ $MSG"
+            curl -fsS --max-time 10 --retry 3 "$HC_URL" -d "$APP healthy ($CODE)" >/dev/null
+            echo "✓ pinged $APP healthy"
           else
-            STATUS="down"
-            MSG="$APP returned HTTP $CODE (expected $EXPECT)"
-            echo "✗ $MSG"
+            curl -fsS --max-time 10 --retry 3 "$HC_URL/fail" -d "$APP returned HTTP $CODE (expected $EXPECT)" >/dev/null
+            echo "✗ pinged $APP fail (HTTP $CODE)"
+            exit 1
           fi
-
-          ENCODED_MSG=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$MSG")
-          curl -fsS --max-time 10 --retry 3 \
-            "${KUMA_BASE_URL}/api/push/${KUMA_PUSH_TOKEN}?status=${STATUS}&msg=${ENCODED_MSG}&ping=${PING_MS}" \
-            > /dev/null || true
-
-          # Kuma is the alerting layer — never fail the workflow itself.
-          # A down ping to Kuma is sufficient; GitHub Actions failure here
-          # just causes retry storms without adding signal.

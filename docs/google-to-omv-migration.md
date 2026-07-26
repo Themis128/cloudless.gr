@@ -223,7 +223,6 @@ should show the freed space within ~1 hour (Google's quota
 recalculation isn't instant).
 
 If quota didn't drop:
-
 - Empty Trash in **all three** products (Drive / Gmail / Photos) —
   Trash holds for 30 days otherwise
 - Check `is:unorganized` in Drive for orphaned files

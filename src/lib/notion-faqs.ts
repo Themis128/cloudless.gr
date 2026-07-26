@@ -98,6 +98,7 @@ export const staticFaqs: Faq[] = [
 // Mapper
 // ---------------------------------------------------------------------------
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function mapPage(page: any): Faq {
   const p = page.properties ?? {};
   return {
@@ -108,6 +109,7 @@ function mapPage(page: any): Faq {
     locales: (p.Locale?.multi_select ?? []).map((l: any) => l.name),
   };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Public API

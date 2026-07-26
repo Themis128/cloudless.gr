@@ -71,19 +71,6 @@ async function gscQuery(siteUrl: string, body: object): Promise<Response> {
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-/** Google Search Console API response types */
-interface GscRow {
-  keys: string[];
-  clicks?: number;
-  impressions?: number;
-  ctr?: number;
-  position?: number;
-}
-
-interface GscSearchAnalyticsResponse {
-  rows?: GscRow[];
-}
-
 export interface SeoSnapshot {
   /** Total organic clicks (last 28 days) */
   clicks: number;
@@ -146,8 +133,8 @@ export async function getSeoSnapshot(
       console.error("[GSC] Overview error:", await totalsRes.text());
       return null;
     }
-    const totals = (await totalsRes.json()) as GscSearchAnalyticsResponse;
-    const row = totals.rows?.[0] ?? { clicks: 0, impressions: 0, ctr: 0, position: 0 };
+    const totals = await totalsRes.json();
+    const row = totals.rows?.[0] ?? {};
 
     // Count unique keywords
     const kwRes = await gscQuery(siteUrl, {
@@ -155,7 +142,7 @@ export async function getSeoSnapshot(
       dimensions: ["query"],
       rowLimit: 25000, // GSC max
     });
-    const kwData = kwRes.ok ? ((await kwRes.json()) as GscSearchAnalyticsResponse) : { rows: [] };
+    const kwData = kwRes.ok ? await kwRes.json() : {};
     const organicKeywords: number = kwData.rows?.length ?? 0;
 
     return {
@@ -189,14 +176,14 @@ export async function getTopKeywords(
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as GscSearchAnalyticsResponse;
+    const data = await res.json();
 
-    return (data.rows ?? []).map((r: GscRow) => ({
-      keyword: r.keys?.[0] ?? "",
-      clicks: Math.round(r.clicks ?? 0),
-      impressions: Math.round(r.impressions ?? 0),
-      ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      position: parseFloat((r.position ?? 0).toFixed(1)),
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      keyword: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getTopKeywords error:", err);
@@ -241,14 +228,14 @@ export async function getPerformanceHistory(
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as GscSearchAnalyticsResponse;
+    const data = await res.json();
 
-    return (data.rows ?? []).map((r: GscRow) => ({
-      date: r.keys?.[0] ?? "",
-      clicks: Math.round(r.clicks ?? 0),
-      impressions: Math.round(r.impressions ?? 0),
-      ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      avgPosition: parseFloat((r.position ?? 0).toFixed(1)),
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      date: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      avgPosition: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getPerformanceHistory error:", err);
@@ -274,14 +261,14 @@ export async function getTopPages(
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as GscSearchAnalyticsResponse;
+    const data = await res.json();
 
-    return (data.rows ?? []).map((r: GscRow) => ({
-      page: r.keys?.[0] ?? "",
-      clicks: Math.round(r.clicks ?? 0),
-      impressions: Math.round(r.impressions ?? 0),
-      ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      position: parseFloat((r.position ?? 0).toFixed(1)),
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      page: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getTopPages error:", err);
@@ -307,7 +294,7 @@ export async function getWebAnalytics(
       rowLimit: 1,
     });
 
-    const totalsData = totalsRes.ok ? ((await totalsRes.json()) as any) : {};
+    const totalsData = totalsRes.ok ? await totalsRes.json() : {};
     const total = totalsData.rows?.[0] ?? {};
 
     // Top pages
@@ -318,7 +305,7 @@ export async function getWebAnalytics(
       orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
-    const pagesData = pagesRes.ok ? ((await pagesRes.json()) as any) : {};
+    const pagesData = pagesRes.ok ? await pagesRes.json() : {};
     const topPages = (pagesData.rows ?? []).map((r: Record<string, unknown>) => ({
       page: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
@@ -370,7 +357,7 @@ export async function getCtrOpportunities(
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as any;
+    const data = await res.json();
 
     const opportunities = (data.rows ?? [])
       .filter((r: Record<string, unknown>) => {
@@ -430,7 +417,7 @@ export async function getDeviceBreakdown(siteUrl = DEFAULT_SITE): Promise<Device
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as any;
+    const data = await res.json();
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       device: (r.keys as string[])?.[0] ?? "",
@@ -487,7 +474,7 @@ export async function getProductPageMetrics(
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as any;
+    const data = await res.json();
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       page: (r.keys as string[])?.[0] ?? "",
@@ -533,7 +520,7 @@ export async function getQueryPageMapping(
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as any;
+    const data = await res.json();
 
     return (data.rows ?? []).map((r: Record<string, unknown>) => ({
       query: (r.keys as string[])?.[0] ?? "",
@@ -596,7 +583,7 @@ export async function getSearchIntentBreakdown(
     });
 
     if (!res.ok) return empty;
-    const data = (await res.json()) as GscSearchAnalyticsResponse;
+    const data = await res.json();
 
     const brandRe = /cloudless/i;
     const productRe =
@@ -604,12 +591,12 @@ export async function getSearchIntentBreakdown(
     const infoRe =
       /\b(how|what|why|when|where|guide|tutorial|tips|learn|blog|article|example|comparison|vs|review)\b/i;
 
-    const toKeyword = (r: GscRow): IntentKeyword => ({
-      keyword: r.keys?.[0] ?? "",
-      clicks: Math.round(r.clicks ?? 0),
-      impressions: Math.round(r.impressions ?? 0),
-      ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      position: parseFloat((r.position ?? 0).toFixed(1)),
+    const toKeyword = (r: Record<string, unknown>): IntentKeyword => ({
+      keyword: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     });
 
     const result: SearchIntentBreakdown = {
@@ -620,7 +607,7 @@ export async function getSearchIntentBreakdown(
     };
 
     for (const row of data.rows ?? []) {
-      const kw = row.keys?.[0] ?? "";
+      const kw = (row.keys as string[])?.[0] ?? "";
       const mapped = toKeyword(row);
 
       if (brandRe.test(kw)) {
@@ -678,14 +665,14 @@ export async function getTrafficByCountry(
     });
 
     if (!res.ok) return [];
-    const data = (await res.json()) as GscSearchAnalyticsResponse;
+    const data = await res.json();
 
-    return (data.rows ?? []).map((r: GscRow) => ({
-      country: r.keys?.[0] ?? "",
-      clicks: Math.round(r.clicks ?? 0),
-      impressions: Math.round(r.impressions ?? 0),
-      ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
-      avgPosition: parseFloat((r.position ?? 0).toFixed(1)),
+    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+      country: (r.keys as string[])?.[0] ?? "",
+      clicks: Math.round((r.clicks as number) ?? 0),
+      impressions: Math.round((r.impressions as number) ?? 0),
+      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
+      avgPosition: parseFloat(((r.position as number) ?? 0).toFixed(1)),
     }));
   } catch (err) {
     console.error("[GSC] getTrafficByCountry error:", err);

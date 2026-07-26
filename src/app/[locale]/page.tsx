@@ -41,7 +41,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const localePaths: Record<string, string> = {
-    en: "https://cloudless.gr/en",
+    en: "https://cloudless.gr",
     el: "https://cloudless.gr/el",
     fr: "https://cloudless.gr/fr",
     de: "https://cloudless.gr/de",
@@ -51,7 +51,8 @@ export async function generateMetadata({
   const safeLocale: Locale = isSupportedLocale(locale) ? locale : "en";
   const messages = getMessages(safeLocale);
   const meta = (messages as Record<string, unknown>).meta as
-    Record<string, Record<string, string>> | undefined;
+    | Record<string, Record<string, string>>
+    | undefined;
 
   return {
     title: {
@@ -67,25 +68,8 @@ export async function generateMetadata({
         el: localePaths.el,
         fr: localePaths.fr,
         de: localePaths.de,
-        "x-default": "https://cloudless.gr/en",
+        "x-default": localePaths.en,
       },
-    },
-    openGraph: {
-      title: meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing",
-      description:
-        meta?.home?.description ??
-        "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
-      url: canonical,
-      siteName: "Cloudless",
-      locale: `${locale}_US`,
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: meta?.home?.title ?? "Cloudless — Cloud Computing, Serverless & AI Marketing",
-      description:
-        meta?.home?.description ??
-        "Clear skies. Zero friction. We help startups and SMBs with cloud architecture, serverless development, data analytics, and AI-powered digital marketing.",
     },
   };
 }

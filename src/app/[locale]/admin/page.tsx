@@ -2,8 +2,26 @@
 
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useEffect, useState } from "react";
-import { type PortalSummary } from "@/lib/client-portals";
 import { Link } from "@/i18n/navigation";
+
+/**
+ * Admin Dashboard — the platform command center.
+ * Aligned with every surface of the one-stop-shop platform:
+ * growth (leads → campaigns → ROI), clients (portals, deliverables,
+ * payments, health), the public website (blog, CMS, store, docs),
+ * and system health.
+ */
+
+interface PortalHealth {
+  score: number;
+  band: "healthy" | "watch" | "at_risk";
+}
+
+interface PortalSummary {
+  deliverables?: { status: string }[];
+  paymentLinks?: { status: string }[];
+  health?: PortalHealth;
+}
 
 interface DashStats {
   leads: number | null;
@@ -36,7 +54,7 @@ const EMPTY_STATS: DashStats = {
 async function safeJson<T>(result: PromiseSettledResult<Response>): Promise<T | null> {
   if (result.status !== "fulfilled" || !result.value.ok) return null;
   try {
-    return (await result.value.json()) as any as any as T;
+    return (await result.value.json()) as T;
   } catch {
     return null;
   }
@@ -127,13 +145,13 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Website — what visitors see",
     accent: "text-neon-magenta",
     cards: [
-      card("Blog", "AppFlowy-backed posts on /blog", "✍️", "/admin/blog"),
+      card("Blog", "Notion-backed posts on /blog", "✍️", "/admin/blog"),
       card("Case Studies", "CMS for /case-studies and /work", "💼", "/admin/cms/case-studies"),
       card("Services", "CMS for the /services page", "📦", "/admin/cms/services"),
       card("Testimonials", "Social proof shown across the site", "⭐", "/admin/cms/testimonials"),
       card("FAQs", "CMS for FAQ sections", "❓", "/admin/cms/faqs"),
-      card("Docs", "AppFlowy-backed docs on /docs", "📚", "/admin/docs"),
-      card("Form Submissions", "Contact entries stored in AppFlowy", "📝", "/admin/appflowy"),
+      card("Docs", "Notion-backed docs on /docs", "📚", "/admin/docs"),
+      card("Form Submissions", "Contact entries stored in Notion", "📝", "/admin/notion"),
       card("SEO", "Search Console performance and keywords", "🔍", "/admin/analytics/seo"),
     ],
   },
@@ -148,7 +166,6 @@ const NAV_GROUPS: NavGroup[] = [
         "/admin/selfhosted"
       ),
       card("Integrations", "Live status of every connected service", "🔌", "/admin/integrations"),
-      card("Automation", "n8n workflow engine — trigger and monitor", "⚡", "/admin/automation"),
       card("AWS Cost", "Per-service spend (Athena view, R9 ETL)", "💸", "/admin/cost"),
       card("Errors", "Unresolved Sentry issues", "⚠️", "/admin/errors", (s) =>
         s.errors === null ? null : `${s.errors} unresolved`

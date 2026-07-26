@@ -14,9 +14,9 @@ export default function AdminDocsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/docs");
+      const res = await fetchWithAuth("/api/admin/notion/docs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setDocs(data.docs ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load docs");
@@ -26,6 +26,7 @@ export default function AdminDocsPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

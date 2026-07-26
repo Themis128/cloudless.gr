@@ -1,16 +1,15 @@
-# RESTORED 2026-07-04 — Postiz AI re-enabled with Ollama backend.
-# Previously evicted 2026-06-21 to free omv RAM for AppFlowy Phase-1.
-# Now routes:
-#   Postiz Copilot → LiteLLM (this pod) → Ollama (qwen2.5-coder on Office WSL via Tailscale)
+# EVICTED 2026-06-21 to free omv RAM for the AppFlowy Phase-1 deploy
+# (memory: project_appflowy_rejected → unrejected once disk + Notion
+# decom freed ~1 GB headroom). Keep this manifest in source so the
+# operator can `kubectl apply -f` it back if Postiz AI features are
+# wanted again — none of the ConfigMaps or Secrets it depends on
+# (postiz-litellm-config, postiz-anthropic, postiz-litellm-secrets)
+# are deleted; only the Deployment is.
 #
-# Secrets still exist and were not deleted during eviction:
-#   - postiz-anthropic:   ANTHROPIC_API_KEY (legacy, not used with Ollama)
-#   - postiz-litellm-secrets: LITELLM_MASTER_KEY (used by Postiz as OPENAI_API_KEY)
-#   - postiz-openai:      OPENAI_API_KEY (same value as LITELLM_MASTER_KEY)
-# ConfigMap still exists:
-#   - postiz-litellm-config: routes gpt-4.1 → ollama/qwen2.5-coder
-#
-# To disable AI again (free RAM): kubectl -n postiz delete deploy postiz-litellm
+# Effect of evicting: Postiz's AI caption-suggestion + content-generation
+# features stop working. Postiz publishing/scheduling continues to work.
+# Per memory project_bedrock_chat_model the main chat already moved to
+# Bedrock Nova Micro, so this LiteLLM proxy is the only consumer left.
 ---
 apiVersion: apps/v1
 kind: Deployment

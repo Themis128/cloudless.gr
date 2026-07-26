@@ -31,9 +31,15 @@ export function CampaignHero({ campaign, locale }: Props) {
             <div className="cl-hero__slots">
               <strong>
                 {campaign.slotsRemaining}{" "}
-                {locale === "el" ? "Founding Client θέσεις" : "Founding Client slots"}
+                {locale === "el"
+                  ? "Founding Client θέσεις"
+                  : "Founding Client slots"}
               </strong>
-              <span>{locale === "el" ? "Λήγει 1 Ιουλ 2026" : "Closes 1 Jul 2026"}</span>
+              <span>
+                {locale === "el"
+                  ? "Λήγει 1 Ιουλ 2026"
+                  : "Closes 1 Jul 2026"}
+              </span>
             </div>
           ) : null}
         </div>
@@ -45,7 +51,9 @@ export function CampaignHero({ campaign, locale }: Props) {
           <Image
             src={campaign.heroImage}
             alt={
-              locale === "el" ? "Εβδομαδιαία αναφορά Shop Insights" : "Weekly Shop Insights digest"
+              locale === "el"
+                ? "Εβδομαδιαία αναφορά Shop Insights"
+                : "Weekly Shop Insights digest"
             }
             width={760}
             height={1380}

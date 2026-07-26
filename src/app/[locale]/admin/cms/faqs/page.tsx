@@ -30,9 +30,9 @@ export default function AdminFaqsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/faqs");
+      const res = await fetchWithAuth("/api/admin/notion/faqs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as { faqs: Faq[] };
+      const data = (await res.json()) as { faqs: Faq[] };
       setItems(data.faqs ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -42,7 +42,7 @@ export default function AdminFaqsPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    load().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [load]);
 
   const openCreate = () => {
@@ -74,13 +74,13 @@ export default function AdminFaqsPage() {
       const { pageId, ...input } = form;
       const method = pageId ? "PATCH" : "POST";
       const body = pageId ? { pageId, ...input } : input;
-      const res = await fetchWithAuth("/api/admin/appflowy/faqs", {
+      const res = await fetchWithAuth("/api/admin/notion/faqs", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const d = (await res.json()) as any as any as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? `HTTP ${res.status}`);
       }
       setForm(null);
@@ -97,7 +97,7 @@ export default function AdminFaqsPage() {
     setDeleting(pageId);
     try {
       const res = await fetchWithAuth(
-        `/api/admin/appflowy/faqs?pageId=${encodeURIComponent(pageId)}`,
+        `/api/admin/notion/faqs?pageId=${encodeURIComponent(pageId)}`,
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

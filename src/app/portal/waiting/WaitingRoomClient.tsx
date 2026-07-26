@@ -158,7 +158,7 @@ function WaitingRoomContent() {
       try {
         const meRes = await fetchWithAuth("/api/portal/me");
         if (!meRes.ok) throw new Error(`Portal status check failed (HTTP ${meRes.status})`);
-        const me: PortalStatus = (await meRes.json()) as any;
+        const me: PortalStatus = await meRes.json();
 
         if (planParam && !enrollAttemptedFor.current.has(planParam)) {
           if (me.status === "none" || (me.status === "waiting" && me.plan !== planParam)) {
@@ -175,11 +175,11 @@ function WaitingRoomContent() {
             // the entry so the next user action (refresh, retry) can retry.
             enrollAttemptedFor.current.add(planParam);
             if (!enrollRes.ok) {
-              const data = (await enrollRes.json().catch(() => ({}))) as any;
+              const data = await enrollRes.json().catch(() => ({}));
               throw new Error(data.error ?? `Enrollment failed (HTTP ${enrollRes.status})`);
             }
             const refreshed = await fetchWithAuth("/api/portal/me");
-            setStatus((await refreshed.json()) as any);
+            setStatus(await refreshed.json());
             setEnrolling(false);
             return;
           }
@@ -207,7 +207,7 @@ function WaitingRoomContent() {
     async function pollOnce() {
       try {
         const res = await fetchWithAuth("/api/portal/me");
-        if (res.ok) setStatus((await res.json()) as any);
+        if (res.ok) setStatus(await res.json());
       } catch {
         // silent
       }

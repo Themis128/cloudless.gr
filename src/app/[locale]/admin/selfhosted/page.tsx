@@ -89,8 +89,8 @@ const APPS: AppDef[] = [
     name: "Grafana",
     description: "Dashboards · Metrics · Alerts",
     icon: "📊",
-    authMode: "link",
-    detail: "Tunnel-exposed via NodePort 30850 — opens Grafana login",
+    authMode: "vpn",
+    detail: "Requires VPN / Tailscale — not tunnel-exposed",
   },
   {
     key: "kuma",
@@ -167,11 +167,11 @@ function AppCard({ app, health, pingMs }: AppCardProps) {
     try {
       const res = await fetchWithAuth(`/api/admin/autologin?app=${encodeURIComponent(app.key)}`);
       if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as any;
+        const j = await res.json().catch(() => ({}));
         setErr((j as { error?: string }).error ?? `HTTP ${res.status}`);
         return;
       }
-      const { url } = (await res.json()) as any as any as { url: string };
+      const { url } = (await res.json()) as { url: string };
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed");
@@ -270,7 +270,7 @@ export default function SelfhostedPortalPage() {
       try {
         const res = await fetchWithAuth("/api/admin/cluster/kuma-status");
         if (!res.ok) return;
-        const json = (await res.json()) as any as any as any;
+        const json = await res.json();
         const summary = json.summary as KumaSummary | null;
         if (!summary) return;
 

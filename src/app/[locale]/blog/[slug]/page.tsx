@@ -5,11 +5,13 @@ import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import { posts as staticPosts, getPostBySlug as getStaticPost, formatDate } from "@/lib/blog";
 import {
-  getPostBySlug as getAppFlowyPost,
+  getPostBySlug as getNotionPost,
+  getPostWithToc,
   getRelatedPosts,
-  getAllSlugs as getAppFlowyAllSlugs,
-} from "@/lib/appflowy-blog";
-import { isAppFlowyConfigured } from "@/lib/appflowy";
+  getAllSlugs,
+} from "@/lib/notion-blog";
+import { isConfiguredAsync } from "@/lib/integrations";
+import { trackEvent } from "@/lib/notion-analytics";
 import JsonLd from "@/components/JsonLd";
 import { getBlogPostSchema, getBreadcrumbSchema } from "@/lib/structured-data";
 import React from "react";
@@ -105,10 +107,11 @@ const categoryColors: Record<string, string> = {
 };
 
 export async function generateStaticParams() {
-  const useAppFlowy = await isAppFlowyConfigured();
-  const appflowySlugs = useAppFlowy ? await getAppFlowyAllSlugs() : [];
+  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+  const notionSlugs = useNotion ? await getAllSlugs() : [];
 
-  const allSlugs = new Set([...appflowySlugs, ...staticPosts.map((p) => p.slug)]);
+  // Combine Notion slugs with static slugs (deduplicated)
+  const allSlugs = new Set([...notionSlugs, ...staticPosts.map((p) => p.slug)]);
 
   return Array.from(allSlugs).flatMap((slug) =>
     ["en", "el", "fr"].map((locale) => ({ locale, slug }))
@@ -118,10 +121,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const canonical = `https://cloudless.gr/${locale}/blog/${slug}`;
-  const useAppFlowy = await isAppFlowyConfigured();
+  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
-  if (useAppFlowy) {
-    const post = await getAppFlowyPost(slug);
+  // Try Notion first
+  if (useNotion) {
+    const post = await getNotionPost(slug);
     if (post) {
       return {
         title: post.seoTitle || post.title,
@@ -157,10 +161,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const useAppFlowy = await isAppFlowyConfigured();
+  const useNotion = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
-  if (useAppFlowy) {
-    const notionPost = await getAppFlowyPost(slug);
+  // Track blog view (fire-and-forget — never blocks render)
+  trackEvent({
+    event: `blog_view:${slug}`,
+    type: "blog_view",
+    page: `/blog/${slug}`,
+    source: "organic",
+  }).catch(() => {});
+
+  // Try Notion first — use getPostWithToc for TOC support
+  if (useNotion) {
+    const notionPost = await getPostWithToc(slug);
     if (notionPost) {
       // Fetch related posts
       const related = await getRelatedPosts(notionPost, 3);
@@ -264,14 +277,14 @@ export default async function BlogPostPage({ params }: Props) {
                 </div>
 
                 {/* TOC sidebar */}
-                {(notionPost.toc ?? []).length > 0 && (
+                {notionPost.toc.length > 0 && (
                   <aside className="hidden w-52 flex-none xl:block">
                     <div className="sticky top-24">
                       <p className="mb-3 font-mono text-xs font-medium tracking-widest text-slate-500 uppercase">
                         On this page
                       </p>
                       <ul className="space-y-1 border-l border-slate-800">
-                        {(notionPost.toc ?? []).map((entry) => (
+                        {notionPost.toc.map((entry) => (
                           <li key={entry.blockId}>
                             <a
                               href={`#${entry.blockId}`}

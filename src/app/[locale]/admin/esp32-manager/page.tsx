@@ -234,7 +234,7 @@ export default function Esp32ManagerPage() {
   const call = useCallback(async (path: string, opts?: RequestInit) => {
     try {
       const res = await fetchWithAuth(path, opts);
-      const json = (await res.json()) as any as any as any;
+      const json = await res.json();
       if (json?.offline) {
         setOffline(true);
         return null;
@@ -288,6 +288,7 @@ export default function Esp32ManagerPage() {
   }, [call, selectedId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tab === "config") loadConfig().catch(() => {});
   }, [tab, loadConfig]);
 

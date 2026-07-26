@@ -8,7 +8,7 @@
  *   - POST endpoints with empty body return 400/422, not 5xx
  *   - Bearer with garbage token is rejected
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./coverage";
 import fs from "fs";
 import path from "path";
 import { ADMIN_APIS, ADMIN_API_DYNAMIC } from "./helpers/coverage-routes";
@@ -45,17 +45,18 @@ test.describe("Admin APIs unauthenticated", () => {
       headers: { Authorization: "Bearer garbage" },
       failOnStatusCode: false,
     });
-    // Garbage token should be rejected - either with 401/403 or with empty data (200 but no user data)
-    const status = r.status();
-    expect([200, 401, 403]).toContain(status);
+    expect([401, 403]).toContain(r.status());
   });
 });
 
 test.describe("Admin APIs authenticated", () => {
-  // Skip entire describe block if no valid auth credentials
-  test.skip(!hasRealAuth(), "Skipping authenticated admin APIs (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)");
-
   test.use({ storageState: STORAGE });
+
+  test.beforeEach(({}, testInfo) => {
+    if (!hasRealAuth()) {
+      testInfo.skip(true, "Skipping authenticated admin APIs (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)");
+    }
+  });
 
   for (const api of ALL_ADMIN_APIS) {
     test(`auth GET ${api} — non-5xx`, async ({ request }) => {

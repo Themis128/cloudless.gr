@@ -29,7 +29,7 @@ async function fetchDashboardStats(
   let upcomingConsultations = 0;
 
   if (purchasesRes.status === "fulfilled" && purchasesRes.value.ok) {
-    const data = (await purchasesRes.value.json()) as any as any;
+    const data = await purchasesRes.value.json();
     const purchases = data.purchases ?? [];
     const subs = data.subscriptions ?? [];
     totalOrders = purchases.length;
@@ -40,7 +40,7 @@ async function fetchDashboardStats(
   }
 
   if (consultationsRes.status === "fulfilled" && consultationsRes.value.ok) {
-    const data = (await consultationsRes.value.json()) as any as any;
+    const data = await consultationsRes.value.json();
     upcomingConsultations = (data.consultations ?? []).filter(
       (c: { status: string }) => c.status === "upcoming"
     ).length;
@@ -61,6 +61,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user?.email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }

@@ -33,7 +33,7 @@ Always read the source-of-truth manifest before changing anything:
 | appflowy-web | omv | Notion-like SPA UI |
 | admin-frontend | omv | Workspace admin console at `/console` |
 | nginx | omv | In-cluster path router |
-| **appflowy-worker** | **omv-ha** | Custom image `ghcr.io/themis128/appflowy-worker:lg-page-14-a53` (16K page + A53 baseline). Pinned to omv-ha to save RAM on omv. See rebuild runbook below. |
+| **appflowy-worker** | **omv-ha** | **Pi 5 has 16K page kernel; worker's jemalloc is 4K — drop nodeSelector when upstream fixes** |
 
 ## Tool selection — pick the most specific that fits
 
@@ -181,51 +181,6 @@ restart drops every cloudless.gr tunnel host).
   `src/lib/notion-*.ts` readers to AppFlowy API.
 - Phase 4: switch env routing, validate public pages, retire `NOTION_*`
   SSM keys (operator-side `aws ssm delete-parameters`).
-
-## Worker image rebuild runbook
-
-The cluster runs a **custom worker image** instead of the upstream
-`appflowyinc/appflowy_worker:latest` to fix two incompatibilities:
-
-| Fix | Env var set at build time | Why |
-|-----|--------------------------|-----|
-| 16K jemalloc page size | `JEMALLOC_SYS_WITH_LG_PAGE=14` | Pi 5 kernel uses 16 KiB pages; upstream jemalloc compiled for 4 KiB → abort on Pi 5 |
-| A53 ISA baseline | `RUSTFLAGS="-C target-cpu=cortex-a53 -C target-feature=-lse,-crypto,-sve"` | Pi 3 (omv-ha) has Cortex-A53; upstream binary uses LSE/crypto absent on A53 → SIGILL |
-
-**Dockerfile:** `infrastructure/appflowy/worker-build/Dockerfile`
-**CI workflow:** `.github/workflows/build-appflowy-worker.yml` (triggered on Dockerfile changes or `workflow_dispatch`)
-**Registry:** `ghcr.io/themis128/appflowy-worker:lg-page-14-a53`
-
-### Rebuild when upstream AppFlowy-Cloud bumps
-
-```bash
-# Trigger a rebuild manually pointing at the new upstream tag or SHA:
-gh workflow run build-appflowy-worker.yml \
-  -f appflowy_version=<new-tag-or-sha>
-
-# Once the workflow completes and the image is pushed, update the manifest:
-# infrastructure/appflowy/k8s/appflowy.yaml → image tag → new dated tag
-# e.g.: ghcr.io/themis128/appflowy-worker:lg-page-14-a53-20261001-abc12345
-
-# Then rollout:
-kubectl -n appflowy set image deploy/appflowy-worker \
-  appflowy-worker=ghcr.io/themis128/appflowy-worker:lg-page-14-a53-<new-tag>
-kubectl -n appflowy rollout status deploy/appflowy-worker
-kubectl -n appflowy logs deploy/appflowy-worker --tail=50
-```
-
-### Verify worker health after rollout
-
-```bash
-kubectl -n appflowy get pod -l app=appflowy-worker
-kubectl -n appflowy logs deploy/appflowy-worker --tail=50
-# Healthy: lines like "snapshot worker processing collabs" — NO "SIGILL" or "Unsupported system page size"
-```
-
-### Estimated rebuild time
-
-- Pi 5 native (arm64, no QEMU): ~15-20 min first build, ~5 min with GHA cache warm
-- x86_64 cross-compile via QEMU: not recommended (pnpm install + cargo under emulation OOMs)
 
 ## See also
 

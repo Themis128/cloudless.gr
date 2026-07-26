@@ -1,12 +1,17 @@
-import type { AttributeValue } from "@aws-sdk/client-dynamodb";
-import type { AuthDatabase } from "@/lib/auth-d1";
+import {
+  ConditionalCheckFailedException,
+  DynamoDBClient,
+  PutItemCommand,
+  UpdateItemCommand,
+  type AttributeValue,
+} from "@aws-sdk/client-dynamodb";
 import type Stripe from "stripe";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const APP_SOURCE_TAG = "cloudless.gr";
 const ANALYTICS_RETENTION_DAYS = 400;
 
-let dynamoClient: any = null;
+let dynamoClient: DynamoDBClient | null = null;
 
 export function resolveDynamoEndpoint(): string | undefined {
   const endpoint = process.env.DYNAMODB_ENDPOINT?.trim();
@@ -22,19 +27,8 @@ export function resolveDynamoEndpoint(): string | undefined {
   return endpoint;
 }
 
-// D1 binding interface - provided by Worker context
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
-function getAuthDb(): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  return env.AUTH_DB ?? null;
-}
-
-async function getDynamoClient() {
+function getDynamoClient(): DynamoDBClient {
   if (!dynamoClient) {
-    const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
     dynamoClient = new DynamoDBClient({
       region: REGION,
       endpoint: resolveDynamoEndpoint(),
@@ -59,8 +53,10 @@ function toJson(value: unknown): string {
   }
 }
 
-function getTransactionsTableName(): string | null {
-  return process.env.STRIPE_TRANSACTIONS_TABLE?.trim() || null;
+function getTransactionsTableName(): string {
+  const tableName = process.env.STRIPE_TRANSACTIONS_TABLE?.trim();
+  if (tableName) return tableName;
+  throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
 }
 
 export interface StripeEventTags {
@@ -138,51 +134,9 @@ export interface PersistStripeEventResult {
   duplicate: boolean;
 }
 
-/**
- * Persist a Stripe webhook event to D1 (primary) or DynamoDB (fallback).
- * D1 uses INSERT OR IGNORE for duplicate detection.
- */
 export async function persistStripeEvent(event: Stripe.Event): Promise<PersistStripeEventResult> {
-  const object = event.data.object as unknown as Record<string, unknown>;
-  const customerId = asString(object.customer);
-  const payloadJson = toJson(event.data.object);
-
-  // Try D1 first (Cloudflare Workers)
-  const db = getAuthDb();
-  if (db) {
-    try {
-      const result = await db
-        .prepare(
-          "INSERT OR IGNORE INTO stripe_transaction (event_id, event_type, customer_id, processing_status, received_at, payload_json) VALUES (?, ?, ?, ?, ?, ?)"
-        )
-        .bind(
-          event.id,
-          event.type,
-          customerId || null,
-          "received",
-          Math.floor(Date.now() / 1000),
-          payloadJson
-        )
-        .run();
-      // changes === 0 means the row was ignored (duplicate PK)
-      const duplicate = (result.meta?.changes ?? 0) === 0;
-      if (!duplicate) {
-        sinkStripeEventToLake(event).catch(() => {});
-      }
-      return { duplicate };
-    } catch (err) {
-      console.warn(
-        "[stripe-transactions] D1 persistStripeEvent failed, falling back to DynamoDB:",
-        err instanceof Error ? err.message : err
-      );
-      // Fall through to DynamoDB
-    }
-  }
-
   const tableName = getTransactionsTableName();
-  if (!tableName) throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
-  const { PutItemCommand, ConditionalCheckFailedException } = await import("@aws-sdk/client-dynamodb");
-  const client = await getDynamoClient();
+  const client = getDynamoClient();
 
   try {
     await client.send(
@@ -207,28 +161,8 @@ export async function persistStripeEvent(event: Stripe.Event): Promise<PersistSt
 }
 
 export async function markStripeEventProcessed(eventId: string): Promise<void> {
-  // Try D1 first (Cloudflare Workers)
-  const db = getAuthDb();
-  if (db) {
-    try {
-      await db
-        .prepare("UPDATE stripe_transaction SET processing_status = ? WHERE event_id = ?")
-        .bind("processed", eventId)
-        .run();
-      return;
-    } catch (err) {
-      console.warn(
-        "[stripe-transactions] D1 markStripeEventProcessed failed, falling back to DynamoDB:",
-        err instanceof Error ? err.message : err
-      );
-      // Fall through to DynamoDB
-    }
-  }
-
   const tableName = getTransactionsTableName();
-  if (!tableName) return;
-  const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
-  const client = await getDynamoClient();
+  const client = getDynamoClient();
   await client.send(
     new UpdateItemCommand({
       TableName: tableName,
@@ -244,28 +178,8 @@ export async function markStripeEventProcessed(eventId: string): Promise<void> {
 }
 
 export async function markStripeEventFailed(eventId: string, errorMessage: string): Promise<void> {
-  // Try D1 first (Cloudflare Workers)
-  const db = getAuthDb();
-  if (db) {
-    try {
-      await db
-        .prepare("UPDATE stripe_transaction SET processing_status = ? WHERE event_id = ?")
-        .bind("handler_failed", eventId)
-        .run();
-      return;
-    } catch (err) {
-      console.warn(
-        "[stripe-transactions] D1 markStripeEventFailed failed, falling back to DynamoDB:",
-        err instanceof Error ? err.message : err
-      );
-      // Fall through to DynamoDB
-    }
-  }
-
   const tableName = getTransactionsTableName();
-  if (!tableName) return;
-  const { UpdateItemCommand } = await import("@aws-sdk/client-dynamodb");
-  const client = await getDynamoClient();
+  const client = getDynamoClient();
   await client.send(
     new UpdateItemCommand({
       TableName: tableName,
@@ -282,18 +196,10 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
 }
 
 // ---------------------------------------------------------------------------
-// Data Lake sink — writes Stripe events to R2 (primary) or S3 (fallback).
+// Data Lake sink — writes Stripe events to S3 for Athena analytics.
 // ---------------------------------------------------------------------------
 
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-
-interface R2Env {
-  DATALAKE_BUCKET: R2Bucket;
-}
-
-function getLakeR2(): R2Bucket | null {
-  return (process.env as unknown as R2Env).DATALAKE_BUCKET ?? null;
-}
 
 const LAKE_BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
 
@@ -326,21 +232,6 @@ async function sinkStripeEventToLake(event: Stripe.Event): Promise<void> {
     properties: { stripe_event_id: event.id, type: event.type },
   });
 
-  // Try R2 first (Cloudflare Workers)
-  const r2 = getLakeR2();
-  if (r2) {
-    try {
-      await r2.put(key, record, { customMetadata: { contentType: "application/x-ndjson" } });
-      return;
-    } catch (err) {
-      console.warn(
-        "[stripe-transactions] R2 sink failed, falling back to S3:",
-        err instanceof Error ? err.message : err
-      );
-    }
-  }
-
-  // Fallback to S3
   await getLakeS3().send(
     new PutObjectCommand({
       Bucket: LAKE_BUCKET,

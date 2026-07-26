@@ -52,11 +52,15 @@ const COPY = {
     orderLabel: "Order ID:",
     fitcallH1: "Your fit-call request is in.",
     fitcallSub:
-      "We'll email you 2-3 time slots within the next 4 working hours. " + "No pressure, no pitch.",
+      "We'll email you 2-3 time slots within the next 4 working hours. " +
+      "No pressure, no pitch.",
   },
 } as const;
 
-export default async function CampaignThanks({ params, searchParams }: PageProps) {
+export default async function CampaignThanks({
+  params,
+  searchParams,
+}: PageProps) {
   const { locale: rawLocale, slug } = await params;
   const { tier, order } = await searchParams;
   if (rawLocale !== "el" && rawLocale !== "en") notFound();

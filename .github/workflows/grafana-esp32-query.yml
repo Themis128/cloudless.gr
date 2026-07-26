@@ -1,0 +1,39 @@
+name: Grafana ESP32 Query
+on:
+  workflow_dispatch:
+    inputs:
+      dashboard_uid:
+        description: Dashboard UID
+        default: esp32-watchdog
+        required: true
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Get Grafana admin password
+        run: |
+          PASS=$(kubectl get secret kube-prom-grafana -n monitoring \
+            -o jsonpath='{.data.admin-password}' | base64 -d)
+          echo "::add-mask::${PASS}"
+          echo "GRAFANA_PASS=${PASS}" >> "$GITHUB_ENV"
+      - name: Query Grafana and ESP32 data
+        env:
+          DASHBOARD_UID: ${{ inputs.dashboard_uid }}
+        run: python3 scripts/grafana-esp32-query.py

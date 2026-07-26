@@ -57,7 +57,11 @@ export const DEFAULTS: Required<
 };
 
 export type AnomalyRuleId =
-  "cpc_spike" | "cpc_ceiling" | "ctr_floor" | "zero_conversions" | "spend_pace";
+  | "cpc_spike"
+  | "cpc_ceiling"
+  | "ctr_floor"
+  | "zero_conversions"
+  | "spend_pace";
 
 export interface AnomalyFinding {
   /** Stable id for the rule that fired — used for de-dup keying. */

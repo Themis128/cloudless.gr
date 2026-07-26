@@ -93,7 +93,7 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to generate strategy");
-      const data = (await res.json()) as { strategy: Record<string, unknown> };
+      const data = await res.json();
       setStrategy(data.strategy);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
@@ -118,9 +118,7 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to generate copy");
-      const data = (await res.json()) as {
-        variants?: { variants: CopyVariant[] };
-      };
+      const data = await res.json();
       setCopyVariants(data.variants?.variants ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");

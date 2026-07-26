@@ -27,6 +27,7 @@ This PR addresses (2). (1) is documented in the operator runbook and unblocked b
 ## Schema for the Notion DBs
 
 ### Devices DB (required)
+
 One row per device. Updated by upsert (key: `Device ID`).
 
 | Property | Type | Notes |
@@ -42,6 +43,7 @@ One row per device. Updated by upsert (key: `Device ID`).
 | Status | select | Online \| Stale \| Offline |
 
 ### Telemetry DB (optional)
+
 Append-only log of significant alert transitions.
 
 | Property | Type | Notes |

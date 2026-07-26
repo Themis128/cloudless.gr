@@ -62,7 +62,7 @@ export default function EmailPage() {
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData((await res.json()) as any as any);
+      setData(await res.json());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -71,6 +71,7 @@ export default function EmailPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(tab);
   }, [tab]);
 
@@ -80,7 +81,7 @@ export default function EmailPage() {
         <PageHeader />
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            EspoCRM is not configured. Add <code className="text-yellow-300">ESPOCRM_API_KEY</code>{" "}
+            EspoCRM is not configured. Add <code className="text-yellow-300">HUBSPOT_API_KEY</code>{" "}
             to AWS SSM.
           </p>
         </div>

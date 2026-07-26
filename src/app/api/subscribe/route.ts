@@ -5,7 +5,6 @@ import { removeFromSuppressionList } from "@/lib/ses-suppression";
 import { isValidEmail } from "@/lib/validation";
 import { slackSubscriberNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
-import { trackS3Event } from "@/lib/analytics";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -18,7 +17,7 @@ export async function POST(request: Request) {
   // error (400), not a 500.
   let parsed;
   try {
-    parsed = (await request.json()) as any;
+    parsed = await request.json();
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -64,13 +63,6 @@ export async function POST(request: Request) {
       message: email,
       actor: email,
       route: "/api/subscribe",
-    });
-
-    // S3 datalake event — server-side, no cookie consent required (legitimate interest)
-    trackS3Event({
-      event: "subscribe",
-      email,
-      properties: { source: "newsletter_form" },
     });
 
     return Response.json({ success: true });

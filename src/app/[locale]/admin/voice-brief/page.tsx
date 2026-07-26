@@ -23,7 +23,7 @@ export default function VoiceBriefPage() {
     try {
       const res = await fetchWithAuth("/api/admin/voice-brief");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setBrief(data.brief ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -40,7 +40,7 @@ export default function VoiceBriefPage() {
         method: "POST",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       if (data.brief) setBrief(data.brief);
       else throw new Error(data.error ?? "Generation failed");
     } catch (e) {
@@ -69,6 +69,7 @@ export default function VoiceBriefPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     return () => {
       globalThis.speechSynthesis?.cancel();

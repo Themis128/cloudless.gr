@@ -1,15 +1,21 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
-import { callGemini } from "@/lib/gemini-admin";
+import {
+  getBedrockClient,
+  runBedrockTurn,
+  joinAssistantText,
+  BEDROCK_MODEL_ID,
+} from "@/lib/bedrock-shared";
 
 /**
  * POST /api/internal/ai/generate — service-to-service text generation.
  *
  * Used by the weekly newsletter draft cron (and any future internal job)
- * to generate text without needing an API key. Tries Cloudflare Workers AI
- * first (free tier covers our usage); falls back to Gemini on any failure
- * so a CF outage or quota exhaustion doesn't kill the Monday draft.
+ * to generate text without needing an Anthropic.com API key. Tries
+ * Cloudflare Workers AI first (free tier covers our usage); falls back
+ * to AWS Bedrock Claude on any Cloudflare error so a CF outage or quota
+ * exhaustion doesn't kill the Monday draft.
  *
  * Auth: shared secret in `x-internal-secret`, compared in constant time
  * with `AI_GENERATE_SECRET` from SSM. Returns 503 if the secret isn't
@@ -20,11 +26,11 @@ import { callGemini } from "@/lib/gemini-admin";
  *     system?: string,                       // optional system prompt
  *     messages: { role, content: string }[], // required
  *     maxTokens?: number,                    // default 4096
- *     model?: string,                        // CF model id (ignored on Gemini fallback)
+ *     model?: string,                        // CF model id (ignored on Bedrock fallback)
  *   }
  *
  * Response 200:
- *   { result: string, source: "cloudflare" | "gemini", model: string }
+ *   { result: string, source: "cloudflare" | "bedrock", model: string }
  *
  * NOT in /api/admin/* on purpose: this is machine-to-machine, the secret
  * IS the auth, and we don't want the admin rate limit on cron traffic.
@@ -34,7 +40,6 @@ export const runtime = "nodejs";
 
 const DEFAULT_CF_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const FALLBACK_CF_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
-const GEMINI_MODEL = "gemini-1.5-flash";
 
 /**
  * Strict allowlist for `model` values passed in the request body. The
@@ -85,6 +90,10 @@ async function callCloudflare(
   messages: ChatMessage[],
   maxTokens: number
 ): Promise<string> {
+  // Defence-in-depth — every caller in this file already passes a
+  // validated model (handler allowlist + hardcoded defaults), but a
+  // future call site could regress. Reject anything outside the
+  // pattern before it reaches `fetch`.
   if (!isAllowedCfModel(model)) {
     throw new Error("Refusing to call Cloudflare with non-allowlisted model id");
   }
@@ -95,6 +104,8 @@ async function callCloudflare(
   const url = new URL(
     `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`
   );
+  // Final sanity: the URL host MUST be Cloudflare's API. If anything in
+  // accountId or model managed to slip through and rehost the URL, fail.
   if (url.host !== "api.cloudflare.com") {
     throw new Error(`Refusing to call non-Cloudflare host: ${url.host}`);
   }
@@ -106,7 +117,7 @@ async function callCloudflare(
     },
     body: JSON.stringify({ messages: cfMessages, max_tokens: maxTokens }),
   });
-  const data = (await res.json()) as any as {
+  const data = (await res.json()) as {
     result?: { response?: unknown };
     errors?: { message?: string }[];
   };
@@ -114,34 +125,35 @@ async function callCloudflare(
     const reason = data.errors?.[0]?.message ?? `status ${res.status}`;
     throw new Error(`Cloudflare Workers AI: ${reason}`);
   }
+  // Workers AI usually returns `result.response` as a string, but some models
+  // (and some failure modes) put a non-string there. Coerce defensively so a
+  // bad shape doesn't crash the handler — it just becomes "fall back to Bedrock".
   const raw = data.result?.response;
   const text = typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
   if (!text.trim()) throw new Error("Cloudflare Workers AI returned empty response");
   return text;
 }
 
-async function callGeminiFallback(
+async function callBedrock(
   system: string | undefined,
   messages: ChatMessage[],
   maxTokens: number
 ): Promise<string> {
-  const config = await getConfig();
-  const apiKey = config.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
-  }
-
-  // Build Gemini-compatible message format
-  const geminiMessages = messages.map((m) => ({
-    role: m.role === "user" ? "user" : "model",
-    content: m.content,
-  }));
-
-  const prompt = system
-    ? `${system}\n\n${geminiMessages.map((m) => m.content).join("\n")}`
-    : geminiMessages.map((m) => m.content).join("\n");
-
-  return callGemini(prompt, apiKey, maxTokens);
+  const bedrockMessages = messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({
+      role: m.role as "user" | "assistant",
+      content: [{ text: m.content }],
+    }));
+  const content = await runBedrockTurn({
+    client: getBedrockClient(),
+    system: system ?? "",
+    messages: bedrockMessages,
+    maxTokens,
+  });
+  const text = joinAssistantText(content);
+  if (!text) throw new Error("Bedrock returned empty response");
+  return text;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -159,7 +171,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   let body: GenerateBody;
   try {
-    body = (await request.json()) as any as GenerateBody;
+    body = (await request.json()) as GenerateBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -173,6 +185,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
   const maxTokens = Math.min(Math.max(body.maxTokens ?? 4096, 64), 8192);
 
+  // Reject untrusted model ids before they reach the Cloudflare URL.
+  // Hardcoded defaults bypass the allowlist (they're trusted constants).
   if (body.model !== undefined && !isAllowedCfModel(body.model)) {
     return NextResponse.json(
       { error: "Invalid `model`. Expected pattern @<provider>/<vendor>/<name>." },
@@ -197,8 +211,8 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
       return NextResponse.json({ result, source: "cloudflare", model: cfModel });
     } catch (err) {
-      console.warn("[internal/ai/generate] Cloudflare failed, trying fallback:", err);
-      // Try the fallback CF model once before going to Gemini.
+      console.warn("[internal/ai/generate] Cloudflare failed, trying Bedrock:", err);
+      // Try the fallback CF model once before going to Bedrock.
       if (cfModel !== FALLBACK_CF_MODEL) {
         try {
           const result = await callCloudflare(
@@ -221,12 +235,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   }
 
-  // Fallback: Gemini (uses GEMINI_API_KEY from config).
+  // Fallback: Bedrock (uses Lambda IAM, no API key).
   try {
-    const result = await callGeminiFallback(body.system, messages, maxTokens);
-    return NextResponse.json({ result, source: "gemini", model: GEMINI_MODEL });
+    const result = await callBedrock(body.system, messages, maxTokens);
+    return NextResponse.json({ result, source: "bedrock", model: BEDROCK_MODEL_ID });
   } catch (err) {
-    console.error("[internal/ai/generate] Gemini also failed:", err);
+    console.error("[internal/ai/generate] Bedrock also failed:", err);
     return NextResponse.json(
       {
         error: "All AI providers failed.",

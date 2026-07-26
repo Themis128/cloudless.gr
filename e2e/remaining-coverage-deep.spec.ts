@@ -3,7 +3,7 @@
  * For dynamic IDs we test the auth gate with a placeholder; happy-path with a real
  * ID would be deferred to functional tests with a fixture.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./coverage";
 import fs from "fs";
 import path from "path";
 

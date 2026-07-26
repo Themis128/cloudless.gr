@@ -1,11 +1,14 @@
+yy
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
-**Status as of 2026-07-10:** R10, R11, R12, R14 (Phase 1) + R13, R18,
-R22 (Phase 2) + R21a-d, R15, R19, R16, R23, R24, R20 (Phase 3-5) all shipped.
-**All Medium-effort items complete.** Only Large-effort items remain:
-R17 (Kuma monitors - operator), R25 (auto-login bridge), and CAPI finalization.
-The 2026-07-10 session shipped R21-R25 and related infrastructure.
-See "Session log — 2026-07-10" below.
+**Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
+R22 (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
+**Phase 2 is 3/3 done.** R13 descoped to 24h cadence ⇒ already covered
+by R10's daily EspoCRM CronJob; R22 audit confirmed the existing
+ConditionalWrite-dedup pattern is safe at SMB volume. The 2026-06-22
+session ran a 22-PR ops sweep on top of that — see the "Session log"
+section below. **Next R-row: R21a** (Meilisearch self-host on omv-ha —
+entry to the AI baseline arc).
 
 The single canonical action list for taking the AWS-serverless + Pi-cluster
 stack to "production-perfect with full data-analytics features", under the
@@ -131,52 +134,32 @@ operator polish or unlock follow-on automation.
 
 ---
 
-## Session log — 2026-07-10 (R21-R25 shipped)
-
-8 commits shipped after Phase 1-3 landing in previous sessions.
-All Medium-effort items R21-R25 now complete. Listed here to track repo state.
-
-| Commit | Theme | Net |
-|---|---|---|
-| 2d29f559 | Ship R21-R25 — Meilisearch, recommendations, descriptions, Resend, failover drill | 8 files |
-| 1a7cdc4c | R20 placeholder — Postgres logical replication subscriber (Large effort, deferred) | 4 files |
-| 48a8e7f4 | R24 — Route 53 DR workflow + Terraform for Global Tables replicas | 2 files |
-| c869bd3d | Update master-todo with session log | docs |
-| 1a5fbfbe | Finalize documentation fixes | docs |
-
-**Phase 3 complete:** AI baseline live (semantic search + recommendations + GenAI descriptions).
-**Phase 4 status:** R15, R19 complete; R17 operator action pending.
-**Phase 5 status:** R16, R23, R24 complete; R20 placeholder (Large effort).
-
 ## Phase 3 — Week 3 (AI baseline — the visible-value chunk)
 
 Closes the "❓ MISSING — AI baseline" finding from `best-practices-audit-2026.md`.
 Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
-- [x] ~~🤖 🟠 **R21a~~ ✅ **SHIPPED 2026-07-10** — `k8s/search/meilisearch.yaml` (4Gi PVC on OMV-MAIN SSD), deploy workflow at `.github/workflows/deploy-search.yml`. Deployed but tunnel activation pending operator action.
-- [x] ~~🤖 🔵 **R21b~~ ✅ **SHIPPED 2026-07-10** — `/api/search` route with hybrid semantic search via Bedrock Titan embeddings, fallback to local search. Wire to Meilisearch when tunnel is activated.
-- [x] ~~🤖 🔵 **R21c~~ ✅ **SHIPPED 2026-07-10** — `/api/products/recommendations` endpoint, collaborative filtering with co-purchase signals, shown on product detail pages.
-- [x] ~~🤖 🔵 **R21d~~ ✅ **SHIPPED 2026-07-10** — `scripts/generate-product-descriptions.ts` uses Bedrock Nova Micro to draft product descriptions for operator approval.
+- [ ] 🤖 🟠 **R21a** Meilisearch self-host on omv-ha — k8s manifest + PVC + tunnel route. **EFFORT: S / RISK: LOW**
+- [ ] 🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings — index DDB product catalog into Meilisearch on order/edit hooks. **EFFORT: M / RISK: LOW**
+- [ ] 🤖 🔵 **R21c** Product recommendation engine — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/products/[slug]` + `/store`. **EFFORT: M / RISK: LOW**
+- [ ] 🤖 🔵 **R21d** GenAI product descriptions — one-shot script: Bedrock Nova generates description draft per product → operator approves before publish. **EFFORT: S / RISK: LOW**
 
 ---
 
 ## Phase 4 — Week 4 (hardening + observability)
 
-- [x] ~~🤖 🟠 **R15~~ ✅ **SHIPPED 2026-07-10** — `infrastructure/cloudflare-access/access-apps.tf`, deploy workflow, and lib utilities created. Tunnel activation and service token configuration pending operator action.
+- [ ] 🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts (grafana / kuma / appflowy admin / n8n) via Service Tokens. **EFFORT: M / RISK: LOW**
 - [ ] 👤 🟠 **R17** Operator: create 12 Kuma monitors + wire Kuma → ntfy + Slack channels directly. **(also in Phase 0 — duplicate intentional)**
-- [x] ~~🤖 🟣 **R19~~ ✅ **SHIPPED 2026-07-10** — `.github/workflows/failover-drill.yml` validates Pi→Workers failover path monthly. Tested in dry-run mode; production drill requires Cloudflare LB setup.
+- [ ] 🤖 🟣 **R19** Monthly failover drill — manual-dispatch workflow disables R53 PRIMARY for 90s, asserts SECONDARY served from outside, re-enables. **EFFORT: M / RISK: MED**
 
 ---
 
 ## Phase 5 — When time permits (lower priority)
 
-- [x] ~~🤖 🟠 **R16~~ ✅ **SHIPPED 2026-07-10** — `infrastructure/appflowy/walg-sidecar.yaml` WAL-G sidecar for continuous postgres backup to S3. RPO ~5 min for knowledge base.
-
-- [x] ~~🤖 🔵 **R23~~ ✅ **SHIPPED 2026-07-10** — `src/lib/email-resend.ts` alternative email delivery via Resend API. Pilot ready; wire to order confirmation flow when `RESEND_API_KEY` is provisioned.
-
-- [x] ~~🤖 🔵 **R24~~ ✅ **SHIPPED 2026-07-10** — `.github/workflows/r24-add-replicas.yml` adds DDB Global Tables replicas, `infrastructure/r24-dr/dynamodb.tf` configures DR. Requires Cloudflare LB for failover activation.
-
-- [ ] 🤖 🟣 **R20** Postgres logical replication subscriber on AWS — **using existing services only**: postgres logical decoding → Lambda subscriber → DDB write. No new EC2/Lightsail. RPO ~seconds. **EFFORT: L (wal2json plugin install on Pi required) / RISK: MED** (placeholder shipped)
+- [ ] 🤖 🟠 **R16** AppFlowy WAL-G to S3 — wal-g sidecar on postgres pod streams WAL continuously. RPO ~5 min for knowledge base. **EFFORT: M / RISK: MED**
+- [ ] 🤖 🔵 **R23** Resend pilot on order-confirmation flow (vs SES baseline). Keep SES for ETL/bulk. **EFFORT: S / RISK: LOW**
+- [ ] 🤖 🔵 **R24** Route 53 health-check + secondary-region Lambda (`us-west-2`) passive + DDB Global Tables. AWS-side DR (paired with R20's Pi-side data sync). **EFFORT: M / RISK: MED**
+- [ ] 🤖 🟣 **R20** Postgres logical replication subscriber on AWS — **using existing services only**: postgres logical decoding → Lambda subscriber → DDB write. No new EC2/Lightsail. RPO ~seconds. **EFFORT: L / RISK: MED**
 
 ---
 
@@ -261,4 +244,3 @@ with the same hardware you have today and no new AWS service categories.
 - `docs/pi-cloud-sync.md` — canonical AWS↔Pi sync contract
 - `docs/session-summary-2026-06-21.md` — previous session (R7-R9 + R10-R14)
 - `docs/session-summary-2026-06-22.md` — this session (workflows + R13/R18)
-- `docs/session-summary-2026-07-10.md` — this session (R21-R25 shipped)

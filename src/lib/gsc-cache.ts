@@ -1,14 +1,3 @@
-/**
- * Read-through cache for slow third-party data (Google Search Console).
- *
- * GSC has per-minute, per-day, and 50k-row-per-day quotas. Every admin tab
- * open used to hit the API fresh. This cache lets each route serve from
- * D1 (Cloudflare Workers) or Dynamo (AWS Lambda) if a fresh-enough entry
- * exists, falling back to the live API when not. The hourly
- * /api/cron/gsc-cache-refresh job pre-warms the common queries so admin
- * users see instant responses.
- */
-
 import {
   DynamoDBClient,
   GetItemCommand,
@@ -16,143 +5,124 @@ import {
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
+import { createHash } from "crypto";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+/**
+ * Read-through cache for slow third-party data (Google Search Console).
+ *
+ * GSC has per-minute, per-day, and 50k-row-per-day quotas. Every admin tab
+ * open used to hit the API fresh. This cache lets each route serve from
+ * Dynamo if a fresh-enough entry exists, falling back to the live API when
+ * not. The hourly /api/cron/gsc-cache-refresh job pre-warms the common
+ * queries so admin users see instant responses.
+ *
+ * Schema:
+ *   pk = "<route>"                e.g. "seo", "keywords", "ctr-opportunities"
+ *   sk = "<params-hash>"          deterministic for a given query-string
+ *   payload (S, JSON)             the cached response body
+ *   storedAt (S, ISO 8601)        when we wrote it
+ *   ttlSeconds (N)                requested TTL at write time
+ *
+ * Failure model: safe. If the table is not configured (no env var), or any
+ * Dynamo operation throws, helpers return null / undefined and callers fall
+ * back to the live API path. The cache is never on the critical path.
+ */
 
-export interface CacheEntry<T = unknown> {
-  payload: T;
-  cachedAt: number;
-  expiresAt: number;
-  stale: boolean;
-  ageSeconds: number;
-}
-
-// ---------------------------------------------------------------------------
-// D1 cache helpers (D1 primary on Workers)
-// ---------------------------------------------------------------------------
-
-export function getAuthDb(): any {
-  const db = (globalThis as any)?.__AUTH_DB__;
-  return db;
-}
-
-export async function getCachedD1<T>(route: string, hash: string, ttlSeconds: number): Promise<CacheEntry<T> | null> {
-  const db = getAuthDb();
-  if (!db) return null;
-  try {
-    const result = await db.prepare(
-      "SELECT result_json, cached_at, expires_at FROM analytics_cache WHERE pk = ? AND sk = ?"
-    ).bind(route, hash).first();
-    if (!result) return null;
-    const entry = fromD1Row<T>(result, ttlSeconds);
-    if (entry) return entry;
-  } catch {
-    // Fall through to DynamoDB
-  }
-  return null;
-}
-
-export async function setCachedD1<T>(route: string, hash: string, payload: T, ttlSeconds: number): Promise<void> {
-  const db = getAuthDb();
-  if (!db) return;
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    const expiresAt = now + ttlSeconds;
-    await db.prepare(
-      "INSERT INTO analytics_cache (pk, sk, result_json, cached_at, expires_at) VALUES (?, ?, ?, ?, ?) " +
-        "ON CONFLICT(pk, sk) DO UPDATE SET result_json = excluded.result_json, cached_at = excluded.cached_at, expires_at = excluded.expires_at"
-    ).bind(route, hash, JSON.stringify(payload), now, expiresAt).run();
-  } catch (err) {
-    console.warn("[gsc-cache] setCachedD1 failed:", err instanceof Error ? err.message : err);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// DynamoDB helpers
-// ---------------------------------------------------------------------------
+const REGION = process.env.AWS_REGION || "us-east-1";
 
 let dynamoClient: DynamoDBClient | null = null;
-
-export function getDynamoClient(): DynamoDBClient {
-  if (!dynamoClient) {
-    dynamoClient = new DynamoDBClient({
-      region: process.env.AWS_REGION || "us-east-1",
-      endpoint: resolveDynamoEndpoint(),
-    });
-  }
+function getDynamoClient(): DynamoDBClient {
+  dynamoClient ??= new DynamoDBClient({
+    region: REGION,
+    endpoint: resolveDynamoEndpoint(),
+  });
   return dynamoClient;
 }
 
-export function getTableName(): string | null {
-  return process.env.GSC_CACHE_TABLE?.trim() || null;
+function getTableName(): string | null {
+  return process.env.ANALYTICS_CACHE_TABLE?.trim() || null;
 }
 
-export function paramsHash(params: Record<string, unknown>): string {
-  const keys = Object.keys(params).sort();
-  const parts = keys.map((k) => `${k}=${JSON.stringify(params[k])}`);
-  return parts.join("&");
+/**
+ * Hash an arbitrary params object into a short deterministic key suffix.
+ * Same input → same hash, regardless of property order, on every Lambda.
+ */
+export function paramsHash(params: Record<string, unknown> = {}): string {
+  // Sort keys so {a:1, b:2} and {b:2, a:1} hash to the same value.
+  const entries = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null)
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) return "default";
+  const canonical = JSON.stringify(entries);
+  return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
 }
 
-function fromItem<T>(item: Record<string, any>, ttlSeconds: number): CacheEntry<T> | null {
-  try {
-    const payload = JSON.parse(item.result_json?.S ?? "{}");
-    const cachedAt = Number(item.cached_at?.N ?? 0);
-    const expiresAt = Number(item.expires_at?.N ?? 0);
-    const ageSeconds = Math.max(0, Math.floor((Date.now() / 1000) - cachedAt));
-    return { payload, cachedAt, expiresAt, stale: ageSeconds > ttlSeconds, ageSeconds };
-  } catch {
-    return null;
-  }
+export interface CacheEntry<T> {
+  payload: T;
+  storedAt: string;
+  ageSeconds: number;
+  stale: boolean;
 }
 
-function fromD1Row<T>(row: any, ttlSeconds: number): CacheEntry<T> | null {
-  try {
-    const payload = JSON.parse(row.result_json ?? "{}");
-    const cachedAt = row.cached_at ?? 0;
-    const expiresAt = row.expires_at ?? 0;
-    const ageSeconds = Math.max(0, Math.floor((Date.now() / 1000) - cachedAt));
-    return { payload, cachedAt, expiresAt, stale: ageSeconds > ttlSeconds, ageSeconds };
-  } catch {
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Public read/write API
-// ---------------------------------------------------------------------------
-
-export async function getCached<T>(
+function toItem<T>(
   route: string,
-  params: Record<string, unknown>,
+  hash: string,
+  payload: T,
   ttlSeconds: number
-): Promise<CacheEntry<T> | null> {
-  // Try D1 first (Cloudflare Workers)
-  const db = getAuthDb();
-  if (db) {
-    const hash = paramsHash(params);
-    try {
-      const result = await db.prepare(
-        "SELECT result_json, cached_at, expires_at FROM analytics_cache WHERE pk = ? AND sk = ?"
-      ).bind(route, hash).first();
-      if (result) {
-        const entry = fromD1Row<T>(result, ttlSeconds);
-        if (entry) return entry;
-      }
-    } catch {
-      // Fall through to DynamoDB
-    }
-  }
+): Record<string, AttributeValue> {
+  return {
+    pk: { S: route },
+    sk: { S: hash },
+    payload: { S: JSON.stringify(payload) },
+    storedAt: { S: new Date().toISOString() },
+    ttlSeconds: { N: String(ttlSeconds) },
+  };
+}
 
+function fromItem<T>(
+  item: Record<string, AttributeValue>,
+  ttlSeconds: number
+): CacheEntry<T> | null {
+  const storedAt = item.storedAt?.S;
+  const raw = item.payload?.S;
+  if (!storedAt || !raw) return null;
+  let payload: T;
+  try {
+    payload = JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+  const storedAtMs = Date.parse(storedAt);
+  const ageSeconds = Math.max(0, Math.floor((Date.now() - storedAtMs) / 1000));
+  return {
+    payload,
+    storedAt,
+    ageSeconds,
+    stale: ageSeconds > ttlSeconds,
+  };
+}
+
+/**
+ * Read a cached entry. Returns null if:
+ *   - the table is not configured (local dev / partial deploy)
+ *   - no entry exists for (route, hash)
+ *   - the entry is malformed
+ * The caller decides whether a stale entry is acceptable; both fresh and
+ * stale entries are returned with their `ageSeconds` filled in.
+ */
+export async function getCached<T = unknown>(
+  route: string,
+  params: Record<string, unknown> = {},
+  ttlSeconds = 3600
+): Promise<CacheEntry<T> | null> {
   const table = getTableName();
   if (!table) return null;
+  const hash = paramsHash(params);
   try {
-    const c = getDynamoClient();
-    const out = await c.send(
+    const out = await getDynamoClient().send(
       new GetItemCommand({
         TableName: table,
-        Key: { pk: { S: route }, sk: { S: paramsHash(params) } },
+        Key: { pk: { S: route }, sk: { S: hash } },
       })
     );
     if (!out.Item) return null;
@@ -163,48 +133,24 @@ export async function getCached<T>(
   }
 }
 
+/**
+ * Write a payload to the cache. Best-effort — failures are logged and
+ * swallowed because cache writes must never break the user-facing path.
+ */
 export async function setCached<T = unknown>(
   route: string,
   params: Record<string, unknown> = {},
   payload: T,
   ttlSeconds = 3600
 ): Promise<void> {
-  const hash = paramsHash(params);
-  const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
-  const payloadJson = JSON.stringify(payload);
-  const now = Math.floor(Date.now() / 1000);
-
-  // Try D1 first (Cloudflare Workers)
-  const db = getAuthDb();
-  if (db) {
-    try {
-      await db
-        .prepare(
-          "INSERT INTO analytics_cache (pk, sk, result_json, cached_at, expires_at) VALUES (?, ?, ?, ?, ?) " +
-            "ON CONFLICT(pk, sk) DO UPDATE SET result_json = excluded.result_json, cached_at = excluded.cached_at, expires_at = excluded.expires_at"
-        )
-        .bind(route, hash, payloadJson, now, expiresAt)
-        .run();
-      return;
-    } catch {
-      // Fall through to DynamoDB
-    }
-  }
-
   const table = getTableName();
   if (!table) return;
+  const hash = paramsHash(params);
   try {
-    const c = getDynamoClient();
-    await c.send(
+    await getDynamoClient().send(
       new PutItemCommand({
         TableName: table,
-        Item: {
-          pk: { S: route },
-          sk: { S: hash },
-          result_json: { S: payloadJson },
-          cached_at: { N: String(now) },
-          expires_at: { N: String(expiresAt) },
-        },
+        Item: toItem(route, hash, payload, ttlSeconds),
       })
     );
   } catch (err) {

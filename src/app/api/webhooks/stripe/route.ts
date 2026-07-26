@@ -5,7 +5,6 @@ import { sendOrderConfirmation, sendPaymentFailureNotice, notifyTeam } from "@/l
 import { escapeHtml } from "@/lib/escape-html";
 import { slackOrderNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
-import { trackS3Event } from "@/lib/analytics";
 import { upsertContact, createDeal, associateDealWithContact } from "@/lib/espocrm";
 import type Stripe from "stripe";
 import { mapIntegrationError } from "@/lib/api-errors";
@@ -142,24 +141,6 @@ async function handleCheckoutCompleted(
   if (session.customer_email) {
     syncEspoCRMDeal(session).catch(() => {});
   }
-
-  // S3 datalake event — server-side, no cookie consent required (legitimate interest)
-  trackS3Event({
-    event: "purchase",
-    email: session.customer_email ?? undefined,
-    amount: (session.amount_total ?? 0) / 100,
-    currency: (session.currency ?? "eur").toUpperCase(),
-    campaign: session.metadata?.campaign ?? undefined,
-    source: session.metadata?.utm_source ?? undefined,
-    medium: session.metadata?.utm_medium ?? undefined,
-    properties: {
-      sessionId: session.id,
-      mode: session.mode,
-      paymentStatus: session.payment_status,
-      campaignSlug: session.metadata?.campaign ?? undefined,
-      tier: session.metadata?.tier ?? undefined,
-    },
-  });
 }
 
 function invoiceCustomerString(invoice: Stripe.Invoice): string {

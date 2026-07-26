@@ -36,7 +36,7 @@ async function generateInsights(
       signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) return "";
-    const d = ((await res.json()) as any);
+    const d = await res.json();
     return d.content?.[0]?.text ?? "";
   } catch {
     return "";
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   let includeSections: string[];
 
   try {
-    const body = ((await request.json()) as any);
+    const body = await request.json();
     clientName = body.clientName;
     dateStart = body.dateStart;
     dateEnd = body.dateEnd;

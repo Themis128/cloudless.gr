@@ -1,12 +1,17 @@
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
 import { escapeHtml } from "@/lib/escape-html";
 import { DEFAULT_LOCALE } from "@/lib/locale-defaults";
 import { sendEmail as sendEmailUnified } from "@/lib/email-sender";
 
-export { setEmailBinding } from "@/lib/email-sender";
+let sesClient: SESv2Client | null = null;
 
-/** Notify when a new user registers. Re-exported from slack-notify for auth routes. */
-export { slackRegistrationNotify } from "@/lib/slack-notify";
+async function getSES(): Promise<SESv2Client> {
+  if (sesClient) return sesClient;
+  const config = await getConfig();
+  sesClient = new SESv2Client({ region: config.AWS_SES_REGION });
+  return sesClient;
+}
 
 interface SendEmailOptions {
   to: string;
@@ -20,15 +25,48 @@ interface SendEmailOptions {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
-  await sendEmailUnified({
-    to: options.to,
-    subject: options.subject,
-    html: options.html,
-    text: options.text,
-    replyTo: options.replyTo,
-    fromLabel: options.fromLabel,
-    listUnsubscribeUrl: options.listUnsubscribeUrl,
-  });
+  const config = await getConfig();
+  const ses = await getSES();
+
+  const fromAddress = options.fromLabel
+    ? `${options.fromLabel} <${config.SES_FROM_EMAIL}>`
+    : config.SES_FROM_EMAIL;
+
+  const extraHeaders = options.listUnsubscribeUrl
+    ? [
+        {
+          Name: "List-Unsubscribe",
+          Value: `<${options.listUnsubscribeUrl}>`,
+        },
+        { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
+      ]
+    : [];
+
+  try {
+    await ses.send(
+      new SendEmailCommand({
+        FromEmailAddress: fromAddress,
+        Destination: { ToAddresses: [options.to] },
+        ...(options.replyTo ? { ReplyToAddresses: options.replyTo } : {}),
+        Content: {
+          Simple: {
+            Subject: { Data: options.subject, Charset: "UTF-8" },
+            Body: {
+              Html: { Data: options.html, Charset: "UTF-8" },
+              Text: { Data: options.text, Charset: "UTF-8" },
+            },
+            ...(extraHeaders.length ? { Headers: extraHeaders } : {}),
+          },
+        },
+      })
+    );
+  } catch (err: unknown) {
+    // AWS SDK v3 XML parser throws a deserialization error on SES success responses
+    // that contain &#xD; entities. If HTTP status is 200 the email was delivered —
+    // swallow the parse error and continue.
+    const meta = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata;
+    if (meta?.httpStatusCode !== 200) throw err;
+  }
 }
 
 export async function sendOrderConfirmation(
@@ -401,41 +439,5 @@ export async function notifyTeam(subject: string, body: string): Promise<void> {
         return "";
       })
       .join(""),
-  });
-}
-
-export async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
-  const safeUrl = escapeHtml(resetUrl);
-  await sendEmail({
-    to: email,
-    subject: "Reset your Cloudless password",
-    fromLabel: "Cloudless",
-    html: `
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0f;color:#e2e8f0;border-radius:12px;overflow:hidden;">
-        <div style="padding:32px 40px 24px;border-bottom:1px solid #1e293b;">
-          <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#00fff5;">Cloudless</p>
-          <h1 style="margin:0;font-size:26px;font-weight:700;color:#f1f5f9;">Reset your password</h1>
-        </div>
-        <div style="padding:28px 40px 32px;">
-          <p style="margin:0 0 20px;font-size:15px;color:#94a3b8;line-height:1.7;">Click the button below to set a new password for your account.</p>
-          <div style="text-align:center;margin:0 0 28px;">
-            <a href="${safeUrl}" style="display:inline-block;padding:14px 36px;background:#00fff5;color:#0a0a0f;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:0.3px;">Reset Password</a>
-          </div>
-          <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">This link expires in <strong style="color:#94a3b8;">24 hours</strong>. If you didn't request a reset, ignore this email.</p>
-        </div>
-        <div style="padding:16px 40px;background:#080811;border-top:1px solid #1e293b;">
-          <p style="margin:0;font-size:12px;color:#475569;">Cloudless &middot; <a href="https://cloudless.gr" style="color:#00fff5;text-decoration:none;">cloudless.gr</a></p>
-        </div>
-      </div>`,
-    text: [
-      "Reset your password",
-      "",
-      "Click the link below to set a new password for your Cloudless account:",
-      resetUrl,
-      "",
-      "This link expires in 24 hours. If you didn't request a reset, ignore this email.",
-      "",
-      "Cloudless · cloudless.gr",
-    ].join("\n"),
   });
 }

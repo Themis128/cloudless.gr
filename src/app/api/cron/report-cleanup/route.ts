@@ -5,7 +5,11 @@ import { isCronAuthorized, cronUnauthorized } from "@/lib/cron-auth";
 
 const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000;
 
-async function handleReportCleanup() {
+export async function GET(request: NextRequest) {
+  if (!(await isCronAuthorized(request))) {
+    return cronUnauthorized();
+  }
+
   const reports = await listReports();
   const now = Date.now();
 
@@ -48,24 +52,6 @@ async function handleReportCleanup() {
   }
 
   return NextResponse.json({ cleaned, total: reports.length });
-}
-
-// GET endpoint for manual testing / browser access
-export async function GET(request: NextRequest) {
-  // Still require auth for GET requests from external sources
-  // Internal requests from SST Cron will use POST
-  if (!await isCronAuthorized(request)) {
-    return cronUnauthorized();
-  }
-  return handleReportCleanup();
-}
-
-// POST endpoint for SST Cron triggers and programmatic access
-export async function POST(request: NextRequest) {
-  if (!await isCronAuthorized(request)) {
-    return cronUnauthorized();
-  }
-  return handleReportCleanup();
 }
 
 export const runtime = "nodejs";

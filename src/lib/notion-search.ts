@@ -54,6 +54,7 @@ export interface DatabaseProperty {
 // Mappers
 // ---------------------------------------------------------------------------
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 function mapSearchResult(item: any): SearchResult {
   const isPage = item.object === "page";
   let title = "";
@@ -119,6 +120,7 @@ function mapProperty(name: string, prop: any): DatabaseProperty {
 
   return result;
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // Search API
@@ -140,6 +142,7 @@ export async function searchPages(
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const body: Record<string, any> = {
       query,
       page_size: Math.min(options?.limit ?? 20, 100),
@@ -164,6 +167,7 @@ export async function searchPages(
       method: "POST",
       body: JSON.stringify(body),
     });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     return {
       results: data.results.map(mapSearchResult),
@@ -196,10 +200,12 @@ export async function listUsers(): Promise<NotionUser[]> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const data = await notionFetch<{ results: any[] }>("/users", {
       method: "GET",
     });
     return data.results.map(mapUser);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Users] Failed to list users:", msg); // codeql[js/log-injection]
@@ -214,8 +220,10 @@ export async function getBotUser(): Promise<NotionUser | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const data = await notionFetch<any>("/users/me");
     return mapUser(data);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Users] Failed to get bot user:", msg); // codeql[js/log-injection]
@@ -230,8 +238,10 @@ export async function getUser(userId: string): Promise<NotionUser | null> {
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const data = await notionFetch<any>(`/users/${userId}`);
     return mapUser(data);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Users] Failed to get user:", msg); // codeql[js/log-injection]
@@ -251,6 +261,7 @@ export async function getDatabaseSchema(databaseId: string): Promise<DatabaseSch
   await requireIntegrationAsync("NOTION_API_KEY");
 
   try {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const db = await notionFetch<any>(`/databases/${databaseId}`);
 
     const title = (db.title ?? []).map((t: any) => t.plain_text).join("");
@@ -264,6 +275,7 @@ export async function getDatabaseSchema(databaseId: string): Promise<DatabaseSch
       properties,
       url: db.url ?? "",
     };
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   } catch (err) {
     const msg = ((err as Error)?.message ?? "unknown error").replace(/[\r\n]/g, " ");
     console.error("[Notion Schema] Failed to get database schema:", msg); // codeql[js/log-injection]

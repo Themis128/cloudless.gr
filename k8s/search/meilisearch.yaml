@@ -12,11 +12,6 @@ metadata:
   namespace: search
   labels:
     app.kubernetes.io/name: meilisearch
-    cloudless.gr/storage-node: omv
-    cloudless.gr/storage-tier: dedicated-ssd
-    cloudless.gr/storage-purpose: r21-search
-  annotations:
-    cloudless.gr/storage-note: "Persistent data must use the dedicated 120GB SSD on omv-main."
 spec:
   accessModes:
     - ReadWriteOnce
@@ -47,8 +42,6 @@ spec:
         app.kubernetes.io/name: meilisearch
         app.kubernetes.io/component: search-engine
     spec:
-      # R21a: Meilisearch runs on omv-main where the dedicated SSD-backed
-      # local-path storage lives. omv-ha (Pi 4 1GB) cannot host this service.
       nodeSelector:
         kubernetes.io/hostname: omv
       containers:
@@ -103,23 +96,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: meilisearch
-  namespace: search
-  labels:
-    app.kubernetes.io/name: meilisearch
-spec:
-  type: NodePort
-  selector:
-    app.kubernetes.io/name: meilisearch
-  ports:
-    - name: http
-      port: 7700
-      targetPort: http
-      nodePort: 30770
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: meilisearch-internal
   namespace: search
   labels:
     app.kubernetes.io/name: meilisearch

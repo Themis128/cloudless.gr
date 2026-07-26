@@ -43,10 +43,10 @@ export default function TikTokPage() {
         return;
       }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
-      const camData = (await camRes.json()) as any as any as any;
+      const camData = await camRes.json();
       setCampaigns(camData.campaigns ?? []);
       if (insRes.ok) {
-        const insData = (await insRes.json()) as any as any as any;
+        const insData = await insRes.json();
         setInsights(insData.insights ?? null);
       }
     } catch (e) {
@@ -57,6 +57,7 @@ export default function TikTokPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   // error (400), not a 500.
   let parsed;
   try {
-    parsed = (await request.json()) as any;
+    parsed = await request.json();
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     // Suppress future SES sends, and flip the EspoCRM contact out of the
     // newsletter audience so the weekly send no longer targets them.
-    const [suppressed, espocrmUpdated] = await Promise.all([
+    const [suppressed, hubspotUpdated] = await Promise.all([
       addToSuppressionList(email),
       setNewsletterStatus(email, "newsletter_unsubscribed"),
     ]);
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       `<h2>Newsletter unsubscribe</h2>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed (manual removal needed)"}</p>
-      <p><strong>EspoCRM updated:</strong> ${espocrmUpdated ? "Yes" : "Failed (manual removal needed)"}</p>
+      <p><strong>EspoCRM updated:</strong> ${hubspotUpdated ? "Yes" : "Failed (manual removal needed)"}</p>
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`
     ).catch(() => {});
     sendUnsubscribeConfirmation(email).catch((err) =>
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [suppressed, espocrmUpdated] = await Promise.all([
+    const [suppressed, hubspotUpdated] = await Promise.all([
       addToSuppressionList(email),
       setNewsletterStatus(email, "newsletter_unsubscribed"),
     ]);
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       `<h2>Newsletter unsubscribe (via email link)</h2>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       <p><strong>SES suppressed:</strong> ${suppressed ? "Yes" : "Failed"}</p>
-      <p><strong>EspoCRM updated:</strong> ${espocrmUpdated ? "Yes" : "Failed"}</p>
+      <p><strong>EspoCRM updated:</strong> ${hubspotUpdated ? "Yes" : "Failed"}</p>
       <p><strong>Date:</strong> ${new Date().toISOString()}</p>`
     ).catch(() => {});
     sendUnsubscribeConfirmation(email).catch((err) =>

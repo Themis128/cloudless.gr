@@ -57,7 +57,7 @@ async function performErrorAction(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
   });
-  const data = (await res.json()) as any as any as any;
+  const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
   return `${ACTION_LABELS[status]} successfully`;
 }
@@ -83,7 +83,7 @@ export default function AdminErrorsPage() {
         if (res.status === 503) throw new Error("Sentry not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setIssues(data.issues ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load errors");
@@ -93,6 +93,7 @@ export default function AdminErrorsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchErrors();
   }, [fetchErrors]);
 

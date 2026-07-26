@@ -41,8 +41,8 @@ export default function XPage() {
         return;
       }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
-      setCampaigns(((await camRes.json()) as any as any).campaigns ?? []);
-      if (insRes.ok) setInsights(((await insRes.json()) as any as any).insights ?? null);
+      setCampaigns((await camRes.json()).campaigns ?? []);
+      if (insRes.ok) setInsights((await insRes.json()).insights ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -51,6 +51,7 @@ export default function XPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

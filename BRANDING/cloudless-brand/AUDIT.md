@@ -32,9 +32,9 @@ Findings drive `brand.md` v3 and the corrected social templates.
 
 The site footer carries this disclaimer:
 
-> *"This website is a training and portfolio project built for educational purposes only. It is not a commercial service and does not accept clients."*
+> _"This website is a training and portfolio project built for educational purposes only. It is not a commercial service and does not accept clients."_
 
-Material consequence: the 6 social posts I drafted for the Jun 24 – Jul 3 calendar include language like *"60 cost audits in", "we cut a client's bill 80%", "book a 30-minute audit"*. **Those claims contradict the disclaimer.**
+Material consequence: the 6 social posts I drafted for the Jun 24 – Jul 3 calendar include language like _"60 cost audits in", "we cut a client's bill 80%", "book a 30-minute audit"_. **Those claims contradict the disclaimer.**
 
 Two paths to resolve:
 

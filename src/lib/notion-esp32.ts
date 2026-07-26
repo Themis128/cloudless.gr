@@ -83,10 +83,7 @@ export async function getEsp32NotionConfig(): Promise<Esp32NotionConfig> {
 
   // Fallback: in case the values move into the integrations module later.
   try {
-    const integ = (await getIntegrationsAsync()) as Record<
-      string,
-      string | undefined
-    >;
+    const integ = (await getIntegrationsAsync()) as Record<string, string | undefined>;
     return {
       devicesDbId: integ.NOTION_ESP32_DEVICES_DB_ID,
       telemetryDbId: integ.NOTION_ESP32_TELEMETRY_DB_ID,
@@ -119,10 +116,7 @@ interface NotionQueryResponse {
   results?: Array<{ id: string }>;
 }
 
-async function findDevicePageByDeviceId(
-  dbId: string,
-  deviceId: string,
-): Promise<string | null> {
+async function findDevicePageByDeviceId(dbId: string, deviceId: string): Promise<string | null> {
   const body = {
     filter: {
       property: PROP_DEVICE_ID,
@@ -130,13 +124,10 @@ async function findDevicePageByDeviceId(
     },
     page_size: 1,
   };
-  const res = await notionFetch<NotionQueryResponse>(
-    `/databases/${dbId}/query`,
-    {
-      method: "POST",
-      body: JSON.stringify(body),
-    },
-  );
+  const res = await notionFetch<NotionQueryResponse>(`/databases/${dbId}/query`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
   return res.results?.[0]?.id ?? null;
 }
 
@@ -151,9 +142,7 @@ async function findDevicePageByDeviceId(
  * created; otherwise the existing page is patched. Returns the Notion page id
  * (or null when the feature is not configured).
  */
-export async function upsertEsp32DeviceInNotion(
-  status: Esp32Status,
-): Promise<string | null> {
+export async function upsertEsp32DeviceInNotion(status: Esp32Status): Promise<string | null> {
   const cfg = await getEsp32NotionConfig();
   if (!cfg.devicesDbId) return null;
   if (!status.device_id) return null; // can't upsert without a key
@@ -170,22 +159,16 @@ export async function upsertEsp32DeviceInNotion(
       rich_text: status.ip ? [{ text: { content: status.ip } }] : [],
     },
     Firmware: {
-      rich_text: status.firmware_ver
-        ? [{ text: { content: status.firmware_ver } }]
-        : [],
+      rich_text: status.firmware_ver ? [{ text: { content: status.firmware_ver } }] : [],
     },
     RSSI: { number: status.rssi },
     [PROP_FREE_RAM]: { number: status.free_ram_bytes },
     Uptime: { number: status.uptime_s },
-    [PROP_LAST_HEARTBEAT]:
-      heartbeat != null ? { date: { start: heartbeat } } : { date: null },
+    [PROP_LAST_HEARTBEAT]: heartbeat != null ? { date: { start: heartbeat } } : { date: null },
     Status: { select: { name: statusLabel(status) } },
   };
 
-  const existing = await findDevicePageByDeviceId(
-    cfg.devicesDbId,
-    status.device_id,
-  );
+  const existing = await findDevicePageByDeviceId(cfg.devicesDbId, status.device_id);
 
   if (existing) {
     const updated = await notionFetch<{ id: string }>(`/pages/${existing}`, {
@@ -212,9 +195,7 @@ export async function upsertEsp32DeviceInNotion(
  * here — callers are expected to forward only significant transitions
  * (alert raised / resolved), not every heartbeat.
  */
-export async function appendEsp32TelemetryToNotion(
-  alert: Esp32Alert,
-): Promise<string | null> {
+export async function appendEsp32TelemetryToNotion(alert: Esp32Alert): Promise<string | null> {
   const cfg = await getEsp32NotionConfig();
   if (!cfg.telemetryDbId) return null;
 
@@ -233,10 +214,8 @@ export async function appendEsp32TelemetryToNotion(
           rich_text: [{ text: { content: alert.message.slice(0, 2000) } }],
         },
         Status: { select: { name: alert.status || "ACTIVE" } },
-        [PROP_FIRST_SEEN]:
-          firstSeen != null ? { date: { start: firstSeen } } : { date: null },
-        [PROP_LAST_SEEN]:
-          lastSeen != null ? { date: { start: lastSeen } } : { date: null },
+        [PROP_FIRST_SEEN]: firstSeen != null ? { date: { start: firstSeen } } : { date: null },
+        [PROP_LAST_SEEN]: lastSeen != null ? { date: { start: lastSeen } } : { date: null },
       },
     }),
   });
@@ -258,16 +237,13 @@ export async function readEsp32DevicesFromNotion(): Promise<Esp32Status[]> {
   const cfg = await getEsp32NotionConfig();
   if (!cfg.devicesDbId) return [];
 
-  const res = await notionFetch<{ results?: NotionPage[] }>(
-    `/databases/${cfg.devicesDbId}/query`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        sorts: [{ property: "Last Heartbeat", direction: "descending" }],
-        page_size: 25,
-      }),
-    },
-  );
+  const res = await notionFetch<{ results?: NotionPage[] }>(`/databases/${cfg.devicesDbId}/query`, {
+    method: "POST",
+    body: JSON.stringify({
+      sorts: [{ property: "Last Heartbeat", direction: "descending" }],
+      page_size: 25,
+    }),
+  });
 
   return (res.results ?? []).map((page) => mapDevicePage(page));
 }
@@ -279,12 +255,11 @@ const PROP_LAST_HEARTBEAT = "Last Heartbeat";
 const PROP_FIRST_SEEN = "First seen";
 const PROP_LAST_SEEN = "Last seen";
 
- 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapDevicePage(page: any): Esp32Status {
   const p = page.properties ?? {};
   const richText = (v: unknown): string | null => {
-    const arr = (v as { rich_text?: Array<{ plain_text?: string }> })
-      ?.rich_text;
+    const arr = (v as { rich_text?: Array<{ plain_text?: string }> })?.rich_text;
     if (!arr?.length) return null;
     return arr.map((t) => t.plain_text ?? "").join("") || null;
   };

@@ -82,7 +82,7 @@ async function callThrowing<T>(
   if (res.status === 204) return undefined as T;
   const ct = res.headers.get("content-type") ?? "";
   if (!ct.includes("application/json")) return undefined as T;
-  return (await res.json()) as any as T;
+  return (await res.json()) as T;
 }
 
 // --- Calendar-side surface (preserved) -----------------------------------
@@ -118,8 +118,7 @@ export async function listPostizIntegrations(groupId?: string): Promise<PostizIn
       console.error("[Postiz] integrations request failed:", res.status);
       return [];
     }
-    const data = (await res.json()) as any as
-      PostizIntegration[] | { integrations?: PostizIntegration[] };
+    const data = (await res.json()) as PostizIntegration[] | { integrations?: PostizIntegration[] };
     return Array.isArray(data) ? data : (data.integrations ?? []);
   } catch (err) {
     console.error("[Postiz] integrations error:", err);
@@ -200,8 +199,7 @@ export async function schedulePost(input: SchedulePostInput): Promise<SchedulePo
       console.error("[Postiz] post create failed:", res.status, body.slice(0, 300));
       return { ok: false, postIds: [], error: `Postiz returned ${res.status}` };
     }
-    const data = (await res.json()) as any as
-      Array<{ id?: string; postId?: string }> | { id?: string };
+    const data = (await res.json()) as Array<{ id?: string; postId?: string }> | { id?: string };
     const postIds = Array.isArray(data)
       ? data.map((p) => p.id ?? p.postId ?? "").filter(Boolean)
       : [data.id ?? ""].filter(Boolean);
@@ -412,7 +410,7 @@ export async function uploadFile(file: Blob, filename: string): Promise<Uploaded
     signal: AbortSignal.timeout(60_000),
   });
   if (!res.ok) throw new PostizApiError(res.status, await res.text().catch(() => ""));
-  return (await res.json()) as any as UploadedFile;
+  return (await res.json()) as UploadedFile;
 }
 
 // --- Full Public-API coverage per docs.postiz.com ------------------------

@@ -1,267 +1,36 @@
 {
   "mcpServers": {
-    "fast-markdown": {
-      "command": "npx",
-      "args": ["tsx", "fast-markdown-mcp/src/index.ts"],
-      "env": {
-        "DEVDOCS_STORAGE_PATH": "${DEVDOCS_STORAGE_PATH:-/home/tbaltzakis/DevDocs/storage/markdown}"
-      },
-      "autoStart": true,
-      "alwaysAllow": [
-        "list_files",
-        "read_file",
-        "search_files",
-        "get_toc"
-      ]
-    },
-    "cloudflare-pages": {
-      "command": "npx",
-      "args": ["tsx", "cloudflare-pages-mcp/src/index.ts"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
-      },
-      "autoStart": false,
-      "alwaysAllow": [
-        "pages_list_projects",
-        "pages_get_project",
-        "pages_list_deployments",
-        "pages_get_deployment_logs"
-      ]
-    },
-    "playwright": {
+    "cloudless-infra": {
       "command": "npx",
       "args": [
-        "-y",
-        "@playwright/mcp"
+        "tsx",
+        "tools/ssh-mcp/src/index.ts"
       ],
       "env": {
-        "PLAYWRIGHT_HEADLESS": "true"
+        "OMV_SSH_HOST_TAILSCALE": "100.113.41.119",
+        "OMV_SSH_USER": "omv",
+        "OMV_SSH_KEY": "${HOME}/.ssh/id_ed25519",
+        "OMV_SSH_KEY_CONTENTS": "${OMV_SSH_KEY_CONTENTS}"
       }
     },
-    "cloudflare": {
+    "project": {
       "command": "npx",
       "args": [
         "-y",
-        "@cloudflare/mcp-server-cloudflare"
-      ],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}",
-        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID:-fb7dc7b69b662480cd5961a4d1913c78}"
-      },
-      "autoStart": true
-    },
-    "cloudflare-builds": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://builds.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-observability": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://observability.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-containers": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://containers.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-logpush": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://logs.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-ai-gateway": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://ai-gateway.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-auditlogs": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://auditlogs.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-dns-analytics": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://dns-analytics.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-dex": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://dex.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-casb": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://casb.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-bindings": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://bindings.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": true,
-      "alwaysAllow": [
-        "kv_namespaces_list",
-        "kv_namespace_create",
-        "workers_list",
-        "r2_buckets_list",
-        "d1_databases_list"
-      ]
-    },
-    "cloudflare-docs": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://docs.mcp.cloudflare.com/mcp"],
-      "autoStart": false
-    },
-    "cloudflare-graphql": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://graphql.mcp.cloudflare.com/mcp"],
-      "env": {
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      },
-      "autoStart": false
-    },
-    "cloudflare-blog": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://blog.mcp.cloudflare.com/mcp"],
-      "autoStart": false
-    },
-    "docker": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-server-docker"
+        "project-mcp"
       ],
       "autoStart": true
     },
-    "tailscale": {
+    "notion": {
       "command": "npx",
       "args": [
         "-y",
-        "@hexsleeves/tailscale-mcp-server"
+        "@notionhq/notion-mcp-server"
       ],
       "env": {
-        "TAILSCALE_API_KEY": "${TAILSCALE_API_KEY}"
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer ${NOTION_API_KEY}\",\"Notion-Version\":\"2022-06-28\"}"
       },
       "autoStart": true
-    },
-    "brand-system": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@brandsystem/mcp"
-      ],
-      "env": {
-        "BRAND_SYSTEM_API_KEY": "${BRAND_SYSTEM_API_KEY}",
-        "BRAND_SYSTEM_SITE": "https://cloudless.gr"
-      }
-    },
-    "postiz": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@postiz/mcp"
-      ],
-      "env": {
-        "POSTIZ_API_URL": "https://postiz.cloudless.gr",
-        "POSTIZ_API_KEY": "${POSTIZ_API_KEY}"
-      }
-    },
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
-    },
-    "sequentialthinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequentialthinking"
-      ]
-    },
-    "brave-search": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-brave-search"
-      ],
-      "env": {
-        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
-      }
-    },
-    "github": {
-      "command": "/home/tbaltzakis/.local/share/github-mcp-server/github-mcp-server",
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      },
-      "autoStart": true,
-      "alwaysAllow": [
-        "search_repos",
-        "search_code",
-        "search_issues",
-        "search_users",
-        "get_file_contents",
-        "get_issue",
-        "list_issues",
-        "create_issue",
-        "update_issue",
-        "get_pull_request",
-        "list_pull_requests",
-        "create_pull_request",
-        "get_repo",
-        "list_repos",
-        "create_repo",
-        "fork_repo",
-        "get_branch",
-        "list_branches",
-        "create_branch",
-        "delete_branch",
-        "get_commit",
-        "list_commits",
-        "get_workflow_run",
-        "list_workflow_runs",
-        "get_workflow_run_logs",
-        "get_workflow_run_usage",
-        "get_actions_secrets",
-        "create_actions_secret",
-        "delete_actions_secret",
-        "get_actions_variables",
-        "create_actions_variable",
-        "delete_actions_variable"
-      ]
     }
   }
 }
-

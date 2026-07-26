@@ -1,128 +1,162 @@
 /**
- * R25: Self-hosted admin auto-login bridge
- * 
- * Provides one-click admin access to self-hosted apps via Cloudflare Access Service Tokens.
- * Integrated with /api/admin/autologin for the /admin/cluster tiles.
+ * Self-hosted admin auto-login bridge (R25)
+ *
+ * Knows how to produce a launch URL for each self-hosted app tile.
+ * Only AppFlowy supports server-side token-based SSO (GoTrue password grant).
+ * All other apps get a canonical admin URL (smart link, opens in new tab).
+ *
+ * Security notes:
+ * - AppFlowy tokens are fetched server-side and short-lived (5 min max, set by GoTrue).
+ * - Tokens are never logged — only the resulting redirect URL is returned.
+ * - This module is server-only; never import it from client components.
  */
-
 import { getConfig } from "@/lib/ssm-config";
 
-// App name type
-export type SelfhostedApp = "appflowy" | "espocrm" | "postiz" | "grafana" | "n8n" | "kuma";
+export type SelfhostedApp = "appflowy" | "espocrm" | "n8n" | "postiz" | "grafana" | "kuma";
 
-// Canonical app config (used by autologin route)
-export const SELFHOSTED_APP_NAMES = {
-  appflowy: {
-    url: "https://appflowy.cloudless.gr",
-    authMethod: "service-token",
-  },
-  espocrm: {
-    url: "https://espocrm.cloudless.gr/",
-    authMethod: "basic",
-  },
-  postiz: {
-    url: "https://postiz.cloudless.gr",
-    authMethod: "jwt",
-  },
-  grafana: {
-    url: "https://grafana.cloudless.gr",
-    authMethod: "cookie",
-  },
-  n8n: {
-    url: "https://n8n.cloudless.gr/signin",
-    authMethod: "basic",
-  },
-  kuma: {
-    url: "https://kuma.cloudless.gr/dashboard",
-    authMethod: "basic",
-  },
-} as const;
+export const SELFHOSTED_APP_NAMES: Record<SelfhostedApp, string> = {
+  appflowy: "AppFlowy",
+  espocrm: "EspoCRM",
+  n8n: "n8n",
+  postiz: "Postiz",
+  grafana: "Grafana",
+  kuma: "Uptime Kuma",
+};
 
-/**
- * Result of autologin URL generation
- */
 export interface AutologinResult {
   url: string;
+  /** true = URL contains an injected token and should not be stored */
   hasToken: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Per-app URL builders
+// ---------------------------------------------------------------------------
+
 /**
- * Check if an app supports auto-login (currently only AppFlowy with GoTrue)
+ * AppFlowy: POST to GoTrue password-grant endpoint → get access_token →
+ * construct deep-link `{base}/web#access_token=…` so the SPA logs in on load.
+ *
+ * The access_token returned is short-lived (GoTrue default: 1 hour, but we
+ * request a fresh one immediately before redirect so it's effectively brand-new).
+ * We do NOT use APPFLOWY_JWT_SECRET here — that's for the service-role API
+ * path. This is a real user login via the GoTrue password grant.
  */
-export function supportsAutoLogin(app: SelfhostedApp): boolean {
-  return app === "appflowy";
+async function buildAppFlowyUrl(): Promise<AutologinResult> {
+  const cfg = await getConfig();
+  const base = (cfg.APPFLOWY_API_URL ?? "").replace(/\/$/, "");
+  const email = cfg.APPFLOWY_EMAIL ?? "";
+  const password = cfg.APPFLOWY_PASSWORD ?? "";
+
+  if (!base || !email || !password) {
+    throw new Error(
+      "AppFlowy not configured: APPFLOWY_API_URL / APPFLOWY_EMAIL / APPFLOWY_PASSWORD missing"
+    );
+  }
+
+  // GoTrue password-grant: POST {base}/gotrue/token?grant_type=password
+  const grantUrl = `${base}/gotrue/token?grant_type=password`;
+
+  let res: Response;
+  try {
+    res = await fetch(grantUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (err) {
+    throw new Error(`AppFlowy GoTrue unreachable: ${(err as Error).message}`);
+  }
+
+  if (!res.ok) {
+    // Deliberately omit password from any message that bubbles up.
+    throw new Error(`AppFlowy GoTrue returned HTTP ${res.status} for ${email}`);
+  }
+
+  let body: { access_token?: string };
+  try {
+    body = (await res.json()) as { access_token?: string };
+  } catch {
+    throw new Error("AppFlowy GoTrue response was not valid JSON");
+  }
+
+  const token = body.access_token;
+  if (!token) {
+    throw new Error("AppFlowy GoTrue did not return an access_token");
+  }
+
+  // AppFlowy web SPA reads the access_token from the URL hash on initial load.
+  const redirectUrl = `${base}/web#access_token=${encodeURIComponent(token)}`;
+  return { url: redirectUrl, hasToken: true };
 }
 
+function buildEspoCrmUrl(base: string): AutologinResult {
+  // EspoCRM has no token-based SSO — direct to login page.
+  const b = base.replace(/\/$/, "");
+  return { url: `${b}/`, hasToken: false };
+}
+
+function buildN8nUrl(base: string): AutologinResult {
+  const b = base.replace(/\/$/, "");
+  return { url: `${b}/signin`, hasToken: false };
+}
+
+function buildPostizUrl(base: string): AutologinResult {
+  const b = base.replace(/\/$/, "");
+  return { url: `${b}/`, hasToken: false };
+}
+
+function buildGrafanaUrl(base: string): AutologinResult {
+  const b = (base || "https://grafana.cloudless.gr").replace(/\/$/, "");
+  return { url: `${b}/`, hasToken: false };
+}
+
+function buildKumaUrl(base: string): AutologinResult {
+  const b = (base || "https://kuma.cloudless.gr").replace(/\/$/, "");
+  // Kuma dashboard — no login required if running without auth mode.
+  return { url: `${b}/dashboard`, hasToken: false };
+}
+
+// ---------------------------------------------------------------------------
+// Public entry point
+// ---------------------------------------------------------------------------
+
 /**
- * Generate a pre-authenticated URL for a self-hosted app
- * Uses Cloudflare Access Service Tokens for SSO
+ * Returns a launch URL for the given self-hosted app.
+ * For AppFlowy this involves a live GoTrue call; for all others it's a
+ * synchronous URL build from SSM config.
  */
 export async function getAutologinUrl(app: SelfhostedApp): Promise<AutologinResult> {
-  const appConfig = SELFHOSTED_APP_NAMES[app];
-  
-  // Check if Cloudflare Access Service Token is configured
-  const cfClientId = process.env[`CLOUDFLARE_ACCESS_CLIENT_ID_${app.toUpperCase()}`];
-  const cfClientSecret = process.env[`CLOUDFLARE_ACCESS_CLIENT_SECRET_${app.toUpperCase()}`];
+  const cfg = await getConfig();
 
-  // AppFlowy uses GoTrue password grant
-  if (app === "appflowy") {
-    // Get config from SSM (includes credentials)
-    const config = await getConfig();
-    const apiUrl = config.APPFLOWY_API_URL;
-    const email = config.APPFLOWY_EMAIL;
-    const password = config.APPFLOWY_PASSWORD;
+  switch (app) {
+    case "appflowy":
+      return buildAppFlowyUrl();
 
-    if (!apiUrl || !email || !password) {
-      throw new Error("AppFlowy auto-login is not configured (APPFLOWY_API_URL, APPFLOWY_EMAIL, or APPFLOWY_PASSWORD missing)");
-    }
+    case "espocrm":
+      return buildEspoCrmUrl(cfg.ESPOCRM_BASE_URL || "https://espocrm.cloudless.gr");
 
-    try {
-      const resp = await fetch(`${apiUrl}/auth/token?grant_type=password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    case "n8n":
+      return buildN8nUrl(cfg.N8N_API_URL || "https://n8n.cloudless.gr");
 
-      if (!resp.ok) {
-        const status = resp.status;
-        throw new Error(`AppFlowy GoTrue returned HTTP ${status}`);
-      }
+    case "postiz":
+      return buildPostizUrl(cfg.POSTIZ_API_URL || "https://postiz.cloudless.gr");
 
-       
-      const data = await resp.json() as any;
+    case "grafana":
+      return buildGrafanaUrl(cfg.GRAFANA_BASE_URL);
 
-      if (!data.access_token) {
-        throw new Error("AppFlowy GoTrue returned no access_token in response");
-      }
+    case "kuma":
+      return buildKumaUrl(cfg.KUMA_BASE_URL);
 
-      // Return URL with access token in hash
-      return {
-        url: `${apiUrl}/#access_token=${data.access_token}`,
-        hasToken: true,
-      };
-    } catch (err) {
-      if (err instanceof Error) {
-        // Sanitize error messages that might leak credentials
-        if (err.message.includes("ECONNREFUSED") || err.message.includes("ENOTFOUND")) {
-          throw new Error(`AppFlowy is unreachable: ${err.message}`);
-        }
-        throw err;
-      }
-      throw err;
+    default: {
+      const _exhaustive: never = app;
+      throw new Error(`Unknown self-hosted app: ${String(_exhaustive)}`);
     }
   }
+}
 
-  // For apps behind Cloudflare Access, return the URL with access token param
-  if (cfClientId && cfClientSecret) {
-    return {
-      url: appConfig.url,
-      hasToken: true,
-    };
-  }
-
-  // No Access configured - return direct URL (strip trailing slash if present)
-  return {
-    url: appConfig.url.replace(/\/$/, ""),
-    hasToken: false,
-  };
+/** Returns true only for apps where we can inject a real token (currently just AppFlowy). */
+export function supportsAutoLogin(app: SelfhostedApp): boolean {
+  return app === "appflowy";
 }

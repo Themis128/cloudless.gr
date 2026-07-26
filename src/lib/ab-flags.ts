@@ -1,5 +1,4 @@
 import { getConfig } from "@/lib/ssm-config";
-import type { AuthDatabase } from "@/lib/auth-d1";
 
 export interface ABFlag {
   id: string;
@@ -13,19 +12,7 @@ export interface ABFlag {
   };
 }
 
-// D1 binding interface - provided by Worker context
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
-function getAuthDb(): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  return env.AUTH_DB ?? null;
-}
-
-const D1_CONFIG_KEY = "AB_FLAGS_JSON";
-
-// Default flag definitions — overridden by D1 config or SSM AB_FLAGS_JSON when configured
+// Default flag definitions — overridden by SSM AB_FLAGS_JSON when configured
 export const DEFAULT_FLAGS: ABFlag[] = [
   {
     id: "hero-cta",
@@ -62,45 +49,7 @@ export const DEFAULT_FLAGS: ABFlag[] = [
   },
 ];
 
-async function readFlagsFromD1(): Promise<ABFlag[] | null> {
-  const db = getAuthDb();
-  if (!db) return null;
-  try {
-    const row = await db
-      .prepare("SELECT value FROM config WHERE key = ?")
-      .bind(D1_CONFIG_KEY)
-      .first<{ value: string }>();
-    if (row?.value) {
-      const parsed = JSON.parse(row.value) as ABFlag[];
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (err) {
-    console.warn(
-      "[ab-flags] D1 read failed, falling back to SSM:",
-      err instanceof Error ? err.message : err
-    );
-  }
-  return null;
-}
-
-export async function saveFlagsToD1(flags: ABFlag[]): Promise<void> {
-  const db = getAuthDb();
-  if (!db) throw new Error("D1 not available");
-  await db
-    .prepare(
-      "INSERT INTO config (key, value, updated_at) VALUES (?, ?, ?) " +
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at"
-    )
-    .bind(D1_CONFIG_KEY, JSON.stringify(flags), Math.floor(Date.now() / 1000))
-    .run();
-}
-
 export async function getABFlags(): Promise<ABFlag[]> {
-  // Try D1 first (Cloudflare Workers)
-  const d1Flags = await readFlagsFromD1();
-  if (d1Flags) return d1Flags;
-
-  // Fall back to SSM via getConfig
   try {
     const cfg = await getConfig();
     const raw = (cfg as unknown as Record<string, string | undefined>).AB_FLAGS_JSON;

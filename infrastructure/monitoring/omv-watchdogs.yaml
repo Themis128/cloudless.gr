@@ -67,12 +67,6 @@ spec:
                     secretKeyRef:
                       name: cluster-alerts-secret
                       key: SLACK_BOT_TOKEN
-                - name: KUMA_PUSH_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: cluster-alerts-kuma
-                      key: KUMA_PUSH_K3S_POD_HEALTH
-                      optional: true
                 - name: SLACK_CHANNEL
                   value: "C09AF5W3X16"
                 - name: WARN_PCT
@@ -120,8 +114,6 @@ spec:
 
                   if [ -z "$WARNS$CRITS" ]; then
                     echo "[${STAMP}] all monitored mounts under ${WARN_PCT}%"
-                    [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
-                      wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=all+mounts+under+${WARN_PCT}pct" >/dev/null 2>&1 || true
                     exit 0
                   fi
 
@@ -136,8 +128,6 @@ spec:
                   import json,os,sys
                   print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))
                   ')
-                  [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
-                    wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=disk+pressure+detected" >/dev/null 2>&1 || true
                   echo "[${STAMP}] posting to ${SLACK_CHANNEL}"
                   RESP=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
                     -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \
@@ -208,12 +198,6 @@ spec:
                     secretKeyRef:
                       name: cluster-alerts-secret
                       key: SLACK_BOT_TOKEN
-                - name: KUMA_PUSH_TOKEN
-                  valueFrom:
-                    secretKeyRef:
-                      name: cluster-alerts-kuma
-                      key: KUMA_PUSH_ETCD_SNAPSHOT_AGE
-                      optional: true
                 - name: SLACK_CHANNEL
                   value: "C09AF5W3X16"
                 - name: MAX_AGE_HOURS
@@ -241,13 +225,9 @@ spec:
                       BODY=":warning: *k3s etcd snapshot is ${AGE_H}h old* (expected <${MAX_AGE_HOURS}h). Latest: \`${LATEST_FILE}\`. Check the hourly snapshot cron on omv-main."
                     else
                       echo "[${STAMP}] backup healthy: newest snapshot ${AGE_H}h old"
-                      [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
-                        wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=up&msg=snapshot+${AGE_H}h+old" >/dev/null 2>&1 || true
                       exit 0
                     fi
                   fi
-                  [ -n "${KUMA_PUSH_TOKEN:-}" ] && \
-                    wget -qO- "https://kuma.cloudless.gr/api/push/${KUMA_PUSH_TOKEN}?status=down&msg=etcd+snapshot+stale+or+missing" >/dev/null 2>&1 || true
                   PAYLOAD=$(printf '%s' "$BODY" | python3 -c 'import json,os,sys; print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": sys.stdin.read()}))')
                   RESP=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
                     -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" \

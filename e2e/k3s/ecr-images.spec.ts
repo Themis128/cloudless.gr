@@ -1,58 +1,50 @@
 /**
- * Workers image health — verifies the Cloudflare Workers deployment
- * is running and serving the application correctly.
+ * ECR image availability — verifies Docker images the Pi k3s cluster pulls
+ * are present in ECR and not expired by lifecycle policy.
  *
- * MIGRATION NOTE (July 2026): The application has migrated from k3s to Cloudflare
- * Workers. The pi-origin endpoint is now decommissioned. These tests now focus on
- * the primary Workers deployment status.
- *
- * Catches: Workers deployment issues, missing env vars, version format issues.
+ * Catches: ECR lifecycle too aggressive, failed push, image tag mismatch.
  */
 import { test, expect } from "../coverage";
-import { PRIMARY_HOST, probeHealth, isHealthBody, isNetworkError } from "./_helpers";
+import { PRIMARY_HOST, STANDBY_HOST, probeHealth, isHealthBody } from "./_helpers";
 
-test.describe("Workers image health", () => {
-  test("Workers primary responds with valid health body", async ({ request }) => {
-    let r: Awaited<ReturnType<typeof request.get>>;
-    try {
-      r = await request.get(`https://${PRIMARY_HOST}/api/health`, {
-        failOnStatusCode: false,
-        timeout: 20_000,
-      });
-    } catch (e) {
-      if (isNetworkError(e)) { test.skip(true, `cloudless.gr not reachable: ${e}`); return; }
-      throw e;
-    }
-    expect(r.status(), "Primary health endpoint must return 200").toBe(200);
+test.describe("ECR / container image health", () => {
+  test("Pi cluster is running a valid image (app responds on pi-origin)", async ({ request }) => {
+    const r = await request.get(`https://pi-origin.${PRIMARY_HOST}/api/health`, {
+      failOnStatusCode: false,
+      timeout: 20_000,
+    });
+    expect(r.status(), "Pi origin not responding — possible ImagePullBackOff?").toBe(200);
     expect(isHealthBody(await r.text())).toBe(true);
   });
 
-  test("health response contains status and timestamp", async ({ request }) => {
-    let r: Awaited<ReturnType<typeof probeHealth>>;
-    try {
-      r = await probeHealth(request, PRIMARY_HOST);
-    } catch (e) {
-      if (isNetworkError(e)) { test.skip(true, `host not reachable: ${e}`); return; }
-      throw e;
+  test("primary app version matches standby (no SHA drift)", async ({ request }) => {
+    const [primary, standby] = await Promise.all([
+      probeHealth(request, PRIMARY_HOST),
+      probeHealth(request, STANDBY_HOST),
+    ]);
+    const pBody = JSON.parse(primary.body);
+    const sBody = JSON.parse(standby.body);
+    expect(pBody.status).toBe(sBody.status);
+    // Exact SHA equality is NOT asserted here — the Pi image build takes ~10 min
+    // and the Pi legitimately lags one deploy behind Lambda during rollout windows.
+    // SHA drift with a grace window is tested by the dedicated sha-drift-detector.yml
+    // workflow; asserting equality here produces transient CI noise on every deploy.
+    // We verify both report a valid git SHA (proving APP_VERSION is wired up).
+    const shaRe = /^[0-9a-f]{7,40}$/i;
+    if (pBody.version) {
+      expect(pBody.version, `primary version is not a git SHA: ${pBody.version}`).toMatch(shaRe);
     }
-    // Just check the response is valid JSON (version may be placeholder in dev)
-    const body = JSON.parse(r.body);
-    expect(body.status).toBe("ok");
-    expect(typeof body.timestamp).toBe("string");
+    if (sBody.version) {
+      expect(sBody.version, `standby version is not a git SHA: ${sBody.version}`).toMatch(shaRe);
+    }
   });
 
-  test("Workers responds (any valid response, headers optional in dev)", async ({ request }) => {
-    let r: Awaited<ReturnType<typeof request.get>>;
-    try {
-      r = await request.get(`https://${PRIMARY_HOST}/api/health`, {
-        failOnStatusCode: false,
-        timeout: 20_000,
-      });
-    } catch (e) {
-      if (isNetworkError(e)) { test.skip(true, `cloudless.gr not reachable: ${e}`); return; }
-      throw e;
-    }
-    // Just verify we get a 200 response — CSP headers are set by middleware
-    expect(r.status()).toBe(200);
+  test("Pi origin responds with the app's CSP (not a default nginx/k3s page)", async ({ request }) => {
+    const r = await request.get(`https://pi-origin.${PRIMARY_HOST}/api/health`, {
+      failOnStatusCode: false,
+      timeout: 20_000,
+    });
+    const csp = r.headers()["content-security-policy"] ?? "";
+    expect(csp, "Pi origin missing CSP — serving default page instead of the app?").toContain("frame-ancestors");
   });
 });

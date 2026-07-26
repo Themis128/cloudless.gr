@@ -35,9 +35,9 @@ export default function AdminBlogPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/blog");
+      const res = await fetchWithAuth("/api/admin/notion/blog");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setPosts(data.posts ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load posts");
@@ -47,6 +47,7 @@ export default function AdminBlogPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

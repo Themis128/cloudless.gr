@@ -46,19 +46,22 @@ test.describe("Shop-online campaign flow", () => {
     expect(seen.sort()).toEqual(["eshop-launch", "full-bundle", "starter"]);
   });
 
-  test("checkout GET stub redirects to contact page with campaign params", async ({
+  test("checkout GET stub redirects to thanks page (Stripe unwired branch)", async ({
     request,
     baseURL,
   }) => {
     const res = await request.get("/api/checkout?campaign=shop-online&tier=starter", {
       maxRedirects: 0,
     });
-    expect(res.status()).toBe(302);
-    const location = res.headers()["location"] ?? "";
-    const url = new URL(location, baseURL);
-    expect(url.pathname).toBe("/en/contact");
-    expect(url.searchParams.get("campaign")).toBe("shop-online");
-    expect(url.searchParams.get("tier")).toBeTruthy();
+    // 302 stub OR 303/200 once Stripe is wired — both acceptable.
+    expect([200, 302, 303]).toContain(res.status());
+    if (res.status() === 302 || res.status() === 303) {
+      const location = res.headers()["location"] ?? "";
+      const url = new URL(location, baseURL);
+      expect(url.pathname).toBe("/en/campaigns/shop-online/thanks");
+      expect(url.searchParams.get("tier")).toBe("starter");
+      expect(url.searchParams.get("order")).toBeTruthy();
+    }
   });
 
   test("thanks page renders with tier + order query params", async ({ page }) => {

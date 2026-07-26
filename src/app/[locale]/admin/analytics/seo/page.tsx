@@ -103,14 +103,14 @@ export default function SeoAnalyticsPage() {
         return;
       }
       if (!seoRes.ok) throw new Error("Failed to load SEO snapshot");
-      const seo = (await seoRes.json()) as any as any as any;
+      const seo = await seoRes.json();
       setSnapshot(seo.snapshot ?? null);
       setKeywords(seo.keywords ?? []);
-      if (qpRes.ok) setMappings(((await qpRes.json()) as any as any).mappings ?? []);
-      if (intentRes.ok) setIntent(((await intentRes.json()) as any as any).intent ?? null);
-      if (countryRes.ok) setCountries(((await countryRes.json()) as any as any).countries ?? []);
-      if (deviceRes.ok) setDevices(((await deviceRes.json()) as any as any).devices ?? []);
-      if (archiveRes.ok) setArchive(((await archiveRes.json()) as any as any).reports ?? []);
+      if (qpRes.ok) setMappings((await qpRes.json()).mappings ?? []);
+      if (intentRes.ok) setIntent((await intentRes.json()).intent ?? null);
+      if (countryRes.ok) setCountries((await countryRes.json()).countries ?? []);
+      if (deviceRes.ok) setDevices((await deviceRes.json()).devices ?? []);
+      if (archiveRes.ok) setArchive((await archiveRes.json()).reports ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -119,6 +119,7 @@ export default function SeoAnalyticsPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, []);
 

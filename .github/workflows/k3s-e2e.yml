@@ -81,7 +81,7 @@ jobs:
         # build. Up to 3min of polling covers the K3s rolling update window.
         run: |
           set -euo pipefail
-          BASE="${BASE_URL:-https://pi-origin.cloudless.gr}"
+          BASE="${BASE_URL:-https://cloudless.gr}"
           deadline=$(( $(date +%s) + 180 ))
           attempt=0
           while [ "$(date +%s)" -lt "$deadline" ]; do
@@ -111,7 +111,7 @@ jobs:
       - name: run k3s suite
         env:
           CI: "1"
-          K3S_BASE_URL: ${{ inputs.base_url || 'https://pi-origin.cloudless.gr' }}
+          K3S_BASE_URL: ${{ inputs.base_url || 'https://cloudless.gr' }}
         run: pnpm exec playwright test --config=playwright.k3s.config.mts
 
       - name: upload report on failure

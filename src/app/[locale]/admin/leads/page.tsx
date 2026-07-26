@@ -19,7 +19,7 @@ interface UnifiedLead {
 }
 
 const SOURCE_BADGE: Record<string, string> = {
-  espocrm: "bg-orange-500/10 text-orange-300 border-orange-500/30",
+  hubspot: "bg-orange-500/10 text-orange-300 border-orange-500/30",
   portal: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
 };
 
@@ -45,7 +45,7 @@ export default function AdminLeadsPage() {
         if (res.status === 503) throw new Error("No lead source configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setLeads(data.leads ?? []);
       setFetchedAt(data.fetchedAt ?? new Date().toISOString());
       setError(null);
@@ -58,6 +58,7 @@ export default function AdminLeadsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLeads().catch(() => {});
     const interval = setInterval(() => {
       fetchLeads().catch(() => {});

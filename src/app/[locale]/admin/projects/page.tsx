@@ -66,9 +66,9 @@ export default function AdminProjectsPage() {
     setLoadingProjects(true);
     setErrorProjects(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/projects");
+      const res = await fetchWithAuth("/api/admin/notion/projects");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setProjects(data.projects ?? []);
     } catch (err) {
       setErrorProjects(err instanceof Error ? err.message : "Failed to load projects");
@@ -81,9 +81,9 @@ export default function AdminProjectsPage() {
     setLoadingTasks(true);
     setErrorTasks(null);
     try {
-      const res = await fetchWithAuth("/api/admin/appflowy/tasks");
+      const res = await fetchWithAuth("/api/admin/notion/tasks");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as any;
+      const data = await res.json();
       setTasks(data.tasks ?? []);
       setFetchedTasks(true);
     } catch (err) {
@@ -94,11 +94,13 @@ export default function AdminProjectsPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadProjects();
   }, []);
 
   useEffect(() => {
     if (tab === "tasks" && !fetchedTasks) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadTasks();
     }
   }, [tab, fetchedTasks]);
@@ -106,7 +108,7 @@ export default function AdminProjectsPage() {
   async function updateProjectStatus(id: string, status: ProjectStatus) {
     setUpdatingId(id);
     try {
-      await fetchWithAuth("/api/admin/appflowy/projects", {
+      await fetchWithAuth("/api/admin/notion/projects", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),
@@ -120,7 +122,7 @@ export default function AdminProjectsPage() {
   async function updateTaskStatus(id: string, status: TaskStatus) {
     setUpdatingId(id);
     try {
-      await fetchWithAuth("/api/admin/appflowy/tasks", {
+      await fetchWithAuth("/api/admin/notion/tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageId: id, status }),

@@ -32,7 +32,7 @@ const ALERTABLE_SEVERITIES: readonly AdminAlertSeverity[] = ["high", "critical"]
 
 async function verifySecret(req: NextRequest): Promise<boolean> {
   const cfg = await getConfig();
-  const expected = cfg.CONTENT_WEBHOOK_SECRET;
+  const expected = cfg.NOTION_WEBHOOK_SECRET;
   if (!expected) return false;
   const got = req.headers.get("x-mqtt-publish-secret");
   if (!got || got.length !== expected.length) return false;
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   let body: { topic?: string; payload?: unknown; retain?: boolean };
   try {
-    body = (await req.json()) as any as typeof body;
+    body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }

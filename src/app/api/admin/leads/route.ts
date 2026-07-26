@@ -62,14 +62,14 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const espocrmConfigured = await isConfiguredAsync("ESPOCRM_API_KEY");
+  const hubspotConfigured = await isConfiguredAsync("ESPOCRM_API_KEY");
 
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Number(searchParams.get("limit") ?? 50), 100);
 
     const [contactsResult, pendingResult] = await Promise.allSettled([
-      espocrmConfigured ? listContacts(limit) : Promise.resolve([]),
+      hubspotConfigured ? listContacts(limit) : Promise.resolve([]),
       readPendingClients(),
     ]);
 
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       contactsResult.status === "fulfilled" ? (contactsResult.value as EspoCRMContactRecord[]) : [];
     const pending = pendingResult.status === "fulfilled" ? pendingResult.value : [];
 
-    if (!espocrmConfigured && pending.length === 0) {
+    if (!hubspotConfigured && pending.length === 0) {
       return NextResponse.json(
         { error: "No lead source configured (EspoCRM key missing, no portal leads)." },
         { status: 503 }
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         email: p.email,
         name: [p.firstname, p.lastname].filter(Boolean).join(" "),
         company: p.company || undefined,
-        sources: ["espocrm"],
+        sources: ["hubspot"],
         status: p.hs_lead_status || undefined,
         createdAt: p.createdate || undefined,
       });
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       leads,
       total: leads.length,
       sources: {
-        espocrm: espocrmConfigured,
+        hubspot: hubspotConfigured,
         portal: true,
       },
       fetchedAt: new Date().toISOString(),
