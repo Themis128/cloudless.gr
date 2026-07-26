@@ -1,5 +1,4 @@
-/**
- * AppFlowy Cloud HTTP client — read-side surface for /admin/integrations and
+/** * AppFlowy Cloud HTTP client — read-side surface for /admin/integrations and
  * the appflowy-to-lake ETL. AppFlowy Cloud's REST API is documented at
  * https://github.com/AppFlowy-IO/AppFlowy-Cloud — authentication is the same
  * GoTrue JWT the SPA uses.
@@ -7,14 +6,14 @@
  * Two auth modes:
  *
  * 1. **Service-role JWT** — sign with `GOTRUE_JWT_SECRET` (HS256, role=
- *    "supabase_admin"). Bypasses per-user RLS; safe for read-only admin
- *    queries. Use this for /admin/integrations and ETL.
+ * "supabase_admin"). Bypasses per-user RLS; safe for read-only admin
+ * queries. Use this for /admin/integrations and ETL.
  * 2. **User JWT** — pass-through of the SPA's access_token. Use when calling
- *    on behalf of a logged-in user (no current consumer).
+ * on behalf of a logged-in user (no current consumer).
  *
  * Config (SSM or env):
- *   APPFLOWY_API_URL          base URL, e.g. https://appflowy.cloudless.gr
- *   APPFLOWY_JWT_SECRET       same value as cluster Secret appflowy-secrets/GOTRUE_JWT_SECRET
+ * APPFLOWY_API_URL base URL, e.g. https://appflowy.cloudless.gr
+ * APPFLOWY_JWT_SECRET same value as cluster Secret appflowy-secrets/GOTRUE_JWT_SECRET
  *
  * Both unconfigured → typed `AppFlowyNotConfiguredError` so callers can fall
  * back to "not wired yet" without crashing.
@@ -64,8 +63,7 @@ function b64url(input: Buffer | string): string {
     .replace(/\//g, "_");
 }
 
-/**
- * Mint a short-lived service-role JWT. Mirrors the shape GoTrue issues for
+/** Mint a short-lived service-role JWT. Mirrors the shape GoTrue issues for
  * admin grants: `role: "supabase_admin"`, audience empty, 5-minute expiry.
  */
 function signServiceJwt(secret: string): string {
@@ -80,7 +78,9 @@ function signServiceJwt(secret: string): string {
   };
   const head = b64url(JSON.stringify(header));
   const body = b64url(JSON.stringify(payload));
-  const sig = b64url(createHmac("sha256", secret).update(`${head}.${body}`).digest());
+  const sig = b64url(
+    createHmac("sha256", secret).update(`${head}.${body}`).digest()
+  );
   return `${head}.${body}.${sig}`;
 }
 
@@ -113,7 +113,6 @@ async function callThrowing<T>(
 // ---------------------------------------------------------------------------
 // Read surface used by /admin/integrations + ETL
 // ---------------------------------------------------------------------------
-
 export async function isAppFlowyConfigured(): Promise<boolean> {
   try {
     await getAppFlowyConfig();
@@ -144,8 +143,15 @@ export interface AppFlowyWorkspace {
   created_at: string;
 }
 
-/**
- * Lists every workspace visible to the service-role JWT. Used by ETL +
+export interface AppFlowyUserSummary {
+  uid: number;
+  uuid: string;
+  email: string;
+  name: string;
+  created_at: string;
+}
+
+/** Lists every workspace visible to the service-role JWT. Used by ETL +
  * the admin page tile. Returns empty array on unconfigured.
  */
 export async function listAllWorkspaces(): Promise<AppFlowyWorkspace[]> {
@@ -156,14 +162,6 @@ export async function listAllWorkspaces(): Promise<AppFlowyWorkspace[]> {
     if (e instanceof AppFlowyNotConfiguredError) return [];
     throw e;
   }
-}
-
-export interface AppFlowyUserSummary {
-  uid: number;
-  uuid: string;
-  email: string;
-  name: string;
-  created_at: string;
 }
 
 export async function listAllUsers(): Promise<AppFlowyUserSummary[]> {
@@ -184,7 +182,8 @@ export async function getAppFlowySummary(): Promise<{
   userCount: number;
 }> {
   const configured = await isAppFlowyConfigured();
-  if (!configured) return { configured: false, healthy: false, workspaceCount: 0, userCount: 0 };
+  if (!configured)
+    return { configured: false, healthy: false, workspaceCount: 0, userCount: 0 };
   const [healthy, workspaces, users] = await Promise.all([
     pingAppFlowyHealth(),
     listAllWorkspaces().catch(() => [] as AppFlowyWorkspace[]),
@@ -196,4 +195,91 @@ export async function getAppFlowySummary(): Promise<{
     workspaceCount: workspaces.length,
     userCount: users.length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Admin CMS surface — used by Next.js /admin/appflowy/* routes
+// ---------------------------------------------------------------------------
+export interface AppFlowyView {
+  view_id: string;
+  name: string;
+  type: "document" | "folder";
+  document_id?: string;
+  last_edited_time: string;
+  cover_image?: string;
+}
+
+export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyView[]> {
+  try {
+    const r = await callThrowing<{ data: AppFlowyView[] }>(`/admin/workspace/${workspaceId}/views`);
+    return r.data ?? [];
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return [];
+    throw e;
+  }
+}
+
+export async function getDocument(workspaceId: string, viewId: string): Promise<unknown> {
+  try {
+    const r = await callThrowing<{ data: unknown }>(`/admin/workspace/${workspaceId}/document/${viewId}`);
+    return r.data;
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) throw e;
+    throw e;
+  }
+}
+
+export async function extractDocText(doc: unknown): Promise<string> {
+  try {
+    // Simplified text extraction for AppFlowy documents
+    const data = doc as { text?: string; content?: unknown[] };
+    if (data.text) return data.text;
+    if (Array.isArray(data.content)) {
+      return data.content
+        .map((c) => {
+          if (typeof c === "string") return c;
+          if (c && typeof c === "object" && "text" in c) return String(c.text);
+          return "";
+        })
+        .join("\n");
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+export async function markdownToHtml(markdown: string): Promise<string> {
+  // Simplified markdown to HTML converter
+  return markdown
+    .replace(/^# (.*$)/gm, "<h1>$1</h1>")
+    .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+    .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/`(.*?)`/g, "<code>$1</code>")
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/\n/g, "<br/>");
+}
+
+export async function listWorkspaceViews(workspaceId: string): Promise<AppFlowyView[]> {
+  try {
+    const r = await callThrowing<{ data: AppFlowyView[] }>(`/admin/workspace/${workspaceId}/views`);
+    return r.data ?? [];
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return [];
+    throw e;
+  }
+}
+
+export async function searchDocuments(workspaceId: string, query: string): Promise<AppFlowyView[]> {
+  try {
+    const r = await callThrowing<{ data: AppFlowyView[] }>(
+      `/admin/workspace/${workspaceId}/search?query=${encodeURIComponent(query)}`
+    );
+    return r.data ?? [];
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return [];
+    throw e;
+  }
 }

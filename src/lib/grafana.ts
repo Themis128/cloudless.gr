@@ -1,17 +1,4 @@
-/**
- * Grafana admin API client — dashboard CRUD + health probe. Used by future
- * /admin/grafana page and by any ETL that wants to provision a dashboard
- * programmatically (e.g. when a new self-hosted app comes online).
- *
- * Config (SSM or env):
- *   GRAFANA_BASE_URL  default: https://grafana.cloudless.gr
- *   GRAFANA_API_TOKEN admin-scoped API token from Grafana Settings → API Keys
- *
- * Both halves of the app reuse this lib. Token grants full admin so it's
- * never exposed to the client — every consumer is a server-side route or
- * Lambda. Unconfigured → throws `GrafanaNotConfiguredError`.
- */
-import { getConfig } from "@/lib/ssm-config";
+/** * Grafana admin API client — dashboard CRUD + health probe. Used by future * /admin/grafana page and by any ETL that wants to provision a dashboard * programmatically (e.g. when a new self-hosted app comes online). * * Config (SSM or env): * GRAFANA_BASE_URL default: https://grafana.cloudless.gr * GRAFANA_API_TOKEN admin-scoped API token from Grafana Settings → API Keys * * Both halves of the app reuse this lib. Token grants full admin so it's * never exposed to the client — every consumer is a server-side route or * Lambda. Unconfigured → throws `GrafanaNotConfiguredError`. */ import { getConfig } from "@/lib/ssm-config";
 
 export class GrafanaNotConfiguredError extends Error {
   constructor() {
@@ -75,6 +62,16 @@ export async function pingGrafana(): Promise<boolean> {
   }
 }
 
+export interface GrafanaDatasource {
+  uid: string;
+  name: string;
+  type: string;
+  url: string;
+  basicAuth: boolean;
+  basicAuthUser?: string;
+  isDefault: boolean;
+}
+
 export interface GrafanaDashboardSummary {
   uid: string;
   title: string;
@@ -82,6 +79,28 @@ export interface GrafanaDashboardSummary {
   type: "dash-db" | "dash-folder";
   tags: string[];
   folderTitle?: string;
+}
+
+export async function listDatasources(): Promise<GrafanaDatasource[]> {
+  const res = await grafanaFetch("/datasources");
+  if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
+  return (await res.json()) as GrafanaDatasource[];
+}
+
+export async function syncPrometheusDatasource(prometheusUrl?: string): Promise<GrafanaDatasource> {
+  const body = prometheusUrl ? { url: prometheusUrl } : undefined;
+  const res = await grafanaFetch(
+    "/datasources/uid/prometheus/sync",
+    { method: "POST", body: body ? JSON.stringify(body) : undefined }
+  );
+  if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
+  return (await res.json()) as GrafanaDatasource;
+}
+
+export async function prometheusQuery(query: string): Promise<unknown> {
+  const res = await grafanaFetch(`/datasources/uid/prometheus/query?query=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
+  return res.json();
 }
 
 export async function listDashboards(query = ""): Promise<GrafanaDashboardSummary[]> {
@@ -94,11 +113,7 @@ export async function listDashboards(query = ""): Promise<GrafanaDashboardSummar
 
 export interface GrafanaDashboardResponse {
   dashboard: Record<string, unknown>;
-  meta: {
-    url: string;
-    folderTitle?: string;
-    updated: string;
-  };
+  meta: { url: string; folderTitle?: string; updated: string };
 }
 
 export async function getDashboard(uid: string): Promise<GrafanaDashboardResponse> {
@@ -107,11 +122,7 @@ export async function getDashboard(uid: string): Promise<GrafanaDashboardRespons
   return (await res.json()) as GrafanaDashboardResponse;
 }
 
-/**
- * Create or update a dashboard. When `dashboard.uid` is present the existing
- * dashboard is updated; otherwise a new one is created. Pass `overwrite: true`
- * to force-update if Grafana would otherwise reject due to version conflict.
- */
+/** * Create or update a dashboard. When `dashboard.uid` is present the existing * dashboard is updated; otherwise a new one is created. Pass `overwrite: true` * to force-update if Grafana would otherwise reject due to version conflict. */
 export async function upsertDashboard(
   dashboard: Record<string, unknown>,
   options: { folderUid?: string; overwrite?: boolean; message?: string } = {}

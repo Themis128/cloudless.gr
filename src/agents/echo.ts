@@ -1,4 +1,4 @@
-import { Agent, callable } from "agents";
+import { Agent } from "@cloudflare/agents";
 
 // Env for agents - extends the generated Cloudflare.Env
 // This provides the types needed for Agent<T> while staying compatible
@@ -15,7 +15,7 @@ export class EchoAgent extends Agent<Env, EchoState> {
     count: 0,
   };
 
-  @callable()
+  
   getState() {
     return {
       lastMessage: this.state?.lastMessage ?? "",
@@ -23,7 +23,7 @@ export class EchoAgent extends Agent<Env, EchoState> {
     };
   }
 
-  @callable()
+  
   echo(message: string) {
     const nextState = {
       lastMessage: message,
@@ -35,7 +35,7 @@ export class EchoAgent extends Agent<Env, EchoState> {
     return nextState;
   }
 
-  @callable()
+  
   reset() {
     const nextState = {
       lastMessage: "",

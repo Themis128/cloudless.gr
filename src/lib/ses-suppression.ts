@@ -142,7 +142,3 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
  * Returns true on success (including when email wasn't suppressed),
  * false on failure (logged, not thrown).
  */
-export async function removeFromSuppressionList(email: string): Promise<boolean> {
-  // We are only using D1 now
-  return removeFromSuppressionListD1(email);
-}

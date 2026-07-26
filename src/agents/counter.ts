@@ -1,4 +1,4 @@
-import { Agent, callable } from "agents";
+import { Agent } from "@cloudflare/agents";
 
 // Env for agents - extends the generated Cloudflare.Env
 // This provides the types needed for Agent<T> while staying compatible
@@ -13,12 +13,12 @@ export class CounterAgent extends Agent<Env, CounterState> {
     count: 0,
   };
 
-  @callable()
+  
   getCount() {
     return this.state?.count ?? 0;
   }
 
-  @callable()
+  
   increment() {
     const nextCount = (this.state?.count ?? 0) + 1;
 
@@ -29,7 +29,7 @@ export class CounterAgent extends Agent<Env, CounterState> {
     return nextCount;
   }
 
-  @callable()
+  
   decrement() {
     const nextCount = Math.max(0, (this.state?.count ?? 0) - 1);
 
@@ -40,7 +40,7 @@ export class CounterAgent extends Agent<Env, CounterState> {
     return nextCount;
   }
 
-  @callable()
+  
   reset() {
     this.setState({
       count: 0,

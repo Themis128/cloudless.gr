@@ -313,7 +313,7 @@ async function handleTabFetch<T>(
   setError(null);
   try {
     const json = await fetchJson(url);
-    setData(extractFn(json));
+    setData(extractFn(json as Record<string, unknown>));
   } catch (err) {
     setError(err instanceof Error ? err.message : `Failed to load ${tab}`);
   } finally {
@@ -341,14 +341,14 @@ async function loadOverviewData(days: number): Promise<{
 
   if (seoRes.status === "fulfilled" && seoRes.value.ok) {
     const d = await seoRes.value.json();
-    snapshot = d.snapshot ?? null;
+    snapshot = (d as any).snapshot ?? null;
   } else {
     overviewError = "Failed to load GSC overview";
   }
 
   if (webRes.status === "fulfilled" && webRes.value.ok) {
     const d = await webRes.value.json();
-    analytics = d.analytics ?? null;
+    analytics = (d as any).analytics ?? null;
   }
 
   return { snapshot, analytics, overviewError };

@@ -1,4 +1,4 @@
-import { Agent, callable } from "agents";
+import { Agent } from "@cloudflare/agents";
 
 // Env for agents - extends the generated Cloudflare.Env
 // This provides the types needed for Agent<T> while staying compatible
@@ -130,7 +130,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
     error: "",
   };
 
-  @callable()
+  
   getState() {
     return {
       lastPrompt: this.state?.lastPrompt ?? "",
@@ -143,12 +143,12 @@ export class CodingAgent extends Agent<Env, CodingState> {
     };
   }
 
-  @callable()
+  
   getResult() {
     return this.getState();
   }
 
-  @callable()
+  
   reset() {
     const nextState: CodingState = {
       lastPrompt: "",

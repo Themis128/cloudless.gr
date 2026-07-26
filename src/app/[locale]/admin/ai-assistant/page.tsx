@@ -93,8 +93,8 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to generate strategy");
-      const data = await res.json();
-      setStrategy(data.strategy);
+      const data = await res.json() as { strategy?: string };
+      setStrategy(data.strategy ? { strategy: data.strategy } : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     } finally {
@@ -118,8 +118,8 @@ export default function AIAssistantPage() {
         return;
       }
       if (!res.ok) throw new Error("Failed to generate copy");
-      const data = await res.json();
-      setCopyVariants(data.variants?.variants ?? null);
+      const data = await res.json() as { variants?: { variants?: string[] } };
+setCopyVariants(data.variants?.variants?.map(v => ({ id: v, text: v, headline: "", body: "", cta: "", tone: "" })) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     } finally {

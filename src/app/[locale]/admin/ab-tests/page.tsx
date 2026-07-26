@@ -39,8 +39,8 @@ export default function ABTestsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/ab-tests");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setFlags(data.flags ?? []);
+const data = await res.json() as { flags?: ABFlag[] };
+      setFlags((data.flags as ABFlag[]) ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -64,7 +64,7 @@ export default function ABTestsPage() {
         body: JSON.stringify({ id, ...patch }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await res.json() as { flags?: ABFlag[], warning?: string };
       setFlags(data.flags ?? flags);
       if (data.warning) setWarning(data.warning);
     } catch (e) {
@@ -88,7 +88,7 @@ export default function ABTestsPage() {
         body: JSON.stringify({ action: "reset" }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await res.json() as { flags?: ABFlag[] };
       setFlags(data.flags ?? flags);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Reset failed");
