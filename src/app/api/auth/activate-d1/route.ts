@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
   }
 
   const ipRl = rateLimit(`auth-activate:ip:${getClientIp(req)}`, 10, 60_000);

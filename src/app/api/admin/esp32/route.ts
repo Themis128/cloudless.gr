@@ -37,13 +37,13 @@ async function proxyRequest(path: string, init?: RequestInit): Promise<NextRespo
     if (res.status === 404) {
       return NextResponse.json(
         { error: "ESP32 management unavailable", offline: true },
-        { status: 503 }
+        { status: 404 }
       );
     }
     const data: unknown = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch {
-    return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 503 });
+    return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 404 });
   }
 }
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (isPrivateLanUrl(ALERT_API)) {
     return NextResponse.json(
       { error: "ESP32 API not reachable from this deployment", offline: true },
-      { status: 503 }
+      { status: 404 }
     );
   }
 
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         };
         return NextResponse.json([device]);
       } catch {
-        return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 503 });
+        return NextResponse.json({ error: "Pi unreachable", offline: true }, { status: 404 });
       }
     }
     case "config":
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (isPrivateLanUrl(ALERT_API)) {
     return NextResponse.json(
       { error: "ESP32 API not reachable from this deployment", offline: true },
-      { status: 503 }
+      { status: 404 }
     );
   }
 
@@ -140,7 +140,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   if (isPrivateLanUrl(ALERT_API)) {
     return NextResponse.json(
       { error: "ESP32 API not reachable from this deployment", offline: true },
-      { status: 503 }
+      { status: 404 }
     );
   }
 

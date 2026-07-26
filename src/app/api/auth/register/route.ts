@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   if (!emailRl.ok) return emailRl.response;
 
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
 
   // Always succeed-or-look-like-success to defeat account enumeration.
 

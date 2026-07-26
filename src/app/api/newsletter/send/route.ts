@@ -79,7 +79,7 @@ export async function POST(request: Request): Promise<Response> {
   const config = await getConfig();
   const secret = config.NEWSLETTER_SEND_SECRET;
   if (!secret) {
-    return Response.json({ error: "Newsletter sending is not configured." }, { status: 503 });
+    return Response.json({ error: "Newsletter sending is not configured." }, { status: 404 });
   }
   if (!secretsMatch(request.headers.get("x-newsletter-secret"), secret)) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });

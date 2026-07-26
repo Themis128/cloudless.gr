@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     if (err instanceof PostizNotConfiguredError) {
       return NextResponse.json(
         { connected: false, error: "postiz_not_configured" },
-        { status: 503 }
+        { status: 404 }
       );
     }
     if (err instanceof PostizApiError) {

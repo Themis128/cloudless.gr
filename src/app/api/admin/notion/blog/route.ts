@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Blog not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Notion Blog not configured" }, { status: 404 });
   }
 
   const posts = await getPosts();

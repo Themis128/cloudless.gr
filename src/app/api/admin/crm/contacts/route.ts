@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
   if (!(await isConfiguredAsync("ESPOCRM_API_KEY"))) {
-    return NextResponse.json({ error: "EspoCRM not configured." }, { status: 503 });
+    return NextResponse.json({ error: "EspoCRM not configured." }, { status: 404 });
   }
 
   try {

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     if (err instanceof IntegrationNotConfiguredError) {
       return NextResponse.json(
         { error: "GSC archive not configured (NOTION_GSC_REPORTS_DB_ID).", reports: [] },
-        { status: 503 }
+        { status: 404 }
       );
     }
     console.error("[GSC archive] Error:", err);

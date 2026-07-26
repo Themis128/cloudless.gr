@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_TESTIMONIALS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Testimonials not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Notion Testimonials not configured" }, { status: 404 });
   }
 
   try {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_TESTIMONIALS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Testimonials not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Notion Testimonials not configured" }, { status: 404 });
   }
 
   let body: TestimonialInput;

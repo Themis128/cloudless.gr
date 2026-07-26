@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Tasks not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Notion Tasks not configured" }, { status: 404 });
   }
 
   const summary = request.nextUrl.searchParams.get("summary");
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_TASKS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Tasks not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Notion Tasks not configured" }, { status: 404 });
   }
 
   const body = await request.json();

@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID"))) {
-    return NextResponse.json({ error: "Docs not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Docs not configured" }, { status: 404 });
   }
 
   const { slug } = await params;

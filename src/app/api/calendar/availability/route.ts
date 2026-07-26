@@ -4,7 +4,7 @@ import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(request: Request) {
   if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
-    return NextResponse.json({ error: "Calendar booking is not yet available." }, { status: 503 });
+    return NextResponse.json({ error: "Calendar booking is not yet available." }, { status: 404 });
   }
 
   try {

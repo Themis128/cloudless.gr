@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   const cfg = await getConfig();
   const secret = cfg.SENTRY_WEBHOOK_SECRET || "";
   if (!secret) {
-    return NextResponse.json({ error: "receiver_not_configured" }, { status: 503 });
+    return NextResponse.json({ error: "receiver_not_configured" }, { status: 404 });
   }
   if (!verifySignature(rawBody, signature, secret)) {
     return NextResponse.json({ error: "bad_signature" }, { status: 401 });

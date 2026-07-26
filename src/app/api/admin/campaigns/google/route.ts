@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isGoogleAdsConfigured())) {
-    return NextResponse.json({ error: "Google Ads not configured." }, { status: 503 });
+    return NextResponse.json({ error: "Google Ads not configured." }, { status: 404 });
   }
 
   try {

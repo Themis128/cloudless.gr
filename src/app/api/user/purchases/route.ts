@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   try {
     const stripe = await getStripe();
     if (!stripe) {
-      return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
+      return NextResponse.json({ error: "Stripe not configured" }, { status: 404 });
     }
 
     // Search for customers by email

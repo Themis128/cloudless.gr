@@ -17,7 +17,7 @@ function getDb(_request: NextRequest): AuthDatabase | null {
 export async function POST(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
   }
 
   const ipRl = rateLimit(`auth-reset-confirm:ip:${getClientIp(req)}`, 5, 60_000);

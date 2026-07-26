@@ -153,10 +153,10 @@ export async function POST(request: NextRequest) {
     if (name === "AccessDeniedException" || name === "UnauthorizedException") {
       return Response.json(
         { error: "Chat not available right now. Please use the Contact page." },
-        { status: 503 }
+        { status: 404 }
       );
     }
-    return Response.json({ error: "AI service unavailable." }, { status: 502 });
+    return Response.json({ error: "AI service unavailable." }, { status: 503 });
   }
 
   return new Response(sseStreamFromText(finalText), {

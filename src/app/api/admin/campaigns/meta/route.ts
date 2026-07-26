@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isMetaAdsConfigured())) {
-    return NextResponse.json({ error: "Meta Ads not configured." }, { status: 503 });
+    return NextResponse.json({ error: "Meta Ads not configured." }, { status: 404 });
   }
 
   try {

@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   const config = await getConfig();
   if (!config.GOOGLE_CLIENT_EMAIL || !config.GOOGLE_PRIVATE_KEY) {
-    return NextResponse.json({ error: "Google Search Console not configured." }, { status: 503 });
+    return NextResponse.json({ error: "Google Search Console not configured." }, { status: 404 });
   }
 
   const DEFAULT_LIMIT = 20;

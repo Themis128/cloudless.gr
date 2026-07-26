@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
   const db = getDb(req);
   if (!db) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
   }
 
   // Check SESSION_SECRET
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   const db = getDb(req);
   if (!db) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
   }
 
   let action: string | undefined;

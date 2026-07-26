@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   try {
     const workspaceId = await getPrimaryWorkspaceId();
     if (!workspaceId) {
-      return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 503 });
+      return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 404 });
     }
 
     const views = await listWorkspaceViews(workspaceId);
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ tasks, count: tasks.length });
   } catch (err) {
     if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 503 });
+      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 404 });
     }
     return NextResponse.json({ error: "Failed to list tasks" }, { status: 500 });
   }

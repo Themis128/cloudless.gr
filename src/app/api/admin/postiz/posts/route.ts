@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ posts });
   } catch (err) {
     if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+      return NextResponse.json({ error: "postiz_not_configured" }, { status: 404 });
     }
     if (err instanceof PostizApiError) {
       return NextResponse.json(
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ result }, { status: 201 });
   } catch (err) {
     if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
+      return NextResponse.json({ error: "postiz_not_configured" }, { status: 404 });
     }
     if (err instanceof PostizApiError) {
       return NextResponse.json(
