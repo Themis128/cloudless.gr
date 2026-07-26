@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Link } from "@/i18n/navigation";
 
 /* Shapes mirror src/lib/gsc.ts (served by /api/admin/analytics/*). */
-
 interface SeoSnapshot {
   clicks: number;
   impressions: number;
@@ -72,6 +71,32 @@ interface ArchiveRow {
   ctrOpportunities: number;
 }
 
+/** Response types for API endpoints */
+interface SeoResponse {
+  snapshot: SeoSnapshot;
+  keywords: KeywordRow[];
+}
+
+interface QueryPageResponse {
+  mappings: QueryPageRow[];
+}
+
+interface IntentResponse {
+  intent: IntentBreakdown;
+}
+
+interface CountryResponse {
+  countries: CountryRow[];
+}
+
+interface DeviceResponse {
+  devices: DeviceRow[];
+}
+
+interface ArchiveResponse {
+  reports: ArchiveRow[];
+}
+
 export default function SeoAnalyticsPage() {
   const [snapshot, setSnapshot] = useState<SeoSnapshot | null>(null);
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
@@ -103,14 +128,32 @@ export default function SeoAnalyticsPage() {
         return;
       }
       if (!seoRes.ok) throw new Error("Failed to load SEO snapshot");
-      const seo = await seoRes.json() as any;
-      setSnapshot((seo as any).snapshot ?? null);
+
+      // Type-safe response handling
+      const seo = await seoRes.json() as SeoResponse;
+      setSnapshot(seo.snapshot ?? null);
       setKeywords(seo.keywords ?? []);
-      if (qpRes.ok) setMappings((await qpRes.json()).mappings ?? []);
-      if (intentRes.ok) setIntent(((await intentRes.json()) as any).intent ?? null);
-      if (countryRes.ok) setCountries((await countryRes.json()).countries ?? []);
-      if (deviceRes.ok) setDevices((await deviceRes.json()).devices ?? []);
-      if (archiveRes.ok) setArchive((await archiveRes.json()).reports ?? []);
+
+      if (qpRes.ok) {
+        const qpData = await qpRes.json() as QueryPageResponse;
+        setMappings(qpData?.mappings ?? []);
+      }
+      if (intentRes.ok) {
+        const intentData = await intentRes.json() as IntentResponse;
+        setIntent(intentData?.intent ?? null);
+      }
+      if (countryRes.ok) {
+        const countryData = await countryRes.json() as CountryResponse;
+        setCountries(countryData?.countries ?? []);
+      }
+      if (deviceRes.ok) {
+        const deviceData = await deviceRes.json() as DeviceResponse;
+        setDevices(deviceData?.devices ?? []);
+      }
+      if (archiveRes.ok) {
+        const archiveData = await archiveRes.json() as ArchiveResponse;
+        setArchive(archiveData?.reports ?? []);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -152,7 +195,6 @@ export default function SeoAnalyticsPage() {
 
       {loading && <Spinner />}
       {error && <ErrorMsg msg={error} />}
-
       {!loading && !error && (
         <div className="space-y-10">
           {snapshot && (
@@ -363,7 +405,9 @@ function SeoTable({
               {head.map((h, i) => (
                 <th
                   key={h}
-                  className={`px-4 py-3 font-mono text-xs text-slate-500 ${i === 0 || i === 1 ? "text-left" : "text-right"}`}
+                  className={`px-4 py-3 font-mono text-xs text-slate-500 ${
+                    i === 0 || i === 1 ? "text-left" : "text-right"
+                  }`}
                 >
                   {h}
                 </th>
@@ -373,10 +417,7 @@ function SeoTable({
           <tbody className="divide-y divide-slate-800">
             {rows.length === 0 && (
               <tr>
-                <td
-                  colSpan={head.length}
-                  className="py-8 text-center font-mono text-sm text-slate-600"
-                >
+                <td colSpan={head.length} className="py-8 text-center font-mono text-sm text-slate-600">
                   {empty}
                 </td>
               </tr>
@@ -386,7 +427,9 @@ function SeoTable({
                 {cells.map((c, ci) => (
                   <td
                     key={`${ci}-${c}`}
-                    className={`max-w-xs truncate px-4 py-2.5 font-mono text-xs ${ci === 0 ? "text-white" : ci === 1 ? "text-slate-400" : "text-right text-slate-300"}`}
+                    className={`max-w-xs truncate px-4 py-2.5 font-mono text-xs ${
+                      ci === 0 ? "text-white" : ci === 1 ? "text-slate-400" : "text-right text-slate-300"
+                    }`}
                   >
                     {c}
                   </td>
