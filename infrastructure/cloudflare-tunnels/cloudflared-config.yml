@@ -1,0 +1,132 @@
+# Cloudflare Tunnel Configuration for omv-main (192.168.1.128)
+# Generated: 2026-07-26
+# Tunnel ID: e977a490-58c5-4fdb-9155-86832e3e636a
+# This configuration should be copied to /etc/cloudflared/config.yml on omv-main
+
+tunnel: e977a490-58c5-4fdb-9155-86832e3e636a
+credentials-file: /etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json
+no-autoupdate: true
+
+ingress:
+  # cloudless.gr - Main website (Workers.dev)
+  - hostname: cloudless.gr
+    service: https://cloudless-gr.baltzakis-themis.workers.dev
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+
+  # manage.cloudless.gr - Management interface
+  - hostname: manage.cloudless.gr
+    service: https://cloudless-gr.baltzakis-themis.workers.dev
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+
+  # pi-origin.cloudless.gr - Legacy origin
+  - hostname: pi-origin.cloudless.gr
+    service: https://cloudless-gr.baltzakis-themis.workers.dev
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+
+  # grafana.cloudless.gr - Monitoring dashboard
+  - hostname: grafana.cloudless.gr
+    service: http://192.168.1.128:30850
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+
+  # postiz.cloudless.gr - Postiz social publishing engine
+  - hostname: postiz.cloudless.gr
+    service: http://192.168.1.128:30500
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+
+  # espocrm.cloudless.gr - CRM system
+  - hostname: espocrm.cloudless.gr
+    service: http://192.168.1.128:30700
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+
+  # appflowy.cloudless.gr - AppFlowy CMS
+  - hostname: appflowy.cloudless.gr
+    service: http://192.168.1.128:30810
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+      noTLSVerify: false
+      httpHostHeader: appflowy.cloudless.gr
+
+  # n8n.cloudless.gr - Workflow automation
+  - hostname: n8n.cloudless.gr
+    service: http://192.168.1.128:30900
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+      httpHostHeader: n8n.cloudless.gr
+
+  # kuma.cloudless.gr - Uptime Kuma monitoring
+  - hostname: kuma.cloudless.gr
+    service: http://192.168.1.128:32501
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+      noTLSVerify: false
+      httpHostHeader: kuma.cloudless.gr
+
+  # ntfy.cloudless.gr - Notification service
+  - hostname: ntfy.cloudless.gr
+    service: http://192.168.1.128:30080
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+      httpHostHeader: ntfy.cloudless.gr
+
+  # omv.cloudless.gr - OMV Web UI
+  - hostname: omv.cloudless.gr
+    service: http://localhost:80
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+      httpHostHeader: omv.cloudless.gr
+
+  # ftp.cloudless.gr - OMV FTP server
+  - hostname: ftp.cloudless.gr
+    service: http://localhost:21
+    originRequest:
+      connectTimeout: 30s
+      tcpKeepAlive: 60s
+
+  # docs.cloudless.gr - Documentation portal
+  - hostname: docs.cloudless.gr
+    service: http://192.168.1.128:30901
+    originRequest:
+      connectTimeout: 15s
+      tcpKeepAlive: 30s
+
+  # meili.cloudless.gr - Meilisearch search engine
+  - hostname: meili.cloudless.gr
+    service: http://192.168.1.128:30902
+    originRequest:
+      connectTimeout: 10s
+      tcpKeepAlive: 30s
+
+  # agent.cloudless.gr - Agent API
+  - hostname: agent.cloudless.gr
+    service: http://192.168.1.128:30924
+    originRequest:
+      connectTimeout: 30s
+      tcpKeepAlive: 30s
+
+  # vibe.cloudless.gr - Vibe agent
+  - hostname: vibe.cloudless.gr
+    service: http://192.168.1.128:30301
+    originRequest:
+      connectTimeout: 30s
+      tcpKeepAlive: 30s
+
+  # Catch-all rule - return 404 for undefined routes
+  - service: http_status:404
