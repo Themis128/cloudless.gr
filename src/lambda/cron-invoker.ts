@@ -32,7 +32,6 @@ async function getCronSecret(): Promise<string> {
   }
 
   // AWS Lambda environment - fetch from SSM
-  const { SSMClient, GetParameterCommand } = await import("@aws-sdk/client-ssm");
   const ssm = new SSMClient({ region: process.env.AWS_REGION ?? "us-east-1" });
   const ssmPrefix = process.env.SSM_PREFIX ?? "/cloudless/production";
 

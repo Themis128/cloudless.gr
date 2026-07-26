@@ -19,7 +19,6 @@
 let lastNotifiedVersion: string | undefined;
 
 async function loadSsmParams(prefix: string): Promise<Map<string, string>> {
-  const { SSMClient, GetParametersByPathCommand } = await import("@aws-sdk/client-ssm");
   const ssm = new SSMClient({ region: process.env.AWS_REGION ?? "us-east-1" });
   const params = new Map<string, string>();
   let nextToken: string | undefined;

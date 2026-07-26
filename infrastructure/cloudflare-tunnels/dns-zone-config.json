@@ -5,7 +5,7 @@
     {
       "type": "A",
       "name": "cloudless.gr",
-      "content": "192.0.2.1",
+      "content": "192.168.1.128",
       "ttl": 1,
       "proxied": true,
       "comment": "Placeholder - Cloudflare Workers route will override"

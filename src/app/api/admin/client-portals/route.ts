@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     // Computed, non-persisted health score per portal (Phase 4). readPortals
     // normalizes record shape, so scoring can't throw on legacy data — the
     // try/catch is defense-in-depth, matching the sibling admin routes.
-    const withHealth = portals.map((p) => ({ ...p, health: scoreClientHealth(p) }));
+    const withHealth = portals.map((p) => ({ ...p, health: scoreClientHealth(p, new Date()) }));
     return NextResponse.json({ portals: withHealth, workspaceId });
   } catch (err) {
     console.error("[client-portals] GET failed:", err);
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
   const workspaceId =
     explicitWorkspaceId !== undefined
       ? explicitWorkspaceId || undefined
-      : ((await getActiveWorkspaceId(request)) ?? undefined);
+const workspaceId = explicitWorkspaceId !== undefined ? explicitWorkspaceId || undefined : (await getActiveWorkspaceId(request));
 
   const portal: ClientPortal = {
     token: randomUUID(),

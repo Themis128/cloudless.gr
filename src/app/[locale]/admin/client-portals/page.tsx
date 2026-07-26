@@ -161,7 +161,7 @@ function StepManager({
               <span className="w-5 shrink-0 font-mono text-xs text-slate-600">
                 {String(idx + 1).padStart(2, "0")}
               </span>
-              <span className="flex-1 truncate font-mono text-sm text-white">{step.name}</span>
+              <span className="flex-1 truncate font-mono text-sm text-white">{step.name ?? ""}</span>
 
               {/* Status selector */}
               <select
