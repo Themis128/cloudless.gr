@@ -35,11 +35,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ results: [], total: 0 });
     }
 
-    const views = await searchDocuments(workspaceId, q, limit);
+    const views = await searchDocuments(workspaceId, q);
     const results = views.map((v) => ({
       id: v.view_id,
       title: v.name,
-      type: v.layout,
+      type: v.type,
       lastEdited: v.last_edited_time,
       url: `/appflowy/view/${v.view_id}`,
     }));

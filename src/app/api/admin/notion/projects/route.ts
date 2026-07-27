@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Notion Projects not configured" }, { status: 404 });
   }
 
-  const body = await request.json();
+  const body = await request.json() as { name: string; [key: string]: unknown };
   if (!body.name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
@@ -55,7 +55,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = await request.json();
+  const body = await request.json() as { pageId?: string; status?: string; progress?: number };
   const { pageId, status, progress } = body;
 
   if (!pageId) {
@@ -64,13 +64,13 @@ export async function PATCH(request: NextRequest) {
 
   if (status) {
     const valid: ProjectStatus[] = ["Planning", "In Progress", "On Hold", "Completed", "Cancelled"];
-    if (!valid.includes(status)) {
+    if (!valid.includes(status as ProjectStatus)) {
       return NextResponse.json(
         { error: `Invalid status. Must be one of: ${valid.join(", ")}` },
         { status: 400 }
       );
     }
-    const ok = await updateProjectStatus(pageId, status);
+    const ok = await updateProjectStatus(pageId, status as ProjectStatus);
     if (!ok) return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 

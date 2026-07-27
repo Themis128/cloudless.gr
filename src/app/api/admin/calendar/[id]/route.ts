@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { updateCalendarItem, deleteCalendarItem } from "@/lib/content-calendar";
+import { updateCalendarItem, deleteCalendarItem, type CalendarItem } from "@/lib/content-calendar";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
-  const updates = await request.json();
+  const updates = await request.json() as Partial<Omit<CalendarItem, "id">>;
   let item;
   try {
     item = await updateCalendarItem(id, updates);

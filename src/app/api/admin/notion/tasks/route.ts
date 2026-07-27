@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Notion Tasks not configured" }, { status: 404 });
   }
 
-  const body = await request.json();
+  const body = await request.json() as { task: string; [key: string]: unknown };
   if (!body.task) {
     return NextResponse.json({ error: "task is required" }, { status: 400 });
   }
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = await request.json();
+  const body = await request.json() as { pageId: string; status: string };
   const { pageId, status } = body;
 
   if (!pageId || !status) {
@@ -70,14 +70,14 @@ export async function PATCH(request: NextRequest) {
   }
 
   const valid: TaskStatus[] = ["Backlog", "To Do", "In Progress", "In Review", "Done", "Blocked"];
-  if (!valid.includes(status)) {
+  if (!valid.includes(status as TaskStatus)) {
     return NextResponse.json(
       { error: `Invalid status. Must be one of: ${valid.join(", ")}` },
       { status: 400 }
     );
   }
 
-  const ok = await updateTaskStatus(pageId, status);
+  const ok = await updateTaskStatus(pageId, status as TaskStatus);
   if (!ok) {
     return NextResponse.json({ error: "Failed to update task status" }, { status: 500 });
   }

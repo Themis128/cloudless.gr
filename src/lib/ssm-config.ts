@@ -177,6 +177,7 @@ interface AppConfig {
   // AI
   ANTHROPIC_API_KEY: string;
   ANTHROPIC_CHAT_MODEL: string;
+ PROMETHEUS_URL: string;
 }
 
 let cached: AppConfig | null = null;
@@ -272,6 +273,7 @@ function buildConfigFromParams(params: Map<string, string>): AppConfig {
     KUMA_BASE_URL: params.get("KUMA_BASE_URL") ?? "",
     KUMA_STATUS_PAGE_SLUG: params.get("KUMA_STATUS_PAGE_SLUG") ?? "",
     GRAFANA_BASE_URL: params.get("GRAFANA_BASE_URL") ?? "",
+  PROMETHEUS_URL: params.get("PROMETHEUS_URL") ?? "",
     GRAFANA_API_TOKEN: params.get("GRAFANA_API_TOKEN") ?? "",
     NTFY_BASE_URL: params.get("NTFY_BASE_URL") ?? "",
     NTFY_TOPIC: params.get("NTFY_TOPIC") ?? "",
@@ -377,6 +379,7 @@ function buildConfigFromEnv(): AppConfig {
     KUMA_BASE_URL: process.env.KUMA_BASE_URL || "",
     KUMA_STATUS_PAGE_SLUG: process.env.KUMA_STATUS_PAGE_SLUG || "",
     GRAFANA_BASE_URL: process.env.GRAFANA_BASE_URL || "",
+  PROMETHEUS_URL: process.env.PROMETHEUS_URL || "",
     GRAFANA_API_TOKEN: process.env.GRAFANA_API_TOKEN || "",
     NTFY_BASE_URL: process.env.NTFY_BASE_URL || "",
     NTFY_TOPIC: process.env.NTFY_TOPIC || "",

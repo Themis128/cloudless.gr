@@ -36,7 +36,7 @@ async function generateInsights(
       signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) return "";
-    const d = await res.json();
+    const d = await res.json() as { content?: Array<{ text?: string }> };
     return d.content?.[0]?.text ?? "";
   } catch {
     return "";
@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
   let includeSections: string[];
 
   try {
-    const body = await request.json();
-    clientName = body.clientName;
-    dateStart = body.dateStart;
-    dateEnd = body.dateEnd;
+    const body = await request.json() as { clientName?: string; dateStart?: string; dateEnd?: string; includeSections?: string[] };
+    clientName = body.clientName!;
+    dateStart = body.dateStart!;
+    dateEnd = body.dateEnd!;
     includeSections = body.includeSections ?? ["pipeline", "email"];
     if (!clientName || !dateStart || !dateEnd)
       throw new Error("clientName, dateStart, dateEnd required");

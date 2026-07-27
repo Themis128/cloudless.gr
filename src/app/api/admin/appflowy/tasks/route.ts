@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { listAllWorkspaces, listWorkspaceViews, AppFlowyNotConfiguredError } from "@/lib/appflowy";
+import { AppFlowyView } from "@/lib/appflowy";
 
 type TaskStatus = "To Do" | "In Progress" | "Done" | "Cancelled";
 
@@ -19,13 +20,7 @@ interface Task {
   url: string;
 }
 
-function viewToTask(v: {
-  view_id: string;
-  name: string;
-  layout: string;
-  created_at: string;
-  last_edited_time: string;
-}): Task {
+function viewToTask(v: AppFlowyView): Task {
   return {
     id: v.view_id,
     name: v.name,
@@ -33,7 +28,7 @@ function viewToTask(v: {
     priority: "Medium",
     project: "",
     assignee: "",
-    dueDate: v.created_at,
+    dueDate: v.last_edited_time,
     description: "",
     url: `/appflowy/view/${v.view_id}`,
   };
@@ -57,7 +52,7 @@ export async function GET(request: NextRequest) {
     const views = await listWorkspaceViews(workspaceId);
     // Tasks are typically linked to projects, but AppFlowy views are flat
     // Return all document views as tasks
-    const tasks = views.filter((v) => v.layout === "Document").map(viewToTask);
+    const tasks = views.filter((v) => v.type === "document").map(viewToTask);
 
     return NextResponse.json({ tasks, count: tasks.length });
   } catch (err) {

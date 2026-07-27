@@ -22,8 +22,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
   let status: IssueStatus;
   try {
-    const body = await request.json();
-    status = body.status;
+    const body = await request.json() as { status?: string };
+    status = body.status as IssueStatus;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
