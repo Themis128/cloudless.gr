@@ -2,47 +2,31 @@
  * ETL: LinkedIn Ads → R2 Data Lake (Parquet)
  *
  * Migrated version using R2 S3-compatible endpoint.
- * Same logic as linkedin-ads-to-lake.mjs - only client configuration differs.
+ * Resolves token from environment variable only (LINKEDIN_ACCESS_TOKEN).
+ * SSM has been removed — use GitHub Actions secrets or Wrangler secrets.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 import { getS3Client, BUCKET } from "./_r2-config.mjs";
+
 const ACCOUNT = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
-const REGION = process.env.AWS_REGION || "us-east-1";
-const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
 
 /**
- * Resolve the LinkedIn access token. SSM-first because that's where the
- * operator rotates it. The GH secret is the env-var fallback for local runs.
+ * Resolve the LinkedIn access token from environment variable.
+ * Token should be set via LINKEDIN_ACCESS_TOKEN env var (GitHub secret / Wrangler secret).
  */
-async function resolveToken() {
-	if (process.env.LINKEDIN_ACCESS_TOKEN_FORCE_ENV === "1" && process.env.LINKEDIN_ACCESS_TOKEN) {
-		return process.env.LINKEDIN_ACCESS_TOKEN;
+function resolveToken() {
+	const token = process.env.LINKEDIN_ACCESS_TOKEN;
+	if (!token) {
+		console.error("LINKEDIN_ACCESS_TOKEN not available (env var not set)");
+		process.exit(1);
 	}
-	try {
-		const ssm = new SSMClient({ region: REGION });
-		const res = await ssm.send(
-			new GetParameterCommand({
-				Name: `${SSM_PREFIX}/LINKEDIN_ACCESS_TOKEN`,
-				WithDecryption: true,
-			})
-		);
-		const v = res.Parameter?.Value;
-		if (v) return v;
-	} catch (err) {
-		console.warn("[etl/linkedin] SSM lookup failed, falling back to env:", err?.name || err?.message);
-	}
-	return process.env.LINKEDIN_ACCESS_TOKEN;
+	return token;
 }
 
-const TOKEN = await resolveToken();
-if (!TOKEN) {
-	console.error("LINKEDIN_ACCESS_TOKEN not available (tried SSM + env)");
-	process.exit(1);
-}
+const TOKEN = resolveToken();
 
 // R2 S3-compatible client (uses shared config helper)
 const s3 = getS3Client();

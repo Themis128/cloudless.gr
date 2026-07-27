@@ -1,5 +1,5 @@
 # Cloudless.gr Migration - Comprehensive Todo List
-# Generated: 2026-07-24 | Based on all migration docs and existing todo files
+# Generated: 2026-07-27 | Updated with migration status
 
 ## 🔴 HIGH PRIORITY - Blocking Production
 
@@ -17,9 +17,14 @@
 
 ## 🟡 MEDIUM PRIORITY - Migration Completion
 
-### ETL Script Migration (2 Remaining from AWS→Cloudflare)
-- [ ] `scripts/etl/clients-to-lake.mjs` - Migrate SSM → D1 `app_config`
-- [ ] `scripts/etl/portals-to-lake.mjs` - Migrate SSM → D1 `app_config`
+### ETL Script Migration (SSM→D1) ✅ COMPLETE
+- [x] `scripts/etl/clients-to-r2.mjs` - Already migrated, uses D1 config + R2 storage
+- [x] `scripts/etl/portals-to-r2.mjs` - Already migrated, uses D1 config + R2 storage
+- [x] `scripts/etl/linkedin-ads-to-r2.mjs` - Migrated, env-only token resolution (SSM removed)
+- [x] `scripts/etl/clients-to-lake.mjs` - Deprecation notice added
+- [x] `scripts/etl/portals-to-lake.mjs` - Deprecation notice added
+- [x] Added GitHub workflows: `etl-clients-to-r2.yml`, `etl-portals-to-r2.yml`
+- [ ] Run LLM workflow to verify on Pi runners
 
 ### Infrastructure & Operations
 - [ ] Restart Cline/Claude desktop to load MCP configuration changes
@@ -33,6 +38,11 @@
 - [ ] Run Playwright E2E tests against production (cloudless.gr and pi-origin.cloudless.gr)
 
 ### Code Quality
-- [ ] Clean up legacy ETL scripts once new versions verified
-- [ ] Remove AWS SDK imports from fully migrated files
+- [ ] Remove `@aws-sdk/client-ssm` from legacy-only scripts/etl/package.json if no longer used
+- [ ] Remove `@aws-sdk/client-cost-explorer` from scripts/etl/package.json if no longer used
 - [ ] Update any remaining docs referencing old AWS architecture
+
+### Security & Monitoring
+- [ ] Run `pnpm mcp-security-scan` on API routes
+- [ ] Add smoke test workflow for Workers deployment
+- [ ] Audit large dependencies in package.json (langchain, aws-sdk)

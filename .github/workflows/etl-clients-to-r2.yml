@@ -1,0 +1,80 @@
+name: ETL: Clients to R2
+# ETL sync: Cognito users + portals + ML scores → unified clients parquet in R2.
+# Reads config from D1 app_config via /api/config endpoint.
+# Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
+
+on:
+  schedule:
+    - cron: "45 6 * * *" # daily at 06:45 UTC
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/etl-clients-to-r2.yml"
+      - "scripts/etl/clients-to-r2.mjs"
+      - "scripts/etl/_r2-config.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  etl:
+    name: Run Clients → R2 sync
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"self-hosted,omv,build"') }}
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.3.1
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4.2.0
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: scripts/etl
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Clients-to-R2 sync
+        working-directory: scripts/etl
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+          AUTH_DB_URL: http://localhost:8787/api/config
+        run: node clients-to-r2.mjs
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: actions/github-script@v9
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            if (process.env.SLACK_WEBHOOK_URL) {
+              const payload = {
+                text: `ETL: Clients to R2 failed in workflow run ${context.runId}`,
+                blocks: [{
+                  type: "section",
+                  text: { type: "mrkdwn", text: ":x: ETL: Clients to R2 failed" }
+                }]
+              };
+              fetch(process.env.SLACK_WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+              }).catch(() => {});
+            }
+
+# Required secrets (add via GitHub repo → Settings → Secrets → Actions):
+# CF_ACCOUNT_ID - Your Cloudflare account ID
+# CF_R2_ACCESS_KEY_ID - R2 access key from Cloudflare dashboard
+# CF_R2_SECRET_ACCESS_KEY - R2 secret key from Cloudflare dashboard
+# SLACK_WEBHOOK_URL - Slack webhook for failure notifications (optional)

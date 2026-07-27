@@ -1,4 +1,12 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — use `portals-to-r2.mjs` instead.
+ *
+ * This legacy version uses AWS SSM for config and S3 for storage.
+ * The migrated version (`portals-to-r2.mjs`) reads config from D1 via
+ * the /api/config endpoint and writes to R2-compatible storage.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: Client Portals (SSM) → S3 Data Lake (Parquet)
  *
  * Reads /cloudless/CLIENT_PORTALS_JSON from SSM, computes per-portal
@@ -113,6 +121,7 @@ async function main() {
   await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: "lake/portals/portals.parquet", Body: body }));
   unlinkSync(TMP);
   console.log(`✅ Uploaded ${portals.length} portals → s3://${BUCKET}/lake/portals/portals.parquet`);
+  console.log("⚠️  DEPRECATED: Use portals-to-r2.mjs instead (D1 config + R2 storage)");
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

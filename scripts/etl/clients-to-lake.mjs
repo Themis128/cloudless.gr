@@ -1,4 +1,12 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — use `clients-to-r2.mjs` instead.
+ *
+ * This legacy version uses AWS SSM for config and S3 for storage.
+ * The migrated version (`clients-to-r2.mjs`) reads config from D1 via
+ * the /api/config endpoint and writes to R2-compatible storage.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: Cognito Users + Portals + RFM scores → unified clients table in S3.
  *
  * Merges:
@@ -80,10 +88,6 @@ async function loadSSMJson(key) {
     const res = await ssm.send(new GetParameterCommand({ Name: key }));
     return JSON.parse(res.Parameter?.Value || "[]");
   } catch (err) {
-    // Log but don't fail — a missing SSM param is a degraded state
-    // (e.g. brand-new env without portals yet), not a fatal one.
-    // Previously this swallowed errors silently which masked
-    // AccessDenied + ParameterNotFound + JSON parse errors equally.
     console.warn(`[etl/clients] SSM ${key} unavailable:`, err?.name || err?.message || "unknown");
     return [];
   }
@@ -105,10 +109,6 @@ async function loadScores(key) {
     await reader.close();
     return rows;
   } catch (err) {
-    // ML scores files (scores_rfm.parquet, scores_churn.parquet) are produced
-    // by a separate ML pipeline. They may be missing on a fresh env, in which
-    // case the clients table just lands without rfm/churn columns populated.
-    // Log + continue rather than fail the whole ETL.
     console.warn(`[etl/clients] scores ${key} unavailable:`, err?.name || err?.message || "unknown");
     return [];
   } finally {
@@ -171,6 +171,7 @@ async function main() {
   await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: "lake/clients/clients.parquet", Body: body }));
   unlinkSync(TMP);
   console.log(`✅ Uploaded ${cognitoUsers.length} clients → s3://${BUCKET}/lake/clients/clients.parquet`);
+  console.log("⚠️  DEPRECATED: Use clients-to-r2.mjs instead (D1 config + R2 storage)");
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
