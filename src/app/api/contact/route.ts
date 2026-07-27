@@ -46,8 +46,7 @@ try {
     phone?: string;
     attribution?: string;
   };
-  const attributionData = sanitizeAttribution(attribution ?? "");
-
+  
     if (!name || !email || !message) {
       return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
@@ -108,7 +107,7 @@ try {
     const nameParts = String(name).trim().split(" ");
 
     // Lead engine: deterministic score + first-touch attribution summary.
-    const lead = scoreLead({ email, service, company, message: String(message), attribution });
+const lead = scoreLead({ email, service, company, message: String(message), attribution: attributionData });
     const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
 
     Promise.allSettled([
