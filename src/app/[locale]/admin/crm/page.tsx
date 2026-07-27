@@ -35,6 +35,11 @@ const leadStatusClasses: Record<string, string> = {
   BAD_TIMING: "text-slate-500 bg-slate-700/30",
 };
 
+
+const getEmail = (c: Contact) => c.emailAddress ?? c.properties?.email ?? "";
+const getFirst = (c: Contact) => c.firstName ?? c.properties?.firstname ?? "";
+const getLast = (c: Contact) => c.lastName ?? c.properties?.lastname ?? "";
+const getCompany = (c: Contact) => c.accountName ?? c.properties?.company ?? "";
 export default function AdminCRMPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +53,7 @@ export default function AdminCRMPage() {
         if (res.status === 503) throw new Error("EspoCRM not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = await res.json();
+      const data = (await res.json()) as { contacts: any[] };
       setContacts(data.contacts ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load contacts");
@@ -120,23 +125,23 @@ export default function AdminCRMPage() {
                   className="hover:bg-void-lighter/30 border-b border-slate-800/50 transition-colors"
                 >
                   <td className="px-6 py-4 text-white">
-                    {[c.properties.firstname, c.properties.lastname].filter(Boolean).join(" ") ||
+                    {[c.properties?.firstname, c.properties?.lastname].filter(Boolean).join(" ") ||
                       "—"}
                   </td>
                   <td className="text-neon-cyan px-6 py-4 font-mono text-xs">
-                    {c.properties.email ?? "—"}
+                    {c.properties?.email ?? "—"}
                   </td>
-                  <td className="px-6 py-4 text-slate-300">{c.properties.company || "—"}</td>
+                  <td className="px-6 py-4 text-slate-300">{c.properties?.company || "—"}</td>
                   <td className="px-6 py-4">
                     <span
-                      className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${leadStatusClasses[c.properties.hs_lead_status ?? ""] ?? "bg-slate-800/50 text-slate-400"}`}
+                      className={`rounded-full px-2 py-0.5 font-mono text-[10px] ${leadStatusClasses[c.properties?.hs_lead_status ?? ""] ?? "bg-slate-800/50 text-slate-400"}`}
                     >
-                      {c.properties.hs_lead_status ?? "—"}
+                      {c.properties?.hs_lead_status ?? "—"}
                     </span>
                   </td>
                   <td className="px-6 py-4 font-mono text-slate-500">
-                    {c.properties.createdate
-                      ? new Date(c.properties.createdate).toLocaleDateString("en-IE")
+                    {c.properties?.createdate
+                      ? new Date(c.properties?.createdate).toLocaleDateString("en-IE")
                       : "—"}
                   </td>
                 </tr>
@@ -177,7 +182,7 @@ export default function AdminCRMPage() {
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
           <p className="font-mono text-xs text-slate-500">New Leads</p>
           <p className="font-heading text-neon-cyan mt-1 text-2xl font-bold">
-            {loading ? "…" : contacts.filter((c) => c.properties.hs_lead_status === "NEW").length}
+            {loading ? "…" : contacts.filter((c) => c.properties?.hs_lead_status === "NEW").length}
           </p>
         </div>
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-4">
@@ -185,7 +190,7 @@ export default function AdminCRMPage() {
           <p className="font-heading text-neon-magenta mt-1 text-2xl font-bold">
             {loading
               ? "…"
-              : contacts.filter((c) => c.properties.hs_lead_status === "OPEN_DEAL").length}
+              : contacts.filter((c) => c.properties?.hs_lead_status === "OPEN_DEAL").length}
           </p>
         </div>
       </div>

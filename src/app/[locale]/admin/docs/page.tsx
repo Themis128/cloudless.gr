@@ -16,7 +16,7 @@ export default function AdminDocsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/docs");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = (await res.json()) as { docs: any[] };
       setDocs(data.docs ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load docs");

@@ -33,7 +33,7 @@ export default function AdminCompaniesPage() {
         if (res.status === 503) throw new Error("EspoCRM not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = await res.json();
+      const data = (await res.json()) as { companies: any[] };
       setCompanies(data.companies ?? []);
       setFetchedAt(new Date().toISOString());
       setError(null);

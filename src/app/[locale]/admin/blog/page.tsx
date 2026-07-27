@@ -37,7 +37,7 @@ export default function AdminBlogPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/blog");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const { posts } = await res.json();
+      const { posts } = (await res.json()) as { posts: AppFlowyPost[] };
       setPosts(posts ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load posts");
@@ -98,8 +98,8 @@ export default function AdminBlogPage() {
               f === "all"
                 ? posts.length
                 : f === "published"
-                  ? publishedCount
-                  : draftCount;
+                ? publishedCount
+                : draftCount;
             return (
               <button
                 key={f}
