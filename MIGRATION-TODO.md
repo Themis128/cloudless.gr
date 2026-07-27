@@ -6,24 +6,24 @@
 ## 🔴 HIGH PRIORITY - Blocking Production
 
 ### Cloudflare API Token Fix (Blocks Deploy)
-- [ ] Create new Cloudflare API Token with "Edit Cloudflare Workers" template
-- [ ] Add token as `CLOUDFLARE_API_TOKEN` GitHub repository secret
-- [ ] Verify `CLOUDFLARE_ACCOUNT_ID` secret exists (`fb7dc7b69b662480cd5961a4d1913c78`)
-- [ ] Trigger a new build to verify the fix works
+- [x] Create new Cloudflare API Token with "Edit Cloudflare Workers" template
+- [x] Add token as `CLOUDFLARE_API_TOKEN` GitHub repository secret
+- [x] Verify `CLOUDFLARE_ACCOUNT_ID` secret exists (`fb7dc7b69b662480cd5961a4d1913c78`)
+- [ ] **Verify deployment workflow works** with the new token (test a build)
 
 ### Google Calendar Configuration (Blocks Calendar Booking)
-- [ ] Add `GOOGLE_CLIENT_EMAIL` as Wrangler secret for Workers
-- [ ] Add `GOOGLE_PRIVATE_KEY` as Wrangler secret (with `\n` for newlines)
-- [ ] Add `GOOGLE_CALENDAR_ID` as Wrangler secret (defaults to "primary")
-- [ ] OR: Add `GOOGLE_CLIENT_EMAIL` and `GOOGLE_CALENDAR_ID` to D1 `app_config` table for k3s
+- [x] Add `GOOGLE_CLIENT_EMAIL` as Wrangler secret for Workers
+- [x] Add `GOOGLE_PRIVATE_KEY` as Wrangler secret (with `\n` for newlines)
+- [x] Add `GOOGLE_CALENDAR_ID` as Wrangler secret (defaults to "primary")
+- [ ] **Test calendar booking flow** (availability → book slot)
 
 ---
 
 ## 🟡 MEDIUM PRIORITY - Migration Completion
 
-### ETL Script Migration (2 Remaining from AWS→Cloudflare)
-- [ ] `scripts/etl/clients-to-lake.mjs` - Migrate SSM → D1 `app_config`
-- [ ] `scripts/etl/portals-to-lake.mjs` - Migrate SSM → D1 `app_config`
+### ETL Script Migration (Legacy Scripts Deprecated)
+- [x] `scripts/etl/clients-to-lake.mjs` - Deprecated, replaced by `clients-to-r2.mjs` (D1 config + R2 storage)
+- [x] `scripts/etl/portals-to-lake.mjs` - Deprecated, replaced by `portals-to-r2.mjs` (D1 config + R2 storage)
 
 ### Infrastructure & Operations
 - [ ] Restart Cline/Claude desktop to load MCP configuration changes
@@ -40,6 +40,7 @@
 
 ### Code Quality
 - [x] Add deprecation notices to all legacy `-to-lake.mjs` ETL scripts (11 scripts updated)
+- [x] Mark `-to-lake.mjs` legacy scripts as fully deprecated (11 scripts updated in latest commit)
 - [ ] Remove AWS SDK imports from fully migrated files (post-deprecation cleanup)
 - [ ] Update any remaining docs referencing old AWS architecture
 
@@ -103,9 +104,9 @@
 
 | Priority | Count | Status |
 |----------|-------|--------|
-| 🔴 High (Blocking) | 8 | 0/8 |
-| 🟡 Medium | 4 | 0/4 |
-| 🟢 Low | 5 | 0/5 |
-| ✅ Completed | 50+ | Done |
+| 🔴 High (Blocking) | 4 | 2/6 |
+| 🟡 Medium | 2 | 0/2 |
+| 🟢 Low | 6 | 1/6 |
+| ✅ Completed | 52+ | Done |
 
 **Next Action:** Start with **Cloudflare API Token Fix** (blocks all deployments), then **Google Calendar Configuration** (enables booking feature).

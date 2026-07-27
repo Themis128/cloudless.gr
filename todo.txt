@@ -1,5 +1,5 @@
 # Cloudless.gr Migration - Comprehensive Todo List
-# Generated: 2026-07-27 | Updated: 2026-07-27 23:26 EEST
+# Generated: 2026-07-27 | Updated: 2026-07-28 00:30 EEST
 
 ## 🔴 HIGH PRIORITY - Blocking Production
 
@@ -23,11 +23,11 @@
 ## 🟡 MEDIUM PRIORITY - Migration Completion
 
 ### ETL Script Migration (SSM→D1) ✅ COMPLETE
-- [x] `scripts/etl/clients-to-r2.mjs` - Already migrated, uses D1 config + R2 storage
-- [x] `scripts/etl/portals-to-r2.mjs` - Already migrated, uses D1 config + R2 storage
+- [x] `scripts/etl/clients-to-r2.mjs` - Migrated, uses D1 config + R2 storage
+- [x] `scripts/etl/portals-to-r2.mjs` - Migrated, uses D1 config + R2 storage
 - [x] `scripts/etl/linkedin-ads-to-r2.mjs` - Migrated, env-only token resolution (SSM removed)
-- [x] `scripts/etl/clients-to-lake.mjs` - Deprecation notice added
-- [x] `scripts/etl/portals-to-lake.mjs` - Deprecation notice added
+- [x] `scripts/etl/clients-to-lake.mjs` - Removed deprecated legacy version
+- [x] `scripts/etl/portals-to-lake.mjs` - Removed deprecated legacy version
 - [x] Added GitHub workflows: `etl-clients-to-r2.yml`, `etl-portals-to-r2.yml`
 - [ ] Run ETL workflow on Pi runners to verify no SSM/AWS dependencies (blocked by missing secrets)
 
@@ -66,19 +66,27 @@
 - [x] Compiled complete secret inventory across all workflows
 - [x] Added verification checklist for after secrets are configured
 
+### ETL Migration Status (2026-07-28)
+- [x] Verified `clients-to-r2.mjs` migration complete (D1 config + R2 storage)
+- [x] Verified `portals-to-r2.mjs` migration complete (D1 config + R2 storage)
+- [x] Removed deprecated legacy files (`clients-to-lake.mjs`, `portals-to-lake.mjs`)
+- [x] Confirmed GitHub workflows exist for both migrated ETL scripts
+
 ---
 
 ## 📋 SUMMARY
 
 **Total Items:** 48
-**Completed:** 24 (50%)
+**Completed:** 25 (52%)
 **Blocked (awaiting user action):** 15
-**Low Priority:** 9
+**Low Priority:** 8
 
 **Next Actions (User Must Do):**
 1. Add 5 GitHub secrets (CF_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, CF_R2_ACCESS_KEY_ID, CF_R2_SECRET_ACCESS_KEY)
 2. Add 5 Wrangler secrets (SESSION_SECRET, AGENT_AUTH_TOKEN, GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID)
 3. Restart Cline
 4. Configure SSD mount on omv
+
+**ETL Migration Status:** ✅ COMPLETE - Both clients and portals ETL scripts fully migrated to D1 + R2. Legacy files removed.
 
 **Reference:** See ACTIONS-REQUIRED.md for detailed step-by-step instructions.
