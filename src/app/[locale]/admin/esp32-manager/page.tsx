@@ -234,7 +234,7 @@ export default function Esp32ManagerPage() {
   const call = useCallback(async (path: string, opts?: RequestInit) => {
     try {
       const res = await fetchWithAuth(path, opts);
-      const json = await res.json();
+      const json = (await res.json()) as { offline?: boolean };
       if (json?.offline) {
         setOffline(true);
         return null;
@@ -281,7 +281,7 @@ export default function Esp32ManagerPage() {
     setConfigLoading(true);
     const data = await call(`/api/admin/esp32?action=config&device_id=${selectedId}`);
     if (data && !data.offline) {
-      setConfig(data);
+      setConfig(data as any);
       setConfigDirty(false);
     }
     setConfigLoading(false);
@@ -302,9 +302,10 @@ export default function Esp32ManagerPage() {
       body: JSON.stringify(config),
     });
     setConfigLoading(false);
-    const msg = res?.ok ? "✓ Config saved & published to device" : "✗ Save failed";
+    const success = res !== null && !res?.offline;
+  const msg = success ? "✓ Config saved & published to device" : "✗ Save failed";
     setConfigFeedback(msg);
-    if (res?.ok) setConfigDirty(false);
+    if (success) setConfigDirty(false);
     setTimeout(() => setConfigFeedback(""), 4000);
   }, [call, config, selectedId]);
 
@@ -335,9 +336,8 @@ export default function Esp32ManagerPage() {
       }),
     });
     setOtaLoading(false);
-    const msg = res?.ok
-      ? `✓ OTA command sent to ${selectedId} — device will reboot when done`
-      : "✗ Failed to send OTA command";
+const success = res !== null && !res?.offline;
+ const msg = success ? `✓ OTA command sent to ${selectedId} — device will reboot when done` : "✗ Failed to send OTA command";
     setOtaFeedback(msg);
   }, [call, selectedId, otaUrl, otaVersion]);
 

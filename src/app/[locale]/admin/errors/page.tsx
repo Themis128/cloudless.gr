@@ -48,6 +48,10 @@ const ACTION_LABELS: Record<string, string> = {
   unresolved: "Reopened",
 };
 
+function isErrorResponse(data: unknown): data is { error?: string } {
+  return typeof data === "object" && data !== null && !Array.isArray(data);
+}
+
 async function performErrorAction(
   id: string,
   status: "resolved" | "ignored" | "unresolved"
@@ -58,7 +62,10 @@ async function performErrorAction(
     body: JSON.stringify({ status }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const errorMessage = isErrorResponse(data) ? data.error : undefined;
+    throw new Error(errorMessage ?? `HTTP ${res.status}`);
+  }
   return `${ACTION_LABELS[status]} successfully`;
 }
 
@@ -83,7 +90,7 @@ export default function AdminErrorsPage() {
         if (res.status === 503) throw new Error("Sentry not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = await res.json();
+      const data = (await res.json()) as { issues: any[] };
       setIssues(data.issues ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load errors");
