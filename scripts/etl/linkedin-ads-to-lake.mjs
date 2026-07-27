@@ -1,4 +1,12 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — use `linkedin-ads-to-r2.mjs` instead.
+ *
+ * This legacy version uses AWS S3 for storage.
+ * The migrated version (`linkedin-ads-to-r2.mjs`) reads config from D1 via
+ * the /api/config endpoint and writes to R2-compatible storage.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: LinkedIn Ads → S3 Data Lake (Parquet)
  *
  * Pulls campaign-level insights for the last 90 days from the LinkedIn

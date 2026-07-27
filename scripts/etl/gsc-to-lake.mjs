@@ -1,4 +1,12 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — use `gsc-to-r2.mjs` instead.
+ *
+ * This legacy version uses AWS S3 for storage.
+ * The migrated version (`gsc-to-r2.mjs`) reads config from D1 via
+ * the /api/config endpoint and writes to R2-compatible storage.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: Google Search Console → S3 Data Lake (Parquet)
  *
  * Pulls last-90-day search analytics from GSC, dimensioned by query + page,

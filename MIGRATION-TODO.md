@@ -39,8 +39,8 @@
 - [ ] Run Playwright E2E tests against production (cloudless.gr and pi-origin.cloudless.gr)
 
 ### Code Quality
-- [ ] Clean up legacy ETL scripts (`espocrm-to-lake.mjs`, `clients-to-lake.mjs`, `portals-to-lake.mjs`) once new versions verified
-- [ ] Remove AWS SDK imports from fully migrated files
+- [x] Add deprecation notices to all legacy `-to-lake.mjs` ETL scripts (11 scripts updated)
+- [ ] Remove AWS SDK imports from fully migrated files (post-deprecation cleanup)
 - [ ] Update any remaining docs referencing old AWS architecture
 
 ---

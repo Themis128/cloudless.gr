@@ -1,4 +1,12 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — use `appflowy-to-r2.mjs` instead.
+ *
+ * This legacy version uses AWS S3 for storage.
+ * The migrated version (`appflowy-to-r2.mjs`) reads config from D1 via
+ * the /api/config endpoint and writes to R2-compatible storage.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: AppFlowy Cloud → S3 Data Lake (Parquet) — postgres-direct edition
  *
  * REVISED 2026-06-21: switched from REST `/admin/*` (which returned 0 rows

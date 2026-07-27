@@ -1,4 +1,16 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — AWS Cost Explorer data collection.
+ *
+ * This script depends on AWS Cost Explorer API (an AWS-specific service).
+ * Since the cloudless.gr infrastructure has migrated fully to Cloudflare,
+ * this script is retained for historical reference only.
+ *
+ * No direct R2 replacement exists; Cloudflare does not provide cost APIs.
+ * Consider removing this script and associated Grafana dashboard if AWS
+ * cost monitoring is no longer required.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: AWS Cost Explorer → S3 Data Lake (Parquet)
  *
  * R9 of the 2026-06-21 R-series. Pulls daily cost per AWS service for the last

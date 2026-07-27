@@ -43,9 +43,13 @@
 - [ ] Run Playwright E2E tests against production (cloudless.gr and pi-origin.cloudless.gr)
 
 ### Code Quality
-- [ ] Remove `@aws-sdk/client-ssm` from legacy-only scripts/etl/package.json if no longer used
-- [ ] Remove `@aws-sdk/client-cost-explorer` from scripts/etl/package.json if no longer used
-- [ ] Update any remaining docs referencing old AWS architecture
+- [x] Add deprecation notices to all legacy `-to-lake.mjs` ETL scripts (10 scripts updated)
+- [x] Add deprecation notice to `compute-rfm-churn.mjs`
+- [x] Remove unused AWS SDK packages from `scripts/etl/package.json` (`@aws-sdk/client-ssm`, `@aws-sdk/client-cost-explorer`)
+- [x] Update `_r2-config.mjs` to throw error when R2 credentials missing (fail-fast)
+- [ ] User action: Create R2 API credentials and add to GitHub secrets
+- [ ] User action: Update `.env.example` to remove AWS SSM/Cognito references
+- [ ] User action: Create `.env.local` for development
 
 ### Security & Monitoring
 - [ ] Run `pnpm mcp-security-scan` on API routes

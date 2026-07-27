@@ -1,4 +1,12 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — use `n8n-to-r2.mjs` instead.
+ *
+ * This legacy version uses AWS S3 for storage.
+ * The migrated version (`n8n-to-r2.mjs`) reads config from D1 via
+ * the /api/config endpoint and writes to R2-compatible storage.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: n8n → S3 Data Lake (Parquet)
  *
  * Pulls workflows + executions from the self-hosted n8n via the public

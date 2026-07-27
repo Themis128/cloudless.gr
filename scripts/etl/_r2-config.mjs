@@ -17,7 +17,10 @@ export function getS3Client() {
 			credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
 		});
 	}
-	return new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+	throw new Error(
+		"Missing R2 credentials. Set CF_ACCOUNT_ID, CF_R2_ACCESS_KEY_ID, and CF_R2_SECRET_ACCESS_KEY. " +
+		"See https://developers.cloudflare.com/r2/api/s3-api/"
+	);
 }
 
 export const BUCKET = process.env.ANALYTICS_BUCKET || "datalake-bucket";

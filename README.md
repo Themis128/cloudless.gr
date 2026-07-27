@@ -1,6 +1,6 @@
 # Cloudless — cloudless.gr
 
-> **Auth is Cognito.** App admin = membership in the Cognito group `admin`.
+> **Auth is Cloudflare D1.** App admin = membership in the `admin` group in the D1 `user-auth-db`. Managed via `/api/admin/users/promote`.
 
 Cloud computing, serverless development, data analytics, and AI-powered digital marketing for startups and SMBs.
 
@@ -27,16 +27,15 @@ Translation dictionaries live in `src/locales/en.json` and `src/locales/el.json`
 sequenceDiagram
     participant U as User
     participant App as Next.js Client
-    participant KC as Cognito (Hosted UI)
+    participant D1 as Cloudflare D1
 
     U->>App: Click "Sign in"
-    App->>KC: Authorization Code + PKCE redirect
-    KC-->>U: Hosted login page
-    U->>KC: Enter credentials
-    KC-->>App: Authorization code → /api/auth/callback/cognito
-    App->>KC: Exchange code for tokens
-    KC-->>App: access_token + id_token + refresh_token
-    App->>App: Decode id_token, check groups claim
+    App->>App: Email/password form
+    U->>App: Enter credentials
+    App->>D1: Verify credentials (PBKDF2 hash)
+    D1-->>App: User record + roles
+    App->>App: Create session token
+    App-->>U: Session cookie + redirect
     alt admin group
         App->>U: Show admin panel
     else regular user
@@ -44,24 +43,24 @@ sequenceDiagram
     end
 ```
 
-User authentication is powered by **AWS Cognito** (Hosted UI) via **next-auth v5**. The `AuthProvider` in `src/context/AuthContext.tsx` wraps the entire app and exposes sign-in, sign-out, and admin detection through the `useAuth()` hook. The Cognito provider is activated by setting `COGNITO_ISSUER` (plus client ID/secret and domain) in the server environment.
+User authentication is powered by **Cloudflare D1** with PBKDF2 password hashing. The `AuthProvider` in `src/context/AuthContext.tsx` wraps the entire app and exposes sign-in, sign-out, and admin detection through the `useAuth()` hook.
 
 Key features of the auth system:
 
-- **OIDC Authorization Code + PKCE** — login redirects to the Cognito Hosted UI; tokens are exchanged server-side and stored in an encrypted next-auth session cookie.
-- **Refresh-token rotation** — the server transparently refreshes expired access tokens before they reach API routes.
-- **RP-Initiated Logout** — sign-out calls Cognito's logout endpoint so the SSO session is fully terminated.
-- Admin detection — server-side via `groups` claim in the next-auth JWT (`["admin"]`). Admin routes are checked in `src/proxy.ts` middleware before rendering.
-- Route protection is **server-side** via `src/proxy.ts` middleware (all unauthenticated requests to `/dashboard` and `/admin` are redirected to login before the page renders) and additionally client-side via layout guards. Locale-prefixed routes (e.g. `/en/dashboard`, `/el/admin/orders`) are normalized before authorization checks.
+- **Email/password authentication** — credentials verified against D1 `user-auth-db` with PBKDF2 secure hashing.
+- **Session management** — server-side sessions stored in D1 with configurable expiry (30 days default, 60 days with "remember me").
+- **Admin detection** — server-side via `roles` table in D1. Admin routes are checked by `src/lib/auth-middleware.ts` before rendering.
+- **Password security** — minimum 8 characters with mixed case, numbers, and symbols. Account lockout after 5 failed attempts in 15 minutes.
+- **Email verification** — OTP via Cloudflare Email binding on registration.
+- Route protection is **server-side** via middleware (all unauthenticated requests to `/dashboard` and `/admin` are redirected to login before the page renders) and additionally client-side via layout guards. Locale-prefixed routes (e.g. `/en/dashboard`, `/el/admin/orders`) are normalized before authorization checks.
 - Theme preference (`dark` / `light` / `system`) is exposed via a navbar `ThemeSwitcher` (popover on desktop, inline radios on mobile) and the dashboard settings form. Anonymous visitors persist to `localStorage["cloudless-theme-pref"]`; signed-in users also sync to `user.preferences.theme`. Selection priority: admin path (locked dark) → user preference → localStorage → route default. Cross-tab sync via the `storage` event. See `docs/design-system-v2.md` § "Theme switcher".
-- JWT hardening — `api-auth.ts` validates Bearer JWTs against the active provider's JWKS endpoint, enforcing `issuer`, `audience`, and group membership claims.
 
 ## Architecture
 
 ```mermaid
 graph TB
     subgraph Client["Browser / Mobile"]
-        UI["Next.js App&lt;br/&gt;React 19 + Tailwind 4"]
+        UI["Next.js App<br/>React 19 + Tailwind 4"]
         SW["Service Worker PWA"]
     end
     subgraph Routes["API Routes"]
@@ -78,10 +77,11 @@ graph TB
         Health["/api/health"]
     end
 
-    subgraph AWS["AWS"]
-        Cognito["Cognito OIDC"]
-        SES["SES Email"]
-        SSM["SSM Parameter Store"]
+    subgraph Cloudflare["Cloudflare"]
+        D1["D1 Database"]
+        R2["R2 Storage"]
+        Email["Email Binding"]
+        WorkersAI["Workers AI"]
     end
     subgraph External["External Services"]
         Stripe["Stripe Payments"]
@@ -92,15 +92,16 @@ graph TB
     end
 
     UI --> Routes
-    UI --> Cognito
-    Routes --> SSM
-    Contact --> SES
+    Routes --> D1
+    Routes --> R2
+    Routes --> Email
+    Contact --> Email
     Contact --> Slack
     Contact --> EspoCRM
-    Subscribe --> SES
+    Subscribe --> Email
     Subscribe --> Slack
     Checkout --> Stripe
-    StripeWH --> SES
+    StripeWH --> Email
     StripeWH --> Slack
     CalAvail --> GCal
     CalBook --> GCal
@@ -119,18 +120,18 @@ src/
 │   ├── services/page.tsx   # Service offerings & pricing
 │   ├── blog/               # Blog listing & [slug] detail pages
 │   ├── store/              # E-commerce store, [id] detail, success page
-│   ├── contact/page.tsx    # Contact form (AWS SES)
-│   ├── auth/               # Authentication pages (Cognito + next-auth)
-│   │   ├── login/page.tsx       # Login — redirects to Cognito Hosted UI
-│   │   ├── signup/page.tsx      # Sign-up — redirects to Cognito sign-up
-│   │   └── forgot-password/page.tsx # Forgot password — Cognito self-service flow
+│   ├── contact/page.tsx    # Contact form (Cloudflare Email)
+│   ├── auth/               # Authentication pages (Cloudflare D1)
+│   │   ├── login/page.tsx       # Login — email/password form
+│   │   ├── signup/page.tsx      # Sign-up — registration with email verification
+│   │   └── forgot-password/page.tsx # Forgot password — reset flow
 │   ├── dashboard/          # Client dashboard (auth-protected)
 │   ├── admin/              # Admin panel (admin-group-only)
 │   ├── not-found.tsx       # Custom 404
 │   └── api/
-│       ├── contact/route.ts         # POST → AWS SES email
+│       ├── contact/route.ts         # POST → Cloudflare Email
 │       ├── checkout/route.ts        # POST → Stripe Checkout session
-│       ├── subscribe/route.ts       # POST → SES + Slack subscriber notification
+│       ├── subscribe/route.ts       # POST → Cloudflare Email + Slack
 │       ├── webhooks/stripe/route.ts # Stripe webhook handler
 │       └── slack/
 │           ├── events/route.ts      # Slack Events API (mentions, DMs)
@@ -143,15 +144,15 @@ src/
 │   └── store/              # Cart button, slide-over, grid, add-to-cart
 ├── context/
 │   ├── CartContext.tsx      # Shopping cart state (useReducer)
-│   └── AuthContext.tsx      # Auth state (next-auth session) with useAuth() hook
+│   └── AuthContext.tsx      # Auth state (D1 session) with useAuth() hook
 └── lib/
-    ├── auth.ts             # next-auth v5 config (Cognito)
-    ├── ssm-config.ts       # AWS SSM Parameter Store config loader
+    ├── auth.ts             # D1-based auth config
+    ├── ssm-config-d1.ts    # D1 + Wrangler secrets config loader
     ├── integrations.ts     # Third-party integration config (Slack tokens)
     ├── stripe.ts           # Stripe client initialization
     ├── store-products.ts   # Demo product catalog
     ├── blog.ts             # Blog post data
-    ├── email.ts            # Email helper (SES): order confirmation, team notifications
+    ├── email-sender.ts     # Cloudflare Email helper
     ├── slack-notify.ts     # SlackClient with retry/backoff; Block Kit notifiers
     ├── slack-verify.ts     # Slack request signature verification (HMAC-SHA256)
     ├── i18n.ts             # Locale system with translate/translateArray
@@ -220,76 +221,59 @@ graph LR
         EnvFile[".env.local"] --> NextJS["Next.js Server"]
     end
 
-    subgraph Prod["Production AWS"]
-        SSM["SSM Parameter Store"] --> GetConfig["getConfig()"]
-        GetConfig --> APIRoutes["API Routes"]
+    subgraph Prod["Production Cloudflare"]
+        Secrets["Wrangler Secrets"] --> Worker["Cloudflare Worker"]
+        D1Config["D1 app_config"] --> Worker
     end
 
-    SSM -->|SecureString| STRIPE_KEY["STRIPE_SECRET_KEY"]
-    SSM -->|SecureString| SLACK_TOKEN["SLACK_BOT_TOKEN"]
-    SSM -->|SecureString| SES_CREDS["SES_FROM_EMAIL"]
-    SSM -->|String| APP_CONFIG["APP_VERSION etc"]
+    Secrets -->|Secret| STRIPE_KEY["STRIPE_SECRET_KEY"]
+    Secrets -->|Secret| SLACK_TOKEN["SLACK_BOT_TOKEN"]
+    D1Config -->|Public| APP_CONFIG["Integration config"]
 ```
 
-This project uses **no `.env` files** in production. All secrets are stored in **AWS SSM Parameter Store** under the path prefix `/cloudless/production/` and fetched at runtime via `src/lib/ssm-config.ts`.
+This project uses **no `.env` files** in production. All secrets are stored in **Wrangler secrets** and non-sensitive configuration is stored in the **D1 `app_config` table**. Configuration is fetched at runtime via `src/lib/ssm-config-d1.ts`.
 
-### How `ssm-config.ts` works
+### How `ssm-config-d1.ts` works
 
-- `SSM_PREFIX` uses `||` (not `??`) so an empty string falls back to `/cloudless/production` and never fetches from the SSM root.
-- A module-level singleton `SSMClient` avoids re-creating the connection pool on every 5-min cache refresh.
-- On transient SSM failure, `getConfig()` serves the last known good (stale) cache instead of crashing all in-flight requests. If there is no prior cache, it throws so Lambda reports a cold-start failure.
-- `NODE_ENV=test` short-circuits SSM entirely and reads from `process.env` (unit tests never touch AWS).
+- Detects Cloudflare Workers runtime and reads from `process.env` (Wrangler secrets) or D1 `app_config` table.
+- Falls back to `process.env` for local development.
+- Caches D1 config for the lifetime of the Worker instance to avoid repeated queries.
 
-### Required SSM parameters (startup validation)
+### Required secrets
 
-`getConfig()` throws on startup if any of these are missing:
-
-| Parameter | Type | Description |
+| Secret | Type | Description |
 |---|---|---|
-| `STRIPE_SECRET_KEY` | SecureString | Stripe API secret key |
-| `STRIPE_WEBHOOK_SECRET` | SecureString | Stripe webhook signature secret |
+| `STRIPE_SECRET_KEY` | Secret | Stripe API secret key |
+| `STRIPE_WEBHOOK_SECRET` | Secret | Stripe webhook signature secret |
+| `SESSION_SECRET` | Secret | Session signing key (32+ bytes) |
+| `SLACK_BOT_TOKEN` | Secret | Slack bot OAuth token |
+| `SLACK_SIGNING_SECRET` | Secret | Slack request signing secret |
+| `SLACK_WEBHOOK_URL` | Secret | Slack incoming webhook URL |
+| `GOOGLE_CLIENT_EMAIL` | Public | Google service account email (in D1) |
+| `GOOGLE_PRIVATE_KEY` | Secret | Google service account key |
+| `NOTION_API_KEY` | Secret | Notion integration token |
+| `ANTHROPIC_API_KEY` | Secret | Claude AI API key |
 
-### All SSM parameters
-
-| Parameter                | Type         | Description                   |
-| ------------------------ | ------------ | ----------------------------- |
-| `SES_FROM_EMAIL`         | String       | Verified SES sender address   |
-| `SES_TO_EMAIL`           | String       | Contact form recipient        |
-| `AWS_SES_REGION`         | String       | SES region (e.g. `us-east-1`) |
-| `STRIPE_SECRET_KEY`      | SecureString | Stripe API secret key         |
-| `STRIPE_PUBLISHABLE_KEY` | SecureString | Stripe publishable key        |
-| `STRIPE_WEBHOOK_SECRET`  | SecureString | Stripe webhook signature       |
-| `SLACK_BOT_TOKEN`        | SecureString | Slack bot OAuth token         |
-| `SLACK_SIGNING_SECRET`   | SecureString | Slack request signing secret  |
-| `SLACK_WEBHOOK_URL`      | SecureString | Slack incoming webhook URL    |
-| `GOOGLE_CLIENT_EMAIL`    | String       | Google service account email  |
-| `GOOGLE_PRIVATE_KEY`     | SecureString | Google service account key    |
-| `NOTION_API_KEY`         | SecureString | Notion integration token      |
-| `ANTHROPIC_API_KEY`      | SecureString | Claude AI API key             |
-| `ANTHROPIC_CHAT_MODEL`   | String       | Optional Claude model for chatbot (`/api/chat`) |
-| _(+ all other integration keys in `AppConfig`)_ | | |
-
-For local development, configure your AWS CLI with credentials that have `ssm:GetParametersByPath` permission on `/cloudless/production/*`.
-
-### SSM as data store (separate from secrets)
-
-Some features use SSM as a mutable JSON blob store for app state, separate from the secrets config:
+### D1 app_config keys (non-sensitive)
 
 | Key | Purpose |
 |---|---|
-| `/cloudless/PENDING_CLIENTS_JSON` | Client signup queue (`pending-clients.ts`) |
-| `/cloudless/AB_FLAGS_JSON` | A/B test flag state (`admin/ab-tests`) |
-| `/cloudless/CLIENT_PORTALS_JSON` | Portal token registry |
-| `/cloudless/WORKSPACES_JSON` | Workspace config |
+| `ESPOCRM_BASE_URL` | EspoCRM instance URL |
+| `LINKEDIN_AD_ACCOUNT_ID` | LinkedIn Ads account ID |
+| `POSTIZ_API_URL` | Postiz instance URL |
+| `NOTION_CALENDAR_DB_ID` | Notion calendar database |
+| `NOTION_REPORTS_DB_ID` | Notion reports database |
 
-## Transactional Email (SES)
+Set secrets via: `echo "value" \| npx wrangler secret put SECRET_NAME --config wrangler.jsonc`
 
-All outbound email uses **AWS SES v2** (`@aws-sdk/client-sesv2`) via `src/lib/email.ts`.
+## Transactional Email
+
+All outbound email uses **Cloudflare Email Service** via `src/lib/email-sender.ts`.
 
 | Function | Trigger | Notes |
 |---|---|---|
 | `sendEmail()` | Base helper | Accepts optional `listUnsubscribeUrl` → adds RFC 8058 `List-Unsubscribe` + `List-Unsubscribe-Post` headers |
-| `notifyTeam()` | Contact form, orders, subscribe, unsubscribe | Sends to `SES_TO_EMAIL` (from SSM) |
+| `notifyTeam()` | Contact form, orders, subscribe, unsubscribe | Sends to admin inbox |
 | `sendOrderConfirmation()` | Stripe `checkout.session.completed` | Sent to customer |
 | `sendPaymentFailureNotice()` | Stripe `invoice.payment_failed` | Sent to customer |
 | `sendSubscriberWelcome()` | Newsletter signup | Sent to subscriber with `List-Unsubscribe` header |
@@ -301,17 +285,16 @@ Two endpoints handle opt-outs, both rate-limited to **5 requests / IP / minute**
 - `POST /api/unsubscribe` — JSON `{ email }`, used by the settings UI
 - `GET /api/unsubscribe?email=…` — one-click link included in all subscriber emails (`List-Unsubscribe` header)
 
-Both call `addToSuppressionList()` in `src/lib/ses-suppression.ts`, which adds the address to the SES account-level suppression list via `PutSuppressedDestinationCommand`. SES will reject all future sends to suppressed addresses at the infrastructure level.
+Both call `addToSuppressionList()` in `src/lib/ses-suppression.ts`, which adds the address to the D1 `email_suppression` table. Cloudflare Email will reject all future sends to suppressed addresses.
 
 ### Reliability notes
 
-- `POST /api/subscribe` sends both SES emails in `Promise.all()` — if either fails the subscriber gets a 500 and can retry. Slack notification is fire-and-forget and never fails the request.
-- `sendEmail()` swallows AWS SDK XML parse errors on HTTP 200 responses (known SDK quirk where a successful send throws a deserialization error).
-- No `.env` files in production — all SES credentials (`SES_FROM_EMAIL`, `SES_TO_EMAIL`, `AWS_SES_REGION`) are loaded from SSM at runtime.
+- `POST /api/subscribe` sends both emails in `Promise.all()` — if either fails the subscriber gets a 500 and can retry. Slack notification is fire-and-forget and never fails the request.
+- Cloudflare Email binding provides automatic DKIM/DMARC/SPF when domain is verified.
 
 ## Stripe (Store, Checkout, Webhooks)
 
-All Stripe operations use a lazy singleton from `src/lib/stripe.ts` (`getStripe()`) initialized once from SSM and reused across warm Lambda instances.
+All Stripe operations use a lazy singleton from `src/lib/stripe.ts` (`getStripe()`) initialized from Wrangler secrets.
 
 ### Checkout (`POST /api/checkout`)
 
@@ -324,11 +307,11 @@ All Stripe operations use a lazy singleton from `src/lib/stripe.ts` (`getStripe(
 ### Webhook (`POST /api/webhooks/stripe`)
 
 - Signature verified via `stripe.webhooks.constructEvent()` (HMAC-SHA256) before any processing — returns 400 on failure.
-- Webhook secret loaded exclusively from SSM (`STRIPE_WEBHOOK_SECRET`) — no env var fast-path.
+- Webhook secret loaded from Wrangler secret `STRIPE_WEBHOOK_SECRET`.
 - `checkout.session.completed`: order confirmation email sent only when `payment_status === "paid"` OR `mode === "subscription"`. One-time payments with `payment_status !== "paid"` (e.g. async bank transfers still pending) do not trigger the email.
 - `invoice.payment_failed`: sends failure notice to customer + team alert.
 - EspoCRM contact upsert + deal creation runs fire-and-forget after `checkout.session.completed`.
-- Sentry `captureException` and `flush` called on handler errors before Lambda returns.
+- Sentry `captureException` and `flush` called on handler errors before returning.
 
 ### User purchases (`GET /api/user/purchases`)
 
@@ -340,7 +323,7 @@ All Notion operations use `src/lib/notion.ts` — a thin fetch wrapper that call
 
 ### Webhook (`POST /api/webhooks/notion`)
 
-- Shared secret verified via `x-webhook-secret` header using `crypto.timingSafeEqual` (timing-safe) before any payload is parsed. Secret loaded from SSM (`NOTION_WEBHOOK_SECRET`) via `getConfig()`.
+- Shared secret verified via `x-webhook-secret` header using `crypto.timingSafeEqual` (timing-safe) before any payload is parsed. Secret loaded from Wrangler secrets via `getIntegrationsAsync()`.
 - Missing or incorrect secret returns 401; invalid JSON returns 400.
 - Supported event types and their effects:
 
@@ -355,7 +338,7 @@ All Notion operations use `src/lib/notion.ts` — a thin fetch wrapper that call
 
 ### Calendar persistence (`src/lib/notion-calendar.ts`)
 
-Persists content calendar items to `NOTION_CALENDAR_DB_ID`. Reads config from `getIntegrationsAsync()` (env + SSM merged). Respects explicit `NOTION_CALENDAR_DB_ID = ""` env-var clears (disables integration without clearing SSM cache).
+Persists content calendar items to `NOTION_CALENDAR_DB_ID`. Reads config from `getConfigAsync()` (Wrangler secrets + D1 `app_config`). Respects explicit `NOTION_CALENDAR_DB_ID = ""` env-var clears (disables integration).
 
 ### Reports persistence (`src/lib/notion-reports.ts`)
 
@@ -379,7 +362,7 @@ pnpm start
 
 ## Google Search Console (SEO)
 
-The SEO integration in `src/lib/gsc.ts` uses the same Google service account already stored in SSM (`GOOGLE_CLIENT_EMAIL` + `GOOGLE_PRIVATE_KEY`) that powers Google Calendar.
+The SEO integration in `src/lib/gsc.ts` uses the same Google service account already stored in Wrangler secrets / D1 `app_config` (`GOOGLE_CLIENT_EMAIL` + `GOOGLE_PRIVATE_KEY`) that powers Google Calendar.
 
 ### One-time setup
 
@@ -420,7 +403,7 @@ All functions return `null` / `[]` on error — they never throw — so dashboar
 | `GET /api/admin/analytics/search-intent` | GSC | Keywords grouped by search intent with bucket counts |
 | `GET /api/admin/analytics/countries?limit=N` | GSC | Traffic by country, `limit` max 50 |
 
-All GSC routes require admin JWT and return `503` when `GOOGLE_CLIENT_EMAIL` or `GOOGLE_PRIVATE_KEY` are absent from SSM.
+All GSC routes require admin JWT and return `503` when `GOOGLE_CLIENT_EMAIL` or `GOOGLE_PRIVATE_KEY` are absent.
 
 ### Weekly digest
 
@@ -470,14 +453,15 @@ The visual identity uses a navy/electric-blue/cyan palette with Instrument Sans 
 
 GitHub Actions workflows in `.github/workflows/`:
 
-- **deploy.yml** — Builds and deploys to AWS Amplify on push to `main`
+- **deploy.yml** — Builds and deploys to Cloudflare Workers on push to `main`
+- **cloudflare-deploy.yml** — Deploys Worker via Wrangler
 - **lighthouse.yml** — Runs Lighthouse audits on PRs against key pages
 - **pr-labeler.yml** — Auto-labels PRs by size and file paths
 - **stale.yml** — Marks and closes stale issues/PRs
 
 ## Deployment
 
-The app deploys to **AWS Amplify**. The deployment workflow handles build and deploy automatically on push to `main`. Production IAM role needs `ssm:GetParametersByPath` and `ses:SendEmail` permissions.
+The app deploys to **Cloudflare Workers** via Wrangler. The deployment workflow handles build and deploy automatically on push to `main`. Secrets are managed via Wrangler secrets and D1 `app_config`.
 
 ## Git Line Endings
 
@@ -494,9 +478,10 @@ This avoids noisy `LF will be replaced by CRLF` warnings and keeps diffs stable 
 - React 19.2.4
 - TypeScript 5
 - Tailwind CSS 4
-- Cognito + next-auth v5 (authentication)
-- AWS SES v2 (transactional email — contact, orders, newsletter, portal approvals)
-- AWS SSM Parameter Store (secrets)
+- Cloudflare D1 (authentication, sessions)
+- Cloudflare Email Service (transactional email)
+- Cloudflare R2 (object storage)
+- Cloudflare Workers AI (AI inference)
 - Stripe (checkout & payments)
 - Vitest + React Testing Library (1164 tests)
 

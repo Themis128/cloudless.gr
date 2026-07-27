@@ -1,4 +1,12 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DEPRECATED — use `stripe-to-r2.mjs` instead.
+ *
+ * This legacy version uses AWS S3 for storage.
+ * The migrated version (`stripe-to-r2.mjs`) reads config from D1 via
+ * the /api/config endpoint and writes to R2-compatible storage.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
  * ETL: Stripe → S3 Data Lake (Parquet)
  *
  * Pulls all Stripe checkout sessions, invoices, and subscriptions,
