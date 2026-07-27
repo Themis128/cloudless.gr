@@ -1,20 +1,27 @@
 # Cloudless.gr Migration - Comprehensive Todo List
-*Generated: 2026-07-24 | Based on all migration docs and existing todo files*
+*Generated: 2026-07-24 | Updated: 2026-07-28*
 
 ---
 
 ## 🔴 HIGH PRIORITY - Blocking Production
 
-### Cloudflare API Token Fix (Blocks Deploy)
-- [x] Create new Cloudflare API Token with "Edit Cloudflare Workers" template
-- [x] Add token as `CLOUDFLARE_API_TOKEN` GitHub repository secret
-- [x] Verify `CLOUDFLARE_ACCOUNT_ID` secret exists (`fb7dc7b69b662480cd5961a4d1913c78`)
+### Cloudflare API Token Fix (PARTIALLY COMPLETE)
+- [x] **CLOUDFLARE_API_TOKEN** - ✅ Set as GitHub secret (~1 day ago)
+- [x] **CF_ACCOUNT_ID** - ✅ Set as GitHub secret (~2 days ago)
+- [x] **CLOUDFLARE_ZONE_ID** - ✅ Set as GitHub secret (~5 days ago)
+- [x] Create `create-r2-credentials.yml` workflow to auto-generate R2 credentials
+- [ ] User action: Run `create-r2-credentials.yml` workflow to generate `CF_R2_ACCESS_KEY_ID` and `CF_R2_SECRET_ACCESS_KEY`
+- [ ] User action: Set `SESSION_SECRET` via `npx wrangler secret put SESSION_SECRET --config wrangler.jsonc`
+- [ ] User action: Set `AGENT_AUTH_TOKEN` via `npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc`
 - [ ] **Verify deployment workflow works** with the new token (test a build)
 
 ### Google Calendar Configuration (Blocks Calendar Booking)
-- [x] Add `GOOGLE_CLIENT_EMAIL` as Wrangler secret for Workers
-- [x] Add `GOOGLE_PRIVATE_KEY` as Wrangler secret (with `\n` for newlines)
-- [x] Add `GOOGLE_CALENDAR_ID` as Wrangler secret (defaults to "primary")
+- [x] **GOOGLE_CLIENT_EMAIL** - ✅ Set as GitHub secret (~1 month ago)
+- [x] **GOOGLE_PRIVATE_KEY** - ✅ Set as GitHub secret (~1 month ago)
+- [x] **GOOGLE_CALENDAR_ID** - ✅ Set as GitHub secret (~2 days ago)
+- [ ] User action: Add `GOOGLE_CLIENT_EMAIL` as Wrangler secret for Workers
+- [ ] User action: Add `GOOGLE_PRIVATE_KEY` as Wrangler secret (with \n for newlines)
+- [ ] User action: Add `GOOGLE_CALENDAR_ID` as Wrangler secret (defaults to "primary")
 - [ ] **Test calendar booking flow** (availability → book slot)
 
 ---
@@ -22,8 +29,11 @@
 ## 🟡 MEDIUM PRIORITY - Migration Completion
 
 ### ETL Script Migration (Legacy Scripts Deprecated)
-- [x] `scripts/etl/clients-to-lake.mjs` - Deprecated, replaced by `clients-to-r2.mjs` (D1 config + R2 storage)
-- [x] `scripts/etl/portals-to-lake.mjs` - Deprecated, replaced by `portals-to-r2.mjs` (D1 config + R2 storage)
+- [x] `scripts/etl/clients-to-lake.mjs` - Removed (replaced by `clients-to-r2.mjs`)
+- [x] `scripts/etl/portals-to-lake.mjs` - Removed (replaced by `portals-to-r2.mjs`)
+- [x] All 10 legacy `-to-lake.mjs` scripts have deprecation notices
+- [x] `_r2-config.mjs` updated to fail-fast (no AWS S3 fallback)
+- [x] Removed unused AWS SDK packages from `scripts/etl/package.json`
 
 ### Infrastructure & Operations
 - [ ] Restart Cline/Claude desktop to load MCP configuration changes
@@ -40,8 +50,9 @@
 
 ### Code Quality
 - [x] Add deprecation notices to all legacy `-to-lake.mjs` ETL scripts (11 scripts updated)
-- [x] Mark `-to-lake.mjs` legacy scripts as fully deprecated (11 scripts updated in latest commit)
-- [ ] Remove AWS SDK imports from fully migrated files (post-deprecation cleanup)
+- [x] Update `_r2-config.mjs` to fail-fast instead of falling back to AWS S3
+- [x] Remove unused AWS SDK packages from `scripts/etl/package.json`
+- [ ] Update `migrate-all-to-r2.sh` to reflect fail-fast behavior
 - [ ] Update any remaining docs referencing old AWS architecture
 
 ---
@@ -56,7 +67,9 @@
 - [x] Bedrock → Workers AI (`@cf/meta/llama-3.1-8b-instruct`)
 - [x] Cognito → D1-based auth
 - [x] All 5 Wrangler secrets migrated (ADMIN_ALERT_SECRET, ESPOCRM_API_KEY, ESPOCRM_API_PASSWORD, SLACK_WEBHOOK_URL, POSTIZ_API_KEY)
-- [x] 5/5 ETL scripts migrated to R2 + D1 config
+- [x] 10/10 ETL scripts migrated to R2 + D1 config
+- [x] Legacy `-to-lake.mjs` files removed (clients-to-lake, portals-to-lake)
+- [x] `create-r2-credentials.yml` workflow created (auto-generates R2 credentials)
 
 ### Authentication Security Hardening (ALL COMPLETE ✅)
 - [x] Password strength validation (min 8 chars, mixed case, number, symbol)
@@ -104,9 +117,9 @@
 
 | Priority | Count | Status |
 |----------|-------|--------|
-| 🔴 High (Blocking) | 4 | 2/6 |
+| 🔴 High (Blocking) | 6 | 3/6 |
 | 🟡 Medium | 2 | 0/2 |
 | 🟢 Low | 6 | 1/6 |
-| ✅ Completed | 52+ | Done |
+| ✅ Completed | 55+ | Done |
 
-**Next Action:** Start with **Cloudflare API Token Fix** (blocks all deployments), then **Google Calendar Configuration** (enables booking feature).
+**Next Action:** Run the `create-r2-credentials.yml` workflow to auto-generate R2 credentials, then set `SESSION_SECRET` and `AGENT_AUTH_TOKEN` via Wrangler.
