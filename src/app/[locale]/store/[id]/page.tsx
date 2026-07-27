@@ -8,6 +8,7 @@ import {
   categoryLabels,
   categoryColors,
 } from "@/lib/store-products";
+import { recommendProductsForProduct } from "@/lib/product-recommendations";
 import AddToCartButton from "@/components/store/AddToCartButton";
 import ProductIcon from "@/components/store/ProductIcon";
 import JsonLd from "@/components/JsonLd";

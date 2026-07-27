@@ -25,6 +25,11 @@ interface Subscription {
   created: string;
 }
 
+interface PurchasesDataResponse {
+  purchases: Purchase[];
+  subscriptions: Subscription[];
+}
+
 const statusClasses: Record<string, string> = {
   paid: "text-neon-green bg-neon-green/10",
   complete: "text-neon-green bg-neon-green/10",
@@ -49,9 +54,9 @@ async function fetchPurchasesData(
       if (res.status === 503) throw new Error("Stripe not configured");
       throw new Error(`HTTP ${res.status}`);
     }
-    const data = await res.json();
-    setPurchases(data.purchases ?? []);
-    setSubscriptions(data.subscriptions ?? []);
+  const data = (await res.json()) as PurchasesDataResponse;
+  setPurchases(data.purchases ?? []);
+  setSubscriptions(data.subscriptions ?? []);
   } catch (err) {
     setError(err instanceof Error ? err.message : "Failed to load purchases");
   } finally {

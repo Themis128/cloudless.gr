@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import StoreGrid from "@/components/store/StoreGrid";
+import RecommendationGrid from "@/components/store/RecommendationGrid";
 import JsonLd from "@/components/JsonLd";
 import { getFAQSchema } from "@/lib/structured-data";
 import ScrollReveal from "@/components/ScrollReveal";

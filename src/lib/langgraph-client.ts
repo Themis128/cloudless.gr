@@ -90,39 +90,43 @@ export async function getCloudlessAssistant(): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function listAssistants(): Promise<never> {
+export async function listAssistants(_graphId?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function createLangGraphThread(): Promise<never> {
+export async function createLangGraphThread(_metadata?: Record<string, unknown>): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function getLangGraphThread(): Promise<never> {
+export async function getLangGraphThread(_tid?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function patchLangGraphThread(): Promise<never> {
+export async function patchLangGraphThread(_tid?: string, _metadata?: Record<string, unknown>): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function getLangGraphThreadState(): Promise<never> {
+export async function getLangGraphThreadState(_tid?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function updateLangGraphThreadState(): Promise<never> {
+export async function updateLangGraphThreadState(_tid?: string, _values?: Record<string, unknown>, _asNode?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function deleteLangGraphThread(): Promise<never> {
+export async function deleteLangGraphThread(_tid?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function searchLangGraphThreads(): Promise<never> {
+export async function searchLangGraphThreads(
+  _limit?: number,
+  _metadata?: Record<string, unknown>,
+  _status?: "idle" | "busy" | "interrupted" | "error"
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function getLangGraphThreadHistory(): Promise<never> {
+export async function getLangGraphThreadHistory(_tid?: string, _limit?: number): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
@@ -142,54 +146,93 @@ export interface StreamRunOptions {
   };
 }
 
-export async function streamLangGraphRun(): Promise<never> {
+export async function streamLangGraphRun(
+  _threadId?: string,
+  _assistantId?: string,
+  _messages?: Array<Record<string, unknown>>,
+  _opts?: StreamRunOptions
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function createBackgroundRun(): Promise<never> {
+export async function createBackgroundRun(
+  _threadId?: string,
+  _assistantId?: string,
+  _messages?: Array<Record<string, unknown>>,
+  _opts?: Record<string, unknown>
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function joinRunStream(): Promise<never> {
+export async function joinRunStream(_threadId?: string, _runId?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function cancelRun(): Promise<never> {
+export async function cancelRun(
+  _threadId?: string,
+  _runId?: string,
+  _wait?: boolean
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function listRuns(): Promise<never> {
+export async function listRuns(_threadId?: string, _limit?: number): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function getRun(): Promise<never> {
+export async function getRun(_threadId?: string, _runId?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function invokeLangGraphRun(): Promise<never> {
+export async function invokeLangGraphRun(
+  _threadId?: string,
+  _assistantId?: string,
+  _messages?: Array<Record<string, unknown>>,
+  _config?: Record<string, unknown>
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function storeGet(): Promise<never> {
+export async function storeGet(
+  _namespace?: string[],
+  _key?: string
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function storePut(): Promise<never> {
+export async function storePut(
+  _namespace?: string[],
+  _key?: string,
+  _value?: Record<string, unknown>
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function storeDelete(): Promise<never> {
+export async function storeDelete(_namespace?: string[], _key?: string): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function storeSearch(): Promise<never> {
+export async function storeSearch(
+  _namespacePrefix?: string[],
+  _query?: string,
+  _limit?: number,
+  _filter?: Record<string, unknown>
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function storeListNamespaces(): Promise<never> {
+export async function storeListNamespaces(
+  _prefix?: string,
+  _suffix?: string
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }
 
-export async function resumeInterruptedRun(): Promise<never> {
+export async function resumeInterruptedRun(
+  _threadId?: string,
+  _assistantId?: string,
+  _resumeValue?: unknown,
+  _streamMode?: StreamRunOptions["streamMode"]
+): Promise<never> {
   throw new Error("@langchain/langgraph-sdk is not installed in this environment");
 }

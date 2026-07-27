@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
 
+interface AudienceRequest {
+  description?: string;
+  platforms?: string[];
+  objective?: string;
+}
+
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -10,7 +16,7 @@ export async function POST(request: NextRequest) {
   let platforms: string[];
   let objective: string;
   try {
-    const body = await request.json();
+    const body = (await request.json()) as AudienceRequest;
     description = String(body.description ?? "").slice(0, 2000);
     platforms = Array.isArray(body.platforms) ? body.platforms : ["Meta", "LinkedIn", "Google"];
     objective = String(body.objective ?? "LEAD_GENERATION").slice(0, 200);

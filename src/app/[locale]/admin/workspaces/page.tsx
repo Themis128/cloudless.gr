@@ -10,6 +10,10 @@ interface PostizGroupOption {
   name: string;
 }
 
+interface PostizGroupsResponse {
+  groups: PostizGroupOption[];
+}
+
 const EMPTY_FORM = { name: "", description: "", adminEmails: "", postizGroupId: "", notionTag: "" };
 
 export default function WorkspacesPage() {
@@ -142,18 +146,18 @@ export default function WorkspacesPage() {
   // and other errors leave `postizGroups` at `null` so the inputs degrade
   // to free text. The `groups` route on the server reads from SSM, so this
   // is a single round-trip per page visit.
-  useEffect(() => {
-    fetchWithAuth("/api/admin/postiz/groups")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (Array.isArray(data?.groups)) {
-          setPostizGroups(data.groups as PostizGroupOption[]);
-        }
-      })
-      .catch(() => {
-        /* silent — UI just falls back to free-text */
-      });
-  }, []);
+useEffect(() => {
+  fetchWithAuth("/api/admin/postiz/groups")
+  .then((r) => r.ok ? r.json().then((d) => d as PostizGroupsResponse) : Promise.resolve(null))
+  .then((data) => {
+    if (Array.isArray(data?.groups)) {
+      setPostizGroups(data.groups as PostizGroupOption[]);
+    }
+  })
+  .catch(() => {
+    /* silent — UI just falls back to free-text */
+  });
+}, []);
 
   return (
     <div>

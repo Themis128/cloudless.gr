@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { callClaude, getAnthropicApiKey } from "@/lib/anthropic";
 
+interface CopyRequest {
+  service?: string;
+  platform?: string;
+  objective?: string;
+  language?: string;
+}
+
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
@@ -11,7 +18,7 @@ export async function POST(request: NextRequest) {
   let objective: string;
   let language: string;
   try {
-    const body = await request.json();
+    const body = (await request.json()) as CopyRequest;
     service = String(body.service ?? "").slice(0, 2000);
     platform = String(body.platform ?? "Meta").slice(0, 50);
     objective = String(body.objective ?? "awareness").slice(0, 200);
