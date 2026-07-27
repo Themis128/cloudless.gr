@@ -57,7 +57,7 @@ export default function GrafanaAdminPage() {
       if (!dRes.ok && dRes.status !== 503) {
         throw new Error(`dashboards HTTP ${dRes.status}`);
       }
-      const d = await dRes.json();
+ const d: { dashboards: any[]; configured: boolean } = await dRes.json();
       setDashboards(d.dashboards ?? []);
       setConfigured(Boolean(d.configured));
       if (hRes.ok) setHealth(await hRes.json());
