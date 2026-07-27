@@ -21,7 +21,7 @@ export default function ReportViewPage() {
         setError("Report not found.");
         return;
       }
-      const data = await res.json();
+      const data = (await res.json()) as { report: Report };
       setReport(data.report);
     } catch {
       setError("Failed to load report.");
@@ -50,10 +50,7 @@ export default function ReportViewPage() {
     return (
       <div>
         <div className="mb-6">
-          <Link
-            href="/admin/reports"
-            className="font-mono text-xs text-slate-500 hover:text-slate-300"
-          >
+          <Link href="/admin/reports" className="font-mono text-xs text-slate-500 hover:text-slate-300">
             ← Reports
           </Link>
         </div>
@@ -67,10 +64,7 @@ export default function ReportViewPage() {
   return (
     <div>
       <div className="mb-6">
-        <Link
-          href="/admin/reports"
-          className="font-mono text-xs text-slate-500 hover:text-slate-300"
-        >
+        <Link href="/admin/reports" className="font-mono text-xs text-slate-500 hover:text-slate-300">
           ← Reports
         </Link>
       </div>
@@ -90,10 +84,7 @@ export default function ReportViewPage() {
 
       <div className="space-y-6">
         {report.sections.map((section) => (
-          <div
-            key={section.id}
-            className="bg-void-light/50 rounded-xl border border-slate-800 p-6"
-          >
+          <div key={section.id} className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
             <h2 className="font-heading mb-4 font-semibold text-white">
               {section.title}
             </h2>
@@ -111,19 +102,14 @@ export default function ReportViewPage() {
 
             <div className="grid gap-3 sm:grid-cols-3">
               {Object.entries(section.data).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="rounded-lg border border-slate-800 bg-slate-900/50 p-3"
-                >
+                <div key={key} className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
                   <p className="font-mono text-[10px] text-slate-500">
                     {key
                       .replace(/([A-Z])/g, " $1")
                       .replace(/^./, (s) => s.toUpperCase())}
                   </p>
                   <p className="mt-1 font-mono text-sm font-bold text-white">
-                    {typeof value === "number"
-                      ? value.toLocaleString()
-                      : String(value)}
+                    {typeof value === "number" ? value.toLocaleString() : String(value)}
                   </p>
                 </div>
               ))}

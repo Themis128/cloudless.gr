@@ -27,7 +27,7 @@ export default function ReportsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/reports");
       if (!res.ok) return;
-      const data = await res.json();
+      const data = (await res.json()) as { reports: Report[] };
       setReports(data.reports ?? []);
     } catch {
       /* silent */
@@ -141,8 +141,8 @@ export default function ReportsPage() {
                   r.status === "ready"
                     ? "border-neon-green/30 text-neon-green"
                     : r.status === "generating"
-                      ? "border-yellow-500/30 text-yellow-400"
-                      : "border-red-500/30 text-red-400"
+                    ? "border-yellow-500/30 text-yellow-400"
+                    : "border-red-500/30 text-red-400"
                 }`}
               >
                 {r.status}
