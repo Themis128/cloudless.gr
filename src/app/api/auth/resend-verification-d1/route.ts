@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
     .join("");
   const otp = (parseInt(hex.slice(0, 8), 16) % 1_000_000).toString().padStart(6, "0");
 
-  // Send our branded SES email with the new token+OTP, fire-and-forget
-  sendActivationEmail(email, token, otp).catch(() => {});
+// Send our branded SES email with the new token+OTP, fire-and-forget
+sendActivationEmail(email, token).catch(() => {});
 
   // Return the new token so the client can verify the fresh OTP
   return NextResponse.json({ ok: true, token });

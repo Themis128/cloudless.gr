@@ -277,9 +277,12 @@ The Cloudless Team`,
 export async function sendBookingConfirmation(bookingData: {
   customerEmail: string;
   customerName: string;
-  service: string;
-  date: string;
-  time: string;
+  service?: string;
+  date?: string;
+  time?: string;
+  slotLabel?: string;
+  meetLink?: string;
+  notes?: string;
 }): Promise<void> {
   await sendEmail({
     to: bookingData.customerEmail,

@@ -36,9 +36,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  try {
-    const { name, email, company, service, message, phone } = parsed;
-    const attribution = sanitizeAttribution(parsed.attribution);
+try {
+  const { name, email, company, service, message, phone, attribution } = parsed as {
+    name: string;
+    email: string;
+    company?: string;
+    service: string;
+    message: string;
+    phone?: string;
+    attribution?: string;
+  };
+  const attributionData = sanitizeAttribution(attribution ?? "");
 
     if (!name || !email || !message) {
       return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
@@ -101,7 +109,7 @@ export async function POST(request: Request) {
 
     // Lead engine: deterministic score + first-touch attribution summary.
     const lead = scoreLead({ email, service, company, message: String(message), attribution });
-    const attributionSummary = attribution ? formatAttribution(attribution) : undefined;
+    const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
 
     Promise.allSettled([
       slackContactNotify({

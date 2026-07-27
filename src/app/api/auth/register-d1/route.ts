@@ -86,13 +86,13 @@ export async function POST(req: NextRequest) {
       .toString()
       .padStart(6, "0");
 
-    // Fire-and-forget — don't fail signup if SES is down
-    sendActivationEmail(email, token, otp, fullName).catch((e) =>
-      console.error("[auth/register-d1] activation email failed:", e)
-    );
+// Fire-and-forget — don't fail signup if SES is down
+sendActivationEmail(email, token).catch((e) =>
+  console.error("[auth/register-d1] activation email failed:", e)
+);
 
-    // Notify team
-    slackRegistrationNotify(email).catch(() => {});
+// Notify team
+slackRegistrationNotify({ name: fullName || email, email }).catch(() => {});
     notifyTeam(
       "New User Registration",
       `${email}${fullName ? ` (${fullName})` : ""} just signed up.`

@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     .toString()
     .padStart(6, "0");
 
-  // Send our branded SES email with the new token+OTP, fire-and-forget
-  sendActivationEmail(email, token, otp).catch(() => {});
+// Send our branded SES email with the new token+OTP, fire-and-forget
+sendActivationEmail(email, token).catch(() => {});
 
   // Return the new token so the client can verify the fresh OTP
   return NextResponse.json({ ok: true, token });
