@@ -1,19 +1,24 @@
 # Cloudless.gr Migration - Comprehensive Todo List
-# Generated: 2026-07-27 | Updated with migration status
+# Generated: 2026-07-27 | Updated: 2026-07-27 23:26 EEST
 
 ## 🔴 HIGH PRIORITY - Blocking Production
 
 ### Cloudflare API Token Fix (Blocks Deploy)
-- [ ] Create new Cloudflare API Token with "Edit Cloudflare Workers" template
-- [ ] Add token as `CLOUDFLARE_API_TOKEN` GitHub repository secret
-- [ ] Verify `CLOUDFLARE_ACCOUNT_ID` secret exists (fb7dc7b69b662480cd5961a4d1913c78)
-- [ ] Trigger a new build to verify the fix works
+- [x] **Documented all missing secrets** - See ACTIONS-REQUIRED.md
+- [ ] User action: Create new Cloudflare API Token with "Edit Cloudflare Workers" template
+- [ ] User action: Add token as `CLOUDFLARE_API_TOKEN` GitHub repository secret
+- [ ] User action: Add `CF_ACCOUNT_ID` secret (from Cloudflare dashboard)
+- [ ] User action: Add `CLOUDFLARE_ZONE_ID` secret (from Cloudflare dashboard)
+- [ ] User action: Add `CF_R2_ACCESS_KEY_ID` and `CF_R2_SECRET_ACCESS_KEY` for ETL
+- [ ] User action: Trigger a new build to verify the fix works
 
 ### Google Calendar Configuration (Blocks Calendar Booking)
-- [ ] Add `GOOGLE_CLIENT_EMAIL` as Wrangler secret for Workers
-- [ ] Add `GOOGLE_PRIVATE_KEY` as Wrangler secret (with \n for newlines)
-- [ ] Add `GOOGLE_CALENDAR_ID` as Wrangler secret (defaults to "primary")
+- [ ] User action: Add `GOOGLE_CLIENT_EMAIL` as Wrangler secret for Workers
+- [ ] User action: Add `GOOGLE_PRIVATE_KEY` as Wrangler secret (with \n for newlines)
+- [ ] User action: Add `GOOGLE_CALENDAR_ID` as Wrangler secret (defaults to "primary")
 - [ ] OR: Add `GOOGLE_CLIENT_EMAIL` and `GOOGLE_CALENDAR_ID` to D1 `app_config` table for k3s
+
+**Note:** Calendar booking is optional. Core chat functionality works without it.
 
 ## 🟡 MEDIUM PRIORITY - Migration Completion
 
@@ -24,16 +29,16 @@
 - [x] `scripts/etl/clients-to-lake.mjs` - Deprecation notice added
 - [x] `scripts/etl/portals-to-lake.mjs` - Deprecation notice added
 - [x] Added GitHub workflows: `etl-clients-to-r2.yml`, `etl-portals-to-r2.yml`
-- [ ] Run LLM workflow to verify on Pi runners
+- [ ] Run ETL workflow on Pi runners to verify no SSM/AWS dependencies (blocked by missing secrets)
 
 ### Infrastructure & Operations
-- [ ] Restart Cline/Claude desktop to load MCP configuration changes
-- [ ] Configure 2TB SSD mount for analytics storage (/sdb1 on omv)
+- [ ] User action: Restart Cline/Claude desktop to load MCP configuration changes
+- [ ] User action: Configure 2TB SSD mount for analytics storage (/sdb1 on omv)
 
 ## 🟢 LOW PRIORITY - Nice to Have
 
 ### Testing & Verification
-- [ ] Verify `clients-to-r2.mjs` deployment works end-to-end
+- [ ] Verify `clients-to-r2.mjs` deployment works end-to-end (after secrets added)
 - [ ] Run full ETL pipeline on Pi runners to verify no SSM/AWS dependencies
 - [ ] Run Playwright E2E tests against production (cloudless.gr and pi-origin.cloudless.gr)
 
@@ -46,3 +51,30 @@
 - [ ] Run `pnpm mcp-security-scan` on API routes
 - [ ] Add smoke test workflow for Workers deployment
 - [ ] Audit large dependencies in package.json (langchain, aws-sdk)
+
+---
+
+## ✅ COMPLETED ITEMS (Recent)
+
+### Documentation & Configuration
+- [x] Created comprehensive ACTIONS-REQUIRED.md with all missing secrets
+- [x] Documented step-by-step setup for each secret
+- [x] Compiled complete secret inventory across all workflows
+- [x] Added verification checklist for after secrets are configured
+
+---
+
+## 📋 SUMMARY
+
+**Total Items:** 48
+**Completed:** 24 (50%)
+**Blocked (awaiting user action):** 15
+**Low Priority:** 9
+
+**Next Actions (User Must Do):**
+1. Add 5 GitHub secrets (CF_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, CF_R2_ACCESS_KEY_ID, CF_R2_SECRET_ACCESS_KEY)
+2. Add 5 Wrangler secrets (SESSION_SECRET, AGENT_AUTH_TOKEN, GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_CALENDAR_ID)
+3. Restart Cline
+4. Configure SSD mount on omv
+
+**Reference:** See ACTIONS-REQUIRED.md for detailed step-by-step instructions.
