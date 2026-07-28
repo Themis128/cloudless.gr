@@ -43,7 +43,6 @@
     "playwright.config.mts",
     "playwright.production.config.mts",
     "e2e",
-    "__tests__",
     ".claude",
     "scripts",
     "tools",
