@@ -18,12 +18,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/lib/api-auth", () => ({
-  requireAdmin: vi.fn(async () => ({ ok: true, user: { sub: "admin", groups: ["admin"] } })),
+  requireAdmin: vi.fn(async () => ({ ok: true, user: { sub: "admin", groups: ["admin"], roles: ["admin"] } })),
 }));
 
 vi.mock("@/lib/ssm-config", () => ({
   getConfig: vi.fn(async () => ({})),
   resetSsmCache: vi.fn(),
+  getD1Client: vi.fn(() => ({
+    prepare: vi.fn().mockReturnThis(),
+    bind: vi.fn().mockReturnThis(),
+    first: vi.fn().mockResolvedValue({}),
+    run: vi.fn().mockResolvedValue({}),
+  })),
 }));
 
 const sendMock = vi.fn();

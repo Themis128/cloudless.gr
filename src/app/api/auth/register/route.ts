@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  CognitoIdentityProviderClient,
-  AdminCreateUserCommand,
-  AdminSetUserPasswordCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
+import { D1Database } from "@cloudflare/workers-types";
 import { createHmac, randomBytes } from "crypto";
 import { recordNotification } from "@/lib/admin-notifications";
 import { sendActivationEmail, notifyTeam } from "@/lib/email";
 import { slackRegistrationNotify } from "@/lib/slack-notify";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { hashPassword } from "@/lib/password-hashing";
 
-function makeClient(): CognitoIdentityProviderClient {
-  const issuer = process.env.COGNITO_ISSUER ?? "";
-  const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";
-  return new CognitoIdentityProviderClient({ region });
-}
+declare const AUTH_DB: D1Database;
 
 export async function POST(req: NextRequest) {
   const ipRl = rateLimit(`auth-register:ip:${getClientIp(req)}`, 20, 60_000);
@@ -38,47 +31,44 @@ export async function POST(req: NextRequest) {
   const emailRl = rateLimit(`auth-register:email:${email}`, 5, 600_000);
   if (!emailRl.ok) return emailRl.response;
 
-  const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
+  // Check if email already exists in D1
+  const existing = await AUTH_DB.prepare("SELECT id FROM users WHERE email = ?")
+    .bind(email)
+    .first();
+  if (existing) {
+    console.warn(`[auth/register] enumeration probe blocked for ${JSON.stringify(email)}`);
+    return NextResponse.json({ ok: true });
+  }
 
-  // Always succeed-or-look-like-success to defeat account enumeration.
+  // Validate password strength
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return NextResponse.json(
+      { error: passwordError },
+      { status: 400 }
+    );
+  }
+
+  // Hash the password
+  const hashedPassword = await hashPassword(password);
 
   try {
-    const client = makeClient();
-    // AdminCreateUser with MessageAction=SUPPRESS creates the user without
-    // sending Cognito's own verification email — our branded SES email below
-    // is the only activation message the user receives.
-    await client.send(
-      new AdminCreateUserCommand({
-        UserPoolId: userPoolId,
-        Username: email,
-        MessageAction: "SUPPRESS",
-        UserAttributes: [
-          { Name: "email", Value: email },
-          { Name: "email_verified", Value: "false" },
-          ...(fullName ? [{ Name: "name", Value: fullName }] : []),
-        ],
-      })
-    );
-    // Set the permanent password immediately so the user isn't forced into a
-    // FORCE_CHANGE_PASSWORD state after confirming their email.
-    await client.send(
-      new AdminSetUserPasswordCommand({
-        UserPoolId: userPoolId,
-        Username: email,
-        Password: password,
-        Permanent: true,
-      })
-    );
-    // Generate a 24-hour HMAC activation token and send our branded SES email.
-    // The token is: base64url(randomNonce) + "." + HMAC(email:exp:nonce, AUTH_SECRET)
+    // Create user in D1
+    const userId = await AUTH_DB.prepare(
+      "INSERT INTO users (email, password_hash, full_name, created_at) VALUES (?, ?, ?, ?)"
+    )
+      .bind(email, hashedPassword, fullName, new Date().toISOString())
+      .run()
+      .then((result) => result.lastInsertRowId());
+
+    // Generate activation token
     const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
     const exp = Date.now() + 5 * 60 * 1000; // 5-minute window
     const nonce = randomBytes(16).toString("hex");
     const sig = createHmac("sha256", secret).update(`${email}:${exp}:${nonce}`).digest("base64url");
     const token = `${nonce}.${exp}.${sig}`;
-    // Derive a 6-digit OTP from the same material — mobile users who can't
-    // tap the link can type this code on the signup page instead.
+
+    // Derive OTP from token
     const otp = (
       parseInt(
         createHmac("sha256", secret)
@@ -90,10 +80,13 @@ export async function POST(req: NextRequest) {
     )
       .toString()
       .padStart(6, "0");
-    // Fire-and-forget — don't fail the signup if SES is down
+
+    // Send activation email (fire-and-forget)
     sendActivationEmail(email, token).catch((e) =>
       console.error("[auth/register] activation email failed:", e)
     );
+
+    // Record admin notification
     recordNotification({
       category: "auth",
       type: "info",
@@ -103,26 +96,27 @@ export async function POST(req: NextRequest) {
       route: "/api/auth/register",
       metadata: { fullName: fullName ?? null },
     });
-    // Notify team via Slack + SES
+
+    // Notify team via Slack and email (fire-and-forget)
     slackRegistrationNotify(email).catch(() => {});
     notifyTeam(
       "New User Registration",
       `${email}${fullName ? ` (${fullName})` : ""} just signed up.`
     ).catch(() => {});
-    // Return token so the client can verify the OTP without a separate lookup.
+
+    // Return success with token
     return NextResponse.json({ ok: true, token });
-  } catch (err: unknown) {
-    const name = (err as { name?: string }).name;
-    if (name === "UsernameExistsException") {
-      console.warn(`[auth/register] enumeration probe blocked for ${JSON.stringify(email)}`);
-      return NextResponse.json({ ok: true });
-    }
-    if (name === "InvalidPasswordException" || name === "InvalidParameterException")
-      return NextResponse.json(
-        { error: "Password does not meet requirements (min 8 chars, mixed case, number, symbol)" },
-        { status: 400 }
-      );
-    console.error("[auth/register] AdminCreateUser failed:", err);
+  } catch (err) {
+    console.error("[auth/register] registration failed:", err);
     return NextResponse.json({ error: "Sign up failed" }, { status: 500 });
   }
+}
+
+function validatePassword(password: string): string | null {
+  if (password.length < 8) return "Password must be at least 8 characters";
+  if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
+  if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
+  if (!/[0-9]/.test(password)) return "Password must contain at least one number";
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return "Password must contain at least one special character";
+  return null;
 }

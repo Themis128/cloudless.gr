@@ -1,7 +1,7 @@
 import { escapeHtml } from "@/lib/escape-html";
 import { isValidEmail } from "@/lib/validation";
 import { sendEmail, sendContactAcknowledgment } from "@/lib/email";
-import { getConfig } from "@/lib/ssm-config";
+import { getConfig } from "@/lib/ssm-config-d1";
 import { slackContactNotify } from "@/lib/slack-notify";
 import { recordNotification } from "@/lib/admin-notifications";
 import {
@@ -19,6 +19,8 @@ import { mapIntegrationError } from "@/lib/api-errors";
 import { sanitizeAttribution, formatAttribution } from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
+import { handlers } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth-middleware";
 
 interface ContactRequestBody {
   name: string;
@@ -41,6 +43,11 @@ interface AttributionData {
 }
 
 export async function POST(request: Request) {
+  // Check authentication
+  const auth = await handlers.auth(request);
+  if (!auth) {
+    return Response.json({ error: "Authentication required." }, { status: 401 });
+  }
   // Rate limit: 5 contact submissions per IP per 10 minutes
   const ip = getClientIp(request);
   const rl = rateLimit(`contact:${ip}`, 5, 10 * 60_000);
@@ -68,6 +75,7 @@ export async function POST(request: Request) {
     }
 
     const config = await getConfig();
+const user = await handlers.auth(request);
 
     const subject = `[Contact] ${String(service || "General inquiry").slice(0, 100)} — ${String(name).slice(0, 100)}`;
 
