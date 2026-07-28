@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { ChatRequest } from "@cloudless/ai";
-import { requireAuth } from "'lib/auth-middleware'";
+import { requireAuth } from "../lib/auth-middleware";
 
 // Chat AI endpoint supporting multiple providers for free tier coverage
 // Workers AI: 100K tokens/day | Gemini: 1500 requests/day (free)
