@@ -10,7 +10,10 @@
  */
 import { test, expect } from "./coverage";
 import fs from "fs";
-import path from "path";
+import path from 'path';
+import { dirname, fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 import { ADMIN_APIS, ADMIN_API_DYNAMIC } from "./helpers/coverage-routes";
 
 const STORAGE = path.join(__dirname, ".auth", "admin.json");

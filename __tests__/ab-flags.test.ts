@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { DEFAULT_FLAGS, assignVariant } from "@/lib/ab-flags";
+import { DEFAULT_FLAGS, assignVariant, getABFlags } from "@/lib/ab-flags";
 import type { ABFlag } from "@/lib/ab-flags";
 
-const mockGetConfig = vi.fn();
-
+// Mock the entire module at the top level
 vi.mock("@/lib/ssm-config", () => ({
-  getConfig: () => mockGetConfig(),
+  getConfig: vi.fn(),
   resetSsmCache: vi.fn(),
 }));
+
+const mockGetConfig = vi.fn();
 
 describe("DEFAULT_FLAGS", () => {
   it("is a non-empty array of ABFlag objects", () => {
@@ -88,11 +89,11 @@ describe("assignVariant()", () => {
 describe("getABFlags()", () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.resetAllMocks();
   });
 
   it("returns DEFAULT_FLAGS when SSM returns no AB_FLAGS_JSON", async () => {
-    mockGetConfig.mockResolvedValue({});
-    const { getABFlags } = await import("@/lib/ab-flags");
+    vi.mocked(mockGetConfig).mockResolvedValue({});
     const result = await getABFlags();
     expect(result).toEqual(DEFAULT_FLAGS);
   });
@@ -108,31 +109,27 @@ describe("getABFlags()", () => {
         variants: { a: "A", b: "B" },
       },
     ];
-    mockGetConfig.mockResolvedValue({
+    vi.mocked(mockGetConfig).mockResolvedValue({
       AB_FLAGS_JSON: JSON.stringify(customFlags),
     });
-    const { getABFlags } = await import("@/lib/ab-flags");
     const result = await getABFlags();
     expect(result).toEqual(customFlags);
   });
 
   it("falls back to DEFAULT_FLAGS when AB_FLAGS_JSON is invalid JSON", async () => {
-    mockGetConfig.mockResolvedValue({ AB_FLAGS_JSON: "not-json{" });
-    const { getABFlags } = await import("@/lib/ab-flags");
+    vi.mocked(mockGetConfig).mockResolvedValue({ AB_FLAGS_JSON: "not-json{" });
     const result = await getABFlags();
     expect(result).toEqual(DEFAULT_FLAGS);
   });
 
   it("falls back to DEFAULT_FLAGS when AB_FLAGS_JSON is not an array", async () => {
-    mockGetConfig.mockResolvedValue({ AB_FLAGS_JSON: '{"key": "value"}' });
-    const { getABFlags } = await import("@/lib/ab-flags");
+    vi.mocked(mockGetConfig).mockResolvedValue({ AB_FLAGS_JSON: '{"key": "value"}' });
     const result = await getABFlags();
     expect(result).toEqual(DEFAULT_FLAGS);
   });
 
   it("falls back to DEFAULT_FLAGS when getConfig throws", async () => {
-    mockGetConfig.mockRejectedValue(new Error("SSM unavailable"));
-    const { getABFlags } = await import("@/lib/ab-flags");
+    vi.mocked(mockGetConfig).mockRejectedValue(new Error("SSM unavailable"));
     const result = await getABFlags();
     expect(result).toEqual(DEFAULT_FLAGS);
   });

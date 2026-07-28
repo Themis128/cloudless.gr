@@ -11,7 +11,10 @@
  */
 import { test, expect } from "@playwright/test";
 import fs from "fs";
-import path from "path";
+import path from 'path';
+import { dirname, fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const STORAGE = path.join(__dirname, ".auth", "admin.json");
 

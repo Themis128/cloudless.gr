@@ -20,16 +20,41 @@ vi.mock("@/lib/slack-verify", () => ({
   unauthorizedSlack: vi.fn((_reason: string) =>
     Response.json({ error: "Unauthorized" }, { status: 401 })
   ),
+  verifySlackRequest: (...args: unknown[]) => mockVerify(...args),
+  unauthorizedSlack: vi.fn((_reason: string) =>
+    Response.json({ error: "Unauthorized" }, { status: 401 })
+  ),
 }));
 
 vi.mock("@/lib/slack-rate-limit", () => ({
   checkSlackRateLimit: vi.fn().mockReturnValue(true),
+  checkSlackRateLimit: vi.fn().mockReturnValue(true),
 }));
 
-const mockFetch = vi.fn();
+const mockFetch = vi.fn().mockImplementation((url: string, options: RequestInit) => {
+  if (url.includes("views.open")) {
+    return new Promise((resolve) =>
+      setTimeout(() =>
+        resolve(
+          new Response(JSON.stringify({ ok: true }), { status: 200 })
+        )
+      )
+    );
+  }
+  return new Promise((resolve) =>
+    setTimeout(() =>
+      resolve(
+        new Response(JSON.stringify({ ok: false, error: "Not found" }), { status: 404 })
+      )
+    )
+  );
+});
 vi.stubGlobal("fetch", mockFetch);
 
-const mockListOrders = vi.fn();
+const mockListOrders = vi.fn().mockResolvedValue({
+  orders: [],
+  hasMore: false,
+});
 vi.mock("@/lib/stripe", () => ({
   listRecentCheckoutSessions: (...args: unknown[]) => mockListOrders(...args),
   formatPrice: vi.fn(
@@ -38,6 +63,12 @@ vi.mock("@/lib/stripe", () => ({
 }));
 
 vi.mock("@/lib/integrations", () => ({
+  getSlackConfigAsync: vi.fn().mockResolvedValue({
+    SLACK_BOT_TOKEN: "xoxb-test-token",
+    SLACK_WEBHOOK_URL: undefined,
+    SLACK_SIGNING_SECRET: "test-secret",
+  }),
+  resetSlackConfigCache: vi.fn(),
   getSlackConfigAsync: vi.fn(async () => ({
     SLACK_BOT_TOKEN: "xoxb-test-token",
     SLACK_WEBHOOK_URL: undefined,

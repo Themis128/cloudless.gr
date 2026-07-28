@@ -11,9 +11,31 @@ vi.mock("@/lib/slack-verify", () => ({
   unauthorizedSlack: vi.fn((_reason: string) =>
     Response.json({ error: "Unauthorized" }, { status: 401 })
   ),
+  verifySlackRequest: (...args: unknown[]) => mockVerify(...args),
+  unauthorizedSlack: vi.fn((_reason: string) =>
+    Response.json({ error: "Unauthorized" }, { status: 401 })
+  ),
 }));
 
 vi.mock("@/lib/stripe", () => ({
+  listRecentCheckoutSessions: vi.fn().mockResolvedValue({
+    orders: [
+      {
+        id: "cs_test_mock123",
+        email: "test@cloudless.gr",
+        amount: 4900,
+        currency: "EUR",
+        status: "complete",
+        created: Math.floor(Date.now() / 1000),
+        paymentStatus: "paid",
+        mode: "payment",
+      },
+    ],
+    hasMore: false,
+  }),
+  formatPrice: vi.fn(
+    (amount: number, currency: string) => `€${(amount / 100).toFixed(2)} ${currency}`
+  ),
   listRecentCheckoutSessions: vi.fn(async () => ({
     orders: [
       {

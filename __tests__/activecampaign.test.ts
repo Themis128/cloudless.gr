@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createMock } from "vitest";
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
 // Mock getConfig so tests never touch AWS SSM or environment variable loading
-const mockGetConfig = vi.fn();
+const mockGetConfig = createMock<typeof getConfig>();
+const mockResetSsmCache = createMock<typeof resetSsmCache>();
+
 vi.mock("@/lib/ssm-config", () => ({
   getConfig: mockGetConfig,
-  resetSsmCache: vi.fn(),
+  resetSsmCache: mockResetSsmCache,
 }));
 
 const AC_URL = "https://test.api-us1.com";
