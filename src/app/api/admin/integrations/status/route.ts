@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getConfig } from "@/lib/ssm-config";
+import { getConfig, AppConfig } from "@/lib/ssm-config";
 import { verifyActiveCampaignToken } from "@/lib/activecampaign";
 
 export type IntegrationStatus = "configured" | "not_configured" | "degraded" | "error";
@@ -15,7 +15,7 @@ export type IntegrationReport = {
 };
 
 type PingResult = { status: IntegrationStatus; message?: string };
-type Cfg = Awaited<ReturnType<typeof getConfig>>;
+type Cfg = AppConfig;
 
 async function pingEspoCRM(baseUrl: string, apiKey: string): Promise<PingResult> {
   try {
@@ -125,6 +125,13 @@ async function pingStripe(secretKey: string): Promise<PingResult> {
   }
 }
 
+type TikTokConfig = {
+  TIKTOK_APP_ID: string;
+  TIKTOK_APP_SECRET: string;
+  TIKTOK_ACCESS_TOKEN: string;
+  TIKTOK_ADVERTISER_ID: string;
+};
+
 const NOT_CONFIGURED: PingResult = { status: "not_configured" };
 
 function sentryStatus(cfg: Cfg): IntegrationStatus {
@@ -147,7 +154,9 @@ function sentryReport(cfg: Cfg): IntegrationReport {
   };
 }
 
-function tiktokStatus(appReady: boolean, fullyConfigured: boolean): IntegrationStatus {
+function tiktokStatus(cfg: TikTokConfig): IntegrationStatus {
+  const appReady = Boolean(cfg.TIKTOK_APP_ID && cfg.TIKTOK_APP_SECRET);
+  const fullyConfigured = Boolean(appReady && cfg.TIKTOK_ACCESS_TOKEN && cfg.TIKTOK_ADVERTISER_ID);
   if (fullyConfigured) return "configured";
   if (appReady) return "degraded";
   return "not_configured";
@@ -163,7 +172,7 @@ function tiktokReport(cfg: Cfg): IntegrationReport {
     id: "tiktok",
     name: "TikTok Ads",
     category: "social_ads",
-    status: tiktokStatus(appReady, fullyConfigured),
+    status: tiktokStatus({ ...cfg } as TikTokConfig),
     message:
       appReady && !fullyConfigured
         ? "App credentials set. Complete OAuth to get access token and advertiser ID."
