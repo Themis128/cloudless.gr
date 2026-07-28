@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import { vi } from 'vitest';
 
 // Mock implementations for AWS SDK clients that redirect to Cloudflare equivalents

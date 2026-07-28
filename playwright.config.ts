@@ -1,6 +1,4 @@
-/// <reference types="vitest" />
 import { defineConfig } from '@playwright/test';
-import { vi } from 'vitest';
 
 // Import the AWS mock setup from global-setup.ts
 import './e2e/global-setup';
@@ -77,16 +75,6 @@ export default defineConfig({
   // Retry on failure
   retriesOnFail: true,
   // Setup environment variables for AWS to Cloudflare migration
-  globalSetup: require.resolve('./e2e/global-setup'),
-  globalTeardown: require.resolve('./e2e/global-teardown'),
+  globalSetup: './e2e/global-setup',
+  globalTeardown: './e2e/global-teardown',
 });
-</final_file_content>
-<task_progress>
-- [x] Create playwright.config.ts with Cloudflare base URL configuration
-- [x] Reference AWS mock setup from global-setup.ts
-- [x] Add serverFilters to redirect AWS endpoints to Cloudflare equivalents
-- [x] Configure test timeout and retry settings for Cloudflare network
-- [x] Set up projects for Chromium, Firefox, and WebKit browsers
-- [ ] Restart test runner to load new configuration
-</task_progress>
-</write_to_file>
