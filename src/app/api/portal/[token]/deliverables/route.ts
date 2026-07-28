@@ -15,7 +15,11 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  *
  * Body: { deliverableId: string, action: "approve" | "request_changes", comment?: string }
  */
-export async function POST(
+    export async function POST(
+      // Add authentication check
+      if (!isAuthenticated(request)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {

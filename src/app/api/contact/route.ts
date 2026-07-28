@@ -20,6 +20,26 @@ import { sanitizeAttribution, formatAttribution } from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
 
+interface ContactRequestBody {
+  name: string;
+  email: string;
+  company?: string;
+  service: string;
+  message: string;
+  phone?: string;
+  attribution?: string;
+}
+
+interface AttributionData {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referrer?: string;
+  landingPage?: string;
+}
+
 export async function POST(request: Request) {
   // Rate limit: 5 contact submissions per IP per 10 minutes
   const ip = getClientIp(request);
@@ -37,16 +57,7 @@ export async function POST(request: Request) {
   }
 
 try {
-  const { name, email, company, service, message, phone, attribution } = parsed as {
-    name: string;
-    email: string;
-    company?: string;
-    service: string;
-    message: string;
-    phone?: string;
-    attribution?: string;
-  };
-  
+const { name, email, company, service, message, phone, attribution } = parsed as ContactRequestBody;
     if (!name || !email || !message) {
       return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
@@ -107,6 +118,7 @@ try {
     const nameParts = String(name).trim().split(" ");
 
     // Lead engine: deterministic score + first-touch attribution summary.
+const attributionData = attribution ? JSON.parse(attribution) : undefined;
 const lead = scoreLead({ email, service, company, message: String(message), attribution: attributionData });
     const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
 
@@ -228,7 +240,7 @@ const lead = scoreLead({ email, service, company, message: String(message), attr
       fbp,
       fbc,
       eventSourceUrl: "https://cloudless.gr/contact",
-      source: service ?? attribution?.utmSource ?? undefined,
+      source: service ?? attributionData?.utmSource ?? undefined,
     }).catch(() => {});
 
     return Response.json({ success: true, eventId });

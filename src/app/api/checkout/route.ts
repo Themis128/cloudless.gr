@@ -3,6 +3,7 @@ import { getProductById } from "@/lib/store-products";
 import { getCampaign } from "@/data/campaigns";
 import { routing } from "@/i18n/routing";
 import { canonicalOrigin } from "@/lib/canonical-origin";
+import { requireAuth } from "'lib/auth-middleware'";
 
 interface CheckoutItem {
   id: string;
@@ -19,6 +20,11 @@ function pickLocale(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   let parsed: { items?: CheckoutItem[] };
   try {
     parsed = (await request.json()) as { items?: CheckoutItem[] };
@@ -64,6 +70,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   const slug = request.nextUrl.searchParams.get("campaign");
   const tier = request.nextUrl.searchParams.get("tier");
   if (!slug || !tier) {

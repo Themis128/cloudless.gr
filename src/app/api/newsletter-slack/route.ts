@@ -36,8 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   const config = await getConfig();
-  const secret = config.CONTENT_WEBHOOK_SECRET || process.env.NOTION_WEBHOOK_SECRET || "";
-
+  const secret = config.APPFLOWY_WEBHOOK_SECRET || process.env.APPFLOWY_WEBHOOK_SECRET || "";
   // Verify webhook secret if configured
   const providedSecret = request.headers.get("x-content-webhook-secret") ?? "";
   if (secret && !safeEq(providedSecret, secret)) {

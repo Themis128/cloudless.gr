@@ -94,7 +94,7 @@ server.tool(
 	'pages_get_project',
 	'Get details for a specific Cloudflare Pages project. Use this tool when: you need project details, check configuration, or before performing operations like trigger deployment or delete. Returns project details including name, account_id, created_at, production_branch, and subdomain.',
 	{
-		project_name: PagesProjectNameSchema,
+		project_name: PagesProjectNameSchema.describe('The name of the Pages project to get details for'),
 	},
 	async ({ project_name }) => {
 		const result = await cfApi(`/pages/projects/${project_name}`);
@@ -131,8 +131,8 @@ server.tool(
 	'pages_list_deployments',
 	'List deployments for a Cloudflare Pages project. Use this tool when: checking deployment history, monitoring recent changes, or finding deployment IDs for log retrieval. Returns deployment objects with status, created_at, and URLs. Use limit to control pagination.',
 	{
-		project_name: PagesProjectNameSchema,
-		limit: PagesListLimitSchema,
+		project_name: PagesProjectNameSchema.describe('The name of the Pages project to list deployments for'),
+		limit: PagesListLimitSchema.describe('Maximum number of deployments to return (1-100)'),
 	},
 	async ({ project_name, limit }) => {
 		const result = await cfApi(
@@ -171,7 +171,7 @@ server.tool(
 	'pages_get_deployment_logs',
 	'Get logs for a specific Cloudflare Pages deployment. Use this tool when: debugging failed deployments, checking build output, or viewing deployment status and errors. Requires both the project name and deployment ID. Returns build logs and status information.',
 	{
-		project_name: PagesProjectNameSchema,
+		project_name: PagesProjectNameSchema.describe('The name of the Pages project containing the deployment'),
 		deployment_id: PagesDeploymentIdSchema.describe(
 			'The deployment ID (usually a UUID or unique identifier)',
 		),
@@ -254,7 +254,7 @@ server.tool(
 	'pages_delete_project',
 	'Delete a Cloudflare Pages project. Use this tool when: removing unused projects, cleaning up test deployments, or user explicitly requests project deletion. Warning: This is a destructive operation that permanently removes the project and all its deployments. Returns success confirmation.',
 	{
-		project_name: PagesProjectNameSchema,
+		project_name: PagesProjectNameSchema.describe('The name of the Pages project to delete'),
 	},
 	async ({ project_name }) => {
 		const result = await cfApi(`/pages/projects/${project_name}`, 'DELETE');
@@ -334,7 +334,7 @@ server.tool(
 	'pages_get_deployment',
 	'Get details for a specific Cloudflare Pages deployment. Use this tool when: checking deployment status, viewing deployment metadata, or before getting logs. Returns deployment details including status, created_at, and deployment URLs.',
 	{
-		project_name: PagesProjectNameSchema,
+		project_name: PagesProjectNameSchema.describe('The name of the Pages project containing the deployment'),
 		deployment_id: PagesDeploymentIdSchema.describe(
 			'The deployment ID to get details for',
 		),

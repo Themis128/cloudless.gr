@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-
 /**
  * POST /api/inbound-email
  * Webhook endpoint for Cloudflare Email Routing

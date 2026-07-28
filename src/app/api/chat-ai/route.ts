@@ -1,3 +1,7 @@
+import { NextRequest, NextResponse } from "next/server";
+import type { ChatRequest } from "@cloudless/ai";
+import { requireAuth } from "'lib/auth-middleware'";
+
 // Chat AI endpoint supporting multiple providers for free tier coverage
 // Workers AI: 100K tokens/day | Gemini: 1500 requests/day (free)
 
@@ -51,7 +55,12 @@ async function callGemini(messages: ChatRequest["messages"], max_tokens: number)
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const body = (await request.json()) as ChatRequest;
     const { messages, max_tokens = 512, provider = "gemini" } = body;

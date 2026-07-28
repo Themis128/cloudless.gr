@@ -69,10 +69,120 @@ export async function setD1ConfigValue(
 }
 
 /**
+ * Type definition for application configuration.
+ */
+interface AppConfig {
+  SES_FROM_EMAIL: string;
+  SES_TO_EMAIL: string;
+  AWS_SES_REGION: string;
+  NEWSLETTER_SEND_SECRET: string;
+  STRIPE_SECRET_KEY: string;
+  STRIPE_PUBLISHABLE_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+  COGNITO_USER_POOL_ID: string;
+  COGNITO_CLIENT_ID: string;
+  AUTH_SECRET: string;
+  SLACK_WEBHOOK_URL: string;
+  SLACK_BOT_TOKEN: string;
+  SLACK_SIGNING_SECRET: string;
+  HUBSPOT_API_KEY: string;
+  HUBSPOT_CLIENT_SECRET: string;
+  NOTION_API_KEY: string;
+  NOTION_BLOG_DB_ID: string;
+  NOTION_WEBHOOK_SECRET: string;
+  NOTION_SUBMISSIONS_DB_ID: string;
+  NOTION_DOCS_DB_ID: string;
+  NOTION_PROJECTS_DB_ID: string;
+  NOTION_TASKS_DB_ID: string;
+  NOTION_ANALYTICS_DB_ID: string;
+  NOTION_GSC_REPORTS_DB_ID: string;
+  NOTION_CALENDAR_DB_ID: string;
+  NOTION_REPORTS_DB_ID: string;
+  NOTION_TESTIMONIALS_DB_ID: string;
+  NOTION_CASE_STUDIES_DB_ID: string;
+  NOTION_SERVICES_DB_ID: string;
+  NOTION_FAQS_DB_ID: string;
+  GOOGLE_CLIENT_EMAIL: string;
+  GEMINI_API_KEY: string;
+  GOOGLE_PRIVATE_KEY: string;
+  GOOGLE_CALENDAR_ID: string;
+  GSC_SITE_URL: string;
+  SENTRY_AUTH_TOKEN: string;
+  SENTRY_ORG: string;
+  SENTRY_PROJECT: string;
+  ACTIVECAMPAIGN_API_URL: string;
+  ACTIVECAMPAIGN_API_TOKEN: string;
+  GOOGLE_ADS_DEVELOPER_TOKEN: string;
+  GOOGLE_ADS_CUSTOMER_ID: string;
+  LINKEDIN_CLIENT_ID: string;
+  LINKEDIN_CLIENT_SECRET: string;
+  LINKEDIN_ACCESS_TOKEN: string;
+  LINKEDIN_AD_ACCOUNT_ID: string;
+  LINKEDIN_ORGANIZATION_URN: string;
+  TIKTOK_APP_ID: string;
+  TIKTOK_APP_SECRET: string;
+  TIKTOK_ACCESS_TOKEN: string;
+  TIKTOK_ADVERTISER_ID: string;
+  X_API_KEY: string;
+  X_API_SECRET: string;
+  X_ACCESS_TOKEN: string;
+  X_ACCESS_SECRET: string;
+  X_AD_ACCOUNT_ID: string;
+  META_AD_ACCOUNT_ID: string;
+  META_PIXEL_ID: string;
+  META_CAPI_ACCESS_TOKEN: string;
+  META_ACCESS_TOKEN: string;
+  META_PAGE_ID: string;
+  GITHUB_TOKEN: string;
+  CRON_SECRET: string;
+  ANTHROPIC_API_KEY: string;
+  ANTHROPIC_CHAT_MODEL: string;
+  AI_GENERATE_SECRET: string;
+  GITHUB_DISPATCH_TOKEN: string;
+  ADMIN_ALERT_SECRET: string;
+  CONTENT_WEBHOOK_SECRET: string;
+  SENTRY_WEBHOOK_SECRET: string;
+  SNS_PORTAL_TOPIC_ARN: string;
+  GRAFANA_BASE_URL: string;
+  GRAFANA_API_TOKEN: string;
+  PROMETHEUS_URL: string;
+  KUMA_BASE_URL: string;
+  KUMA_STATUS_PAGE_SLUG: string;
+  KUMA_API_KEY: string;
+  NTFY_BASE_URL: string;
+  NTFY_TOPIC: string;
+  NTFY_TOKEN: string;
+  ADMIN_PUSH_VIA_NTFY: string;
+  MQTT_BROKER_HOST: string;
+  MQTT_BROKER_PORT: string;
+  MQTT_USERNAME: string;
+  MQTT_PASSWORD: string;
+  ESPOCRM_BASE_URL: string;
+  ESPOCRM_API_KEY: string;
+  ESPOCRM_API_PASSWORD: string;
+  ESPOCRM_API_USER: string;
+  ESPOCRM_WEBHOOK_SECRET: string;
+  APPFLOWY_API_URL: string;
+  APPFLOWY_JWT_SECRET: string;
+  APPFLOWY_EMAIL: string;
+  APPFLOWY_PASSWORD: string;
+  POSTIZ_API_URL: string;
+  POSTIZ_API_KEY: string;
+  POSTIZ_WEBHOOK_SECRET: string;
+  POSTIZ_SLACK_CHANNEL: string;
+  ACTIVECAMPAIGN_LEAD_AUTOMATION_ID: string;
+  LINKEDIN_CAPI_ACCESS_TOKEN: string;
+  N8N_API_URL: string;
+  N8N_API_KEY: string;
+  N8N_WORKFLOW_LEAD_ENRICH_ID: string;
+  N8N_WORKFLOW_NEWSLETTER_NURTURE_ID: string;
+}
+
+/**
  * Build configuration object from environment variables (development fallback).
  * This mirrors the buildConfigFromEnv from ssm-config.ts.
  */
-function buildConfigFromEnv(): Record<string, string> {
+function buildConfigFromEnv(): AppConfig {
   return {
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
