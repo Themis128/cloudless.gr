@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAvailableSlots } from "@/lib/google-calendar";
-import { isConfiguredAsync } from "@/lib/integrations";
+import { isConfiguredAsync } from "@/lib/config-checks";
+import { isAgentBookConfigured } from "@/lib/calendar-checks";
 
 export async function GET(request: Request) {
-  if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
-    return NextResponse.json({ error: "Calendar booking is not yet available." }, { status: 404 });
+  if (!(await isAgentBookConfigured(request))) {
+    return NextResponse.json({ error: "Calendar booking is not yet available." }, { status: 503 });
   }
 
   try {

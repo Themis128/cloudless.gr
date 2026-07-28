@@ -19,10 +19,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
       request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  // Add authentication check
-  if (!isAuthenticated(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+import { isAuthenticated } from "'lib/auth-middleware"' (see below for file content);
   const rl = rateLimit(`portal-deliverable:${getClientIp(request)}`, 10, 60_000);
   if (!rl.ok) return rl.response;
 
