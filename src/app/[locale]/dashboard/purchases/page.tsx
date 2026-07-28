@@ -54,9 +54,9 @@ async function fetchPurchasesData(
       if (res.status === 503) throw new Error("Stripe not configured");
       throw new Error(`HTTP ${res.status}`);
     }
-  const data = (await res.json()) as PurchasesDataResponse;
-  setPurchases(data.purchases ?? []);
-  setSubscriptions(data.subscriptions ?? []);
+    const data = (await res.json()) as PurchasesDataResponse;
+    setPurchases(data.purchases ?? []);
+    setSubscriptions(data.subscriptions ?? []);
   } catch (err) {
     setError(err instanceof Error ? err.message : "Failed to load purchases");
   } finally {

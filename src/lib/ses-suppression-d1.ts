@@ -50,7 +50,10 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
 
     return true;
   } catch (err) {
-    console.error("[ses-suppression-d1] Failed to suppress email:", err instanceof Error ? err.message : err);
+    console.error(
+      "[ses-suppression-d1] Failed to suppress email:",
+      err instanceof Error ? err.message : err
+    );
     return false;
   }
 }
@@ -64,7 +67,8 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
   const db = getD1Binding();
   if (!db) {
     // Fall back to SES suppression when D1 unavailable
-    const { removeFromSuppressionList: removeFromSesSuppression } = await import("@/lib/ses-suppression");
+    const { removeFromSuppressionList: removeFromSesSuppression } =
+      await import("@/lib/ses-suppression");
     return removeFromSesSuppression(email);
   }
 
@@ -72,7 +76,10 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
     await db.prepare("DELETE FROM email_suppression WHERE email = ?").bind(email).run();
     return true;
   } catch (err) {
-    console.error("[ses-suppression-d1] Failed to remove suppression:", err instanceof Error ? err.message : err);
+    console.error(
+      "[ses-suppression-d1] Failed to remove suppression:",
+      err instanceof Error ? err.message : err
+    );
     return false;
   }
 }
@@ -115,7 +122,9 @@ export async function getSuppressedEmails(limit = 1000): Promise<string[]> {
   try {
     const now = Math.floor(Date.now() / 1000);
     const rows = await db
-      .prepare("SELECT email FROM email_suppression WHERE expires_at > ? ORDER BY suppressed_at DESC LIMIT ?")
+      .prepare(
+        "SELECT email FROM email_suppression WHERE expires_at > ? ORDER BY suppressed_at DESC LIMIT ?"
+      )
       .bind(now, limit)
       .all<{ email: string }>();
 

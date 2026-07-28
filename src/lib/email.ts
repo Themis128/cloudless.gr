@@ -6,7 +6,8 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
 import { getD1Client } from "@/lib/d1-client";
 
-const isWorkers = typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
+const isWorkers =
+  typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
 
 /**
  * Send an email using the configured email provider.

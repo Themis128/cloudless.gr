@@ -32,13 +32,7 @@ import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
  */
 
 export type NotificationCategory =
-  | "contact"
-  | "subscribe"
-  | "booking"
-  | "order"
-  | "error"
-  | "auth"
-  | "portal";
+  "contact" | "subscribe" | "booking" | "order" | "error" | "auth" | "portal";
 
 export type NotificationType = "info" | "warning" | "error" | "success";
 

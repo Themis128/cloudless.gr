@@ -153,7 +153,7 @@ import {
   getD1Config,
   getD1ConfigValue,
   setD1ConfigValue,
-  type D1Config
+  type D1Config,
 } from "./ssm-config-d1.ts";
 
 let cached: AppConfig | null = null;
@@ -457,7 +457,7 @@ export async function getConfig(): Promise<AppConfig> {
       // This is a simplified check - in practice, the D1 binding would be passed in
       const maybeEnv = typeof process !== "undefined" ? process.env : {};
       const db = maybeEnv.AUTH_DB as unknown as D1Config["AUTH_DB"];
-      
+
       if (db) {
         // Try to get config from D1
         const d1Config = await getD1Config(db);
@@ -469,13 +469,13 @@ export async function getConfig(): Promise<AppConfig> {
       // Fall back to environment if D1 fails
       console.warn("[SSM] D1 lookup failed, falling back to environment:", err);
     }
-    
+
     // Fallback to environment variables in Workers environment
     return buildConfigFromEnv();
   }
 
   // 3. Fall back to AWS SSM for non-Worker environments (existing logic)
-  
+
   // In tests, skip SSM entirely and read from process.env. Still cache the
   // result so successive getConfig() calls return the same object reference;
   // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.

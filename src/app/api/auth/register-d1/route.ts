@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createUser, validatePasswordStrength, validateSessionSecret, type AuthDatabase } from "@/lib/auth-d1";
+import {
+  createUser,
+  validatePasswordStrength,
+  validateSessionSecret,
+  type AuthDatabase,
+} from "@/lib/auth-d1";
 import { sendActivationEmail, notifyTeam, slackRegistrationNotify } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { createHmac as nodeCreateHmac } from "crypto";
@@ -86,13 +91,13 @@ export async function POST(req: NextRequest) {
       .toString()
       .padStart(6, "0");
 
-// Fire-and-forget — don't fail signup if SES is down
-sendActivationEmail(email, token).catch((e) =>
-  console.error("[auth/register-d1] activation email failed:", e)
-);
+    // Fire-and-forget — don't fail signup if SES is down
+    sendActivationEmail(email, token).catch((e) =>
+      console.error("[auth/register-d1] activation email failed:", e)
+    );
 
-// Notify team
-slackRegistrationNotify({ name: fullName || email, email }).catch(() => {});
+    // Notify team
+    slackRegistrationNotify({ name: fullName || email, email }).catch(() => {});
     notifyTeam(
       "New User Registration",
       `${email}${fullName ? ` (${fullName})` : ""} just signed up.`

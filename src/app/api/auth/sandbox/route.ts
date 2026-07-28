@@ -38,10 +38,7 @@ function isSandboxEnabled(): boolean {
 export async function GET(req: NextRequest) {
   // Only allow in development mode
   if (!isSandboxEnabled()) {
-    return NextResponse.json(
-      { error: "Auth sandbox is disabled in production" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Auth sandbox is disabled in production" }, { status: 403 });
   }
 
   const db = getDb(req);
@@ -102,10 +99,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   // Only allow in development mode
   if (!isSandboxEnabled()) {
-    return NextResponse.json(
-      { error: "Auth sandbox is disabled in production" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Auth sandbox is disabled in production" }, { status: 403 });
   }
 
   const ipRl = rateLimit(`auth-sandbox:ip:${getClientIp(req)}`, 5, 60_000);

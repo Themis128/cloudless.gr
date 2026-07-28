@@ -22,7 +22,7 @@ export async function generateGeminiResponse(
   messages: Array<{ role: "user" | "model"; content: string }>,
   maxTokens: number = 600,
   tools?: Array<{ name: string; description: string; parameters: unknown }>,
-  systemInstruction?: string,
+  systemInstruction?: string
 ): Promise<string> {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
@@ -68,7 +68,7 @@ export async function generateGeminiResponse(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    },
+    }
   );
 
   if (!response.ok) {
@@ -79,7 +79,10 @@ export async function generateGeminiResponse(
   const data = (await response.json()) as {
     candidates?: Array<{
       content?: {
-        parts?: Array<{ text?: string; functionCall?: { name: string; args: Record<string, unknown> } }>;
+        parts?: Array<{
+          text?: string;
+          functionCall?: { name: string; args: Record<string, unknown> };
+        }>;
       };
     }>;
   };
@@ -88,16 +91,19 @@ export async function generateGeminiResponse(
 }
 
 // Tool use support for Gemini
-export function extractFunctionCalls(data: unknown): Array<{ name: string; args: Record<string, unknown> }> {
+export function extractFunctionCalls(
+  data: unknown
+): Array<{ name: string; args: Record<string, unknown> }> {
   const candidates = (data as { candidates?: unknown[] })?.candidates;
   if (!candidates) return [];
-  
+
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
   for (const candidate of candidates) {
     const parts = (candidate as { content?: { parts?: unknown[] } })?.content?.parts;
     if (parts) {
       for (const part of parts) {
-        const fc = (part as Record<string, unknown>).functionCall as { name: string; args: Record<string, unknown> } | undefined;
+        const fc = (part as Record<string, unknown>).functionCall as
+          { name: string; args: Record<string, unknown> } | undefined;
         if (fc?.name) {
           calls.push({ name: fc.name, args: fc.args });
         }

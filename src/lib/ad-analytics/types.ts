@@ -149,10 +149,7 @@ export interface AdMetrics {
  *  same `pivot=` query-param the LinkedIn `adAnalytics` endpoint accepts, so
  *  the adapter can pass them through verbatim. */
 export type DemographicPivot =
-  | "MEMBER_INDUSTRY"
-  | "MEMBER_SENIORITY"
-  | "MEMBER_JOB_TITLE"
-  | "MEMBER_COMPANY_SIZE";
+  "MEMBER_INDUSTRY" | "MEMBER_SENIORITY" | "MEMBER_JOB_TITLE" | "MEMBER_COMPANY_SIZE";
 
 /** Bucket-label → click-count map for one pivot. Label is whatever the
  *  platform returned (resolved against LinkedIn's lookups when available,

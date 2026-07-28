@@ -61,7 +61,10 @@ export async function POST(req: NextRequest) {
   const lockoutCheck = await checkFailedAttempts(db, email);
   if (lockoutCheck.locked) {
     return NextResponse.json(
-      { error: "Account temporarily locked due to too many failed attempts. Try again in 15 minutes." },
+      {
+        error:
+          "Account temporarily locked due to too many failed attempts. Try again in 15 minutes.",
+      },
       { status: 429 }
     );
   }

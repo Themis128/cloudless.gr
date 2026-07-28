@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       },
       {
         status: 400,
-      },
+      }
     );
   }
 
@@ -97,10 +97,7 @@ export async function POST(request: Request) {
       });
     } catch (err) {
       console.error("[products/recommendations] AI recommendation failed:", err);
-      return Response.json(
-        { error: "Failed to generate recommendations" },
-        { status: 500 }
-      );
+      return Response.json({ error: "Failed to generate recommendations" }, { status: 500 });
     }
   }
 

@@ -78,9 +78,7 @@ function signServiceJwt(secret: string): string {
   };
   const head = b64url(JSON.stringify(header));
   const body = b64url(JSON.stringify(payload));
-  const sig = b64url(
-    createHmac("sha256", secret).update(`${head}.${body}`).digest()
-  );
+  const sig = b64url(createHmac("sha256", secret).update(`${head}.${body}`).digest());
   return `${head}.${body}.${sig}`;
 }
 
@@ -182,8 +180,7 @@ export async function getAppFlowySummary(): Promise<{
   userCount: number;
 }> {
   const configured = await isAppFlowyConfigured();
-  if (!configured)
-    return { configured: false, healthy: false, workspaceCount: 0, userCount: 0 };
+  if (!configured) return { configured: false, healthy: false, workspaceCount: 0, userCount: 0 };
   const [healthy, workspaces, users] = await Promise.all([
     pingAppFlowyHealth(),
     listAllWorkspaces().catch(() => [] as AppFlowyWorkspace[]),
@@ -221,7 +218,9 @@ export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyVie
 
 export async function getDocument(workspaceId: string, viewId: string): Promise<unknown> {
   try {
-    const r = await callThrowing<{ data: unknown }>(`/admin/workspace/${workspaceId}/document/${viewId}`);
+    const r = await callThrowing<{ data: unknown }>(
+      `/admin/workspace/${workspaceId}/document/${viewId}`
+    );
     return r.data;
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) throw e;

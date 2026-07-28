@@ -22,13 +22,13 @@ interface D1Config {
  * Used by ETL scripts and Workers to get runtime configuration.
  */
 export async function getD1Config<T extends Record<string, string> = Record<string, string>>(
-  db: D1Database,
+  db: D1Database
 ): Promise<T> {
   const config: Record<string, string> = {};
 
-  const results = await db.prepare(
-    "SELECT key, value FROM app_config WHERE value IS NOT NULL",
-  ).all<{ key: string; value: string }>();
+  const results = await db
+    .prepare("SELECT key, value FROM app_config WHERE value IS NOT NULL")
+    .all<{ key: string; value: string }>();
 
   for (const row of results.results) {
     if (row.key && row.value) {
@@ -42,13 +42,11 @@ export async function getD1Config<T extends Record<string, string> = Record<stri
 /**
  * Get a single configuration value from D1.
  */
-export async function getD1ConfigValue(
-  db: D1Database,
-  key: string,
-): Promise<string | undefined> {
-  const result = await db.prepare(
-    "SELECT value FROM app_config WHERE key = ?",
-  ).bind(key).first<{ value: string }>();
+export async function getD1ConfigValue(db: D1Database, key: string): Promise<string | undefined> {
+  const result = await db
+    .prepare("SELECT value FROM app_config WHERE key = ?")
+    .bind(key)
+    .first<{ value: string }>();
 
   return result?.value;
 }
@@ -60,12 +58,15 @@ export async function setD1ConfigValue(
   db: D1Database,
   key: string,
   value: string,
-  description?: string,
+  description?: string
 ): Promise<void> {
-  await db.prepare(
-    `INSERT OR REPLACE INTO app_config (key, value, description, updated_at)
-     VALUES (?, ?, ?, strftime('%s', 'now'))`,
-  ).bind(key, value, description ?? "").run();
+  await db
+    .prepare(
+      `INSERT OR REPLACE INTO app_config (key, value, description, updated_at)
+     VALUES (?, ?, ?, strftime('%s', 'now'))`
+    )
+    .bind(key, value, description ?? "")
+    .run();
 }
 
 /**
@@ -296,7 +297,7 @@ function buildConfigFromEnv(): AppConfig {
  * This is a unified interface that works in both environments.
  */
 export async function getConfig<T extends Record<string, string> = Record<string, string>>(
-  db?: D1Database,
+  db?: D1Database
 ): Promise<T> {
   // In Workers environment with D1 binding
   if (isWorkersEnvironment() && db) {

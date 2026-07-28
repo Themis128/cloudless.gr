@@ -44,7 +44,10 @@ function getAiBinding(env: Env): AiBinding | null {
 /* LRU cache and client */
 let _embeddingCache: EmbeddingCache | null = null;
 
-async function generateWorkersAiEmbedding(text: string, ai: AiBinding | null): Promise<number[] | null> {
+async function generateWorkersAiEmbedding(
+  text: string,
+  ai: AiBinding | null
+): Promise<number[] | null> {
   if (!ai) return null;
   try {
     const resp = (await ai.run(WORKERS_AI_EMBED_MODEL, { text: [text] })) as {
@@ -72,7 +75,10 @@ async function generateEmbedding(text: string, ai: AiBinding | null): Promise<nu
   return null;
 }
 
-async function getProductEmbeddings(products: StoreProduct[], ai: AiBinding | null): Promise<Map<string, number[]>> {
+async function getProductEmbeddings(
+  products: StoreProduct[],
+  ai: AiBinding | null
+): Promise<Map<string, number[]>> {
   const now = Date.now();
   if (_embeddingCache && now - _embeddingCache.fetchedAt < CACHE_TTL_EMBED) {
     const missing = products.filter((p) => !_embeddingCache!.embeddings.has(p.id));
@@ -110,7 +116,11 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-export async function getSimilarProducts(env: Env, productIds: string[], limit = 4): Promise<StoreProduct[]> {
+export async function getSimilarProducts(
+  env: Env,
+  productIds: string[],
+  limit = 4
+): Promise<StoreProduct[]> {
   const products = await (await import("@/lib/store-products")).getProducts();
   const ai = getAiBinding(env);
   const embeddings = await getProductEmbeddings(products, ai);

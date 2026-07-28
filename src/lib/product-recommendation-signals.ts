@@ -34,6 +34,6 @@ export function buildCoPurchaseSignals(orderProductIds: string[][]): ProductOrde
       (a, b) =>
         b.count - a.count ||
         a.productId.localeCompare(b.productId) ||
-        a.relatedProductId.localeCompare(b.relatedProductId),
+        a.relatedProductId.localeCompare(b.relatedProductId)
     );
 }

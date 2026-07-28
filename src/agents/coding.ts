@@ -130,7 +130,6 @@ export class CodingAgent extends Agent<Env, CodingState> {
     error: "",
   };
 
-  
   getState() {
     return {
       lastPrompt: this.state?.lastPrompt ?? "",
@@ -143,12 +142,10 @@ export class CodingAgent extends Agent<Env, CodingState> {
     };
   }
 
-  
   getResult() {
     return this.getState();
   }
 
-  
   reset() {
     const nextState: CodingState = {
       lastPrompt: "",
@@ -221,12 +218,9 @@ export class CodingAgent extends Agent<Env, CodingState> {
     try {
       const systemPrompt = buildSystemPrompt(mode);
 
-      const result = await this.env.AI.run(
-        "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-        {
-          prompt: systemPrompt + "\n\nUser task and repository context:\n" + prompt,
-        }
-      );
+      const result = await this.env.AI.run("@cf/deepseek-ai/deepseek-r1-distill-qwen-32b", {
+        prompt: systemPrompt + "\n\nUser task and repository context:\n" + prompt,
+      });
 
       const responseText = extractText(result);
 
@@ -272,7 +266,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
 
       if (request.method === "POST") {
         try {
-          const body = await request.json() as { prompt?: string };
+          const body = (await request.json()) as { prompt?: string };
           prompt = body.prompt ?? prompt;
         } catch {
           // Ignore malformed JSON and fall back to query string.
@@ -306,7 +300,7 @@ export class CodingAgent extends Agent<Env, CodingState> {
 
       if (request.method === "POST") {
         try {
-          const body = await request.json() as { prompt?: string; mode?: string };
+          const body = (await request.json()) as { prompt?: string; mode?: string };
           prompt = body.prompt ?? prompt;
           mode = normalizeMode(body.mode ?? mode);
         } catch {

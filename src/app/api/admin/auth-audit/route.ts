@@ -14,11 +14,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { type AuthDatabase } from "@/lib/auth-d1";
 import { requireAdmin } from "@/lib/auth-middleware";
-import {
-  queryAuditLog,
-  getAuditLogCount,
-  type AuditAction,
-} from "@/lib/auth-audit";
+import { queryAuditLog, getAuditLogCount, type AuditAction } from "@/lib/auth-audit";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +41,7 @@ export async function GET(request: NextRequest) {
   const startDate = searchParams.get("startDate")
     ? Number(searchParams.get("startDate"))
     : undefined;
-  const endDate = searchParams.get("endDate")
-    ? Number(searchParams.get("endDate"))
-    : undefined;
+  const endDate = searchParams.get("endDate") ? Number(searchParams.get("endDate")) : undefined;
   const limit = Math.min(100, Number(searchParams.get("limit") ?? 100));
   const offset = Number(searchParams.get("offset") ?? 0);
 

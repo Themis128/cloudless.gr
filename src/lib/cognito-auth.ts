@@ -79,7 +79,7 @@ async function signUp(input: SignUpInput): Promise<void> {
   url.searchParams.set("response_type", "code");
   url.searchParams.set(
     "redirect_uri",
-    `${globalThis.location?.origin ?? ""}/api/auth/callback/cognito`,
+    `${globalThis.location?.origin ?? ""}/api/auth/callback/cognito`
   );
   url.searchParams.set("scope", "openid profile email");
   if (input.options?.userAttributes?.email) {
@@ -99,7 +99,7 @@ async function resetPassword(input: ResetPasswordInput): Promise<void> {
   url.searchParams.set("response_type", "code");
   url.searchParams.set(
     "redirect_uri",
-    `${globalThis.location?.origin ?? ""}/api/auth/callback/cognito`,
+    `${globalThis.location?.origin ?? ""}/api/auth/callback/cognito`
   );
   if (input.username) url.searchParams.set("login_hint", input.username);
   globalThis.location.href = url.toString();

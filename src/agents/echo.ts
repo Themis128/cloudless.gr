@@ -15,7 +15,6 @@ export class EchoAgent extends Agent<Env, EchoState> {
     count: 0,
   };
 
-  
   getState() {
     return {
       lastMessage: this.state?.lastMessage ?? "",
@@ -23,7 +22,6 @@ export class EchoAgent extends Agent<Env, EchoState> {
     };
   }
 
-  
   echo(message: string) {
     const nextState = {
       lastMessage: message,
@@ -35,7 +33,6 @@ export class EchoAgent extends Agent<Env, EchoState> {
     return nextState;
   }
 
-  
   reset() {
     const nextState = {
       lastMessage: "",

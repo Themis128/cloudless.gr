@@ -88,7 +88,7 @@ export const ANALYTICS_QUERIES = {
  */
 export async function listParquetPartitions(
   r2Client: R2Bucket,
-  prefix: string = 'analytics/'
+  prefix: string = "analytics/"
 ): Promise<ParquetPartition[]> {
   const partitions: ParquetPartition[] = [];
   let cursor: string | undefined;
@@ -107,14 +107,14 @@ export async function listParquetPartitions(
       }
     }
     // Cursor only exists when truncated is true - use type guard
-    if (response.truncated && 'cursor' in response) {
+    if (response.truncated && "cursor" in response) {
       cursor = response.cursor;
     } else {
       cursor = undefined;
     }
   } while (cursor);
 
-  return partitions.sort((a, b) => 
+  return partitions.sort((a, b) =>
     `${b.year}${b.month}${b.day}`.localeCompare(`${a.year}${a.month}${a.day}`)
   );
 }
@@ -126,7 +126,6 @@ export async function listParquetPartitions(
  * For client-side DuckDB, consider proxying through a Worker endpoint.
  */
 export async function getParquetPresignedUrl(
-   
   _r2Client: R2Bucket,
   key: string
 ): Promise<string | null> {

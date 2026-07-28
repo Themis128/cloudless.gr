@@ -44,14 +44,17 @@ export default function EmailCampaignsPage() {
         fetchWithAuth("/api/admin/email/campaigns"),
       ]);
       if (statsRes.ok) {
-        setTotalSubscribers((await statsRes.json() as { totalSubscribers: number | null }).totalSubscribers ?? null);
+        setTotalSubscribers(
+          ((await statsRes.json()) as { totalSubscribers: number | null }).totalSubscribers ?? null
+        );
       }
       if (listsRes.ok) {
-        setLists((await listsRes.json() as { lists: any[] }).lists ?? []);
+        setLists(((await listsRes.json()) as { lists: any[] }).lists ?? []);
       } else if (listsRes.status === 503) {
         setListsConfigured(false);
       }
-      if (autoRes.ok) setAutomations((await autoRes.json() as { automations: any[] }).automations ?? []);
+      if (autoRes.ok)
+        setAutomations(((await autoRes.json()) as { automations: any[] }).automations ?? []);
       if (!campRes.ok) {
         const body = (await campRes.json().catch(() => null)) as {
           error?: string;

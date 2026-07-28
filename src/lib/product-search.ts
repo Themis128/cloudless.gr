@@ -69,7 +69,6 @@ export function productToSearchDocument(product: StoreProduct): ProductSearchDoc
   };
 }
 
-
 interface MeiliTaskResponse {
   taskUid?: number;
   uid?: number;
@@ -90,17 +89,13 @@ async function waitForMeiliTask(uid: number | undefined): Promise<void> {
   const deadline = Date.now() + 60_000;
 
   while (Date.now() < deadline) {
-    const task = await meiliRequest<MeiliTaskResponse>(
-      `/tasks/${uid}`,
-      {},
-      getMeiliAdminKey(),
-    );
+    const task = await meiliRequest<MeiliTaskResponse>(`/tasks/${uid}`, {}, getMeiliAdminKey());
 
     if (task.status === "succeeded") return;
 
     if (task.status === "failed" || task.status === "canceled") {
       throw new Error(
-        `Meilisearch task ${uid} ${task.status}: ${task.error?.message ?? "unknown error"}`,
+        `Meilisearch task ${uid} ${task.status}: ${task.error?.message ?? "unknown error"}`
       );
     }
 
@@ -115,7 +110,7 @@ async function deleteProductsIndexIfExists(): Promise<void> {
     const task = await meiliRequest<MeiliTaskResponse>(
       `/indexes/${PRODUCTS_INDEX}`,
       { method: "DELETE" },
-      getMeiliAdminKey(),
+      getMeiliAdminKey()
     );
 
     await waitForMeiliTask(meiliTaskUid(task));
@@ -139,7 +134,7 @@ async function createProductsIndex(): Promise<void> {
           primaryKey: "id",
         }),
       },
-      getMeiliAdminKey(),
+      getMeiliAdminKey()
     );
 
     await waitForMeiliTask(meiliTaskUid(task));
@@ -151,7 +146,6 @@ async function createProductsIndex(): Promise<void> {
     }
   }
 }
-
 
 export async function ensureProductsSearchIndex(): Promise<void> {
   const task = await meiliRequest<MeiliTaskResponse>(
@@ -171,7 +165,7 @@ export async function ensureProductsSearchIndex(): Promise<void> {
         },
       }),
     },
-    getMeiliAdminKey(),
+    getMeiliAdminKey()
   );
 
   await waitForMeiliTask(meiliTaskUid(task));
@@ -202,7 +196,7 @@ export async function reindexProductsWithEmbeddings(): Promise<{
           [PRODUCT_EMBEDDER]: embedding,
         },
       };
-    }),
+    })
   );
 
   const task = await meiliRequest<MeiliTaskResponse>(
@@ -211,7 +205,7 @@ export async function reindexProductsWithEmbeddings(): Promise<{
       method: "POST",
       body: JSON.stringify(docs),
     },
-    getMeiliAdminKey(),
+    getMeiliAdminKey()
   );
 
   const uid = meiliTaskUid(task);
@@ -225,7 +219,7 @@ export async function reindexProductsWithEmbeddings(): Promise<{
 
 export async function searchProductsWithMeili(
   query: string,
-  limit = 8,
+  limit = 8
 ): Promise<ProductSearchHit[]> {
   const vector = await embedTextWithTitan(query);
 
@@ -244,7 +238,7 @@ export async function searchProductsWithMeili(
         attributesToRetrieve: ["id", "name", "category", "description", "price", "href"],
         showRankingScore: true,
       }),
-    },
+    }
   );
 
   return res.hits ?? [];
@@ -252,15 +246,13 @@ export async function searchProductsWithMeili(
 
 export async function searchProductsFallback(
   query: string,
-  limit = 8,
+  limit = 8
 ): Promise<ProductSearchHit[]> {
   const q = query.toLowerCase();
   const products = await getProducts();
 
   return products
     .map(productToSearchDocument)
-    .filter((p) =>
-      [p.name, p.category, p.description, p.text].join(" ").toLowerCase().includes(q),
-    )
+    .filter((p) => [p.name, p.category, p.description, p.text].join(" ").toLowerCase().includes(q))
     .slice(0, limit);
 }

@@ -14,7 +14,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   let stageId: string;
   try {
-    const body = await request.json() as { stageId: string };
+    const body = (await request.json()) as { stageId: string };
     stageId = body.stageId;
     if (!stageId) throw new Error("missing stageId");
   } catch (err) {

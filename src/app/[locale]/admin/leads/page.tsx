@@ -45,7 +45,7 @@ export default function AdminLeadsPage() {
         if (res.status === 503) throw new Error("No lead source configured");
         throw new Error(`HTTP ${res.status}`);
       }
- const data: { leads: any[]; fetchedAt?: string } = await res.json();
+      const data: { leads: any[]; fetchedAt?: string } = await res.json();
       setLeads(data.leads ?? []);
       setFetchedAt(data.fetchedAt ?? new Date().toISOString());
       setError(null);

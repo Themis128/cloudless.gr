@@ -56,8 +56,9 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-try {
-const { name, email, company, service, message, phone, attribution } = parsed as ContactRequestBody;
+  try {
+    const { name, email, company, service, message, phone, attribution } =
+      parsed as ContactRequestBody;
     if (!name || !email || !message) {
       return Response.json({ error: "Name, email, and message are required." }, { status: 400 });
     }
@@ -118,8 +119,14 @@ const { name, email, company, service, message, phone, attribution } = parsed as
     const nameParts = String(name).trim().split(" ");
 
     // Lead engine: deterministic score + first-touch attribution summary.
-const attributionData = attribution ? JSON.parse(attribution) : undefined;
-const lead = scoreLead({ email, service, company, message: String(message), attribution: attributionData });
+    const attributionData = attribution ? JSON.parse(attribution) : undefined;
+    const lead = scoreLead({
+      email,
+      service,
+      company,
+      message: String(message),
+      attribution: attributionData,
+    });
     const attributionSummary = attributionData ? formatAttribution(attributionData) : undefined;
 
     Promise.allSettled([

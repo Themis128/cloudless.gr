@@ -41,8 +41,8 @@ export default function XPage() {
         return;
       }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
-      setCampaigns((await camRes.json() as { campaigns: any[] }).campaigns ?? []);
-      if (insRes.ok) setInsights((await insRes.json() as { insights: any }).insights ?? null);
+      setCampaigns(((await camRes.json()) as { campaigns: any[] }).campaigns ?? []);
+      if (insRes.ok) setInsights(((await insRes.json()) as { insights: any }).insights ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {

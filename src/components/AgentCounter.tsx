@@ -78,48 +78,42 @@ export default function AgentCounter() {
       <div className="flex items-center gap-4">
         <span className="font-mono text-sm text-slate-400">
           Current count:{" "}
-          <span className="text-neon-cyan font-bold">
-            {loading ? "loading..." : count}
-          </span>
+          <span className="text-neon-cyan font-bold">{loading ? "loading..." : count}</span>
         </span>
       </div>
 
       <div className="flex gap-2">
         <button
           onClick={() => void increment()}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
+          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
           disabled={loading}
         >
           Increment
         </button>
         <button
           onClick={() => void decrement()}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
+          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
           disabled={loading}
         >
           Decrement
         </button>
         <button
           onClick={() => void reset()}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
+          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
           disabled={loading}
         >
           Reset
         </button>
         <button
           onClick={() => void refresh()}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm hover:border-neon-cyan/50"
+          className="hover:border-neon-cyan/50 rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 font-mono text-sm"
           disabled={loading}
         >
           Refresh
         </button>
       </div>
 
-      {error && (
-        <pre className="text-red-400 text-xs">
-          Error: {error}
-        </pre>
-      )}
+      {error && <pre className="text-xs text-red-400">Error: {error}</pre>}
     </div>
   );
 }

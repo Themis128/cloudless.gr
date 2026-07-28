@@ -36,18 +36,15 @@ export async function verifyGeminiKey(): Promise<{
   if (!key) return { status: "not_configured" };
 
   try {
-    const res = await fetch(
-      `${GEMINI_API}/${GEMINI_MODEL}:generateContent?key=${key}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: "ping" }] }],
-          generationConfig: { maxOutputTokens: 1 },
-        }),
-        signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
-      }
-    );
+    const res = await fetch(`${GEMINI_API}/${GEMINI_MODEL}:generateContent?key=${key}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: "ping" }] }],
+        generationConfig: { maxOutputTokens: 1 },
+      }),
+      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+    });
     if (res.status === 401 || res.status === 403) {
       return { status: "rejected", message: `API key rejected (${res.status})` };
     }
@@ -71,17 +68,14 @@ export async function callGemini(
   apiKey: string,
   maxTokens: number = 1000
 ): Promise<string> {
-  const response = await fetch(
-    `${GEMINI_API}/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: maxTokens },
-      }),
-    }
-  );
+  const response = await fetch(`${GEMINI_API}/${GEMINI_MODEL}:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: maxTokens },
+    }),
+  });
 
   if (!response.ok) {
     const err = await response.text().catch(() => "");

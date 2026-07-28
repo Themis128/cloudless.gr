@@ -22,7 +22,8 @@ export const authOpenApiSpec = {
     "/api/auth/login": {
       post: {
         summary: "User login",
-        description: "Authenticate user with email and password. Optionally supports 'Remember me' for longer sessions.",
+        description:
+          "Authenticate user with email and password. Optionally supports 'Remember me' for longer sessions.",
         operationId: "login",
         requestBody: {
           required: true,
@@ -147,7 +148,11 @@ export const authOpenApiSpec = {
                 required: ["email", "password"],
                 properties: {
                   email: { type: "string", format: "email", example: "user@example.com" },
-                  password: { type: "string", format: "password", description: "Min 8 chars, mixed case, number, symbol" },
+                  password: {
+                    type: "string",
+                    format: "password",
+                    description: "Min 8 chars, mixed case, number, symbol",
+                  },
                   fullName: { type: "string", example: "John Doe" },
                 },
               },
@@ -163,7 +168,10 @@ export const authOpenApiSpec = {
                   type: "object",
                   properties: {
                     ok: { type: "boolean" },
-                    token: { type: "string", description: "Activation token for email verification" },
+                    token: {
+                      type: "string",
+                      description: "Activation token for email verification",
+                    },
                   },
                 },
               },

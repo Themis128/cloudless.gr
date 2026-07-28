@@ -90,10 +90,10 @@ export async function POST(req: NextRequest) {
     )
       .toString()
       .padStart(6, "0");
-// Fire-and-forget — don't fail the signup if SES is down
-sendActivationEmail(email, token).catch((e) =>
-  console.error("[auth/register] activation email failed:", e)
-);
+    // Fire-and-forget — don't fail the signup if SES is down
+    sendActivationEmail(email, token).catch((e) =>
+      console.error("[auth/register] activation email failed:", e)
+    );
     recordNotification({
       category: "auth",
       type: "info",
@@ -103,8 +103,8 @@ sendActivationEmail(email, token).catch((e) =>
       route: "/api/auth/register",
       metadata: { fullName: fullName ?? null },
     });
-// Notify team via Slack + SES
-slackRegistrationNotify(email).catch(() => {});
+    // Notify team via Slack + SES
+    slackRegistrationNotify(email).catch(() => {});
     notifyTeam(
       "New User Registration",
       `${email}${fullName ? ` (${fullName})` : ""} just signed up.`

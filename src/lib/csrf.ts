@@ -31,9 +31,7 @@ export async function storeCsrfToken(
   const expiresAt = Math.floor(Date.now() / 1000) + CSRF_TOKEN_EXPIRY_SECONDS;
 
   await db
-    .prepare(
-      "INSERT OR REPLACE INTO csrf_token (id, session_id, expires_at) VALUES (?, ?, ?)"
-    )
+    .prepare("INSERT OR REPLACE INTO csrf_token (id, session_id, expires_at) VALUES (?, ?, ?)")
     .bind(token, sessionId, expiresAt)
     .run();
 }
@@ -69,10 +67,7 @@ export async function validateCsrfToken(
 /**
  * Delete a CSRF token (single-use or cleanup).
  */
-export async function deleteCsrfToken(
-  db: AuthDatabase,
-  token: string
-): Promise<void> {
+export async function deleteCsrfToken(db: AuthDatabase, token: string): Promise<void> {
   await db.prepare("DELETE FROM csrf_token WHERE id = ?").bind(token).run();
 }
 

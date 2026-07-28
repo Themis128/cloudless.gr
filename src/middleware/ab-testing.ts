@@ -5,7 +5,7 @@
  * Workers runs at the edge by default, making Lambda@Edge unnecessary.
  */
 export const AB_EXPERIMENTS = {
-  "b": {
+  b: {
     weight: 0.5,
     variants: { a: "/", b: "/?variant=b" },
   },

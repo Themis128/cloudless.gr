@@ -14,7 +14,7 @@ export async function requireAuth(request: NextRequest) {
 
 export async function requireAdmin(request: NextRequest) {
   const session = await auth(request);
-const { user } = session || {};
+  const { user } = session || {};
 
   if (!user || !user.role || user.role !== "admin") {
     return NextResponse.redirect(new URL("/auth/login", request.url));

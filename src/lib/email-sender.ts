@@ -130,5 +130,10 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
   // 3. No transport available (tests, unconfigured environments)
   console.warn("[email-sender] No email binding available. Skipping send.");
   // Sanitize email fields to prevent log injection attacks
-  console.log("  To:", String(payload.to).replace(/[\x00-\x1F\x7F]/g, ""), "Subject:", String(payload.subject).replace(/[\x00-\x1F\x7F]/g, ""));
+  console.log(
+    "  To:",
+    String(payload.to).replace(/[\x00-\x1F\x7F]/g, ""),
+    "Subject:",
+    String(payload.subject).replace(/[\x00-\x1F\x7F]/g, "")
+  );
 }

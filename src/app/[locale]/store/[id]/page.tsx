@@ -3,11 +3,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import {
-  getProductById,
-  categoryLabels,
-  categoryColors,
-} from "@/lib/store-products";
+import { getProductById, categoryLabels, categoryColors } from "@/lib/store-products";
 import { recommendProductsForProduct } from "@/lib/product-recommendations";
 import AddToCartButton from "@/components/store/AddToCartButton";
 import ProductIcon from "@/components/store/ProductIcon";

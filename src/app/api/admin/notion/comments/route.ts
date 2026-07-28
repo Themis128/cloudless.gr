@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
   if (!authPost.ok) return authPost.response;
 
   try {
-    const body = await request.json() as { page_id: string; text: string };
-  const { page_id, text } = body;
+    const body = (await request.json()) as { page_id: string; text: string };
+    const { page_id, text } = body;
 
     if (!page_id || !text) {
       return NextResponse.json({ error: "page_id and text are required" }, { status: 400 });

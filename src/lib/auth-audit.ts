@@ -52,10 +52,7 @@ export interface AuditLogEntry {
  * });
  * ```
  */
-export async function logAuthAction(
-  db: AuthDatabase,
-  entry: AuditLogEntry
-): Promise<void> {
+export async function logAuthAction(db: AuthDatabase, entry: AuditLogEntry): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
 
   await db
@@ -118,7 +115,15 @@ export async function queryAuditLog(
     created_at: number;
   }[]
 > {
-  const { action, adminUserId, targetUserId, startDate, endDate, limit = 100, offset = 0 } = options;
+  const {
+    action,
+    adminUserId,
+    targetUserId,
+    startDate,
+    endDate,
+    limit = 100,
+    offset = 0,
+  } = options;
 
   let query = "SELECT * FROM admin_audit_log WHERE 1 = 1";
   const params: unknown[] = [];

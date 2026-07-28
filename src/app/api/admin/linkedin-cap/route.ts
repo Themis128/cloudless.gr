@@ -31,22 +31,26 @@ export async function POST(request: Request) {
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
+          Authorization: `Bearer ${LINKEDIN_ACCESS_TOKEN}`,
           "Content-Type": "application/json",
           "X-RestLi-Method": "BATCH_PARTIAL_UPDATE",
         },
         body: JSON.stringify({
-          elements: [{
-            conversion: `urn:lla:linkedin.com:conversion:${conversionId || LINKEDIN_CONVERSION_ID}`,
-            eventId: eventId,
-            ...(email ? { email } : {}),
-            ...(firstName || lastName ? {
-              userData: {
-                ...(firstName ? { firstName } : {}),
-                ...(lastName ? { lastName } : {}),
-              },
-            } : {}),
-          }],
+          elements: [
+            {
+              conversion: `urn:lla:linkedin.com:conversion:${conversionId || LINKEDIN_CONVERSION_ID}`,
+              eventId: eventId,
+              ...(email ? { email } : {}),
+              ...(firstName || lastName
+                ? {
+                    userData: {
+                      ...(firstName ? { firstName } : {}),
+                      ...(lastName ? { lastName } : {}),
+                    },
+                  }
+                : {}),
+            },
+          ],
         }),
       }
     );

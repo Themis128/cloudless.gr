@@ -134,10 +134,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const [web, commerce] = await Promise.all([
-      fetchWebAnalytics(),
-      fetchCommerceAnalytics(),
-    ]);
+    const [web, commerce] = await Promise.all([fetchWebAnalytics(), fetchCommerceAnalytics()]);
 
     const summary: AnalyticsSummary = {
       web,

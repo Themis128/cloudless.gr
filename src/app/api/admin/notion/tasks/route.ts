@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Notion Tasks not configured" }, { status: 404 });
   }
 
-  const body = await request.json() as { task: string; [key: string]: unknown };
+  const body = (await request.json()) as { task: string; [key: string]: unknown };
   if (!body.task) {
     return NextResponse.json({ error: "task is required" }, { status: 400 });
   }
@@ -62,7 +62,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  const body = await request.json() as { pageId: string; status: string };
+  const body = (await request.json()) as { pageId: string; status: string };
   const { pageId, status } = body;
 
   if (!pageId || !status) {

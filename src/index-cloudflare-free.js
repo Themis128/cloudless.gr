@@ -25,7 +25,9 @@ async function hashPassword(password, secret) {
     256
   );
   const hash = new Uint8Array(hashBuffer);
-  return Array.from(hash).map(b => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(hash)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // Legacy SHA-256 verification for backward compatibility during migration
@@ -34,7 +36,9 @@ async function verifyLegacyPassword(password, secret, expectedHash) {
   const data = encoder.encode(password + secret);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hash = new Uint8Array(hashBuffer);
-  const hex = Array.from(hash).map(b => b.toString(16).padStart(2, "0")).join("");
+  const hex = Array.from(hash)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return hex === expectedHash;
 }
 
@@ -80,7 +84,8 @@ export default {
     // Redirect www.cloudless.gr to cloudless.gr
     // ==========================================
     if (host === "www.cloudless.gr") {
-      const canonicalUrl = url.origin.replace("www.cloudless.gr", "cloudless.gr") + url.pathname + url.search;
+      const canonicalUrl =
+        url.origin.replace("www.cloudless.gr", "cloudless.gr") + url.pathname + url.search;
       return new Response(null, {
         status: 301,
         headers: {
@@ -107,9 +112,9 @@ export default {
         return jsonResponse({ error: "Authentication not configured" }, 503);
       }
 
-      const { results: existing } = await env.AUTH_DB.prepare(
-        "SELECT id FROM user WHERE email = ?",
-      ).bind(email.toLowerCase().trim()).all();
+      const { results: existing } = await env.AUTH_DB.prepare("SELECT id FROM user WHERE email = ?")
+        .bind(email.toLowerCase().trim())
+        .all();
 
       if (existing.length > 0) {
         return jsonResponse({ error: "User already exists" }, 400);
@@ -120,12 +125,22 @@ export default {
       const now = Math.floor(Date.now() / 1000);
 
       await env.AUTH_DB.prepare(
-        "INSERT INTO user (id, email, name, username, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      ).bind(id, email.toLowerCase().trim(), name || null, email.toLowerCase().trim(), passwordHash, now, now).run();
+        "INSERT INTO user (id, email, name, username, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+        .bind(
+          id,
+          email.toLowerCase().trim(),
+          name || null,
+          email.toLowerCase().trim(),
+          passwordHash,
+          now,
+          now
+        )
+        .run();
 
-      await env.AUTH_DB.prepare(
-        "INSERT INTO user_role (user_id, role) VALUES (?, ?)",
-      ).bind(id, "user").run();
+      await env.AUTH_DB.prepare("INSERT INTO user_role (user_id, role) VALUES (?, ?)")
+        .bind(id, "user")
+        .run();
 
       return jsonResponse({
         ok: true,
@@ -146,9 +161,9 @@ export default {
         return jsonResponse({ error: "Authentication not configured" }, 503);
       }
 
-      const { results } = await env.AUTH_DB.prepare(
-        "SELECT * FROM user WHERE email = ?",
-      ).bind(email.toLowerCase().trim()).all();
+      const { results } = await env.AUTH_DB.prepare("SELECT * FROM user WHERE email = ?")
+        .bind(email.toLowerCase().trim())
+        .all();
 
       const user = results[0];
       if (!user) {
@@ -161,33 +176,40 @@ export default {
       }
 
       const { results: roleResults } = await env.AUTH_DB.prepare(
-        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'",
-      ).bind(user.id).all();
+        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'"
+      )
+        .bind(user.id)
+        .all();
       const isAdmin = roleResults.length > 0;
 
       const sessionId = crypto.randomUUID();
       const expiresAt = Math.floor(Date.now() / 1000) + SESSION_EXPIRY_SECONDS;
 
       await env.AUTH_DB.prepare(
-        "INSERT INTO session (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
-      ).bind(sessionId, user.id, expiresAt, Math.floor(Date.now() / 1000)).run();
+        "INSERT INTO session (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)"
+      )
+        .bind(sessionId, user.id, expiresAt, Math.floor(Date.now() / 1000))
+        .run();
 
-      return new Response(JSON.stringify({
-        ok: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          company: user.company,
-          phone: user.phone,
-        },
-        isAdmin,
-      }), {
-        headers: {
-          "Set-Cookie": `session_token=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_EXPIRY_SECONDS}`,
-          "Content-Type": "application/json",
-        },
-      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            company: user.company,
+            phone: user.phone,
+          },
+          isAdmin,
+        }),
+        {
+          headers: {
+            "Set-Cookie": `session_token=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_EXPIRY_SECONDS}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     // POST /api/auth/logout - Destroy session
@@ -201,7 +223,7 @@ export default {
       const response = jsonResponse({ ok: true });
       response.headers.append(
         "Set-Cookie",
-        "session_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0",
+        "session_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0"
       );
       return response;
     }
@@ -215,8 +237,10 @@ export default {
       }
 
       const { results } = await env.AUTH_DB.prepare(
-        "SELECT id, preferences_json FROM user WHERE email = ?",
-      ).bind(email.toLowerCase().trim()).all();
+        "SELECT id, preferences_json FROM user WHERE email = ?"
+      )
+        .bind(email.toLowerCase().trim())
+        .all();
 
       if (results.length === 0) {
         return jsonResponse({ ok: true });
@@ -229,8 +253,10 @@ export default {
       const expiresAt = Math.floor(Date.now() / 1000) + RESET_TOKEN_EXPIRY_SECONDS;
 
       await env.AUTH_DB.prepare(
-        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.reset_token', ?, '$.reset_expires', ?) WHERE id = ?",
-      ).bind(token, expiresAt, user.id).run();
+        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.reset_token', ?, '$.reset_expires', ?) WHERE id = ?"
+      )
+        .bind(token, expiresAt, user.id)
+        .run();
 
       const resetUrl = `${url.origin}/auth/reset-confirm?token=${encodeURIComponent(token)}`;
 
@@ -276,8 +302,10 @@ export default {
 
       const now = Math.floor(Date.now() / 1000);
       const { results } = await env.AUTH_DB.prepare(
-        "SELECT id, preferences_json FROM user WHERE json_extract(preferences_json, '$.reset_token') = ? AND json_extract(preferences_json, '$.reset_expires') > ?",
-      ).bind(token, now).all();
+        "SELECT id, preferences_json FROM user WHERE json_extract(preferences_json, '$.reset_token') = ? AND json_extract(preferences_json, '$.reset_expires') > ?"
+      )
+        .bind(token, now)
+        .all();
 
       if (results.length === 0) {
         return jsonResponse({ error: "Invalid or expired reset token" }, 400);
@@ -292,8 +320,10 @@ export default {
       delete prefs.reset_expires;
 
       await env.AUTH_DB.prepare(
-        "UPDATE user SET password_hash = ?, preferences_json = ? WHERE id = ?",
-      ).bind(passwordHash, JSON.stringify(prefs), user.id).run();
+        "UPDATE user SET password_hash = ?, preferences_json = ? WHERE id = ?"
+      )
+        .bind(passwordHash, JSON.stringify(prefs), user.id)
+        .run();
 
       await env.AUTH_DB.prepare("DELETE FROM session WHERE user_id = ?").bind(user.id).run();
 
@@ -310,8 +340,10 @@ export default {
 
       const now = Math.floor(Date.now() / 1000);
       const { results: sessionResults } = await env.AUTH_DB.prepare(
-        "SELECT * FROM session WHERE id = ? AND expires_at > ?",
-      ).bind(sessionId, now).all();
+        "SELECT * FROM session WHERE id = ? AND expires_at > ?"
+      )
+        .bind(sessionId, now)
+        .all();
 
       if (sessionResults.length === 0) {
         const response = jsonResponse({ user: null });
@@ -321,8 +353,10 @@ export default {
 
       const session = sessionResults[0];
       const { results: userResults } = await env.AUTH_DB.prepare(
-        "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE id = ?",
-      ).bind(session.user_id).all();
+        "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE id = ?"
+      )
+        .bind(session.user_id)
+        .all();
 
       if (userResults.length === 0) {
         return jsonResponse({ user: null });
@@ -330,8 +364,10 @@ export default {
 
       const user = userResults[0];
       const { results: roleResults } = await env.AUTH_DB.prepare(
-        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'",
-      ).bind(user.id).all();
+        "SELECT role FROM user_role WHERE user_id = ? AND role = 'admin'"
+      )
+        .bind(user.id)
+        .all();
 
       return jsonResponse({
         user: {
@@ -450,18 +486,18 @@ export default {
         return jsonResponse({ error: "Email required" }, 400);
       }
 
-      const { results } = await env.AUTH_DB.prepare(
-        "SELECT id FROM user WHERE email = ?",
-      ).bind(email.toLowerCase().trim()).all();
+      const { results } = await env.AUTH_DB.prepare("SELECT id FROM user WHERE email = ?")
+        .bind(email.toLowerCase().trim())
+        .all();
 
       if (results.length === 0) {
         return jsonResponse({ error: "User not found" }, 404);
       }
 
       const user = results[0];
-      await env.AUTH_DB.prepare(
-        "INSERT OR REPLACE INTO user_role (user_id, role) VALUES (?, ?)",
-      ).bind(user.id, "admin").run();
+      await env.AUTH_DB.prepare("INSERT OR REPLACE INTO user_role (user_id, role) VALUES (?, ?)")
+        .bind(user.id, "admin")
+        .run();
 
       return jsonResponse({ ok: true, message: `User ${email} promoted to admin` });
     }
@@ -488,12 +524,15 @@ export default {
             headers: {
               "Content-Type": "text/event-stream",
               "Cache-Control": "no-cache, no-transform",
-              "Connection": "keep-alive",
+              Connection: "keep-alive",
               "X-Accel-Buffering": "no",
             },
           });
         } catch (err) {
-          console.warn("[chat] Service binding failed, falling back:", err instanceof Error ? err.message : err);
+          console.warn(
+            "[chat] Service binding failed, falling back:",
+            err instanceof Error ? err.message : err
+          );
         }
       }
 
@@ -513,44 +552,47 @@ export default {
         return jsonResponse({ error: "Invalid request body" }, 400);
       }
 
-       // Try Workers AI first
-       if (env.AI) {
-         try {
-           const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).`;
+      // Try Workers AI first
+      if (env.AI) {
+        try {
+          const SYSTEM_PROMPT = `You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).`;
 
-           const workersAiMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
+          const workersAiMessages = [{ role: "system", content: SYSTEM_PROMPT }, ...messages];
 
-           const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-             messages: workersAiMessages,
-             max_tokens: 600,
-           });
+          const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+            messages: workersAiMessages,
+            max_tokens: 600,
+          });
 
-           const response = result.response || "";
-           if (!response) {
-             throw new Error("Empty response from Workers AI");
-           }
-           const stream = new ReadableStream({
-             start(controller) {
-               const chunks = response.match(/.{1,80}/g) || [response];
-               for (const chunk of chunks) {
-                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
-               }
-               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-               controller.close();
-             },
-           });
+          const response = result.response || "";
+          if (!response) {
+            throw new Error("Empty response from Workers AI");
+          }
+          const stream = new ReadableStream({
+            start(controller) {
+              const chunks = response.match(/.{1,80}/g) || [response];
+              for (const chunk of chunks) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+              }
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              controller.close();
+            },
+          });
 
-           return new Response(stream, {
-             headers: {
-               "Content-Type": "text/event-stream",
-               "Cache-Control": "no-cache",
-               "Connection": "keep-alive",
-             },
-           });
-         } catch (err) {
-           console.warn("[chat] Workers AI failed:", err instanceof Error ? err.message : String(err));
-         }
-       }
+          return new Response(stream, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+          });
+        } catch (err) {
+          console.warn(
+            "[chat] Workers AI failed:",
+            err instanceof Error ? err.message : String(err)
+          );
+        }
+      }
 
       // Fallback: Google Gemini API if available
       if (env.GOOGLE_AI_API_KEY) {
@@ -567,7 +609,8 @@ export default {
                   role: m.role === "user" ? "user" : "model",
                   parts: [{ text: m.content }],
                 })),
-                systemInstruction: "You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).",
+                systemInstruction:
+                  "You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Services: Cloud Architecture & Migration, Serverless Development, Data Analytics, AI Growth Engine. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).",
                 generationConfig: { maxOutputTokens: 600 },
               }),
             }
@@ -580,7 +623,9 @@ export default {
               start(controller) {
                 const chunks = text.match(/.{1,80}/g) || [text];
                 for (const chunk of chunks) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`)
+                  );
                 }
                 controller.enqueue(encoder.encode("data: [DONE]\n\n"));
                 controller.close();
@@ -591,7 +636,10 @@ export default {
             });
           }
         } catch (err) {
-          console.warn("[chat] Google Gemini fallback failed:", err instanceof Error ? err.message : String(err));
+          console.warn(
+            "[chat] Google Gemini fallback failed:",
+            err instanceof Error ? err.message : String(err)
+          );
         }
       }
 
@@ -609,7 +657,8 @@ export default {
               model: "claude-3-5-sonnet-20241022",
               max_tokens: 600,
               messages,
-              system: "You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).",
+              system:
+                "You are Cloudless Assistant, a helpful pre-sales assistant for Cloudless.gr — a cloud computing, serverless architecture, and AI-powered digital marketing agency. Based in Greece, serves EU and international clients. Keep answers concise (2-4 sentences max).",
             }),
           });
 
@@ -620,7 +669,9 @@ export default {
               start(controller) {
                 const chunks = text.match(/.{1,80}/g) || [text];
                 for (const chunk of chunks) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`)
+                  );
                 }
                 controller.enqueue(encoder.encode("data: [DONE]\n\n"));
                 controller.close();
@@ -631,7 +682,10 @@ export default {
             });
           }
         } catch (err) {
-          console.warn("[chat] Anthropic fallback failed:", err instanceof Error ? err.message : String(err));
+          console.warn(
+            "[chat] Anthropic fallback failed:",
+            err instanceof Error ? err.message : String(err)
+          );
         }
       }
 
@@ -651,33 +705,35 @@ export default {
         return jsonResponse({ error: "Invalid request body" }, 400);
       }
 
-       const { name, email, company, service, message, phone } = parsed;
+      const { name, email, company, service, message, phone } = parsed;
 
-       if (!name || !email || !message) {
-         return jsonResponse({ error: "Name, email, and message are required" }, 400);
-       }
+      if (!name || !email || !message) {
+        return jsonResponse({ error: "Name, email, and message are required" }, 400);
+      }
 
-       // Validate email format (same regex as Next.js validation)
-       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-         return jsonResponse({ error: "Invalid email address" }, 400);
-       }
+      // Validate email format (same regex as Next.js validation)
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return jsonResponse({ error: "Invalid email address" }, 400);
+      }
 
-       const now = Math.floor(Date.now() / 1000);
+      const now = Math.floor(Date.now() / 1000);
 
       // Log to admin_notifications D1 table
       try {
         await env.AUTH_DB.prepare(
           "INSERT INTO admin_notification (pk, sk, category, title, message, actor, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(
-          `contact#${now}`,
-          `contact#${now}`,
-          "contact",
-          `New contact: ${String(name).slice(0, 100)}`,
-          String(message).slice(0, 500),
-          String(email),
-          JSON.stringify({ company, service, phone, leadScore: 0, leadBand: "cold" }),
-          now
-        ).run();
+        )
+          .bind(
+            `contact#${now}`,
+            `contact#${now}`,
+            "contact",
+            `New contact: ${String(name).slice(0, 100)}`,
+            String(message).slice(0, 500),
+            String(email),
+            JSON.stringify({ company, service, phone, leadScore: 0, leadBand: "cold" }),
+            now
+          )
+          .run();
       } catch (err) {
         console.error("[contact] D1 log failed:", err);
       }
@@ -756,16 +812,18 @@ export default {
       try {
         await env.AUTH_DB.prepare(
           "INSERT INTO admin_notification (pk, sk, category, title, message, actor, metadata_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        ).bind(
-          `subscribe#${now}`,
-          `subscribe#${now}`,
-          "subscribe",
-          "New newsletter subscriber",
-          email,
-          email,
-          JSON.stringify({ source: "newsletter_form" }),
-          now
-        ).run();
+        )
+          .bind(
+            `subscribe#${now}`,
+            `subscribe#${now}`,
+            "subscribe",
+            "New newsletter subscriber",
+            email,
+            email,
+            JSON.stringify({ source: "newsletter_form" }),
+            now
+          )
+          .run();
       } catch (err) {
         console.error("[subscribe] D1 log failed:", err);
       }
@@ -805,14 +863,16 @@ export default {
 
           await env.AUTH_DB.prepare(
             "INSERT INTO stripe_transaction (event_id, event_type, customer_id, processing_status, received_at, payload_json) VALUES (?, ?, ?, ?, ?, ?)"
-          ).bind(
-            event.id || `evt_${now}`,
-            event.type || "unknown",
-            event.data?.object?.customer || null,
-            "processed",
-            now,
-            JSON.stringify(event)
-          ).run();
+          )
+            .bind(
+              event.id || `evt_${now}`,
+              event.type || "unknown",
+              event.data?.object?.customer || null,
+              "processed",
+              now,
+              JSON.stringify(event)
+            )
+            .run();
 
           return jsonResponse({ received: true });
         } catch (err) {
@@ -902,7 +962,7 @@ export default {
       // Check if this is a locale route (e.g., /en, /el, /fr)
       const pathParts = url.pathname.split("/").filter(Boolean);
       const localePattern = /^(en|el|fr)$/;
-      
+
       let assetPath;
       if (url.pathname === "/" || localePattern.test(pathParts[0])) {
         // For root or locale routes, serve locale-specific index.html
@@ -913,7 +973,7 @@ export default {
         // Strip leading slash to match R2 bucket key format
         assetPath = url.pathname.replace(/^\//, "");
       }
-      
+
       const asset = await env.ASSETS_BUCKET.get(assetPath);
 
       if (asset) {

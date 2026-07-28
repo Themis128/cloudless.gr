@@ -69,11 +69,15 @@ export async function GET(request: NextRequest) {
       nodes: [
         {
           name: "omv",
-          status: kumaSummary?.monitors?.some((m) => m.name.includes("omv") && m.status !== "up") ? "unhealthy" : "healthy",
+          status: kumaSummary?.monitors?.some((m) => m.name.includes("omv") && m.status !== "up")
+            ? "unhealthy"
+            : "healthy",
         },
         {
           name: "omv-ha",
-          status: kumaSummary?.monitors?.some((m) => m.name.includes("omv-ha") && m.status !== "up") ? "unhealthy" : "healthy",
+          status: kumaSummary?.monitors?.some((m) => m.name.includes("omv-ha") && m.status !== "up")
+            ? "unhealthy"
+            : "healthy",
         },
       ],
       fetchedAt: new Date().toISOString(),

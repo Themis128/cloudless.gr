@@ -44,11 +44,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-    // Validate filename for path traversal
-    if (/(\.\.|\\|\/)/.test(filename)) {
-      return NextResponse.json({ error: "invalid_filename" }, { status: 400 });
-    }
-    const filename =
+  // Validate filename for path traversal
+  if (/(\.\.|\\|\/)/.test(filename)) {
+    return NextResponse.json({ error: "invalid_filename" }, { status: 400 });
+  }
+  const filename =
     (form.get("filename") as string | null) ?? (file instanceof File ? file.name : "upload.bin");
 
   // Fail fast on disallowed MIME types so the user gets a clean 4xx instead

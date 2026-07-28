@@ -89,16 +89,18 @@ export async function listDatasources(): Promise<GrafanaDatasource[]> {
 
 export async function syncPrometheusDatasource(prometheusUrl?: string): Promise<GrafanaDatasource> {
   const body = prometheusUrl ? { url: prometheusUrl } : undefined;
-  const res = await grafanaFetch(
-    "/datasources/uid/prometheus/sync",
-    { method: "POST", body: body ? JSON.stringify(body) : undefined }
-  );
+  const res = await grafanaFetch("/datasources/uid/prometheus/sync", {
+    method: "POST",
+    body: body ? JSON.stringify(body) : undefined,
+  });
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
   return (await res.json()) as GrafanaDatasource;
 }
 
 export async function prometheusQuery(query: string): Promise<unknown> {
-  const res = await grafanaFetch(`/datasources/uid/prometheus/query?query=${encodeURIComponent(query)}`);
+  const res = await grafanaFetch(
+    `/datasources/uid/prometheus/query?query=${encodeURIComponent(query)}`
+  );
   if (!res.ok) throw new GrafanaApiError(res.status, await res.text().catch(() => ""));
   return res.json();
 }

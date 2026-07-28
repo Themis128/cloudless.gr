@@ -35,7 +35,6 @@ const leadStatusClasses: Record<string, string> = {
   BAD_TIMING: "text-slate-500 bg-slate-700/30",
 };
 
-
 const getEmail = (c: Contact) => c.emailAddress ?? c.properties?.email ?? "";
 const getFirst = (c: Contact) => c.firstName ?? c.properties?.firstname ?? "";
 const getLast = (c: Contact) => c.lastName ?? c.properties?.lastname ?? "";

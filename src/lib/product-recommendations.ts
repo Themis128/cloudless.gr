@@ -14,7 +14,7 @@ function featureTokens(product: StoreProduct): Set<string> {
       .toLowerCase()
       .split(/[^a-z0-9]+/)
       .map((token) => token.trim())
-      .filter((token) => token.length >= 3),
+      .filter((token) => token.length >= 3)
   );
 }
 
@@ -38,17 +38,19 @@ export interface ProductRecommendationOptions {
 function coPurchaseScore(
   productId: string,
   relatedProductId: string,
-  signals: ProductOrderSignal[] = [],
+  signals: ProductOrderSignal[] = []
 ): number {
   return signals
-    .filter((signal) => signal.productId === productId && signal.relatedProductId === relatedProductId)
+    .filter(
+      (signal) => signal.productId === productId && signal.relatedProductId === relatedProductId
+    )
     .reduce((sum, signal) => sum + signal.count, 0);
 }
 
 export async function recommendProductsForProduct(
   productId: string,
   limit = 3,
-  options: ProductRecommendationOptions = {},
+  options: ProductRecommendationOptions = {}
 ): Promise<StoreProduct[]> {
   const products = await getProducts();
   const current = products.find((product) => product.id === productId);

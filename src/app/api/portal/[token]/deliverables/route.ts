@@ -6,6 +6,7 @@ import { SlackClient } from "@/lib/slack-notify";
 import { sendEmail } from "@/lib/email";
 import { getConfig } from "@/lib/ssm-config";
 import { escapeHtml } from "@/lib/escape-html";
+import { isAuthenticated } from "../../../../../lib/auth-middleware";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -15,11 +16,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  *
  * Body: { deliverableId: string, action: "approve" | "request_changes", comment?: string }
  */
-    export async function POST(
-      request: NextRequest,
+export async function POST(
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-import { isAuthenticated } from "'lib/auth-middleware"' (see below for file content);
   const rl = rateLimit(`portal-deliverable:${getClientIp(request)}`, 10, 60_000);
   if (!rl.ok) return rl.response;
 

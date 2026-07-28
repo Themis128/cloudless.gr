@@ -281,9 +281,7 @@ export async function authenticateUser(
 
   // Create session with appropriate expiry
   const sessionId = crypto.randomUUID();
-  const expirySeconds = rememberMe
-    ? SESSION_EXPIRY_REMEMBER_SECONDS
-    : SESSION_EXPIRY_SECONDS;
+  const expirySeconds = rememberMe ? SESSION_EXPIRY_REMEMBER_SECONDS : SESSION_EXPIRY_SECONDS;
   const expiresAt = Math.floor(Date.now() / 1000) + expirySeconds;
 
   await db

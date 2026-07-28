@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   let body: string;
   try {
-    const payload = await request.json() as { body: string };
+    const payload = (await request.json()) as { body: string };
     body = payload.body;
     if (!body) throw new Error("missing body");
   } catch (err) {

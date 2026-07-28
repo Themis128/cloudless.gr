@@ -22,10 +22,7 @@ function attr(user: UserType, name: string): string | undefined {
   return user.Attributes?.find((a) => a.Name === name)?.Value;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
@@ -46,9 +43,9 @@ export async function GET(
     const user = {
       username,
       email: attr(userRes, "email"),
-      name: attr(userRes, "name") || [attr(userRes, "given_name"), attr(userRes, "family_name")]
-        .filter(Boolean)
-        .join(" "),
+      name:
+        attr(userRes, "name") ||
+        [attr(userRes, "given_name"), attr(userRes, "family_name")].filter(Boolean).join(" "),
       company: attr(userRes, "custom:company"),
       phone: attr(userRes, "phone_number"),
       emailVerified: attr(userRes, "email_verified") === "true",
@@ -68,10 +65,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
@@ -93,7 +87,7 @@ export async function PUT(
       attributes.push(
         { Name: "name", Value: body.name },
         { Name: "given_name", Value: body.name.split(" ")[0] ?? "" },
-        { Name: "family_name", Value: body.name.split(" ").slice(1).join(" ") },
+        { Name: "family_name", Value: body.name.split(" ").slice(1).join(" ") }
       );
     }
 

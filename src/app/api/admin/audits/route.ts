@@ -25,10 +25,7 @@ export async function POST(request: NextRequest) {
 
   const token = process.env.GITHUB_TOKEN ?? "";
   if (!token) {
-    return NextResponse.json(
-      { error: "GitHub Actions dispatch not configured" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "GitHub Actions dispatch not configured" }, { status: 404 });
   }
 
   try {
@@ -65,9 +62,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[admin/audits] Dispatch error:", err);
-    return NextResponse.json(
-      { error: "Failed to dispatch audit workflow" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to dispatch audit workflow" }, { status: 500 });
   }
 }

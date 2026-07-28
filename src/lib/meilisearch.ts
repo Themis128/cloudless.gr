@@ -20,7 +20,7 @@ export function isMeilisearchConfigured(): boolean {
 export async function meiliRequest<T>(
   path: string,
   init: RequestInit = {},
-  key = getMeiliSearchKey(),
+  key = getMeiliSearchKey()
 ): Promise<T> {
   const host = getMeiliHost();
 

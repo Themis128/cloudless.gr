@@ -6,8 +6,18 @@ import { CALENDAR_ITEM_COLORS, PLATFORM_LABELS } from "@/lib/content-calendar";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 export default function CalendarPage() {
@@ -82,7 +92,10 @@ export default function CalendarPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      const data = (await res.json().catch(() => null)) as { error?: string; channels?: Array<{ name: string }> } | null;
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+        channels?: Array<{ name: string }>;
+      } | null;
       if (!res.ok) {
         window.alert(data?.error ?? `Publish failed (HTTP ${res.status}).`);
         return;
@@ -96,12 +109,16 @@ export default function CalendarPage() {
   }
 
   const prevMonth = () => {
-    if (month === 0) { setYear((y) => y - 1); setMonth(11); }
-    else setMonth((m) => m - 1);
+    if (month === 0) {
+      setYear((y) => y - 1);
+      setMonth(11);
+    } else setMonth((m) => m - 1);
   };
   const nextMonth = () => {
-    if (month === 11) { setYear((y) => y + 1); setMonth(0); }
-    else setMonth((m) => m + 1);
+    if (month === 11) {
+      setYear((y) => y + 1);
+      setMonth(0);
+    } else setMonth((m) => m + 1);
   };
 
   const firstWeekday = new Date(year, month, 1).getDay();
@@ -134,27 +151,41 @@ export default function CalendarPage() {
 
       <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
         <div className="mb-4 flex items-center justify-between">
-          <button type="button" onClick={prevMonth} className="px-2 font-mono text-slate-400 transition-colors hover:text-white">
+          <button
+            type="button"
+            onClick={prevMonth}
+            className="px-2 font-mono text-slate-400 transition-colors hover:text-white"
+          >
             ‹
           </button>
           <h2 className="font-mono text-sm font-semibold text-white">
             {MONTHS[month]} {year}
           </h2>
-          <button type="button" onClick={nextMonth} className="px-2 font-mono text-slate-400 transition-colors hover:text-white">
+          <button
+            type="button"
+            onClick={nextMonth}
+            className="px-2 font-mono text-slate-400 transition-colors hover:text-white"
+          >
             ›
           </button>
         </div>
 
         <div className="grid grid-cols-7 gap-px bg-slate-800">
           {DAYS.map((d) => (
-            <div key={d} className="bg-void-light py-2 text-center font-mono text-[10px] text-slate-500">
+            <div
+              key={d}
+              className="bg-void-light py-2 text-center font-mono text-[10px] text-slate-500"
+            >
               {d}
             </div>
           ))}
           {cells.map((day, idx) => {
-            const dateStr = day ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : null;
+            const dateStr = day
+              ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+              : null;
             const dayItems = dateStr ? (itemsByDate[dateStr] ?? []) : [];
-            const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+            const isToday =
+              day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
 
             return (
               <div
@@ -168,7 +199,9 @@ export default function CalendarPage() {
               >
                 {day && (
                   <>
-                    <p className={`mb-1 font-mono text-[10px] ${isToday ? "text-neon-cyan font-bold" : "text-slate-500"}`}>
+                    <p
+                      className={`mb-1 font-mono text-[10px] ${isToday ? "text-neon-cyan font-bold" : "text-slate-500"}`}
+                    >
                       {day}
                     </p>
                     {dayItems.slice(0, 3).map((item) => {
@@ -184,9 +217,11 @@ export default function CalendarPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (publishable) {
-                              if (window.confirm(
-                                `Publish "${item.title}" via Postiz?\n\nFuture date → scheduled, past/today → posted now.`
-                              )) {
+                              if (
+                                window.confirm(
+                                  `Publish "${item.title}" via Postiz?\n\nFuture date → scheduled, past/today → posted now.`
+                                )
+                              ) {
                                 handlePublish(item);
                               }
                             } else if (window.confirm(`Delete "${item.title}"?`)) {
@@ -244,7 +279,11 @@ export default function CalendarPage() {
               <h3 className="font-mono text-sm font-semibold text-white">
                 New Item — {selectedDate}
               </h3>
-              <button type="button" onClick={() => setShowForm(false)} className="font-mono text-slate-500 hover:text-white">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="font-mono text-slate-500 hover:text-white"
+              >
                 ✕
               </button>
             </div>
@@ -263,7 +302,9 @@ export default function CalendarPage() {
                   <label className="mb-1 block font-mono text-xs text-slate-400">Type</label>
                   <select
                     value={form.type}
-                    onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as CalendarItemType }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, type: e.target.value as CalendarItemType }))
+                    }
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:outline-none"
                   >
                     <option value="social_post">Social Post</option>
@@ -277,7 +318,9 @@ export default function CalendarPage() {
                   <label className="mb-1 block font-mono text-xs text-slate-400">Platform</label>
                   <select
                     value={form.platform}
-                    onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value as CalendarPlatform }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, platform: e.target.value as CalendarPlatform }))
+                    }
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white focus:outline-none"
                   >
                     {(Object.keys(PLATFORM_LABELS) as CalendarPlatform[]).map((p) => (

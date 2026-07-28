@@ -7,7 +7,7 @@ export const BEDROCK_TITAN_EMBED_MODEL_ID =
 
 export const BEDROCK_EMBED_DIMENSIONS = Number.parseInt(
   process.env.BEDROCK_EMBED_DIMENSIONS || "512",
-  10,
+  10
 );
 
 let client: BedrockRuntimeClient | null = null;
@@ -40,7 +40,7 @@ export async function embedTextWithTitan(input: string): Promise<number[]> {
       contentType: "application/json",
       accept: "application/json",
       body: new TextEncoder().encode(body),
-    }),
+    })
   );
 
   const text = new TextDecoder().decode(res.body as Uint8Array);

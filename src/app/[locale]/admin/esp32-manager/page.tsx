@@ -303,7 +303,7 @@ export default function Esp32ManagerPage() {
     });
     setConfigLoading(false);
     const success = res !== null && !res?.offline;
-  const msg = success ? "✓ Config saved & published to device" : "✗ Save failed";
+    const msg = success ? "✓ Config saved & published to device" : "✗ Save failed";
     setConfigFeedback(msg);
     if (success) setConfigDirty(false);
     setTimeout(() => setConfigFeedback(""), 4000);
@@ -336,8 +336,10 @@ export default function Esp32ManagerPage() {
       }),
     });
     setOtaLoading(false);
-const success = res !== null && !res?.offline;
- const msg = success ? `✓ OTA command sent to ${selectedId} — device will reboot when done` : "✗ Failed to send OTA command";
+    const success = res !== null && !res?.offline;
+    const msg = success
+      ? `✓ OTA command sent to ${selectedId} — device will reboot when done`
+      : "✗ Failed to send OTA command";
     setOtaFeedback(msg);
   }, [call, selectedId, otaUrl, otaVersion]);
 

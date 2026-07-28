@@ -37,7 +37,7 @@ export default function WorkspacesPage() {
     try {
       const res = await fetchWithAuth("/api/admin/workspaces");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { workspaces: any[] };
+      const data = (await res.json()) as { workspaces: any[] };
       setWorkspaces(data.workspaces ?? []);
       setCtxWorkspaces(data.workspaces ?? []);
     } catch (e) {
@@ -70,7 +70,7 @@ export default function WorkspacesPage() {
           notionTag: form.notionTag.trim() || undefined,
         }),
       });
-        const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
       setForm(EMPTY_FORM);
       load();
@@ -101,7 +101,7 @@ export default function WorkspacesPage() {
         }),
       });
       if (!res.ok) {
-            const d = (await res.json()) as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error);
       }
       setEditingId(null);
@@ -146,18 +146,18 @@ export default function WorkspacesPage() {
   // and other errors leave `postizGroups` at `null` so the inputs degrade
   // to free text. The `groups` route on the server reads from SSM, so this
   // is a single round-trip per page visit.
-useEffect(() => {
-  fetchWithAuth("/api/admin/postiz/groups")
-  .then((r) => r.ok ? r.json().then((d) => d as PostizGroupsResponse) : Promise.resolve(null))
-  .then((data) => {
-    if (Array.isArray(data?.groups)) {
-      setPostizGroups(data.groups as PostizGroupOption[]);
-    }
-  })
-  .catch(() => {
-    /* silent — UI just falls back to free-text */
-  });
-}, []);
+  useEffect(() => {
+    fetchWithAuth("/api/admin/postiz/groups")
+      .then((r) => (r.ok ? r.json().then((d) => d as PostizGroupsResponse) : Promise.resolve(null)))
+      .then((data) => {
+        if (Array.isArray(data?.groups)) {
+          setPostizGroups(data.groups as PostizGroupOption[]);
+        }
+      })
+      .catch(() => {
+        /* silent — UI just falls back to free-text */
+      });
+  }, []);
 
   return (
     <div>

@@ -11,8 +11,13 @@ export async function POST(request: Request) {
   if (!rl.ok) return rl.response;
 
   if (!(await isEspoCRMConfigured())) {
-    return NextResponse.json({ error: "CRM not configured." }, {// @ts-ignore
-  status: 404 });
+    return NextResponse.json(
+      { error: "CRM not configured." },
+      {
+        // @ts-ignore
+        status: 404,
+      }
+    );
   }
 
   try {

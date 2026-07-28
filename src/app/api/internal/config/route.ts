@@ -31,9 +31,8 @@ export async function GET(req: NextRequest) {
   if (key) {
     // Get specific config key
     try {
-      const result = await db.prepare(
-        "SELECT key, value, description, updated_at FROM app_config WHERE key = ?"
-      )
+      const result = await db
+        .prepare("SELECT key, value, description, updated_at FROM app_config WHERE key = ?")
         .bind(key)
         .first<AppConfig>();
 
@@ -58,9 +57,8 @@ export async function GET(req: NextRequest) {
 
   // List all configs (without values for security)
   try {
-    const results = await db.prepare(
-      "SELECT key, description, updated_at FROM app_config ORDER BY key"
-    )
+    const results = await db
+      .prepare("SELECT key, description, updated_at FROM app_config ORDER BY key")
       .all<AppConfig>();
 
     return NextResponse.json({

@@ -130,28 +130,28 @@ export default function SeoAnalyticsPage() {
       if (!seoRes.ok) throw new Error("Failed to load SEO snapshot");
 
       // Type-safe response handling
-      const seo = await seoRes.json() as SeoResponse;
+      const seo = (await seoRes.json()) as SeoResponse;
       setSnapshot(seo.snapshot ?? null);
       setKeywords(seo.keywords ?? []);
 
       if (qpRes.ok) {
-        const qpData = await qpRes.json() as QueryPageResponse;
+        const qpData = (await qpRes.json()) as QueryPageResponse;
         setMappings(qpData?.mappings ?? []);
       }
       if (intentRes.ok) {
-        const intentData = await intentRes.json() as IntentResponse;
+        const intentData = (await intentRes.json()) as IntentResponse;
         setIntent(intentData?.intent ?? null);
       }
       if (countryRes.ok) {
-        const countryData = await countryRes.json() as CountryResponse;
+        const countryData = (await countryRes.json()) as CountryResponse;
         setCountries(countryData?.countries ?? []);
       }
       if (deviceRes.ok) {
-        const deviceData = await deviceRes.json() as DeviceResponse;
+        const deviceData = (await deviceRes.json()) as DeviceResponse;
         setDevices(deviceData?.devices ?? []);
       }
       if (archiveRes.ok) {
-        const archiveData = await archiveRes.json() as ArchiveResponse;
+        const archiveData = (await archiveRes.json()) as ArchiveResponse;
         setArchive(archiveData?.reports ?? []);
       }
     } catch (e) {
@@ -417,7 +417,10 @@ function SeoTable({
           <tbody className="divide-y divide-slate-800">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={head.length} className="py-8 text-center font-mono text-sm text-slate-600">
+                <td
+                  colSpan={head.length}
+                  className="py-8 text-center font-mono text-sm text-slate-600"
+                >
                   {empty}
                 </td>
               </tr>
@@ -428,7 +431,11 @@ function SeoTable({
                   <td
                     key={`${ci}-${c}`}
                     className={`max-w-xs truncate px-4 py-2.5 font-mono text-xs ${
-                      ci === 0 ? "text-white" : ci === 1 ? "text-slate-400" : "text-right text-slate-300"
+                      ci === 0
+                        ? "text-white"
+                        : ci === 1
+                          ? "text-slate-400"
+                          : "text-right text-slate-300"
                     }`}
                   >
                     {c}

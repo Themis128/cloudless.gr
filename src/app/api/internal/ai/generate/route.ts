@@ -97,8 +97,8 @@ async function callCloudflare(
   if (!isAllowedCfModel(model)) {
     throw new Error("Refusing to call Cloudflare with non-allowlisted model id");
   }
-    const cfMessages = [
-      ...(system ? [{ role: "system" as const, content: sanitizePrompt(system) }] : []),
+  const cfMessages = [
+    ...(system ? [{ role: "system" as const, content: sanitizePrompt(system) }] : []),
     ...(system ? [{ role: "system" as const, content: system }] : []),
     ...messages,
   ];

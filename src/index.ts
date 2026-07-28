@@ -7,7 +7,10 @@ import type { CounterState } from "./agents/counter";
 // CHAT is optional - service binding to dedicated chat worker, CRON_SECRET for cron auth
 
 interface ChatService {
-  chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
+  chatStream: (
+    messages: { role: "user" | "assistant"; content: string }[],
+    headers: Record<string, string>
+  ) => Promise<ReadableStream<Uint8Array>>;
 }
 
 // Custom Env interface for this worker - extends base bindings with agent-specific ones
@@ -187,9 +190,9 @@ async function handleCspReport(request: Request): Promise<Response> {
         const b = (entry.body as Record<string, unknown>) ?? {};
         console.warn(
           `[csp-violation] dir=${b.effectiveDirective || b["violated-directive"] || "?"} ` +
-          `blocked=${b.blockedURL || b["blocked-uri"] || "?"} ` +
-          `doc=${b.documentURL || b["document-uri"] || "?"} ` +
-          `disp=${b.disposition || "?"}`,
+            `blocked=${b.blockedURL || b["blocked-uri"] || "?"} ` +
+            `doc=${b.documentURL || b["document-uri"] || "?"} ` +
+            `disp=${b.disposition || "?"}`
         );
       }
     }
@@ -198,7 +201,7 @@ async function handleCspReport(request: Request): Promise<Response> {
     const r = ((payload as Record<string, unknown>)["csp-report"] as Record<string, unknown>) ?? {};
     console.warn(
       `[csp-violation] dir=${r["effective-directive"] || r["violated-directive"] || "?"} ` +
-      `blocked=${r["blocked-uri"] || "?"} doc=${r["document-uri"] || "?"} disp=${r.disposition || "?"}`,
+        `blocked=${r["blocked-uri"] || "?"} doc=${r["document-uri"] || "?"} disp=${r.disposition || "?"}`
     );
   }
 
@@ -215,7 +218,9 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
 
   try {
     // For RPC-style call, extract messages and call directly
-    const body = (await request.json().catch(() => ({}))) as { messages?: { role: "user" | "assistant"; content: string }[] };
+    const body = (await request.json().catch(() => ({}))) as {
+      messages?: { role: "user" | "assistant"; content: string }[];
+    };
 
     // Build headers object for RPC context
     const headers = Object.fromEntries(request.headers.entries());
@@ -223,7 +228,10 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
     // CHAT is WorkerEntrypoint from wrangler types
     // Call chatStream method with the appropriate signature
     const chatStub = env.CHAT as unknown as {
-      chatStream: (messages: { role: "user" | "assistant"; content: string }[], headers: Record<string, string>) => Promise<ReadableStream<Uint8Array>>;
+      chatStream: (
+        messages: { role: "user" | "assistant"; content: string }[],
+        headers: Record<string, string>
+      ) => Promise<ReadableStream<Uint8Array>>;
     };
     const stream = await chatStub.chatStream(body.messages || [], headers);
     return new Response(stream, {
@@ -252,7 +260,7 @@ async function handleChatRoute(request: Request, env: Env): Promise<Response> {
 async function handleCronRoute(env: Env): Promise<Response | null> {
   // Detect if this is a cron trigger (SST Cron sets CRON_ROUTE in env)
   const cronRoute = process.env.CRON_ROUTE;
-  
+
   if (!cronRoute) {
     return null;
   }
@@ -264,16 +272,13 @@ async function handleCronRoute(env: Env): Promise<Response | null> {
   }
 
   // Create internal POST request to the cron endpoint
-  const internalRequest = new Request(
-    `https://internal${cronRoute}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.CRON_SECRET}`,
-        "x-cron-internal": "true",
-      },
-    }
-  );
+  const internalRequest = new Request(`https://internal${cronRoute}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.CRON_SECRET}`,
+      "x-cron-internal": "true",
+    },
+  });
 
   // Route to the appropriate API endpoint via ASSETS
   // The cron API routes are handled by Next.js /api/cron/* endpoints
@@ -298,7 +303,8 @@ const worker = {
     const isCustomAgentRoute = url.pathname.startsWith(AGENT_PATH_PREFIX + "/");
     const isDefaultAgentRoute = url.pathname.startsWith(DEFAULT_AGENT_PATH_PREFIX + "/");
     const isServerCounterRoute = url.pathname.startsWith(SERVER_COUNTER_PREFIX + "/");
-    const isChatRoute = url.pathname.startsWith(CHAT_PATH_PREFIX + "/") || url.pathname === CHAT_PATH_PREFIX;
+    const isChatRoute =
+      url.pathname.startsWith(CHAT_PATH_PREFIX + "/") || url.pathname === CHAT_PATH_PREFIX;
     const isCspReport = url.pathname === "/api/csp-report" && request.method === "POST";
 
     if ((isCustomAgentRoute || isServerCounterRoute) && !isAuthorized(request, env)) {
@@ -345,13 +351,14 @@ const worker = {
     // ==========================================
     const isAdminApi = url.pathname.startsWith("/api/admin");
     const isAuthApi = url.pathname.startsWith("/api/auth") || url.pathname === "/api/auth/session";
-    
+
     if (isAdminApi && !isAuthApi) {
       // Check for valid session cookie or Bearer token
       const sessionId = request.headers.get("Cookie")?.match(/session_token=([^;]+)/)?.[1];
       const authHeader = request.headers.get("Authorization");
-      const hasValidAuth = sessionId || (authHeader?.startsWith("Bearer ") && authHeader.slice(7).trim());
-      
+      const hasValidAuth =
+        sessionId || (authHeader?.startsWith("Bearer ") && authHeader.slice(7).trim());
+
       if (!hasValidAuth) {
         return Response.json({ error: "Authentication required" }, { status: 401 });
       }
@@ -364,7 +371,12 @@ const worker = {
       let dbOk: boolean = false;
       try {
         const result = await env.AUTH_DB?.prepare("SELECT 1 as ok").all();
-        dbOk = !!(result && result.results && result.results.length > 0 && (result.results[0] as { ok?: number })?.ok === 1);
+        dbOk = !!(
+          result &&
+          result.results &&
+          result.results.length > 0 &&
+          (result.results[0] as { ok?: number })?.ok === 1
+        );
       } catch {
         dbOk = false;
       }
@@ -383,6 +395,5 @@ const worker = {
     return new Response(response.body, { ...response, headers: response.headers });
   },
 };
-
 
 export default worker;

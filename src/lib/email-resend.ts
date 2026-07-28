@@ -43,7 +43,9 @@ export async function sendEmailResend(options: ResendOptions): Promise<void> {
     : "orders@cloudless.gr";
 
   try {
-    await (client as { emails: { send: (opts: Record<string, unknown>) => Promise<unknown> } }).emails.send({
+    await (
+      client as { emails: { send: (opts: Record<string, unknown>) => Promise<unknown> } }
+    ).emails.send({
       from: fromAddress,
       to: options.to,
       subject: options.subject,

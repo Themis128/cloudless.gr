@@ -13,12 +13,10 @@ export class CounterAgent extends Agent<Env, CounterState> {
     count: 0,
   };
 
-  
   getCount() {
     return this.state?.count ?? 0;
   }
 
-  
   increment() {
     const nextCount = (this.state?.count ?? 0) + 1;
 
@@ -29,7 +27,6 @@ export class CounterAgent extends Agent<Env, CounterState> {
     return nextCount;
   }
 
-  
   decrement() {
     const nextCount = Math.max(0, (this.state?.count ?? 0) - 1);
 
@@ -40,7 +37,6 @@ export class CounterAgent extends Agent<Env, CounterState> {
     return nextCount;
   }
 
-  
   reset() {
     this.setState({
       count: 0,

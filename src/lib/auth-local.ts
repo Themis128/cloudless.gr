@@ -1,6 +1,6 @@
 /**
  * Local Auth - Email/Password Authentication without AWS
- * 
+ *
  * Uses Cloudflare D1 for user storage. Utility functions for auth.ts.
  * Designed for k3s deployments on Cloudflare.
  */
@@ -27,7 +27,7 @@ export async function hashPassword(password: string): Promise<string> {
   const data = encoder.encode(password);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**
@@ -65,8 +65,8 @@ export async function createUser(
         name,
         emailVerified: false,
         createdAt: now,
-        updatedAt: now
-      }
+        updatedAt: now,
+      },
     };
   } catch (error) {
     console.error("[local-auth] createUser error:", error);
@@ -77,10 +77,7 @@ export async function createUser(
 /**
  * Get user by email
  */
-export async function getUserByEmail(
-  db: D1Database,
-  email: string
-): Promise<User | null> {
+export async function getUserByEmail(db: D1Database, email: string): Promise<User | null> {
   try {
     const stmt = db.prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
     const user = await stmt.bind(email.toLowerCase()).first<User>();
@@ -94,10 +91,7 @@ export async function getUserByEmail(
 /**
  * Create session for user
  */
-export async function createSession(
-  db: D1Database,
-  userId: string
-): Promise<string> {
+export async function createSession(db: D1Database, userId: string): Promise<string> {
   const sessionId = crypto.randomUUID();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
@@ -117,10 +111,7 @@ export async function createSession(
 /**
  * Get user by session token
  */
-export async function getUserBySession(
-  db: D1Database,
-  sessionId: string
-): Promise<User | null> {
+export async function getUserBySession(db: D1Database, sessionId: string): Promise<User | null> {
   try {
     const now = new Date().toISOString();
     const stmt = db.prepare(
@@ -137,10 +128,7 @@ export async function getUserBySession(
 /**
  * Delete session
  */
-export async function deleteSession(
-  db: D1Database,
-  sessionId: string
-): Promise<void> {
+export async function deleteSession(db: D1Database, sessionId: string): Promise<void> {
   try {
     const stmt = db.prepare("DELETE FROM sessions WHERE id = ?");
     await stmt.bind(sessionId).run();
@@ -152,10 +140,7 @@ export async function deleteSession(
 /**
  * Check if user is admin
  */
-export async function isAdmin(
-  db: D1Database,
-  userId: string
-): Promise<boolean> {
+export async function isAdmin(db: D1Database, userId: string): Promise<boolean> {
   try {
     const stmt = db.prepare("SELECT isAdmin FROM users WHERE id = ? LIMIT 1");
     const result = await stmt.bind(userId).first<{ isAdmin: boolean }>();

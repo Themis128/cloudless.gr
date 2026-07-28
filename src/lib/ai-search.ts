@@ -7,7 +7,9 @@
 
 // Detect Cloudflare Workers environment
 function isWorkersEnvironment(): boolean {
-  return typeof (globalThis as unknown as Record<string, string | undefined>).caches !== "undefined";
+  return (
+    typeof (globalThis as unknown as Record<string, string | undefined>).caches !== "undefined"
+  );
 }
 
 interface AiSearchResult {
