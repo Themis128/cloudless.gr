@@ -29,13 +29,12 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
   Pi `NTFY_BASE_URL=http://ntfy.ntfy.svc.cluster.local` (public tunnel hits CF challenge).
   Proof: signed POST → `{ ok: true, result: { slack: { ok: true }, ntfy: { ok: true } } }`;
   Slack DM + ntfy topic `cloudless-ops` both received.
-- [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy (+ Slack bridge).
+- [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy (+ Slack).
   Proof 2026-07-29: slug `cloudless`, 12 monitors, ntfy notification id=1; in-cluster
   `GET http://uptime-kuma…/api/status-page/cloudless` → 200; app ConfigMap
-  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack fan-out via
-  `kuma-slack-bridge` Deployment (`infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml`).
-  App route `POST /api/webhooks/kuma` is mounted on Pi hostpath after 2026-07-29
-  standalone rebuild (unauth → **401**, not 404). Incoming Webhook URL not required.
+  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack cut over 2026-07-29 to
+  `POST /api/webhooks/kuma` on `cloudless-app` (Bearer `ADMIN_ALERT_SECRET`);
+  `kuma-slack-bridge` scaled to 0 (rollback manifest retained).
 - [x] `PARTIAL` Restore ESP32 Notion page (API reconstruct; history UI expired).
   Proof 2026-07-29: `scripts/notion-restore-esp32.mjs` rebuilt 16 blocks on page
   `3677d82c-410a-81e4-a6db-e9ae89578fda` (Devices/Telemetry DBs still empty).
@@ -47,6 +46,12 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
   Proof: `src/lib/cost-analytics.ts`, `/admin/cost`, runbook §5.
 
 ## Claude-shippable roadmap items
+
+- [x] `DONE` AppFlowy CMS dual-run (Notion → AppFlowy primary on Pi).
+  Evidence 2026-07-29: `src/lib/appflowy.ts` + dual-run readers; migrate/backfill scripts;
+  `CMS_PARITY_REQUIRE_APPFLOWY=1` → **6/6 appflowy** on LAN `:30300` and
+  `https://cloudless-proxy.fly.dev` (parity probe uses `Accept-Encoding: identity`).
+  Prod pod: `APPFLOWY_API_URL=http://nginx.appflowy.svc.cluster.local`.
 
 - [x] `DONE` R25 self-hosted admin auto-login bridge.
   Evidence: `src/lib/selfhosted-autologin.ts`, `src/app/api/admin/autologin/route.ts`, `src/app/[locale]/admin/selfhosted/page.tsx`, `src/app/[locale]/admin/cluster/page.tsx`.
@@ -65,14 +70,27 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` R19 monthly failover drill workflow.
   Evidence: `.github/workflows/failover-drill.yml` (monthly schedule + manual dispatch probes for primary/secondary health).
 
-- [x] `DONE` R16 AppFlowy WAL-G continuous backup to S3.
-  Evidence: WAL-G sidecar + archive_command wired in `infrastructure/appflowy/k8s/appflowy.yaml`; Secret/ConfigMap/CronJob in `infrastructure/appflowy/walg-sidecar.yaml`. Operator still must create `appflowy-walg-aws` from SSM before apply.
+- [x] `PARTIAL` R16 AppFlowy WAL-G → **Cloudflare R2** (replaces S3 design).
+  Evidence: `infrastructure/appflowy/walg-sidecar.yaml` + postgres wiring in
+  `infrastructure/appflowy/k8s/appflowy.yaml` retargeted to R2 endpoint
+  (`datalake-bucket/appflowy-wal/`). Secret `appflowy-walg-r2` still needs R2
+  API token from Cloudflare (`.github/workflows/create-r2-credentials.yml` or
+  dashboard) before apply — **no AWS CLI/SSM**.
 - [x] `DONE` R23 Resend pilot for order confirmations.
   Evidence: `src/lib/email-resend.ts` plus pilot switch/fallback in `src/lib/email.ts` (`sendOrderConfirmation` prefers Resend when configured, falls back to SES).
-- [x] `DONE` R24 AWS secondary-region DR path.
-  Evidence: `infrastructure/r24-dr/{main,route53,dynamodb}.tf`, `infrastructure/r24-dr/README.md`, `.github/workflows/r24-add-replicas.yml`.
-- [x] `DONE` R20 Postgres logical replication subscriber to AWS.
-  Evidence: `infrastructure/r20-replication/{README.md,subscriber.ts,wal2json-config.yaml}`, `.github/workflows/r20-replication-subscriber.yml`.
+- [x] `DEFERRED` R24 AWS secondary-region DR path (legacy).
+  Decision 2026-07-29: do not provision; prefer Cloudflare Tunnel HA + R2 offsite
+  + R19 failover drill. Manifests retained under `infrastructure/r24-dr/`.
+- [x] `DEFERRED` R20 Postgres logical replication subscriber to AWS (legacy).
+  Decision 2026-07-29: do not provision AWS subscriber; prefer R16→R2 WAL + ETL
+  `scripts/etl/appflowy-to-r2.mjs`. Manifests retained under `infrastructure/r20-replication/`.
+
+## Next open (Cloudflare-first)
+
+- [ ] `OPEN` Apply R16: create `appflowy-walg-r2` from R2 API token + apply
+  ConfigMap/CronJob + restart AppFlowy postgres (when ready to enable WAL archive).
+- [ ] `OPEN` Retarget R10 PVC backup CronJobs from AWS S3/`apk add aws-cli` to R2
+  (`infrastructure/backup/cronjob-*.yaml`).
 
 ## LinkedIn CAPI finalization
 
@@ -100,7 +118,9 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
 
 - **Migrate off AWS → Cloudflare.** Prefer Workers / R2 / D1 / Access / Tunnel over expanding SSM, S3, Lambda, Athena, Cognito, etc.
 - **Do not install AWS CLI or AWS SDK** for agent/operator work on this repo; use Cloudflare tooling and existing in-repo paths instead.
-- AWS-backed roadmap items still labeled `DONE` in-repo (R16 WAL-G→S3, R20→AWS, R24 secondary region) are **legacy designs** — next work should replace them with Cloudflare equivalents rather than provisioning AWS secrets/CLI.
+- AWS-backed roadmap items (old R16→S3, R20→AWS, R24 secondary region) are
+  **legacy** — R16 retargeted to R2 in-repo; R20/R24 deferred. Next: apply
+  `appflowy-walg-r2` + retarget PVC backup CronJobs to R2 (no AWS CLI).
 
 ## Notes
 

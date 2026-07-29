@@ -74,9 +74,11 @@ spec:
     metadata: { labels: { app: postgres } }
     spec:
       nodeSelector: { kubernetes.io/hostname: omv }
-      # R16: WAL-G continuous backup. Init copies the wal-g binary into a
+      # R16: WAL-G → Cloudflare R2 (S3-compatible). Init copies wal-g into a
       # shared emptyDir so postgres archive_command can invoke it. Requires
-      # Secret appflowy-walg-aws (see infrastructure/appflowy/walg-sidecar.yaml).
+      # Secret appflowy-walg-r2 + ConfigMap appflowy-walg-env
+      # (see infrastructure/appflowy/walg-sidecar.yaml). AWS_* names are
+      # WAL-G's S3 client API; values are R2 tokens — not AWS IAM.
       initContainers:
         - name: walg-bin
           image: ghcr.io/wal-g/wal-g:v3.0.3
@@ -100,12 +102,9 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
-            - { name: AWS_REGION, value: us-east-1 }
-            - { name: WALG_S3_PREFIX, value: "s3://cloudless-analytics-data/appflowy-wal/wal/" }
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_ACCESS_KEY_ID } }
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_SECRET_ACCESS_KEY } }
+          envFrom:
+            - configMapRef: { name: appflowy-walg-env, optional: true }
+            - secretRef: { name: appflowy-walg-r2, optional: true }
           args:
             - "-c"
             - "archive_mode=on"
@@ -127,20 +126,14 @@ spec:
           args:
             - |
               set -euo pipefail
-              export WALG_S3_PREFIX=s3://cloudless-analytics-data/appflowy-wal/wal/
-              export WALG_UPLOAD_CONCURRENCY=2
-              export WALG_SENTINEL_NAME=appflowy-postgres-production
               while true; do
                 wal-g wal-verify integrity || true
                 sleep 300
               done
+          envFrom:
+            - configMapRef: { name: appflowy-walg-env, optional: true }
+            - secretRef: { name: appflowy-walg-r2, optional: true }
           env:
-            - { name: AWS_REGION, value: us-east-1 }
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_ACCESS_KEY_ID } }
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_SECRET_ACCESS_KEY } }
-            - { name: WALG_S3_PREFIX, value: "s3://cloudless-analytics-data/appflowy-wal/wal/" }
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
           volumeMounts:
             - { name: data, mountPath: /var/lib/postgresql/data, readOnly: true }

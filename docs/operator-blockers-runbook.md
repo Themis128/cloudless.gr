@@ -59,21 +59,17 @@ Bootstrapped in-cluster via `scripts/kuma-bootstrap.cjs`:
 
 - Status page slug: **`cloudless`**, **12** HTTP monitors
 - Notification: ntfy → `https://ntfy.cloudless.gr` topic `cloudless-alerts`
-- Slack: Incoming Webhook was revoked (2026-05-25). Live path is the
-  in-cluster bridge Deployment (Pi hostpath standalone still 404s
-  `/api/webhooks/kuma`):
-  - Manifest: `infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml`
-  - Service: `http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/`
-  - Auth: Bearer `ADMIN_ALERT_SECRET`
-  - App route (future): `POST /api/webhooks/kuma` after standalone rebuild
+- Slack: Incoming Webhook was revoked (2026-05-25). **Live path (cut over 2026-07-29):**
+  - `POST http://cloudless-app.cloudless.svc.cluster.local/api/webhooks/kuma`
+  - Auth: Bearer `ADMIN_ALERT_SECRET` → `src/app/api/webhooks/kuma/route.ts` → `SlackClient`
+  - Kuma notification row updated in SQLite; `kuma-slack-bridge` Deployment scaled to **0** (manifest kept for rollback)
+  - Re-register script default: `scripts/kuma-slack-bridge.cjs` → app webhook URL
 
 ```bash
-POD=$(kubectl -n uptime-kuma get pod -l app=uptime-kuma -o jsonpath='{.items[0].metadata.name}')
-TOKEN=$(kubectl -n cloudless get secret cloudless-secrets -o jsonpath='{.data.ADMIN_ALERT_SECRET}' | base64 -d)
-kubectl -n uptime-kuma cp scripts/kuma-slack-bridge.cjs "$POD":/tmp/kuma-slack-bridge.cjs
-kubectl -n uptime-kuma exec "$POD" -- env NODE_PATH=/app/node_modules \
-  KUMA_USER=tbaltzakis KUMA_PASS='…' KUMA_BRIDGE_TOKEN="$TOKEN" \
-  node /tmp/kuma-slack-bridge.cjs
+# Optional re-register from uptime-kuma pod
+KUMA_BRIDGE_URL=http://cloudless-app.cloudless.svc.cluster.local/api/webhooks/kuma \
+KUMA_BRIDGE_TOKEN="$ADMIN_ALERT_SECRET" KUMA_PASS='…' \
+  node scripts/kuma-slack-bridge.cjs
 ```
 
 ## 4. ESP32 Notion page — PARTIAL (history expired)
