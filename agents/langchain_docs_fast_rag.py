@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -9,9 +10,9 @@ os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
 os.environ.setdefault("LANGCHAIN_TRACING", "false")
 
 from langchain_chroma import Chroma
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 
 PERSIST_DIR = ".deepagents/langchain_docs_chroma"
 COLLECTION_NAME = "langchain_docs"
@@ -93,9 +94,7 @@ def expanded_query(question: str, query_type: str) -> str:
         )
 
     if query_type == "langchain_agents":
-        return (
-            f"{question} create_agent tools LangChain Python @tool tool calling"
-        )
+        return f"{question} create_agent tools LangChain Python @tool tool calling"
 
     if query_type == "langsmith_observability":
         return (
@@ -145,8 +144,7 @@ def retrieve(question: str, k: int = 7):
 
     reranked = sorted(
         results,
-        key=lambda item: item[1]
-        + source_boost(item[0].metadata.get("source", ""), query_type),
+        key=lambda item: item[1] + source_boost(item[0].metadata.get("source", ""), query_type),
     )
 
     return [doc for doc, _score in reranked[:k]]
@@ -160,12 +158,7 @@ def format_context(docs):
         source = doc.metadata.get("source", "Unknown source")
         content = doc.page_content[:2200]
 
-        parts.append(
-            f"[DOC {i}]\n"
-            f"Title: {title}\n"
-            f"Source: {source}\n\n"
-            f"{content}"
-        )
+        parts.append(f"[DOC {i}]\nTitle: {title}\nSource: {source}\n\n{content}")
 
     return "\n\n---\n\n".join(parts)
 

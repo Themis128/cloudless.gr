@@ -6,6 +6,7 @@ This skill covers the complete Meta (Facebook/Instagram) setup for cloudless.gr'
 The MCP server enables Claude to post content, read analytics, manage audiences, and run Meta Ads.
 
 **App credentials (already created):**
+
 - App ID: `1936126137016578`
 - App Secret: `2d77630ff18b1cea3e4e00ba2f9a7b73`
 - App Dashboard: <https://developers.facebook.com/apps/1936126137016578>
@@ -30,11 +31,13 @@ The MCP server enables Claude to post content, read analytics, manage audiences,
 The Facebook Page `116436681562585` IS connected to `@cloudless_gr` but only in **lite mode** (for ads only). The Graph API requires a **full OAuth connection** to expose the IG Business Account ID.
 
 Attempts made:
+
 - Clicked "Review connection" at `facebook.com/settings/?tab=linked_instagram`
 - Steps 1 + 2 (permissions + messages) completed
 - Flow failed at step 3 with: **"Business Account Not Allowed to Advertise — This business account didn't comply with our Advertising Policies or other standards."**
 
 **Likely causes (in order of probability):**
+
 1. **@cloudless_gr IS a Business Instagram account** (confirmed 2026-04-20 via Instagram Professional Account Tools page). However, the IG-to-FB-Page connection is in **lite mode** (ads only), not the full Graph API connection needed for the `instagram_business_account` field to resolve.
 2. The Meta Business Portfolio (ID: `1558125105019725`) has an advertising policy issue blocking the full connection flow.
 
@@ -56,12 +59,15 @@ Attempts made:
 **Step 3 — Retrieve the IG Business Account ID**
 
 After completing Step 2, run in Graph API Explorer (`developers.facebook.com/tools/explorer`):
+
 ```
 GET /116436681562585?fields=instagram_business_account
 ```
+
 Using the **cloudless.gr Page Access Token**.
 
 It will return:
+
 ```json
 {
   "instagram_business_account": { "id": "XXXXXXXXXXXXXXXXX" },
@@ -74,9 +80,11 @@ Copy that `id` value — that's your `INSTAGRAM_BUSINESS_ACCOUNT_ID`.
 **Step 4 — Update the MCP config**
 
 Edit `C:\Users\baltz\AppData\Roaming\Claude\claude_desktop_config.json`:
+
 ```json
 "INSTAGRAM_BUSINESS_ACCOUNT_ID": "PASTE_THE_ID_HERE"
 ```
+
 Restart Claude Desktop. Then verify with `get_account_info` tool.
 
 ---
@@ -119,12 +127,14 @@ GET https://graph.facebook.com/v19.0/oauth/access_token
 ```
 
 **Or use the helper script (recommended):**
+
 ```bash
 cd "D:\Nuxt Projects\Cloudless\.claude\mcp-servers\instagram"
 node setup-token.js <YOUR_SHORT_LIVED_TOKEN>
 ```
 
 The script will:
+
 1. Exchange the short-lived token for a 60-day long-lived token
 2. Retrieve your Facebook Pages
 3. Find the Instagram Business Account linked to each page
@@ -135,15 +145,19 @@ The script will:
 After getting the long-lived token, make these two API calls:
 
 **Get Facebook Pages:**
+
 ```
 GET https://graph.facebook.com/v19.0/me/accounts?access_token={LONG_TOKEN}
 ```
+
 Returns a list of pages. Find the cloudless.gr page and copy its `id`.
 
 **Get Instagram Business Account:**
+
 ```
 GET https://graph.facebook.com/v19.0/{PAGE_ID}?fields=instagram_business_account&access_token={LONG_TOKEN}
 ```
+
 Returns `{ "instagram_business_account": { "id": "XXXXXXXXX" } }`. That `id` is your `INSTAGRAM_BUSINESS_ACCOUNT_ID`.
 
 ### Step 4 — Get Meta Ad Account ID
@@ -151,9 +165,11 @@ Returns `{ "instagram_business_account": { "id": "XXXXXXXXX" } }`. That `id` is 
 ```
 GET https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_status&access_token={LONG_TOKEN}
 ```
+
 The `id` field is in format `act_XXXXXXXXX`. Strip the `act_` prefix for `META_AD_ACCOUNT_ID`.
 
 **Known ad accounts:**
+
 - `657781691826702` — Themistoklis Baltzakis (use this for cloudless.gr)
 - `2771400643144250` — Vera Symeonidou (client account, do not use)
 
@@ -220,6 +236,7 @@ Base URL: `https://graph.facebook.com/v19.0`
 **All requests require `?access_token={META_ACCESS_TOKEN}` or Bearer header.**
 
 Key endpoints:
+
 - `GET /{IG_USER_ID}` — account info
 - `GET /{IG_USER_ID}/media` — list media
 - `GET /{MEDIA_ID}/insights` — post analytics

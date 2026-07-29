@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .base import APIResponse, BaseAPIClient
 
@@ -12,7 +12,7 @@ class FleetClient(BaseAPIClient):
     """
 
     @classmethod
-    def from_env(cls) -> "FleetClient":
+    def from_env(cls) -> FleetClient:
         import os
 
         return cls(
@@ -28,13 +28,13 @@ class FleetClient(BaseAPIClient):
         method: str,
         path: str,
         *,
-        params: Optional[Dict[str, Any]] = None,
-        json_body: Optional[Any] = None,
+        params: dict[str, Any] | None = None,
+        json_body: Any | None = None,
     ) -> APIResponse:
         return self.request(method, path, params=params, json_body=json_body)
 
     # Connections
-    def create_connection(self, payload: Dict[str, Any]) -> Any:
+    def create_connection(self, payload: dict[str, Any]) -> Any:
         return self.post("/agent-connections", json_body=payload).data
 
     def list_connections(self, **params: Any) -> Any:
@@ -47,13 +47,13 @@ class FleetClient(BaseAPIClient):
     def list_oauth_providers(self, **params: Any) -> Any:
         return self.get("/oauth/providers", params=params).data
 
-    def create_oauth_provider(self, payload: Dict[str, Any]) -> Any:
+    def create_oauth_provider(self, payload: dict[str, Any]) -> Any:
         return self.post("/oauth/providers", json_body=payload).data
 
     def get_oauth_provider(self, provider_id: str) -> Any:
         return self.get(f"/oauth/providers/{provider_id}").data
 
-    def update_oauth_provider(self, provider_id: str, payload: Dict[str, Any]) -> Any:
+    def update_oauth_provider(self, provider_id: str, payload: dict[str, Any]) -> Any:
         return self.patch(f"/oauth/providers/{provider_id}", json_body=payload).data
 
     def delete_oauth_provider(self, provider_id: str) -> Any:

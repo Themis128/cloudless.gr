@@ -21,6 +21,7 @@ sorts, and grouping. Available layouts:
 | **Gallery** | Card grid with cover images                   |
 
 ### View features
+
 - **Filters** — show only items matching conditions (AND/OR logic).
 - **Sorts** — order items by one or more properties (ascending/descending).
 - **Group by** — visually cluster items by a Select, Status, Person, Date, etc.
@@ -64,6 +65,7 @@ sorts, and grouping. Available layouts:
 | **Button**        | Clickable action trigger                        |
 
 ### Place Property (newer)
+
 Accepts locations (via search, name, or address). Stores coordinates for map-related features.
 
 ---
@@ -73,6 +75,7 @@ Accepts locations (via search, name, or address). Stores coordinates for map-rel
 Relations connect pages **between two databases** (or within the same database).
 
 ### Creating a relation
+
 1. Add new property → choose **Relation**.
 2. Pick the target database.
 3. Optionally limit to **1 page** or allow **unlimited**.
@@ -85,10 +88,12 @@ Relations connect pages **between two databases** (or within the same database).
 | **Two-way** | Toggle "Show on \[target DB\]" → creates a matching column in the target database. Edits sync both ways. |
 
 ### Self-relations
+
 A database can relate to **itself** (e.g., task → subtask). Recommendation:
 toggle **off** two-way for self-relations to avoid duplication issues.
 
 ### API endpoint
+
 ```
 PATCH /v1/pages/{page_id}
 {
@@ -107,6 +112,7 @@ PATCH /v1/pages/{page_id}
 Rollups **aggregate** data from related pages.
 
 ### Setup
+
 1. The database must already have a **Relation** property.
 2. Add a **Rollup** property → select: relation, target property, calculation.
 
@@ -124,6 +130,7 @@ Sum, Average, Median, Min, Max, Range
 Earliest date, Latest date, Date range
 
 ### Limitations
+
 - **Cannot** rollup a rollup (no nesting — would cause loops).
 - Rollups can only be **sorted** when outputting numeric values.
 - Exporting a relational DB as CSV flattens relations to plain-text URLs;
@@ -153,6 +160,7 @@ Earliest date, Latest date, Date range
 | Update a page         | PATCH  | `/v1/pages/{id}`                  |
 
 ### Query body example
+
 ```json
 {
   "filter": {

@@ -29,6 +29,7 @@ const user = JSON.parse(await env.USERS_KV.get(id));
 ```
 
 **Use KV when:**
+
 - Single key lookups
 - Eventual consistency acceptable
 - No queries by index needed
@@ -54,6 +55,7 @@ await env.DB.prepare(
 ```
 
 **Use D1 when:**
+
 - Queries by index, filter, aggregate
 - Joins between tables
 - Sorting required

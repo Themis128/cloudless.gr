@@ -9,24 +9,29 @@ Replace AWS-dependent infrastructure files with Cloudflare-native alternatives a
 These components are no longer needed since migration is 100% complete:
 
 ### 1. Athena Analytics (`infrastructure/athena/`)
+
 - `selfhosted.sql` - Athena SQL queries
 - **Reason**: Replaced by DuckDB-Wasm + R2 parquet in Workers
 
 ### 2. R20 Replication (`infrastructure/r20-replication/`)
+
 - `subscriber.ts` - DynamoDB replication subscriber
 - `wal2json-config.yaml` - Postgres→DDB replication config
 - `README.md` - AWS DR documentation
 - **Reason**: R20 was for AWS cross-region DR; now uses R2 native
 
 ### 3. SES-to-EspoCRM Bridge (`infrastructure/ses-to-espocrm/`)
+
 - Lambda function and deploy scripts
 - **Reason**: Replaced by Cloudflare Email binding (SES → Email)
 
 ### 4. IAM Policies (`infrastructure/iam/`)
+
 - `policies/ses-provisioner.json` - AWS SES permissions
 - **Reason**: All IAM roles/polices deprecated
 
 ### 5. Backup to S3 (`infrastructure/backup/`)
+
 - `cronjob-appflowy.yaml` - S3 backup target
 - `cronjob-espocrm.yaml` - S3 backup target
 - `cronjob-n8n.yaml` - S3 backup target
@@ -35,12 +40,14 @@ These components are no longer needed since migration is 100% complete:
 - **Reason**: Replace with R2 backup targets
 
 ### 6. K3s Snapshot Mirror (`infrastructure/etcd-backup/`)
+
 - Uses AWS S3 for snapshot storage
 - **Reason**: Change to R2 for k3s snapshots
 
 ## New Cloudflare Architecture to CREATE
 
 ### 1. R2 Backup CronJobs (replacing S3 backups)
+
 ```yaml
 # infrastructure/backup-r2/
 # - cronjob-appflowy-r2.yaml
@@ -49,6 +56,7 @@ These components are no longer needed since migration is 100% complete:
 ```
 
 ### 2. Database Failover Updates
+
 ```yaml
 # infrastructure/database/postgresql-ha.yaml - UPDATE
 # Change backup target from S3 to R2
@@ -56,6 +64,7 @@ These components are no longer needed since migration is 100% complete:
 ```
 
 ### 3. K3s Snapshot Updates
+
 ```yaml
 # infrastructure/etcd-backup/ - UPDATE
 # Use R2 instead of S3 for snapshots
@@ -64,6 +73,7 @@ These components are no longer needed since migration is 100% complete:
 ## Files to Keep AS-IS
 
 ### Core Analytics Stack (Cloudflare + k3s)
+
 - `infrastructure/appflowy/` - CMS stack (needs tunnel updates only)
 - `infrastructure/n8n/` - Workflow automation
 - `infrastructure/espocrm/` - CRM system

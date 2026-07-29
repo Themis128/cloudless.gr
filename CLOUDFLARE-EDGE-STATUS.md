@@ -5,12 +5,14 @@
 ## Current Status: ✅ READY FOR EDGE DELIVERY
 
 ### Primary Path - Cloudflare Workers
+
 - **Endpoint**: cloudless.gr (and www.cloudless.gr)
 - **Status**: ✅ Active and healthy
 - **Health Check**: `/api/health` returns HTTP 200
 - **Services**: auth, email, ai, analytics, r2 all operational
 
 ### Current Services Response
+
 ```json
 {"services":{"auth":true,"email":true,"ai":true,"stripe":false,"analytics":true,"r2":true,"chat":false},"allOk":false}
 ```
@@ -79,21 +81,27 @@ The current setup uses Fly.io proxy as the automatic failover mechanism:
 ## Required Actions
 
 ### 1. Deploy Fly.io Proxy
+
 Deploy the `fly-proxy-app` to enable automatic failover:
+
 ```bash
 # Requires FLY_API_TOKEN secret
 gh workflow run deploy-fly-proxy.yml -f apply=true
 ```
 
 ### 2. Pi Tunnel Restart (Optional)
+
 To fix `pi-origin.cloudless.gr` returning 530:
+
 ```bash
 ssh tbaltzakis@192.168.1.128
 sudo systemctl restart cloudflared
 ```
 
 ### 3. Optional: Cloudflare LB (Enhanced Failover)
+
 If you want Cloudflare Load Balancer instead of DNS switch:
+
 ```bash
 gh workflow run store-cloudflare-token.yml \
   -f cloudflare_token=<TOKEN> \

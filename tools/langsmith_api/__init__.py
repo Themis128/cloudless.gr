@@ -20,5 +20,4 @@ __all__ = [
 ]
 
 from .endpoints import get_endpoint, list_endpoints, load_endpoint_registry
-
 from .safe_runner import endpoint_is_safe_read, run_registered_endpoint

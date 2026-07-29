@@ -1,5 +1,7 @@
 # Hands-On Action Plan: Tailscale OAuth & omv Node Recovery
+
 # Generated: 2026-07-19
+
 # Priority: CRITICAL - Required for cluster operations
 
 ## ⚠️ Current Status
@@ -163,25 +165,26 @@ If the Pi cannot be powered on or remains unreachable:
 | **Total remaining** | **10-13 minutes** | |
 
 ---
- 
+
 ## ✅ Summary of Changes Made
- 
+
 ### Workflow Fix (COMPLETED)
- - Fixed `.github/workflows/tailscale-deploy.yml` to use existing secret names
- - The workflow now uses `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_SECRET`
- - Support for both naming conventions added for backward compatibility
- - **Commit:** `cf4eb21c` - pushed to main branch
- 
- ### What Still Needs Your Action
- 
+
+- Fixed `.github/workflows/tailscale-deploy.yml` to use existing secret names
+- The workflow now uses `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_SECRET`
+- Support for both naming conventions added for backward compatibility
+- **Commit:** `cf4eb21c` - pushed to main branch
+
+### What Still Needs Your Action
+
  | # | Action | Why Required |
  |---|--------|--------------|
  | 1 | Power on omv (Pi 5) at LAN IP 192.168.1.128 | Node is offline, preventing cluster access |
  | 2 | Approve subnet routes in Tailscale Admin (10.42.0.0/16, 10.43.0.0/16) | Required for Tailscale-to-cluster networking |
- 
+
  ---
- 
- ## ❓ Questions?
- 
+
+## ❓ Questions?
+
 - **No access to Pi physically?** You'll need to wait until someone can power it on
 - **Tailscale Admin access issues?** Contact your workspace admin

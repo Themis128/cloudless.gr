@@ -57,7 +57,7 @@ export default function PipelinePage() {
       ]);
       if (!boardRes.ok) throw new Error("Failed to load board");
       if (!statsRes.ok) throw new Error("Failed to load stats");
-      const boardData: { dealsByStage: Record<string, any[]>; pipelines: any[] } =
+      const boardData: { dealsByStage: Record<string, Deal[]>; pipelines: Pipeline[] } =
         await boardRes.json();
       const statsData: {
         totalDeals: number;

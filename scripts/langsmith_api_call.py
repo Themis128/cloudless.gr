@@ -19,7 +19,6 @@ from tools.langsmith_api import (
     ManagedDeepAgentsClient,
 )
 
-
 CLIENTS = {
     "langsmith": LangSmithClient,
     "deepagents": ManagedDeepAgentsClient,
@@ -45,7 +44,7 @@ def main() -> None:
     parser.add_argument("client", choices=sorted(CLIENTS))
     parser.add_argument("method", choices=["GET", "POST", "PATCH", "PUT", "DELETE"])
     parser.add_argument("path")
-    parser.add_argument("--params", help='JSON query params, e.g. \'{"limit":1}\'')
+    parser.add_argument("--params", help="JSON query params, e.g. '{\"limit\":1}'")
     parser.add_argument("--json", help='JSON request body, e.g. \'{"name":"test"}\'')
     parser.add_argument(
         "--allow-error",

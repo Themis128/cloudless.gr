@@ -47,7 +47,7 @@ export default function AdminTicketsPage() {
         if (res.status === 503) throw new Error("EspoCRM not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (await res.json()) as { tickets: any[] };
+      const data = (await res.json()) as { tickets: Ticket[] };
       setTickets(data.tickets ?? []);
       setFetchedAt(new Date().toISOString());
       setError(null);

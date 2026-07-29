@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const nonce = randomBytes(16).toString("hex");
   const sig = createHmac("sha256", secret).update(`${email}:${exp}:${nonce}`).digest("base64url");
   const token = `${nonce}.${exp}.${sig}`;
-  const otp = (
+  const _otp = (
     parseInt(
       createHmac("sha256", secret).update(`otp:${email}:${exp}:${nonce}`).digest("hex").slice(0, 8),
       16

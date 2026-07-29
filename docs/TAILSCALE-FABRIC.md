@@ -56,6 +56,7 @@ Aligned with current Tailscale Kubernetes Operator docs (validated mid-2026):
    `Tailscale admin API`, `Tailscale fix fabric ACL`.
 
 3. **Enable HTTPS Certificates** (required for Serve / kube-apiserver):
+
    ```bash
    # PATCH /api/v2/tailnet/{tailnet}/settings  {"httpsEnabled":true}
    bash scripts/tailscale-enable-https.sh
@@ -63,11 +64,13 @@ Aligned with current Tailscale Kubernetes Operator docs (validated mid-2026):
    ```
 
 4. **Approve Service hosts** (HA ProxyGroup VIPs stay dark until approved):
+
    ```bash
    bash scripts/tailscale-approve-service-hosts.sh
    # Workflow: Tailscale approve service hosts
    # Or: Services admin → each svc → approve ingress-0 / kube-0
    ```
+
    `autoApprovers.services["svc:*"]` alone may not auto-approve; the approval
    API returns `autoApproved:false` until hosts are explicitly approved.
 

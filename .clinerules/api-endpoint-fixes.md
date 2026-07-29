@@ -5,10 +5,12 @@
 ### 1. Calendar Endpoints - Missing D1 Support for Config
 
 **Problem:** The `/api/calendar/availability` and `/api/calendar/book` endpoints use `isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY")` which:
+
 - Works with SSM fallback in Next.js/k3s
 - Does NOT work in Workers environment (no SSM access)
 
 **Fix Applied:**
+
 - ✅ Updated `/api/config/route.ts` to include Google Calendar config keys:
   - `GOOGLE_CLIENT_EMAIL` - Added to public keys array
   - `GOOGLE_CALENDAR_ID` - Added to public keys array
@@ -27,6 +29,7 @@
 **Problem:** The chat tool `check_calendar_availability` and `book_slot` depend on Google Calendar being configured.
 
 **Status:** Working correctly - returns helpful message when not configured:
+
 ```
 "Calendar booking is not yet wired up. Suggest the visitor use the Contact page to request a time."
 ```
@@ -40,6 +43,7 @@
 ## Changes Made
 
 ### src/app/api/config/route.ts (2026-07-20)
+
 - ✅ Added `GOOGLE_CLIENT_EMAIL` to config whitelist (public key)
 - ✅ Added `GOOGLE_CALENDAR_ID` to config whitelist (public key)
 - `GOOGLE_PRIVATE_KEY` already in secretKeys array (masked for security)
@@ -59,6 +63,7 @@
 To enable calendar booking, add these secrets:
 
 ### Option A: Wrangler Secrets (for Workers)
+
 ```bash
 pnpm cf:typecheck  # Verify types
 npx wrangler secret put GOOGLE_CLIENT_EMAIL --config wrangler.jsonc
@@ -67,7 +72,9 @@ npx wrangler secret put GOOGLE_CALENDAR_ID --config wrangler.jsonc  # Defaults t
 ```
 
 ### Option B: D1 app_config (for k3s or shared config)
+
 Add via Wrangler or k3s secret:
+
 ```sql
 INSERT OR REPLACE INTO app_config (key, value, description) VALUES ('GOOGLE_CLIENT_EMAIL', 'service-account@project.iam.gserviceaccount.com', 'Google Calendar service account');
 INSERT OR REPLACE INTO app_config (key, value, description) VALUES ('GOOGLE_CALENDAR_ID', 'primary', 'Google Calendar ID');
@@ -78,6 +85,7 @@ Note: GOOGLE_PRIVATE_KEY should be set via Wrangler secret for security.
 ## Test File Notes
 
 The `.test-fix-plan.md` references test files that don't exist in `__tests__/` directory. These tests may have been:
+
 - Removed during migration
 - Moved to `e2e/` directory
 - Planned but not yet created

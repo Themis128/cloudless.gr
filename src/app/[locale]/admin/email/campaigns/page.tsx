@@ -49,12 +49,14 @@ export default function EmailCampaignsPage() {
         );
       }
       if (listsRes.ok) {
-        setLists(((await listsRes.json()) as { lists: any[] }).lists ?? []);
+        setLists(((await listsRes.json()) as { lists: ACList[] }).lists ?? []);
       } else if (listsRes.status === 503) {
         setListsConfigured(false);
       }
       if (autoRes.ok)
-        setAutomations(((await autoRes.json()) as { automations: any[] }).automations ?? []);
+        setAutomations(
+          ((await autoRes.json()) as { automations: ACAutomation[] }).automations ?? []
+        );
       if (!campRes.ok) {
         const body = (await campRes.json().catch(() => null)) as {
           error?: string;

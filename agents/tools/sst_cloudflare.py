@@ -6,29 +6,27 @@ including Worker deployment, D1 database management, R2 bucket operations, and
 Cron job scheduling.
 """
 
-import subprocess
 import json
-import os
-from typing import Optional, Dict, Any, List
+import subprocess
+from typing import Any
 
 
 def sst_deploy_infra(
-    config: str = "sst.config.cf-infra.ts", 
-    stage: str = "production"
-) -> Dict[str, Any]:
+    config: str = "sst.config.cf-infra.ts", stage: str = "production"
+) -> dict[str, Any]:
     """
     Deploy SST infrastructure configuration.
-    
+
     Args:
         config: Path to SST config file (default: sst.config.cf-infra.ts)
         stage: Deployment stage (production, staging, etc.)
-    
+
     Returns:
         Deployment result with status and outputs
     """
     cmd = ["sst", "deploy", "--config", config, "--stage", stage]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     return {
         "success": result.returncode == 0,
         "stdout": result.stdout,
@@ -38,44 +36,43 @@ def sst_deploy_infra(
 
 
 def sst_list_resources(
-    config: str = "sst.config.cf-infra.ts", 
-    stage: str = "production"
-) -> Dict[str, Any]:
+    config: str = "sst.config.cf-infra.ts", stage: str = "production"
+) -> dict[str, Any]:
     """
     List SST-managed Cloudflare resources.
-    
+
     Args:
         config: Path to SST config file
         stage: Deployment stage
-    
+
     Returns:
         JSON output of sst list command
     """
     cmd = ["sst", "list", "--config", config, "--stage", stage]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode != 0:
         return {"success": False, "error": result.stderr}
-    
+
     try:
         return {"success": True, "resources": json.loads(result.stdout)}
     except json.JSONDecodeError:
         return {"success": True, "raw": result.stdout}
 
 
-def sst_dev(config: str = "sst.config.ts") -> Dict[str, Any]:
+def sst_dev(config: str = "sst.config.ts") -> dict[str, Any]:
     """
     Start SST dev mode for local development.
-    
+
     Args:
         config: Path to SST config file
-    
+
     Returns:
         Dev session status
     """
     cmd = ["sst", "dev", "--config", config]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     return {
         "success": result.returncode == 0,
         "stdout": result.stdout,
@@ -84,22 +81,21 @@ def sst_dev(config: str = "sst.config.ts") -> Dict[str, Any]:
 
 
 def sst_remove_infra(
-    config: str = "sst.config.cf-infra.ts", 
-    stage: str = "production"
-) -> Dict[str, Any]:
+    config: str = "sst.config.cf-infra.ts", stage: str = "production"
+) -> dict[str, Any]:
     """
     Remove SST-managed Cloudflare resources.
-    
+
     Args:
         config: Path to SST config file
         stage: Deployment stage
-    
+
     Returns:
         Removal result
     """
     cmd = ["sst", "remove", "--config", config, "--stage", stage]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     return {
         "success": result.returncode == 0,
         "stdout": result.stdout,
@@ -108,19 +104,19 @@ def sst_remove_infra(
     }
 
 
-def sst_add_provider(provider: str = "cloudflare") -> Dict[str, Any]:
+def sst_add_provider(provider: str = "cloudflare") -> dict[str, Any]:
     """
     Add a provider to the SST configuration.
-    
+
     Args:
         provider: Provider name to add
-    
+
     Returns:
         Result of adding the provider
     """
     cmd = ["sst", "add", provider]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     return {
         "success": result.returncode == 0,
         "stdout": result.stdout,
@@ -128,19 +124,19 @@ def sst_add_provider(provider: str = "cloudflare") -> Dict[str, Any]:
     }
 
 
-def validate_sst_config(config: str = "sst.config.ts") -> Dict[str, Any]:
+def validate_sst_config(config: str = "sst.config.ts") -> dict[str, Any]:
     """
     Validate SST configuration file syntax.
-    
+
     Args:
         config: Path to SST config file
-    
+
     Returns:
         Validation result
     """
     cmd = ["sst", "validate", "--config", config]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     return {
         "valid": result.returncode == 0,
         "stdout": result.stdout,
@@ -149,25 +145,24 @@ def validate_sst_config(config: str = "sst.config.ts") -> Dict[str, Any]:
 
 
 def get_sst_outputs(
-    config: str = "sst.config.cf-infra.ts", 
-    stage: str = "production"
-) -> Dict[str, Any]:
+    config: str = "sst.config.cf-infra.ts", stage: str = "production"
+) -> dict[str, Any]:
     """
     Get outputs from SST deployment (e.g., worker URLs, database IDs).
-    
+
     Args:
         config: Path to SST config file
         stage: Deployment stage
-    
+
     Returns:
         JSON outputs from the SST stack
     """
     cmd = ["sst", "outputs", "--config", config, "--stage", stage]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode != 0:
         return {"success": False, "error": result.stderr}
-    
+
     try:
         return {"success": True, "outputs": json.loads(result.stdout)}
     except json.JSONDecodeError:

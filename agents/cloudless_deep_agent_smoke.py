@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -9,7 +10,6 @@ os.environ.setdefault("LANGCHAIN_TRACING", "false")
 
 from deepagents import create_deep_agent
 from langchain_openai import ChatOpenAI
-
 
 llm = ChatOpenAI(
     model=os.getenv(

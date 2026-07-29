@@ -3,6 +3,7 @@
 ## Executive Summary
 
 **Updated: 2026-07-17** - This analysis provides a comprehensive cross-reference between:
+
 1. The existing infrastructure manifests (AppFlowy, n8n, Postiz, EspoCRM)
 2. DevDocs MCP server capabilities (crawling, extraction, organized knowledge)
 3. Outstanding migration tasks and self-hosted app tuning
@@ -65,11 +66,13 @@ Phase 3 - Analytics Stack:
 **Current State:** n8n is deployed (k8s.yaml) but workflows need to be imported.
 
 **DevDocs Value:**
+
 - Crawl https://docs.n8n.io/workflows for workflow creation patterns
 - Extract Slack integration docs for `#alerts` channel configuration
 - Get R2 access patterns for analytics data pipeline
 
 **Action Items:**
+
 - [ ] Use DevDocs to extract n8n workflow best practices
 - [ ] Create `funnel-daily-rollup` workflow (Cron → DuckDB → Slack)
 - [ ] Create `lead-enrichment` workflow (Webhook → HTTP → EspoCRM)
@@ -80,11 +83,13 @@ Phase 3 - Analytics Stack:
 **Current State:** EspoCRM namespace created, webhook endpoint defined but not verified.
 
 **DevDocs Value:**
+
 - Extract EspoCRM API patterns for contact/deal creation
 - Get webhook payload structure for real-time sync
 - Understand EspoCRM field mapping for lead scoring
 
 **Action Items:**
+
 - [ ] Crawl EspoCRM docs via DevDocs for webhook patterns
 - [ ] Configure `/api/webhooks/espocrm` with proper authentication
 - [ ] Test contact → lead → deal flow end-to-end
@@ -94,11 +99,13 @@ Phase 3 - Analytics Stack:
 **Current State:** Metabase running, DuckDB pending.
 
 **DevDocs Value:**
+
 - Extract DuckDB parquet query patterns for R2 data
 - Get Metabase dashboard creation patterns
 - Understand SQL views for funnel metrics
 
 **Action Items:**
+
 - [ ] Use DevDocs to get DuckDB-Wasm R2 integration patterns
 - [ ] Create `v_funnel_metrics` SQL view
 - [ ] Create `v_lead_sources` UTM breakdown view
@@ -111,11 +118,13 @@ Phase 3 - Analytics Stack:
 ### AppFlowy Fine-Tuning
 
 **Current Configuration (appflowy-complete.yaml):**
+
 - NodePort: 30810
 - PVC: 20Gi
 - RAM: 1-2Gi limits
 
 **DevDocs Recipe:**
+
 ```sql
 -- Query DevDocs for AppFlowy backup optimization patterns
 -- Extract WAL-G configuration for continuous backup
@@ -123,6 +132,7 @@ Phase 3 - Analytics Stack:
 ```
 
 **Tuning Actions:**
+
 - [ ] Extract AppFlowy backup best practices for 2TB SSD
 - [ ] Optimize PostgreSQL connection pooling (pool: min_idle 5 / max_size 20)
 - [ ] Configure Tailscale ingress properly for omv-ha offloading
@@ -130,11 +140,13 @@ Phase 3 - Analytics Stack:
 ### n8n Performance Tuning
 
 **Current Configuration:**
+
 - Image: n8nio/n8n:2.28.2-arm64 (native ARM)
 - RAM: 256Mi request / 1Gi limit
 - N8N_RUNNERS_ENABLED=false (reduces memory)
 
 **DevDocs Recipe:**
+
 ```yaml
 # Query DevDocs for n8n memory optimization patterns
 # Extract SQLite tuning for embedded database
@@ -142,6 +154,7 @@ Phase 3 - Analytics Stack:
 ```
 
 **Tuning Actions:**
+
 - [ ] Extract n8n memory optimization patterns for Pi 5
 - [ ] Configure webhook timeout for Pi latency
 - [ ] Set up proper resource limits to prevent OOM
@@ -151,6 +164,7 @@ Phase 3 - Analytics Stack:
 **Current State:** Redeployed (2026-07-17), waiting for image pull completion.
 
 **DevDocs Recipe:**
+
 - [ ] Extract Postiz media upload optimization for R2
 - [ ] Get social media scheduling patterns for analytics
 - [ ] Query Postiz API patterns for content pipeline

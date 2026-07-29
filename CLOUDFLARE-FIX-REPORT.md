@@ -7,6 +7,7 @@ This document summarizes the fixes applied to the Cloudflare application configu
 ## Issues Identified
 
 ### 1. ✅ CLOUDFLARE_API_TOKEN Verified and Working
+
 - **Status**: Token is set and validated successfully (last used: 2026-07-18)
 - **Token ID**: ea0e2cf46a19f44113a6e16d0811431e (cloudless build token)
 - **Permissions Confirmed**:
@@ -21,12 +22,14 @@ This document summarizes the fixes applied to the Cloudflare application configu
 - **Note**: Pages permission missing (optional - add if Workers Pages features are needed)
 
 ### 2. ✅ Cloudflare MCP Server Configured in .cline MCP Settings
+
 - **Status**: MCP server configuration added to `.cline/data/settings/cline_mcp_settings.json`
 - **Fix Applied**: Added `cloudflare` MCP server using official `@cloudflare/mcp-server-cloudflare` package
 - **Note**: Uses npx to run the official Cloudflare MCP server
 - **Required**: Restart Cline/Claude to load the updated MCP configuration
 
 ### 3. ✅ Workers Configuration Ready
+
 - **Status**: `wrangler-cloudflare-free.json` has correct bindings for R2, D1, AI, Email, Analytics
 - **Fix Applied**: Verified all bindings: AUTH_DB, ASSETS_BUCKET, ANALYTICS_BUCKET, MEDIA_BUCKET, DATALAKE_BUCKET
 - **Note**: SESSION_SECRET must be set via `wrangler secret put SESSION_SECRET` (32+ bytes required)
@@ -42,6 +45,7 @@ This document summarizes the fixes applied to the Cloudflare application configu
 ## Configuration Details
 
 ### MCP Server Settings (`.cline/data/settings/cline_mcp_settings.json`)
+
 ```json
 {
   "mcpServers": {
@@ -69,7 +73,9 @@ This document summarizes the fixes applied to the Cloudflare application configu
 ```
 
 ### Required API Token Permissions (for full MCP functionality)
+
 When creating your Cloudflare API token, ensure it has these permissions:
+
 - Account → Cloudflare Pages → Edit (optional - for Pages features)
 - Account → Workers Scripts → Edit ✓ (included in current token)
 - Account → Workers KV Storage → Edit ✓ (included in current token)
@@ -77,6 +83,7 @@ When creating your Cloudflare API token, ensure it has these permissions:
 - Zone → Zone → Read ✓ (included in current token)
 
 ### Workers Environment Variables (wrangler-cloudflare-free.json)
+
 ```json
 {
   "vars": {
@@ -90,13 +97,16 @@ When creating your Cloudflare API token, ensure it has these permissions:
 ```
 
 **Required Secrets (set via Wrangler CLI):**
+
 - `SESSION_SECRET` - 32+ random bytes for password hashing (set with `wrangler secret put SESSION_SECRET`)
 - Optional: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`
 
 ## Next Steps
 
 ### 1. ✅ CLOUDFLARE_API_TOKEN is Set
+
 The token has been provided and verified. To make it persistent:
+
 ```bash
 # For persistent shell profile (optional - already set for this session)
 echo 'export CLOUDFLARE_API_TOKEN="<your-cloudflare-api-token>"' >> ~/.bashrc
@@ -106,6 +116,7 @@ echo "<your-cloudflare-api-token>" | gh secret set CLOUDFLARE_API_TOKEN --body -
 ```
 
 ### 2. Set SESSION_SECRET (required for auth)
+
 ```bash
 # Generate and set the session secret
 npx wrangler secret put SESSION_SECRET
@@ -113,9 +124,11 @@ npx wrangler secret put SESSION_SECRET
 ```
 
 ### 3. Restart Cline/Claude
+
 After setting the API token, restart your AI assistant to load the updated MCP configuration.
 
 ### 4. Verify Settings
+
 ```bash
 # Run the diagnostic script
 CLOUDFLARE_API_TOKEN="<your-cloudflare-api-token>" bash scripts/cloudflare-fix.sh
@@ -125,7 +138,9 @@ bash scripts/cf-token-smoketest.sh
 ```
 
 ### 5. Optional: Add Pages Permissions
+
 If you need Cloudflare Pages functionality:
+
 1. Go to https://dash.cloudflare.com/profile/api-tokens
 2. Edit the "cloudless build token"
 3. Add Account → Cloudflare Pages → Edit permission
@@ -136,6 +151,7 @@ If you need Cloudflare Pages functionality:
 Once configured and Cline restarted, you can use these tools through your AI assistant:
 
 ### Pages Tools (requires Pages permission)
+
 - `pages_list_projects` - List all Pages projects
 - `pages_get_project` - Get project details
 - `pages_create_project` - Create a new project
@@ -143,15 +159,18 @@ Once configured and Cline restarted, you can use these tools through your AI ass
 - `pages_rollback_deployment` - Rollback to a previous deployment
 
 ### DNS Tools
+
 - `dns_list_zones` - List all zones/domains
 - `dns_list_records` - List DNS records
 - `dns_create_record` - Create a DNS record
 
 ### Workers Tools
+
 - `workers_list` - List all Worker scripts ✓
 - `workers_deploy` - Deploy a Worker script ✓
 
 ### KV Tools
+
 - `kv_list_namespaces` - List namespaces
 - `kv_put_value` - Write a key-value pair
 

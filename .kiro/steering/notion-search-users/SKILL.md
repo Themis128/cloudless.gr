@@ -42,6 +42,7 @@ Search all pages and databases the integration has access to.
 | `start_cursor` | string | Pagination cursor from previous response. |
 
 **Response:**
+
 ```json
 {
   "object": "list",
@@ -53,6 +54,7 @@ Search all pages and databases the integration has access to.
 ```
 
 **Important notes:**
+
 - Search only returns objects shared with the integration
 - Search indexes title/name — it does NOT search page content or property values
 - Results include full page/database objects with all properties
@@ -62,16 +64,19 @@ Search all pages and databases the integration has access to.
 ### Search Patterns
 
 **Find all databases:**
+
 ```json
 { "filter": { "value": "database", "property": "object" } }
 ```
 
 **Find pages matching a title:**
+
 ```json
 { "query": "Q1 Report", "filter": { "value": "page", "property": "object" } }
 ```
 
 **Paginate through all pages:**
+
 ```typescript
 async function searchAll(query: string): Promise<Page[]> {
   const results: Page[] = [];
@@ -98,6 +103,7 @@ async function searchAll(query: string): Promise<Page[]> {
 Returns the bot user associated with the integration token. Useful for identifying the integration itself.
 
 **Response:**
+
 ```json
 {
   "object": "user",
@@ -117,6 +123,7 @@ Returns the bot user associated with the integration token. Useful for identifyi
 Retrieve a specific user by ID.
 
 **Response:**
+
 ```json
 {
   "object": "user",
@@ -133,6 +140,7 @@ Retrieve a specific user by ID.
 List all users in the workspace. Paginated.
 
 **Response:**
+
 ```json
 {
   "object": "list",
@@ -143,6 +151,7 @@ List all users in the workspace. Paginated.
 ```
 
 **User types:**
+
 - `"person"` — workspace members, with `person.email`
 - `"bot"` — integrations, with `bot.owner` and `bot.workspace_name`
 
@@ -155,6 +164,7 @@ List all users in the workspace. Paginated.
 Create a comment on a page or as a reply in a discussion thread.
 
 **Comment on a page (new discussion):**
+
 ```json
 {
   "parent": { "page_id": "<page-uuid>" },
@@ -165,6 +175,7 @@ Create a comment on a page or as a reply in a discussion thread.
 ```
 
 **Reply to an existing discussion:**
+
 ```json
 {
   "discussion_id": "<discussion-uuid>",
@@ -181,11 +192,13 @@ The `rich_text` array supports the same format as block rich text (annotations, 
 List comments on a page or block. The `block_id` parameter is required — use a page ID to get all page-level comments.
 
 **Query parameters:**
+
 - `block_id` (required) — page or block UUID
 - `start_cursor` — pagination cursor
 - `page_size` — results per page (max 100)
 
 **Response:**
+
 ```json
 {
   "object": "list",
@@ -227,6 +240,7 @@ Notion supports a 3-step file upload process (API version 2022-06-28+).
 ```
 
 **Response:**
+
 ```json
 {
   "id": "upload-uuid",
@@ -248,6 +262,7 @@ Send the raw file bytes as the request body with the appropriate `Content-Type` 
 Finalizes the upload and returns the hosted file URL.
 
 **Response:**
+
 ```json
 {
   "id": "upload-uuid",

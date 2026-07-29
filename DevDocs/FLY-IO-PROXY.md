@@ -17,6 +17,7 @@ The Fly.io proxy (`cloudless-proxy`) provides an external failover endpoint that
 ## Configuration
 
 ### fly.toml
+
 ```toml
 app = "cloudless-proxy"
 primary_region = "fra"
@@ -43,6 +44,7 @@ primary_region = "fra"
 ### proxy.py (FastAPI Implementation)
 
 Located in `fly-proxy-app/proxy.py`:
+
 - Health checks primary backend every 30s
 - Proxies to primary when healthy, fallback otherwise
 - 30s cache TTL for health status
@@ -55,6 +57,7 @@ Located in `fly-proxy-app/proxy.py`:
 | `/{path:path}` | * | Proxies all requests with failover |
 
 ### Health Check Response
+
 ```json
 {
   "status": "healthy",
@@ -92,6 +95,7 @@ Fly.io proxy → Pi k3s (direct via Tailscale)
 ```
 
 The Fly.io proxy provides an external entry point that bypasses Cloudflare when needed, ensuring availability during:
+
 - Cloudflare outages
 - DNS propagation issues
 - TLS certificate problems

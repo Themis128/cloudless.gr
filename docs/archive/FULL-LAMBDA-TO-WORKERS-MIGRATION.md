@@ -1,6 +1,7 @@
 # Full Lambda → Workers Migration Plan
 
 ## Current State
+
 - **221 API route.ts files** total
 - **Workers migrated:** auth, subscribe, unsubscribe, chat, cron, analytics (7 endpoints)
 - **Lambda remaining:** ~214 routes still on AWS via SST
@@ -8,6 +9,7 @@
 ## Route Categories & Migration Complexity
 
 ### Tier 1: Core Business Logic (HIGH PRIORITY)
+
 | Routes | Count | Complexity | Notes |
 |--------|-------|------------|-------|
 | `/api/contact` | 1 | Medium | SES → Email binding, Slack webhook |
@@ -19,6 +21,7 @@
 | `/api/user/purchases` | 1 | Low | Stripe data |
 
 ### Tier 2: Cron Jobs (HIGHEST PRIORITY - Infrastructure)
+
 | Route | Schedule | Complexity | Dependencies |
 |-------|----------|------------|--------------|
 | `/api/cron/analytics-rollup` | Daily 01:00 UTC | High | Notion API, Slack |
@@ -34,6 +37,7 @@
 | `/api/cron/owner-digest` | Scheduled | Medium | Various APIs |
 
 ### Tier 3: Chat & AI (MEDIUM PRIORITY)
+
 | Routes | Count | Notes |
 |--------|-------|-------|
 | `/api/chat` | 1 | Bedrock → Workers AI |
@@ -43,6 +47,7 @@
 | `/api/admin/ai/*` | 10+ | Workers AI, D1 storage |
 
 ### Tier 4: Content & CMS (MEDIUM PRIORITY)
+
 | Routes | Count | Notes |
 |--------|-------|-------|
 | `/api/blog/*` | 2 | Notion API |
@@ -52,6 +57,7 @@
 | `/api/admin/notion/*` | 10+ | Notion API management |
 
 ### Tier 5: Admin & Analytics (LOW PRIORITY - Admin only)
+
 | Routes | Count | Notes |
 |--------|-------|-------|
 | `/api/admin/analytics/*` | 15+ | GSC, DuckDB-wasm, D1 |
@@ -63,6 +69,7 @@
 | `/api/admin/subscriptions` | 1 | Stripe |
 
 ### Tier 6: Webhooks & Integrations (LOW PRIORITY)
+
 | Routes | Count | Notes |
 |--------|-------|-------|
 | `/api/webhooks/*` | 8 | Various external services |
@@ -94,6 +101,7 @@
 ## Migration Steps
 
 ### Phase 1: Infrastructure (Week 1)
+
 - [ ] Add missing D1 databases to wrangler.json
 - [ ] Migrate DynamoDB tables to D1 schemas
 - [ ] Add Workers AI binding
@@ -101,6 +109,7 @@
 - [ ] Create Workers Cron triggers
 
 ### Phase 2: Core Routes (Week 2-3)
+
 - [ ] `/api/contact` - Email + Slack
 - [ ] `/api/checkout` - Stripe
 - [ ] `/api/webhooks/stripe` - Stripe webhook
@@ -108,28 +117,33 @@
 - [ ] `/api/subscribe` - Email
 
 ### Phase 3: Cron Jobs (Week 2)
+
 - [ ] Migrate all 11 cron handlers to Workers format
 - [ ] Add Cron Triggers to wrangler.json
 - [ ] Remove from sst.config.ts
 
 ### Phase 4: Chat & AI (Week 3-4)
+
 - [ ] `/api/chat` - Workers AI
 - [ ] `/api/chat-ai` - Workers AI
 - [ ] `/api/recommendations` - AI + D1
 - [ ] `/api/admin/ai/*` - AI endpoints
 
 ### Phase 5: Content & CMS (Week 4-5)
+
 - [ ] `/api/blog/*` - Notion
 - [ ] `/api/docs/*` - Notion
 - [ ] `/api/admin/notion/*` - Notion management
 
 ### Phase 6: Admin & Analytics (Week 5-6)
+
 - [ ] `/api/admin/analytics/*` - GSC, stats
 - [ ] `/api/admin/campaigns/*` - Ad APIs
 - [ ] `/api/admin/crm/*` - CRM
 - [ ] `/api/admin/postiz/*` - Social
 
 ### Phase 7: Cleanup (Week 6)
+
 - [ ] Remove SST infrastructure
 - [ ] Remove DynamoDB tables
 - [ ] Remove Cognito
@@ -138,6 +152,7 @@
 ## Key Technical Changes Required
 
 ### AWS SDK → Workers Bindings
+
 - `@aws-sdk/client-dynamodb` → `env.DB.prepare()` (D1)
 - `@aws-sdk/client-s3` → `env.BUCKET.get/put()` (R2)
 - `@aws-sdk/client-ses` → `env.EMAIL.send()` (Email)
@@ -145,6 +160,7 @@
 - `@aws-sdk/client-cognito` → D1 queries
 
 ### Next.js API Route → Workers Handler
+
 ```typescript
 // Before (Next.js)
 export async function POST(request: NextRequest) {
@@ -164,6 +180,7 @@ export default {
 ```
 
 ### Cron Jobs Migration
+
 ```json
 // Add to wrangler.json
 {
@@ -188,6 +205,7 @@ export default {
 | API key exposure | High | Use Wrangler secrets properly |
 
 ## Estimated Effort
+
 - **Total routes:** 221
 - **Lines of code:** ~15,000-20,000
 - **Developer time:** 6-8 weeks (1 dev)

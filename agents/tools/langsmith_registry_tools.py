@@ -4,7 +4,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -18,7 +18,6 @@ from tools.langsmith_api import (
     ManagedDeepAgentsClient,
 )
 from tools.langsmith_api.endpoints import get_endpoint, list_endpoints
-
 
 CLIENTS = {
     "langsmith": LangSmithClient,
@@ -46,8 +45,8 @@ def describe_langsmith_endpoint(name: str) -> str:
 
 def call_registered_langsmith_endpoint(
     name: str,
-    params_json: Optional[str] = None,
-    body_json: Optional[str] = None,
+    params_json: str | None = None,
+    body_json: str | None = None,
     max_pages: int = 1,
 ) -> str:
     """Call a registered endpoint only. Protected endpoints require LANGSMITH_API_KEY."""
@@ -59,8 +58,8 @@ def call_registered_langsmith_endpoint(
     if endpoint.get("auth_required") and not os.getenv("LANGSMITH_API_KEY"):
         return "Blocked: endpoint requires LANGSMITH_API_KEY, but it is not configured."
 
-    params: Optional[Dict[str, Any]] = json.loads(params_json) if params_json else None
-    body: Optional[Dict[str, Any]] = json.loads(body_json) if body_json else None
+    params: dict[str, Any] | None = json.loads(params_json) if params_json else None
+    body: dict[str, Any] | None = json.loads(body_json) if body_json else None
 
     client = CLIENTS[endpoint["client"]].from_env()
     method = endpoint["method"]

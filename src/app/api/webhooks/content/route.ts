@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
 
   let body: WebhookPayload;
   try {
-    body = (await request.json()) as any;
+    body = (await request.json()) as WebhookPayload;
   } catch (err) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;

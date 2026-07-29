@@ -1,17 +1,6 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { D1Database } from "@cloudflare/workers-types";
-import {
-  recordNotification,
-  sendActivationEmail,
-  notifyTeam,
-  slackRegistrationNotify,
-  hashPassword,
-  verifyPassword,
-  rateLimit,
-  getClientIp,
-} from "@/lib/auth-utils";
-
 const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
 type RefreshTokenError = typeof REFRESH_TOKEN_ERROR;
 type NextAuthResult = ReturnType<typeof NextAuth>;
@@ -82,13 +71,11 @@ function resolveAuthEnv(): AuthEnv {
  */
 async function handleSignIn(
   token: JWT,
-  user: { id: string; email: string; fullName?: string }
+  _user: { id: string; email: string; fullName?: string }
 ): Promise<JWT> {
   const userId = token.sub ?? "";
   if (userId) {
-    await AUTH_DB.prepare(
-      "INSERT INTO sessions (user_id, expires_at) VALUES (?, ?)"
-    )
+    await AUTH_DB.prepare("INSERT INTO sessions (user_id, expires_at) VALUES (?, ?)")
       .bind(userId, Math.floor(Date.now() / 1000) + 3600 * 24) // 24-hour expiry
       .run();
     token.tokensPersisted = true;
@@ -169,9 +156,7 @@ function buildNextAuth(env: AuthEnv): NextAuthResult {
         const userId = "token" in message ? message.token?.sub : undefined;
         if (userId) {
           try {
-            await AUTH_DB.prepare("DELETE FROM sessions WHERE user_id = ?")
-              .bind(userId)
-              .run();
+            await AUTH_DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
           } catch {
             // Best-effort cleanup
           }

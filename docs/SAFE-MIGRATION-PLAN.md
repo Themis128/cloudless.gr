@@ -160,6 +160,7 @@ import { D1Adapter } from "lucia-adapter-d1";
 ### 3.3 Registration Flow
 
 Create `src/app/api/auth/register/route.ts`:
+
 - Verify email uniqueness
 - Hash password with bcrypt
 - Create user record in D1
@@ -182,17 +183,20 @@ AWS_PROFILE=default npx tsx scripts/migrate-dynamodb-to-d1.ts
 ### 4.2 Update Application Code
 
 Replace imports in:
+
 - `src/app/api/user/purchases/route.ts` (StripeTransactions)
 - `src/app/api/user/consultations/route.ts` (Calendar bookings)
 - `src/app/api/admin/users/route.ts` (UserProfile)
 - `src/app/api/admin/analytics/route.ts` (AnalyticsCache)
 
 Replace:
+
 ```typescript
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 ```
 
 With:
+
 ```typescript
 // Fetch via API routes or direct D1 queries
 import { AUTH_DB } from "wrangler.jsonc";
@@ -205,6 +209,7 @@ import { AUTH_DB } from "wrangler.jsonc";
 ### 5.1 DuckDB-Wasm Setup
 
 Client-side analytics implementation in `src/lib/analytics-client.ts`:
+
 - Stream parquet files from R2
 - Run queries in browser
 - Cache results in localStorage
@@ -297,6 +302,7 @@ npx wrangler d1 list
 **Option A: Update wrangler.jsonc routes (Recommended)**
 
 If wrangler.jsonc already has routes configured and domain is on Cloudflare:
+
 ```bash
 # Deploy to production
 npx wrangler deploy
@@ -335,6 +341,7 @@ watch -n 300 'curl -sI https://cloudless.gr/api/health'
 If issues arise, execute in order:
 
 1. **DNS Revert**
+
    ```bash
    # Point cloudless.gr back to CloudFront
    # Keep Workers deployment as backup
@@ -345,6 +352,7 @@ If issues arise, execute in order:
    - No password reset needed (original auth restored)
 
 3. **Data Sync**
+
    ```bash
    # Sync D1 changes back to DynamoDB if any occurred
    npx tsx scripts/d1-to-dynamodb-backup.ts

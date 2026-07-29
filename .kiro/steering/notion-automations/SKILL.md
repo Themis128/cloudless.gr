@@ -28,6 +28,7 @@ automation fires when **any** trigger occurs or when **all** triggers occur.
 | **Every {frequency}** | Recurring on a schedule (daily, weekly, monthly, etc.) | Configurable start/end dates and timezone. **Cannot** be combined with other trigger types |
 
 ### Multi-trigger timing
+
 When multiple `is edited` triggers must **all** occur, the edits must happen
 within a ~3 second window. If that's too restrictive, use separate automations.
 
@@ -79,6 +80,7 @@ Value: dateBetween(now(), prop("Due Date"), "days")
 Then reference `overdue_days` in subsequent actions (e.g., email body, property edits).
 
 This enables patterns like:
+
 - Marking sub-tasks complete when a parent task completes
 - Calculating derived values and writing them to properties
 - Conditional branching across multiple actions
@@ -95,6 +97,7 @@ Edit property, Add page to, Edit pages in, Send notification,
 Send mail to, Send webhook, Send Slack notification, Define variables.
 
 ### Database Buttons vs Inline Buttons
+
 - **Database buttons**: A property column; each row has the same button config.
 - **Inline buttons**: Placed anywhere in a page's content.
 
@@ -139,23 +142,28 @@ Send mail to, Send webhook, Send Slack notification, Define variables.
 ## Common Workflow Patterns
 
 ### Auto-assign status on creation
+
 - **Trigger**: Page added
 - **Action**: Edit property → Status = "New"
 
 ### Notify team on high-priority items
+
 - **Trigger**: Priority is set to "Urgent"
 - **Action**: Send notification to @channel-owner
 
 ### Sync to external system via webhook
+
 - **Trigger**: Status is set to "Approved"
 - **Action**: Send webhook → your API endpoint (include Name, ID, Status properties)
 
 ### Auto-complete parent when all children done
+
 - **Trigger**: Status is edited
 - **Action**: Define variable: `all_done = prop("Sub-tasks").every(current.prop("Status") == "Done")`
 - **Action**: If all_done → Edit pages in parent DB → Status = "Done"
 
 ### Weekly digest email
+
 - **Trigger**: Every Monday at 9:00 AM
 - **Action**: Send mail to team → Subject: "Weekly Project Update"
 

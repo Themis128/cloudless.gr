@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";

@@ -68,6 +68,7 @@ Navbar (sticky, dark, logo left, nav right)
 Current spacing uses Tailwind's `py-20 lg:py-28` for sections. This creates the right rhythm for content-heavy sections but causes excessive whitespace when sections have less content.
 
 **Guideline for fixes**:
+
 - Content-heavy sections: `py-16 lg:py-24` is usually sufficient
 - Light sections (badges, stats): `py-10 lg:py-14`
 - Hero: Uses explicit height via content, not padding

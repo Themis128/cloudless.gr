@@ -13,11 +13,6 @@ export async function getStripe(): Promise<Stripe | null> {
   return stripeInstance;
 }
 
-function isStripeConfigured() {
-  const stripe = stripeInstance;
-  return stripe !== null && stripe !== undefined;
-}
-
 // ---------------------------------------------------------------------------
 // Orders — fetch recent checkout sessions from Stripe
 // ---------------------------------------------------------------------------

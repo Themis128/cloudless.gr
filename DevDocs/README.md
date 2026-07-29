@@ -12,6 +12,7 @@ This folder contains technical documentation for development operations, archite
 ## Document Structure
 
 All DevDocs follow a consistent structure:
+
 1. **Status Overview** - Current state and progress
 2. **Technical Details** - Implementation specifics
 3. **Actionable Commands** - Copy-paste scripts and commands
@@ -20,11 +21,13 @@ All DevDocs follow a consistent structure:
 ## Related Documentation
 
 Core system documentation is maintained in `.clinerules/`:
+
 - `.clinerules/aws-to-cloudflare-migration.md` - Migration playbook
 - `.clinerules/migration-completion.md` - Completion report
 - `.clinerules/cloudless-architecture.md` - Architecture overview
 
 Operational status files:
+
 - `ACTIONS-REQUIRED.md` - Action items and verification status
 - `pending-actions-runbook.md` - Current runbook
 - `CLOUDFLARE-TUNNEL-MIGRATION.md` - Tunnel setup and fixes
@@ -32,6 +35,7 @@ Operational status files:
 - `ARCHITECTURE-MAP.md` - Detailed architecture map
 
 See also:
+
 - `docs/` - General project documentation
 - `ops/` - Operational playbooks and scripts
 - `.github/workflows/` - CI/CD and deployment automation

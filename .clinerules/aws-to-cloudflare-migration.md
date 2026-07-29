@@ -18,20 +18,24 @@ All critical AWS services have been migrated to Cloudflare equivalents. The infr
 ## ETL Migration Status
 
 ### scripts/etl/espocrm-to-r2.mjs ✅ COMPLETE
+
 - **S3 → R2**: Uses `_r2-config.mjs` with R2 endpoint
 - **SSM → GitHub Secrets**: Migrated in commit `6a249a65` - uses `ESPOCRM_API_KEY` or `ESPOCRM_API_PASSWORD` from GitHub secrets
 
 ### scripts/etl/espocrm-to-lake.mjs (legacy S3 version)
+
 - Uses AWS SDK S3Client pointing to S3
 - Uses SSM for credentials
 - **Note**: Deprecated - use `espocrm-to-r2.mjs` instead
 
 ### scripts/etl/clients-to-lake.mjs
+
 - Uses SSMClient for `PENDING_CLIENTS_JSON` and `CLIENT_PORTALS_JSON` (legacy)
 - Uses S3Client for S3 (legacy)
 - **Status**: ⏳ Migrated to clients-to-r2.mjs (uses D1 via `/api/config` endpoint)
 
 ### scripts/etl/clients-to-r2.mjs ✅ COMPLETE
+
 - Migrated SSM → D1 for config access (`loadConfigFromD1()` function)
 - Uses `getS3Client()` for R2-compatible storage
 - **Status**: Ready for deployment (verified 2026-07-20)
@@ -39,9 +43,11 @@ All critical AWS services have been migrated to Cloudflare equivalents. The infr
 ### scripts/etl/linkedin-ads-to-lake.mjs ✅ COMPLETE
 
 ### scripts/etl/postiz-to-lake.mjs ✅ COMPLETE
+
 - Migrated in commit `af41adec` - uses `getS3Client()` and `POSTIZ_API_KEY` from env
 
 ### scripts/etl/appflowy-to-lake.mjs ✅ COMPLETE
+
 - Migrated in commit `af41adec` - uses `getS3Client()` for R2 storage
 
 ## Migration Strategy
@@ -61,6 +67,7 @@ All critical AWS services have been migrated to Cloudflare equivalents. The infr
 ## Required Secrets (All Migrated to Wrangler)
 
 All secrets have been migrated as of 2026-07-19:
+
 ```
 ADMIN_ALERT_SECRET ✅
 ESPOCRM_API_KEY ✅
@@ -72,6 +79,7 @@ POSTIZ_API_KEY ✅
 ## Environment Setup
 
 The ETL workflow sets `SSM_DISABLED=1`. Scripts use:
+
 - `process.env.ESPOCRM_API_KEY` (from Wrangler secret)
 - `process.env.ESPOCRM_API_PASSWORD` (from Wrangler secret)
 - `getS3Client()` from `_r2-config.mjs` for R2-compatible storage
@@ -79,6 +87,7 @@ The ETL workflow sets `SSM_DISABLED=1`. Scripts use:
 ## Completed Files
 
 All ETL scripts have been migrated:
+
 - ✅ `.github/workflows/etl-espocrm-to-r2.yml` - Uses Wrangler secrets (no SSM/AWS)
 - ✅ `scripts/etl/espocrm-to-r2.mjs` - Uses `getS3Client()` + GitHub secrets
 - ✅ `scripts/etl/linkedin-ads-to-lake.mjs` - Uses `getS3Client()` + env vars

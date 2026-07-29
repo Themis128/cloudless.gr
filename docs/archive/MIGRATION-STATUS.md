@@ -3,11 +3,13 @@
 ## Completed Changes (6 files, ~60 lines)
 
 ### Files Modified:
+
 1. **fly.toml** - PRIMARY_HOST = `cloudless.gr` (was CloudFront)
 2. **fly-proxy-app/proxy.py** - Backend check updated to Cloudflare
 3. **scripts/sync-ssm-to-wrangler.ts** - All 20 secrets mapped for migration
 
 ### Files Created:
+
 1. **scripts/dynamodb-migration-policy.json** - IAM policy for all 5 tables
 2. **scripts/add-dynamodb-migration-permissions.sh** - IAM setup script
 3. **scripts/create-dynamodb-policy.py** - Alternative policy creator
@@ -18,22 +20,27 @@
 ## Execution Results:
 
 ### ✅ Secrets Sync: SUCCESS (15/20 synced)
+
 - AUTH_SECRET, CRON_SECRET, STRIPE_* keys synced
 - Missing: SESSION_SECRET, ANTHROPIC_CHAT_MODEL, SLACK_WEBHOOK_URL, etc.
 
 ### ✅ IAM Policy: CREATED
+
 - Policy `cloudless-dynamodb-migration` created
 - Attached to `cloudless-ops` user
 
 ### ❌ DynamoDB Migration: PENDING
+
 - Script ready, needs `wrangler` CLI configured
 - IAM permissions now in place
 
 ### ❌ Fly.io Proxy: PENDING
+
 - flyctl not installed on this machine
 - Run manually: `flyctl deploy --app cloudless-proxy`
 
 ## Remaining AWS Services:
+
 | Service | Tables/Resources | Migration Status |
 |---------|-----------------|----------------|
 | SSM | 4 modules use SSMClient | Script ready |

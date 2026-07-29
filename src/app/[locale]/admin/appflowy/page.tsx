@@ -51,7 +51,7 @@ export default function AppFlowySubmissionsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/submissions");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as {
+      const data = (await res.json()) as {
         submissions: Submission[];
         count: number;
       };
@@ -64,7 +64,13 @@ export default function AppFlowySubmissionsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const updateStatus = async (pageId: string, status: StatusValue) => {

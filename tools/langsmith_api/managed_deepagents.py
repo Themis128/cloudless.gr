@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .base import APIResponse, BaseAPIClient
 
@@ -13,7 +13,7 @@ class ManagedDeepAgentsClient(BaseAPIClient):
     """
 
     @classmethod
-    def from_env(cls) -> "ManagedDeepAgentsClient":
+    def from_env(cls) -> ManagedDeepAgentsClient:
         import os
 
         return cls(
@@ -29,8 +29,8 @@ class ManagedDeepAgentsClient(BaseAPIClient):
         method: str,
         path: str,
         *,
-        params: Optional[Dict[str, Any]] = None,
-        json_body: Optional[Any] = None,
+        params: dict[str, Any] | None = None,
+        json_body: Any | None = None,
     ) -> APIResponse:
         return self.request(method, path, params=params, json_body=json_body)
 
@@ -41,19 +41,19 @@ class ManagedDeepAgentsClient(BaseAPIClient):
     def list_agents(self, **params: Any) -> Any:
         return self.get("/agents", params=params).data
 
-    def create_agent(self, payload: Dict[str, Any]) -> Any:
+    def create_agent(self, payload: dict[str, Any]) -> Any:
         return self.post("/agents", json_body=payload).data
 
     def get_agent(self, agent_id: str) -> Any:
         return self.get(f"/agents/{agent_id}").data
 
-    def update_agent(self, agent_id: str, payload: Dict[str, Any]) -> Any:
+    def update_agent(self, agent_id: str, payload: dict[str, Any]) -> Any:
         return self.patch(f"/agents/{agent_id}", json_body=payload).data
 
     def delete_agent(self, agent_id: str) -> Any:
         return self.delete(f"/agents/{agent_id}").data
 
-    def clone_agent(self, agent_id: str, payload: Optional[Dict[str, Any]] = None) -> Any:
+    def clone_agent(self, agent_id: str, payload: dict[str, Any] | None = None) -> Any:
         return self.post(f"/agents/{agent_id}/clone", json_body=payload or {}).data
 
     def check_agent_health(self, agent_id: str) -> Any:
@@ -66,38 +66,38 @@ class ManagedDeepAgentsClient(BaseAPIClient):
     def list_threads(self, **params: Any) -> Any:
         return self.get("/threads", params=params).data
 
-    def create_thread(self, payload: Dict[str, Any]) -> Any:
+    def create_thread(self, payload: dict[str, Any]) -> Any:
         return self.post("/threads", json_body=payload).data
 
     def get_thread(self, thread_id: str) -> Any:
         return self.get(f"/threads/{thread_id}").data
 
-    def update_thread(self, thread_id: str, payload: Dict[str, Any]) -> Any:
+    def update_thread(self, thread_id: str, payload: dict[str, Any]) -> Any:
         return self.patch(f"/threads/{thread_id}", json_body=payload).data
 
     def delete_thread(self, thread_id: str) -> Any:
         return self.delete(f"/threads/{thread_id}").data
 
-    def search_threads(self, payload: Dict[str, Any]) -> Any:
+    def search_threads(self, payload: dict[str, Any]) -> Any:
         return self.post("/threads/search", json_body=payload).data
 
-    def count_threads(self, payload: Optional[Dict[str, Any]] = None) -> Any:
+    def count_threads(self, payload: dict[str, Any] | None = None) -> Any:
         return self.post("/threads/count", json_body=payload or {}).data
 
     # -------------------------------------------------------------------------
     # Runs
     # -------------------------------------------------------------------------
 
-    def create_thread_run(self, thread_id: str, payload: Dict[str, Any]) -> Any:
+    def create_thread_run(self, thread_id: str, payload: dict[str, Any]) -> Any:
         return self.post(f"/threads/{thread_id}/runs", json_body=payload).data
 
-    def create_thread_and_run(self, payload: Dict[str, Any]) -> Any:
+    def create_thread_and_run(self, payload: dict[str, Any]) -> Any:
         return self.post("/threads/runs", json_body=payload).data
 
-    def stream_thread_run(self, thread_id: str, payload: Dict[str, Any]) -> Any:
+    def stream_thread_run(self, thread_id: str, payload: dict[str, Any]) -> Any:
         return self.post(f"/threads/{thread_id}/runs/stream", json_body=payload).data
 
-    def resolve_interrupt(self, thread_id: str, run_id: str, payload: Dict[str, Any]) -> Any:
+    def resolve_interrupt(self, thread_id: str, run_id: str, payload: dict[str, Any]) -> Any:
         return self.post(
             f"/threads/{thread_id}/runs/{run_id}/interrupt",
             json_body=payload,
@@ -110,13 +110,13 @@ class ManagedDeepAgentsClient(BaseAPIClient):
     def list_mcp_servers(self, **params: Any) -> Any:
         return self.get("/mcp-servers", params=params).data
 
-    def create_mcp_server(self, payload: Dict[str, Any]) -> Any:
+    def create_mcp_server(self, payload: dict[str, Any]) -> Any:
         return self.post("/mcp-servers", json_body=payload).data
 
     def get_mcp_server(self, server_id: str) -> Any:
         return self.get(f"/mcp-servers/{server_id}").data
 
-    def update_mcp_server(self, server_id: str, payload: Dict[str, Any]) -> Any:
+    def update_mcp_server(self, server_id: str, payload: dict[str, Any]) -> Any:
         return self.patch(f"/mcp-servers/{server_id}", json_body=payload).data
 
     def delete_mcp_server(self, server_id: str) -> Any:
@@ -125,14 +125,14 @@ class ManagedDeepAgentsClient(BaseAPIClient):
     def list_mcp_tools(self, server_id: str, **params: Any) -> Any:
         return self.get(f"/mcp-servers/{server_id}/tools", params=params).data
 
-    def register_oauth_provider(self, server_id: str, payload: Dict[str, Any]) -> Any:
+    def register_oauth_provider(self, server_id: str, payload: dict[str, Any]) -> Any:
         return self.post(f"/mcp-servers/{server_id}/oauth-provider", json_body=payload).data
 
     # -------------------------------------------------------------------------
     # Auth sessions
     # -------------------------------------------------------------------------
 
-    def start_auth_session(self, payload: Dict[str, Any]) -> Any:
+    def start_auth_session(self, payload: dict[str, Any]) -> Any:
         return self.post("/auth-sessions", json_body=payload).data
 
     def get_auth_session(self, session_id: str) -> Any:

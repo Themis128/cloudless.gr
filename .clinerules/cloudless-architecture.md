@@ -41,6 +41,7 @@ Visitor → /contact form → [app]
 ## Migration Completion Status
 
 ### Completed (✓)
+
 - [x] R2 buckets created: cloudless-assets, cloudless-analytics, app-media-bucket, datalake-bucket
 - [x] D1 database created: user-auth-db
 - [x] Wrangler configuration ready: wrangler.jsonc, wrangler-cloudflare-free.json
@@ -52,6 +53,7 @@ Visitor → /contact form → [app]
 - [x] DevDocs integration complete with migration-completion.md
 
 ### Remaining Tasks
+
 - [ ] Restart Cline to load MCP configuration changes
 - [ ] Configure 2TB SSD mount for analytics storage (/sdb1)
 - [ ] Update MinIO credentials from `minioadmin` defaults (security risk)
@@ -62,6 +64,7 @@ Visitor → /contact form → [app]
 **Tunnel ID**: e977a490-58c5-4fdb-9155-86832e3e636a
 
 ### All Services Operational (11/11)
+
 | Service | Namespace | NodePort | Tunnel Host | Status |
 |---------|-----------|----------|-------------|--------|
 | grafana | monitoring | 30850 | grafana.cloudless.gr | ✅ Running + tunnel working |
@@ -77,6 +80,7 @@ Visitor → /contact form → [app]
 ## MCP Tools Available
 
 The fast-markdown-mcp server provides:
+
 - `sync_file` - Force sync a specific file
 - `read_file` - Read content of a markdown file
 - `list_files` - List all available markdown files

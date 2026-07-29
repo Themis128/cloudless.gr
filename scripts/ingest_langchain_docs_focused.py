@@ -1,13 +1,12 @@
 import re
 import shutil
-import requests
 from pathlib import Path
-from urllib.parse import urljoin
 
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import requests
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 LLMS_TXT_URL = "https://docs.langchain.com/llms.txt"
 PERSIST_DIR = ".deepagents/langchain_docs_chroma"
@@ -19,10 +18,19 @@ SEED_URLS = [
     ("Deep Agents quickstart", "https://docs.langchain.com/oss/python/deepagents/quickstart.md"),
     ("LangChain agents overview", "https://docs.langchain.com/oss/python/langchain/agents.md"),
     ("LangChain tools", "https://docs.langchain.com/oss/python/langchain/tools.md"),
-    ("LangSmith tracing quickstart", "https://docs.langchain.com/langsmith/observability-quickstart.md"),
+    (
+        "LangSmith tracing quickstart",
+        "https://docs.langchain.com/langsmith/observability-quickstart.md",
+    ),
     ("LangSmith observability", "https://docs.langchain.com/langsmith/observability.md"),
-    ("Deploy a Managed Deep Agent", "https://docs.langchain.com/langsmith/managed-deep-agents-deploy.md"),
-    ("Managed Deep Agents overview", "https://docs.langchain.com/langsmith/managed-deep-agents-overview.md"),
+    (
+        "Deploy a Managed Deep Agent",
+        "https://docs.langchain.com/langsmith/managed-deep-agents-deploy.md",
+    ),
+    (
+        "Managed Deep Agents overview",
+        "https://docs.langchain.com/langsmith/managed-deep-agents-overview.md",
+    ),
     ("Managed Deep Agents CLI", "https://docs.langchain.com/langsmith/managed-deep-agents-cli.md"),
 ]
 

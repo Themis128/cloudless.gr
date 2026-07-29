@@ -8,6 +8,7 @@ The Meta Marketing API enables creating, managing, and reporting on ad campaigns
 **Auth:** Bearer token (same as Graph API — needs `ads_management` + `ads_read` permissions)
 
 **Cloudless Account IDs:**
+
 - Ad Account: `act_657781691826702` (Themistoklis Baltzakis)
 - Facebook Page: `116436681562585`
 - App ID: `1936126137016578`
@@ -294,6 +295,7 @@ GET /act_657781691826702/insights
 ### Breakdown Dimensions
 
 Add `&breakdowns=` with:
+
 - `age`, `gender`, `age,gender`
 - `country`, `region`
 - `publisher_platform`, `platform_position`

@@ -1,9 +1,11 @@
 # Post-Powercycle Cluster Status Report
+
 # Generated: 2026-07-19 20:22 UTC
 
 ## Current Status
 
 ### Tailscale Network Status
+
 ```
 100.121.191.7   cloudless-k3s-operator  ✅ Active (this machine)
 100.74.191.58   github-omv              ❌ Offline (last seen 10h ago)
@@ -11,6 +13,7 @@
 ```
 
 ### GitHub Actions Workflow Run
+
 - **k3s-ssh-restart (#29696311213):** Completed but couldn't connect to Pi
 - **Reason:** The `github-omv` node was offline when the workflow ran
 - **Warning:** TS_AUTHKEY is deprecated (OAuth recommended)
@@ -18,6 +21,7 @@
 ## Recovery Options
 
 ### Option 1: Tailscale Reconnect Agent (Recommended)
+
 This workflow will attempt to reconnect Tailscale services once the Pi is online:
 
 ```bash
@@ -28,17 +32,21 @@ gh workflow run .github/workflows/tailscale-reconnect-agent.yml \
 ```
 
 Or manually:
+
 1. Go to https://github.com/Themis128/cloudless.gr/actions/workflows/tailscale-reconnect-agent.yml
 2. Click "Run workflow"
 3. Leave default settings (target=all, restart_tailscale_daemon=true)
 
 ### Option 2: Re-run k3s SSH Restart (when Pi is online)
+
 ```bash
 gh workflow run .github/workflows/k3s-ssh-restart.yml --repo Themis128/cloudless.gr
 ```
 
 ### Option 3: Manual SSH (when on LAN)
+
 If you're on the local network:
+
 ```bash
 # SSH directly to the Pi
 ssh tbaltzakis@192.168.1.128
@@ -98,6 +106,7 @@ kubectl get pods -n appflowy -o wide
 ## Secrets Status (Verified)
 
 ✅ All required secrets configured:
+
 - TS_CLIENT_ID, TS_CLIENT_SECRET (OAuth)
 - OMV_SSH_KEY (for SSH access)
 - KUBECONFIG_B64 (for kubectl access)

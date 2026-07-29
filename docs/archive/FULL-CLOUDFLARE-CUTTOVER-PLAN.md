@@ -1,7 +1,9 @@
 # Full Cloudflare Workers Migration Plan
+
 ## AWS to Cloudflare Workers Cutover - Cloudless.gr
 
 ### Executive Summary
+
 This plan completes the migration of cloudless.gr from AWS (Lambda@Edge, Lambda, DynamoDB, S3, CloudFront, Athena, Bedrock, SSM) to Cloudflare Workers (Free Tier) with Fly.io providing HA failover. The Workers entry point (`src/index-cloudflare-free.js`) already handles Auth, Static Assets, Analytics, and Chat. Remaining 200+ Lambda routes need to be migrated.
 
 ---
@@ -50,6 +52,7 @@ This plan completes the migration of cloudless.gr from AWS (Lambda@Edge, Lambda,
 ### Phase 1: Data Migration (Critical Path)
 
 #### 1.1 DynamoDB → D1 Migration
+
 **Status: Blocked - IAM Permissions**
 
 Required: `dynamodb:Scan` permission for `cloudless-ops` user
@@ -63,6 +66,7 @@ CLOUDFLARE_API_TOKEN=$CF_TOKEN AWS_PROFILE=default pnpm tsx scripts/migrate-dyna
 ```
 
 **Tables to migrate:**
+
 | DynamoDB Table | D1 Table | Records |
 |---------------|----------|---------|
 | cloudless-production-UserProfileTable | user | ~1,000 |
@@ -72,6 +76,7 @@ CLOUDFLARE_API_TOKEN=$CF_TOKEN AWS_PROFILE=default pnpm tsx scripts/migrate-dyna
 | cloudless-production-AnalyticsCacheTable | analytics_cache | ~50 |
 
 #### 1.2 S3 → R2 Migration (Assets & Data Lake)
+
 **Status: Script ready**
 
 ```bash
@@ -88,6 +93,7 @@ pnpm tsx scripts/migrate-s3-to-r2.mjs cloudless-analytics-data
 ### Phase 2: API Routes Migration
 
 #### 2.1 Critical Routes (Priority 1)
+
 These routes have direct Cloudflare replacements:
 
 | Route | AWS Service | Cloudflare Replacement | Worker Code Status |
@@ -98,6 +104,7 @@ These routes have direct Cloudflare replacements:
 | `/api/webhooks/stripe` | Lambda | Worker webhook handler | ❌ Not migrated |
 
 #### 2.2 Analytics Routes (Priority 2)
+
 Athena → DuckDB-Wasm migration:
 
 | Route | Purpose | Replacement |
@@ -109,6 +116,7 @@ Athena → DuckDB-Wasm migration:
 #### 2.3 Lambda@Edge Migration (Priority: HIGH)
 
 Since CloudFront has been deleted, any Lambda@Edge functions you had for:
+
 - A/B testing at the edge
 - Geo-routing
 - Header rewrites
@@ -117,6 +125,7 @@ Since CloudFront has been deleted, any Lambda@Edge functions you had for:
 These should be migrated to **Workers middleware** patterns. Cloudflare Workers runs at the edge by default, making Lambda@Edge unnecessary.
 
 **Lambda@Edge → Workers Middleware Examples:**
+
 ```typescript
 // src/middleware/ab-testing.ts
 export async function abTestingMiddleware(request: Request, env: Env): Promise<Response | null> {
@@ -148,6 +157,7 @@ export async function geoRedirectMiddleware(request: Request, env: Env): Promise
 ```
 
 #### 2.4 Lambda Routes to Worker Endpoints
+
 The following route categories need migration (221 total routes):
 
 **Migration Strategy:** Selective cut-over per category
@@ -194,6 +204,7 @@ Current Lambda cron schedule:
 ### Phase 4: Secrets & Configuration
 
 #### 4.1 Missing Secrets (from sync-ssm-to-wrangler.ts)
+
 ```bash
 # Set missing secrets manually if not in SSM
 echo "secret_value" | npx wrangler secret put SESSION_SECRET
@@ -202,6 +213,7 @@ echo "secret_value" | npx wrangler secret put SLACK_WEBHOOK_URL
 ```
 
 Required secrets:
+
 - `SESSION_SECRET` - Auth session signing
 - `ANTHROPIC_API_KEY` - Fallback for chat (if Workers AI unavailable)
 - `SLACK_WEBHOOK_URL` - Notifications
@@ -214,6 +226,7 @@ Required secrets:
 ### Phase 5: Fly.io HA Failover Update
 
 **Current fly.toml:**
+
 - PRIMARY_HOST: `cloudless.gr` (✅ Workers)
 - FALLBACK_HOST: `github-omv.tail4ecae1.ts.net` (Pi via Tailscale)
 
@@ -232,6 +245,7 @@ If you want to keep Lambda as secondary instead of/ in addition to Pi:
 ### Phase 6: Validation & Cutover
 
 #### 6.1 Pre-Cutover Checklist
+
 - [ ] All secrets synced to Wrangler
 - [ ] DynamoDB data migrated to D1
 - [ ] S3 data migrated to R2
@@ -242,6 +256,7 @@ If you want to keep Lambda as secondary instead of/ in addition to Pi:
 - [ ] Client-side analytics (DuckDB-Wasm) tested
 
 #### 6.2 Gradual Cutover Strategy
+
 ```bash
 # 1. Deploy updated Worker with additional routes
 pnpm cf:deploy:free
@@ -255,6 +270,7 @@ flyctl deploy --app cloudless-proxy --image updated-worker
 ```
 
 #### 6.3 Monitoring During Cutover
+
 ```bash
 # Watch Worker logs
 npx wrangler tail cloudless-gr
@@ -271,12 +287,14 @@ npx wrangler d1 query user-auth-db --remote "SELECT COUNT(*) FROM user" --format
 ## Execution Commands
 
 ### Step 1: Fix IAM Permissions
+
 ```bash
 # Add DynamoDB read permissions for migration
 AWS_PROFILE=default pnpm tsx scripts/add-dynamodb-migration-permissions.sh
 ```
 
 ### Step 2: Sync Missing Secrets
+
 ```bash
 # Ensure CLOUDFLARE_API_TOKEN is set
 export CLOUDFLARE_API_TOKEN=$YOUR_TOKEN
@@ -286,12 +304,14 @@ AWS_PROFILE=default pnpm tsx scripts/sync-ssm-to-wrangler.ts
 ```
 
 ### Step 3: Migrate DynamoDB → D1
+
 ```bash
 # Migrate all tables
 CLOUDFLARE_API_TOKEN=$CF_TOKEN AWS_PROFILE=default pnpm tsx scripts/migrate-dynamodb-to-d1.ts
 ```
 
 ### Step 4: Migrate S3 → R2
+
 ```bash
 # Use rclone for large transfers (leveraging CloudShift's expertise)
 rclone sync s3:cloudless-assets r2:cloudless-assets --transfers=10
@@ -299,12 +319,14 @@ rclone sync s3:cloudless-analytics-data r2:datalake-bucket --transfers=10
 ```
 
 ### Step 5: Deploy Worker with All Routes
+
 ```bash
 # Build and deploy
 pnpm cf:build && pnpm cf:deploy:free
 ```
 
 ### Step 6: Configure Fly.io Cron Jobs
+
 ```bash
 # Create scheduled machines for Lambda cron fallback (if needed)
 # Or migrate to Workers Cron Triggers
@@ -332,12 +354,14 @@ If issues arise:
 
 1. **Immediate:** Fly.io falls back to Pi/k3s cluster
 2. **If Pi fails:** Re-deploy old SST stack
+
 ```bash
 # Quick rollback to SST/Lambda
 AWS_PROFILE=default pnpm deploy
 ```
 
 3. **Restore from backup:**
+
 ```bash
 # DynamoDB backup restore
 aws dynamodb restore-table-from-backup --target-table-name user-profile-restored

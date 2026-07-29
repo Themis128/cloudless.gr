@@ -35,6 +35,7 @@ Classic Page Roles (personal-profile Pages) and Portfolio-based Page access have
 ### Managing Page access in a Portfolio
 
 URL pattern:
+
 ```
 https://business.facebook.com/latest/settings/pages?business_id=1558125105019725
 ```
@@ -42,6 +43,7 @@ https://business.facebook.com/latest/settings/pages?business_id=1558125105019725
 Click the Page → "People" tab → Add People → select user → check the task boxes you want to grant.
 
 Tasks you can grant individually:
+
 - **Manage Page** (= Admin)
 - **Create content**
 - **Messages and community activity** (reply to comments, DMs)
@@ -95,6 +97,7 @@ IG accounts come in three flavors:
 ### Switching to a Business account
 
 In the IG mobile app (not web):
+
 1. Tap your profile → hamburger menu → Settings and privacy → Account type and tools
 2. Tap "Switch to professional account"
 3. Pick category (e.g., "Digital creator" or "Business services")
@@ -112,11 +115,13 @@ This is THE distinction that matters. Two ways to link, producing different resu
 **How to identify:** You went to IG app → Settings → Account Center → Connected experiences (or historically "Linked accounts" → Facebook)
 
 **What you get:**
+
 - Your IG posts can auto-cross-post to the linked FB Page
 - Basic cross-profile identity
 - Maybe the IG inbox shows in Business Suite
 
 **What you DON'T get:**
+
 - Full Insights API access
 - Ability to manage IG ads from Ads Manager with full objective support
 - Commerce features
@@ -127,6 +132,7 @@ This is the current cloudless.gr state — the account is linked via the IG app,
 ### 5b. Full-mode link (via the Facebook Page's Instagram tab)
 
 **How to do it:**
+
 1. Go to the FB Page on desktop — **use classic layout, not Pages Experience**. If your Page has been force-upgraded to Pages Experience, go to `https://www.facebook.com/<pageusername>` directly.
 2. Page → Settings → Linked Accounts → Instagram
 3. Click "Connect account" → log in with @cloudless_gr credentials
@@ -134,6 +140,7 @@ This is the current cloudless.gr state — the account is linked via the IG app,
 5. Confirm — the Page should now show the IG account in its Linked Accounts list with "Full access"
 
 **What you get:**
+
 - Everything from lite-mode
 - Full Insights API (media insights, account insights, story insights)
 - Ads Manager can target the IG account directly for all objectives
@@ -148,9 +155,11 @@ You can't "upgrade" in place. You must:
 2. Wait 10-15 minutes (propagation)
 3. On the FB Page: Settings → Linked Accounts → Instagram → Connect (per 5b)
 4. Inside the Portfolio after reconnection, verify at:
+
    ```
    https://business.facebook.com/latest/settings/instagram_accounts?business_id=1558125105019725
    ```
+
    The account should now appear with "Full control" (not "Shared" or "Lite").
 
 **This is the step that unblocks Windsor.ai Instagram connector + proper ads targeting for cloudless.gr.**
@@ -158,11 +167,13 @@ You can't "upgrade" in place. You must:
 ### 5d. cloudless.gr specifics
 
 Per `meta_business_portfolio_diagnosis.md`:
+
 - @cloudless_gr IG currently appears in Portfolio `1526956002406847` (the bogus/empty one) under People → business users
 - This is because of a historical connection path Meta silently migrated
 - Need to: remove from Portfolio 1526956002406847 AND from any lite-mode link, then re-add via Page 116436681562585 (which lives in Portfolio 1558125105019725)
 
 Sequence:
+
 1. Portfolio 1526956002406847 → Settings → Instagram accounts (or People → business users) → Remove @cloudless_gr
 2. IG app → Account Center → Remove any remaining FB connection
 3. FB Page (under Portfolio 1558125105019725) → Linked Accounts → Instagram → Connect → login as @cloudless_gr

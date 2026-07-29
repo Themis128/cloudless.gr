@@ -30,11 +30,3 @@ def test_endpoint_auth_flags_for_public_and_protected_examples():
 
     assert health["auth_required"] is False
     assert fleet["auth_required"] is True
-
-
-def test_endpoint_auth_flags_for_public_and_protected_examples():
-    health = get_endpoint("langsmith.health")
-    fleet = get_endpoint("fleet.connections.list")
-
-    assert health["auth_required"] is False
-    assert fleet["auth_required"] is True

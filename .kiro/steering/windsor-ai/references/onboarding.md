@@ -15,6 +15,7 @@ https://onboard.windsor.ai/app/{connector_id}
 ```
 
 Examples:
+
 - `https://onboard.windsor.ai/app/facebook`
 - `https://onboard.windsor.ai/app/instagram`
 - `https://onboard.windsor.ai/app/linkedin_organic`
@@ -84,16 +85,19 @@ These share a **Meta Business Portfolio** (formerly Business Manager). Before on
 - Review the list of **permissions** the OAuth popup requests and accept all; unchecking any scope will cause certain fields to silently return null.
 
 **cloudless.gr status (2026-04-21):**
+
 - Portfolio `1526956002406847` — EMPTY (no Pages/IG/ad account) — do not try to onboard through this
 - Portfolio `1558125105019725` — has Page `cloudless.gr` (116436681562585) but no ad account yet; next step is to create ad account inside this portfolio
 
 ### LinkedIn (Ads + Organic)
 
 Two separate connectors:
+
 - `linkedin` — Campaign Manager (ads)
 - `linkedin_organic` — Company Page posts and follower analytics
 
 Prerequisites:
+
 - LinkedIn user must be a **Page Admin** (Super admin or Content admin) on the Company Page for `linkedin_organic`
 - For `linkedin` (ads), user must have access to the LinkedIn Ad Account
 - Both connectors use different OAuth scopes — authorizing one does not authorize the other
@@ -127,6 +131,7 @@ Prerequisites:
 ## 5. Windsor account limits
 
 **TRIAL plan (cloudless.gr current):**
+
 - 10 connectors maximum
 - 15 accounts total (one connector can pull from multiple accounts — each counts separately)
 - **Status 2026-04-21:** 4/10 connectors, 4/15 accounts used
@@ -152,6 +157,7 @@ Paid plans raise these limits. Check `subscription-info-limits-and-usage` on the
 ## 7. Revoking / removing a connector
 
 To fully disconnect:
+
 1. Windsor side: onboard.windsor.ai/app/data-preview → find connector → "Delete connection"
 2. Third-party side: revoke Windsor's OAuth grant in the provider's security settings
    - Meta: <https://accounts.meta.com/security/business-apps>

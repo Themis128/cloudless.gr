@@ -66,7 +66,7 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccess |
     }
 
     // Decode without verification first to get the key ID
-    const header = JSON.parse(Buffer.from(parts[0], "base64").toString()) as { kid: string };
+    const _header = JSON.parse(Buffer.from(parts[0], "base64").toString()) as { kid: string };
     const payload = JSON.parse(Buffer.from(parts[1], "base64").toString()) as AccessTokenPayload;
 
     // Verify the token is for an Access application

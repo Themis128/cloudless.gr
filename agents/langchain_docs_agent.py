@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -8,11 +9,11 @@ os.environ.setdefault("LANGSMITH_TRACING", "false")
 os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
 os.environ.setdefault("LANGCHAIN_TRACING", "false")
 
+from langchain.agents import create_agent
+from langchain.tools import tool
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain.agents import create_agent
-from langchain.tools import tool
 
 PERSIST_DIR = ".deepagents/langchain_docs_chroma"
 COLLECTION_NAME = "langchain_docs"
@@ -29,9 +30,7 @@ db = Chroma(
     collection_name=COLLECTION_NAME,
 )
 
-retriever = db.as_retriever(
-    search_kwargs={"k": 5}
-)
+retriever = db.as_retriever(search_kwargs={"k": 5})
 
 
 @tool
@@ -49,11 +48,7 @@ def search_langchain_docs(query: str) -> str:
         source = doc.metadata.get("source", "Unknown source")
         content = doc.page_content[:1800]
 
-        formatted.append(
-            f"[{idx}] Title: {title}\n"
-            f"Source: {source}\n\n"
-            f"{content}"
-        )
+        formatted.append(f"[{idx}] Title: {title}\nSource: {source}\n\n{content}")
 
     return "\n\n---\n\n".join(formatted)
 

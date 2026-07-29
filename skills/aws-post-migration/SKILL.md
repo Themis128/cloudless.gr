@@ -36,6 +36,7 @@ aws cloudfront list-distributions --query "DistributionList.Items[?Origins.Items
 ```
 
 Expected outcomes:
+
 - Workers health returns `true` and `d1`
 - DNS returns Cloudflare IPs (not AWS origins)
 - No active CloudFront distributions for your domains

@@ -1,9 +1,11 @@
 # SST Cloudflare AI Component Integration
 
 ## Overview
+
 SST's Cloudflare AI component for managing Workers AI models and bindings. Use this skill when working with SST's Cloudflare infrastructure for AI-powered applications.
 
 **UPDATE**: SST v4 now has native Cloudflare provider support via `sst.cloudflare.Ai`. The `sst.config.cf-infra.ts` should be updated to use the Cloudflare provider.
+
 ```
 
 ## SST Cloudflare AI Configuration
@@ -96,16 +98,19 @@ async function runWorkersAiChat(systemPrompt: string, messages: any[]): Promise<
 ## SST Cloudflare AI Features (When Available)
 
 ### Model Configuration
+
 - Multiple models per binding
 - Automatic model routing
 - Usage tracking and limits
 
 ### Environment Management
+
 - Automatic secret injection
 - Staging/production separation
 - Cross-stage model aliases
 
 ### Service Bindings
+
 - Python Workers calling SST AI
 - TypeScript Workers with AI bindings
 - Cross-worker AI sharing
@@ -113,6 +118,7 @@ async function runWorkersAiChat(systemPrompt: string, messages: any[]): Promise<
 ## Migration Path
 
 ### Current (Stable)
+
 ```
 wrangler.jsonc → Workers AI binding
 src/lib/bedrock-chat.ts → Uses AI binding directly
@@ -120,6 +126,7 @@ GitHub secrets → Provide CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID
 ```
 
 ### Future (SST Managed)
+
 ```
 sst.config.ts → $cf.ai() component
 SST → Deploy Worker + AI binding together

@@ -340,15 +340,15 @@ async function loadOverviewData(days: number): Promise<{
   let overviewError: string | null = null;
 
   if (seoRes.status === "fulfilled" && seoRes.value.ok) {
-    const d = await seoRes.value.json();
-    snapshot = (d as any).snapshot ?? null;
+    const d = (await seoRes.value.json()) as { snapshot?: SeoSnapshot };
+    snapshot = d.snapshot ?? null;
   } else {
     overviewError = "Failed to load GSC overview";
   }
 
   if (webRes.status === "fulfilled" && webRes.value.ok) {
-    const d = await webRes.value.json();
-    analytics = (d as any).analytics ?? null;
+    const d = (await webRes.value.json()) as { analytics?: WebAnalytics };
+    analytics = d.analytics ?? null;
   }
 
   return { snapshot, analytics, overviewError };

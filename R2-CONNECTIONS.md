@@ -23,6 +23,7 @@
 Worker deployed to: `https://fully-migrated-serverless-stack.baltzakis-themis.workers.dev`
 
 ### Verified Endpoints:
+
 - `/api/health` - Returns healthy status ✅
 - `/api/auth/session` - Returns null (no session) ✅
 - `/` - Serves index.html from R2 ✅
@@ -37,7 +38,9 @@ Worker deployed to: `https://fully-migrated-serverless-stack.baltzakis-themis.wo
 | datalake-bucket | EEUR | - | - |
 
 ## 📊 ETL Migration Status (Fixed)
+
 All 12 `-to-r2.mjs` ETL scripts now correctly target `datalake-bucket`:
+
 - `stripe-to-r2.mjs`, `sentry-to-r2.mjs`, `gsc-to-r2.mjs`, `appflowy-to-r2.mjs`
 - `clients-to-r2.mjs`, `espocrm-to-r2.mjs`, `postiz-to-r2.mjs`
 - `compute-rfm-churn-to-r2.mjs`, `n8n-to-r2.mjs`, `portals-to-r2.mjs`
@@ -54,6 +57,7 @@ All 12 `-to-r2.mjs` ETL scripts now correctly target `datalake-bucket`:
    - Allows direct R2 access via pub-{hash}.r2.dev
 
 3. **Migrate Remaining S3 Content** (optional):
+
    ```bash
    pnpm cf:r2:upload-dir
    ```

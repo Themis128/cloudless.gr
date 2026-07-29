@@ -7,9 +7,19 @@
  * dumps in stack frames) and any client-side fetch URLs that include tokens.
  */
 
-type ErrorEvent = any;
-type EventHint = any;
-type Breadcrumb = any;
+type ErrorEvent = {
+  request?: {
+    headers?: Record<string, string>;
+    url?: string;
+    query_string?: string;
+    data?: unknown;
+    cookies?: Record<string, string>;
+  };
+  extra?: Record<string, unknown>;
+  contexts?: Record<string, unknown>;
+};
+type EventHint = unknown;
+type Breadcrumb = { data?: Record<string, unknown> };
 
 const REDACT = "[REDACTED]";
 

@@ -3,6 +3,7 @@
 ## Current Architecture
 
 ### Dev Server (`pnpm dev`)
+
 - **Port**: 4000
 - **Bundler**: Turbopack (Next.js 16)
 - **Runtime**: Node.js
@@ -11,6 +12,7 @@
 - **HMR**: WebSocket on localhost:4000
 
 ### Production (Cloudflare Workers + OpenNext)
+
 - **Entry Point**: `src/index.ts` (custom Worker)
 - **Bundler**: OpenNext.js build pipeline
 - **Runtime**: V8 isolates (Edge)
@@ -23,21 +25,25 @@
 ## Identified Discrepancies
 
 ### 1. Double Locale Cascade Handling ⚠️
+
 **Issue**: Both `src/index.ts` (lines 127-151) and `middleware.ts` (lines 437-450) handle `/en/en/en/...` redirects.
 **Impact**: Requests pass through worker → middleware, so cascade redirects run twice.
 **Fix**: Remove locale cascade logic from `src/index.ts` (worker) - let middleware handle it.
 
 ### 2. Security Headers Duplication ⚠️
+
 **Issue**: Both worker (`src/index.ts:59-121`) and middleware (`middleware.ts:269-311`) set identical security headers.
 **Impact**: Headers set twice, potential conflicts if values differ.
 **Fix**: Remove security headers from worker, let middleware handle them consistently.
 
 ### 3. Hardcoded WebSocket URLs in CSP ❌
+
 **Issue**: `middleware.ts:228` hardcodes `ws://192.168.1.128:30800` for production connect-src.
 **Impact**: If cluster IPs change, WebSocket connections break in production.
 **Fix**: Make WebSocket URLs configurable via environment variables.
 
 ### 4. Manifest Rewrite Edge Case
+
 **Issue**: `next.config.ts:92-98` rewrites `/manifest.webmanifest` → `/api/pwa-manifest`.
 **Impact**: Unknown if OpenNext preserves rewrites correctly through ASSETS fetch.
 **Verification needed**: Test PWA manifest in production deployment.
@@ -45,6 +51,7 @@
 ## How Requests Are Served
 
 ### Dev Server Flow
+
 ```
 Request → localhost:4000
          ├─ Next.js server (Node.js)
@@ -58,6 +65,7 @@ Request → localhost:4000
 ```
 
 ### Cloudflare Production Flow
+
 ```
 Request → cloudless.gr (via Cloudflare Tunnel)
          ↓
@@ -114,9 +122,11 @@ OpenNext Handler
 ### Verification Steps
 
 1. **Build and preview locally**
+
    ```bash
    pnpm cf:build && pnpm cf:preview
    ```
+
    Test against local OpenNext preview on port 8787.
 
 2. **Compare middleware behavior**
@@ -177,6 +187,7 @@ NODE_ENV=production
 ## Conclusion
 
 The dev server and Cloudflare are **functionally equivalent** for most features, but have:
+
 - **2 duplicate code blocks** that should be removed (locale cascade, security headers)
 - **1 hardcoded IP** in CSP that should be parameterized
 - **1 edge case** (manifest rewrite) to verify

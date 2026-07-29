@@ -21,14 +21,13 @@ export interface AbContext {
  */
 export async function abTestingMiddleware(
   request: Request,
-  env: Record<string, unknown>,
-  context?: AbContext
+  _env: Record<string, unknown>,
+  _context?: AbContext
 ): Promise<Response | null> {
   const url = new URL(request.url);
   const experiment = url.searchParams.get("exp") as keyof typeof AB_EXPERIMENTS | null;
 
   if (experiment && AB_EXPERIMENTS[experiment]) {
-    const variants = AB_EXPERIMENTS[experiment].variants;
     const variant = Math.random() < 0.5 ? "b" : "a";
     url.searchParams.set("variant", variant);
     return Response.redirect(url.toString(), 302);

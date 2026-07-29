@@ -1,5 +1,7 @@
 # Cloudless.gr Pending Actions Runbook
+
 # Generated: 2026-07-19
+
 # Updated: 2026-07-20 01:43 EEST - All endpoints verified working
 
 ---
@@ -7,6 +9,7 @@
 ## 🟢 CURRENT STATUS: All Services Operational
 
 **Status:** omv node (Pi 5, 192.168.1.128) is **ONLINE**
+
 - Tailscale IP: 100.74.191.58 (correct)
 - SSH: ✅ Working (verified 2026-07-20)
 - k3s: ✅ Running (pods verified)
@@ -18,6 +21,7 @@
 ## ✅ Completed Configuration
 
 ### Wrangler Secrets (5/5 CONFIGURED)
+
 ```
 ADMIN_ALERT_SECRET ✅
 ESPOCRM_API_KEY ✅
@@ -27,6 +31,7 @@ POSTIZ_API_KEY ✅
 ```
 
 ### Tailscale OAuth (4/4 CONFIGURED)
+
 ```
 TS_CLIENT_ID      — 2026-07-19 ✅
 TS_CLIENT_SECRET  — 2026-07-19 ✅
@@ -35,6 +40,7 @@ OMV_SSH_KEY       — 2026-07-12 ✅
 ```
 
 ### D1 Configuration
+
 ```
 ✅ email_suppression table ready
 ✅ app_config with ESPOCRM_BASE_URL ready
@@ -42,6 +48,7 @@ OMV_SSH_KEY       — 2026-07-12 ✅
 ```
 
 ### Services Deployed (All 9 services operational)
+
 ```
 ✅ grafana (30850) - Monitoring dashboard
 ✅ kuma (32501) - Uptime Kuma monitoring  
@@ -84,6 +91,7 @@ OMV_SSH_KEY       — 2026-07-12 ✅
 ## ✅ Security Fixes Applied
 
 ### MinIO Credentials Updated (2026-07-20)
+
 - **Before:** `minioadmin` / `minioadmin` (insecure defaults)
 - **After:** Random hex credentials (`57b56c9b79e46f8fe467` / `1a8159f4574a94bd06e9dc3b33ba1dfe39a69e56`)
 - **Pod restarted:** minio-d8f9f74cb-smkmd successfully rolled out with new credentials

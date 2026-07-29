@@ -81,7 +81,13 @@ export default function AnalyticsDashboardPage() {
   }, [days]);
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   // Bar chart helper — renders a simple horizontal bar

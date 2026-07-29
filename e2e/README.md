@@ -13,6 +13,7 @@ The tests validate the **Cloudflare + Pi k3s + Fly.io** architecture:
 | **Fly.io proxy** | HA failover proxy | `fly-proxy.spec.ts` |
 
 ### Architecture Diagram
+
 ```
 Visitor → cloudflare.gr edge (cf-ray)
   ├─► Workers (primary) → D1 Auth + R2 Storage

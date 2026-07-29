@@ -34,11 +34,13 @@ The device `100.123.189.49` is a **stale/orphaned device** from a previous deplo
 #### Step 2: Verify Active Devices
 
 After cleanup, verify active devices:
+
 ```bash
 kubectl get ProxyGroup,Connector -n tailscale-operator -o jsonpath='{range .items[*]}{.kind}{" "}{.metadata.name}{": "}{.status.devices[*].tailnetIPs}{"\n"}{end}'
 ```
 
 **Expected output:**
+
 ```
 ProxyGroup monitoring-proxies: ["100.109.23.1","fd7a:115c:a1e0::3f39:1702"]
 Connector k3s-subnet-router: ["100.84.93.105","fd7a:115c:a1e0::8e39:5d6a"]
@@ -55,6 +57,7 @@ curl -I https://loki.ts.cloudless.gr 2>/dev/null | head -5
 ### Required ACL Configuration (for reference)
 
 Your Tailscale ACLs should include:
+
 ```json
 {
   "tagOwners": {

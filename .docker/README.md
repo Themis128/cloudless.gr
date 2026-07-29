@@ -70,6 +70,7 @@ docker mcp client connect vscode --profile cloudless-dev
 ### 4. VS Code Integration
 
 Add to your `.vscode/settings.json`:
+
 ```json
 {
   "cline.mcpMode": "stdio",

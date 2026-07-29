@@ -79,12 +79,3 @@ export async function cleanupExpiredCsrfTokens(db: AuthDatabase): Promise<number
   const result = await db.prepare("DELETE FROM csrf_token WHERE expires_at < ?").bind(now).run();
   return result.meta?.changes ?? 0;
 }
-
-/**
- * Interface for D1 database prepared statement execution
- */
-interface D1PreparedStatement {
-  bind: (...args: unknown[]) => D1PreparedStatement;
-  first: <T = Record<string, unknown>>(col?: string) => Promise<T | null>;
-  run: () => Promise<{ success: boolean; meta?: { changes: number } }>;
-}

@@ -10,7 +10,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import { getKumaSummary, type KumaMonitor } from "@/lib/kuma";
+import { getKumaSummary } from "@/lib/kuma";
 import { readLatestAlertStatus } from "@/lib/mqtt";
 
 export const dynamic = "force-dynamic";

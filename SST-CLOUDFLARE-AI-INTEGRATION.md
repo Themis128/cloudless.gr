@@ -3,12 +3,14 @@
 ## Current State Analysis
 
 ### Workers AI Configuration (Current)
+
 - **Binding**: Configured in `wrangler.jsonc` as `AI` (line 55-57)
 - **Model**: `@cf/meta/llama-3.1-8b-instruct` (used in `bedrock-chat.ts`)
 - **Usage**: Primary chat path via `ai.run()` in `runWorkersAiChat()` function
 - **Fallback**: Bedrock Nova Micro (`us.amazon.nova-micro-v1:0`) when Workers AI fails
 
 ### SST Configuration (Current)
+
 - **SST v4** with `home: "aws"` - no native Cloudflare provider support
 - Cloudflare infrastructure managed via Wrangler directly
 - `sst.config.cf-infra.ts` is a placeholder (not creating resources via SST)
@@ -83,6 +85,7 @@ def process_logs_with_ai(log_chunks: list[str]) -> dict:
 ## Integration Steps
 
 ### Phase 1: Infrastructure (SST + Wrangler)
+
 1. Add missing secrets to GitHub Actions:
    - `CLOUDFLARE_API_TOKEN` (Account:Edit, Workers:Edit scopes)
    - `CF_ACCOUNT_ID` (from Cloudflare dashboard)
@@ -90,12 +93,14 @@ def process_logs_with_ai(log_chunks: list[str]) -> dict:
 2. Update `sst.config.cf-infra.ts` to use SST's Cloudflare provider (if available in SST v4)
 
 ### Phase 2: Python Worker Creation
+
 3. Create `lambda/ai-worker/index.py` with:
    - `requirements.txt` for dependencies
    - Handler that uses Workers AI for chat/completions
    - Environment variable support for model selection
 
 4. Add to `wrangler.jsonc`:
+
    ```json
    {
      "ai": {
@@ -108,9 +113,11 @@ def process_logs_with_ai(log_chunks: list[str]) -> dict:
    ```
 
 ### Phase 3: Service Binding
+
 5. Update `src/index.ts` to route `/api/chat` to Python worker via service binding
 
 6. Add Python worker to `wrangler.jsonc`:
+
    ```json
    "services": [{
      "binding": "CHAT_AI",

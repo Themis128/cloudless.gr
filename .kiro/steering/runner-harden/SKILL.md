@@ -59,6 +59,7 @@ Environment="DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER=1"
 ```
 
 And to `/etc/systemd/resolved.conf.d/retry.conf`:
+
 ```ini
 [Resolve]
 DNS=8.8.8.8 8.8.4.4 1.1.1.1
@@ -74,6 +75,7 @@ If MCP tools are unavailable but at least one runner is online:
 Trigger **"harden runner systemd units (manual)"** from GitHub Actions → workflow_dispatch.
 
 It runs on all three runners in parallel via matrix strategy. Each runner:
+
 1. Writes its own override.conf
 2. Configures fallback DNS
 3. Runs `daemon-reload` + restarts its own service
@@ -92,6 +94,7 @@ bash /home/user/cloudless.gr/.github/scripts/harden-runner-systemd.sh omv-3
 ```
 
 Or fetch and run from the repo directly:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Themis128/cloudless.gr/main/.github/scripts/harden-runner-systemd.sh | sudo bash -s omv
 ```

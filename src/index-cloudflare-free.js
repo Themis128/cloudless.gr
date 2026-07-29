@@ -31,7 +31,7 @@ async function hashPassword(password, secret) {
 }
 
 // Legacy SHA-256 verification for backward compatibility during migration
-async function verifyLegacyPassword(password, secret, expectedHash) {
+async function _verifyLegacyPassword(password, secret, expectedHash) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + secret);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -66,8 +66,8 @@ function jsonResponse(data, status = 200, extraHeaders = {}) {
   });
 }
 
-export default {
-  async fetch(request, env, ctx) {
+const cloudflareFreeWorker = {
+  async fetch(request, env, _ctx) {
     const url = new URL(request.url);
     const method = request.method;
     const host = url.hostname;
@@ -897,7 +897,7 @@ export default {
         return jsonResponse({ error: "Invalid request body" }, 400);
       }
 
-      const { items = [], successUrl, cancelUrl } = parsed;
+      const { items = [], successUrl, cancelUrl: _cancelUrl } = parsed;
 
       if (!items || !Array.isArray(items) || items.length === 0) {
         return jsonResponse({ error: "No items in cart" }, 400);
@@ -996,3 +996,5 @@ export default {
     return new Response("Not found", { status: 404 });
   },
 };
+
+export default cloudflareFreeWorker;

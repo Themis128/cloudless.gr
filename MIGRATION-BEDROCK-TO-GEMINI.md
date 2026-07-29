@@ -9,6 +9,7 @@ Generated: 2026-07-21 (Updated)
 ## Summary
 
 Migration from AWS Bedrock/Anthropic to Google Gemini completed for:
+
 - Main chat endpoint (`/api/chat`)
 - Chat service worker (`services/chat/src/index.ts`)
 - Admin AI assistant (`/api/admin/ai/assistant`)
@@ -21,6 +22,7 @@ Migration from AWS Bedrock/Anthropic to Google Gemini completed for:
 ## Phase 1: AI Provider Migration (COMPLETED)
 
 ### Files Updated
+
 | File | Status |
 |------|--------|
 | `src/lib/gemini-shared.ts` | ✅ Created - Core Gemini client |
@@ -33,12 +35,14 @@ Migration from AWS Bedrock/Anthropic to Google Gemini completed for:
 | `src/lib/ssm-config-d1.ts` | ✅ Updated - Added GEMINI_API_KEY |
 
 ### Fallback Chain (for chat)
+
 1. Workers AI (`@cf/meta/llama-3.1-8b-instruct`) - Primary, fastest
 2. Gemini 1.5 Flash (`gemini-1.5-flash`) - Fallback, good token limits (1500/day free)
 
 ## Phase 2: AWS Cleanup (COMPLETED)
 
 ### Removed from package.json
+
 - `ses:provision` script (SES migrated to Cloudflare Email)
 - `cognito:setup`, `cognito:setup:dry`, `cognito:setup:quick` scripts
 - `e2e:cognito`, `e2e:cognito:dry` scripts
@@ -55,9 +59,11 @@ Migration from AWS Bedrock/Anthropic to Google Gemini completed for:
 - `@aws-lambda-powertools/logger`
 
 ### Remaining AWS SDK (kept for compatibility)
+
 - `@aws-sdk/client-s3` - Used in `scripts/etl/_r2-config.mjs` for R2-compatible storage (R2 uses S3 API)
 
 ### Files Updated
+
 - `.env.example` - Removed AWS SSM/S3/Cognito/SES references, added GEMINI_API_KEY
 - `.dev.vars.example` - Added GEMINI_API_KEY for local development
 - `src/lib/analytics-r2.ts` - Removed S3 fallback, R2-only
@@ -66,6 +72,7 @@ Migration from AWS Bedrock/Anthropic to Google Gemini completed for:
 ## Phase 3: Secrets Required
 
 ### Production Secrets (via Wrangler)
+
 ```bash
 # Required for Gemini integration
 npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc --env=""
@@ -80,7 +87,9 @@ npx wrangler secret put GOOGLE_CALENDAR_ID --config wrangler.jsonc --env=""
 ```
 
 ### Development Secrets (via .dev.vars)
+
 Add to `.dev.vars`:
+
 ```
 GEMINI_API_KEY=your-gemini-api-key-here
 CRON_SECRET=your-cron-secret-here
@@ -89,6 +98,7 @@ STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
 ```
 
 ### Secrets Already Configured
+
 - SESSION_SECRET ✅
 - AGENT_AUTH_TOKEN ✅
 - SLACK_WEBHOOK_URL ✅ (2026-07-19)

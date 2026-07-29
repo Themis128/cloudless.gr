@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "CRM not configured." },
       {
-        // @ts-ignore
+        // @ts-expect-error NextResponse.json status typing
         status: 404,
       }
     );
@@ -22,7 +22,15 @@ export async function POST(request: Request) {
 
   try {
     const { email, firstname, lastname, company, service_interest, message, lead_source } =
-      (await request.json()) as any;
+      (await request.json()) as {
+        email?: string;
+        firstname?: string;
+        lastname?: string;
+        company?: string;
+        service_interest?: string;
+        message?: string;
+        lead_source?: string;
+      };
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ error: "Valid email is required." }, { status: 400 });

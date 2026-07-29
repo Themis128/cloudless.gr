@@ -84,8 +84,8 @@ export async function getAthenaD1Tables(db: D1Database): Promise<string[]> {
 
     if (result.results && Array.isArray(result.results)) {
       return result.results
-        .map((row: any) => row.name)
-        .filter((name: string): name is string => typeof name === "string");
+        .map((row: Record<string, unknown>) => row.name)
+        .filter((name): name is string => typeof name === "string");
     }
     return [];
   } catch (error) {
@@ -110,9 +110,9 @@ export async function getAthenaD1TableSchema(
 
     if (result.results && Array.isArray(result.results)) {
       return result.results
-        .map((col: any) => ({
-          name: col.name || "",
-          type: col.type || "UNKNOWN",
+        .map((col: Record<string, unknown>) => ({
+          name: String(col.name ?? ""),
+          type: String(col.type ?? "UNKNOWN"),
         }))
         .filter(
           (col: { name: string }): col is { name: string; type: string } =>
@@ -131,7 +131,7 @@ export async function getAthenaD1TableSchema(
  * @param db D1 database instance
  * @returns Array of database names
  */
-export async function getAthenaD1Databases(db: D1Database): Promise<string[]> {
+export async function getAthenaD1Databases(_db: D1Database): Promise<string[]> {
   // In D1, we typically work with a single database
   // Return the database name if we can determine it, otherwise return a default
   return ["cloudless_analytics"]; // Default database name matching the original
@@ -143,8 +143,8 @@ export async function getAthenaD1Databases(db: D1Database): Promise<string[]> {
  * @returns Empty array (D1 doesn't track query history like Athena)
  */
 export async function getAthenaD1QueryHistory(
-  db: D1Database,
-  maxResults: number = 10
+  _db: D1Database,
+  _maxResults: number = 10
 ): Promise<Array<{ queryId: string; sql: string; timestamp: string }>> {
   // D1 doesn't have built-in query history tracking like Athena
   // Return empty array to maintain compatibility

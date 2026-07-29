@@ -281,7 +281,7 @@ export default function Esp32ManagerPage() {
     setConfigLoading(true);
     const data = await call(`/api/admin/esp32?action=config&device_id=${selectedId}`);
     if (data && !data.offline) {
-      setConfig(data as any);
+      setConfig(data as DeviceConfig);
       setConfigDirty(false);
     }
     setConfigLoading(false);

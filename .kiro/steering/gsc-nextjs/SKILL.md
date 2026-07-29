@@ -59,6 +59,7 @@ Token is cached in module scope (`cachedToken`) with a 60-second buffer before e
 ## GSC API Pattern
 
 All queries go to:
+
 ```
 POST https://searchconsole.googleapis.com/v1/sites/{encodedSiteUrl}/searchAnalytics/query
 ```
@@ -66,6 +67,7 @@ POST https://searchconsole.googleapis.com/v1/sites/{encodedSiteUrl}/searchAnalyt
 The site URL must be `encodeURIComponent`-encoded. Default site: `sc-domain:cloudless.gr` (covers all subdomains and protocols).
 
 ### Request body structure:
+
 ```json
 {
   "startDate": "2026-03-16",
@@ -77,6 +79,7 @@ The site URL must be `encodeURIComponent`-encoded. Default site: `sc-domain:clou
 ```
 
 ### Empty dimensions = site-wide totals (single summary row):
+
 ```json
 { "startDate": "...", "endDate": "...", "dimensions": [], "rowLimit": 1 }
 ```
@@ -86,22 +89,29 @@ The site URL must be `encodeURIComponent`-encoded. Default site: `sc-domain:clou
 ## Public Functions in gsc.ts
 
 ### `getSeoSnapshot(siteUrl?)` → `SeoSnapshot | null`
+
 28-day rolling window. Makes **two** GSC calls:
+
 1. Totals (no dimensions) → clicks, impressions, CTR, avgPosition
 2. All keywords (dimensions: `["query"]`, rowLimit: 25000) → count for organicKeywords
 
 ### `getTopKeywords(siteUrl?, limit=20)` → `KeywordData[]`
+
 Top keywords sorted by clicks. Each row: `{ keyword, clicks, impressions, ctr, position }`.
 
 ### `getTopPages(siteUrl?, limit=25)` → `PageData[]`
+
 Top pages sorted by clicks. Each row: `{ page, clicks, impressions, ctr, position }`.
 
 ### `getPerformanceHistory(siteUrl?, weeks=12)` → `PerformancePoint[]`
+
 Daily data points for trend charts. Each row: `{ date, clicks, impressions, ctr, avgPosition }`.
+
 - Use `weeks` to control lookback (max 52 = ~1 year)
 - Returns daily granularity; aggregate client-side for weekly charts
 
 ### `getWebAnalytics(siteUrl?)` → `WebAnalyticsData | null`
+
 Combines totals + top 20 pages. Used by the web analytics dashboard card.
 
 ---
@@ -153,6 +163,7 @@ export async function GET(req: Request) {
 ## One-Time Setup (Prerequisites)
 
 Before GSC functions return real data, a human must:
+
 1. **Enable GSC API**: GCP Console → APIs & Services → Enable "Google Search Console API"
 2. **Add service account to GSC**: GSC → Settings → Users and permissions → Add user → paste `GOOGLE_CLIENT_EMAIL` → role: "Full"
 3. **(Optional) Set GSC_SITE_URL in SSM**: If domain is not `cloudless.gr`, put `sc-domain:yourdomain.com` at `/cloudless/production/GSC_SITE_URL`

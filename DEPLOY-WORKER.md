@@ -7,11 +7,13 @@ Quick reference for deploying cloudless.gr to Cloudflare Workers.
 Before deploying, ensure you have:
 
 1. **Cloudflare API Token** set in environment:
+
    ```bash
    export CLOUDFLARE_API_TOKEN=your_token_here
    ```
 
 2. **Required secrets** configured in Wrangler:
+
    ```bash
    # Auth secrets
    npx wrangler secret put SESSION_SECRET

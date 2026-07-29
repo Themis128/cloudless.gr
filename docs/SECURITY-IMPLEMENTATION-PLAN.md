@@ -5,12 +5,14 @@
 This document maps GitHub Agentic Workflows (AW) security architecture patterns to cloudless.gr's existing security posture. It identifies gaps, proposes mitigations, and provides a prioritized implementation plan for defense-in-depth security around MCP servers, AI agents, and workflow automation.
 
 **Current MCP Landscape:**
+
 - 17 MCP servers configured in `mcp.json`
 - Mix of local (`ollama`, `cloudless-infra`, `sequentialthinking`, `filesystem`) and remote (`cloudflare-*`, `github.com/github-mcp-server`, `playwright`, `brave-search`) servers
 - Credentials injected via environment variables
 - No runtime isolation, content sanitization, or output validation
 
 **Risk Assessment:**
+
 - **High Risk:** GitHub MCP server with full repo access, Cloudflare MCP with infrastructure control, filesystem MCP with project root access
 - **Medium Risk:** Kubernetes/SSH MCP with cluster control, network-exposed MCP servers
 - **Low Risk:** Local inference (ollama), sequential thinking (no external access)
@@ -29,6 +31,7 @@ This document maps GitHub Agentic Workflows (AW) security architecture patterns 
 | Host filesystem isolation | ⚠️ Partial | `filesystem` MCP scoped to `/home/tbaltzakis/cloudless.gr`, but no read-only mounts |
 
 **Recommendation:** Implement MCP server containerization using Docker/Podman with:
+
 - Per-server network namespaces
 - Domain allowlists via proxy
 - Resource quotas (CPU/memory limits)
@@ -62,6 +65,7 @@ This document maps GitHub Agentic Workflows (AW) security architecture patterns 
 ## Threat Model (cloudless.gr Context)
 
 ### Adversary Capabilities
+
 1. **Compromised MCP server** - Malicious or compromised MCP server (e.g., forked `github-mcp-server`)
 2. **Prompt injection** - User input containing hidden instructions to manipulate agent behavior
 3. **Credential exfiltration** - Stolen env vars or SSM secrets via MCP tool outputs
@@ -69,6 +73,7 @@ This document maps GitHub Agentic Workflows (AW) security architecture patterns 
 5. **Supply chain attack** - Malicious code in MCP server dependencies
 
 ### Assets to Protect
+
 - GitHub repository tokens (`GITHUB_PERSONAL_ACCESS_TOKEN`)
 - Cloudflare API token (`CLOUDFLARE_API_TOKEN`)
 - AWS credentials (SSM Parameter Store access)
@@ -92,6 +97,7 @@ This document maps GitHub Agentic Workflows (AW) security architecture patterns 
 **Implementation:**
 
 **Step 1: Create `mcp.schema.json` for configuration validation**
+
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -127,6 +133,7 @@ This document maps GitHub Agentic Workflows (AW) security architecture patterns 
 ```
 
 **Step 2: Add validation script (`scripts/validate-mcp-config.ts`)**
+
 ```typescript
 import { readFileSync } from 'fs';
 
@@ -153,6 +160,7 @@ export function validateMCPConfig(configPath: string): void {
 ```
 
 **Step 3: Create `mcp-security.json` with tool allowlists**
+
 ```json
 {
   "version": "1.0",
@@ -236,6 +244,7 @@ export function validateMCPConfig(configPath: string): void {
 **Enforcement mechanism:** Wrap MCP tool calls with a security interceptor.
 
 **Code Pattern:**
+
 ```typescript
 // src/lib/mcp-security.ts
 
@@ -302,6 +311,7 @@ export function validateMCPToolCall(
 **Implementation:**
 
 Create `src/lib/mcp-sanitizer.ts`:
+
 ```typescript
 export interface SanitizationConfig {
   maxSize: number; // bytes
@@ -399,6 +409,7 @@ function normalizeUnicode(text: string): string {
 ```
 
 **Usage in MCP wrapper:**
+
 ```typescript
 export async function callMCPTool(
   serverName: string,
@@ -430,6 +441,7 @@ export async function callMCPTool(
 **Implementation:**
 
 Create `src/lib/secret-redactor.ts`:
+
 ```typescript
 export function redactSecrets(content: string): string {
   const config = getIntegrations();
@@ -473,6 +485,7 @@ export async function redactArtifacts(dir: string): Promise<void> {
 ```
 
 **Usage in workflow (if using GitHub Actions):**
+
 ```yaml
 - name: Redact secrets from artifacts
   run: npx tsx src/lib/secret-redactor.ts /tmp/gh-aw
@@ -571,6 +584,7 @@ export const safeOutputs = new SafeOutputsBuffer();
 ```
 
 **Integration with MCP wrapper:**
+
 ```typescript
 export async function callMCPToolWithSafeOutputs(
   serverName: string,
@@ -612,6 +626,7 @@ private isWriteTool(toolName: string): boolean {
 ```
 
 **Stage gating pattern:**
+
 ```typescript
 export async function executeWorkflowStage(stage: WorkflowStage): Promise<void> {
   // 1. Execute read-only MCP operations
@@ -659,6 +674,7 @@ export async function executeWorkflowStage(stage: WorkflowStage): Promise<void> 
 **Implementation:**
 
 Create Docker Compose for MCP gateways:
+
 ```yaml
 # docker-compose.mcp.yml
 version: '3.8'
@@ -718,6 +734,7 @@ networks:
 **Implementation:**
 
 Create `scripts/verify-mcp-integrity.ts`:
+
 ```typescript
 import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
@@ -771,6 +788,7 @@ export function verifyMCPIntegrity(
 ```
 
 **Generate integrity manifest:**
+
 ```bash
 # scripts/generate-mcp-manifest.ts
 export function generateManifest(configPath: string): IntegrityManifest {
@@ -806,7 +824,9 @@ export function generateManifest(configPath: string): IntegrityManifest {
 **Implementation:**
 
 Avoid plaintext env vars in `mcp.json`. Use:
+
 1. **Docker secrets** (for containerized MCP):
+
 ```yaml
 services:
   mcp-github:
@@ -821,6 +841,7 @@ secrets:
 ```
 
 2. **Kubernetes Secrets** (for k3s-hosted MCP):
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -832,6 +853,7 @@ stringData:
 ```
 
 3. **Runtime injection only** - Never write secrets to disk:
+
 ```typescript
 // src/lib/mcp-runtime.ts
 export function injectMCPServerSecrets(serverName: string): Record<string, string> {
@@ -968,6 +990,7 @@ function generateLockFile(config: any): LockFile {
 ```
 
 **Add security scanners:**
+
 ```typescript
 export function runSecurityScanners(configPath: string): SecurityReport {
   const report: SecurityReport = {
@@ -994,6 +1017,7 @@ interface SecurityReport {
 ```
 
 **CI/CD integration:**
+
 ```yaml
 # .github/workflows/mcp-security.yml
 name: MCP Security Scan
@@ -1036,6 +1060,7 @@ jobs:
 **Implementation:**
 
 Create `src/lib/mcp-threat-detection.ts`:
+
 ```typescript
 export interface ThreatReport {
   safe: boolean;
@@ -1102,6 +1127,7 @@ export async function invokeSecurityModel(prompt: string): Promise<string> {
 ```
 
 **Usage:**
+
 ```typescript
 export async function callMCPToolWithDetection(...) {
   const result = await callMCPTool(serverName, toolName, args);
@@ -1131,6 +1157,7 @@ export async function callMCPToolWithDetection(...) {
 **Implementation:**
 
 Filter MCP content based on source trust:
+
 ```typescript
 export enum IntegrityLevel {
   NONE = 'none',
@@ -1427,6 +1454,7 @@ alerts:
 | **Observability** | CLI tools + artifact retention | Audit logs + structured metrics | 80% (no CLI) |
 
 **Overall Maturity:**
+
 - GitHub AW: Production-grade (used by GitHub)
 - cloudless.gr proposed: Alpha/Beta stage (~65% coverage)
 

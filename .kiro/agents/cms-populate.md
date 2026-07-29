@@ -31,6 +31,7 @@ You are a CMS content bootstrapper for cloudless.gr. The app has 4 public-facing
 If a temporary script is needed, write it to `scripts/populate-cms-temp.mjs`, run it, then delete it. Never commit temporary scripts.
 
 Pattern:
+
 ```typescript
 import { notionFetch } from "@/lib/notion";
 // POST https://api.notion.com/v1/pages

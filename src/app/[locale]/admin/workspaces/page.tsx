@@ -37,7 +37,7 @@ export default function WorkspacesPage() {
     try {
       const res = await fetchWithAuth("/api/admin/workspaces");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { workspaces: any[] };
+      const data = (await res.json()) as { workspaces: Workspace[] };
       setWorkspaces(data.workspaces ?? []);
       setCtxWorkspaces(data.workspaces ?? []);
     } catch (e) {

@@ -11,8 +11,6 @@
  * - Environment variables in wrangler.jsonc vars section
  */
 
-import type { D1User } from "./auth-d1";
-
 // Cloudflare API token permissions needed
 export interface RequiredTokenPermissions {
   account: {
@@ -62,10 +60,11 @@ export interface CloudflareEnv {
 
 // Detect if running in Cloudflare Workers
 export function isCloudflareWorkers(): boolean {
+  const g = globalThis as unknown as Record<string, unknown>;
   return (
-    typeof (globalThis as any).Navigator === "undefined" &&
-    typeof (globalThis as any).WebSocket === "undefined" &&
-    typeof (globalThis as any).caches !== "undefined"
+    typeof g.Navigator === "undefined" &&
+    typeof g.WebSocket === "undefined" &&
+    typeof g.caches !== "undefined"
   );
 }
 
@@ -86,17 +85,19 @@ export function getCloudflareConfig() {
 
   // Workers environment - access via global env
   // This would be set in the Worker's fetch handler via the env parameter
+  const g = globalThis as unknown as Record<string, unknown>;
   return {
     getR2Binding: (name: "ASSETS_BUCKET" | "ANALYTICS_BUCKET") => {
       // This is called inside fetch() where env is available
       // Return the binding for use
-      return (globalThis as any).__R2__?.[name];
+      const r2 = g.__R2__ as Record<string, R2Bucket> | undefined;
+      return r2?.[name];
     },
     getD1Binding: () => {
-      return (globalThis as any).__D1__;
+      return g.__D1__ as D1Database | undefined;
     },
     getAIBinding: () => {
-      return (globalThis as any).__AI__;
+      return g.__AI__ as Ai | undefined;
     },
   };
 }
@@ -105,7 +106,6 @@ export function getCloudflareConfig() {
 export function validateRequiredSecrets(env: CloudflareEnv): string[] {
   // Note: AUTH_SECRET is deprecated, using SESSION_SECRET instead
   const required = ["SESSION_SECRET"];
-  const optional = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"];
   return required.filter((k) => !env[k as keyof CloudflareEnv]);
 }
 

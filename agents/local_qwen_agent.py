@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 # Load local env first
@@ -9,9 +10,9 @@ os.environ.setdefault("LANGSMITH_TRACING", "false")
 os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
 os.environ.setdefault("LANGCHAIN_TRACING", "false")
 
-from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from langchain.tools import tool
+from langchain_openai import ChatOpenAI
 
 
 @tool
@@ -25,7 +26,9 @@ def project_summary() -> str:
 
 
 llm = ChatOpenAI(
-    model=os.getenv("LOCAL_VLLM_MODEL", os.getenv("LOCAL_MODEL_NAME", "Qwen/Qwen2.5-Coder-3B-Instruct-AWQ")),
+    model=os.getenv(
+        "LOCAL_VLLM_MODEL", os.getenv("LOCAL_MODEL_NAME", "Qwen/Qwen2.5-Coder-3B-Instruct-AWQ")
+    ),
     base_url=os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:8001/v1"),
     api_key=os.getenv("OPENAI_API_KEY", "EMPTY"),
     temperature=0.1,

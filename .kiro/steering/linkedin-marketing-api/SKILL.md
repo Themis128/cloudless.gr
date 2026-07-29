@@ -8,6 +8,7 @@ The LinkedIn Marketing API enables publishing organic posts, managing company pa
 **Auth:** OAuth 2.0 Bearer token  
 **API Version:** `202504` (April 2025 — versioned monthly)  
 **Required Headers:**
+
 ```
 Authorization: Bearer {TOKEN}
 LinkedIn-Version: 202504
@@ -16,6 +17,7 @@ Content-Type: application/json
 ```
 
 **Cloudless Account:**
+
 - LinkedIn Organic Page: cloudless.gr (URN: `urn:li:organization:108614163`)
 - LinkedIn Ads Account: Baltzakis Ad Account (ID: `512642510`)
 - Connected via Windsor.ai ✅
@@ -27,6 +29,7 @@ Content-Type: application/json
 ### OAuth 2.0 (3-Legged)
 
 **Step 1 — Authorization URL:**
+
 ```
 https://www.linkedin.com/oauth/v2/authorization
   ?response_type=code
@@ -37,6 +40,7 @@ https://www.linkedin.com/oauth/v2/authorization
 ```
 
 **Step 2 — Exchange code for token:**
+
 ```bash
 curl -X POST "https://www.linkedin.com/oauth/v2/accessToken" \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -50,6 +54,7 @@ curl -X POST "https://www.linkedin.com/oauth/v2/accessToken" \
 Returns: `{"access_token": "...", "expires_in": 5184000}` (60 days)
 
 **Step 3 — Refresh token:**
+
 ```bash
 curl -X POST "https://www.linkedin.com/oauth/v2/accessToken" \
   -d "grant_type=refresh_token" \
@@ -104,6 +109,7 @@ Returns: `201 Created` with `x-restli-id` header containing the post URN.
 ### Content Types
 
 #### Text Only
+
 ```json
 {
   "author": "urn:li:organization:108614163",
@@ -115,6 +121,7 @@ Returns: `201 Created` with `x-restli-id` header containing the post URN.
 ```
 
 #### Image Post
+
 ```json
 {
   "author": "urn:li:organization:108614163",
@@ -133,6 +140,7 @@ Returns: `201 Created` with `x-restli-id` header containing the post URN.
 ```
 
 #### Multi-Image Post
+
 ```json
 {
   "author": "urn:li:organization:108614163",
@@ -152,6 +160,7 @@ Returns: `201 Created` with `x-restli-id` header containing the post URN.
 ```
 
 #### Video Post
+
 ```json
 {
   "author": "urn:li:organization:108614163",
@@ -169,6 +178,7 @@ Returns: `201 Created` with `x-restli-id` header containing the post URN.
 ```
 
 #### Article/Link Post
+
 ```json
 {
   "author": "urn:li:organization:108614163",
@@ -188,6 +198,7 @@ Returns: `201 Created` with `x-restli-id` header containing the post URN.
 ```
 
 #### Document/PDF Post
+
 ```json
 {
   "author": "urn:li:organization:108614163",
@@ -205,6 +216,7 @@ Returns: `201 Created` with `x-restli-id` header containing the post URN.
 ```
 
 #### Poll Post
+
 ```json
 {
   "author": "urn:li:organization:108614163",
@@ -238,6 +250,7 @@ Poll durations: `ONE_DAY`, `THREE_DAYS`, `ONE_WEEK`, `TWO_WEEKS`
 #### Step 1 — Initialize Upload
 
 **Image:**
+
 ```bash
 curl -X POST "https://api.linkedin.com/rest/images?action=initializeUpload" \
   -H "Authorization: Bearer {TOKEN}" \
@@ -249,9 +262,11 @@ curl -X POST "https://api.linkedin.com/rest/images?action=initializeUpload" \
     }
   }'
 ```
+
 Returns: `{"value": {"uploadUrl": "...", "image": "urn:li:image:..."}}`
 
 **Video:**
+
 ```bash
 curl -X POST "https://api.linkedin.com/rest/videos?action=initializeUpload" \
   -H "Authorization: Bearer {TOKEN}" \

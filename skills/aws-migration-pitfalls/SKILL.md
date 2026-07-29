@@ -20,6 +20,7 @@ Workers Python (Pyodide) is still preview. Rewriting to TypeScript is the standa
 **Effort estimate:** 1 Python Lambda of 200 lines ≈ 2-4 days TypeScript rewrite.
 
 **Mitigation:**
+
 - Plan language migration upfront
 - Allocate buffer time for learning
 - Consider strangler fig for gradual transition
@@ -30,6 +31,7 @@ DynamoDB partitions by hash key. KV has no partition concept. A hot key can beco
 single-key bottleneck on KV (write conflicts).
 
 **Mitigation:**
+
 - For high-throughput: use D1 with indexes OR keep DynamoDB behind Worker
 - Monitor write patterns; KV works best for distributed keys
 - Consider DOs for session/lock patterns
@@ -47,6 +49,7 @@ SELECT * FROM events WHERE json_extract(data, '$.type') = 'login';
 ```
 
 **Mitigation:**
+
 - Denormalize to separate columns: `event_type TEXT INDEXED`
 - Use SQLite json_extract() function
 - Consider Hyperdrive for heavy JSONB workloads
@@ -56,6 +59,7 @@ SELECT * FROM events WHERE json_extract(data, '$.type') = 'login';
 R2 has no Glacier tier (cold storage 10x cheaper). Archive pattern differs.
 
 **Mitigation:**
+
 - Store compressed in R2
 - Or keep AWS Glacier + Worker proxy
 - Plan archive strategy before migration
@@ -65,6 +69,7 @@ R2 has no Glacier tier (cold storage 10x cheaper). Archive pattern differs.
 Lambda memory config indirectly sets CPU. Worker charges pure CPU time.
 
 **Mitigation:**
+
 - CPU-bound handlers may hit 30s Worker limit
 - Profile handlers before migration
 - Consider breaking large handlers into smaller pieces
@@ -74,6 +79,7 @@ Lambda memory config indirectly sets CPU. Worker charges pure CPU time.
 Cognito doesn't export password hashes. Users must reset passwords.
 
 **Mitigation:**
+
 - Communicate migration to users
 - Plan password reset flow
 - Consider phased migration with email notifications
@@ -83,6 +89,7 @@ Cognito doesn't export password hashes. Users must reset passwords.
 API Gateway has stageVariables.key. Workers doesn’t.
 
 **Mitigation:**
+
 - Replace with environment variables
 - Deploy via Wrangler with per-env config
 - Update deployment pipeline for env handling
@@ -92,6 +99,7 @@ API Gateway has stageVariables.key. Workers doesn’t.
 VPC Lambdas access private RDS directly. Edge Workers aren’t in a VPC.
 
 **Mitigation:**
+
 - Use Cloudflare Tunnel or Hyperdrive
 - Expose Postgres publicly with auth
 - Consider hybrid approach for VPC-dependent services
@@ -101,6 +109,7 @@ VPC Lambdas access private RDS directly. Edge Workers aren’t in a VPC.
 SQS DLQ: after N retries, message moves to DLQ. Queues has different config.
 
 **Mitigation:**
+
 - Use dead_letter_queue binding in Queues
 - Verify message format compatibility
 - Add adapter for existing SQS consumers
@@ -110,6 +119,7 @@ SQS DLQ: after N retries, message moves to DLQ. Queues has different config.
 IaC (CloudFormation, Terraform AWS) doesn't map to Cloudflare.
 
 **Mitigation:**
+
 - Re-IaC for Cloudflare using Terraform provider
 - Coverage differs; plan gaps upfront
 - Maintain parallel IaC during transition
@@ -117,6 +127,7 @@ IaC (CloudFormation, Terraform AWS) doesn't map to Cloudflare.
 ## When NOT to migrate
 
 Keep AWS if you have:
+
 - SageMaker training workloads
 - EMR / Athena / Redshift (data warehouse)
 - Kinesis streaming (high-throughput)

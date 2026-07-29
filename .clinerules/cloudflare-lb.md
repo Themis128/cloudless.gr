@@ -41,6 +41,7 @@ All traffic routing has been migrated from AWS ALB/ELB to Cloudflare-native solu
 **Purpose**: Unified edge runtime handling authentication, analytics, chat, and static assets.
 
 **Key Features**:
+
 - **D1 Database**: User authentication and session management
 - **R2 Storage**: Static assets and analytics data storage
 - **Workers AI**: AI inference fallback with multiple provider support
@@ -48,6 +49,7 @@ All traffic routing has been migrated from AWS ALB/ELB to Cloudflare-native solu
 - **Service Bindings**: RPC-style communication with chat service
 
 **Endpoints**:
+
 - `/api/auth/*` - Authentication (email/password, D1-based)
 - `/api/chat` - AI chat with multiple provider fallback
 - `/api/contact` - Contact form handling with email notifications
@@ -134,18 +136,21 @@ graph TD
 ## Benefits of Cloudflare Native Approach
 
 ### Cost Savings
+
 - **No EC2 instances** required for load balancing
 - **No separate ALB/ELB** costs
 - **Free tier** covers most use cases
 - **Pay-per-request** model scales with usage
 
 ### Operational Efficiency
+
 - **No infrastructure management** (patching, scaling, monitoring)
 - **Automatic global distribution** (300+ data centers)
 - **Built-in security** (DDoS protection, WAF, SSL)
 - **Simplified deployment** (no load balancer configuration)
 
 ### Performance
+
 - **Edge caching** reduces latency globally
 - **Automatic SSL** certificates with zero configuration
 - **Global load balancing** with intelligent routing
@@ -197,6 +202,7 @@ ingress:
 ## Migration Validation
 
 ### Pre-Migration Checklist
+
 - [x] All services deployed and healthy
 - [x] DNS records updated
 - [x] SSL certificates configured
@@ -204,6 +210,7 @@ ingress:
 - [x] Backup strategies implemented
 
 ### Post-Migration Validation
+
 - [x] All 11 services operational via tunnel
 - [x] Workers handling authentication requests
 - [x] R2 storage accessible
@@ -214,12 +221,14 @@ ingress:
 ## Monitoring & Alerting
 
 ### Cloudflare Analytics
+
 - Traffic distribution across regions
 - Response times and performance metrics
 - Error rates and failure patterns
 - Bandwidth usage and costs
 
 ### Service Health Checks
+
 - `/api/health` endpoint (returns "ok" when all services healthy)
 - `/api/services` endpoint (detailed service status)
 - Cloudflare Dashboard monitoring
@@ -227,6 +236,7 @@ ingress:
 ## Security Considerations
 
 ### Built-in Cloudflare Security
+
 - **DDoS Protection**: Automatic mitigation of volumetric attacks
 - **WAF**: Web Application Firewall with OWASP rules
 - **SSL/TLS**: Automatic certificate provisioning and renewal
@@ -234,6 +244,7 @@ ingress:
 - **Rate Limiting**: Protection against brute force attacks
 
 ### Zero-Trust Architecture
+
 - **Service Bindings**: Internal services communicate via private network
 - **Tunnel Encryption**: All traffic encrypted end-to-end
 - **No Public IPs**: Internal services never exposed to internet
@@ -241,12 +252,14 @@ ingress:
 ## Future Enhancements
 
 ### Planned Improvements
+
 1. **Multi-region deployment**: Deploy workers in multiple regions for failover
 2. **Advanced caching**: Implement Cloudflare Cache Rules for dynamic content
 3. **Analytics pipeline**: Enhance DuckDB-Wasm integration for real-time analytics
 4. **Edge functions**: Move more logic to Workers for better performance
 
 ### Monitoring & Optimization
+
 - [ ] Set up Cloudflare budget alerts
 - [ ] Monitor Workers invocation limits
 - [ ] Optimize R2 storage lifecycle policies
@@ -257,14 +270,17 @@ ingress:
 ### Common Issues & Solutions
 
 **Issue 1**: Service returns 502 Bad Gateway
+
 - **Cause**: Service not running or tunnel misconfiguration
 - **Solution**: Check service health on omv node, verify tunnel configuration
 
 **Issue 2**: Authentication failing
+
 - **Cause**: D1 database connection issue or SESSION_SECRET missing
 - **Solution**: Check `/api/health` endpoint, verify environment variables
 
 **Issue 3**: Workers returning 503
+
 - **Cause**: Missing required bindings or configuration
 - **Solution**: Check wrangler.jsonc configuration, verify secrets
 

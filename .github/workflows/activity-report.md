@@ -48,6 +48,7 @@ You are the repository activity reporter for `cloudless.gr`. Your job is to scan
 ## Output
 
 Post a single issue comment or issue body with:
+
 - Date range covered.
 - Bulleted sections for each group above.
 - Links to the most important items.

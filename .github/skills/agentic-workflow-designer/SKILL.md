@@ -25,6 +25,7 @@ Ask one question at a time. Move to the next phase only after the current phase 
 Ask: **"What do you want to automate?"**
 
 Capture:
+
 - Workflow name (kebab-case candidate)
 - Brief description
 - Optional emoji
@@ -34,6 +35,7 @@ Capture:
 Ask: **"When should this run?"**
 
 Follow up only if needed:
+
 - Which event type(s)?
 - Any filters (labels, branches, commands)?
 - Scheduled cadence (daily/weekly/hourly)?
@@ -43,10 +45,12 @@ Map to the `on:` block.
 ### Phase 3: Scope (Read/Write)
 
 Ask:
+
 - **"What should it read?"** (issues, PRs, code, discussions, CI data)
 - **"What should it create or update?"** (comments, issues, PRs, labels)
 
 Map to:
+
 - `permissions:` (keep read-only for agent job)
 - `tools:`
 - `safe-outputs:`
@@ -54,15 +58,18 @@ Map to:
 ### Phase 4: Data Strategy
 
 Ask:
+
 - **"What data does the agent need to make decisions?"**
 - Follow up: **"Can we pre-fetch and aggregate that data with shell commands so the agent only reads compact JSON?"**
 
 Capture:
+
 - Whether `steps:` should pre-fetch GitHub data with `gh` + `jq`
 - Output paths under `/tmp/gh-aw/data/`
 - Whether batch work should use sub-agents
 
 Map to:
+
 - `steps:`
 - Prompt references to pre-computed file paths
 
@@ -71,6 +78,7 @@ Map to:
 Ask: **"Should it block merging, just advise, or silently log?"**
 
 Capture:
+
 - Visibility expectations (comment, issue, no visible output)
 - No-op behavior expectation
 
@@ -81,12 +89,14 @@ Guide toward safe output behavior and explicit `noop` instructions.
 Ask: **"Does it need external APIs, web access, package installs, or MCP servers?"**
 
 Follow up:
+
 - **"Any third-party services or MCP servers to include (for example Slack, Jira, Datadog, custom internal MCP)?"**
 - **"Are you deploying on GitHub.com, GHEC with custom endpoints, or GHES?"**
 - For each integration, identify required auth from source docs and map it to GitHub Actions secrets + workflow env variables.
 - Ask for exact external domains (FQDN/wildcard).
 
 Map to:
+
 - `network.allowed`
 - Optional MCP/GitHub tool usage in `tools:`
 - `secrets:` / `env:` wiring for integration tokens
@@ -97,6 +107,7 @@ Map to:
 Ask only if ambiguous: **"Any AI engine preference?"**
 
 If no preference, suggest default:
+
 - "I'd suggest Copilot since you haven't mentioned a preference. Sound good?"
 
 Map to `engine:` only when not default.
@@ -370,6 +381,7 @@ Before final output, run this internal self-check:
 ## References (load only when needed)
 
 In-repo references:
+
 - `.github/aw/syntax.md` (index → `.github/aw/syntax-core.md`, `.github/aw/syntax-agentic.md`, `.github/aw/syntax-tools-imports.md`)
 - `.github/aw/safe-outputs.md` (index → `.github/aw/safe-outputs-content.md`, `.github/aw/safe-outputs-management.md`, `.github/aw/safe-outputs-automation.md`, `.github/aw/safe-outputs-runtime.md`)
 - `.github/aw/network.md`
@@ -380,6 +392,7 @@ In-repo references:
 - `.github/aw/create-agentic-workflow.md`
 
 Portable HTTPS references:
+
 - `https://github.com/github/gh-aw/blob/main/.github/aw/syntax.md` (index → `.../syntax-core.md`, `.../syntax-agentic.md`, `.../syntax-tools-imports.md`)
 - `https://github.com/github/gh-aw/blob/main/.github/aw/safe-outputs.md` (index → `.../safe-outputs-content.md`, `.../safe-outputs-management.md`, `.../safe-outputs-automation.md`, `.../safe-outputs-runtime.md`)
 - `https://github.com/github/gh-aw/blob/main/.github/aw/network.md`

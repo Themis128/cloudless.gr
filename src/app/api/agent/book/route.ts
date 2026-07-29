@@ -164,8 +164,8 @@ async function handleConfirm(
       },
     });
     sendBookingConfirmation({
-      customerName: userName,
-      customerEmail: userEmail,
+      name: userName,
+      email: userEmail,
       slotLabel,
       meetLink: result.htmlLink,
       notes,

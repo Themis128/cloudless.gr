@@ -51,8 +51,6 @@ function LoginContent() {
   const activated = searchParams.get("activated") === "1";
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   useEffect(() => {
     if (!isLoading && user) {

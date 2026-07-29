@@ -37,7 +37,7 @@ export default function RecommendationGrid({
         const res = await fetch(`/api/recommendations?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch recommendations");
 
-        const data = (await res.json()) as any;
+        const data = (await res.json()) as { recommendations: StoreProduct[] };
         setRecommendations(data.recommendations);
       } catch (err) {
         console.error("[RecommendationGrid] Error:", err);

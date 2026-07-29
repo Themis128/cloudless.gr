@@ -5,6 +5,8 @@
  * Falls back to S3 for AWS Lambda environment.
  */
 
+import type { R2Bucket } from "@cloudflare/workers-types";
+
 export interface AnalyticsEvent {
   event: string;
   user_id?: string;
@@ -26,13 +28,12 @@ export interface AnalyticsEvent {
   properties?: Record<string, unknown>;
 }
 
-// Detect environment
-function isCloudflareWorkers(): boolean {
-  return typeof (globalThis as any).caches !== "undefined";
+interface AnalyticsR2Env {
+  DATALAKE_BUCKET: R2Bucket;
 }
 
 // R2 adapter for Workers (Cloudflare-only)
-export async function trackR2Event(env: any, evt: AnalyticsEvent): Promise<void> {
+export async function trackR2Event(env: AnalyticsR2Env, evt: AnalyticsEvent): Promise<void> {
   const now = new Date();
   const y = now.getUTCFullYear();
   const m = String(now.getUTCMonth() + 1).padStart(2, "0");
@@ -51,7 +52,7 @@ export async function trackR2Event(env: any, evt: AnalyticsEvent): Promise<void>
 }
 
 // Universal function - Workers environment only
-export function trackEvent(env: any | undefined, evt: AnalyticsEvent): void {
+export function trackEvent(env: AnalyticsR2Env | undefined, evt: AnalyticsEvent): void {
   // In Workers, env is passed with DATALAKE_BUCKET binding
   if (env?.DATALAKE_BUCKET) {
     trackR2Event(env, evt).catch(() => {});

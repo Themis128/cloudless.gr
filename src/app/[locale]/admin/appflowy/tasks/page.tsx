@@ -115,7 +115,7 @@ export default function TasksKanbanPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/tasks");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as any as any as { tasks: Task[] };
+      const data = (await res.json()) as { tasks: Task[] };
       setTasks(data.tasks ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tasks");
@@ -125,7 +125,13 @@ export default function TasksKanbanPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const updateStatus = async (pageId: string, status: TaskStatus) => {

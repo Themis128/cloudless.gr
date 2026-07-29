@@ -7,6 +7,7 @@ triggers: when the user mentions "ai-search", "wrangler ai-search", "cloudflare 
 # Wrangler AI Search Integration
 
 ## Overview
+
 Cloudflare AI Search is a managed semantic search service that combines vector search with LLM-powered question answering. Use this skill when working with `wrangler ai-search` commands for document indexing, semantic search, and search-enabled agents.
 
 ## Installation
@@ -22,6 +23,7 @@ pnpm add -g wrangler@latest
 ## Commands Reference
 
 ### List AI Search Instances
+
 ```bash
 # List all instances in default namespace
 npx wrangler ai-search list
@@ -34,6 +36,7 @@ npx wrangler ai-search list --json
 ```
 
 ### Create AI Search Instance
+
 ```bash
 # Create with R2 source
 npx wrangler ai-search create cloudless-docs \
@@ -54,6 +57,7 @@ npx wrangler ai-search create website-search \
 ```
 
 ### Search AI Search Instance
+
 ```bash
 # Basic search
 npx wrangler ai-search search cloudless-docs --query "how to deploy workers"
@@ -91,6 +95,7 @@ npx wrangler ai-search jobs logs cloudless-docs job_abc123
 ## Use Cases for cloudless.gr
 
 ### Documentation Search Service
+
 ```bash
 npx wrangler ai-search namespace create dev-docs
 
@@ -151,5 +156,6 @@ export default {
 | `No results returned` | Enable hybrid search, adjust score-threshold |
 
 ## Related Skills
+
 - `skills/sst-cloudflare/SKILL.md` - SST Cloudflare provider
 - `skills/sst-cloudflare-ai.md` - Workers AI integration

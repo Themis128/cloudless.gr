@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 
 from agents.cloudless_research_agent import agent
 from agents.tools.langchain_docs import (
+    fetch_langchain_doc_pages,
     load_langchain_docs_index,
     search_langchain_docs_index,
-    fetch_langchain_doc_pages,
 )
 
 load_dotenv(".env.local")
@@ -160,13 +160,11 @@ curl http://127.0.0.1:8001/v1/models
     raise SystemExit(0)
 
 formatted_matches = "\n".join(
-    f"{i + 1}. {match['title']} - {match['url']}"
-    for i, match in enumerate(matches)
+    f"{i + 1}. {match['title']} - {match['url']}" for i, match in enumerate(matches)
 )
 
 formatted_pages = "\n\n".join(
-    f"PAGE {i + 1}\nURL: {page['url']}\nCONTENT:\n{page['content']}"
-    for i, page in enumerate(pages)
+    f"PAGE {i + 1}\nURL: {page['url']}\nCONTENT:\n{page['content']}" for i, page in enumerate(pages)
 )
 
 result = agent.invoke(

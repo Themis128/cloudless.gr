@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Iterable, Iterator, Optional
+from collections.abc import Iterable, Iterator
+from typing import Any
 
 
 def _parse_data(raw_data: str) -> Any:
@@ -19,7 +20,7 @@ def _parse_data(raw_data: str) -> Any:
         return raw_data
 
 
-def iter_sse_events(lines: Iterable[str]) -> Iterator[Dict[str, Any]]:
+def iter_sse_events(lines: Iterable[str]) -> Iterator[dict[str, Any]]:
     """Parse Server-Sent Events from an iterable of decoded lines.
 
     Supports common SSE fields:
@@ -37,12 +38,12 @@ def iter_sse_events(lines: Iterable[str]) -> Iterator[Dict[str, Any]]:
         "retry": "..."
       }
     """
-    event_name: Optional[str] = None
-    event_id: Optional[str] = None
-    retry: Optional[str] = None
+    event_name: str | None = None
+    event_id: str | None = None
+    retry: str | None = None
     data_lines: list[str] = []
 
-    def emit() -> Optional[Dict[str, Any]]:
+    def emit() -> dict[str, Any] | None:
         nonlocal event_name, event_id, retry, data_lines
 
         if not event_name and not event_id and not retry and not data_lines:

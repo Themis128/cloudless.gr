@@ -64,6 +64,9 @@
     // (MD059 "[here]" link text, MD056 malformed tables) — file upstream
     // rather than patching local copies.
     ".claude/skills/**",
+    ".kiro/**",
+    "logs_failed.md",
+    "**/*logs*.md",
     "CHANGELOG.md",
     // Generated, gitignored artifacts — not authored docs. markdownlint-cli2
     // does not read .gitignore, so these must be listed explicitly.

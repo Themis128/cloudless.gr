@@ -41,6 +41,7 @@ You are the issue triage agent for `cloudless.gr`. Your job is to process every 
 ## Output
 
 Post a single concise triage comment on the issue containing:
+
 - Summary of what was understood.
 - Classification fields: `type`, `priority`, `area`.
 - Duplicate or relation updates.

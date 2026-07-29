@@ -32,6 +32,19 @@ select = ["F", "E", "W", "I", "UP", "B", "C4"]
 # double-flagging long strings/URLs that are intentionally kept on one line.
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# Agents/scripts often adjust sys.path before importing local packages.
+"agents/**/*.py" = ["E402"]
+"scripts/check_langsmith_api_clients.py" = ["E402"]
+"scripts/cloudless_fast_answer.py" = ["E402"]
+"scripts/langsmith_api_call.py" = ["E402"]
+"scripts/langsmith_api_page.py" = ["E402"]
+"scripts/langsmith_api_stream.py" = ["E402"]
+"scripts/langsmith_endpoint_call.py" = ["E402"]
+"scripts/vibe_plan.py" = ["E402"]
+"scripts/vibe_status.py" = ["E402"]
+"tests/langsmith_api/**/*.py" = ["E402"]
+
 [tool.ruff.format]
 quote-style = "double"
 
@@ -43,9 +56,16 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 no_implicit_optional = true
+explicit_package_bases = true
+mypy_path = "."
+# Don't deep-type agents/tools pulled in via imports from scripts — those
+# modules are experimental helpers, not the CI gate surface.
+follow_imports = "skip"
 exclude = [
   '^\.venv/',
   '^\.mypy_cache/',
   '^node_modules/',
   '^\.next/',
+  '^agents/',
+  '^tools/',
 ]

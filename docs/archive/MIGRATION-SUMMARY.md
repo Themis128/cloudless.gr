@@ -3,25 +3,30 @@
 ## Completed: S3-Backed Data Layer
 
 ### New Files
+
 - `src/lib/r2-s3-client.ts` — Lambda-compatible S3 client pointed at R2 endpoint
 
 ### Migrated Files
+
 - `src/lib/analytics.ts` — event sink → R2
 - `src/lib/stripe-transactions.ts` — lake sink → R2  
 - `src/lib/admin-notifications.ts` — notification archive → R2
 - `.env.example` — added R2 credential documentation
 
 ### Already Compatible
+
 - `src/lib/r2-upload.ts` — R2 endpoint factory (fixed import)
 
 ## Current Status
 
 **Data Transfer (AWS S3 → R2):**
+
 - 52/342 pvc-backups objects transferred (15%)
 - 290 Glacier restores queued (3-5h)
 - Monitor: `bash ~/Cloudshift/watch-migration.sh`
 
 **Lambda Deployment Requirements:**
+
 ```env
 R2_ACCOUNT_ID=your-account-id
 R2_ACCESS_KEY_ID=your-key-id

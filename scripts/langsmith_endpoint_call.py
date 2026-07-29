@@ -22,7 +22,6 @@ from tools.langsmith_api import (
 )
 from tools.langsmith_api.endpoints import get_endpoint, list_endpoints
 
-
 CLIENTS = {
     "langsmith": LangSmithClient,
     "deepagents": ManagedDeepAgentsClient,
@@ -56,8 +55,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Call a registered LangSmith API endpoint")
     parser.add_argument("endpoint", nargs="?", help="Endpoint name, e.g. langsmith.health")
     parser.add_argument("--list", action="store_true", help="List registered endpoints")
-    parser.add_argument("--params", help='JSON query params, e.g. \'{"limit":5}\'')
-    parser.add_argument("--json", help='JSON request body, e.g. \'{"limit":5}\'')
+    parser.add_argument("--params", help="JSON query params, e.g. '{\"limit\":5}'")
+    parser.add_argument("--json", help="JSON request body, e.g. '{\"limit\":5}'")
     parser.add_argument("--page", action="store_true", help="Use pagination helper if supported")
     parser.add_argument("--items-key", help="Response key containing list items")
     parser.add_argument("--page-size", type=int, default=100)

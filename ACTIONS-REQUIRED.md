@@ -1,5 +1,7 @@
 # Manual Actions Required - Cloudless.gr
+
 # Generated: 2026-07-19 16:44 UTC
+
 # Last Updated: 2026-07-28 00:47 EEST - Updated for current secret state
 
 ---
@@ -214,15 +216,19 @@ INSERT OR REPLACE INTO app_config (key, value, description) VALUES (
 ## 🆘 TROUBLESHOOTING
 
 ### "CLOUDFLARE_API_TOKEN is invalid"
+
 - **Solution:** Token may lack required permissions. Recreate with **"Edit Cloudflare Workers"** template
 
 ### "CF_ACCOUNT_ID not found"
+
 - **Solution:** Verify you copied the Account ID from Cloudflare dashboard (not Zone ID)
 
 ### "R2 operations failing"
+
 - **Solution:** Ensure `CF_R2_ACCESS_KEY_ID` and `CF_R2_SECRET_ACCESS_KEY` are set. Use the `create-r2-credentials.yml` workflow (manually triggered) to auto-generate them.
 
 ### "Authentication failed in Workers"
+
 - **Solution:** Set `SESSION_SECRET` and `AGENT_AUTH_TOKEN` via `npx wrangler secret put`
 
 ---

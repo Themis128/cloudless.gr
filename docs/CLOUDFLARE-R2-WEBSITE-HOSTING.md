@@ -1,6 +1,7 @@
 # Cloudflare R2 Website Hosting - Configured
 
 ## R2 Bucket: `cloudless-assets` (ASSETS_BUCKET)
+
 - Location: EEUR (Europe) ✅
 - Storage Class: Standard
 - Objects: 3 ✅
@@ -9,10 +10,12 @@
 ## Policies Applied
 
 ### Public Access
+
 - Status: ⚠️ **Manual step required** in Dashboard
 - Location: Workers & Pages → R2 → cloudless-assets → Settings → Enable "Public bucket"
 
 ### CORS Policy
+
 - Status: ⚠️ **Manual step required** in Dashboard
 - Location: Workers & Pages → R2 → cloudless-assets → CORS
 - Or use `scripts/r2-cors-policy.js` with S3 API credentials
@@ -29,10 +32,12 @@ CORSRules: [{
 ## Worker Configuration
 
 ### Configuration Files
+
 - `wrangler.json` - Main production config ✅
 - `wrangler-cloudflare-free.json` - Free tier deployment config ✅
 
 ### Bindings
+
 | Binding | Resource | Status |
 |---------|----------|--------|
 | `ASSETS_BUCKET` | cloudless-assets | ✅ Connected |
@@ -44,6 +49,7 @@ CORSRules: [{
 | `EMAIL` | Email Sending | ⚠️ Requires Email Routing setup |
 
 ### Worker Code
+
 - `src/index-cloudflare-free.js` - 4-layer architecture ✅
   - Layer 1: D1 Authentication (register, login, logout, session, reset-password)
   - Layer 2: R2 Storage (static assets with SPA fallback)
@@ -93,6 +99,7 @@ CORSRules: [{
    - Workers & Pages → R2 → cloudless-assets → CORS → Add rule
 
 4. **Migrate Full Static Site** (optional):
+
    ```bash
    pnpm cf:build && pnpm cf:r2:upload-dir && pnpm cf:deploy:free
    ```

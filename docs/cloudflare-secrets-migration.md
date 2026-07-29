@@ -1,11 +1,13 @@
 # Cloudflare Workers Secrets Migration Guide
 
 ## Overview
+
 Replace AWS SSM with Cloudflare Workers secrets via wrangler.
 
 ---
 
 ## Current Architecture
+
 - Production: Reads from `/cloudless/production/*` in SSM
 - Dev/Test: Reads from process.env directly
 - Already has `SSM_DISABLED=1` mode for k3s Pi deployment
@@ -15,7 +17,9 @@ Replace AWS SSM with Cloudflare Workers secrets via wrangler.
 ## Migration Path
 
 ### Option A: Workers Secrets (wrangler)
+
 For each secret, run:
+
 ```bash
 # Example for ADMIN_ALERT_SECRET
 npx wrangler secret put ADMIN_ALERT_SECRET
@@ -26,7 +30,9 @@ npx wrangler secret put SES_TO_EMAIL
 ```
 
 ### Option B: Workers KV (for bulk secrets)
+
 Create a KV namespace for configuration:
+
 ```bash
 # Create KV namespace
 npx wrangler kv:namespace create "SECRETS"
@@ -41,12 +47,16 @@ npx wrangler kv:key put --binding=SECRETS "SLACK_WEBHOOK_URL" "https://hooks.sla
 ## Required Changes
 
 ### 1. Update ssm-config.ts for Cloudflare-native mode
+
 Replace SSM client with Workers-specific fetching:
+
 - Use `process.env.SECRET_NAME` in Workers environment
 - Secrets are bound at deploy time via wrangler
 
 ### 2. Update wrangler.jsonc
+
 Add secret bindings:
+
 ```json
 {
   "secrets": {
@@ -57,7 +67,9 @@ Add secret bindings:
 ```
 
 ### 3. Environment Variables for Pi (SSM_DISABLED=1)
+
 When deploying to k3s, inject secrets via Kubernetes:
+
 ```yaml
 env:
   - name: ADMIN_ALERT_SECRET
@@ -85,6 +97,7 @@ env:
 ## Deployment Steps
 
 1. **Add secrets to Workers**
+
    ```bash
    for secret in ADMIN_ALERT_SECRET SES_FROM_EMAIL SES_TO_EMAIL; do
      npx wrangler secret put $secret

@@ -7,17 +7,20 @@
 **Problem:** Container exited with ExitCode 1 due to missing `CLOUDFLARE_API_TOKEN`
 
 **Root Causes:**
+
 1. The docker-compose.yml referenced hardcoded credentials (security issue)
 2. Missing curl dependency (needed for Cloudflare API calls)
 3. Entry point wasn't using tsx to run TypeScript source
 
 **Fixes Applied:**
+
 - ✅ Removed hardcoded credentials from docker-compose.mcp.yml (now uses env var references)
 - ✅ Added curl installation in Dockerfile
 - ✅ Updated entrypoint.sh to use `npx tsx src/index.ts` for TypeScript execution
 - ✅ Added stdin_open and tty for stdio transport compatibility
 
 **Updated Dockerfile:**
+
 ```dockerfile
 # Cloudflare Pages MCP Dockerfile
 # This runs the MCP server using tsx for TypeScript execution
@@ -50,17 +53,20 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 **Current State:** Container exits with ExitCode 0 (clean exit, not error)
 
-**Root Cause:** 
+**Root Cause:**
+
 - Microsoft's Playwright MCP image uses stdio transport for MCP
 - When run via docker-compose without proper stdio handling, it initializes and exits cleanly
 - This is expected behavior for MCP servers designed for direct client integration
 
-**Recommendation:** 
+**Recommendation:**
+
 - MCP stdio servers work best when managed by Cline directly via npx, NOT via docker-compose
 - The existing docker-compose entry is fine for testing but not production use
 - Use the `playwright` entry in cline_mcp_settings.json instead
 
 **Correct Setup via Cline MCP Config:**
+
 ```json
 {
   "mcpServers": {
@@ -78,10 +84,12 @@ ENTRYPOINT ["./entrypoint.sh"]
 
 ### 3. Cloudflare MCP Server Stack ✅ CONFIGURED
 
-**Root Cause:** 
+**Root Cause:**
+
 - These are remote Cloudflare MCP servers that should be accessed via mcp-remote
 
 **Solution Applied:**
+
 - ✅ Added all Cloudflare remote MCP servers to cline_mcp_settings.json and mcp.json
 - ✅ Removed playwright-docker entry (redundant with playwright server)
 - ✅ Configured proper API token requirements for each server
@@ -122,12 +130,14 @@ Your `.cline/data/settings/cline_mcp_settings.json` now includes:
 ## Quick Start Commands
 
 ### Rebuild Cloudflare Pages MCP:
+
 ```bash
 cd /home/tbaltzakis/cloudless.gr
 docker-compose -f docker-compose.mcp.yml build cloudflare-pages-mcp
 ```
 
 ### Run container interactively (testing only):
+
 ```bash
 # Set required env vars
 export CLOUDFLARE_API_TOKEN="your_token_here"
@@ -142,6 +152,7 @@ docker run -i --rm \
 ```
 
 ### View container logs:
+
 ```bash
 docker logs cloudless-pages-mcp --tail 20 2>&1 || echo "Container not running"
 ```
@@ -175,11 +186,13 @@ For MCP servers, prefer managing them via Cline MCP settings using npx/mcp-remot
 ## Troubleshooting
 
 **"Claude's response was interrupted" error:**
+
 - This happens when hitting context-length limits
 - Try to be specific, keep queries concise
 - Break large requests into several smaller tool calls
 
 **Container exits immediately:**
+
 - MCP servers use stdio transport
 - Run with `docker run -i --rm ...` for interactive mode
 - Or use the npx-based configuration in cline_mcp_settings.json instead

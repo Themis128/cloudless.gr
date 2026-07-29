@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
-import { getS3Client } from "@/lib/s3-client";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { Readable } from "node:stream";
-import { getD1Client } from "@/lib/d1-client";
-
 const isWorkers =
-  typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
+  typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined" &&
+  typeof process === "undefined";
 
 /**
  * Send an email using the configured email provider.
@@ -147,7 +143,12 @@ Unsubscribe: https://cloudless.gr/api/unsubscribe?email=${encodeURIComponent(ema
  * @param sessionId - Stripe session ID
  * @param amount - Order amount
  */
-export async function sendOrderConfirmation(email: string, sessionId: string, amount: number) {
+export async function sendOrderConfirmation(
+  email: string,
+  sessionId: string,
+  amount: number,
+  _currency: string = "eur"
+) {
   const safeSessionId = sessionId.replace(/[<>&']/g, "");
   await sendEmail({
     to: email,

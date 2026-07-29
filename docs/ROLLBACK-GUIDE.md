@@ -201,6 +201,7 @@ gantt
 ```
 
 #### Step 1: Revert DNS (if migrated)
+
 ```bash
 # Point domain back to CloudFront / AWS
 # Use your DNS provider's UI or CLI
@@ -211,6 +212,7 @@ aws route53 change-resource-record-sets \
 ```
 
 #### Step 2: Restore Cognito User Pool
+
 ```bash
 # If users were migrated to D1, they need to be re-imported to Cognito
 # Cognito doesn't support direct import - users must reset passwords
@@ -226,6 +228,7 @@ pnpm cognito:setup
 ```
 
 #### Step 3: Restore DynamoDB Tables
+
 ```bash
 # Recreate original table structure
 # Original tables:
@@ -240,6 +243,7 @@ aws dynamodb create-table --table-name cloudless-session-tokens ...
 ```
 
 #### Step 4: Restore S3 Assets
+
 ```bash
 # Sync R2 back to S3
 pnpm r2:sync-to-s3  # if script exists
@@ -249,6 +253,7 @@ pnpm r2:sync-to-s3  # if script exists
 ### Scenario B: Partial Rollback (Keep Data, Revert Auth Route)
 
 #### Step 1: Update Wrangler Configuration
+
 ```bash
 # Edit wrangler.jsonc to remove D1 auth binding
 # Point NEXT_PUBLIC_AUTH_PROVIDER back to "cognito"
@@ -256,6 +261,7 @@ pnpm r2:sync-to-s3  # if script exists
 ```
 
 #### Step 2: Deploy Revert Worker
+
 ```bash
 # Create a revert worker that proxies to AWS endpoints
 # See: scripts/create-rollback-worker.sh
@@ -263,6 +269,7 @@ npx wrangler deploy --config wrangler-rollback.json
 ```
 
 #### Step 3: Restore AWS Services
+
 ```bash
 # Ensure SST config points to original Lambdas
 pnpm deploy  # Deploys via SST to AWS
@@ -271,6 +278,7 @@ pnpm deploy  # Deploys via SST to AWS
 ## Rollback Scripts
 
 ### `scripts/rollback-d1-to-dynamodb.ts`
+
 ```typescript
 // Migration script to move D1 users back to DynamoDB
 // WARNING: Password hashes are not compatible - force password reset required
@@ -278,6 +286,7 @@ pnpm deploy  # Deploys via SST to AWS
 ```
 
 ### `scripts/restore-s3-from-r2.ts`
+
 ```typescript
 // Sync R2 assets back to S3 bucket
 // Usage: pnpm rollback:r2-to-s3
@@ -377,6 +386,7 @@ flowchart LR
 ```
 
 1. **Auth endpoints working:**
+
    ```bash
    curl -X POST https://cloudless.gr/api/auth/login \
      -H "Content-Type: application/json" \
@@ -384,11 +394,13 @@ flowchart LR
    ```
 
 2. **Static assets loading:**
+
    ```bash
    curl -I https://cloudless.gr/assets/logo.png
    ```
 
 3. **Analytics endpoints:**
+
    ```bash
    curl https://cloudless.gr/api/analytics/query
    ```

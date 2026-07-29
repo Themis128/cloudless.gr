@@ -18,6 +18,7 @@ Probed production to confirm the breakage before the pipeline fix lands:
 GitHub repo secrets `NEXT_PUBLIC_COGNITO_CLIENT_ID` and `NEXT_PUBLIC_COGNITO_USER_POOL_ID`
 **already exist** (set 2026-05-09) — yet the table below says the app client "does NOT
 exist in SSM." Before trusting the handoff, verify the secret values:
+
 - `NEXT_PUBLIC_COGNITO_USER_POOL_ID` should equal `us-east-1_1Bq3Mpqer`.
 - `NEXT_PUBLIC_COGNITO_CLIENT_ID` should be a real app client in that pool whose callback
   list includes `https://cloudless.gr/api/auth/callback/cognito`.
@@ -43,7 +44,7 @@ a broken path. Fixed:
 - `Dockerfile` — ARG/ENV now `NEXT_PUBLIC_COGNITO_USER_POOL_ID` / `_CLIENT_ID` / `_DOMAIN`.
 - `.github/workflows/deploy-pi.yml` (Pi/k3s) — build-args now pass the Cognito vars
   from GitHub secrets (`NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`)
-  + the inline domain.
+  - the inline domain.
 - `sst.config.ts` (Lambda) — env now sets `NEXT_PUBLIC_COGNITO_USER_POOL_ID`,
   `NEXT_PUBLIC_COGNITO_DOMAIN`, `COGNITO_USER_POOL_ID` inline; `NEXT_PUBLIC_COGNITO_CLIENT_ID`
   from `process.env`; `COGNITO_CLIENT_ID` / `COGNITO_CLIENT_SECRET` from SSM at runtime.

@@ -26,7 +26,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { name, email, start, end, notes } = (await request.json()) as any;
+    const { name, email, start, end, notes } = (await request.json()) as {
+      name?: string;
+      email?: string;
+      start?: string;
+      end?: string;
+      notes?: string;
+    };
 
     if (!name || !email || !start || !end) {
       return NextResponse.json(

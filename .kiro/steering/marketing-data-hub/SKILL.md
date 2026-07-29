@@ -43,19 +43,23 @@ to the optimal tool.
 ## Decision Tree: Which Tool to Use
 
 ### "How much did I spend on ads?"
+
 → **Windsor.ai** `get_data` with `connector="all"` for blended view
 → Or **Supermetrics** `data_query` for individual platform deep-dive
 
 ### "Show me my Facebook/LinkedIn campaign performance"
+
 → **Windsor.ai** for read-only analytics (fastest)
 → **Supermetrics** for analytics + campaign management (create/pause/update)
 
 ### "Create or manage an ad campaign"
+
 → **Meta Marketing API** for Facebook/Instagram ads with full targeting control (see `meta-marketing-api/SKILL.md`)
 → **LinkedIn Marketing API** for LinkedIn Ads (see `linkedin-marketing-api/SKILL.md`)
 → **Supermetrics** `campaign_create` / `campaign_update` (Google, Meta, Microsoft, TikTok, LinkedIn)
 
 ### "Post to social media"
+
 → **Meta Graph API** for Instagram posts/Reels/carousels (see `instagram-graph-api/SKILL.md`)
 → **Facebook Pages API** for Facebook Page posts (see `facebook-pages-api/SKILL.md`)
 → **Threads API** for Threads posts (see `threads-api/SKILL.md`)
@@ -65,17 +69,21 @@ to the optimal tool.
 → **IFTTT** applets for automated cross-posting workflows
 
 ### "How's my SEO doing?"
+
 → **Ahrefs** for keyword rankings, backlinks, domain rating, competitor analysis
 → **GSC** (Google Search Console) for actual search performance data from Google
 
 ### "Compare all my marketing channels"
+
 → **Windsor.ai** `connector="all"` with `datasource` field — blended cross-channel view
 → Or query each source separately and combine in a dashboard
 
 ### "Automate: when X happens, do Y"
+
 → **IFTTT** for trigger-based automation (new blog post → share to social media)
 
 ### "What keywords should I target?"
+
 → **Ahrefs** Keywords Explorer for volume, difficulty, suggestions
 → **Supermetrics** `campaign_and_resource_get` with `resource_type="keyword_ideas"` for Google Ads keywords
 
@@ -101,47 +109,56 @@ to the optimal tool.
 ## Connected Accounts Summary (2026-04-20)
 
 ### Windsor.ai (4 active connectors)
+
 - GA4: www.baltzakisthemis.com (500620492)
 - LinkedIn Ads: Baltzakis Ad Account (512642510)
 - LinkedIn Organic: cloudless.gr (108614163)
 - Threads: Themistoklis Baltzakis (26733238892980904)
 
 ### Supermetrics (2 known accounts)
+
 - Facebook Ads: act_657781691826702 (needs re-auth)
 - LinkedIn Ads: 512642510
 
 ### Meta Graph API
+
 - Meta Access Token: Active (expires ~2026-06-19)
 - Ad Account: 657781691826702 (Themistoklis Baltzakis)
 - Instagram Business Account: BLOCKED (IG not linked to FB Page properly)
 - Facebook Page: cloudless.gr (116436681562585)
 
 ### IFTTT
+
 - Free tier (limited to 2 applets, RSS/Webhooks need Pro)
 
 ### Ahrefs
+
 - Connected via MCP (social media features require higher plan)
 
 ## Common Multi-Platform Workflows
 
 ### Weekly Marketing Report
+
 1. **Windsor.ai**: `get_data(connector="all", fields=["datasource","spend","clicks","impressions","date"], date_preset="last_7d")` — blended overview
 2. **Ahrefs**: `gsc-performance-history` — SEO trends
 3. **GA4 via Windsor**: `get_data(connector="googleanalytics4", fields=["sessions","users","bounceRate","date"], date_preset="last_7d")` — website traffic
 
 ### Campaign Launch
+
 1. **Supermetrics**: `campaign_create` — create the campaign (PAUSED)
 2. **Supermetrics**: `campaign_and_resource_get` with `resource_type="reach_estimate"` — estimate audience
 3. **Supermetrics**: `campaign_update` — enable after review
 4. **Windsor.ai**: Monitor spend/performance after launch
 
 ### Content Distribution
+
 1. Create content (Canva for visuals, blog post in Next.js/Notion)
 2. **Meta Graph API**: Publish to Instagram
 3. **IFTTT**: Auto-cross-post to other platforms via applet triggers
 4. **Windsor.ai**: Track engagement across all channels
 
 ### Competitive Analysis
+
 1. **Ahrefs**: `site-explorer-organic-keywords` + `site-explorer-referring-domains` for competitor SEO
 2. **Ahrefs**: `keywords-explorer-overview` for keyword gaps
 3. **Supermetrics**: Compare your ad metrics against industry benchmarks

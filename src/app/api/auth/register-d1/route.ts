@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       .update(`${email}:${exp}:${nonce}`)
       .digest("base64url");
     const token = `${nonce}.${exp}.${sig}`;
-    const otp = (
+    const _otp = (
       parseInt(
         nodeCreateHmac("sha256", secret)
           .update(`otp:${email}:${exp}:${nonce}`)
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Notify team
-    slackRegistrationNotify({ name: fullName || email, email }).catch(() => {});
+    slackRegistrationNotify(email).catch(() => {});
     notifyTeam(
       "New User Registration",
       `${email}${fullName ? ` (${fullName})` : ""} just signed up.`

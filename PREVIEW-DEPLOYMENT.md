@@ -23,6 +23,7 @@ pnpm install
 ```
 
 This creates:
+
 - **D1 Database**: `auth-db-preview`
 - **R2 Buckets**: `cloudless-assets-preview`, `cloudless-analytics-preview`, `datalake-bucket-preview`, `app-media-bucket-preview`
 - **Analytics Engine Dataset**: `cloudless_analytics_preview` (auto-created on first write)
@@ -86,6 +87,7 @@ The preview D1 database ID must be set. Run `npx wrangler d1 list` to find the I
 ### "Assets not loading"
 
 Check that static assets were uploaded to the preview R2 bucket:
+
 ```bash
 npx wrangler r2 object list cloudless-assets-preview
 ```
@@ -93,5 +95,6 @@ npx wrangler r2 object list cloudless-assets-preview
 ### "Secrets not found"
 
 Verify secrets are set:
+
 ```bash
 npx wrangler secret list --name cloudless-gr-preview

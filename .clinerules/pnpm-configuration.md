@@ -30,25 +30,31 @@ The cloudless.gr project has pnpm fully configured and operational.
 ## Configuration Details
 
 ### Corepack Setup
+
 ```bash
 corepack enable
 corepack prepare pnpm@latest --activate  # Current: 11.9.0
 ```
 
 ### Workspace Configuration
+
 The project uses a monorepo structure with:
+
 ```yaml
 packages:
   - "workers/*"
 ```
 
 ### Dependency Resolution
+
 - Peer dependencies are auto-installed
 - Workspace packages are preferred
 - Native builds allowed for specific packages (esbuild, swc, sharp, etc.)
 
 ### Compatibility Patterns
+
 The .npmrc includes patterns for:
+
 - Next.js 16 compatibility
 - OpenNext.js/Cloudflare support
 - AWS Amplify compatibility

@@ -18,6 +18,7 @@ cloudless.gr → Cloudflare Workers (auth/assets/analytics/health)
 ## Validation Tests
 
 ### 1. Workers Endpoints (Primary)
+
 ```bash
 # Auth - D1 based
 curl -X POST https://cloudless.gr/api/auth/login \
@@ -37,6 +38,7 @@ curl https://cloudless.gr/api/analytics/r2?file=events/2026/07/01.ndjson.parquet
 ```
 
 ### 2. Lambda Fallback Verification
+
 ```bash
 # These should work via Lambda (fallback)
 curl https://cloudless.gr/api/contact
@@ -46,6 +48,7 @@ curl https://cloudless.gr/api/blog/posts
 ```
 
 ### 3. Failover Test (Simulate Lambda Down)
+
 ```bash
 # Temporarily disable Lambda, verify Workers handles fallback
 # Or test Pi endpoint directly:

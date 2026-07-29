@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .agent_server import AgentServerClient
 from .base import LangSmithAPIError
@@ -9,7 +9,6 @@ from .endpoints import get_endpoint, list_endpoints
 from .fleet import FleetClient
 from .langsmith import LangSmithClient
 from .managed_deepagents import ManagedDeepAgentsClient
-
 
 CLIENTS = {
     "langsmith": LangSmithClient,
@@ -25,7 +24,7 @@ SAFE_POST_SUFFIXES = (
 )
 
 
-def endpoint_is_safe_read(endpoint_name: str, endpoint: Dict[str, Any]) -> bool:
+def endpoint_is_safe_read(endpoint_name: str, endpoint: dict[str, Any]) -> bool:
     """Allow only read-style endpoints.
 
     GET is considered read-only.
@@ -45,12 +44,12 @@ def endpoint_is_safe_read(endpoint_name: str, endpoint: Dict[str, Any]) -> bool:
 def run_registered_endpoint(
     endpoint_name: str,
     *,
-    params: Optional[Dict[str, Any]] = None,
-    json_body: Optional[Dict[str, Any]] = None,
-    page: Optional[bool] = None,
+    params: dict[str, Any] | None = None,
+    json_body: dict[str, Any] | None = None,
+    page: bool | None = None,
     page_size: int = 100,
     max_pages: int = 3,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run a registered endpoint safely.
 
     Returns a structured dictionary instead of raising for expected auth/API errors.

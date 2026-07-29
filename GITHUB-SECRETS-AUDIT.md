@@ -1,5 +1,7 @@
 # GitHub Secrets Audit - Missing Secrets Check
+
 # Generated: 2026-07-21
+
 # Compared: .env.example vs GitHub Repository Secrets
 
 ## ✅ Present in GitHub Secrets (Verified)
@@ -80,18 +82,22 @@
 ## 📋 Next Steps
 
 ### 1. Add GEMINI_API_KEY (Critical for AI chat)
+
 ```bash
 gh secret set GEMINI_API_KEY --repo Themis128/cloudless.gr
 ```
 
 ### 2. Verify Wrangler Secrets for Workers
+
 The following are in GitHub secrets but also need to be in Wrangler for Workers runtime:
+
 ```bash
 npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
 npx wrangler secret put GOOGLE_PRIVATE_KEY --config wrangler.jsonc
 ```
 
 ### 3. Add to D1 app_config (Optional - non-secret configs)
+
 ```bash
 # These can be set in D1 app_config table instead of secrets
 INSERT OR REPLACE INTO app_config (key, value, description) VALUES
@@ -108,6 +114,7 @@ INSERT OR REPLACE INTO app_config (key, value, description) VALUES
 - **Already in Wrangler**: 6 (ESPOCRM_API_KEY, ESPOCRM_API_PASSWORD, SLACK_WEBHOOK_URL, POSTIZ_API_KEY, ADMIN_ALERT_SECRET, CRON_SECRET)
 
 ### Secrets Status Matrix
+
 | Secret | GitHub | Wrangler | Priority | Action Needed |
 |--------|--------|----------|----------|---------------|
 | GEMINI_API_KEY | ✅ | ❌ | 🔴 CRITICAL | `npx wrangler secret put GEMINI_API_KEY` |

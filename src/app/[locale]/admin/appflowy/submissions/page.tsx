@@ -50,10 +50,10 @@ export default function SubmissionsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/submissions?limit=100");
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as any;
-        throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`);
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `HTTP ${res.status}`);
       }
-      const data = (await res.json()) as any as any as { submissions: Submission[] };
+      const data = (await res.json()) as { submissions: Submission[] };
       setSubmissions(data.submissions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load submissions");
@@ -63,7 +63,13 @@ export default function SubmissionsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const updateStatus = async (pageId: string, status: "New" | "In Review" | "Done") => {

@@ -20,6 +20,7 @@ The Context7 MCP server has been successfully installed and configured for cloud
 **Server Name**: `github.com/upstash/context7-mcp`
 
 **Current Setup**:
+
 - Uses `${CONTEXT7_API_KEY}` environment variable (secure approach)
 - Stdio transport (default) for local development
 - Ready for Cline integration
@@ -27,6 +28,7 @@ The Context7 MCP server has been successfully installed and configured for cloud
 ## Missing: API Key Required
 
 The server is installed and configured, but needs a valid Context7 API key for full functionality:
+
 - API key starts with `ctx7sk` prefix
 - Can be obtained from https://context7.com/dashboard
 - Currently set to `${CONTEXT7_API_KEY}` environment variable placeholder
@@ -41,9 +43,11 @@ The server is installed and configured, but needs a valid Context7 API key for f
 
 1. **Obtain API Key**: Get a Context7 API key from https://context7.com/dashboard
 2. **Set Environment Variable**:
+
    ```bash
    export CONTEXT7_API_KEY="ctx7sk_your_key_here"
    ```
+
 3. **Restart Cline** to reload the MCP configuration
 4. **Test the integration** by asking for documentation on any library/framework
 

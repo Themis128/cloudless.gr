@@ -24,6 +24,7 @@ These files are preserved for historical reference. The migration strategy has b
 ## Current Architecture
 
 See the following files for current configuration:
+
 - `../strategy_cloudflare.md` - Cloudflare + Fly.io deployment strategy
 - `../CLUSTER-MAP.md` - Current k3s cluster state
 - `../wrangler.jsonc` - Cloudflare Worker configuration

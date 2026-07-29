@@ -15,8 +15,7 @@ def git_status_short() -> str:
         ["git", "status", "--short"],
         cwd=REPO_ROOT,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
     )
 
@@ -27,9 +26,7 @@ def git_status_short() -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Show readiness status for a vibe patch proposal"
-    )
+    parser = argparse.ArgumentParser(description="Show readiness status for a vibe patch proposal")
     parser.add_argument("proposal", help="Path to proposal markdown file")
     args = parser.parse_args()
 

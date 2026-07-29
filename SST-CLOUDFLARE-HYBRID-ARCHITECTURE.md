@@ -68,40 +68,43 @@ This hybrid approach leverages SST's Cloudflare provider for **infrastructure pr
 ### 🔄 Cron Jobs Architecture
 
 Workers Cron triggers invoke the Worker's `fetch()` handler directly with:
+
 - `CRON_ROUTE` environment variable set to the target endpoint (e.g., `/api/cron/analytics-rollup`)
 - `CRON_SECRET` secret for authorization
 
 The Worker detects `CRON_ROUTE` and:
+
 1. Verifies `CRON_SECRET` is available
 2. Routes through ASSETS to Next.js API handlers (via handleCronRoute in src/index.ts)
 
 ### 🔐 Secrets Required
- 
+
  The following secrets must be configured in Wrangler:
- 
+
  ```bash
  # Run these commands to set production secrets
  npx wrangler secret put CRON_SECRET --config wrangler.jsonc
  npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
  npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
  ```
- 
+
  Or add to GitHub secrets:
- - `CLOUDFLARE_API_TOKEN` - API token for deployment
- - `CF_ACCOUNT_ID` - Cloudflare account ID
- - `CLOUDFLARE_ZONE_ID` - Zone ID for custom domain binding (found in Cloudflare dashboard Overview tab)
- - `CRON_SECRET` - Shared secret for cron job authorization
- - `SESSION_SECRET` - Session signing secret (32+ bytes)
- - `AGENT_AUTH_TOKEN` - Agent RPC authorization token
- 
- ### 🌐 Zone ID Configuration
- 
+
+- `CLOUDFLARE_API_TOKEN` - API token for deployment
+- `CF_ACCOUNT_ID` - Cloudflare account ID
+- `CLOUDFLARE_ZONE_ID` - Zone ID for custom domain binding (found in Cloudflare dashboard Overview tab)
+- `CRON_SECRET` - Shared secret for cron job authorization
+- `SESSION_SECRET` - Session signing secret (32+ bytes)
+- `AGENT_AUTH_TOKEN` - Agent RPC authorization token
+
+### 🌐 Zone ID Configuration
+
  The `CLOUDFLARE_ZONE_ID` is required for custom domain binding. Find it in your Cloudflare dashboard:
- 
+
  1. Go to **Cloudflare Dashboard** → Select your account → **cloudless.gr** zone
  2. The Zone ID appears on the **Overview** tab (format: `Zxxxxxxxxxxxxxxxxxxxxxxxxx`)
  3. Add to GitHub secrets or export before deployment:
- 
+
  ```bash
  # Before deployment
  export CLOUDFLARE_ZONE_ID="your_zone_id_here"
@@ -214,11 +217,13 @@ curl -X POST https://cloudless.gr/api/cron/analytics-rollup \
 ## 📊 Monitoring & Alerts
 
 ### Health Check Endpoints
+
 - `/api/health` - Basic health check (returns 200 OK)
 - `/api/auth/session` - Session validation endpoint
 - `/api/config` - Configuration endpoint with auth required
 
 ### Key Metrics to Monitor
+
 1. **D1 Database**: Query count, storage usage (< 5GB free tier)
 2. **R2 Buckets**: Request count (< 10M ops/month free tier)
 3. **Workers Invocations**: Daily count (< 100K free tier)
@@ -227,19 +232,23 @@ curl -X POST https://cloudless.gr/api/cron/analytics-rollup \
 ## 🔒 Security Considerations
 
 ### Secret Management
+
 - **CRON_SECRET**: Shared secret for internal cron authorization
 - **SESSION_SECRET**: Used for session cookie signing (32+ bytes required)
 - **AGENT_AUTH_TOKEN**: RPC authorization for agent endpoints
 - **ADMIN_ALERT_SECRET**: API authentication for admin endpoints
 
 ### Network Security
+
 - All traffic through Cloudflare Tunnel (encrypted)
 - CSP headers enforced on all responses
 - HSTS enabled with preload directive
 - X-Frame-Options: DENY to prevent clickjacking
 
 ### CORS Configuration
+
 API routes use origin-based CORS allowing:
+
 - `https://cloudless.gr` (production)
 - `https://staging.cloudless.gr` (staging)
 - Cloudflare tunnel endpoints
@@ -259,6 +268,7 @@ API routes use origin-based CORS allowing:
 The Fly.io proxy (cloudless-proxy.fly.dev) provides automatic failover from Cloudflare Workers to the Pi k3s cluster.
 
 ### Proxy Status
+
 ```
 Endpoint: http://cloudless-proxy.fly.dev/health
 Response: {"status":"healthy","primary":"cloudless.gr","fallback":"omv.tail8eb71.ts.net","primary_healthy":true}
@@ -272,6 +282,7 @@ Response: {"status":"healthy","primary":"cloudless.gr","fallback":"omv.tail8eb71
 | **Memory** | 256MB shared CPU |
 
 ### Failover Behavior
+
 - Health checks run every 30s to primary backend
 - If primary returns non-200, traffic routes to fallback
 - HTTP endpoint working (HTTPS cert renewal in progress)
@@ -283,6 +294,7 @@ Response: {"status":"healthy","primary":"cloudless.gr","fallback":"omv.tail8eb71
 ## 🔄 Next Review
 
 This architecture should be reviewed:
+
 - When Cloudflare free tier limits are approached
 - Before adding new cron jobs or scheduled tasks
 - When expanding to additional Workers service bindings
