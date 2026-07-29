@@ -135,7 +135,7 @@ async def health():
             fallback_ok = r.status_code == 200
     except Exception as e:
         fallback_ok = False
-        fallback_error = type(e).__name__
+        fallback_error = f"{type(e).__name__}:{e}"
 
     return {
         "status": "healthy" if healthy else ("degraded" if fallback_ok else "unhealthy"),

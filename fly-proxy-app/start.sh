@@ -45,7 +45,8 @@ if [ -n "${TS_AUTHKEY:-}" ]; then
   fi
 
   # Do NOT set HTTP(S)_PROXY globally — that breaks workers.dev primary.
-  export TS_SOCKS_PROXY="socks5h://${SOCKS}"
+  # httpx wants socks5:// (not socks5h://)
+  export TS_SOCKS_PROXY="socks5://${SOCKS}"
 else
   echo "warn: TS_AUTHKEY unset — Tailscale fallback disabled" >&2
 fi
