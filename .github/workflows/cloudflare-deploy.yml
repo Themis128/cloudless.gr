@@ -69,21 +69,45 @@ jobs:
       - name: Build Next.js app with OpenNext
         run: pnpm run cf:build
 
-      - name: Strip @vercel/og .bin fonts (SST esbuild)
-        run: node scripts/strip-opennext-bin-fonts.mjs
+      # SST cloudflare.Worker was bundling past the free-plan 3 MiB limit
+      # (CF error 10027). OpenNext + wrangler keeps assets out of the script.
+      - name: Point wrangler at OpenNext output
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const path = "wrangler.jsonc";
+          let t = fs.readFileSync(path, "utf8");
+          t = t.replace(/"main"\s*:\s*"[^"]*"/, '"main": ".open-next/worker.js"');
+          t = t.replace(/"directory"\s*:\s*"\.\/out"/, '"directory": ".open-next/assets"');
+          fs.writeFileSync(path, t);
+          console.log("wrangler.jsonc → main=.open-next/worker.js assets=.open-next/assets");
+          NODE
 
-      - name: Unlock SST (handle concurrent lock)
-        run: npx sst unlock --config sst.config.cloudflare.ts --stage production || true
+      - name: Report OpenNext Worker size
+        run: |
+          du -sh .open-next/worker.js .open-next/assets 2>/dev/null || true
+          if [ -f .open-next/worker.js ]; then
+            gzip -c .open-next/worker.js | wc -c | awk '{printf "worker.js gzip ≈ %.2f MiB (free limit 3.00)\n", $1/1024/1024}'
+          fi
 
-      - name: Deploy SST stack
-        run: pnpm exec sst deploy --config sst.config.cloudflare.ts --stage production
+      - name: Deploy Worker (OpenNext + wrangler)
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          if ! pnpm cf:deploy 2>&1 | tee /tmp/cf-deploy.log; then
+            if grep -qE '10027|size limit of 3 MiB' /tmp/cf-deploy.log; then
+              echo "::error::Worker exceeds Cloudflare free-plan 3 MiB limit. Upgrade Workers to Paid (10 MiB) at https://dash.cloudflare.com → Workers & Pages → Plans, then re-run this workflow."
+            fi
+            exit 1
+          fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
 
 # Required secrets:
 # CLOUDFLARE_API_TOKEN - Cloudflare API token
 # CF_ACCOUNT_ID - Cloudflare account ID
 # CLOUDFLARE_ZONE_ID - Cloudflare zone ID for custom domain binding
 # CRON_SECRET - Shared secret for cron job authorization
+# NOTE: Free Workers plan caps script size at 3 MiB (gzip). Full OpenNext
+# Next.js 16 apps often need Workers Paid (10 MiB).
