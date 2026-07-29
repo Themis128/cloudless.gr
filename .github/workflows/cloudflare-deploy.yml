@@ -95,11 +95,11 @@ jobs:
             echo "${url} attempt $i → HTTP $code $(head -c 120 /tmp/smoke-body 2>/dev/null || true)"
             if [ "$code" = "200" ]; then
               status=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))" </tmp/smoke-body 2>/dev/null || echo "")
-              if [ "$status" = "ok" ] || [ -z "$status" ]; then
+              if [ "$status" = "ok" ]; then
                 ok=1
                 break
               fi
-              echo "::warning::workers.dev returned 200 but status='${status}' — retrying"
+              echo "::warning::workers.dev returned 200 but status='${status:-<empty>}' — retrying"
             fi
             sleep 5
           done

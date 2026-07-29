@@ -113,8 +113,21 @@ async function gh(path) {
 }
 
 async function latestRun(workflow) {
-  const data = await gh(`/repos/${repo}/actions/workflows/${encodeURIComponent(workflow)}/runs?per_page=5&status=success`);
-  return (data.workflow_runs ?? [])[0] ?? null;
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/actions/workflows/${encodeURIComponent(workflow)}/runs?per_page=5&status=success`,
+    {
+      headers: {
+        "User-Agent": "audits-aggregator/1.0",
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+      },
+    }
+  );
+  // Archived / removed workflow files 404 by filename — treat as inactive, not fatal.
+  if (res.status === 404) return { missing: true, run: null };
+  if (!res.ok) throw new Error(`GH API ${res.status} ${res.statusText}: workflows/${workflow}/runs`);
+  const data = await res.json();
+  return { missing: false, run: (data.workflow_runs ?? [])[0] ?? null };
 }
 
 // CodeQL #1777/#1779 (js/http-to-file-access): bound URL + content-type + size + magic bytes
@@ -203,7 +216,13 @@ for (const a of AUDITS) {
   console.log(`→ ${a.name}`);
   const entry = { name: a.name, workflow: a.workflow, ok: null, lastRun: null, summary: null, note: null };
   try {
-    const run = await latestRun(a.workflow);
+    const { missing, run } = await latestRun(a.workflow);
+    if (missing) {
+      entry.note = "workflow archived / inactive";
+      dashboard.audits[a.key] = entry;
+      md.push(`| ${a.name} | 📦 archived | — | ${entry.note} |`);
+      continue;
+    }
     if (!run) {
       entry.note = "no successful runs yet";
       dashboard.audits[a.key] = entry;

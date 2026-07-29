@@ -1,22 +1,20 @@
-name: Deploy to Production
+name: Deploy to Production (AWS SST — DISABLED for free-tier cutover)
+
+# FREE-TIER POLICY: Automatic AWS Lambda/CloudFront deploys are disabled.
+# Canonical app deploy is `.github/workflows/cloudflare-deploy.yml`.
+# Keep this file for emergency rollback only (manual workflow_dispatch).
+# Do not re-enable push triggers without an explicit paid/AWS opt-in.
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "__tests__/**"
-      - "public/**"
-      - "sst.config.ts"
-      - "next.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "tsconfig.json"
-      - ".github/workflows/**"
   workflow_dispatch:
+    inputs:
+      confirm_aws:
+        description: 'Type "aws-rollback" to run AWS SST deploy (costs money)'
+        required: true
+        default: ""
 
 concurrency:
   group: deploy-production
@@ -31,6 +29,7 @@ jobs:
   deploy:
     name: Deploy
     environment: production
+    if: ${{ github.event.inputs.confirm_aws == 'aws-rollback' }}
     # Pinned to ubuntu-latest. SST + CDK synth + Sentry sourcemap upload
     # do not fit on an ARM Pi runner under cold-deploy conditions — the
     # Deploy (SST) step hung past the 40 min timeout when we tried the
@@ -47,6 +46,9 @@ jobs:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
     steps:
+      - name: Confirm AWS rollback intent
+        run: |
+          echo "::warning::Running DISABLED AWS SST deploy (rollback only). Prefer cloudflare-deploy.yml."
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -103,16 +105,26 @@ jobs:
       - name: Clear any stale SST lock
         run: pnpm sst unlock --stage production || true
 
-      - name: Resolve Cloudflare token from SSM
+      - name: Resolve Cloudflare API token
         id: cftoken
+        env:
+          GH_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          set -e
-          TOKEN=$(aws ssm get-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --with-decryption --region us-east-1 \
-            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
-            echo "::warning::SSM CLOUDFLARE_API_TOKEN empty - Workers AI not wired"
+          set -euo pipefail
+          # GitHub secret is source of truth (free-tier; token-rotate updates it).
+          # Optional SSM read is legacy fallback for AWS rollback only — never write.
+          TOKEN="${GH_CF_TOKEN:-}"
+          if [ -z "$TOKEN" ]; then
+            TOKEN=$(aws ssm get-parameter \
+              --name /cloudless/production/CLOUDFLARE_API_TOKEN \
+              --with-decryption --region us-east-1 \
+              --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+            if [ -n "$TOKEN" ] && [ "$TOKEN" != "None" ]; then
+              echo "::warning::Using legacy SSM CLOUDFLARE_API_TOKEN — prefer GH secret"
+            else
+              TOKEN=""
+              echo "::warning::CLOUDFLARE_API_TOKEN empty in GH secret and SSM — Workers AI not wired"
+            fi
           fi
           echo "::add-mask::$TOKEN"
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
@@ -127,7 +139,7 @@ jobs:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           SENTRY_ENVIRONMENT: prod
           NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod
-          # Cloudflare Workers AI - reads SSM (source of truth, GH secret is stale).
+          # Prefer GH secret (updated by cloudflare-token-rotate.yml).
           CLOUDFLARE_ACCOUNT_ID: fb7dc7b69b662480cd5961a4d1913c78
           CLOUDFLARE_API_TOKEN: ${{ steps.cftoken.outputs.token }}
           NODE_OPTIONS: --max-old-space-size=3072

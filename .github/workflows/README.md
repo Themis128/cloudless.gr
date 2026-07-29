@@ -66,7 +66,7 @@ Conventions in use today (consolidated retroactively):
 ## 📊 Audit (17) — measurement, not gating
 
 `a11y-audit.yml` · `a11y-live-audit.yml` · `api-contract-audit.yml` ·
-`audits-aggregator.yml` · `bundle-budget.yml` · `bundle-size-pr.yml` ·
+`audits-aggregator.yml` (source audits may be archived — aggregator marks them inactive) · `bundle-budget.yml` · `bundle-size-pr.yml` ·
 `cluster-status-audit.yml` · `core-web-vitals-audit.yml` ·
 `cost-audit.yml` · `deps-drift-audit.yml` · `i18n-audit.yml` ·
 `links-audit.yml` · `seo-hygiene.yml` · `lighthouse.yml` ·
