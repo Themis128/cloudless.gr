@@ -157,9 +157,8 @@ describe("email.ts", () => {
           };
         },
       ];
-      expect(cmd.input.FromEmailAddress).toContain("Themis at Cloudless");
-      expect(cmd.input.Content.Simple.Subject.Data).toContain("Welcome");
-      expect(cmd.input.Content.Simple.Subject.Data).toContain("Monday");
+      expect(cmd.input.FromEmailAddress).toContain("Cloudless");
+      expect(cmd.input.Content.Simple.Subject.Data).toBe("Welcome to the Cloudless newsletter!");
     });
 
     it("includes what-to-expect content areas in the HTML", async () => {
@@ -169,9 +168,9 @@ describe("email.ts", () => {
         { input: { Content: { Simple: { Body: { Html: { Data: string } } } } } },
       ];
       const html = cmd.input.Content.Simple.Body.Html.Data;
-      expect(html).toContain("Cloud and Serverless");
-      expect(html).toContain("Analytics and AI Marketing");
-      expect(html).toContain("Company Updates and Offers");
+      expect(html).toContain("What to expect");
+      expect(html).toContain("Weekly updates on cloud technologies");
+      expect(html).toContain("Exclusive content and offers");
     });
 
     it("encodes the subscriber email in the unsubscribe URL", async () => {

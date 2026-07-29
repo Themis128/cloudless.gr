@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isEspoCRMConfigured())) {
-    return NextResponse.json({ error: "EspoCRM not configured." }, { status: 404 });
+    return NextResponse.json({ error: "EspoCRM not configured." }, { status: 503 });
   }
 
   try {

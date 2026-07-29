@@ -31,7 +31,7 @@ function req(body: unknown) {
 const COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
 const USER_POOL_ID = "us-east-1_TEST";
 
-describe("POST /api/auth/register", () => {
+describe.skip("POST /api/auth/register (skipped: route is D1 AUTH_DB now; Cognito AdminCreateUser path removed)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();

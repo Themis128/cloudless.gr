@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
 
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
+  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
 
   const ok = await confirmUser(userPoolId, email);
   if (!ok) return NextResponse.json({ error: "Activation failed" }, { status: 500 });

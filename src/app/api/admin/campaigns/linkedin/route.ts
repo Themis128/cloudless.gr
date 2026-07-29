@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isLinkedInConfigured())) {
-    return NextResponse.json({ error: "LinkedIn not configured." }, { status: 404 });
+    return NextResponse.json({ error: "LinkedIn not configured." }, { status: 503 });
   }
 
   try {

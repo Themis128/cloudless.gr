@@ -15,7 +15,11 @@ vi.mock("@/lib/email", () => ({
 function req(body: unknown) {
   return new Request("http://localhost/api/auth/resend-verification", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // Documentation-range IP enables enum-safe 200 responses (see route).
+      "x-forwarded-for": "203.0.113.200",
+    },
     body: JSON.stringify(body),
   });
 }
@@ -52,7 +56,10 @@ describe("POST /api/auth/resend-verification", () => {
     const { POST } = await import("@/app/api/auth/resend-verification/route");
     const badReq = new Request("http://localhost/api/auth/resend-verification", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-forwarded-for": "203.0.113.200",
+      },
       body: "not-json",
     });
     const res = await POST(badReq);

@@ -8,7 +8,8 @@ vi.mock("@/lib/ssm-config", () => ({
   resetSsmCache: vi.fn(),
 }));
 
-const mockGetConfig = vi.fn();
+import { getConfig } from "@/lib/ssm-config";
+const mockGetConfig = vi.mocked(getConfig);
 
 describe("DEFAULT_FLAGS", () => {
   it("is a non-empty array of ABFlag objects", () => {

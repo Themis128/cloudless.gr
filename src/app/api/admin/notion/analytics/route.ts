@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   // surfaces still gate correctly. This route returns empty data until the
   // Athena replacement is wired.
   if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
-    return NextResponse.json({ error: "Notion not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
 
   const _rawDays = parseInt(request.nextUrl.searchParams.get("days") ?? "7", 10);
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
   // surfaces still gate correctly. This route returns empty data until the
   // Athena replacement is wired.
   if (!(await isConfiguredAsync("NOTION_API_KEY"))) {
-    return NextResponse.json({ error: "Notion not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notion not configured" }, { status: 503 });
   }
 
   const body = (await request.json().catch(() => ({}))) as { action?: string; daysToKeep?: number };

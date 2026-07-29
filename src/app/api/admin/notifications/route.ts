@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    return NextResponse.json({ error: "Notifications store not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 
   const url = new URL(request.url);
@@ -84,7 +84,7 @@ export async function PATCH(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    return NextResponse.json({ error: "Notifications store not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 
   let body: { id?: string; ids?: string[]; markAllRead?: boolean };

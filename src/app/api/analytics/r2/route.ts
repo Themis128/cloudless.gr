@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const bucket = getBucket(req);
   if (!bucket) {
     // Fallback for AWS deployment - proxy to S3 or return 503
-    return NextResponse.json({ error: "Analytics storage not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Analytics storage not configured" }, { status: 503 });
   }
 
   const url = new URL(req.url);

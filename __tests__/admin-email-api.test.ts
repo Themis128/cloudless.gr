@@ -79,7 +79,7 @@ describe("Admin Email API routes", () => {
       const res = await GET(makeGet("/api/admin/email/campaigns"));
       expect(res.status).toBe(501);
       const data = await res.json();
-      expect(data.error).toMatch(/content.*scope/i);
+      expect(data.error).toMatch(/managed directly in EspoCRM/i);
     });
   });
 

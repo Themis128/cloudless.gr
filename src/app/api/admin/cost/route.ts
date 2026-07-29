@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
           error: "athena_view_not_found",
           detail: "Run the R9 Athena DDL (see docs/optimal-architecture-assessment.md) first.",
         },
-        { status: 404 }
+        { status: 503 }
       );
     }
     return NextResponse.json(

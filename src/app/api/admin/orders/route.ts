@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   try {
     const stripe = await getStripe();
-    if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 404 });
+    if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Number(searchParams.get("limit") ?? 10), 50);
 

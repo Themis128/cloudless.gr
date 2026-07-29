@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Case Studies not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notion Case Studies not configured" }, { status: 503 });
   }
 
   try {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_CASE_STUDIES_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Case Studies not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notion Case Studies not configured" }, { status: 503 });
   }
 
   let body: CaseStudyInput;

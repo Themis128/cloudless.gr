@@ -84,6 +84,13 @@ export async function sendEmail(options: {
 
       await client.send(command);
     } catch (err) {
+      // SES sometimes returns HTTP 200 with a body the SDK XML parser rejects —
+      // treat that as success (message was accepted by SES).
+      const status =
+        err && typeof err === "object" && "$metadata" in err
+          ? (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
+          : undefined;
+      if (status === 200) return;
       console.error("[email-sender] SES failed:", err);
       throw new Error(`SES failure: ${err instanceof Error ? err.message : String(err)}`);
     }

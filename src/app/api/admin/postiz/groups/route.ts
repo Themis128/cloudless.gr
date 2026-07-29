@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ groups });
   } catch (err) {
     if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 404 });
+      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
     }
     if (err instanceof PostizApiError) {
       // Surface the upstream URL + a status-specific hint so the operator can

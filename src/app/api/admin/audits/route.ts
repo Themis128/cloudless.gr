@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const token = process.env.GITHUB_TOKEN ?? "";
   if (!token) {
-    return NextResponse.json({ error: "GitHub Actions dispatch not configured" }, { status: 404 });
+    return NextResponse.json({ error: "GitHub Actions dispatch not configured" }, { status: 503 });
   }
 
   try {

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Projects not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notion Projects not configured" }, { status: 503 });
   }
 
   const status = request.nextUrl.searchParams.get("status") as ProjectStatus | null;
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_PROJECTS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Projects not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notion Projects not configured" }, { status: 503 });
   }
 
   const body = (await request.json()) as { name: string; [key: string]: unknown };

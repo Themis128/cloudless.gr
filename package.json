@@ -92,7 +92,12 @@
     "coverage:merge": "node scripts/coverage-merge.mjs",
     "test:unit:coverage": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1",
     "test:unit:coverage:ci": "mkdir -p coverage/vitest/.tmp && vitest run --coverage --pool=forks --maxWorkers=1 --reporter=default",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "ANALYZE=true next build",
+    "cf:build": "bash scripts/cf-build-wrapper.sh",
+    "cf:build:opennext": "pnpm exec opennextjs-cloudflare build",
+    "cf:deploy": "opennextjs-cloudflare deploy",
+    "cf:preview": "opennextjs-cloudflare preview",
+    "cf:upload": "opennextjs-cloudflare upload"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.33.1",

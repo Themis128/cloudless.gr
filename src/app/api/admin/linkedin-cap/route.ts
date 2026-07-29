@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   }
 
   if (!LINKEDIN_ACCESS_TOKEN) {
-    return Response.json({ error: "LinkedIn CAPI not configured" }, { status: 404 });
+    return Response.json({ error: "LinkedIn CAPI not configured" }, { status: 503 });
   }
 
   try {

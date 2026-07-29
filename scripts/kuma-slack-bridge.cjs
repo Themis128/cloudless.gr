@@ -18,8 +18,7 @@ const PASS = process.env.KUMA_PASS || "";
 // Default to the in-cluster bridge Deployment until the Pi hostpath
 // standalone includes POST /api/webhooks/kuma (currently 404).
 const BRIDGE_URL =
-  process.env.KUMA_BRIDGE_URL ||
-  "http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/";
+  process.env.KUMA_BRIDGE_URL || "http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/";
 const TOKEN = process.env.KUMA_BRIDGE_TOKEN || "";
 
 if (!PASS || !TOKEN) {

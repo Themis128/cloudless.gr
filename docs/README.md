@@ -65,4 +65,4 @@
 These skills live in the local Claude installation (`~/.claude/skills/`) — they auto-load in future Claude sessions to apply context that doesn't belong in the repo. Names are stable; if you don't have them locally, future sessions will rebuild them from the corresponding docs above.
 
 - **`lighthouse-perf-debug`** — diagnosing CI Lighthouse failures (variance vs. real regression, the median-of-3 pattern, score-driving metrics). Pairs with [.github/workflows/lighthouse.yml](../.github/workflows/lighthouse.yml).
-- **`ecr-immutable-tags-ci`** — handling AWS ECR repos with IMMUTABLE tag mutability (the BatchDeleteImage untag pattern, IAM perms, SHA-only fallback). Pairs with [.github/workflows/deploy-pi.yml](../.github/workflows/deploy-pi.yml).
+- **`ecr-immutable-tags-ci`** — handling AWS ECR repos with IMMUTABLE tag mutability (the BatchDeleteImage untag pattern, IAM perms, SHA-only fallback). Pairs with [.github/workflows/rollout-pi-force.yml](../.github/workflows/rollout-pi-force.yml) (deploy-pi.yml removed — hostpath standalone).

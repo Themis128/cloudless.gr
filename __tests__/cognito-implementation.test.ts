@@ -80,7 +80,7 @@ const CLIENT_ID = "cognito-client-id";
 const CLIENT_SECRET = "cognito-client-secret";
 const AUTH_URL = "https://cloudless.gr";
 
-describe("src/lib/auth.ts — Cognito mode", () => {
+describe.skip("src/lib/auth.ts — Cognito mode (skipped: auth.ts is D1-only; Cognito provider path removed)", () => {
   const origFetch = globalThis.fetch;
 
   beforeEach(() => {

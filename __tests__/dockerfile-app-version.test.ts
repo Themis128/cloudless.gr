@@ -5,10 +5,12 @@
  * silently falls back to the "0.1.0" default and the SHA drift detector
  * always reports the Pi as drifted.
  *
- * This test enforces three things at the source-file level:
+ * This test enforces:
  *   1. ARG APP_VERSION is declared in the runner stage (not just builder).
  *   2. ENV APP_VERSION=${APP_VERSION} is set in the runner stage.
- *   3. The build-pi-image workflow passes the build-arg.
+ *
+ * build-pi-image.yml was removed with the hostpath Pi path — there is no
+ * remaining CI workflow that passes APP_VERSION as a docker build-arg.
  */
 
 import { readFileSync } from "node:fs";
@@ -16,7 +18,6 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const DOCKERFILE = resolve(__dirname, "../Dockerfile");
-const WORKFLOW = resolve(__dirname, "../.github/workflows/build-pi-image.yml");
 
 describe("Dockerfile multi-stage APP_VERSION wiring", () => {
   const dockerfile = readFileSync(DOCKERFILE, "utf-8");
@@ -47,22 +48,5 @@ describe("Dockerfile multi-stage APP_VERSION wiring", () => {
       runner,
       "runner stage MUST set ENV APP_VERSION=${APP_VERSION} so process.env.APP_VERSION is populated at runtime"
     ).toMatch(/APP_VERSION=\$\{APP_VERSION\}|APP_VERSION=\$APP_VERSION/);
-  });
-});
-
-describe("build-pi-image workflow APP_VERSION wiring", () => {
-  const yml = readFileSync(WORKFLOW, "utf-8");
-
-  it("passes APP_VERSION as a build-arg to docker buildx", () => {
-    // The workflow uses docker/build-push-action with build-args: |\n ...
-    // Accepts any of three forms that all resolve to the SHA being built:
-    //   1. APP_VERSION=${{ github.event.inputs.target_sha || github.sha }}
-    //   2. APP_VERSION=${{ github.sha }}
-    //   3. APP_VERSION=${{ steps.sha.outputs.full }}   ← PR #294 fix for
-    //      Issue #293; ensures the embedded version matches the ACTUAL
-    //      checked-out HEAD instead of the workflow's GITHUB_SHA.
-    expect(yml, "build-pi-image workflow MUST pass APP_VERSION as a build-arg").toMatch(
-      /APP_VERSION=\$\{\{\s*github\.event\.inputs\.target_sha\s*\|\|\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*github\.sha\s*\}\}|APP_VERSION=\$\{\{\s*steps\.sha\.outputs\.full\s*\}\}/
-    );
   });
 });

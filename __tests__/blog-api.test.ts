@@ -1,12 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resetIntegrationCache } from "@/lib/integrations";
 
-const getPostsMock = vi.fn();
-const getPostBySlugMock = vi.fn();
+const getBlogPostsWithSourceMock = vi.fn();
+const getBlogPostBySlugMock = vi.fn();
+const isAppFlowyConfiguredMock = vi.fn();
+const isConfiguredAsyncMock = vi.fn();
 
-vi.mock("@/lib/notion-blog", () => ({
-  getPosts: getPostsMock,
-  getPostBySlug: getPostBySlugMock,
+vi.mock("@/lib/blog-source", () => ({
+  getBlogPostsWithSource: (...a: unknown[]) => getBlogPostsWithSourceMock(...a),
+  getBlogPostBySlug: (...a: unknown[]) => getBlogPostBySlugMock(...a),
+}));
+
+vi.mock("@/lib/appflowy", () => ({
+  isAppFlowyConfigured: (...a: unknown[]) => isAppFlowyConfiguredMock(...a),
+}));
+
+vi.mock("@/lib/integrations", () => ({
+  isConfiguredAsync: (...a: unknown[]) => isConfiguredAsyncMock(...a),
+  resetIntegrationCache: vi.fn(),
 }));
 
 vi.mock("@/lib/blog", () => ({
@@ -19,14 +29,15 @@ vi.mock("@/lib/blog", () => ({
   ],
 }));
 
-describe("Blog API Notion fallbacks", () => {
+describe("Blog API dual-run fallbacks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetModules();
+    isAppFlowyConfiguredMock.mockResolvedValue(false);
+    isConfiguredAsyncMock.mockResolvedValue(false);
   });
 
-  it("GET /api/blog/posts returns static posts when Notion is not configured", async () => {
-    process.env.NOTION_API_KEY = "";
-    resetIntegrationCache();
+  it("GET /api/blog/posts returns static posts when CMS is not configured", async () => {
     const { GET } = await import("@/app/api/blog/posts/route");
 
     const response = await GET();
@@ -36,11 +47,15 @@ describe("Blog API Notion fallbacks", () => {
     expect(data.source).toBe("static");
     expect(data.fallbackReason).toBe("not-configured");
     expect(response.headers.get("x-blog-source")).toBe("static");
-    expect(getPostsMock).not.toHaveBeenCalled();
+    expect(getBlogPostsWithSourceMock).not.toHaveBeenCalled();
   });
 
-  it("GET /api/blog/posts returns Notion source metadata when upstream succeeds", async () => {
-    getPostsMock.mockResolvedValueOnce([{ slug: "from-notion" }]);
+  it("GET /api/blog/posts returns CMS source metadata when upstream succeeds", async () => {
+    isConfiguredAsyncMock.mockResolvedValue(true);
+    getBlogPostsWithSourceMock.mockResolvedValueOnce({
+      posts: [{ slug: "from-notion" }],
+      source: "notion",
+    });
 
     const { GET } = await import("@/app/api/blog/posts/route");
 
@@ -53,8 +68,9 @@ describe("Blog API Notion fallbacks", () => {
     expect(response.headers.get("x-blog-source")).toBe("notion");
   });
 
-  it("GET /api/blog/posts falls back to static when Notion fetch throws", async () => {
-    getPostsMock.mockRejectedValueOnce(new Error("notion down"));
+  it("GET /api/blog/posts falls back to static with cms-error when fetch throws", async () => {
+    isConfiguredAsyncMock.mockResolvedValue(true);
+    getBlogPostsWithSourceMock.mockRejectedValueOnce(new Error("cms down"));
 
     const { GET } = await import("@/app/api/blog/posts/route");
 
@@ -63,12 +79,13 @@ describe("Blog API Notion fallbacks", () => {
 
     expect(response.status).toBe(200);
     expect(data.source).toBe("static");
-    expect(data.fallbackReason).toBe("notion-error");
+    expect(data.fallbackReason).toBe("cms-error");
     expect(response.headers.get("x-blog-source")).toBe("static");
   });
 
-  it("GET /api/blog/[slug] falls back to static when Notion fetch throws", async () => {
-    getPostBySlugMock.mockRejectedValueOnce(new Error("notion timeout"));
+  it("GET /api/blog/[slug] falls back to static when blog-source fetch throws", async () => {
+    isConfiguredAsyncMock.mockResolvedValue(true);
+    getBlogPostBySlugMock.mockRejectedValueOnce(new Error("cms timeout"));
 
     const { GET } = await import("@/app/api/blog/[slug]/route");
 
@@ -82,8 +99,9 @@ describe("Blog API Notion fallbacks", () => {
     expect(data.post.slug).toBe("hello-world");
   });
 
-  it("GET /api/blog/[slug] uses static fallback when Notion returns null", async () => {
-    getPostBySlugMock.mockResolvedValueOnce(null);
+  it("GET /api/blog/[slug] uses static fallback when blog-source returns null", async () => {
+    isConfiguredAsyncMock.mockResolvedValue(true);
+    getBlogPostBySlugMock.mockResolvedValueOnce(null);
 
     const { GET } = await import("@/app/api/blog/[slug]/route");
 
