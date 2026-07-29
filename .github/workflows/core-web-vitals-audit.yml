@@ -80,13 +80,16 @@ jobs:
             exit 1
           fi
 
-          for path in "" /en /en/services /en/contact /en/store; do
+          for path in /en /en/services /en/contact /en/store; do
             url="${BASE}${path}"
             BODY=$(mktemp)
-            CODE=$(curl -sS -L -o "$BODY" -w "%{http_code}" --max-time 30 "$url" || echo 000)
+            # proxy.ts HTTPS-enforces when x-forwarded-proto=http (Next sets this
+            # on plain HTTP). Pretend we are behind TLS like the Tunnel does.
+            CODE=$(curl -sS -o "$BODY" -w "%{http_code}" --max-time 30 \
+              -H "X-Forwarded-Proto: https" \
+              -H "Host: cloudless.gr" \
+              "$url" || echo 000)
             echo "$url → HTTP $CODE"
-            # Real interstitial only — do NOT match cdn-cgi/challenge-platform
-            # scripts (Cloudflare injects jsd/main.js into normal 200 HTML).
             if grep -qiE 'Just a moment|cf-browser-verification' "$BODY"; then
               echo "::error::$url returned a Cloudflare challenge interstitial (unexpected on NodePort)"
               rm -f "$BODY"
@@ -106,9 +109,9 @@ jobs:
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
           configPath: .github/lighthouserc.cjs
-          # Origin-only audit (bypasses CF). Measures app CWV the Tunnel serves.
+          # Locale-resolved routes only. Bare "/" 308s to Location
+          # http://0.0.0.0:3000/en when HOSTNAME=0.0.0.0 (listen bind).
           urls: |
-            ${{ steps.warm.outputs.base_url }}
             ${{ steps.warm.outputs.base_url }}/en
             ${{ steps.warm.outputs.base_url }}/en/services
             ${{ steps.warm.outputs.base_url }}/en/contact
@@ -144,11 +147,8 @@ jobs:
             "| \(.url) | \((.perf * 100) | round) | \((.a11y * 100) | round) | \((.bp * 100) | round) | \((.seo * 100) | round) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
-          # Bare origin URL may 308 → /en; skip perf gate for that URL only.
-          ROOT="${BASE_URL}/"
-          FAILED=$(echo "$MEDIANS" | jq --arg root "$ROOT" '[.[] | select(
-            (if (.url == $root or .url == ($root | rtrimstr("/"))) then false else .perf < 0.60 end) or
-            .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
+          FAILED=$(echo "$MEDIANS" | jq '[.[] | select(
+            .perf < 0.60 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
 
           if [ "$FAILED" -gt 0 ]; then
@@ -157,9 +157,8 @@ jobs:
             echo "Thresholds: Performance ≥ 60 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "Failing routes:" >> "$GITHUB_STEP_SUMMARY"
-            echo "$MEDIANS" | jq -r --arg root "$ROOT" '.[] | select(
-              (if (.url == $root or .url == ($root | rtrimstr("/"))) then false else .perf < 0.60 end) or
-              .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
+            echo "$MEDIANS" | jq -r '.[] | select(
+              .perf < 0.60 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
             ) | "- \(.url) perf=\((.perf*100)|round) a11y=\((.a11y*100)|round) bp=\((.bp*100)|round) seo=\((.seo*100)|round)"' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
