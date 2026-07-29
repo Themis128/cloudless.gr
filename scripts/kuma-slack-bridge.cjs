@@ -58,10 +58,8 @@ async function main() {
       type: "webhook",
       webhookURL: BRIDGE_URL,
       webhookContentType: "json",
-      additionalHeadersEnabled: true,
-      additionalHeaders: JSON.stringify({
+      webhookAdditionalHeaders: JSON.stringify({
         Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
       }),
     },
     null
@@ -97,23 +95,17 @@ async function main() {
     }
   }
 
-  const test = await emit(
-    socket,
-    "testNotification",
-    {
-      name: "Slack via cloudless bridge",
-      active: true,
-      isDefault: true,
-      type: "webhook",
-      webhookURL: BRIDGE_URL,
-      webhookContentType: "json",
-      additionalHeadersEnabled: true,
-      additionalHeaders: JSON.stringify({
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
-      }),
-    }
-  );
+  const test = await emit(socket, "testNotification", {
+    name: "Slack via cloudless bridge",
+    active: true,
+    isDefault: true,
+    type: "webhook",
+    webhookURL: BRIDGE_URL,
+    webhookContentType: "json",
+    webhookAdditionalHeaders: JSON.stringify({
+      Authorization: `Bearer ${TOKEN}`,
+    }),
+  });
   console.log("testNotification", test);
 
   socket.close();
