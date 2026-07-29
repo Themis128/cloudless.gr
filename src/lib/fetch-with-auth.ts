@@ -15,8 +15,7 @@
 
 import { getSession } from "next-auth/react";
 
-const CACHE_TTL_MS =
-  process.env.VITEST === "true" || process.env.NODE_ENV === "test" ? 0 : 5000;
+const CACHE_TTL_MS = process.env.VITEST === "true" || process.env.NODE_ENV === "test" ? 0 : 5000;
 
 /** Read at call time so Vitest can toggle NEXT_PUBLIC_AUTH_PROVIDER per test. */
 function cognitoBearerEnabled(): boolean {
