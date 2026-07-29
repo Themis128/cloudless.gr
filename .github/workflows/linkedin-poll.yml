@@ -68,6 +68,10 @@ jobs:
           # grows; the full payload lives in CloudWatch.
           head -c 4096 "$BODY" || true
           echo
+          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
+            echo "::error::Cloudflare managed challenge intercepted the cron call (not an app 403). Re-run workflow cloudflare-skip-cron-challenge.yml or check Bot Fight Mode skip for /api/cron/*."
+            exit 1
+          fi
           if [ "$STATUS" != "200" ]; then
             echo "::error::poll returned non-200 status: $STATUS"
             exit 1

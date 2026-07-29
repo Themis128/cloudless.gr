@@ -1,0 +1,64 @@
+name: Skip Cloudflare challenge on /api/cron/*
+
+# GitHub-hosted runners hit Cloudflare Bot Fight / Managed Challenge
+# ("Just a moment…") on /api/cron/*, which breaks Bearer CRON_SECRET polls
+# (linkedin-poll, etc.). This workflow installs a custom WAF skip rule for
+# that path prefix.
+#
+# HOW TO RUN: push a change to this file / the script, or workflow_dispatch.
+# Token: secrets.CLOUDFLARE_API_TOKEN needs Zone:Read + Firewall Services:Edit.
+# Zone: secrets.CLOUDFLARE_ZONE_ID (optional — script resolves cloudless.gr).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudflare-skip-cron-challenge.yml"
+      - "scripts/cf-skip-cron-challenge.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-skip-cron-challenge
+  cancel-in-progress: false
+
+jobs:
+  skip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Install WAF skip rule for /api/cron/*
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: bash scripts/cf-skip-cron-challenge.sh
+
+      - name: Verify cron path is not challenged
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          BODY=$(mktemp)
+          # Even without a valid secret we must NOT get the challenge HTML.
+          # Expect 401/403 from the app, never Cloudflare interstitial.
+          STATUS=$(curl -sS -o "$BODY" -w "%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET:-missing}" \
+            -H "User-Agent: github-actions/cf-skip-cron-verify" \
+            --max-time 30 \
+            "https://cloudless.gr/api/cron/ad-analytics-poll" || true)
+          echo "HTTP $STATUS"
+          head -c 512 "$BODY" || true
+          echo
+          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
+            echo "::error::still receiving Cloudflare challenge HTML — WAF skip not effective yet (propagation?) or token lacks Firewall Services:Edit"
+            exit 1
+          fi
+          if [[ "$STATUS" == "000" ]]; then
+            echo "::error::curl failed to reach origin"
+            exit 1
+          fi
+          echo "✓ no Cloudflare challenge interstitial (app responded with HTTP $STATUS)"

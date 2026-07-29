@@ -1,22 +1,18 @@
 name: Deploy to Production
 
+# Legacy AWS SST path (S3/CloudFront). Production traffic is Cloudflare Workers
+# (`cloudflare-deploy.yml`). Keep this workflow for rare manual SST/infra
+# experiments only — do NOT fire on push to main (NoSuchBucket noise).
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "__tests__/**"
-      - "public/**"
-      - "sst.config.ts"
-      - "next.config.ts"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "tsconfig.json"
-      - ".github/workflows/**"
   workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why run legacy AWS SST deploy? (prefer Cloudflare Workers Deploy)"
+        required: false
+        default: "manual legacy SST deploy"
 
 concurrency:
   group: deploy-production

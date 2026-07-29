@@ -5,7 +5,8 @@ env:
 
 on:
   workflow_run:
-    workflows: [Deploy to Production]
+    # Production deploys ship via Cloudflare Workers, not legacy AWS SST.
+    workflows: [Cloudflare Workers Deploy]
     types: [completed]
     branches: [main]
 
