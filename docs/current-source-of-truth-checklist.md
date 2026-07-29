@@ -87,11 +87,15 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 
 ## Next open (Cloudflare-first)
 
-- [ ] `OPEN` Apply R16: create `appflowy-walg-r2` from R2 API token + apply
-  ConfigMap/CronJob + restart AppFlowy postgres (when ready to enable WAL archive).
-- [ ] `OPEN` Retarget R10 PVC backup CronJobs from AWS S3/`apk add aws-cli` to R2
-  (`infrastructure/backup/cronjob-*.yaml`).
-
+- [x] `DONE` Retarget R10 PVC backup CronJobs to R2 via rclone (no `apk add aws-cli`).
+  Evidence: `infrastructure/backup/cronjob-*.yaml`, `README.md`,
+  `.github/workflows/store-r2-backup-credentials.yml`.
+- [ ] `BLOCKED-OPERATOR` Create Cloudflare R2 S3 API token for `datalake-bucket`, then run
+  `store-r2-backup-credentials.yml` (or kubectl create `pvc-backup-r2` /
+  `appflowy-walg-r2` per `infrastructure/backup/README.md`).
+  Blocker 2026-07-29: `create-r2-credentials.yml` → API **10000 Authentication error**.
+- [ ] `OPEN` After secrets land: apply CronJobs + WAL-G ConfigMap; smoke a
+  `pvc-backup-appflowy` Job.
 ## LinkedIn CAPI finalization
 
 - [x] `DONE` Verify/wire `li_fat_id` capture path in code flow.
@@ -112,18 +116,17 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
 
 ## Already done baseline
 
-- [x] R10, R11, R12, R13 (descoped), R14, R18, R22.
+- [x] R10 (S3 design superseded by R2 CronJobs above), R11, R12, R13 (descoped), R14, R18, R22.
 
 ## Platform direction (operator decision 2026-07-29)
 
 - **Migrate off AWS → Cloudflare.** Prefer Workers / R2 / D1 / Access / Tunnel over expanding SSM, S3, Lambda, Athena, Cognito, etc.
 - **Do not install AWS CLI or AWS SDK** for agent/operator work on this repo; use Cloudflare tooling and existing in-repo paths instead.
 - AWS-backed roadmap items (old R16→S3, R20→AWS, R24 secondary region) are
-  **legacy** — R16 retargeted to R2 in-repo; R20/R24 deferred. Next: apply
-  `appflowy-walg-r2` + retarget PVC backup CronJobs to R2 (no AWS CLI).
+  **legacy** — R16 + R10 retargeted to R2 in-repo; apply blocked on R2 API token.
 
 ## Notes
 
 - `docs/master-todo-list.md` remains the detailed ledger (rationale, history, phase context).
-- Operator: CF rotation skipped; Sentry secret + Slack/ntfy fan-out verified; Kuma done; ESP32 partial reconstruct done.
+- Operator: CF rotation skipped; Sentry + Slack/ntfy verified; Kuma webhook e2e **200**; ESP32 partial reconstruct done.
 - This file is intentionally concise and execution-focused to avoid roadmap drift.
