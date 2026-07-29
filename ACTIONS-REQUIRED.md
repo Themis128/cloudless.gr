@@ -2,102 +2,65 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 21:55 EEST — closed [aw] noise issues; disabled failure-issue spam
+# Last Updated: 2026-07-29 22:05 EEST — Wrangler secrets verified; ETL runner JSON fixed
 
 ---
 
-## ✅ Agentic workflow failure issues (cleared 2026-07-29)
+## ✅ Cleared (2026-07-29)
 
-Closed ~28 open `[aw] … failed` issues (Copilot engine HTTP 401 at provider `172.30.0.30:10002`).
-Also closed #1313 (stale ETL lock) — agentic `etl-espocrm-to-r2.md` is gone; regular `etl-espocrm-to-r2.yml` remains.
+| Item                               | Evidence                                                |
+| ---------------------------------- | ------------------------------------------------------- |
+| GitHub R2 + CF account secrets     | `CF_R2_*`, `CF_ACCOUNT_ID`, `CLOUDFLARE_*` set          |
+| Wrangler `SESSION_SECRET`          | present (`wrangler secret list`)                        |
+| Wrangler `AGENT_AUTH_TOKEN`        | present                                                 |
+| Agentic `[aw] failed` issue spam   | `report-failure-as-issue: false` on 9 workflows (#1386) |
+| AppFlowy R16 WAL + daily dump → R2 | live; `failed_count=0`                                  |
+| PVC backups → R2                   | smoke dump OK                                           |
 
-**To stop new issues:** `safe-outputs.report-failure-as-issue: false` is set on all 9 agentic `.md` workflows (recompiled).
+---
 
-**To make agents work again (operator):** refresh Copilot auth for gh-aw:
+## ⏳ Operator-only (cannot automate from this session)
+
+### 1. Copilot token for agentic workflows (401)
+
+Scheduled gh-aw agents still fail against Copilot provider `172.30.0.30:10002`.
+They no longer open GitHub issues. To restore agents:
 
 ```bash
-# Token used by engine: copilot (gh aw secrets bootstrap reports this as present)
-# If runs still 401, rotate COPILOT_GITHUB_TOKEN (fine-grained PAT / Copilot CLI token)
 gh secret set COPILOT_GITHUB_TOKEN --repo Themis128/cloudless.gr
+# then re-run one agentic workflow to confirm 200 from the Copilot proxy
 ```
 
-Until that token works against the Copilot provider proxy, scheduled agents will still fail — they just will not open GitHub issues.
+### 2. Optional product / monitoring secrets
 
----
+| Secret                                                          | Purpose                                       |
+| --------------------------------------------------------------- | --------------------------------------------- |
+| `GEMINI_API_KEY` (Wrangler)                                     | Gemini fallback (Workers AI works without it) |
+| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` / `NEXT_PUBLIC_META_PIXEL_ID` | Ads                                           |
+| `SENTRY_AUTH_TOKEN` / `NEXT_PUBLIC_SENTRY_DSN`                  | Error tracking                                |
+| `KUMA_PUSH_ETL_ESPOCRM`                                         | ETL Kuma heartbeat                            |
+| Cloudflare API token rotation                                   | if MCP CF tools return 401                    |
 
-## ✅ GitHub secrets (verified 2026-07-29)
+### 3. ESP32 Notion DBs
 
-| Secret | Status | Purpose |
-|--------|--------|---------|
-| `CLOUDFLARE_API_TOKEN` | ✅ | Deploy, SST, CF APIs |
-| `CF_ACCOUNT_ID` | ✅ | Deploy, ETL (`fb7dc7b69b662480cd5961a4d1913c78`) |
-| `CLOUDFLARE_ACCOUNT_ID` | ✅ | Same account id (alias) |
-| `CLOUDFLARE_ZONE_ID` | ✅ | Custom domains |
-| `CF_R2_ACCESS_KEY_ID` | ✅ | R2 S3 API (ETL + backups) |
-| `CF_R2_SECRET_ACCESS_KEY` | ✅ | R2 S3 API |
-
-Cluster: `pvc-backup-r2` (appflowy/espocrm/postiz/n8n) + `appflowy-walg-r2` live.
-Smoke: AppFlowy PVC dump + continuous WAL + daily `pg_dump` CronJob → `datalake-bucket`.
-
----
-
-## ⏳ Still needs operator (Wrangler / optional)
-
-### Wrangler secrets (Workers runtime)
-
-```bash
-npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
-npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
-# optional Gemini fallback:
-npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
-```
-
-| Secret | Priority | Notes |
-|--------|----------|-------|
-| `SESSION_SECRET` | 🔴 | 32+ bytes; session signing |
-| `AGENT_AUTH_TOKEN` | 🔴 | Agent endpoints |
-| `GEMINI_API_KEY` | 🟡 | Workers AI works without it |
-
-### Optional product features
-
-| Secret | Purpose |
-|--------|---------|
-| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | LinkedIn ads |
-| `NEXT_PUBLIC_META_PIXEL_ID` | Meta ads |
-| `SENTRY_AUTH_TOKEN` / `NEXT_PUBLIC_SENTRY_DSN` | Error tracking |
-| `KUMA_PUSH_ETL_ESPOCRM` | ETL monitoring |
+Devices + Telemetry DBs remain empty (no hardware data ever populated).
+Partial page reconstruct already done — see ESP32 restore runbook.
 
 ---
 
 ## 🔧 Verification
 
-1. `gh workflow run etl-espocrm-to-r2.yml` — should no longer fail on missing R2 keys
-2. `gh workflow run cloudflare-deploy.yml`
-3. Continuous WAL: `archived_count` advances, `failed_count=0` on AppFlowy postgres
-4. Daily CronJob `appflowy-walg-basebackup` at `30 2 * * *`
-
----
-
-## 📝 Google Calendar (optional)
-
-Not required for core chat. To enable booking, set Wrangler secrets
-`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID`, or non-secret
-keys via D1 `app_config` / admin Settings. Keep `GOOGLE_PRIVATE_KEY` in Wrangler.
-
----
-
-## 🔗 Links
-
-- [GitHub Secrets](https://github.com/Themis128/cloudless.gr/settings/secrets/actions)
-- [R2 credentials workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/create-r2-credentials.yml)
-- [ETL workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/etl-espocrm-to-r2.yml)
-- Checklist: `docs/current-source-of-truth-checklist.md`
+1. `gh workflow run etl-espocrm-to-r2.yml` — uses
+   `runs-on: ["self-hosted","omv","build"]` when `RUNNER_GENERIC` unset
+2. Continuous WAL: `archived_count` advances, `failed_count=0`
+3. Daily CronJob `appflowy-walg-basebackup` at `30 2 * * *`
+4. `npx wrangler secret list --config wrangler.jsonc` includes SESSION + AGENT
 
 ---
 
 ## Notes
 
-1. Prefer D1 `app_config` + Wrangler/k8s secrets over AWS SSM (legacy Lambda path only).
+1. Pi `cloudless-app-config` has `SSM_DISABLED=1`; `getConfig()` only hits AWS SSM when `SSM_ENABLED=1` (LocalStack / legacy).
 2. Never `kubectl apply` empty Secret stubs for `appflowy-walg-r2` / `pvc-backup-r2`.
 3. `WALG_LOG_LEVEL` must be `NORMAL|DEVEL|ERROR` (not `INFO`).
-4. Cloudflare token rotation remains an operator SKIPPED item if MCP CF tools 401.
+4. Checklist: `docs/current-source-of-truth-checklist.md`

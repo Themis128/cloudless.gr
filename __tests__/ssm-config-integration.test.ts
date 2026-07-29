@@ -43,6 +43,7 @@ describe("ssm-config integration (LocalStack)", () => {
 
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("SSM_DISABLED", "");
+    vi.stubEnv("SSM_ENABLED", "1");
     vi.stubEnv("SSM_PREFIX", process.env.SSM_PREFIX ?? "/cloudless/test");
     vi.stubEnv("AWS_REGION", "us-east-1");
 
@@ -61,6 +62,7 @@ describe("ssm-config integration (LocalStack)", () => {
     if (skipAll) return skip();
 
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SSM_ENABLED", "1");
     vi.stubEnv("SSM_PREFIX", process.env.SSM_PREFIX ?? "/cloudless/test");
 
     vi.resetModules();
@@ -76,6 +78,7 @@ describe("ssm-config integration (LocalStack)", () => {
     if (skipAll) return skip();
 
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SSM_ENABLED", "1");
     vi.stubEnv("SSM_PREFIX", process.env.SSM_PREFIX ?? "/cloudless/test");
 
     vi.resetModules();
@@ -93,6 +96,7 @@ describe("ssm-config integration (LocalStack)", () => {
     if (skipAll) return skip();
 
     vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SSM_ENABLED", "1");
     vi.stubEnv("AWS_ENDPOINT_URL", "http://localhost:1"); // closed port
     vi.stubEnv("SES_FROM_EMAIL", "envonly@cloudless.test");
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_from_env");
