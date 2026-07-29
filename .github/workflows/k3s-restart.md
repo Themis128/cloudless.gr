@@ -10,11 +10,7 @@ permissions:
   contents: read
   issues: read
 strict: false
-environment: copilot
-engine:
-  id: copilot
-  env:
-    COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN }}
+engine: claude
 safe-outputs:
   report-failure-as-issue: false
 ---
