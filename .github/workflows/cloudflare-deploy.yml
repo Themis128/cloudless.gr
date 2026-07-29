@@ -1,73 +1,115 @@
 name: Cloudflare Workers Deploy
 
+# Free-tier: thin edge Worker `cloudless2` (Custom Domains + Cron Triggers + Pi proxy).
+# Full OpenNext SSR is ~31 MiB and exceeds the free 3 MiB Worker limit — SSR stays on Pi
+# (`pi-origin.cloudless.gr`) unless paid Workers is explicitly opted in.
+# No AWS. Requires CLOUDFLARE_API_TOKEN + CF_ACCOUNT_ID (+ optional ZONE_ID, CRON_SECRET).
+
 on:
   push:
     branches: [main]
     paths:
-      - 'migrations/*.sql'
-      - 'src/**/*.ts'
-      - 'wrangler.jsonc'
-      - 'sst.config.cloudflare.ts'
-      - 'opennext.config.js'
-      - '.github/workflows/cloudflare-deploy.yml'
+      - "workers/cloudless2-edge/**"
+      - "wrangler.jsonc"
+      - "migrations/*.sql"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/cloudflare-deploy.yml"
+      - "scripts/cf-ensure-apex-dns.sh"
   workflow_dispatch:
     inputs:
       stage:
-        description: 'Deployment stage'
+        description: "Deployment stage"
         required: false
-        default: 'production'
+        default: "production"
+
+concurrency:
+  group: cloudflare-workers-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
+    name: Deploy Workers
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-
-      - name: Setup PNPM
-        run: npm install -g pnpm@10
+          node-version: "22"
+          cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Apply D1 migrations
-        run: npx wrangler d1 migrations apply user-auth-db --config wrangler.jsonc
+        run: npx wrangler d1 migrations apply user-auth-db --remote --config wrangler.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
-      - name: Set CRON_SECRET secret
-        run: echo "${{ secrets.CRON_SECRET }}" | npx wrangler secret put CRON_SECRET --config wrangler.jsonc || echo "CRON_SECRET already set"
+      - name: Ensure apex/www DNS placeholders
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+        run: bash scripts/cf-ensure-apex-dns.sh || true
 
-      - name: Build Next.js app with OpenNext
-        run: pnpm run cf:build:opennext
+      - name: Ensure CRON_SECRET on Worker (best-effort)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "CRON_SECRET not set in repo secrets — skip wrangler secret put"
+            exit 0
+          fi
+          printf '%s' "$CRON_SECRET" | npx wrangler secret put CRON_SECRET --config wrangler.jsonc || true
 
-      - name: Delete .bin font files (prevents SST loader error)
-        run: find .open-next -name "*.bin" -delete || echo "No .bin files found"
-
-      - name: Unlock SST (handle concurrent lock)
-        run: npx sst unlock --config sst.config.cloudflare.ts --stage production || true
-
-      - name: Deploy SST stack
-        run: pnpm exec sst deploy --config sst.config.cloudflare.ts --stage production
+      - name: Deploy thin edge Worker
+        run: npx wrangler deploy --config wrangler.jsonc --env=""
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CI: "true"
 
-# Required secrets:
-# CLOUDFLARE_API_TOKEN - Cloudflare API token
-# CF_ACCOUNT_ID - Cloudflare account ID
-# CLOUDFLARE_ZONE_ID - Cloudflare zone ID for custom domain binding
-# CRON_SECRET - Shared secret for cron job authorization
+      - name: Smoke health
+        run: |
+          set -euo pipefail
+          # Require workers.dev 200 — it bypasses custom-domain Bot Fight that
+          # often 403s apex/www from GH datacenter IPs. Do not treat 403 as pass.
+          url="https://cloudless2.baltzakis-themis.workers.dev/api/health"
+          ok=0
+          for i in 1 2 3 4 5; do
+            code=$(curl -sS -o /tmp/smoke-body -w "%{http_code}" --max-time 20 "$url" || true)
+            echo "${url} attempt $i → HTTP $code $(head -c 120 /tmp/smoke-body 2>/dev/null || true)"
+            if [ "$code" = "200" ]; then
+              status=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))" </tmp/smoke-body 2>/dev/null || echo "")
+              if [ "$status" = "ok" ] || [ -z "$status" ]; then
+                ok=1
+                break
+              fi
+              echo "::warning::workers.dev returned 200 but status='${status}' — retrying"
+            fi
+            sleep 5
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::Post-deploy smoke failed — ${url} never returned HTTP 200 with healthy body"
+            exit 1
+          fi
+          # Informational only: custom domains may 403 under free Bot Fight.
+          for u in "https://www.cloudless.gr/api/health" "https://cloudless.gr/api/health"; do
+            c=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$u" || true)
+            echo "${u} → HTTP $c (informational)"
+          done
+          echo "✓ smoke ok"
