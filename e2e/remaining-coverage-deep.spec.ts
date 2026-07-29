@@ -5,9 +5,9 @@
  */
 import { test, expect } from "./coverage";
 import fs from "fs";
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -23,25 +23,46 @@ function hasRealAuth(): boolean {
 
 const DYNAMIC_ADMIN_APIS = [
   { template: "/api/admin/ai/analytics-orchestration/pdf", method: "GET" },
-  { template: "/api/admin/calendar/dummy-id",              method: "GET",    label: "/api/admin/calendar/[id]" },
-  { template: "/api/admin/calendar/create",                method: "POST" },
-  { template: "/api/admin/email/campaigns/dummy-id",       method: "GET",    label: "/api/admin/email/campaigns/[id]" },
-  { template: "/api/admin/oauth/tiktok/callback",          method: "GET" },
-  { template: "/api/admin/ops/errors/dummy-id",            method: "GET",    label: "/api/admin/ops/errors/[id]" },
-  { template: "/api/admin/pipeline/deals/dummy-id/move",   method: "POST",   label: "/api/admin/pipeline/deals/[id]/move" },
-  { template: "/api/admin/pipeline/deals/dummy-id/notes",  method: "GET",    label: "/api/admin/pipeline/deals/[id]/notes" },
-  { template: "/api/admin/reports/dummy-id",               method: "GET",    label: "/api/admin/reports/[id]" },
-  { template: "/api/admin/reports/dummy-id/pdf",           method: "GET",    label: "/api/admin/reports/[id]/pdf" },
-  { template: "/api/admin/reports/generate",               method: "POST" },
+  { template: "/api/admin/calendar/dummy-id", method: "GET", label: "/api/admin/calendar/[id]" },
+  { template: "/api/admin/calendar/create", method: "POST" },
+  {
+    template: "/api/admin/email/campaigns/dummy-id",
+    method: "GET",
+    label: "/api/admin/email/campaigns/[id]",
+  },
+  { template: "/api/admin/oauth/tiktok/callback", method: "GET" },
+  {
+    template: "/api/admin/ops/errors/dummy-id",
+    method: "GET",
+    label: "/api/admin/ops/errors/[id]",
+  },
+  {
+    template: "/api/admin/pipeline/deals/dummy-id/move",
+    method: "POST",
+    label: "/api/admin/pipeline/deals/[id]/move",
+  },
+  {
+    template: "/api/admin/pipeline/deals/dummy-id/notes",
+    method: "GET",
+    label: "/api/admin/pipeline/deals/[id]/notes",
+  },
+  { template: "/api/admin/reports/dummy-id", method: "GET", label: "/api/admin/reports/[id]" },
+  {
+    template: "/api/admin/reports/dummy-id/pdf",
+    method: "GET",
+    label: "/api/admin/reports/[id]/pdf",
+  },
+  { template: "/api/admin/reports/generate", method: "POST" },
 ];
 
 test.describe("Dynamic admin APIs — unauthenticated", () => {
   for (const { template, method, label } of DYNAMIC_ADMIN_APIS) {
     const name = label ?? template;
     test(`unauth ${method} ${name} — rejected`, async ({ request }) => {
-      const r = method === "POST"
-        ? await request.post(template, { data: {}, failOnStatusCode: false })
-        : await request.get(template, { failOnStatusCode: false });
+      const r =
+        method === "POST"
+          ? await request.post(template, { data: {}, failOnStatusCode: false })
+          : await request.get(template, { failOnStatusCode: false });
       expect([401, 403, 404, 405]).toContain(r.status());
     });
   }
@@ -57,9 +78,10 @@ test.describe("Dynamic admin APIs — authenticated", () => {
   for (const { template, method, label } of DYNAMIC_ADMIN_APIS) {
     const name = label ?? template;
     test(`auth ${method} ${name} — non-5xx`, async ({ request }) => {
-      const r = method === "POST"
-        ? await request.post(template, { data: {}, failOnStatusCode: false })
-        : await request.get(template, { failOnStatusCode: false });
+      const r =
+        method === "POST"
+          ? await request.post(template, { data: {}, failOnStatusCode: false })
+          : await request.get(template, { failOnStatusCode: false });
       expect(r.status(), `${name} returned ${r.status()}`).toBeLessThan(500);
     });
   }
@@ -93,7 +115,10 @@ test("GET /icons/[name] — generated icon served", async ({ request }) => {
   let oneOk = false;
   for (const u of tries) {
     const r = await request.get(u);
-    if (r.status() < 400) { oneOk = true; break; }
+    if (r.status() < 400) {
+      oneOk = true;
+      break;
+    }
   }
   // If none of the common shapes resolve, the route file still exists — at least one should not 5xx
   // (we don't assert oneOk strictly because the route may take a different name pattern)

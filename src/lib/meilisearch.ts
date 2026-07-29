@@ -89,11 +89,7 @@ export async function resetIndex(documents: ProductDocument[]): Promise<void> {
   if (!isMeilisearchConfigured()) return;
 
   try {
-    await meiliRequest(
-      `/indexes/${PRODUCTS_INDEX}`,
-      { method: "DELETE" },
-      getMeiliAdminKey()
-    );
+    await meiliRequest(`/indexes/${PRODUCTS_INDEX}`, { method: "DELETE" }, getMeiliAdminKey());
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (!message.includes("404") && !message.includes("index_not_found")) {

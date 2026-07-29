@@ -11,8 +11,9 @@
  */
 import { test, expect } from "@playwright/test";
 import fs from "fs";
-import path from 'path';
-import { dirname, fileURLToPath } from 'url';
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -79,9 +80,7 @@ test.describe("Admin CRM/Client-Portal APIs — unauthenticated POST", () => {
 test.describe("Admin CRM/Client-Portal APIs — authenticated", () => {
   // Use the E2E admin token bypass for API tests (no session cookie needed)
   for (const ep of endpoints) {
-    test(`GET ${ep.url} responds non-5xx or 401 (auth checked)`, async ({
-      request,
-    }) => {
+    test(`GET ${ep.url} responds non-5xx or 401 (auth checked)`, async ({ request }) => {
       // The E2E admin token bypass in api-auth.ts checks:
       // - NODE_ENV !== "production" && NEXT_PUBLIC_E2E === "1" && E2E_ADMIN_TOKEN
       // When these conditions aren't met, 401 is the expected response

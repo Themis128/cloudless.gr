@@ -61,7 +61,7 @@ export function isHealthBody(body: string): boolean {
 export async function getWithRetry(
   req: APIRequestContext,
   url: string,
-  attempts = 3,
+  attempts = 3
 ): Promise<{ status: number; body: string; headers: Record<string, string> }> {
   let last: { status: number; body: string; headers: Record<string, string> } = {
     status: 0,
@@ -79,4 +79,13 @@ export async function getWithRetry(
     await new Promise((res) => setTimeout(res, 1_000 * (i + 1)));
   }
   return last;
+}
+
+export function isNetworkError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|EAI_AGAIN|502|503|network/i.test(msg);
+}
+
+export function isOriginDown(status: number): boolean {
+  return status === 502 || status === 503 || status === 504 || status === 521 || status === 522;
 }

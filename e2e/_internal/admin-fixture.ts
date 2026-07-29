@@ -11,6 +11,20 @@ export async function adminRequest(request: APIRequestContext) {
         headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
         data: data ?? {},
       }),
+    put: (url: string, body?: unknown) => {
+      // Some specs pass `{ data: {} }` (Playwright-like options). Accept both:
+      // - `put(url, {})` → body is `{}`.
+      // - `put(url, { data: {} })` → body is `{}`.
+      const payload =
+        body && typeof body === "object" && "data" in body
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (body as any).data
+          : body;
+      return request.put(url, {
+        headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
+        data: payload ?? {},
+      });
+    },
     delete: (url: string) =>
       request.delete(url, { headers: { authorization: `Bearer ${ADMIN_TOKEN}` } }),
     patch: (url: string, data?: unknown) =>

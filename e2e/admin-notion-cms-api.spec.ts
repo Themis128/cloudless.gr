@@ -25,8 +25,9 @@
  */
 import { test, expect } from "@playwright/test";
 import fs from "fs";
-import path from 'path';
-import { dirname, fileURLToPath } from 'url';
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -126,15 +127,13 @@ test.describe("Admin Notion CMS APIs — authenticated", () => {
     if (!hasRealAuth()) {
       testInfo.skip(
         true,
-        "Skipping authenticated checks (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)",
+        "Skipping authenticated checks (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)"
       );
     }
   });
 
   for (const ep of endpoints) {
-    test(`GET ${ep.url} responds non-5xx and matches shape`, async ({
-      request,
-    }) => {
+    test(`GET ${ep.url} responds non-5xx and matches shape`, async ({ request }) => {
       const r = await request.get(ep.url, { failOnStatusCode: false });
       expect(r.status(), `${ep.url} returned ${r.status()}`).toBeLessThan(500);
 
@@ -152,9 +151,7 @@ test.describe("Admin Notion CMS APIs — authenticated", () => {
       }
     });
 
-    test(`POST ${ep.url} rejects invalid JSON with 400`, async ({
-      request,
-    }) => {
+    test(`POST ${ep.url} rejects invalid JSON with 400`, async ({ request }) => {
       const r = await request.post(ep.url, {
         headers: { "content-type": "application/json" },
         data: "{not-json",
@@ -169,9 +166,7 @@ test.describe("Admin Notion CMS APIs — authenticated", () => {
       }
     });
 
-    test(`POST ${ep.url} rejects body missing required field`, async ({
-      request,
-    }) => {
+    test(`POST ${ep.url} rejects body missing required field`, async ({ request }) => {
       const r = await request.post(ep.url, {
         data: ep.invalidPost,
         failOnStatusCode: false,
@@ -195,9 +190,7 @@ test.describe("Admin Notion CMS APIs — authenticated", () => {
       expect(body.error).toMatch(/pageId is required/i);
     });
 
-    test(`DELETE ${ep.url} rejects missing pageId query param`, async ({
-      request,
-    }) => {
+    test(`DELETE ${ep.url} rejects missing pageId query param`, async ({ request }) => {
       const r = await request.delete(ep.url, { failOnStatusCode: false });
       expect(r.status()).toBe(400);
       const body = await r.json();

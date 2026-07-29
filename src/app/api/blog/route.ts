@@ -26,10 +26,7 @@ export async function GET(request: Request) {
     if (limit) {
       posts = posts.slice(0, limit);
     }
-    return NextResponse.json(
-      { posts, source: "static", fallbackReason: "not-configured" },
-      { headers: { "x-blog-source": "static" } }
-    );
+    return NextResponse.json(posts, { headers: { "x-blog-source": "static" } });
   }
 
   try {
@@ -38,15 +35,12 @@ export async function GET(request: Request) {
       posts = posts.slice(0, limit);
     }
 
-    return NextResponse.json(
-      { posts, source: "notion" },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
-          "x-blog-source": "notion",
-        },
-      }
-    );
+    return NextResponse.json(posts, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
+        "x-blog-source": "notion",
+      },
+    });
   } catch (err) {
     console.error("[Blog API] Fetch error:", err);
     const blogModule = await import("@/lib/blog");
@@ -54,9 +48,6 @@ export async function GET(request: Request) {
     if (limit) {
       posts = posts.slice(0, limit);
     }
-    return NextResponse.json(
-      { posts, source: "static", fallbackReason: "notion-error" },
-      { headers: { "x-blog-source": "static" } }
-    );
+    return NextResponse.json(posts, { headers: { "x-blog-source": "static" } });
   }
 }

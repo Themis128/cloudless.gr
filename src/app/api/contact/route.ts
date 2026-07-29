@@ -19,7 +19,6 @@ import { mapIntegrationError } from "@/lib/api-errors";
 import { formatAttribution } from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
-import { auth } from "@/lib/auth";
 
 interface ContactRequestBody {
   name: string;
@@ -32,11 +31,6 @@ interface ContactRequestBody {
 }
 
 export async function POST(request: Request) {
-  // Check authentication
-  const session = await auth();
-  if (!session) {
-    return Response.json({ error: "Authentication required." }, { status: 401 });
-  }
   // Rate limit: 5 contact submissions per IP per 10 minutes
   const ip = getClientIp(request);
   const rl = rateLimit(`contact:${ip}`, 5, 10 * 60_000);

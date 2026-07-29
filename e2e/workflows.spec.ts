@@ -11,6 +11,10 @@
 import { test, expect } from "@playwright/test";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const WORKFLOWS_DIR = path.join(__dirname, "..", "infrastructure", "n8n", "workflows");
 
@@ -85,7 +89,10 @@ test.describe("n8n workflow JSON validation", () => {
       test("all referenced nodes exist", () => {
         const referencedNodes = extractExpressions(workflow);
         for (const nodeName of referencedNodes) {
-          expect(nodeNames.has(nodeName), `Node '${nodeName}' is referenced but does not exist in workflow`).toBe(true);
+          expect(
+            nodeNames.has(nodeName),
+            `Node '${nodeName}' is referenced but does not exist in workflow`
+          ).toBe(true);
         }
       });
 
@@ -99,7 +106,10 @@ test.describe("n8n workflow JSON validation", () => {
               if (typeof item === "object" && item !== null) {
                 const nodeName = (item as { node?: string }).node;
                 if (nodeName) {
-                  expect(nodeNames.has(nodeName), `Connection target '${nodeName}' does not exist`).toBe(true);
+                  expect(
+                    nodeNames.has(nodeName),
+                    `Connection target '${nodeName}' does not exist`
+                  ).toBe(true);
                 }
               }
             }
@@ -126,7 +136,9 @@ test.describe("n8n workflow JSON validation", () => {
 
       test("webhook paths are unique if present", () => {
         const webhookNodes = workflow.nodes.filter((n) => n.type === "n8n-nodes-base.webhook");
-        const webhookPaths = webhookNodes.map((n) => (n.parameters?.path as string) || "").filter(Boolean);
+        const webhookPaths = webhookNodes
+          .map((n) => (n.parameters?.path as string) || "")
+          .filter(Boolean);
         const uniquePaths = new Set(webhookPaths);
         expect(webhookPaths.length, "Duplicate webhook paths found").toBe(uniquePaths.size);
       });

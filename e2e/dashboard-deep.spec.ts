@@ -9,9 +9,9 @@
  */
 import { test, expect } from "./coverage";
 import fs from "fs";
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import { DASHBOARD_PAGES, USER_APIS } from "./helpers/coverage-routes";
@@ -33,7 +33,11 @@ test.describe("Dashboard unauthenticated", () => {
       await page.goto(route);
       // Either redirected to /auth/login or stays on /dashboard with sign-in CTA
       const url = page.url();
-      const hasSignIn = await page.getByRole("link", { name: /sign in|login/i }).first().isVisible({ timeout: 5_000 }).catch(() => false);
+      const hasSignIn = await page
+        .getByRole("link", { name: /sign in|login/i })
+        .first()
+        .isVisible({ timeout: 5_000 })
+        .catch(() => false);
       const isLoginUrl = /\/auth\/login/.test(url);
       const isDashboardUrl = /\/dashboard/.test(url);
       expect(isLoginUrl || (isDashboardUrl && hasSignIn) || isDashboardUrl).toBeTruthy();
@@ -46,7 +50,10 @@ test.describe("Dashboard authenticated", () => {
 
   test.beforeEach(({}, testInfo) => {
     if (!hasRealAuth()) {
-      testInfo.skip(true, "Skipping authenticated dashboard tests (E2E_USER_EMAIL/E2E_USER_PASSWORD not set)");
+      testInfo.skip(
+        true,
+        "Skipping authenticated dashboard tests (E2E_USER_EMAIL/E2E_USER_PASSWORD not set)"
+      );
     }
   });
 
@@ -55,7 +62,10 @@ test.describe("Dashboard authenticated", () => {
       const errors: string[] = [];
       page.on("pageerror", (e) => errors.push(e.message));
       page.on("response", (r) => {
-        if (r.status() >= 500 && r.url().startsWith(page.url().split("?")[0].split("/").slice(0, 3).join("/"))) {
+        if (
+          r.status() >= 500 &&
+          r.url().startsWith(page.url().split("?")[0].split("/").slice(0, 3).join("/"))
+        ) {
           errors.push(`5xx from ${r.url()}: ${r.status()}`);
         }
       });

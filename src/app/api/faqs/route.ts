@@ -14,30 +14,21 @@ export async function GET(request: Request) {
       ? staticFaqs.filter((f) => f.locales.length === 0 || f.locales.includes(locale))
       : staticFaqs;
     if (category) data = data.filter((f) => f.category === category);
-    return NextResponse.json(
-      { faqs: data, source: "static", fallbackReason: "not-configured" },
-      { headers: { "x-cms-source": "static" } }
-    );
+    return NextResponse.json(data, { headers: { "x-cms-source": "static" } });
   }
 
   try {
     const faqs = category
       ? await getFaqsByCategory(category as Parameters<typeof getFaqsByCategory>[0], locale)
       : await getFaqs(locale);
-    return NextResponse.json(
-      { faqs, source: "notion" },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=60",
-          "x-cms-source": "notion",
-        },
-      }
-    );
+    return NextResponse.json(faqs, {
+      headers: {
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=60",
+        "x-cms-source": "notion",
+      },
+    });
   } catch (err) {
     console.error("[API /faqs] Fetch error:", err);
-    return NextResponse.json(
-      { faqs: staticFaqs, source: "static", fallbackReason: "notion-error" },
-      { headers: { "x-cms-source": "static" } }
-    );
+    return NextResponse.json(staticFaqs, { headers: { "x-cms-source": "static" } });
   }
 }

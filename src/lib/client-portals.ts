@@ -24,6 +24,12 @@ function getClient(): SSMClient {
   return ssm;
 }
 
+// E2E fallback:
+// Playwright runs in environments without AWS credentials, but we still want
+// admin flows to be testable. In those cases, persist portals in-memory.
+const E2E_MODE = process.env.NEXT_PUBLIC_E2E === "1" || process.env.NODE_ENV === "test";
+let e2ePortals: ClientPortal[] = [];
+
 export interface PortalComment {
   id: string;
   author: string;
@@ -125,6 +131,9 @@ function normalizePortal(raw: ClientPortal): ClientPortal {
 }
 
 export async function readPortals(): Promise<ClientPortal[]> {
+  if (E2E_MODE) {
+    return (Array.isArray(e2ePortals) ? e2ePortals : []).map((p) => normalizePortal(p));
+  }
   try {
     const res = await getClient().send(new GetParameterCommand({ Name: SSM_KEY }));
     const parsed: unknown = JSON.parse(res.Parameter?.Value ?? "[]");
@@ -136,6 +145,10 @@ export async function readPortals(): Promise<ClientPortal[]> {
 }
 
 export async function writePortals(portals: ClientPortal[]): Promise<void> {
+  if (E2E_MODE) {
+    e2ePortals = portals;
+    return;
+  }
   await getClient().send(
     new PutParameterCommand({
       Name: SSM_KEY,

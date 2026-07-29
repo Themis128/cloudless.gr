@@ -10,8 +10,9 @@
  */
 import { test, expect } from "./coverage";
 import fs from "fs";
-import path from 'path';
-import { dirname, fileURLToPath } from 'url';
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import { ADMIN_APIS, ADMIN_API_DYNAMIC } from "./helpers/coverage-routes";
@@ -28,10 +29,7 @@ function hasRealAuth(): boolean {
 }
 
 const ALL_ADMIN_APIS = Array.from(
-  new Set<string>([
-    ...ADMIN_APIS,
-    ...ADMIN_API_DYNAMIC.map((d) => d.sample),
-  ]),
+  new Set<string>([...ADMIN_APIS, ...ADMIN_API_DYNAMIC.map((d) => d.sample)])
 );
 
 test.describe("Admin APIs unauthenticated", () => {
@@ -57,7 +55,10 @@ test.describe("Admin APIs authenticated", () => {
 
   test.beforeEach(({}, testInfo) => {
     if (!hasRealAuth()) {
-      testInfo.skip(true, "Skipping authenticated admin APIs (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)");
+      testInfo.skip(
+        true,
+        "Skipping authenticated admin APIs (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)"
+      );
     }
   });
 

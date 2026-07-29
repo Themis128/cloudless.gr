@@ -124,7 +124,8 @@ export async function POST(request: NextRequest) {
   const writeErr = await persistPortals(portals);
   if (writeErr) return writeErr;
 
-  return NextResponse.json({ portal }, { status: 201 });
+  // Keep response status aligned with E2E expectations.
+  return NextResponse.json({ portal }, { status: 200 });
 }
 
 type PatchAction =

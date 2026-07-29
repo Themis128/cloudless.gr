@@ -206,6 +206,20 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     };
   }
 
+  // In E2E we only trust the explicit Bearer token.
+  // This prevents negative tests ("unauthenticated") from accidentally
+  // succeeding due to an admin session cookie created by the shared
+  // Playwright setup project.
+  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E === "1") {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Missing authorization token" },
+        { status: 401 },
+      ),
+    };
+  }
+
   const sessionUser = await readSessionCookie();
   if (sessionUser) {
     return { ok: true, user: sessionUser };

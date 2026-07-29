@@ -12,8 +12,9 @@
  */
 import { test, expect } from "./coverage";
 import fs from "fs";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import { ADMIN_PAGES } from "./helpers/coverage-routes";
@@ -38,8 +39,15 @@ test.describe("Admin unauthenticated", () => {
       await page.goto(route);
       await page.waitForLoadState("networkidle").catch(() => {});
       // Without auth, page must either redirect or NOT show admin UI
-      const adminBadge = await page.locator('text=/admin dashboard/i').isVisible({ timeout: 3_000 }).catch(() => false);
-      const loginVisible = await page.getByLabel(/email/i).first().isVisible({ timeout: 3_000 }).catch(() => false);
+      const adminBadge = await page
+        .locator("text=/admin dashboard/i")
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false);
+      const loginVisible = await page
+        .getByLabel(/email/i)
+        .first()
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false);
       const onLogin = /\/auth\/login/.test(page.url());
       // At least one of: redirected to login, login form visible, or no admin content rendered
       expect(onLogin || loginVisible || !adminBadge).toBeTruthy();
@@ -52,7 +60,10 @@ test.describe("Admin authenticated", () => {
 
   test.beforeEach(({}, testInfo) => {
     if (!hasRealAuth()) {
-      testInfo.skip(true, "Skipping authenticated admin tests (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)");
+      testInfo.skip(
+        true,
+        "Skipping authenticated admin tests (E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set)"
+      );
     }
   });
 

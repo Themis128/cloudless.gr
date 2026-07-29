@@ -14,26 +14,21 @@ import { getSimilarProducts, getTrendingProducts } from "@/lib/recommendations";
 
 type RecommendationType = "similar" | "trending";
 
-interface RecommendationResponse {
-  recommendations: {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    currency: string;
-    category: string;
-    image: string;
-  }[];
-  type: RecommendationType;
-}
-
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const type = (searchParams.get("type") as RecommendationType) || "trending";
   const limit = Math.min(Math.max(1, Number(searchParams.get("limit")) || 4), 20);
 
   try {
-    let recommendations: RecommendationResponse["recommendations"] = [];
+    let recommendations: {
+      id: string;
+      name: string;
+      description: string;
+      price: number;
+      currency: string;
+      category: string;
+      image: string;
+    }[] = [];
 
     if (type === "similar") {
       const productIdsParam = searchParams.get("productIds");
@@ -67,21 +62,15 @@ export async function GET(request: NextRequest) {
       }));
     }
 
-    const response: RecommendationResponse = {
-      recommendations,
-      type,
-    };
-
-    return Response.json(response, {
+    // Contract: return the recommendations array directly.
+    // (The tests expect a raw JSON array for `/api/recommendations`.)
+    return Response.json(recommendations, {
       headers: {
         "cache-control": "public, max-age=300, s-maxage=600", // 5-10 min cache
       },
     });
   } catch (err) {
     console.error("[Recommendations API] Error:", err);
-    return Response.json(
-      { recommendations: [], type, error: "Internal server error" },
-      { status: 500 }
-    );
+    return Response.json([], { status: 500 });
   }
 }

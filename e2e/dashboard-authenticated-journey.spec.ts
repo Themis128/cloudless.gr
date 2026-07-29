@@ -18,9 +18,9 @@
  */
 import { test, expect } from "@playwright/test";
 import fs from "fs";
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -46,7 +46,7 @@ const DASHBOARD_ROUTES = [
 test.describe("Authenticated dashboard journey", () => {
   test.skip(
     !hasUserAuth(),
-    "no e2e/.auth/user.json — set E2E_USER_EMAIL/E2E_USER_PASSWORD to enable",
+    "no e2e/.auth/user.json — set E2E_USER_EMAIL/E2E_USER_PASSWORD to enable"
   );
 
   test.use({ storageState: USER_STORAGE });
@@ -57,15 +57,13 @@ test.describe("Authenticated dashboard journey", () => {
       expect(r?.status() ?? 0).toBeLessThan(500);
 
       // Must stay on the dashboard route — auth survived.
-      expect(page.url(), "should not redirect to /auth/login").not.toMatch(
-        /\/auth\/login/,
-      );
+      expect(page.url(), "should not redirect to /auth/login").not.toMatch(/\/auth\/login/);
       expect(page.url()).toContain("/dashboard");
 
       // Real content rendered.
-      await expect(
-        page.locator("main, h1, h2, [role=\"main\"]").first(),
-      ).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator('main, h1, h2, [role="main"]').first()).toBeVisible({
+        timeout: 20_000,
+      });
     });
   }
 

@@ -8,11 +8,10 @@
 import { test as setup, expect, Page } from "@playwright/test";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 
-// Resolve paths relative to this spec file (works in both ESM and CJS).
-// __dirname is available in the bundled output; for the source file we use
-// a fallback that ts-node/Playwright resolves at runtime.
-const HERE = path.dirname(__filename || "e2e/auth.setup.ts");
+const __filename = fileURLToPath(import.meta.url);
+const HERE = path.dirname(__filename);
 const USER_STORAGE = path.join(HERE, ".auth", "user.json");
 const ADMIN_STORAGE = path.join(HERE, ".auth", "admin.json");
 
@@ -42,12 +41,15 @@ setup("authenticate as user", async ({ page }) => {
   const email = process.env.E2E_USER_EMAIL || "";
   const password = process.env.E2E_USER_PASSWORD || "";
   if (!email || !password) {
-    setup.info().annotations.push({ type: "skip", description: "E2E_USER_EMAIL/E2E_USER_PASSWORD not set" });
+    setup
+      .info()
+      .annotations.push({ type: "skip", description: "E2E_USER_EMAIL/E2E_USER_PASSWORD not set" });
     emptyState(USER_STORAGE);
     return;
   }
-  try { await loginAndSave(page, email, password, USER_STORAGE); }
-  catch (err) {
+  try {
+    await loginAndSave(page, email, password, USER_STORAGE);
+  } catch (err) {
     setup.info().annotations.push({ type: "skip", description: `User login failed: ${err}` });
     emptyState(USER_STORAGE);
   }
@@ -57,12 +59,18 @@ setup("authenticate as admin", async ({ page }) => {
   const email = process.env.E2E_ADMIN_EMAIL || "";
   const password = process.env.E2E_ADMIN_PASSWORD || "";
   if (!email || !password) {
-    setup.info().annotations.push({ type: "skip", description: "E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set" });
+    setup
+      .info()
+      .annotations.push({
+        type: "skip",
+        description: "E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD not set",
+      });
     emptyState(ADMIN_STORAGE);
     return;
   }
-  try { await loginAndSave(page, email, password, ADMIN_STORAGE); }
-  catch (err) {
+  try {
+    await loginAndSave(page, email, password, ADMIN_STORAGE);
+  } catch (err) {
     setup.info().annotations.push({ type: "skip", description: `Admin login failed: ${err}` });
     emptyState(ADMIN_STORAGE);
   }
