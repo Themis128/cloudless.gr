@@ -1,4 +1,4 @@
-# R10 — Postiz postgres daily backup to S3 (same pattern as AppFlowy)
+# R10 — Postiz postgres daily backup to Cloudflare R2 (same pattern as AppFlowy)
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -29,7 +29,7 @@ spec:
                 - name: PGPORT
                   value: "5432"
                 - name: PGUSER
-                  value: "postiz"             # verified against live pod env
+                  value: "postiz"
                 - name: PGPASSWORD
                   valueFrom:
                     secretKeyRef:
@@ -37,33 +37,44 @@ spec:
                       key: POSTGRES_PASSWORD
                 - name: PGDATABASE
                   value: "postiz"
-                - name: AWS_ACCESS_KEY_ID
+                - name: R2_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
-                      name: pvc-backup-aws
-                      key: AWS_ACCESS_KEY_ID
-                - name: AWS_SECRET_ACCESS_KEY
+                      name: pvc-backup-r2
+                      key: ACCESS_KEY_ID
+                - name: R2_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: pvc-backup-aws
-                      key: AWS_SECRET_ACCESS_KEY
-                - name: AWS_DEFAULT_REGION
-                  value: "us-east-1"
+                      name: pvc-backup-r2
+                      key: SECRET_ACCESS_KEY
+                - name: R2_ENDPOINT
+                  value: "https://c6d6b805741159c062a3e0b0d7f9d89a.r2.cloudflarestorage.com"
+                - name: R2_BUCKET
+                  value: "datalake-bucket"
               command:
                 - /bin/sh
                 - -c
                 - |
                   set -euo pipefail
-                  apk add --no-cache aws-cli >/dev/null
+                  apk add --no-cache rclone >/dev/null
                   DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
                   KEY="pvc-backups/postiz/daily/${DATE}.sql.custom"
-                  echo "→ dumping postiz postgres → s3://cloudless-analytics-data/${KEY}"
-                  pg_dump --format=custom --no-owner --no-privileges \
-                    | aws s3 cp - "s3://cloudless-analytics-data/${KEY}" \
-                        --content-type application/octet-stream
-                  SIZE=$(aws s3api head-object --bucket cloudless-analytics-data --key "${KEY}" --query ContentLength --output text)
-                  echo "✅ uploaded ${SIZE} bytes"
-                  if [ "${SIZE}" -lt 10000 ]; then
+                  LOCAL_FILE=/tmp/dump.sql.custom
+                  echo "→ dumping postiz postgres"
+                  pg_dump --format=custom --no-owner --no-privileges -f "${LOCAL_FILE}"
+                  export RCLONE_CONFIG_R2_TYPE=s3
+                  export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+                  export RCLONE_CONFIG_R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID}"
+                  export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY}"
+                  export RCLONE_CONFIG_R2_ENDPOINT="${R2_ENDPOINT}"
+                  export RCLONE_CONFIG_R2_REGION=auto
+                  export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
+                  SIZE=$(wc -c < "${LOCAL_FILE}")
+                  echo "→ uploading ${SIZE} bytes → r2://${R2_BUCKET}/${KEY}"
+                  rclone copyto "${LOCAL_FILE}" "r2:${R2_BUCKET}/${KEY}" --s3-no-check-bucket
+                  REMOTE_SIZE=$(rclone lsjson "r2:${R2_BUCKET}/${KEY}" | sed -n 's/.*"Size": *\([0-9]*\).*/\1/p' | head -1)
+                  echo "✅ remote size ${REMOTE_SIZE} bytes"
+                  if [ "${REMOTE_SIZE:-0}" -lt 10000 ]; then
                     echo "❌ backup suspiciously small (<10KB) — failing job for retry"
                     exit 1
                   fi

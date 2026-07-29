@@ -1,0 +1,19 @@
+# Shared env for PVC backups → Cloudflare R2 (rclone, no AWS CLI).
+# Mount as envFrom configMapRef in each CronJob, or copy values.
+#
+# Secret pvc-backup-r2 (per namespace) must provide:
+#   ACCESS_KEY_ID, SECRET_ACCESS_KEY  (R2 S3 API token)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pvc-backup-r2-config
+  # Apply once per backup namespace (appflowy, espocrm, postiz, n8n) or
+  # rely on inline env in CronJobs. This file is the canonical template.
+  namespace: appflowy
+  labels:
+    app.kubernetes.io/name: pvc-backup
+    app.kubernetes.io/component: r2-config
+data:
+  R2_ENDPOINT: "https://c6d6b805741159c062a3e0b0d7f9d89a.r2.cloudflarestorage.com"
+  R2_BUCKET: "datalake-bucket"
+  R2_REGION: "auto"
