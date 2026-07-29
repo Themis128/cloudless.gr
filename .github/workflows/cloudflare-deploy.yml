@@ -20,6 +20,10 @@ on:
       - 'opennext.config.*'
       - 'next.config.*'
       - '.github/workflows/cloudflare-deploy.yml'
+      - 'scripts/cf-build-wrapper.sh'
+      - 'scripts/sst-next-build.mjs'
+      - 'scripts/opennext-middleware-fix.mjs'
+      - 'open-next.config.cloudflare.ts'
   workflow_dispatch:
     inputs:
       stage:
