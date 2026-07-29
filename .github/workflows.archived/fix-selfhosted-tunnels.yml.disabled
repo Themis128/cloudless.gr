@@ -29,11 +29,14 @@ jobs:
 
       - name: Verify k3s API via SSH
         run: |
+          set -euo pipefail
           echo "=== Testing SSH connectivity ==="
-          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+          out=$(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             "$PI_USER@$PI_HOST" \
-            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes" \
-            2>&1 | head -20
+            "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get nodes" 2>&1) \
+            || { echo "::error::SSH/kubectl get nodes failed"; echo "$out" >&2; exit 1; }
+          echo "$out" | head -20
+          echo "✓ k3s reachable via SSH"
 
       # ------------------------------------------------------------------
       # Step 1: Ensure services have correct NodePorts
@@ -59,6 +62,7 @@ jobs:
         env:
           KUBECMD: "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml"
         run: |
+          set -euo pipefail
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             "$PI_USER@$PI_HOST" \
             "$KUBECMD delete pod cf-read-omv -n default --ignore-not-found --wait=true" 2>&1 || true
@@ -100,6 +104,11 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             "$PI_USER@$PI_HOST" \
             "$KUBECMD logs -n default cf-read-omv" 2>&1 | tee /tmp/cf-config-current.txt
+
+          if [ ! -s /tmp/cf-config-current.txt ]; then
+            echo "::error::cloudflared config read returned empty — SSH/kubectl logs failed or pod produced no output"
+            exit 1
+          fi
 
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             "$PI_USER@$PI_HOST" \
