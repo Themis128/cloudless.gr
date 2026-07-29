@@ -8,7 +8,11 @@ import {
   getTestimonials as getNotionTestimonials,
   getFeaturedTestimonials as getNotionFeatured,
 } from "@/lib/notion-testimonials";
-import { isAppFlowyCmsConfigured, isNotionCmsConfigured, cmsSourceHeaders } from "@/lib/cms-provider";
+import {
+  isAppFlowyCmsConfigured,
+  isNotionCmsConfigured,
+  cmsSourceHeaders,
+} from "@/lib/cms-provider";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

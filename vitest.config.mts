@@ -10,60 +10,42 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       // jose — point to the installed package's webapi dist (works for both v5 and v6)
-      jose: path.resolve(
-        __dirname,
-        "node_modules/jose/dist/webapi/index.js",
-      ),
+      jose: path.resolve(__dirname, "node_modules/jose/dist/webapi/index.js"),
       // next-intl/middleware (v4) imports next/server via ESM bare specifier,
       // which Vitest/JSDOM cannot resolve. Tests only need the proxy `config`
       // export, so we provide a no-op factory stub here.
       "next-intl/middleware": path.resolve(
         __dirname,
-        "__tests__/stubs/next-intl-middleware-stub.js",
+        "__tests__/stubs/next-intl-middleware-stub.js"
       ),
       // next-auth imports next/server as a bare ESM specifier. Vitest can't
       // resolve the CJS file. This ESM stub re-exports the real classes.
-      "next/server": path.resolve(
-        __dirname,
-        "__tests__/stubs/next-server-stub.js",
-      ),
+      "next/server": path.resolve(__dirname, "__tests__/stubs/next-server-stub.js"),
       // next-intl's react-client navigation helpers import `next/navigation`
       // as a bare ESM specifier which Vitest can't resolve from the CJS dist.
       // This stub provides no-op hook implementations for component tests.
-      "next/navigation": path.resolve(
-        __dirname,
-        "__tests__/stubs/next-navigation-stub.js",
-      ),
+      "next/navigation": path.resolve(__dirname, "__tests__/stubs/next-navigation-stub.js"),
       // @aws-sdk/client-cognito-identity-provider is not installed; tests that
       // need it supply their own vi.mock() — the stub prevents Vite's import
       // analysis from failing when the route file is dynamically imported.
       "@aws-sdk/client-cognito-identity-provider": path.resolve(
         __dirname,
-        "__tests__/stubs/aws-cognito-stub.js",
+        "__tests__/stubs/aws-cognito-stub.js"
       ),
       // @aws-sdk/client-ssm (and its transitive dep @aws-sdk/util-endpoints) crash
       // under JSDOM during module init. All SSM tests mock @/lib/ssm-config directly.
-      "@aws-sdk/client-ssm": path.resolve(
-        __dirname,
-        "__tests__/stubs/aws-ssm-stub.js",
-      ),
+      "@aws-sdk/client-ssm": path.resolve(__dirname, "__tests__/stubs/aws-ssm-stub.js"),
       // @aws-sdk/client-dynamodb crashes via @smithy/core subpath under JSDOM.
       // Tests mock stripe-transactions.ts directly; the stub satisfies imports.
-      "@aws-sdk/client-dynamodb": path.resolve(
-        __dirname,
-        "__tests__/stubs/aws-dynamodb-stub.js",
-      ),
+      "@aws-sdk/client-dynamodb": path.resolve(__dirname, "__tests__/stubs/aws-dynamodb-stub.js"),
       // @aws-sdk/client-bedrock-runtime shares the same @aws-sdk/util-endpoints
       // crash under JSDOM. Tests mock bedrock-chat.ts directly.
       "@aws-sdk/client-bedrock-runtime": path.resolve(
         __dirname,
-        "__tests__/stubs/aws-bedrock-runtime-stub.js",
+        "__tests__/stubs/aws-bedrock-runtime-stub.js"
       ),
       // @aws-sdk/client-sesv2 shares the same crash. Tests mock email.ts directly.
-      "@aws-sdk/client-sesv2": path.resolve(
-        __dirname,
-        "__tests__/stubs/aws-sesv2-stub.js",
-      ),
+      "@aws-sdk/client-sesv2": path.resolve(__dirname, "__tests__/stubs/aws-sesv2-stub.js"),
     },
   },
   define: {

@@ -3,8 +3,7 @@
  * Alternative email provider (vs SES baseline). Keep SES for ETL/bulk.
  */
 
-// Lazy-load Resend to allow compilation without the package installed
-// Operator: npm install resend, then add RESEND_API_KEY to SSM
+import { Resend } from "resend";
 
 interface ResendOptions {
   to: string;
@@ -20,15 +19,12 @@ export function isResendConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
 }
 
-let resendClient: unknown = null;
+let resendClient: Resend | null = null;
 
-function getResendClient(): unknown {
+function getResendClient(): Resend | null {
   if (resendClient) return resendClient;
-  if (isResendConfigured()) {
-    // Dynamic import to avoid hard dependency
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    resendClient = new (require("resend").Resend)(process.env.RESEND_API_KEY);
-  }
+  if (!isResendConfigured()) return null;
+  resendClient = new Resend(process.env.RESEND_API_KEY);
   return resendClient;
 }
 
@@ -43,15 +39,13 @@ export async function sendEmailResend(options: ResendOptions): Promise<void> {
     : "orders@cloudless.gr";
 
   try {
-    await (
-      client as { emails: { send: (opts: Record<string, unknown>) => Promise<unknown> } }
-    ).emails.send({
+    const { error } = await client.emails.send({
       from: fromAddress,
       to: options.to,
       subject: options.subject,
       html: options.html,
       text: options.text,
-      ...(options.replyTo ? { replyTo: options.replyTo.join(",") } : {}),
+      ...(options.replyTo ? { replyTo: options.replyTo } : {}),
       ...(options.listUnsubscribeUrl
         ? {
             headers: {
@@ -61,6 +55,13 @@ export async function sendEmailResend(options: ResendOptions): Promise<void> {
           }
         : {}),
     });
+    if (error) {
+      throw new Error(
+        typeof error === "object" && error && "message" in error
+          ? String(error.message)
+          : "Resend send failed"
+      );
+    }
   } catch (err) {
     console.error("[resend] Email send failed:", err);
     throw err;

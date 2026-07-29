@@ -54,6 +54,7 @@
     "__tests__",
     "tests",
     "cloudless-campaigns-code",
+    "infrastructure",
     "src/index.ts",
     "src/index-cloudflare-free.js",
     "src/agents"

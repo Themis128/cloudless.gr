@@ -69,10 +69,7 @@ export async function POST(request: NextRequest) {
     await writeWorkspaces(workspaces);
   } catch (err) {
     console.error("[workspaces] writeWorkspaces failed:", err);
-    return NextResponse.json(
-      { error: "Workspace store unavailable" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Workspace store unavailable" }, { status: 503 });
   }
 
   // Fire-and-forget audit log — never block on Slack failures.

@@ -8,7 +8,11 @@ import {
   getCaseStudies as getNotionCaseStudies,
   getFeaturedCaseStudies as getNotionFeatured,
 } from "@/lib/notion-case-studies";
-import { isAppFlowyCmsConfigured, isNotionCmsConfigured, cmsSourceHeaders } from "@/lib/cms-provider";
+import {
+  isAppFlowyCmsConfigured,
+  isNotionCmsConfigured,
+  cmsSourceHeaders,
+} from "@/lib/cms-provider";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

@@ -5,11 +5,12 @@
  */
 
 import { isConfiguredAsync, type IntegrationConfig } from "@/lib/integrations";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 
 export type CmsSource = "appflowy" | "notion" | "static";
 
 export async function isAppFlowyCmsConfigured(): Promise<boolean> {
-  return isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  return isAppFlowyConfigured();
 }
 
 export async function isNotionCmsConfigured(

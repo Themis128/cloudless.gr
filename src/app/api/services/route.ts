@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServices as getAppFlowyServices, staticServices } from "@/lib/appflowy-services";
 import { getServices as getNotionServices } from "@/lib/notion-services";
-import { isAppFlowyCmsConfigured, isNotionCmsConfigured, cmsSourceHeaders } from "@/lib/cms-provider";
+import {
+  isAppFlowyCmsConfigured,
+  isNotionCmsConfigured,
+  cmsSourceHeaders,
+} from "@/lib/cms-provider";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

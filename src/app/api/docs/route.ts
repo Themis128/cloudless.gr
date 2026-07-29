@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
-import { getDocs as getAppFlowyDocs, groupDocsByCategory as groupAppFlowyDocs } from "@/lib/appflowy-docs";
-import { getDocs as getNotionDocs, groupDocsByCategory as groupNotionDocs } from "@/lib/notion-docs";
+import {
+  getDocs as getAppFlowyDocs,
+  groupDocsByCategory as groupAppFlowyDocs,
+} from "@/lib/appflowy-docs";
+import {
+  getDocs as getNotionDocs,
+  groupDocsByCategory as groupNotionDocs,
+} from "@/lib/notion-docs";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 /**
@@ -10,7 +17,7 @@ import { isConfiguredAsync } from "@/lib/integrations";
  * Used by the docs index page and sidebar navigation.
  */
 export async function GET() {
-  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  const appFlowyConfigured = await isAppFlowyConfigured();
   const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID");
 
   if (!appFlowyConfigured && !notionConfigured) {

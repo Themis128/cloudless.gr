@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getBlogPostBySlug } from "@/lib/blog-source";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  const appFlowyConfigured = await isAppFlowyConfigured();
   const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
 
   if (!appFlowyConfigured && !notionConfigured) {
@@ -28,6 +29,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         { headers: { "x-blog-source": "static" } }
       );
     }
+    // Prefer AppFlowy when configured and the slug resolved through the dual-run chain.
+    // getBlogPostBySlug already tried AppFlowy first; if we got a post while AppFlowy is
+    // configured, treat it as appflowy unless Notion was the only configured source.
     const source = appFlowyConfigured ? "appflowy" : "notion";
     return NextResponse.json(
       { post, source },

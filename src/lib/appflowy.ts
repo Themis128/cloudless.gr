@@ -1,19 +1,20 @@
-/** * AppFlowy Cloud HTTP client — read-side surface for /admin/integrations and
- * the appflowy-to-lake ETL. AppFlowy Cloud's REST API is documented at
- * https://github.com/AppFlowy-IO/AppFlowy-Cloud — authentication is the same
- * GoTrue JWT the SPA uses.
+/**
+ * AppFlowy Cloud HTTP client — read-side surface for CMS dual-run,
+ * /admin/integrations, and the appflowy-to-lake ETL.
  *
- * Two auth modes:
+ * Auth modes (tried in order for CMS reads):
  *
- * 1. **Service-role JWT** — sign with `GOTRUE_JWT_SECRET` (HS256, role=
- * "supabase_admin"). Bypasses per-user RLS; safe for read-only admin
- * queries. Use this for /admin/integrations and ETL.
- * 2. **User JWT** — pass-through of the SPA's access_token. Use when calling
- * on behalf of a logged-in user (no current consumer).
+ * 1. **User JWT** — GoTrue password grant with APPFLOWY_EMAIL /
+ *    APPFLOWY_PASSWORD. Uses `/api/workspace` + `/folder` + `/page-view`
+ *    (the surface that works on our self-hosted build).
+ * 2. **Service-role JWT** — HS256 with GOTRUE_JWT_SECRET (`role:
+ *    supabase_admin`). Targets `/api/admin/*` when that admin surface is
+ *    enabled (not available on all AppFlowy Cloud builds).
  *
  * Config (SSM or env):
  * APPFLOWY_API_URL base URL, e.g. https://appflowy.cloudless.gr
- * APPFLOWY_JWT_SECRET same value as cluster Secret appflowy-secrets/GOTRUE_JWT_SECRET
+ * APPFLOWY_EMAIL + APPFLOWY_PASSWORD for user-JWT reads (preferred)
+ * APPFLOWY_JWT_SECRET same value as cluster Secret GOTRUE_JWT_SECRET
  *
  * Both unconfigured → typed `AppFlowyNotConfiguredError` so callers can fall
  * back to "not wired yet" without crashing.
@@ -23,7 +24,9 @@ import { getConfig } from "@/lib/ssm-config";
 
 export class AppFlowyNotConfiguredError extends Error {
   constructor() {
-    super("AppFlowy API not configured (APPFLOWY_API_URL or APPFLOWY_JWT_SECRET missing)");
+    super(
+      "AppFlowy API not configured (APPFLOWY_API_URL plus user credentials or JWT secret missing)"
+    );
     this.name = "AppFlowyNotConfiguredError";
   }
 }
@@ -41,20 +44,24 @@ export class AppFlowyApiError extends Error {
 interface AppFlowyConfig {
   baseUrl: string;
   jwtSecret: string;
+  email: string;
+  password: string;
 }
+
+let cachedUserToken: { token: string; expiresAtMs: number } | null = null;
 
 async function getAppFlowyConfig(): Promise<AppFlowyConfig> {
   const cfg = await getConfig();
-  if (!cfg.APPFLOWY_API_URL || !cfg.APPFLOWY_JWT_SECRET) {
+  const baseUrl = (cfg.APPFLOWY_API_URL ?? "").replace(/\/$/, "");
+  const jwtSecret = cfg.APPFLOWY_JWT_SECRET ?? "";
+  const email = cfg.APPFLOWY_EMAIL ?? "";
+  const password = cfg.APPFLOWY_PASSWORD ?? "";
+  if (!baseUrl || (!jwtSecret && !(email && password))) {
     throw new AppFlowyNotConfiguredError();
   }
-  return {
-    baseUrl: cfg.APPFLOWY_API_URL.replace(/\/$/, ""),
-    jwtSecret: cfg.APPFLOWY_JWT_SECRET,
-  };
+  return { baseUrl, jwtSecret, email, password };
 }
 
-// Base64url without external deps
 function b64url(input: Buffer | string): string {
   return Buffer.from(input)
     .toString("base64")
@@ -63,9 +70,6 @@ function b64url(input: Buffer | string): string {
     .replace(/\//g, "_");
 }
 
-/** Mint a short-lived service-role JWT. Mirrors the shape GoTrue issues for
- * admin grants: `role: "supabase_admin"`, audience empty, 5-minute expiry.
- */
 function signServiceJwt(secret: string): string {
   const header = { alg: "HS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
@@ -82,20 +86,56 @@ function signServiceJwt(secret: string): string {
   return `${head}.${body}.${sig}`;
 }
 
+async function getUserAccessToken(cfg: AppFlowyConfig): Promise<string | null> {
+  if (!cfg.email || !cfg.password) return null;
+  const now = Date.now();
+  if (cachedUserToken && cachedUserToken.expiresAtMs > now + 30_000) {
+    return cachedUserToken.token;
+  }
+
+  const res = await fetch(`${cfg.baseUrl}/gotrue/token?grant_type=password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: cfg.email, password: cfg.password }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) {
+    throw new AppFlowyApiError(res.status, await res.text().catch(() => ""));
+  }
+  const body = (await res.json()) as { access_token?: string; expires_in?: number };
+  if (!body.access_token) {
+    throw new AppFlowyApiError(res.status, "GoTrue response missing access_token");
+  }
+  const expiresInSec = typeof body.expires_in === "number" ? body.expires_in : 3600;
+  cachedUserToken = {
+    token: body.access_token,
+    expiresAtMs: now + expiresInSec * 1000,
+  };
+  return body.access_token;
+}
+
+async function resolveBearerToken(cfg: AppFlowyConfig): Promise<string> {
+  const userToken = await getUserAccessToken(cfg);
+  if (userToken) return userToken;
+  if (cfg.jwtSecret) return signServiceJwt(cfg.jwtSecret);
+  throw new AppFlowyNotConfiguredError();
+}
+
 async function appflowyFetch(
   path: string,
   init: RequestInit & { timeoutMs?: number } = {}
 ): Promise<Response> {
-  const { baseUrl, jwtSecret } = await getAppFlowyConfig();
+  const cfg = await getAppFlowyConfig();
   const { timeoutMs, headers, ...rest } = init;
-  return fetch(`${baseUrl}/api${path}`, {
+  const token = await resolveBearerToken(cfg);
+  return fetch(`${cfg.baseUrl}/api${path}`, {
     ...rest,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${signServiceJwt(jwtSecret)}`,
+      Authorization: `Bearer ${token}`,
       ...headers,
     },
-    signal: AbortSignal.timeout(timeoutMs ?? 10_000),
+    signal: AbortSignal.timeout(timeoutMs ?? 15_000),
   });
 }
 
@@ -108,9 +148,6 @@ async function callThrowing<T>(
   return (await res.json()) as T;
 }
 
-// ---------------------------------------------------------------------------
-// Read surface used by /admin/integrations + ETL
-// ---------------------------------------------------------------------------
 export async function isAppFlowyConfigured(): Promise<boolean> {
   try {
     await getAppFlowyConfig();
@@ -149,10 +186,16 @@ export interface AppFlowyUserSummary {
   created_at: string;
 }
 
-/** Lists every workspace visible to the service-role JWT. Used by ETL +
- * the admin page tile. Returns empty array on unconfigured.
- */
 export async function listAllWorkspaces(): Promise<AppFlowyWorkspace[]> {
+  try {
+    // User API (works on self-hosted cloudless build)
+    const r = await callThrowing<{ data: AppFlowyWorkspace[] }>("/workspace");
+    if (r.data?.length) return r.data;
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return [];
+    // Fall through to admin surface when user path fails.
+  }
+
   try {
     const r = await callThrowing<{ data: AppFlowyWorkspace[] }>("/admin/workspace");
     return r.data ?? [];
@@ -172,7 +215,6 @@ export async function listAllUsers(): Promise<AppFlowyUserSummary[]> {
   }
 }
 
-/** Lightweight summary for the admin dashboard tile. */
 export async function getAppFlowySummary(): Promise<{
   configured: boolean;
   healthy: boolean;
@@ -194,9 +236,6 @@ export async function getAppFlowySummary(): Promise<{
   };
 }
 
-// ---------------------------------------------------------------------------
-// Admin CMS surface — used by Next.js /admin/appflowy/* routes
-// ---------------------------------------------------------------------------
 export interface AppFlowyView {
   view_id: string;
   name: string;
@@ -206,7 +245,61 @@ export interface AppFlowyView {
   cover_image?: string;
 }
 
+type FolderNode = {
+  view_id?: string;
+  name?: string;
+  layout?: number;
+  last_edited_time?: string;
+  has_children?: boolean;
+  children?: FolderNode[];
+  view?: FolderNode;
+};
+
+function flattenFolderViews(node: unknown, out: AppFlowyView[] = []): AppFlowyView[] {
+  if (!node) return out;
+  if (Array.isArray(node)) {
+    for (const child of node) flattenFolderViews(child, out);
+    return out;
+  }
+  if (typeof node !== "object") return out;
+
+  const n = node as FolderNode;
+  const view = n.view ?? n;
+  const viewId = view.view_id;
+  const name = view.name;
+  if (viewId && name) {
+    const isFolder = Boolean(view.has_children) || view.layout === 1;
+    out.push({
+      view_id: viewId,
+      name,
+      type: isFolder ? "folder" : "document",
+      last_edited_time: view.last_edited_time ?? "",
+    });
+  }
+  if (Array.isArray(view.children)) {
+    flattenFolderViews(view.children, out);
+  }
+  if (n !== view && Array.isArray(n.children)) {
+    flattenFolderViews(n.children, out);
+  }
+  return out;
+}
+
 export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyView[]> {
+  try {
+    const r = await callThrowing<{ data: unknown }>(`/workspace/${workspaceId}/folder?depth=10`);
+    const views = flattenFolderViews(r.data);
+    if (views.length > 0) {
+      // Deduplicate by view_id (folder walk can revisit parents).
+      const byId = new Map<string, AppFlowyView>();
+      for (const v of views) byId.set(v.view_id, v);
+      return Array.from(byId.values());
+    }
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) return [];
+    // Fall through to admin API.
+  }
+
   try {
     const r = await callThrowing<{ data: AppFlowyView[] }>(`/admin/workspace/${workspaceId}/views`);
     return r.data ?? [];
@@ -216,7 +309,68 @@ export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyVie
   }
 }
 
+function extractStringsFromCollab(encoded: unknown): string {
+  if (!encoded) return "";
+  let blob: Buffer;
+  if (Array.isArray(encoded)) {
+    blob = Buffer.from(encoded as number[]);
+  } else if (typeof encoded === "string") {
+    try {
+      blob = Buffer.from(encoded, "base64");
+    } catch {
+      blob = Buffer.from(encoded, "utf8");
+    }
+  } else if (Buffer.isBuffer(encoded)) {
+    blob = encoded;
+  } else {
+    return "";
+  }
+
+  const matches = blob.toString("latin1").match(/[\x20-\x7e]{4,}/g) ?? [];
+  const skip = new Set([
+    "data",
+    "document",
+    "blocks",
+    "meta",
+    "children_map",
+    "text_map",
+    "page_id",
+    "page",
+    "parent",
+    "children",
+    "external_id",
+    "external_type",
+    "paragraph",
+    "text",
+  ]);
+  const meaningful = matches.filter((s) => {
+    if (skip.has(s)) return false;
+    if (s.startsWith("$") || s.startsWith("w$")) return false;
+    if (/^[A-Za-z0-9_-]{6,14}\(?$/.test(s)) return false; // CRDT block ids
+    // Keep markdown field lines and real prose only.
+    if (/^\*\*[A-Za-z][^*]+\*\*:/.test(s)) return true;
+    if (s.includes(" ") && s.length >= 24) return true;
+    return false;
+  });
+  return meaningful.join("\n");
+}
+
 export async function getDocument(workspaceId: string, viewId: string): Promise<unknown> {
+  try {
+    const r = await callThrowing<{
+      data?: {
+        view?: AppFlowyView;
+        data?: { encoded_collab?: unknown; row_data?: unknown };
+      };
+    }>(`/workspace/${workspaceId}/page-view/${viewId}`);
+    const encoded = r.data?.data?.encoded_collab;
+    const text = extractStringsFromCollab(encoded);
+    return { text, content: text ? [text] : [], raw: r.data };
+  } catch (e) {
+    if (e instanceof AppFlowyNotConfiguredError) throw e;
+    // Fall through to admin document endpoint.
+  }
+
   try {
     const r = await callThrowing<{ data: unknown }>(
       `/admin/workspace/${workspaceId}/document/${viewId}`
@@ -230,14 +384,14 @@ export async function getDocument(workspaceId: string, viewId: string): Promise<
 
 export async function extractDocText(doc: unknown): Promise<string> {
   try {
-    // Simplified text extraction for AppFlowy documents
     const data = doc as { text?: string; content?: unknown[] };
     if (data.text) return data.text;
     if (Array.isArray(data.content)) {
       return data.content
         .map((c) => {
           if (typeof c === "string") return c;
-          if (c && typeof c === "object" && "text" in c) return String(c.text);
+          if (c && typeof c === "object" && "text" in c)
+            return String((c as { text: unknown }).text);
           return "";
         })
         .join("\n");
@@ -249,7 +403,6 @@ export async function extractDocText(doc: unknown): Promise<string> {
 }
 
 export async function markdownToHtml(markdown: string): Promise<string> {
-  // Simplified markdown to HTML converter
   return markdown
     .replace(/^# (.*$)/gm, "<h1>$1</h1>")
     .replace(/^## (.*$)/gm, "<h2>$1</h2>")
@@ -262,21 +415,15 @@ export async function markdownToHtml(markdown: string): Promise<string> {
 }
 
 export async function listWorkspaceViews(workspaceId: string): Promise<AppFlowyView[]> {
-  try {
-    const r = await callThrowing<{ data: AppFlowyView[] }>(`/admin/workspace/${workspaceId}/views`);
-    return r.data ?? [];
-  } catch (e) {
-    if (e instanceof AppFlowyNotConfiguredError) return [];
-    throw e;
-  }
+  return listAllViewsDeep(workspaceId);
 }
 
 export async function searchDocuments(workspaceId: string, query: string): Promise<AppFlowyView[]> {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
   try {
-    const r = await callThrowing<{ data: AppFlowyView[] }>(
-      `/admin/workspace/${workspaceId}/search?query=${encodeURIComponent(query)}`
-    );
-    return r.data ?? [];
+    const views = await listAllViewsDeep(workspaceId);
+    return views.filter((v) => v.name.toLowerCase().includes(q));
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) return [];
     throw e;

@@ -4,7 +4,11 @@ import {
   staticCaseStudies,
 } from "@/lib/appflowy-case-studies";
 import { getCaseStudyBySlug as getNotionCaseStudyBySlug } from "@/lib/notion-case-studies";
-import { isAppFlowyCmsConfigured, isNotionCmsConfigured, cmsSourceHeaders } from "@/lib/cms-provider";
+import {
+  isAppFlowyCmsConfigured,
+  isNotionCmsConfigured,
+  cmsSourceHeaders,
+} from "@/lib/cms-provider";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

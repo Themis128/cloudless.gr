@@ -3,7 +3,11 @@ import {
   getDocBySlug as getAppFlowyDocBySlug,
   getDocContentWithToc as getAppFlowyDocContentWithToc,
 } from "@/lib/appflowy-docs";
-import { getDocBySlug as getNotionDocBySlug, getDocContent as getNotionDocContent } from "@/lib/notion-docs";
+import {
+  getDocBySlug as getNotionDocBySlug,
+  getDocContent as getNotionDocContent,
+} from "@/lib/notion-docs";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 /**
@@ -15,7 +19,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  const appFlowyConfigured = await isAppFlowyConfigured();
   const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID");
 
   if (!appFlowyConfigured && !notionConfigured) {
@@ -51,7 +55,10 @@ export async function GET(
       return NextResponse.json({ error: "Failed to load doc content" }, { status: 500 });
     }
 
-    return NextResponse.json({ ...content, source: "notion" }, { headers: { "x-cms-source": "notion" } });
+    return NextResponse.json(
+      { ...content, source: "notion" },
+      { headers: { "x-cms-source": "notion" } }
+    );
   } catch (err) {
     console.error("[Docs API] Failed to fetch doc:", err);
     return NextResponse.json({ error: "Failed to fetch doc" }, { status: 500 });

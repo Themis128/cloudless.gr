@@ -33,9 +33,6 @@ export async function GET(req: NextRequest) {
     // Network failures (DNS, timeouts) should not crash the handler:
     // the test suite treats any 5xx as an invalid outcome and expects
     // a graceful "not connected"/"not configured" style response.
-    return NextResponse.json(
-      { connected: false, error: "postiz_unreachable" },
-      { status: 404 }
-    );
+    return NextResponse.json({ connected: false, error: "postiz_unreachable" }, { status: 404 });
   }
 }

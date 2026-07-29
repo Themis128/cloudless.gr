@@ -254,15 +254,21 @@ async function main() {
           );
           const pageViewId = pageRes.data?.view_id;
           if (pageViewId && markdown.length > 0) {
-            // Upload markdown content to the page
-            await appflowyPost(
-              `/workspace/${workspaceId}/doc/${pageViewId}`,
-              appflowyToken,
-              appflowyBase,
-              { data: markdown }
-            ).catch(() => {
-              // Content upload is best-effort — page exists, content may need manual edit
-            });
+            // Upload markdown content to the page. Note: some AppFlowy Cloud
+            // builds return 404 for /doc/:id — page title still migrates and
+            // CMS adapters can serve title-based listings.
+            try {
+              await appflowyPost(
+                `/workspace/${workspaceId}/doc/${pageViewId}`,
+                appflowyToken,
+                appflowyBase,
+                { data: markdown }
+              );
+            } catch (err) {
+              console.warn(
+                `  Content upload skipped for "${title}": ${err.message}`
+              );
+            }
           }
           migrated++;
         } catch (err) {

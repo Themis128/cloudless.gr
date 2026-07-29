@@ -9,12 +9,14 @@ import {
   getPostBySlug as getAppFlowyPostBySlug,
   type AppFlowyPost,
 } from "@/lib/appflowy-blog";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import {
   getPosts as getNotionPosts,
   getPostBySlug as getNotionPostBySlug,
   type NotionBlock,
   type NotionPost,
 } from "@/lib/notion-blog";
+import type { CmsSource } from "@/lib/cms-provider";
 
 const DEFAULT_CATEGORY = "Cloud" as BlogPost["category"];
 const WORDS_PER_MINUTE = 200;
@@ -152,7 +154,10 @@ function mapAppFlowyListingPost(post: AppFlowyPost): BlogPost {
 }
 
 function stripHtml(input: string): string {
-  return input.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return input
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function mapAppFlowyPost(post: AppFlowyPost): BlogPost {
@@ -167,14 +172,19 @@ function mapAppFlowyPost(post: AppFlowyPost): BlogPost {
   };
 }
 
-export async function getBlogPosts(): Promise<BlogPost[]> {
-  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
-  if (appFlowyConfigured) {
+export async function getBlogPostsWithSource(): Promise<{
+  posts: BlogPost[];
+  source: CmsSource;
+}> {
+  if (await isAppFlowyConfigured()) {
     try {
       const appFlowyPosts = await getAppFlowyPosts();
       const published = appFlowyPosts.filter((post) => post.published);
       if (published.length > 0) {
-        return published.map(mapAppFlowyListingPost);
+        return {
+          posts: published.map(mapAppFlowyListingPost),
+          source: "appflowy",
+        };
       }
     } catch {
       // Fall through to Notion/static provider chain.
@@ -182,20 +192,24 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
   }
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
-    return staticPosts;
+    return { posts: staticPosts, source: "static" };
   }
 
   try {
     const notionPosts = await getNotionPosts();
-    return notionPosts.map(mapNotionListingPost);
+    return { posts: notionPosts.map(mapNotionListingPost), source: "notion" };
   } catch {
-    return staticPosts;
+    return { posts: staticPosts, source: "static" };
   }
 }
 
+export async function getBlogPosts(): Promise<BlogPost[]> {
+  const { posts } = await getBlogPostsWithSource();
+  return posts;
+}
+
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
-  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
-  if (appFlowyConfigured) {
+  if (await isAppFlowyConfigured()) {
     try {
       const appFlowyPost = await getAppFlowyPostBySlug(slug);
       if (appFlowyPost?.published) {

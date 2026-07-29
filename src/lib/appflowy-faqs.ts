@@ -63,7 +63,10 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
 
       const localesRaw = parseField(markdown, "Locale");
       const locales = localesRaw
-        ? localesRaw.split(",").map((l) => l.trim()).filter(Boolean)
+        ? localesRaw
+            .split(",")
+            .map((l) => l.trim())
+            .filter(Boolean)
         : [];
       const faq: Faq = {
         id: view.view_id,
@@ -85,10 +88,7 @@ export async function getFaqs(locale?: string): Promise<Faq[]> {
   }
 }
 
-export async function getFaqsByCategory(
-  category: FaqCategory,
-  locale?: string
-): Promise<Faq[]> {
+export async function getFaqsByCategory(category: FaqCategory, locale?: string): Promise<Faq[]> {
   const faqs = await getFaqs(locale);
   return faqs.filter((f) => f.category === category);
 }

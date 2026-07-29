@@ -9,7 +9,11 @@ import {
   getFaqsByCategory as getNotionFaqsByCategory,
 } from "@/lib/notion-faqs";
 import type { FaqCategory } from "@/lib/notion-faqs";
-import { isAppFlowyCmsConfigured, isNotionCmsConfigured, cmsSourceHeaders } from "@/lib/cms-provider";
+import {
+  isAppFlowyCmsConfigured,
+  isNotionCmsConfigured,
+  cmsSourceHeaders,
+} from "@/lib/cms-provider";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

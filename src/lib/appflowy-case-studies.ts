@@ -71,7 +71,10 @@ function mapMarkdownToCaseStudy(
     client: parseField(markdown, "Client") || "",
     industry: parseField(markdown, "Industry") || "General",
     services: servicesRaw
-      ? servicesRaw.split(",").map((s) => s.trim()).filter(Boolean)
+      ? servicesRaw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
       : [],
     summary: parseField(markdown, "Summary") || "",
     challenge: parseField(markdown, "Challenge") || "",
@@ -79,7 +82,12 @@ function mapMarkdownToCaseStudy(
     results: parseField(markdown, "Results") || "",
     metrics,
     coverImage: parseField(markdown, "CoverImage") || undefined,
-    tags: tagsRaw ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [],
+    tags: tagsRaw
+      ? tagsRaw
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [],
     featured: featuredRaw === "true" || featuredRaw === "yes" || featuredRaw === "✅",
     date: parseField(markdown, "Date") || lastEdited,
   };
@@ -105,7 +113,12 @@ export async function getCaseStudies(): Promise<CaseStudy[]> {
         markdown = "";
       }
       caseStudies.push(
-        mapMarkdownToCaseStudy(view.view_id, stripPrefix(view.name), markdown, view.last_edited_time)
+        mapMarkdownToCaseStudy(
+          view.view_id,
+          stripPrefix(view.name),
+          markdown,
+          view.last_edited_time
+        )
       );
     }
 

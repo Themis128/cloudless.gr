@@ -85,7 +85,10 @@ export async function getServices(): Promise<CloudlessService[]> {
         price: parseField(markdown, "Price") || "",
         category,
         features: featuresRaw
-          ? featuresRaw.split(/[;\n]/).map((f) => f.trim()).filter(Boolean)
+          ? featuresRaw
+              .split(/[;\n]/)
+              .map((f) => f.trim())
+              .filter(Boolean)
           : [],
         cta: parseField(markdown, "CTA") || "Contact us",
         icon: parseField(markdown, "Icon") || "⚡",
