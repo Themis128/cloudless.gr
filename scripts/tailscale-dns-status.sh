@@ -16,27 +16,20 @@ curl -sS -H "$AUTH" "$API/tailnet/$TAILNET/dns/searchpaths" | jq . || true
 echo '== ACL autoApprovers =='
 curl -sS -H "$AUTH" -H 'Accept: application/json' "$API/tailnet/$TAILNET/acl" | jq '{tagOwners,autoApprovers}' || true
 
-# Enable MagicDNS (HTTPS Certificates are admin-UI only — no public API).
 echo '== enable MagicDNS (POST preferences) =='
 curl -sS -X POST -H "$AUTH" -H 'Content-Type: application/json' \
   "$API/tailnet/$TAILNET/dns/preferences" \
   -d '{"magicDNS":true}' | jq . || true
 
-echo '== GET dns/preferences =='
-curl -sS -H "$AUTH" "$API/tailnet/$TAILNET/dns/preferences" | jq . || true
+echo '== GET /settings (httpsEnabled) =='
+curl -sS -H "$AUTH" "$API/tailnet/$TAILNET/settings" | jq '{httpsEnabled}' || true
 
-# Probe undocumented / alpha endpoints for HTTPS toggle (expect 404/405).
-for path in \
-  "dns/configuration" \
-  "dns/https" \
-  "settings" ; do
-  echo "== PROBE GET $path =="
-  code=$(curl -sS -o /tmp/ts-probe.json -w '%{http_code}' -H "$AUTH" "$API/tailnet/$TAILNET/$path" || true)
-  echo "HTTP $code $(head -c 200 /tmp/ts-probe.json 2>/dev/null)"
-done
-
-echo '== HTTPS Certificates =='
-echo 'No public API. Enable in admin console:'
-echo '  https://login.tailscale.com/admin/dns  →  HTTPS Certificates → Enable HTTPS'
-echo 'Then delete empty TLS Secrets so the operator re-provisions:'
-echo '  kubectl -n tailscale delete secret grafana.tail4ecae1.ts.net kube.tail4ecae1.ts.net meilisearch.tail4ecae1.ts.net'
+# Official: PATCH /tailnet/{tailnet}/settings  { "httpsEnabled": true }
+# https://github.com/tailscale/tailscale-client-go-v2/blob/main/tailnet_settings.go
+if [[ "${ENABLE_HTTPS:-0}" =~ ^(1|true|TRUE|yes|YES)$ ]]; then
+  echo '== PATCH httpsEnabled=true =='
+  curl -sS -X PATCH -H "$AUTH" -H 'Content-Type: application/json' \
+    "$API/tailnet/$TAILNET/settings" \
+    -d '{"httpsEnabled":true}' | jq . || true
+  curl -sS -H "$AUTH" "$API/tailnet/$TAILNET/settings" | jq '{httpsEnabled}' || true
+fi

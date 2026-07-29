@@ -55,10 +55,14 @@ Aligned with current Tailscale Kubernetes Operator docs (validated mid-2026):
    (`tagOwners` + `autoApprovers` for routes + `svc:*`). Workflows:
    `Tailscale admin API`, `Tailscale fix fabric ACL`.
 
-3. **Enable HTTPS Certificates** (required — no public API):
-   https://login.tailscale.com/admin/dns → **HTTPS Certificates** → **Enable HTTPS**.
+3. **Enable HTTPS Certificates** (required for Serve / kube-apiserver):
+   ```bash
+   # PATCH /api/v2/tailnet/{tailnet}/settings  {"httpsEnabled":true}
+   # Workflow: Tailscale enable HTTPS  — or admin DNS UI
+   bash scripts/tailscale-enable-https.sh
+   ```
    Without this, Ingress `ADDRESS` stays empty and `ProxyGroup kube` stays
-   `KubeAPIServerProxyNoBackends` (TLS Secrets have empty `tls.crt`/`tls.key`).
+   `KubeAPIServerProxyNoBackends` (operator waits until certs exist before advertising).
 
 4. Install:
 
