@@ -253,17 +253,19 @@ jobs:
           docker pull "${IMAGE}"
 
           echo "==> Extracting /app → ${STAGE}"
-          rm -rf "${STAGE}"
-          mkdir -p "${STAGE}"
+          # Stage + DEST are under /home/tbaltzakis and may be root-owned from
+          # prior runs — always use sudo for mkdir/cp/rsync/cleanup.
+          sudo rm -rf "${STAGE}"
+          sudo mkdir -p "${STAGE}"
           CID=$(docker create "${IMAGE}")
-          docker cp "${CID}:/app/." "${STAGE}/"
+          sudo docker cp "${CID}:/app/." "${STAGE}/"
           docker rm "${CID}" >/dev/null
-          test -f "${STAGE}/server.js"
+          sudo test -f "${STAGE}/server.js"
 
           echo "==> Atomic swap into ${DEST}"
           sudo mkdir -p "${DEST}"
           sudo rsync -a --delete "${STAGE}/" "${DEST}/"
-          rm -rf "${STAGE}"
+          sudo rm -rf "${STAGE}"
 
           echo "==> Set APP_VERSION=${FULL_SHA} and restart ${{ env.K3S_DEPLOYMENT }}"
           # Keep node:22-bookworm-slim + hostPath; only refresh files + env.
