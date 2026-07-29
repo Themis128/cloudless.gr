@@ -109,10 +109,8 @@
     "@aws-sdk/client-s3": "^3.1073.0",
     "@aws-sdk/client-sesv2": "^3.1073.0",
     "@aws-sdk/client-ssm": "^3.1073.0",
-    "@cloudflare/agents": "^0.0.16",
     "@langchain/langgraph-sdk": "^1.9.28",
     "@opennextjs/cloudflare": "^1.20.2",
-    "@react-email/components": "1.0.12",
     "@sentry/nextjs": "^10.59.0",
     "ai": "^7.0.42",
     "cmdk": "^1.1.1",
@@ -127,11 +125,12 @@
     "pdf-lib": "^1.17.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-email": "^6.6.3",
+    "react-email": "^6.9.1",
     "resend": "^6.18.1",
     "stripe": "^22.2.2",
     "undici": "^8.5.0",
-    "workers-ai-provider": "^4.0.0"
+    "workers-ai-provider": "^4.0.0",
+    "agents": "^0.20.1"
   },
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1098.0",
