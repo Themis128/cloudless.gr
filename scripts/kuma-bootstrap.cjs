@@ -172,10 +172,8 @@ async function main() {
         type: "webhook",
         webhookURL: BRIDGE_URL,
         webhookContentType: "json",
-        additionalHeadersEnabled: true,
-        additionalHeaders: JSON.stringify({
+        webhookAdditionalHeaders: JSON.stringify({
           Authorization: `Bearer ${BRIDGE_TOKEN}`,
-          "Content-Type": "application/json",
         }),
       },
       null
