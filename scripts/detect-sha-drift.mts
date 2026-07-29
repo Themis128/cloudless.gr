@@ -103,7 +103,8 @@ function evaluateDrift(snapshot: DriftSnapshot, now: number = Date.now()): Drift
 // ───────────────────────────────────────────────────────────────────────
 
 const HEALTH_URLS = {
-  cloud: "https://www.cloudless.gr/api/health",
+  // Apex Worker (pi-origin-proxy) → Tunnel → Pi. Prefer apex over www.
+  cloud: "https://cloudless.gr/api/health",
   pi: "https://pi-origin.cloudless.gr/api/health",
 } as const;
 const SSM_CLOUD = "/cloudless/production/cloud-sha";
@@ -121,6 +122,11 @@ function fetchJson(url: string): Promise<Record<string, unknown> | null> {
         timeout: 10_000,
         autoSelectFamily: true,
         autoSelectFamilyAttemptTimeout: 250,
+        headers: {
+          // Reduce chance of Bot Fight Mode interstitial for machine probes.
+          "user-agent": "cloudless-sha-drift/1.0 (+https://github.com/Themis128/cloudless.gr)",
+          accept: "application/json",
+        },
       },
       (res) => {
       const chunks: Buffer[] = [];
@@ -159,7 +165,29 @@ async function readSsmParam(
   }
 }
 
+async function snapshotCloudflareOnly(): Promise<DriftSnapshot> {
+  const [cloudJson, piJson] = await Promise.all([
+    fetchJson(HEALTH_URLS.cloud),
+    fetchJson(HEALTH_URLS.pi),
+  ]);
+  const cloud = typeof cloudJson?.version === "string" ? cloudJson.version : null;
+  const pi = typeof piJson?.version === "string" ? piJson.version : null;
+  // Both surfaces should serve the same Pi image via Tunnel / proxy.
+  const expected = cloud ?? pi ?? "unknown";
+  return {
+    cloudExpected: expected,
+    piExpected: expected,
+    cloudSsmModifiedAt: null,
+    piSsmModifiedAt: null,
+    cloud,
+    pi,
+  };
+}
+
 async function snapshot(): Promise<DriftSnapshot | null> {
+  if (process.env.CLOUDFLARE_ONLY === "true") {
+    return snapshotCloudflareOnly();
+  }
   const { SSMClient } = await import("@aws-sdk/client-ssm");
   const ssmClient = new SSMClient({ region: REGION });
   const [cloudSsm, piSsm, cloudJson, piJson] = await Promise.all([

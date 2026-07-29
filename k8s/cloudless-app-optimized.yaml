@@ -176,10 +176,11 @@ metadata:
   labels:
     app: cloudless-app
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
   - port: 80
     targetPort: 3000
+    nodePort: 30300
     protocol: TCP
     name: http
   selector:

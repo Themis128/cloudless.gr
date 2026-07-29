@@ -298,4 +298,20 @@ jobs:
             ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
             -n ${{ env.K3S_NAMESPACE }}
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=600s
+
+      - name: Ensure NodePort 30300 for Tunnel origin
+        # Workers Free proxy + Tunnel pi-origin expect http://192.168.1.128:30300
+        run: |
+          set -euo pipefail
+          for svc in cloudless cloudless-app; do
+            if kubectl get svc "$svc" -n "${{ env.K3S_NAMESPACE }}" >/dev/null 2>&1; then
+              echo "Patching svc/$svc → NodePort 30300"
+              kubectl patch svc "$svc" -n "${{ env.K3S_NAMESPACE }}" --type merge -p \
+                '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":3000,"nodePort":30300,"protocol":"TCP"}]}}' \
+                || kubectl patch svc "$svc" -n "${{ env.K3S_NAMESPACE }}" --type merge -p \
+                '{"spec":{"type":"NodePort","ports":[{"port":80,"targetPort":3000,"nodePort":30300,"protocol":"TCP"}]}}'
+              kubectl get svc "$svc" -n "${{ env.K3S_NAMESPACE }}" -o wide
+            fi
+          done
+          curl -sS -o /dev/null -w "local health HTTP %{http_code}\n" --max-time 5 http://127.0.0.1:30300/api/health || true
 # re-triggered 2026-06-04T20:50Z — run #319 OIDC auth transient failure

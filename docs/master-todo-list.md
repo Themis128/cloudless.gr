@@ -13,8 +13,9 @@ D1 search/rec funnel (`0008`), and `store-recommendations` A/B holdout
 shipped 2026-07-29. Auth: register + activate fall back to D1 when Cognito
 unset; lake sinks (Stripe events, admin notifications) write R2 not S3.
 **Workers Free:** OpenNext SSR (~5.5 MiB) cannot deploy; production uses
-tiny `pi-origin-proxy` + Pi Tunnel (`deploy-pi.yml` for app). **Still open:**
-Phase 7 operator cadence; Cognito JWKS retirement; Athena cost UI → R2.
+tiny `pi-origin-proxy` + Pi Tunnel (`deploy-pi.yml` for app). Cognito JWKS
+retirement + Athena cost UI → D1/R2 are **DONE** in the checklist.
+**Still open (operator cadence only):** Phase 7 annual/quarterly rotations.
 
 Quick execution list → `docs/current-source-of-truth-checklist.md`.
 This file remains the detailed ledger + history.

@@ -1,6 +1,6 @@
 # Current Source of Truth Checklist
 
-Last reconciled: 2026-07-29.
+Last reconciled: 2026-07-30.
 
 This is the single execution checklist for roadmap work. Canonical detail and
 history remain in `docs/master-todo-list.md`.
