@@ -255,4 +255,103 @@ export async function notifyTeam(subject: string, body: string) {
   });
 }
 
+/**
+ * Account activation email with link + optional OTP fallback.
+ */
+export async function sendActivationEmail(
+  to: string,
+  token: string,
+  otp?: string,
+  name?: string
+): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://cloudless.gr";
+  const activationUrl = `${site}/api/auth/activate?email=${encodeURIComponent(to)}&token=${encodeURIComponent(token)}`;
+  const safeUrl = escapeHtml(activationUrl);
+  const greeting = name ? escapeHtml(name) : "there";
+  const otpBlock = otp
+    ? `
+          <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:20px;text-align:center;margin:0 0 20px;">
+            <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;">Can&rsquo;t tap the button? Enter this 6-digit code instead</p>
+            <p style="margin:0;font-size:36px;font-weight:700;letter-spacing:12px;color:#00fff5;font-family:monospace;">${escapeHtml(otp)}</p>
+          </div>`
+    : "";
+  const otpText = otp
+    ? [`OPTION 2 — enter this 6-digit code on the verification page: ${otp}`, ""]
+    : [];
+
+  await sendEmail({
+    to,
+    subject: "Activate your Cloudless account",
+    fromLabel: "Cloudless",
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0f;color:#e2e8f0;border-radius:12px;overflow:hidden;">
+        <div style="padding:32px 40px 24px;border-bottom:1px solid #1e293b;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#00fff5;">Cloudless</p>
+          <h1 style="margin:0;font-size:26px;font-weight:700;color:#f1f5f9;">Activate your account</h1>
+        </div>
+        <div style="padding:28px 40px 32px;">
+          <p style="margin:0 0 20px;font-size:15px;color:#94a3b8;line-height:1.7;">Hi ${greeting}, thanks for signing up. Tap the button below to activate your account.</p>
+          <div style="text-align:center;margin:0 0 28px;">
+            <a href="${safeUrl}" style="display:inline-block;padding:14px 36px;background:#00fff5;color:#0a0a0f;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:0.3px;">Activate Account</a>
+          </div>
+          ${otpBlock}
+          <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">The link${otp ? " and code" : ""} expire in <strong style="color:#94a3b8;">24 hours</strong>. If you didn&rsquo;t create an account, ignore this email.</p>
+        </div>
+        <div style="padding:16px 40px;background:#080811;border-top:1px solid #1e293b;">
+          <p style="margin:0;font-size:12px;color:#475569;">Cloudless &middot; <a href="https://cloudless.gr" style="color:#00fff5;text-decoration:none;">cloudless.gr</a></p>
+        </div>
+      </div>`,
+    text: [
+      `Hi ${name ?? "there"},`,
+      "",
+      "Thanks for signing up to Cloudless.",
+      "",
+      "OPTION 1 — tap this link to activate your account:",
+      activationUrl,
+      "",
+      ...otpText,
+      "Both expire in 24 hours. If you didn't create an account, ignore this email.",
+      "",
+      "Cloudless · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
+/**
+ * Password reset email with a one-time reset URL.
+ */
+export async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const safeUrl = escapeHtml(resetUrl);
+  await sendEmail({
+    to: email,
+    subject: "Password Reset Request",
+    html: `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+  <h2 style="color: #00b8ff; margin-bottom: 20px;">Password Reset</h2>
+  <p style="font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 20px;">You requested a password reset. Click the button below to reset your password:</p>
+  <p style="text-align: center; margin: 30px 0;">
+    <a href="${safeUrl}" style="display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#00fff5,#00b8ff);color:white;text-decoration:none;border-radius:6px;font-weight:600;">Reset Password</a>
+  </p>
+  <p style="font-size: 14px; line-height: 1.6; color: #666;">If you didn't request this, please ignore this email.</p>
+  <p style="font-size: 14px; line-height: 1.6; color: #666;">Best regards,<br /><strong>The Cloudless Team</strong></p>
+</div>
+    `,
+    text: `Password Reset Request
+You requested a password reset. Visit this URL to reset your password: ${resetUrl}
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+The Cloudless Team`,
+  });
+}
+
+/** @deprecated Prefer slackRegistrationNotify from @/lib/slack-notify */
+export async function slackRegistrationNotify(email: string): Promise<boolean> {
+  const { slackRegistrationNotify: notify } = await import("@/lib/slack-notify");
+  return notify(email);
+}
+
 export type { SendEmailCommandInput } from "@aws-sdk/client-sesv2";
