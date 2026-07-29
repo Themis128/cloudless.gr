@@ -19,10 +19,14 @@
  *   4. For each row, creates a child Document page in AppFlowy with the row title + all properties as markdown.
  *   5. Reports counts per database on completion.
  *
- * AppFlowy page content is uploaded as markdown via the AppFlowy Cloud REST API
- * POST /api/workspace/:workspaceId/page-view (layout=0 = Document) — same path
- * used by scripts/appflowy-upload-md.mjs.
+ * AppFlowy page content is written via page_data on
+ * POST /api/workspace/:workspaceId/page-view (same path as
+ * scripts/appflowy-upload-md.mjs). Empty pages from older runs can be filled
+ * with scripts/backfill-appflowy-cms-bodies.mjs.
  */
+
+import { randomUUID } from "node:crypto";
+import { createPageWithContent } from "./lib/appflowy-page-content.mjs";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -246,30 +250,15 @@ async function main() {
 
       if (!DRY_RUN) {
         try {
-          const pageRes = await appflowyPost(
-            `/workspace/${workspaceId}/page-view`,
-            appflowyToken,
-            appflowyBase,
-            { name: title, parent_view_id: dbViewId, layout: 0 }
-          );
-          const pageViewId = pageRes.data?.view_id;
-          if (pageViewId && markdown.length > 0) {
-            // Upload markdown content to the page. Note: some AppFlowy Cloud
-            // builds return 404 for /doc/:id — page title still migrates and
-            // CMS adapters can serve title-based listings.
-            try {
-              await appflowyPost(
-                `/workspace/${workspaceId}/doc/${pageViewId}`,
-                appflowyToken,
-                appflowyBase,
-                { data: markdown }
-              );
-            } catch (err) {
-              console.warn(
-                `  Content upload skipped for "${title}": ${err.message}`
-              );
-            }
-          }
+          await createPageWithContent({
+            baseUrl: appflowyBase,
+            token: appflowyToken,
+            workspaceId,
+            parentViewId: dbViewId,
+            title,
+            markdown,
+            viewId: randomUUID(),
+          });
           migrated++;
         } catch (err) {
           console.error(`  Failed to create page "${title}": ${err.message}`);
