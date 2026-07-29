@@ -199,6 +199,23 @@ describe("ssm-config.ts", () => {
 // dependency — not production code) to return canned parameters.
 
 describe("ssm-config.ts — SSM fetch path", () => {
+  /** Opt into the legacy SSM path (SSM_ENABLED=1) and clear env secrets so mocks win. */
+  function enableSsmFetchPath() {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SSM_ENABLED", "1");
+    vi.stubEnv("SSM_DISABLED", "");
+    for (const key of [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET",
+      "STRIPE_PUBLISHABLE_KEY",
+      "NOTION_API_KEY",
+      "GOOGLE_PRIVATE_KEY",
+      "AUTH_SECRET",
+    ]) {
+      vi.stubEnv(key, "");
+    }
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
@@ -230,7 +247,7 @@ describe("ssm-config.ts — SSM fetch path", () => {
   }
 
   it("builds config from SSM parameters and strips the prefix", async () => {
-    vi.stubEnv("NODE_ENV", "production");
+    enableSsmFetchPath();
     stubSsm([
       {
         Parameters: [
@@ -249,7 +266,7 @@ describe("ssm-config.ts — SSM fetch path", () => {
   });
 
   it("follows NextToken pagination across multiple pages", async () => {
-    vi.stubEnv("NODE_ENV", "production");
+    enableSsmFetchPath();
     const send = stubSsm([
       {
         Parameters: [{ Name: "/cloudless/production/STRIPE_SECRET_KEY", Value: "sk_p1" }],
@@ -268,7 +285,7 @@ describe("ssm-config.ts — SSM fetch path", () => {
   });
 
   it("normalizes escaped newlines in GOOGLE_PRIVATE_KEY from SSM", async () => {
-    vi.stubEnv("NODE_ENV", "production");
+    enableSsmFetchPath();
     stubSsm([
       {
         Parameters: [
@@ -289,7 +306,7 @@ describe("ssm-config.ts — SSM fetch path", () => {
   });
 
   it("warns when required Stripe keys are missing but still returns config", async () => {
-    vi.stubEnv("NODE_ENV", "production");
+    enableSsmFetchPath();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     stubSsm([{ Parameters: [{ Name: "/cloudless/production/NOTION_API_KEY", Value: "n" }] }]);
     const { getConfig, resetSsmCache } = await import("@/lib/ssm-config");
@@ -301,7 +318,7 @@ describe("ssm-config.ts — SSM fetch path", () => {
   });
 
   it("serves stale cache when a later SSM fetch fails", async () => {
-    vi.stubEnv("NODE_ENV", "production");
+    enableSsmFetchPath();
     let call = 0;
     const send = vi.fn(async () => {
       call += 1;
