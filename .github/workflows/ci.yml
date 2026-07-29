@@ -136,6 +136,9 @@ jobs:
       SENTRY_ORG: baltzakisthemiscom
       SENTRY_PROJECT: cloudless-gr
       NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+      NEXT_PUBLIC_AUTH_PROVIDER: d1
+      NEXT_PUBLIC_SITE_URL: https://cloudless.gr
+      SSM_DISABLED: "1"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -149,41 +152,6 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      # Cache Next.js build output between PR runs. Typically cuts the
-      # `pnpm build` step from ~3-4 min cold → <1 min on cache hit.
-      # Mirrors the pattern already in deploy.yml.
-      - name: Restore Next.js build cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-            nextjs-${{ runner.os }}-
-      - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm build
-
-  build:
-    name: Build
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
-    timeout-minutes: 30
-    env:
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      SENTRY_ORG: baltzakisthemiscom
-      SENTRY_PROJECT: cloudless-gr
-      NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
-        with:
-          dest: ~/setup-pnpm-${{ runner.name }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-      # Cache Next.js build output between PR runs. Typically cuts the
-      # `pnpm build` step from ~3-4 min cold → <1 min on cache hit.
-      # Mirrors the pattern already in deploy.yml.
       - name: Restore Next.js build cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
