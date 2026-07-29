@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -8,9 +9,9 @@ os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
 os.environ.setdefault("LANGCHAIN_TRACING", "false")
 
 from langchain_chroma import Chroma
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 
 LANGCHAIN_DB_DIR = ".deepagents/langchain_docs_chroma"
 LANGCHAIN_COLLECTION = "langchain_docs"
@@ -152,23 +153,14 @@ def format_context(repo_docs, langchain_docs):
         source = doc.metadata.get("source", "Unknown file")
         content = doc.page_content[:2000]
 
-        parts.append(
-            f"[REPO {i}]\n"
-            f"File: {source}\n\n"
-            f"{content}"
-        )
+        parts.append(f"[REPO {i}]\nFile: {source}\n\n{content}")
 
     for i, doc in enumerate(langchain_docs, start=1):
         title = doc.metadata.get("title", "Untitled")
         source = doc.metadata.get("source", "Unknown source")
         content = doc.page_content[:2000]
 
-        parts.append(
-            f"[DOCS {i}]\n"
-            f"Title: {title}\n"
-            f"Source: {source}\n\n"
-            f"{content}"
-        )
+        parts.append(f"[DOCS {i}]\nTitle: {title}\nSource: {source}\n\n{content}")
 
     return "\n\n---\n\n".join(parts)
 

@@ -5,12 +5,14 @@
 ## 🔴 Cloudflare Token Rotation (REQUIRED)
 
 ### Current Status
+
 - Token exists and is valid
 - **Missing scope:** `User API Tokens:Edit`
 - Passes: Zone:Read, DNS:Read, Analytics:Read, Workers:Read
 - Fails: User API Tokens:Read (cannot list tokens)
 
 ### Required Token Permissions
+
 | Scope | Resource | Permission |
 |-------|----------|------------|
 | Account | User API Tokens | **Edit** |
@@ -24,6 +26,7 @@
 | Zone | Load Balancing: Load Balancers | Edit |
 
 ### After Minting
+
 ```bash
 # Store token + apply HA LB in one step:
 gh workflow run store-cloudflare-token.yml -f cloudflare_token=<token> -f apply=true
@@ -34,6 +37,7 @@ gh workflow run cloudflare-lb.yml -f mode=report
 ```
 
 ### Unlocks
+
 - HA Load Balancer setup
 - Email obfuscation fix
 - Infra MCP tools (`mcp__cloudless-infra__cloudflare_*`)
@@ -43,14 +47,17 @@ gh workflow run cloudflare-lb.yml -f mode=report
 ## Operator-Only Blockers (UI Required)
 
 ### 1. Sentry Webhook Secret
+
 **URL:** https://sentry.io/settings/themis128/projects/cloudless-gr/integrations/
 
 Steps:
+
 1. Create Internal Integration
 2. Subscribe to: `issue` events
 3. Webhook URL: `https://cloudless.gr/api/webhooks/sentry`
 4. Copy Client Secret
 5. Run:
+
    ```bash
    aws ssm put-parameter \
      --name /cloudless/production/SENTRY_WEBHOOK_SECRET \
@@ -60,9 +67,11 @@ Steps:
    ```
 
 ### 2. Kuma Status Page
+
 **URL:** https://kuma.cloudless.gr
 
 Steps:
+
 1. Status Pages → New → slug: `cloudless`
 2. Add 12 monitors:
    - cloudless.gr/api/health
@@ -72,9 +81,11 @@ Steps:
 3. Wire to ntfy + Slack channels (Settings → Notifications)
 
 ### 3. ESP32 Notion Page Restore
+
 **URL:** https://www.notion.so/ (ESP32 hub page)
 
 Steps:
+
 1. Open ESP32 Notion page
 2. Click ••• → Page history
 3. Restore to: **2026-06-02 15:19 UTC**
@@ -98,6 +109,7 @@ echo "$AUTH_SECRET" | npx wrangler secret put AUTH_SECRET
 ```
 
 **Required secrets:**
+
 - `SESSION_SECRET` - Password hashing (D1 auth), 32+ bytes
 - `STRIPE_SECRET_KEY` - Checkout API calls
 - `STRIPE_WEBHOOK_SECRET` - Webhook signature verification
@@ -108,6 +120,7 @@ echo "$AUTH_SECRET" | npx wrangler secret put AUTH_SECRET
 ## Pi k3s Cluster SSM Configuration
 
 ### EspoCRM API Keys
+
 ```bash
 # EspoCRM is live - API user 'cloudless-app' exists (ID: 6a36ef141808ed737)
 # Keys need to be added to SSM:
@@ -125,10 +138,12 @@ aws ssm put-parameter \
 ```
 
 ### Meilisearch (Already Configured)
+
 - Live at: `https://meili.cloudless.gr`
 - Keys in SSM: `MEILI_HOST`, `MEILI_MASTER_KEY`, `MEILI_SEARCH_KEY`
 
 ### Grafana Tunnel + DNS (Partial)
+
 - Values stored: `GRAFANA_BASE_URL`, `PROMETHEUS_URL`
 - Pending: Tunnel ingress rules + DNS CNAME
 

@@ -3,11 +3,13 @@
 ## Decision: DNS Failover vs Fly.io Proxy
 
 **Current Setup:**
+
 - `ha-failover-watchdog.yml` switches DNS every 5 minutes between Worker and Pi
 - Uses Cloudflare DNS (free tier) + Tailscale Funnel for Pi access
 - Detection time: ~5 minutes, Failover time: DNS TTL
 
 **Fly.io Proxy Approach:**
+
 - Immediate failover (30s health check) without DNS propagation delays
 - Free tier (256MB RAM) covers the proxy needs
 - Self-contained in Fly.io (no dependency on GitHub Actions)
@@ -15,6 +17,7 @@
 ## Current Architecture (AWS + Pi Dual-Home)
 
 ### Primary Targets (Managed by ha-failover-watchdog.yml)
+
 ```
 DNS: cloudless.gr → cloudless-gr.baltzakis-themis.workers.dev (PRIMARY)
                       omv.tail8eb71.ts.net (STANDBY via Tailscale Funnel)
@@ -49,6 +52,7 @@ DNS: cloudless.gr (CNAME → Fly.io app)
 ### 1. Fly.io Proxy Application (`fly-proxy-app/`)
 
 **`proxy.py`** - FastAPI reverse proxy with:
+
 - Health check to primary every 30s
 - Automatic failover to fallback on failure
 - Transparent request/response proxying
@@ -89,21 +93,26 @@ primary_region = "fra"
 ## Deployment Steps
 
 ### Step 1: Add FLY_API_TOKEN Secret
+
 Add to GitHub Secrets: `Settings → Secrets → FLY_API_TOKEN`
 
 ### Step 2: Deploy via GitHub Actions
+
 ```
 GitHub → Actions → "Deploy Fly.io Proxy" → Run workflow
 ```
 
 ### Step 3: Get Fly.io App URL
+
 ```bash
 flyctl ips list --app cloudless-proxy
 # Output: your-app.fly.dev
 ```
 
 ### Step 4: Update Cloudflare DNS (if using Fly.io as ingress)
+
 In Cloudflare DNS dashboard:
+
 1. Create CNAME record for `cloudless.gr` → `cloudless-proxy.fly.dev`
 2. Create CNAME record for `www.cloudless.gr` → `cloudless-proxy.fly.dev`
 3. **Proxy status: DNS only** (orange cloud OFF)
@@ -120,6 +129,7 @@ The `agent-deploy-dashboard-mcp` is already added to `mcp.json`:
 ```
 
 ### Available MCP Tools for Fly.io
+
 | Tool | Status | Notes |
 |------|--------|-------|
 | `check_health(url)` | ✅ Works | Universal health checker |
@@ -132,12 +142,14 @@ The `agent-deploy-dashboard-mcp` is already added to `mcp.json`:
 ## Monitoring
 
 ### Health Check Endpoints
+
 - **Fly.io proxy health**: `https://cloudless-proxy.fly.dev/health`
 - **AWS backend**: `https://cloudless.gr/api/health` (via CloudFront)
 - **Worker**: `https://cloudless-gr.baltzakis-themis.workers.dev/api/health`
 - **Pi standby**: `https://omv.tail8eb71.ts.net/api/health`
 
 ### Using MCP for Monitoring
+
 ```bash
 # Check proxy health
 curl -X POST https://agent-deploy-dashboard-mcp.onrender.com/api/v1/check_health \
@@ -150,6 +162,7 @@ curl -X POST https://agent-deploy-dashboard-mcp.onrender.com/api/v1/list_all_ser
 ## Rollback Plan
 
 If issues arise:
+
 1. Delete the Fly.io app: `flyctl apps destroy cloudless-proxy`
 2. Revert DNS in Cloudflare to original:
    - `cloudless.gr` → `cloudless-gr.baltzakis-themis.workers.dev`

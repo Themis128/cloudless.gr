@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 CORE_SKILL_FILES = [
@@ -19,7 +18,10 @@ TOPIC_SKILL_FILES = {
     "storage": ["skills/cloudless-k3s-storage/SKILL.md"],
     "omv": ["skills/cloudless-k3s-storage/SKILL.md"],
     "terraform": ["skills/terraform-doctor/SKILL.md"],
-    "cloudflare": ["skills/cloudflare-tunnel-ops/SKILL.md", "skills/cloudflare-token-doctor/SKILL.md"],
+    "cloudflare": [
+        "skills/cloudflare-tunnel-ops/SKILL.md",
+        "skills/cloudflare-token-doctor/SKILL.md",
+    ],
     "espocrm": ["skills/espocrm-operator/SKILL.md"],
     "appflowy": ["skills/appflowy-operator/SKILL.md"],
     "postiz": ["skills/postiz/SKILL.md", "skills/postiz-doctor/SKILL.md"],
@@ -67,10 +69,6 @@ def load_skill_context(question: str = "", max_chars: int = 4000) -> str:
         if not content:
             continue
 
-        parts.append(
-            "[SKILL]\n"
-            f"File: {skill_path}\n\n"
-            f"{content}"
-        )
+        parts.append(f"[SKILL]\nFile: {skill_path}\n\n{content}")
 
     return "\n\n---\n\n".join(parts)[:max_chars]

@@ -127,7 +127,7 @@ export async function listParquetPartitions(
  */
 export async function getParquetPresignedUrl(
   _r2Client: R2Bucket,
-  key: string
+  _key: string
 ): Promise<string | null> {
   // R2 signed URLs require using the S3-compatible REST API
   // This implementation would need to call a Worker endpoint that generates signed URLs

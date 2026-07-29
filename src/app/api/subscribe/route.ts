@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { email } = parsed;
+    const { email } = parsed as { email?: string };
 
     if (!isValidEmail(email)) {
       return Response.json({ error: "Invalid email address." }, { status: 400 });

@@ -1,6 +1,5 @@
 import { routeAgentRequest } from "agents";
 import { CounterAgent } from "./agents/counter";
-import type { CounterState } from "./agents/counter";
 
 // Extend the generated Env with bindings that wrangler doesn't generate types for
 // AGENT_AUTH_TOKEN is a secret, ASSETS is for static assets, CounterAgent is the DO namespace
@@ -53,7 +52,7 @@ const AGENT_PATH_PREFIX = "/api/agents";
 const DEFAULT_AGENT_PATH_PREFIX = "/agents";
 const SERVER_COUNTER_PREFIX = "/api/server/counter";
 const CHAT_PATH_PREFIX = "/api/chat";
-const LOCALES = ["en", "el", "fr", "de"];
+const _LOCALES = ["en", "el", "fr", "de"];
 
 // ---------------------------------------------------------------------------
 // NOTE: Locale cascade and security headers are handled by middleware.ts

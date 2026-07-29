@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Optional
+from typing import Any
 
 import requests
 
@@ -15,9 +16,9 @@ class LangSmithAPIError(RuntimeError):
         self,
         message: str,
         *,
-        status_code: Optional[int] = None,
+        status_code: int | None = None,
         body: Any = None,
-        url: Optional[str] = None,
+        url: str | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -39,9 +40,9 @@ class BaseAPIClient:
         self,
         *,
         base_url: str,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         timeout: float = 30.0,
-        extra_headers: Optional[Dict[str, str]] = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -57,14 +58,14 @@ class BaseAPIClient:
         default_base_url: str,
         api_key_env: str = "LANGSMITH_API_KEY",
         timeout: float = 30.0,
-    ) -> "BaseAPIClient":
+    ) -> BaseAPIClient:
         return cls(
             base_url=os.getenv(base_url_env, default_base_url),
             api_key=os.getenv(api_key_env),
             timeout=timeout,
         )
 
-    def _headers(self, headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    def _headers(self, headers: dict[str, str] | None = None) -> dict[str, str]:
         merged = {
             "Accept": "application/json",
             "Content-Type": "application/json",
@@ -85,9 +86,9 @@ class BaseAPIClient:
         method: str,
         path: str,
         *,
-        params: Optional[Dict[str, Any]] = None,
-        json_body: Optional[Any] = None,
-        headers: Optional[Dict[str, str]] = None,
+        params: dict[str, Any] | None = None,
+        json_body: Any | None = None,
+        headers: dict[str, str] | None = None,
         raw: bool = False,
     ) -> APIResponse:
         url = f"{self.base_url}/{path.lstrip('/')}"
@@ -142,7 +143,7 @@ class BaseAPIClient:
     def delete(self, path: str, **kwargs: Any) -> APIResponse:
         return self.request("DELETE", path, **kwargs)
 
-    def _extract_items(self, data: Any, items_key: Optional[str] = None) -> list[Any]:
+    def _extract_items(self, data: Any, items_key: str | None = None) -> list[Any]:
         """Extract list items from common API response shapes."""
         if isinstance(data, list):
             return data
@@ -172,7 +173,7 @@ class BaseAPIClient:
 
         return []
 
-    def _next_cursor(self, data: Any) -> Optional[str]:
+    def _next_cursor(self, data: Any) -> str | None:
         """Extract next cursor/token from common paginated response shapes."""
         if not isinstance(data, dict):
             return None
@@ -207,8 +208,8 @@ class BaseAPIClient:
         self,
         path: str,
         *,
-        params: Optional[Dict[str, Any]] = None,
-        items_key: Optional[str] = None,
+        params: dict[str, Any] | None = None,
+        items_key: str | None = None,
         limit_param: str = "limit",
         cursor_param: str = "cursor",
         page_size: int = 100,
@@ -219,7 +220,7 @@ class BaseAPIClient:
         current_params = dict(params or {})
         current_params.setdefault(limit_param, page_size)
 
-        cursor: Optional[str] = None
+        cursor: str | None = None
 
         for _ in range(max_pages):
             if cursor:
@@ -240,8 +241,8 @@ class BaseAPIClient:
         self,
         path: str,
         *,
-        json_body: Optional[Dict[str, Any]] = None,
-        items_key: Optional[str] = None,
+        json_body: dict[str, Any] | None = None,
+        items_key: str | None = None,
         limit_key: str = "limit",
         cursor_key: str = "cursor",
         page_size: int = 100,
@@ -252,7 +253,7 @@ class BaseAPIClient:
         body = dict(json_body or {})
         body.setdefault(limit_key, page_size)
 
-        cursor: Optional[str] = None
+        cursor: str | None = None
 
         for _ in range(max_pages):
             if cursor:
@@ -269,15 +270,14 @@ class BaseAPIClient:
 
         return output
 
-
     def stream(
         self,
         method: str,
         path: str,
         *,
-        params: Optional[Dict[str, Any]] = None,
-        json_body: Optional[Any] = None,
-        headers: Optional[Dict[str, str]] = None,
+        params: dict[str, Any] | None = None,
+        json_body: Any | None = None,
+        headers: dict[str, str] | None = None,
     ):
         """Stream Server-Sent Events from a LangSmith-compatible endpoint."""
         from .streaming import iter_sse_events

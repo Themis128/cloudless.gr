@@ -13,9 +13,25 @@ import type { AuthDatabase } from "@/lib/auth-d1";
 
 const TTL_DAYS = 365 * 5; // 5 years retention (typical for suppression lists)
 
+interface WorkersGlobal {
+  __AUTH_DB__?: AuthDatabase;
+}
+
+interface ProcessWithAuthDb {
+  env?: { AUTH_DB?: AuthDatabase };
+}
+
+function workersGlobal(): WorkersGlobal {
+  return globalThis as unknown as WorkersGlobal;
+}
+
+function getProcessEnv(): ProcessWithAuthDb["env"] {
+  return (process as unknown as ProcessWithAuthDb).env;
+}
+
 function getD1Binding(): AuthDatabase | null {
-  const db = (process as any).env?.AUTH_DB || (globalThis as any).__AUTH_DB__;
-  if (db && typeof db.prepare === "function") return db as AuthDatabase;
+  const db = getProcessEnv()?.AUTH_DB ?? workersGlobal().__AUTH_DB__;
+  if (db && typeof db.prepare === "function") return db;
   return null;
 }
 
@@ -139,6 +155,8 @@ export async function getSuppressedEmails(limit = 1000): Promise<string[]> {
  */
 export function setD1Binding(db: AuthDatabase | null): void {
   if (db) {
-    (process as any).env.AUTH_DB = db;
+    const env = getProcessEnv() ?? {};
+    env.AUTH_DB = db;
+    (process as unknown as ProcessWithAuthDb).env = env;
   }
 }

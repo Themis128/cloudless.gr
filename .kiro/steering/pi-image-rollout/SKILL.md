@@ -12,6 +12,7 @@ The k3s `cloudless` deployment on `omv` runs the Pi standby image (`cloudless-pi
 It uses `imagePullPolicy: Always`, so a rollout restart always pulls the latest ECR image.
 
 **Pod spec:**
+
 - Image: `278585680617.dkr.ecr.us-east-1.amazonaws.com/cloudless-pi-app:latest`
 - AWS creds: `pi-standby-aws-creds` secret (= `omv-main-cli` key)
 - Readiness probe: `GET /api/health` — delay 60s, period 10s, failureThreshold 3
@@ -30,38 +31,47 @@ Roll out **after** a new Pi image has been built and pushed to ECR:
 ## Steps
 
 ### 1. Confirm new image is ready
+
 ```
 aws_get_ssm_parameters(parameter_name: "pi-sha")
 aws_get_ssm_parameters(parameter_name: "ECR_LATEST_DIGEST")
 ```
+
 Both should reflect the intended SHA. (`pi-sha` is the 12-char short SHA of
 the last deploy-pi.yml run; the legacy `current-image-sha` is orphaned.)
 
 ### 2. Check current pod version
+
 ```
 cluster_run_command(node: "omv-main",
   command: "curl -s http://localhost:3000/api/health")
 ```
+
 `version` field = running SHA. Compare with `pi-sha`.
 
 ### 3. Trigger rollout restart
+
 ```
 cluster_run_command(node: "omv-main",
   command: "kubectl rollout restart deployment/cloudless -n cloudless")
 ```
 
 ### 4. Monitor rollout
+
 ```
 k3s_get_pods(namespace: "cloudless")
 ```
+
 Watch for a new pod in `Running` state. Old pod terminates once new pod passes readiness.
 **Expected timeline: ~90 seconds** (60s readiness delay + ~30s startup).
 
 ### 5. Verify new version
+
 ```
 cluster_run_command(node: "omv-main",
   command: "curl -s https://pi-origin.cloudless.gr/api/health | python3 -m json.tool")
 ```
+
 `version` should now match `pi-sha`.
 
 ## Pod States During Rollout
@@ -77,6 +87,7 @@ cloudless-<old>   (terminated)
 ## Rollout Failure / Stuck Pod
 
 If new pod stays `0/1` for >3 min:
+
 ```bash
 # Get new pod name
 kubectl get pods -n cloudless --no-headers | grep -v Completed
@@ -84,7 +95,9 @@ kubectl get pods -n cloudless --no-headers | grep -v Completed
 # Describe it for events
 kubectl describe pod <pod-name> -n cloudless
 ```
+
 Common causes:
+
 - ECR image pull failure (check `omv-main-cli` ECR permissions)
 - OOMKilled (check memory limits vs actual usage)
 - Health check failing (check `/api/health` from inside pod)
@@ -101,6 +114,7 @@ If the auto-healer already ran (check for `auto-healer-*` pod in `Completed` sta
 ```
 k3s_get_pod_logs(namespace: "cloudless", selector: "app=cloudless", tail: 50)
 ```
+
 Look for startup messages confirming the Next.js server started on port 3000.
 
 ## Bedrock Chat After Rollout

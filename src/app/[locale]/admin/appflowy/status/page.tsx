@@ -217,7 +217,7 @@ export default function AppFlowyStatusPage() {
     try {
       const res = await fetchWithAuth("/api/admin/appflowy/status");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: StatusResponse = (await res.json()) as any as any;
+      const json = (await res.json()) as StatusResponse;
       setData(json);
       // Auto-expand connected databases
       const connected = new Set(json.databases.filter((d) => d.connected).map((d) => d.name));
@@ -230,7 +230,13 @@ export default function AppFlowyStatusPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const toggleDb = (name: string) => {

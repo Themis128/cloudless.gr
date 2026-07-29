@@ -48,7 +48,7 @@ async function api(action: string, params: Record<string, unknown> = {}) {
     body: JSON.stringify({ action, ...params }),
   });
   if (!res.ok) {
-    const err = ((await res.json()) as any as any).catch(() => ({ error: res.statusText })) as {
+    const err = (await res.json().catch(() => ({ error: res.statusText }))) as {
       error?: string;
     };
     throw new Error(err.error ?? `HTTP ${res.status}`);
@@ -135,7 +135,7 @@ function StorePanel() {
     setResult(null);
     try {
       const r = await api("store-get", { namespace: [ns], key });
-      const d = (await r.json()) as any as any as any;
+      const d = (await r.json()) as unknown;
       setResult(JSON.stringify(d, null, 2));
     } catch (e) {
       setResult(`Error: ${e instanceof Error ? e.message : e}`);
@@ -182,7 +182,7 @@ function StorePanel() {
         query: key || undefined,
         limit: 10,
       });
-      const d = (await r.json()) as any as any as any;
+      const d = (await r.json()) as unknown;
       setResult(JSON.stringify(d, null, 2));
     } catch (e) {
       setResult(`Error: ${e instanceof Error ? e.message : e}`);
@@ -257,7 +257,7 @@ function RunsPanel({ threadId }: { threadId: string | null }) {
     setBusy(true);
     try {
       const r = await api("list-runs", { thread_id: threadId, limit: 10 });
-      const d = (await r.json()) as any as any as { runs: Run[] };
+      const d = (await r.json()) as { runs: Run[] };
       setRuns(d.runs ?? []);
     } catch {
       /* ignore */
@@ -267,7 +267,13 @@ function RunsPanel({ threadId }: { threadId: string | null }) {
   }, [threadId]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   if (!threadId) return <p className="text-[11px] text-zinc-700">Select a thread</p>;
@@ -336,15 +342,15 @@ export default function LangGraphPage() {
   async function init() {
     try {
       const res = await api("health");
-      const h = (await res.json()) as any as any as { ok: boolean };
+      const h = (await res.json()) as { ok: boolean };
       setServerOk(h.ok);
       if (!h.ok) return;
       const [ares, tres] = await Promise.all([
         api("get-assistant"),
         api("list-threads", { limit: 30 }),
       ]);
-      setAssistant((await ares.json()) as any as any as Assistant);
-      const td = (await tres.json()) as any as any as { threads: Thread[] };
+      setAssistant((await ares.json()) as Assistant);
+      const td = (await tres.json()) as { threads: Thread[] };
       setThreads(td.threads ?? []);
     } catch {
       setServerOk(false);
@@ -353,7 +359,7 @@ export default function LangGraphPage() {
 
   async function newThread() {
     const res = await api("create-thread");
-    const t = (await res.json()) as any as any as Thread;
+    const t = (await res.json()) as Thread;
     setThreads((prev) => [t, ...prev]);
     setActiveThreadId(t.thread_id);
     setMessages([]);
@@ -368,7 +374,7 @@ export default function LangGraphPage() {
     setBusy(true);
     try {
       const res = await api("get-thread-state", { thread_id: id });
-      const state = (await res.json()) as any as any as {
+      const state = (await res.json()) as {
         values?: { messages?: Array<{ type: string; content: string }> };
         next?: string[];
       };
@@ -418,7 +424,7 @@ export default function LangGraphPage() {
       let tid = activeThreadId;
       if (!tid) {
         const res = await api("create-thread");
-        const t = (await res.json()) as any as any as Thread;
+        const t = (await res.json()) as Thread;
         t.label = text.slice(0, 45);
         setThreads((prev) => [t, ...prev]);
         setActiveThreadId(t.thread_id);

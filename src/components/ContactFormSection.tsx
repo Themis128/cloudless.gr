@@ -81,7 +81,7 @@ export default function ContactFormSection() {
       name: (form.elements.namedItem(FIELD_NAME) as HTMLInputElement).value,
       email: (form.elements.namedItem(FIELD_EMAIL) as HTMLInputElement).value,
       company: (form.elements.namedItem(FIELD_COMPANY) as HTMLInputElement).value,
-      service: (form.elements.namedItem(FIELD_SERVICE) as HTMLSelectElement).value,
+      service: (form.elements.namedItem(FIELD_SERVICE) as unknown as HTMLSelectElement).value,
       message: (form.elements.namedItem(FIELD_MESSAGE) as HTMLTextAreaElement).value,
       // First-touch UTM/referrer attribution captured by <AttributionCapture />.
       attribution: getStoredAttribution() ?? undefined,

@@ -1,6 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { permanentRedirect } from "next/navigation";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import type { Metadata, Viewport } from "next";
+import { routing } from "@/i18n/routing";
 
 // Root page redirects to /en. Adding metadata + viewport improves
 // Lighthouse scores for the root URL audit (a11y 86→90+, bp 89→100).

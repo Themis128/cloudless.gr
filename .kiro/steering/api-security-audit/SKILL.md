@@ -21,6 +21,7 @@ if (!(await isCronAuthorized(request))) return 401;
 ```
 
 **How to find:**
+
 ```bash
 grep -rn "isCronAuthorized\|isAdminAuthorized\|isAuthorized" src/app/api/ | grep -v "await"
 ```
@@ -42,6 +43,7 @@ return all.filter(
 ```
 
 **How to find:**
+
 ```bash
 grep -rn "listProjects\|listPortals\|listClients" src/app/api/portal/ src/app/api/public/
 ```
@@ -93,6 +95,7 @@ const secret = cfg.CRON_SECRET ?? process.env.CRON_SECRET ?? "";
 ```
 
 **How to find:**
+
 ```bash
 grep -rn "process\.env\." src/app/api/ | grep -v "NEXT_PUBLIC_\|AWS_REGION\|NODE_ENV\|VERCEL"
 ```
@@ -117,26 +120,31 @@ try {
 ## Audit workflow
 
 1. **Grep for async guard calls without await:**
+
    ```bash
    grep -rn "if (!is[A-Z]" src/app/api/ | grep -v "await"
    ```
 
 2. **Find aggregator calls in public/portal endpoints:**
+
    ```bash
    grep -rn "listProjects\|listPortals\|list[A-Z]" src/app/api/portal/ src/app/api/public/
    ```
 
 3. **Find `===` comparisons with `secret` or `token` in route handlers:**
+
    ```bash
    grep -rn "secret\|token\|key" src/app/api/ | grep "!=="
    ```
 
 4. **Find raw `process.env` for non-public values:**
+
    ```bash
    grep -rn "process\.env\." src/app/api/ | grep -v "NEXT_PUBLIC_\|AWS_REGION\|NODE_ENV"
    ```
 
 5. **Check for AbortSignal passthrough in fetch loops:**
+
    ```bash
    grep -rn "init\?\.signal\|options\?\.signal" src/lib/ src/app/api/
    ```

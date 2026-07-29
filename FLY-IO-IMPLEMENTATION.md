@@ -13,25 +13,31 @@ Fly.io deployment for cloudless.gr as part of the Cloudflare + Local Cluster arc
 ## Current Status
 
 ### Deployed Apps
+
 - [x] **cloudless-proxy** - Deployed Jul 13 2026, 2 machines running in fra (Frankfurt)
 
 ### Retired (Unused Configs Removed)
+
 - [x] **cloudless-analytics** - Metabase running on k3s cluster (see `k8s/manifests/`)
 - [x] **cloudless-cron-analytics** - GitHub Actions `cron-free-tier.yml` handles scheduled jobs
 
 ## Active Implementation: cloudless-proxy
 
 ### Purpose
+
 HA failover proxy that sits in front of the main infrastructure:
+
 - Primary: Cloudflare Workers (`cloudless.gr`)
 - Fallback: Pi k3s via Tailscale (`omv.tail8eb71.ts.net`)
 
 ### Configuration Files
+
 - `fly.toml` - Main proxy configuration
 - `fly-proxy-app/proxy.py` - FastAPI proxy with automatic failover
 - `fly-proxy-app/Dockerfile` - Python 3.11-slim container
 
 ### Deployment Commands
+
 ```bash
 # Already deployed - these are for reference/redeploy
 fly deploy --app cloudless-proxy --config fly.toml
@@ -42,9 +48,11 @@ fly deploy --app cloudless-proxy --config fly.toml
 The following configurations were removed to avoid confusion and redundant infrastructure:
 
 ### fly-analytics.toml (REMOVED)
+
 **Reason**: Metabase already running on k3s cluster. No benefit to running duplicate analytics stack on Fly.io.
 
 **Alternative**: See `k8s/manifests/monitoring-stack.yaml` or run locally:
+
 ```bash
 # Local development
 docker run -d -p 3000:3000 \
@@ -54,9 +62,11 @@ docker run -d -p 3000:3000 \
 ```
 
 ### fly-cron-apps/ (REMOVED)
+
 **Reason**: GitHub Actions `cron-free-tier.yml` already handles scheduled analytics rollup with no Fly.io free tier restrictions.
 
 **Alternative**: Scheduled workflow runs daily at 01:00 UTC:
+
 - See `.github/workflows/cron-free-tier.yml`
 - Calls `/api/cron/analytics-rollup` endpoint on the main app
 
@@ -78,6 +88,7 @@ No further Fly.io deployment needed. The architecture is stable with:
 4. **External Failover** → Fly.io proxy (if Cloudflare needs bypass)
 
 For issues with the deployed proxy:
+
 ```bash
 fly logs --app cloudless-proxy
 fly status --app cloudless-proxy

@@ -1,6 +1,7 @@
 # Cloudflare MCP Server Configuration
 
 ## MCP Server Details
+
 | Property | Value |
 |----------|-------|
 | Endpoint | `https://mcp.cloudflare.com/mcp` |
@@ -45,6 +46,7 @@
 The worker has `send_email` binding configured in `wrangler.json` but requires Email Routing to be enabled in the Cloudflare Dashboard for the EMAIL binding to work.
 
 ### Current Bindings in wrangler.json
+
 - `r2_buckets` - 4 buckets configured ✅
 - `d1_databases` - AUTH_DB configured ✅
 - `send_email` - EMAIL binding configured (requires Email Routing setup) ⚠️
@@ -71,6 +73,7 @@ npx wrangler deployments list --config wrangler-cloudflare-free.json
 ## API Token Requirements
 
 For MCP server access, the CLOUDFLARE_API_TOKEN needs:
+
 - Account R2 Storage: Read/Write
 - Workers Scripts: Read/Write
 - D1 Database: Read/Write

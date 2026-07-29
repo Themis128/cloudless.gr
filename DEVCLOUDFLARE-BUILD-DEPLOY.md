@@ -33,7 +33,7 @@
 ```
 
 ## Available Scripts
- 
+
  | Script | Command | Description |
  |--------|---------|-------------|
  | `pnpm cf:build` | `bash scripts/cf-build-wrapper.sh` | Full OpenNext build → `.open-next/` |
@@ -103,6 +103,7 @@ pnpm deploy
 ```
 
 This runs:
+
 1. `opennextjs-cloudflare build` — Builds Next.js + bundles for Cloudflare
 2. `find .open-next -name "*.bin" -delete` — Removes problematic `.bin` font files
 3. `sst deploy --config sst.config.cloudflare.ts --stage production` — Deploys via SST
@@ -200,12 +201,14 @@ The existing `TAG_CACHE` and `REVALIDATION_QUEUE` KV namespaces are preserved fo
 ## Workers Architecture: Two Entry Points
 
 ### SST/OpenNext Worker (`src/index.ts` + `.open-next/worker.js`)
+
 - **Primary deploy target** via `pnpm deploy`
 - Built by OpenNext.js, handles Next.js SSR/SSG routes
 - Uses `wrangler.jsonc` configuration
 - Health endpoint: `/api/health` (handled by SST/OpenNext)
 
 ### Free-Tier Worker (`src/index-cloudflare-free.js`)
+
 - **Alternative deploy** for Cloudflare Free Tier (no paid add-ons)
 - Custom worker with inline auth, analytics, and chat endpoints
 - Uses `wrangler.cloudflare-free.json` configuration
@@ -214,6 +217,7 @@ The existing `TAG_CACHE` and `REVALIDATION_QUEUE` KV namespaces are preserved fo
 ## Troubleshooting: Empty Health Response
 
 If `/api/health` returns HTTP 200 with empty body:
+
 1. The SST/OpenNext build may not have completed (`.open-next/worker.js` missing)
 2. Check deployment logs: `npx wrangler tail --config wrangler.jsonc`
 3. Verify wrangler.cloudflare-free.json main path points to `./src/index-cloudflare-free.js`

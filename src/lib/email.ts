@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
-import { getS3Client } from "@/lib/s3-client";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { Readable } from "node:stream";
-import { getD1Client } from "@/lib/d1-client";
-
 const isWorkers =
-  typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
+  typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined" &&
+  typeof process === "undefined";
 
 /**
  * Send an email using the configured email provider.
@@ -147,7 +143,12 @@ Unsubscribe: https://cloudless.gr/api/unsubscribe?email=${encodeURIComponent(ema
  * @param sessionId - Stripe session ID
  * @param amount - Order amount
  */
-export async function sendOrderConfirmation(email: string, sessionId: string, amount: number) {
+export async function sendOrderConfirmation(
+  email: string,
+  sessionId: string,
+  amount: number,
+  _currency: string = "eur"
+) {
   const safeSessionId = sessionId.replace(/[<>&']/g, "");
   await sendEmail({
     to: email,
@@ -254,5 +255,212 @@ export async function notifyTeam(subject: string, body: string) {
     fromLabel: "Cloudless Alerts",
   });
 }
+
+/**
+ * Account activation email with link + optional OTP fallback.
+ */
+export async function sendActivationEmail(
+  to: string,
+  token: string,
+  otp?: string,
+  name?: string
+): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://cloudless.gr";
+  const activationUrl = `${site}/api/auth/activate?email=${encodeURIComponent(to)}&token=${encodeURIComponent(token)}`;
+  const safeUrl = escapeHtml(activationUrl);
+  const greeting = name ? escapeHtml(name) : "there";
+  const otpBlock = otp
+    ? `
+          <div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:20px;text-align:center;margin:0 0 20px;">
+            <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#64748b;">Can&rsquo;t tap the button? Enter this 6-digit code instead</p>
+            <p style="margin:0;font-size:36px;font-weight:700;letter-spacing:12px;color:#00fff5;font-family:monospace;">${escapeHtml(otp)}</p>
+          </div>`
+    : "";
+  const otpText = otp
+    ? [`OPTION 2 — enter this 6-digit code on the verification page: ${otp}`, ""]
+    : [];
+
+  await sendEmail({
+    to,
+    subject: "Activate your Cloudless account",
+    fromLabel: "Cloudless",
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0f;color:#e2e8f0;border-radius:12px;overflow:hidden;">
+        <div style="padding:32px 40px 24px;border-bottom:1px solid #1e293b;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#00fff5;">Cloudless</p>
+          <h1 style="margin:0;font-size:26px;font-weight:700;color:#f1f5f9;">Activate your account</h1>
+        </div>
+        <div style="padding:28px 40px 32px;">
+          <p style="margin:0 0 20px;font-size:15px;color:#94a3b8;line-height:1.7;">Hi ${greeting}, thanks for signing up. Tap the button below to activate your account.</p>
+          <div style="text-align:center;margin:0 0 28px;">
+            <a href="${safeUrl}" style="display:inline-block;padding:14px 36px;background:#00fff5;color:#0a0a0f;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;letter-spacing:0.3px;">Activate Account</a>
+          </div>
+          ${otpBlock}
+          <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">The link${otp ? " and code" : ""} expire in <strong style="color:#94a3b8;">24 hours</strong>. If you didn&rsquo;t create an account, ignore this email.</p>
+        </div>
+        <div style="padding:16px 40px;background:#080811;border-top:1px solid #1e293b;">
+          <p style="margin:0;font-size:12px;color:#475569;">Cloudless &middot; <a href="https://cloudless.gr" style="color:#00fff5;text-decoration:none;">cloudless.gr</a></p>
+        </div>
+      </div>`,
+    text: [
+      `Hi ${name ?? "there"},`,
+      "",
+      "Thanks for signing up to Cloudless.",
+      "",
+      "OPTION 1 — tap this link to activate your account:",
+      activationUrl,
+      "",
+      ...otpText,
+      "Both expire in 24 hours. If you didn't create an account, ignore this email.",
+      "",
+      "Cloudless · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
+/**
+ * Password reset email with a one-time reset URL.
+ */
+export async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const safeUrl = escapeHtml(resetUrl);
+  await sendEmail({
+    to: email,
+    subject: "Password Reset Request",
+    html: `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+  <h2 style="color: #00b8ff; margin-bottom: 20px;">Password Reset</h2>
+  <p style="font-size: 16px; line-height: 1.6; color: #333; margin-bottom: 20px;">You requested a password reset. Click the button below to reset your password:</p>
+  <p style="text-align: center; margin: 30px 0;">
+    <a href="${safeUrl}" style="display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#00fff5,#00b8ff);color:white;text-decoration:none;border-radius:6px;font-weight:600;">Reset Password</a>
+  </p>
+  <p style="font-size: 14px; line-height: 1.6; color: #666;">If you didn't request this, please ignore this email.</p>
+  <p style="font-size: 14px; line-height: 1.6; color: #666;">Best regards,<br /><strong>The Cloudless Team</strong></p>
+</div>
+    `,
+    text: `Password Reset Request
+You requested a password reset. Visit this URL to reset your password: ${resetUrl}
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+The Cloudless Team`,
+  });
+}
+
+/** @deprecated Prefer slackRegistrationNotify from @/lib/slack-notify */
+export async function slackRegistrationNotify(email: string): Promise<boolean> {
+  const { slackRegistrationNotify: notify } = await import("@/lib/slack-notify");
+  return notify(email);
+}
+
+export async function sendContactAcknowledgment(opts: {
+  name: string;
+  email: string;
+  service?: string;
+}): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const safeName = escapeHtml(opts.name);
+  const serviceLine = opts.service
+    ? `<p>We noted your interest in <strong>${escapeHtml(opts.service)}</strong>.</p>`
+    : "";
+  await sendEmail({
+    to: opts.email,
+    subject: "We received your message — Cloudless",
+    html: `
+      <p>Hi ${safeName},</p>
+      <p>Thanks for contacting Cloudless. We review every enquiry and typically reply within 24 hours.</p>
+      ${serviceLine}
+      <p>— Themis at Cloudless<br/><a href="https://cloudless.gr">cloudless.gr</a></p>
+    `,
+    text: [
+      `Hi ${opts.name},`,
+      ``,
+      `Thanks for contacting Cloudless. We review every enquiry and typically reply within 24 hours.`,
+      opts.service ? `We noted your interest in: ${opts.service}` : "",
+      ``,
+      `— Themis at Cloudless`,
+      `https://cloudless.gr`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    fromLabel: "Themis at Cloudless",
+  });
+}
+
+/**
+ * Confirmation email after a consultation is booked (chat or calendar).
+ */
+
+export async function sendBookingConfirmation(opts: {
+  name: string;
+  email: string;
+  slotLabel: string;
+  meetLink?: string;
+  notes?: string;
+}): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const meet = opts.meetLink
+    ? `<p><strong>Google Meet:</strong> <a href="${escapeHtml(opts.meetLink)}">${escapeHtml(opts.meetLink)}</a></p>`
+    : "";
+  await sendEmail({
+    to: opts.email,
+    subject: `Consultation confirmed — ${opts.slotLabel}`,
+    html: `
+      <p>Hi ${escapeHtml(opts.name)},</p>
+      <p>Your consultation is booked:</p>
+      <p><strong>${escapeHtml(opts.slotLabel)}</strong></p>
+      ${meet}
+      ${opts.notes ? `<p>Notes: ${escapeHtml(opts.notes)}</p>` : ""}
+      <p>— Cloudless</p>
+    `,
+    text: [
+      `Hi ${opts.name},`,
+      ``,
+      `Your consultation is booked: ${opts.slotLabel}`,
+      opts.meetLink ? `Google Meet: ${opts.meetLink}` : "",
+      opts.notes ? `Notes: ${opts.notes}` : "",
+      ``,
+      `— Cloudless`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    fromLabel: "Cloudless Bookings",
+  });
+}
+
+/**
+ * Confirmation email sent when a subscriber successfully unsubscribes.
+ */
+
+export async function sendUnsubscribeConfirmation(email: string): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: "You've been unsubscribed — Cloudless",
+    fromLabel: "Cloudless",
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Unsubscribed ✓</h2>
+        <p>You've been successfully removed from the Cloudless newsletter. You won't receive any further emails from us.</p>
+        <p>If this was a mistake, you can <a href="https://cloudless.gr/#newsletter" style="color: #00fff5;">re-subscribe here</a>.</p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">Cloudless · <a href="https://cloudless.gr" style="color: #555;">cloudless.gr</a></p>
+      </div>
+    `,
+    text: [
+      "Unsubscribed",
+      "",
+      "You've been successfully removed from the Cloudless newsletter.",
+      "If this was a mistake, visit https://cloudless.gr/#newsletter to re-subscribe.",
+      "",
+      "Cloudless · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
+/**
+ * Account activation email with link + optional OTP fallback.
+ */
 
 export type { SendEmailCommandInput } from "@aws-sdk/client-sesv2";

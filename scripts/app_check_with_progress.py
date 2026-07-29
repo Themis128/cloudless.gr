@@ -1,10 +1,8 @@
 import argparse
 import datetime as dt
 import subprocess
-import sys
 import time
 from pathlib import Path
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUN_DIR = REPO_ROOT / ".agent-runs"
@@ -40,7 +38,6 @@ EXPECTED_TEST_NOISE = (
     "skipping.",
     "not implemented: navigation",
 )
-
 
 
 def shell_join(command: list[str]) -> str:
@@ -99,13 +96,18 @@ def run_step(log, index: int, total: int, name: str, command: list[str]) -> tupl
         write(log, f"[{index}/{total}] ❌ {name} failed in {elapsed:.1f}s with exit code {code}")
 
     if warnings:
-        write(log, f"[{index}/{total}] ⚠️  {name} emitted {len(warnings)} warning/error-looking line(s)")
+        write(
+            log,
+            f"[{index}/{total}] ⚠️  {name} emitted {len(warnings)} warning/error-looking line(s)",
+        )
 
     return code, warnings
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run cloudless.gr app checks with progress and logs")
+    parser = argparse.ArgumentParser(
+        description="Run cloudless.gr app checks with progress and logs"
+    )
     parser.add_argument(
         "--no-live",
         action="store_true",
@@ -164,13 +166,19 @@ def main() -> None:
             ("cluster node SSH access", ["bash", "scripts/check_cluster_node_ssh_access.sh"]),
             ("DDNS auth updater", ["bash", "scripts/check_ddns_update_auth.sh"]),
             ("R21 search baseline", ["bash", "scripts/check_r21_search_baseline.sh"]),
-            ("R21 Meilisearch k3s storage", ["bash", "scripts/check_r21_meilisearch_k3s_storage.sh"]),
+            (
+                "R21 Meilisearch k3s storage",
+                ["bash", "scripts/check_r21_meilisearch_k3s_storage.sh"],
+            ),
         ]
     )
 
     if not args.no_live:
         steps.append(
-            ("R21 Meilisearch live readiness", ["bash", "scripts/check_r21_meilisearch_live_readiness.sh"])
+            (
+                "R21 Meilisearch live readiness",
+                ["bash", "scripts/check_r21_meilisearch_live_readiness.sh"],
+            )
         )
 
     steps.append(("R14 Sentry check", ["bash", "scripts/check_r14_sentry_env_tagging.sh"]))
@@ -229,11 +237,17 @@ def main() -> None:
         if failures:
             write(log)
             write(log, f"❌ Completed with {failures} failing step(s).")
-            write(log, "Next: inspect the first failing command above or ask Deep Agent to summarize this log.")
+            write(
+                log,
+                "Next: inspect the first failing command above or ask Deep Agent to summarize this log.",
+            )
         elif warning_steps:
             write(log)
             write(log, f"✅ All app checks passed, with warnings in {warning_steps} step(s).")
-            write(log, "Review the WARNINGS section above; many test stderr lines are expected fallback-path tests.")
+            write(
+                log,
+                "Review the WARNINGS section above; many test stderr lines are expected fallback-path tests.",
+            )
         else:
             write(log)
             write(log, "✅ All app checks passed.")

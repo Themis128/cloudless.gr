@@ -13,19 +13,14 @@
 
 import { type NextRequest, NextResponse } from "next/server";
 import { type AuthDatabase } from "@/lib/auth-d1";
-import { requireAdmin } from "@/lib/auth-middleware";
+import { requireAdmin } from "@/lib/api-auth";
 import { queryAuditLog, getAuditLogCount, type AuditAction } from "@/lib/auth-audit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireAdmin(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  // Auth context - auth is valid and user is admin
-  const auth = authResult;
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return auth.response;
 
   // Get D1 binding
   const env = process.env as unknown as { AUTH_DB: AuthDatabase };
@@ -44,6 +39,7 @@ export async function GET(request: NextRequest) {
   const endDate = searchParams.get("endDate") ? Number(searchParams.get("endDate")) : undefined;
   const limit = Math.min(100, Number(searchParams.get("limit") ?? 100));
   const offset = Number(searchParams.get("offset") ?? 0);
+  const adminEmail = auth.user.email ?? auth.user.sub;
 
   // If count=true, return total count for reporting
   if (searchParams.get("count") === "true") {
@@ -53,7 +49,7 @@ export async function GET(request: NextRequest) {
       startDate,
       endDate,
     });
-    return NextResponse.json({ count, admin: auth.email });
+    return NextResponse.json({ count, admin: adminEmail });
   }
 
   const entries = await queryAuditLog(db, {
@@ -69,6 +65,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     entries,
     total: entries.length,
-    admin: auth.email,
+    admin: adminEmail,
   });
 }

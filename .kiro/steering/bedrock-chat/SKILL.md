@@ -88,7 +88,9 @@ See `.claude/skills/chat-booking/SKILL.md` for full booking flow and debugging.
 ## IAM Requirements
 
 ### Lambda (PRIMARY — cloudless.gr via CloudFront)
+
 Managed via `sst.config.ts` `permissions` field — applied automatically on deploy:
+
 ```typescript
 permissions: [
   {
@@ -102,9 +104,11 @@ permissions: [
 ```
 
 ### cloudless-pi-standby (SECONDARY — pi-origin.cloudless.gr via Pi k3s)
+
 **Must be added manually** — the GH Actions OIDC role cannot call `iam:PutUserPolicy` on IAM users.
 Note: the k3s pod credential is `cloudless-pi-standby` (key `AKIAUBXIAELU7NG7LBAQ` in the
 `pi-standby-aws-creds` secret). `omv-main-cli` is the Pi **node's** own IAM user — different user.
+
 ```bash
 aws iam put-user-policy \
   --user-name cloudless-pi-standby \
@@ -121,6 +125,7 @@ aws iam put-user-policy \
     }]
   }'
 ```
+
 IAM permissions take effect immediately — no pod restart needed after applying.
 
 ## Testing
@@ -133,6 +138,7 @@ pnpm exec vitest run __tests__/chat-api.test.ts --reporter=verbose
 ```
 
 ### Mock pattern (vitest)
+
 `BedrockRuntimeClient` and `ConverseCommand` are classes — mock them with `function` (not arrow function) so `new` works:
 
 ```typescript
@@ -153,6 +159,7 @@ vi.mock("@aws-sdk/client-bedrock-runtime", () => {
 ```
 
 ### Mock response helpers
+
 ```typescript
 function bedrockTextResponse(text: string) {
   return { stopReason: "end_turn", output: { message: { role: "assistant", content: [{ text }] } } };
@@ -165,7 +172,9 @@ function bedrockToolResponse(toolUseId: string, name: string, input: object) {
 ## Debugging Chat on Production
 
 ### Lambda (cloudless.gr)
+
 Check CloudWatch logs for `[chat]` prefix:
+
 ```
 [chat] tool_use lookup_product    ← tool was called
 [chat] hit MAX_TOOL_ITERATIONS    ← loop cap hit (shows fallback message)
@@ -173,6 +182,7 @@ Check CloudWatch logs for `[chat]` prefix:
 ```
 
 ### Pi (pi-origin.cloudless.gr)
+
 ```
 cluster_run_command(node: "omv-main",
   command: "kubectl logs -n cloudless deployment/cloudless --tail=50 | grep '\\[chat\\]'")

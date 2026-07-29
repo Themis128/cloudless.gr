@@ -56,15 +56,29 @@ Aligned with current Tailscale Kubernetes Operator docs (validated mid-2026):
    `Tailscale admin API`, `Tailscale fix fabric ACL`.
 
 3. **Enable HTTPS Certificates** (required for Serve / kube-apiserver):
+
    ```bash
    # PATCH /api/v2/tailnet/{tailnet}/settings  {"httpsEnabled":true}
-   # Workflow: Tailscale enable HTTPS  — or admin DNS UI
    bash scripts/tailscale-enable-https.sh
+   # Workflow: Tailscale enable HTTPS
    ```
-   Without this, Ingress `ADDRESS` stays empty and `ProxyGroup kube` stays
-   `KubeAPIServerProxyNoBackends` (operator waits until certs exist before advertising).
 
-4. Install:
+4. **Approve Service hosts** (HA ProxyGroup VIPs stay dark until approved):
+
+   ```bash
+   bash scripts/tailscale-approve-service-hosts.sh
+   # Workflow: Tailscale approve service hosts
+   # Or: Services admin → each svc → approve ingress-0 / kube-0
+   ```
+
+   `autoApprovers.services["svc:*"]` alone may not auto-approve; the approval
+   API returns `autoApproved:false` until hosts are explicitly approved.
+
+5. For HA Ingress, set `tailscale.com/http-endpoint: enabled` so the operator
+   advertises the VIP **before** Let's Encrypt fills the TLS Secret (otherwise
+   CertDomains never includes the Service name and certs deadlock).
+
+6. Install:
 
 ```bash
 export TS_CLIENT_ID=…
@@ -73,14 +87,13 @@ export KUBECONFIG=~/.kube/config-cloudless-ts   # LAN works at office
 bash infrastructure/tailscale/deploy.sh
 ```
 
-5. After HTTPS is on, force cert re-issue if Secrets are empty:
+7. After HTTPS + host approval, force cert re-issue if Secrets are empty:
 
 ```bash
-kubectl -n tailscale delete secret \
-  grafana.tail4ecae1.ts.net kube.tail4ecae1.ts.net meilisearch.tail4ecae1.ts.net
+bash scripts/tailscale-refresh-tls-secrets.sh
 ```
 
-6. Wait:
+8. Wait:
 
 ```bash
 kubectl wait connector k3s-cidrs --for=condition=ConnectorReady=true --timeout=5m
@@ -89,7 +102,7 @@ kubectl wait proxygroup kube --for=condition=ProxyGroupReady=true --timeout=5m
 kubectl get ingress -A   # ADDRESS should populate
 ```
 
-7. kubectl via API proxy (preferred off-LAN):
+9. kubectl via API proxy (preferred off-LAN):
 
 ```bash
 URL=$(kubectl get proxygroup kube -o jsonpath='{.status.url}')

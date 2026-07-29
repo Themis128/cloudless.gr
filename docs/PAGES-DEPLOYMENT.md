@@ -5,6 +5,7 @@ This document describes the Cloudflare Pages deployment setup for cloudless.gr.
 ## Overview
 
 Cloudflare Pages provides serverless deployment with:
+
 - **Edge-side rendering (ESR)** - SSR at the edge without cold starts
 - **Built-in D1 integration** - Database access in Pages Functions
 - **R2 bucket access** - Direct static asset serving
@@ -65,11 +66,13 @@ pnpm pages:dev
 ## Architecture
 
 Pages serves:
+
 - **Static assets** - HTML, CSS, JS from `.vercel/output/static`
 - **API routes** - Server-side rendered via Pages Functions
 - **Edge middleware** - Request/response modifications
 
 The D1 database (`user-auth-db`) provides:
+
 - User authentication (email/password)
 - Session management
 - Admin notifications
@@ -77,9 +80,11 @@ The D1 database (`user-auth-db`) provides:
 ## Migration Path
 
 The application is being migrated from:
+
 1. **AWS Amplify** (current) → **Cloudflare Workers** (intermediate) → **Cloudflare Pages** (target)
 
 The migration maintains:
+
 - Same D1 database (user-auth-db)
 - Same R2 buckets (cloudless-assets, etc.)
 - Same API endpoints
@@ -89,6 +94,7 @@ The migration maintains:
 ### Build fails with "Cannot find module"
 
 Ensure all dependencies are listed in `package.json`:
+
 ```bash
 pnpm install
 pnpm typecheck
@@ -97,6 +103,7 @@ pnpm typecheck
 ### D1 binding errors
 
 Verify the database exists and is linked:
+
 ```bash
 npx wrangler d1 list
 npx wrangler d1 info user-auth-db

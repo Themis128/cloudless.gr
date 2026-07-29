@@ -32,11 +32,13 @@ Per the SST documentation and current configuration:
 ## Options for SST Python SDK Integration
 
 ### Option A: Keep Current Setup (Recommended - No Changes Needed)
+
 - Workers AI is already fully functional via Wrangler bindings
 - Chat works with Workers AI as primary + Bedrock fallback
 - **No action required** - just add missing secrets to GitHub
 
 ### Option B: Create Standalone Python Worker (For New AI Features)
+
 Create a Python-based Worker for specific AI tasks:
 
 ```python
@@ -54,6 +56,7 @@ def handler(event, context):
 ```
 
 ### Option C: Monitor SST Development
+
 - Track SST releases for Cloudflare provider support
 - When available, migrate infrastructure definitions from Wrangler to SST
 

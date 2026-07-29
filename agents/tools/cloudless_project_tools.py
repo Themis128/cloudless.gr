@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List
-
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -79,7 +77,7 @@ def _redact_line(line: str) -> str:
 
 def list_project_files(max_files: int = 500) -> str:
     """List safe project files from the cloudless.gr repository."""
-    files: List[str] = []
+    files: list[str] = []
 
     for path in sorted(REPO_ROOT.rglob("*")):
         if len(files) >= max_files:
@@ -122,7 +120,7 @@ def project_tree_summary() -> str:
         ".github/workflows",
     ]
 
-    result: Dict[str, Any] = {}
+    result: dict[str, Any] = {}
 
     for name in important:
         path = REPO_ROOT / name

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const recipient = formData.get("recipient") as string;
     const subject = formData.get("subject") as string;
     const plain = formData.get("plain") as string; // Plain text body
-    const html = formData.get("html") as string; // HTML body
+    const _html = formData.get("html") as string; // HTML body
 
     // Basic validation
     if (!sender || !recipient) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the inbound email (you could store in database, trigger workflows, etc.)
-    console.log("Inbound email received:", {
+    console.warn("Inbound email received:", {
       sender,
       recipient,
       subject,

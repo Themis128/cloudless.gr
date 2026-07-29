@@ -3,6 +3,7 @@
 Primary: workers.dev thin edge (direct HTTPS, no Bot Fight)
 Fallback: Pi k3s NodePort over Tailscale userspace SOCKS5
 """
+
 from __future__ import annotations
 
 import os
@@ -13,12 +14,10 @@ from fastapi import FastAPI, Request, Response
 
 app = FastAPI()
 
-PRIMARY_BASE = os.getenv(
-    "PRIMARY_BASE", "https://cloudless2.baltzakis-themis.workers.dev"
-).rstrip("/")
-FALLBACK_BASE = os.getenv(
-    "FALLBACK_BASE", "http://100.74.191.58:30300"
-).rstrip("/")
+PRIMARY_BASE = os.getenv("PRIMARY_BASE", "https://cloudless2.baltzakis-themis.workers.dev").rstrip(
+    "/"
+)
+FALLBACK_BASE = os.getenv("FALLBACK_BASE", "http://100.74.191.58:30300").rstrip("/")
 PUBLIC_HOST = os.getenv("PUBLIC_HOST", "cloudless.gr")
 # Set by start.sh when Tailscale userspace SOCKS is listening
 TS_SOCKS_PROXY = os.getenv("TS_SOCKS_PROXY", "").strip()
@@ -54,9 +53,7 @@ async def check_primary_health() -> bool:
         return bool(health_cache["healthy"])
 
     try:
-        async with httpx.AsyncClient(
-            timeout=5.0, follow_redirects=True, trust_env=False
-        ) as client:
+        async with httpx.AsyncClient(timeout=5.0, follow_redirects=True, trust_env=False) as client:
             resp = await client.get(
                 f"{PRIMARY_BASE}/api/health",
                 headers=backend_headers(),

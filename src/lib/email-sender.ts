@@ -7,8 +7,6 @@
  * This module is now Workers-only; SES code has been removed.
  */
 
-import { sanitizeError, sanitizeLog } from "@/lib/log-sanitizer";
-
 export interface SendEmailPayload {
   to: string;
   subject: string;
@@ -19,17 +17,25 @@ export interface SendEmailPayload {
   listUnsubscribeUrl?: string;
 }
 
-// Module-level binding set by the Worker entry point
-let _emailBinding: any | null = null;
-
-/** Called by the Worker fetch handler to inject the EMAIL binding. */
-export function setEmailBinding(binding: any): void {
-  _emailBinding = binding;
+interface CloudflareEmailBinding {
+  send: (message: Record<string, unknown>) => Promise<void>;
 }
 
-/** Detect if running in Cloudflare Workers (not Lambda, not Node.js). */
-function isWorkers(): boolean {
-  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
+interface WorkersGlobal {
+  caches?: CacheStorage;
+  __EMAIL_BINDING__?: CloudflareEmailBinding;
+}
+
+function workersGlobal(): WorkersGlobal {
+  return globalThis as unknown as WorkersGlobal;
+}
+
+// Module-level binding set by the Worker entry point
+let _emailBinding: CloudflareEmailBinding | null = null;
+
+/** Called by the Worker fetch handler to inject the EMAIL binding. */
+export function setEmailBinding(binding: CloudflareEmailBinding): void {
+  _emailBinding = binding;
 }
 
 /** Detect if running in a Node.js environment (Lambda, local dev). */
@@ -42,7 +48,7 @@ function getFromAddress(fromLabel: string | undefined, defaultFrom: string): str
 }
 
 async function sendViaCloudflare(
-  binding: any,
+  binding: CloudflareEmailBinding,
   payload: SendEmailPayload,
   fromAddress: string
 ): Promise<void> {
@@ -74,7 +80,7 @@ async function sendViaCloudflare(
 async function checkSuppression(toEmail: string): Promise<boolean> {
   // In Node (local dev or Lambda without SES), we don't have suppression checking
   // since we removed SES. This is safe for development.
-  if (isNode() && !_emailBinding && !(globalThis as any).__EMAIL_BINDING__) {
+  if (isNode() && !_emailBinding && !workersGlobal().__EMAIL_BINDING__) {
     return false;
   }
 
@@ -121,7 +127,7 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
   }
 
   // 2. Workers auto-detect (binding may be set via global injection)
-  const globalBinding = (globalThis as any).__EMAIL_BINDING__;
+  const globalBinding = workersGlobal().__EMAIL_BINDING__;
   if (globalBinding) {
     await sendViaCloudflare(globalBinding, payload, fromAddress);
     return;
@@ -130,7 +136,7 @@ export async function sendEmail(payload: SendEmailPayload): Promise<void> {
   // 3. No transport available (tests, unconfigured environments)
   console.warn("[email-sender] No email binding available. Skipping send.");
   // Sanitize email fields to prevent log injection attacks
-  console.log(
+  console.warn(
     "  To:",
     String(payload.to).replace(/[\x00-\x1F\x7F]/g, ""),
     "Subject:",

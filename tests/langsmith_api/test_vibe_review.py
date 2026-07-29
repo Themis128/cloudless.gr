@@ -104,7 +104,7 @@ def test_vibe_review_rejects_langsmith_api_key_assignment(tmp_path, monkeypatch)
     proposal = make_proposal(
         tmp_path,
         name="unsafe-key.md",
-        proposed_change="LANGSMITH_API_KEY=\"fake-key\"",
+        proposed_change='LANGSMITH_API_KEY="fake-key"',
     )
 
     ok, errors, warnings = vibe_review.review_proposal(proposal)

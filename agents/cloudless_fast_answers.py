@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
 
 from tools.langsmith_api.endpoints import list_endpoints
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -65,7 +63,7 @@ cloudless.gr constraints:
 """.strip()
 
 
-def try_fast_answer(question: str) -> Optional[str]:
+def try_fast_answer(question: str) -> str | None:
     """Return deterministic app-config answers for known question types."""
     question_lc = question.lower()
 

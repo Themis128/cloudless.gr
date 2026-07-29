@@ -9,6 +9,7 @@ docker compose -f playwright-mcp-docker-compose.yml --profile playwright up -d
 ```
 
 Check status:
+
 ```bash
 docker compose -f playwright-mcp-docker-compose.yml ps
 ```
@@ -18,6 +19,7 @@ docker compose -f playwright-mcp-docker-compose.yml ps
 ## SECTION 1: PERFORMANCE OPTIMIZATION
 
 ### Analyze Page Load Performance
+
 ```
 Analyze the home page load performance and identify bottlenecks. 
 Use Playwright to:
@@ -28,6 +30,7 @@ Use Playwright to:
 ```
 
 ### Test API Response Times
+
 ```
 Check the API endpoint response times for /api/search endpoint.
 Use Playwright to:
@@ -38,6 +41,7 @@ Use Playwright to:
 ```
 
 ### Monitor JavaScript Execution
+
 ```
 Find and analyze all JavaScript execution issues on the dashboard.
 Use Playwright to:
@@ -48,6 +52,7 @@ Use Playwright to:
 ```
 
 ### Identify Memory Leaks
+
 ```
 Detect potential memory leaks in the application.
 Use Playwright to:
@@ -62,6 +67,7 @@ Use Playwright to:
 ## SECTION 2: USER INTERACTION TESTING
 
 ### Test Login Flow
+
 ```
 Test the complete login flow and identify UX issues.
 Use Playwright to:
@@ -75,6 +81,7 @@ Use Playwright to:
 ```
 
 ### Test Checkout Process
+
 ```
 Automate and test the entire checkout flow.
 Use Playwright to:
@@ -88,6 +95,7 @@ Use Playwright to:
 ```
 
 ### Test Form Submissions
+
 ```
 Validate all form inputs on the contact page.
 Use Playwright to:
@@ -101,6 +109,7 @@ Use Playwright to:
 ```
 
 ### Test Search Functionality
+
 ```
 Generate comprehensive tests for the search feature.
 Use Playwright to:
@@ -114,6 +123,7 @@ Use Playwright to:
 ```
 
 ### Test Drag and Drop
+
 ```
 Test all drag-and-drop interactions in the app.
 Use Playwright to:
@@ -130,6 +140,7 @@ Use Playwright to:
 ## SECTION 3: RESPONSIVE DESIGN TESTING
 
 ### Test Mobile Responsiveness
+
 ```
 Test responsive design on mobile devices.
 Use Playwright with mobile-chrome project:
@@ -143,6 +154,7 @@ Use Playwright with mobile-chrome project:
 ```
 
 ### Test iPhone Compatibility
+
 ```
 Test on iPhone 12 emulation.
 Use Playwright with mobile-safari project:
@@ -155,6 +167,7 @@ Use Playwright with mobile-safari project:
 ```
 
 ### Test Tablet Layout
+
 ```
 Validate tablet responsiveness (iPad size).
 Use Playwright:
@@ -167,6 +180,7 @@ Use Playwright:
 ```
 
 ### Test Desktop Breakpoints
+
 ```
 Verify all desktop breakpoints (1920x1080).
 Use Playwright:
@@ -183,6 +197,7 @@ Use Playwright:
 ## SECTION 4: API CONTRACT TESTING
 
 ### Validate All API Endpoints
+
 ```
 Test all API endpoints for correct responses.
 Use Playwright HTTP methods:
@@ -196,6 +211,7 @@ Use Playwright HTTP methods:
 ```
 
 ### Test Error Handling
+
 ```
 Validate error handling for all API endpoints.
 Use Playwright:
@@ -209,6 +225,7 @@ Use Playwright:
 ```
 
 ### Test Rate Limiting
+
 ```
 Verify rate limiting is working correctly.
 Use Playwright:
@@ -221,6 +238,7 @@ Use Playwright:
 ```
 
 ### Test Data Validation
+
 ```
 Test API data validation on POST/PATCH requests.
 Use Playwright:
@@ -237,6 +255,7 @@ Use Playwright:
 ## SECTION 5: ERROR & EXCEPTION TRACKING
 
 ### Find All JavaScript Errors
+
 ```
 Identify all JavaScript errors across the application.
 Use Playwright:
@@ -249,6 +268,7 @@ Use Playwright:
 ```
 
 ### Monitor Network Errors
+
 ```
 Detect network-related errors and failures.
 Use Playwright:
@@ -261,6 +281,7 @@ Use Playwright:
 ```
 
 ### Track Unhandled Promises
+
 ```
 Find unhandled promise rejections.
 Use Playwright:
@@ -277,6 +298,7 @@ Use Playwright:
 ## SECTION 6: ACCESSIBILITY TESTING
 
 ### Test Keyboard Navigation
+
 ```
 Validate keyboard navigation works everywhere.
 Use Playwright:
@@ -289,6 +311,7 @@ Use Playwright:
 ```
 
 ### Check ARIA Labels
+
 ```
 Validate all interactive elements have proper ARIA labels.
 Use Playwright to:
@@ -301,6 +324,7 @@ Use Playwright to:
 ```
 
 ### Test Screen Reader Compatibility
+
 ```
 Verify screen reader support.
 Use Playwright to:
@@ -313,6 +337,7 @@ Use Playwright to:
 ```
 
 ### Test Color Contrast
+
 ```
 Check color contrast ratios.
 Use Playwright to:
@@ -329,6 +354,7 @@ Use Playwright to:
 ## SECTION 7: FORM VALIDATION TESTING
 
 ### Test Email Validation
+
 ```
 Validate email input field behavior.
 Use Playwright to:
@@ -340,6 +366,7 @@ Use Playwright to:
 ```
 
 ### Test Password Field
+
 ```
 Validate password requirements and behavior.
 Use Playwright to:
@@ -352,6 +379,7 @@ Use Playwright to:
 ```
 
 ### Test Required Fields
+
 ```
 Validate all required fields enforcement.
 Use Playwright to:
@@ -363,6 +391,7 @@ Use Playwright to:
 ```
 
 ### Test File Upload
+
 ```
 Validate file upload functionality.
 Use Playwright to:
@@ -379,6 +408,7 @@ Use Playwright to:
 ## SECTION 8: BROWSER COMPATIBILITY TESTING
 
 ### Test on Chrome
+
 ```
 Run full test suite on Chromium/Chrome.
 Use Playwright chromium project:
@@ -386,6 +416,7 @@ npx playwright test --project=chromium
 ```
 
 ### Test on Firefox
+
 ```
 Run full test suite on Firefox.
 Use Playwright firefox project:
@@ -393,6 +424,7 @@ npx playwright test --project=firefox
 ```
 
 ### Test on Safari
+
 ```
 Run full test suite on WebKit/Safari.
 Use Playwright webkit project:
@@ -400,6 +432,7 @@ npx playwright test --project=webkit
 ```
 
 ### Test Cross-Browser
+
 ```
 Run tests on all browsers simultaneously.
 Use Playwright all projects:
@@ -411,6 +444,7 @@ npx playwright test --config=playwright-mcp.config.ts
 ## SECTION 9: SECURITY TESTING
 
 ### Test Authentication
+
 ```
 Validate authentication mechanisms.
 Use Playwright to:
@@ -422,6 +456,7 @@ Use Playwright to:
 ```
 
 ### Test Authorization
+
 ```
 Verify authorization rules.
 Use Playwright to:
@@ -433,6 +468,7 @@ Use Playwright to:
 ```
 
 ### Test XSS Prevention
+
 ```
 Check for XSS vulnerabilities.
 Use Playwright to:
@@ -448,6 +484,7 @@ Use Playwright to:
 ## SECTION 10: VISUAL REGRESSION TESTING
 
 ### Capture Page Screenshots
+
 ```
 Take screenshots for visual baseline.
 Use Playwright to:
@@ -459,6 +496,7 @@ Use Playwright to:
 ```
 
 ### Test Theme Changes
+
 ```
 Compare light and dark theme rendering.
 Use Playwright to:
@@ -471,6 +509,7 @@ Use Playwright to:
 ```
 
 ### Compare Component Variants
+
 ```
 Verify component consistency across pages.
 Use Playwright to:
@@ -487,6 +526,7 @@ Use Playwright to:
 ## SECTION 11: PERFORMANCE PROFILING
 
 ### Analyze Network Performance
+
 ```
 Detailed network performance analysis.
 Use Playwright to:
@@ -499,6 +539,7 @@ Use Playwright to:
 ```
 
 ### Test Image Optimization
+
 ```
 Verify images are properly optimized.
 Use Playwright to:
@@ -510,6 +551,7 @@ Use Playwright to:
 ```
 
 ### Test CSS Performance
+
 ```
 Check CSS delivery and parsing.
 Use Playwright to:
@@ -525,16 +567,19 @@ Use Playwright to:
 ## QUICK COMMAND REFERENCE
 
 ### START SERVICES
+
 ```bash
 docker compose -f playwright-mcp-docker-compose.yml --profile playwright up -d
 ```
 
 ### CHECK STATUS
+
 ```bash
 docker compose -f playwright-mcp-docker-compose.yml ps
 ```
 
 ### RUN TESTS
+
 ```bash
 npx playwright test --config=playwright-mcp.config.ts
 npx playwright test --project=chromium
@@ -542,11 +587,13 @@ npx playwright test --debug
 ```
 
 ### VIEW REPORT
+
 ```bash
 npx playwright show-report
 ```
 
 ### STOP SERVICES
+
 ```bash
 docker compose -f playwright-mcp-docker-compose.yml down
 ```
@@ -594,4 +641,3 @@ Status: Ready to Use
 Location: /home/tbaltzakis/cloudless.gr
 Platform: WSL2 Ubuntu 24.04 + Docker
 Date: 2026-07-18
-

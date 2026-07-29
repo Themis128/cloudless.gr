@@ -1,7 +1,9 @@
 # Full Cloudflare Workers Migration Plan
+
 ## AWS to Cloudflare Workers Cutover - Cloudless.gr - ✅ COMPLETE
 
 ### Executive Summary
+
 **Status: 100% Complete (Phase 3 Final - July 10, 2026)**
 
 The migration of cloudless.gr from AWS (Lambda@Edge, Lambda, DynamoDB, S3, CloudFront, Athena, Bedrock, SSM, Cognito) to Cloudflare Workers Free Tier has been successfully implemented. The Workers entry point (`src/index-cloudflare-free.js`) handles all Auth, Static Assets, Analytics, Chat, and Contact endpoints. Fly.io provides HA failover with Workers as primary and Pi/k3s as fallback.
@@ -52,6 +54,7 @@ The migration of cloudless.gr from AWS (Lambda@Edge, Lambda, DynamoDB, S3, Cloud
 ### Phase 1: Data Migration - ✅ COMPLETE
 
 #### 1.1 DynamoDB → D1 Migration - ✅ COMPLETE
+
 All 5 tables migrated successfully:
 
 | DynamoDB Table | D1 Table | Records | Status |
@@ -63,6 +66,7 @@ All 5 tables migrated successfully:
 | cloudless-production-AnalyticsCacheTable | analytics_cache | ~50 | ✅ Migrated |
 
 #### 1.2 S3 → R2 Migration (Assets & Data Lake)
+
 **Status: R2 buckets created, migration script ready**
 
 ```bash
@@ -73,6 +77,7 @@ pnpm tsx scripts/migrate-s3-to-r2.mjs cloudless-analytics-data
 ```
 
 R2 Buckets Configured:
+
 | Binding | Bucket | Purpose |
 |---------|--------|---------|
 | ASSETS_BUCKET | cloudless-assets | Static assets |
@@ -106,6 +111,7 @@ R2 Buckets Configured:
 | `/api/admin/users/promote` | Lambda | D1 admin promotion | ✅ Working |
 
 #### 2.2 Workers AI Implementation
+
 The chat endpoint uses Workers AI as primary with Anthropic fallback:
 
 ```typescript
@@ -120,6 +126,7 @@ const resp = await fetch("https://api.anthropic.com/v1/messages", {...});
 ```
 
 #### 2.3 Lambda@Edge Migration Complete
+
 Since CloudFront was deleted, all Lambda@Edge functions migrated to Workers middleware:
 
 ```typescript
@@ -143,6 +150,7 @@ Since CloudFront was deleted, all Lambda@Edge functions migrated to Workers midd
 | voice-brief | 05:00 UTC Mondays | ✅ `triggers.crons[4]` |
 
 **Configuration in wrangler-cloudflare-free.json:**
+
 ```json
 {
   "triggers": {
@@ -183,6 +191,7 @@ SES_FROM_EMAIL, SES_TO_EMAIL, AWS_SES_REGION
 ### Phase 5: Fly.io HA Failover - ✅ OPERATIONAL
 
 **Current fly.toml configuration:**
+
 ```toml
 app = "cloudless-proxy"
 primary_region = "fra"
@@ -204,6 +213,7 @@ The failover proxy automatically routes to Workers (primary) and falls back to P
 ### Phase 6: Validation & Cutover - ✅ COMPLETE
 
 #### 6.1 Verification Results
+
 All endpoints verified working:
 
 ```bash
@@ -216,7 +226,9 @@ curl https://cloudless.gr/api/health
 ```
 
 #### 6.2 Playwright Test Coverage
+
 Comprehensive test suite in `e2e/cloudflare-migration-complete.spec.ts`:
+
 - Chat endpoint tests (Workers AI, CORS, validation) ✅
 - Contact endpoint tests (validation, email format) ✅
 - Subscribe endpoint tests (email validation) ✅
@@ -232,6 +244,7 @@ Comprehensive test suite in `e2e/cloudflare-migration-complete.spec.ts`:
 ## Infrastructure Files Created/Modified
 
 ### Files Created
+
 1. **scripts/dynamodb-migration-policy.json** - IAM policy for 5 tables
 2. **scripts/add-dynamodb-migration-permissions.sh** - IAM setup script
 3. **scripts/create-dynamodb-policy.py** - Alternative policy creator
@@ -240,6 +253,7 @@ Comprehensive test suite in `e2e/cloudflare-migration-complete.spec.ts`:
 6. **fly-proxy-app/proxy.py** - HA failover proxy
 
 ### Files Modified
+
 1. **wrangler-cloudflare-free.json** - Email binding, Cron triggers, D1 config
 2. **src/index-cloudflare-free.js** - Complete Worker implementation (831 lines)
 3. **schema.sql** - Extended with config, pending_client, voice_brief tables
@@ -249,11 +263,13 @@ Comprehensive test suite in `e2e/cloudflare-migration-complete.spec.ts`:
 ## Post-Migration Actions Remaining
 
 ### 1. Configure Cloudflare Email Routing (Dashboard Action Required)
+
 - Visit: https://dash.cloudflare.com → Workers & Pages → Email
 - Domain verification required for EMAIL binding to work
 - Required for password reset emails
 
 ### 2. Migrate S3 Data to R2 (Optional)
+
 ```bash
 # Migrate remaining analytics data
 pnpm tsx scripts/migrate-s3-to-r2.mjs cloudless-analytics-data
@@ -261,7 +277,9 @@ pnpm tsx scripts/migrate-s3-to-r2.mjs app-media-bucket
 ```
 
 ### 3. Delete AWS Resources (After Final Validation)
+
 Once fully validated on Workers:
+
 1. **Delete DynamoDB tables** - after confirming no fallback needed
 2. **Delete S3 buckets** - after R2 migration
 3. **Delete Athena workgroup** - DuckDB-Wasm replaces it
@@ -324,11 +342,13 @@ Once fully validated on Workers:
 ## Deployment Commands (Completed)
 
 ### Deploy Worker
+
 ```bash
 pnpm cf:deploy:free
 ```
 
 ### Verify Deployment
+
 ```bash
 # Health check
 curl https://cloudless.gr/api/health
@@ -345,17 +365,20 @@ curl https://cloudless.gr/api/auth/session
 ## Monitoring & Debugging
 
 ### Worker Logs
+
 ```bash
 npx wrangler tail
 ```
 
 ### D1 Database Queries
+
 ```bash
 npx wrangler d1 query user-auth-db --remote "SELECT COUNT(*) FROM user" --format pretty
 npx wrangler d1 query user-auth-db --remote "SELECT COUNT(*) FROM stripe_transaction" --format pretty
 ```
 
 ### Fly.io Status
+
 ```bash
 flyctl status --app cloudless-proxy
 flyctl logs --app cloudless-proxy
@@ -369,6 +392,7 @@ If issues arise:
 
 1. **Immediate:** Fly.io falls back to Pi/k3s cluster automatically
 2. **If fallback fails:** Re-deploy old SST stack:
+
    ```bash
    pnpm deploy
    ```
@@ -378,6 +402,7 @@ If issues arise:
 ## Cost Savings Achieved
 
 After migration to Cloudflare Workers Free Tier:
+
 - **AWS Lambda:** Eliminated (~80% cost reduction)
 - **DynamoDB:** Eliminated (~70% cost reduction)
 - **S3:** Reduced to minimal (~50% cost reduction)

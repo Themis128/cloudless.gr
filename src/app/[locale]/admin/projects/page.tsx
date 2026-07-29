@@ -68,7 +68,7 @@ export default function AdminProjectsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/projects");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: { projects: any[] } = await res.json();
+      const data: { projects: Project[] } = await res.json();
       setProjects(data.projects ?? []);
     } catch (err) {
       setErrorProjects(err instanceof Error ? err.message : "Failed to load projects");
@@ -83,7 +83,7 @@ export default function AdminProjectsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/notion/tasks");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: { tasks: any[] } = await res.json();
+      const data: { tasks: Task[] } = await res.json();
       setTasks(data.tasks ?? []);
       setFetchedTasks(true);
     } catch (err) {

@@ -10,6 +10,7 @@ description: End-to-end Playwright testing suite for cloudless.gr. Use this skil
 Playwright test suite covering the full cloudless.gr surface: public pages, API routes, auth, store, admin panel, i18n, PWA manifest, security headers, accessibility, infrastructure smoke tests, and k3s cluster health.
 
 **Two configs:**
+
 - `playwright.config.mts` — local dev (spins up `pnpm dev` on port 4000)
 - `playwright.production.config.mts` — production smoke tests against live cloudless.gr + pi-origin.cloudless.gr
 
@@ -45,6 +46,7 @@ npx playwright show-report
 ## Configs
 
 ### `playwright.config.mts` (local)
+
 | Setting | Value |
 |---------|-------|
 | `baseURL` | `http://localhost:4000` |
@@ -56,6 +58,7 @@ npx playwright show-report
 | Projects | `chromium` (Desktop Chrome), `mobile-chrome` (Pixel 7) |
 
 ### `playwright.production.config.mts` (production smoke)
+
 | Setting | Value |
 |---------|-------|
 | Projects | `cloudless-gr-desktop`, `cloudless-gr-mobile`, `pi-origin-desktop`, `pi-origin-mobile` |
@@ -103,6 +106,7 @@ npx playwright show-report
 | `webhook-signatures.spec.ts` | Stripe + HubSpot webhook HMAC verification | — |
 
 ### `k3s/` subdirectory (Pi k3s cluster — pi-origin.cloudless.gr)
+
 | File | What it covers |
 |------|---------------|
 | `smoke.spec.ts` | `/api/health`, security headers, app signature |
@@ -121,14 +125,19 @@ npx playwright show-report
 ## Key Patterns & Conventions
 
 ### `@mutating` tag
+
 Tests that POST real data to production (contact form, subscribe) are tagged in the test name:
+
 ```typescript
 test("valid submission passes validation @mutating", async ({ page }) => { … });
 ```
+
 The production config's `grep: /^(?!.*@mutating)/` excludes these automatically. Never remove this tag from a test that creates real HubSpot contacts or SES emails.
 
 ### Mobile guard
+
 Desktop-only UI elements (sticky navbar, breadcrumbs) are hidden below `lg` breakpoint. Guard them:
+
 ```typescript
 test("desktop: breadcrumb shows category", async ({ page, isMobile }) => {
   test.skip(!!isMobile, "Breadcrumbs only render on desktop");
@@ -137,21 +146,28 @@ test("desktop: breadcrumb shows category", async ({ page, isMobile }) => {
 ```
 
 ### `INFRA_SMOKE` guard
+
 Infrastructure tests are expensive and hit external endpoints. They always skip unless `INFRA_SMOKE=1`:
+
 ```typescript
 const runInfra = !!process.env.INFRA_SMOKE;
 test.skip(!runInfra, "Set INFRA_SMOKE=1 to run infrastructure tests");
 ```
+
 The production config sets `env: { INFRA_SMOKE: "1" }` globally.
 
 ### `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`
+
 Admin tests check `Boolean(adminEmail && adminPassword)` and call `testInfo.skip()` if missing. These are never set in the production config (admin panel is not public). Set them manually to run admin tests:
+
 ```bash
 E2E_ADMIN_EMAIL=admin@cloudless.gr E2E_ADMIN_PASSWORD=xxx npx playwright test e2e/admin.spec.ts
 ```
 
 ### Rate-limit awareness
+
 The contact and subscribe API route validation tests accept `429` alongside `400` because:
+
 - The per-IP rate limiter runs before schema validation
 - On production, parallel test workers can share the same real IP through Cloudflare tunnel
 - On cloudless.gr (Lambda), different CloudFront edge instances may route requests to different Lambda containers — each with an independent in-memory rate limiter bucket
@@ -165,7 +181,9 @@ if (res.status() === 400) {
 ```
 
 ### PWA manifest dash normalization
+
 `/manifest.webmanifest` (static CDN file) uses a plain hyphen in the app name; `/api/pwa-manifest` (handler) may use an em dash. The byte-for-byte comparison test normalizes both before comparing:
+
 ```typescript
 const normDash = (s?: string) => (s ?? "").replace(/[–—]/g, "-");
 expect(normDash(a.name)).toBe(normDash(b.name));
@@ -176,16 +194,19 @@ expect(normDash(a.name)).toBe(normDash(b.name));
 ## Helpers
 
 ### `e2e/helpers/test-helpers.ts`
+
 - `loginAsUser(page, email, password, redirectPath)` — logs in via UI
 - `logout(page)` — clicks logout
 - Exported constants: `URL_PATHS`, `TEST_USERS`, `WAIT_TIMES`
 
 ### `e2e/fixtures/test-user.ts`
+
 - `TEST_USERS` — fixture user credentials for auth tests
 - `URL_PATHS` — all admin + public route paths
 - `WAIT_TIMES` — named timeouts (e.g. `WAIT_TIMES.animation`)
 
 ### `e2e/k3s/_helpers.ts`
+
 - `probeHealth(request)` — fetches `/api/health`, returns `{ status, body, headers }`
 - `isHealthBody(body)` — validates health response shape
 - `isLikelyAppResponse(headers)` — checks for Next.js response fingerprint

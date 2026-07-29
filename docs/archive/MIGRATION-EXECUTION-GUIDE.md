@@ -43,15 +43,17 @@ AWS_PROFILE=default pnpm tsx scripts/migrate-s3-to-r2.js
 ## Phase 5: Auth Switch
 
 The D1 Auth is already implemented in `src/index-cloudflare-free.js`. To activate:
+
 - Remove `COGNITO_*` env vars from `wrangler.json`
 - Add `SESSION_SECRET` to Wrangler secrets
 - Update `src/lib/auth.ts` to use D1 endpoints
 
 ## Phase 6: Cron Replacement
 
-The cron runner exists at `fly-cron-apps/cron-runner.ts`. 
+The cron runner exists at `fly-cron-apps/cron-runner.ts`.
 
 For Fly.io scheduled machines, run:
+
 ```bash
 # Example: Analytics rollup at 01:00 UTC
 flyctl machines schedule cloudless-cron-analytics --cron "0 1 * * ?"
@@ -74,6 +76,7 @@ flyctl machines schedule cloudless-cron-analytics --cron "0 1 * * ?"
 ## Rollback Plan
 
 If issues occur:
+
 1. Revert `fly.toml` PRIMARY_HOST to CloudFront
 2. Restore SSM parameters
 3. The SST stack remains deployable via `pnpm deploy`

@@ -22,9 +22,9 @@ interface AiBinding {
   run(model: string, inputs: Record<string, unknown>): Promise<unknown>;
 }
 
-interface Env {
-  AUTH_DB: AuthDatabase;
-  AI: AiBinding;
+export interface Env {
+  AUTH_DB?: AuthDatabase;
+  AI?: AiBinding;
 }
 
 /**

@@ -5,6 +5,7 @@ Windsor pulls data from 25+ sources and pushes it to 20+ destinations. This doc 
 ## Destination categories
 
 ### AI & Assistants
+
 For Claude-driven analysis and chat workflows.
 
 - **Claude** — direct MCP integration (what this whole skill is built on). Query via `get_data()` tool calls, synthesize in chat.
@@ -18,6 +19,7 @@ For Claude-driven analysis and chat workflows.
 **When to use for cloudless.gr:** Claude is already wired in. Don't bother with the others unless a specific workflow requires them.
 
 ### Business Intelligence (BI) tools
+
 Drag-and-drop dashboards for non-technical stakeholders.
 
 - **Looker Studio** (formerly Data Studio) — free, Google-native, easy for GA4 crossovers. Best for shareable link-based dashboards.
@@ -28,6 +30,7 @@ Drag-and-drop dashboards for non-technical stakeholders.
 **When to use for cloudless.gr:** **Looker Studio** is the only BI tool that makes sense for a solo/small operation — free, hosted, shareable. Reach for it when a client or investor wants a polished link they can check themselves.
 
 ### Data warehouses
+
 For long-term storage, historical analysis, joining with other business data.
 
 - **BigQuery** — Google Cloud, pay-per-query, scales well, native to GA4
@@ -39,6 +42,7 @@ For long-term storage, historical analysis, joining with other business data.
 **When to use for cloudless.gr:** Overkill for current scale. Only consider BigQuery if you need >2 years of historical data or want to join Windsor data with other GA4 exports.
 
 ### Cloud object storage
+
 Raw data dump for archival or custom downstream processing.
 
 - **Amazon S3** — AWS blob storage
@@ -47,6 +51,7 @@ Raw data dump for archival or custom downstream processing.
 **When to use:** Only for data-lake architectures. Skip for cloudless.gr.
 
 ### Spreadsheets & files
+
 Lightweight, flat-file outputs.
 
 - **Google Sheets** — native collab spreadsheet; perfect for ad-hoc analysis
@@ -55,6 +60,7 @@ Lightweight, flat-file outputs.
 **When to use for cloudless.gr:** Google Sheets is ideal for one-off analyses or sharing raw numbers with a collaborator. Set up a Sheets destination for a connector + fields + date range, and Windsor refreshes the sheet on a schedule.
 
 ### Transactional databases
+
 For applications that need marketing data in real-ish time.
 
 - **MySQL** — commodity SQL
@@ -64,6 +70,7 @@ For applications that need marketing data in real-ish time.
 **When to use for cloudless.gr:** If the Next.js admin dashboard at cloudless.gr should pull marketing metrics from its own DB instead of calling Windsor's MCP live, pipe Windsor → Postgres → Next.js. But the MCP path is simpler for low QPS, so keep Postgres as a future optimization.
 
 ### Programming environments
+
 For custom analysis, ML models, notebooks.
 
 - **Python** — direct Python SDK / REST calls
@@ -103,6 +110,7 @@ The MCP tools (`get_data`, `get_connectors`, etc.) are a **read-on-demand** API 
 Destinations are **push-on-schedule** — Windsor writes data to an external system at a set cadence regardless of whether anyone is looking.
 
 For cloudless.gr:
+
 - Use **MCP** for interactive chat analysis, agent-driven Cowork workflows, and anything that feeds Next.js API routes
 - Use **destinations** for scheduled sync to Sheets/Looker Studio where a stakeholder opens the tool at their own cadence
 

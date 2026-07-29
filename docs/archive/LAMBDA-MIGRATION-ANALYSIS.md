@@ -47,6 +47,7 @@
 ## Migration Status: NOT COMPLETE
 
 ### What IS Migrated (Workers Primary)
+
 - ✅ D1 Auth: register, login, logout, session, password reset
 - ✅ R2 Static Assets serving
 - ✅ Analytics parquet endpoint
@@ -78,6 +79,7 @@
 ## Key Dependencies to Migrate
 
 ### External Services
+
 - Notion API (blog, docs, tasks, projects, submissions)
 - Google Calendar API (availability, bookings)
 - Stripe API (checkout, webhooks, subscriptions)
@@ -88,6 +90,7 @@
 - Google Search Console
 
 ### AWS Services (Fallback Sources)
+
 - DynamoDB: StripeTransactions, UserProfile, AdminNotifications, AnalyticsCache, SessionTokenStore
 - S3: cloudless-analytics-data (events/, lake/)
 - SES: Order confirmations, notifications
@@ -96,19 +99,24 @@
 ## Migration Path Options
 
 ### Option A: Full Migration to Workers
+
 Convert all 221 API routes to Worker endpoints. This requires:
+
 - ~10,000+ lines of code conversion
 - R2/D1 bindings for all data stores
 - Workers AI for all LLM calls
 - Wrangler secrets for all API keys
 
 ### Option B: Hybrid (Current State)
+
 - Workers handles: Auth + Static Assets + Analytics
 - Lambda handles: Complex business logic
 - Pi handles: Full fallback
 
 ### Option C: Selective Route Migration
+
 Prioritize critical routes:
+
 1. Contact form (SES → Email binding)
 2. Checkout/payment verification
 3. Chat widget (Workers AI)
@@ -123,6 +131,7 @@ The current hybrid architecture (cloudless.gr → Cloudflare Workers, with Lambd
 3. **Health/monitoring** - Workers endpoint for uptime checks
 
 The remaining 200+ routes on Lambda represent the full application logic. These can be:
+
 - Gradually migrated as needed
 - Keep Lambda as fallback (it's cost-effective for sporadic use)
 - Pi cluster provides tertiary failover

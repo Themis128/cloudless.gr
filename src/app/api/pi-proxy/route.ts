@@ -7,7 +7,12 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { targetUrl, method, headers, body } = await request.json();
+    const { targetUrl, method, headers, body } = (await request.json()) as {
+      targetUrl?: string;
+      method?: string;
+      headers?: Record<string, string>;
+      body?: unknown;
+    };
 
     if (!targetUrl) {
       return NextResponse.json({ error: "targetUrl is required" }, { status: 400 });

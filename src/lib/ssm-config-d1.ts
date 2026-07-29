@@ -11,12 +11,6 @@ export function isWorkersEnvironment(): boolean {
   return typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined";
 }
 
-// D1 configuration for Workers
-interface D1Config {
-  // D1 binding for the auth database
-  AUTH_DB: D1Database;
-}
-
 /**
  * Fetch all configuration keys from D1 app_config table.
  * Used by ETL scripts and Workers to get runtime configuration.

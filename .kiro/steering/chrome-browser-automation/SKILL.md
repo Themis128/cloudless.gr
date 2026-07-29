@@ -119,6 +119,7 @@ find(query="submit button", tabId=<id>)  → up to 20 matching elements with ref
 ```
 
 ### read_page Options
+
 - `filter`: `"all"` (default) or `"interactive"` (buttons/links/inputs only)
 - `depth`: max tree depth (default 15, reduce if output too large)
 - `max_chars`: output limit (default 50000)
@@ -193,6 +194,7 @@ Options: `showClickIndicators`, `showActionLabels`, `showProgressBar`, `showWate
 ## Common Tasks for cloudless.gr
 
 ### Test website responsiveness
+
 ```
 resize_window(width=375, height=812, tabId=<id>)   → iPhone
 resize_window(width=768, height=1024, tabId=<id>)  → iPad
@@ -200,15 +202,19 @@ resize_window(width=1920, height=1080, tabId=<id>) → Desktop
 ```
 
 ### OAuth service connection (Windsor.ai, IFTTT, etc.)
+
 Navigate to auth URL → fill credentials → grant permissions → verify
 
 ### Inspect deployed site
+
 Navigate to cloudless.gr → screenshot → read_page → check elements
 
 ### Debug API responses
+
 Use `read_network_requests(urlPattern="/api/", tabId=<id>)` to monitor API calls
 
 ### Verify social media account settings
+
 Navigate to platform settings pages (Instagram, Facebook, LinkedIn) to verify
 account types, linked pages, and permissions
 

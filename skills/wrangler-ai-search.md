@@ -1,6 +1,7 @@
 # Wrangler AI Search Integration
 
 ## Overview
+
 Cloudflare AI Search is a managed semantic search service that combines vector search with LLM-powered question answering. Use this skill when working with `wrangler ai-search` commands for document indexing, semantic search, and search-enabled agents.
 
 ## Installation
@@ -16,6 +17,7 @@ pnpm add -g wrangler@latest
 ## Commands Reference
 
 ### List AI Search Instances
+
 ```bash
 # List all instances in default namespace
 npx wrangler ai-search list
@@ -28,6 +30,7 @@ npx wrangler ai-search list --json
 ```
 
 ### Create AI Search Instance
+
 ```bash
 # Create with R2 source
 npx wrangler ai-search create cloudless-docs \
@@ -48,12 +51,14 @@ npx wrangler ai-search create website-search \
 ```
 
 ### Get AI Search Instance Details
+
 ```bash
 npx wrangler ai-search get cloudless-docs --namespace docs
 npx wrangler ai-search get cloudless-docs --json
 ```
 
 ### Update AI Search Instance
+
 ```bash
 # Update models
 npx wrangler ai-search update cloudless-docs \
@@ -66,11 +71,13 @@ npx wrangler ai-search update cloudless-docs --cache
 ```
 
 ### Delete AI Search Instance
+
 ```bash
 npx wrangler ai-search delete cloudless-docs --force
 ```
 
 ### Search AI Search Instance
+
 ```bash
 # Basic search
 npx wrangler ai-search search cloudless-docs --query "how to deploy workers"
@@ -87,6 +94,7 @@ npx wrangler ai-search search cloudless-docs --query "cloud architecture" --json
 ```
 
 ### Get Usage Statistics
+
 ```bash
 npx wrangler ai-search stats cloudless-docs
 npx wrangler ai-search stats cloudless-docs --json
@@ -95,29 +103,34 @@ npx wrangler ai-search stats cloudless-docs --json
 ## Namespace Management
 
 ### List Namespaces
+
 ```bash
 npx wrangler ai-search namespace list
 npx wrangler ai-search namespace list --search docs
 ```
 
 ### Create Namespace
+
 ```bash
 npx wrangler ai-search namespace create docs \
   --description "Documentation search for cloudless.gr"
 ```
 
 ### Get Namespace Details
+
 ```bash
 npx wrangler ai-search namespace get docs
 ```
 
 ### Update Namespace
+
 ```bash
 npx wrangler ai-search namespace update docs \
   --description "Updated description with max 256 chars"
 ```
 
 ### Delete Namespace
+
 ```bash
 npx wrangler ai-search namespace delete docs --force
 ```
@@ -125,27 +138,32 @@ npx wrangler ai-search namespace delete docs --force
 ## Indexing Jobs
 
 ### List Indexing Jobs
+
 ```bash
 npx wrangler ai-search jobs list cloudless-docs
 ```
 
 ### Create Indexing Job
+
 ```bash
 npx wrangler ai-search jobs create cloudless-docs \
   --description "Initial indexing of documentation"
 ```
 
 ### Get Job Details
+
 ```bash
 npx wrangler ai-search jobs get cloudless-docs job_abc123
 ```
 
 ### Cancel Job
+
 ```bash
 npx wrangler ai-search jobs cancel cloudless-docs job_abc123 --force
 ```
 
 ### Get Job Logs
+
 ```bash
 npx wrangler ai-search jobs logs cloudless-docs job_abc123 --per-page 50
 ```
@@ -153,6 +171,7 @@ npx wrangler ai-search jobs logs cloudless-docs job_abc123 --per-page 50
 ## Use Cases for cloudless.gr
 
 ### Documentation Search Service
+
 Create AI Search for dev docs and technical articles:
 
 ```bash
@@ -174,6 +193,7 @@ npx wrangler ai-search create main-docs \
 ```
 
 ### Blog Content Search
+
 Create AI Search for blog posts:
 
 ```bash
@@ -232,6 +252,7 @@ export default {
 ## Common Workflows
 
 ### Initial Setup
+
 ```bash
 # 1. Create namespace
 npx wrangler ai-search namespace create docs
@@ -249,6 +270,7 @@ npx wrangler ai-search jobs create docs-search
 ```
 
 ### Query from Chat
+
 ```typescript
 // src/lib/ai-search-chat.ts
 async function searchDocs(query: string) {
@@ -275,5 +297,6 @@ async function searchDocs(query: string) {
 | `Rate limited` | Add caching, reduce query frequency |
 
 ## Related Skills
+
 - `skills/sst-cloudflare/SKILL.md` - SST Cloudflare provider
 - `skills/sst-cloudflare-ai.md` - Workers AI integration

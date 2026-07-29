@@ -216,7 +216,7 @@ function ReplyForm({
         body: JSON.stringify({ stepId, text: text.trim() }),
       });
       if (res.ok) {
-        const { comment } = await res.json();
+        const { comment } = (await res.json()) as { comment: PortalComment };
         onSent(comment);
         setText("");
       }
@@ -476,12 +476,15 @@ function DeliverableCard({
           comment: comment.trim() || undefined,
         }),
       });
-      const body = await res.json().catch(() => null);
+      const body = (await res.json().catch(() => null)) as {
+        error?: string;
+        deliverable?: PortalDeliverable;
+      } | null;
       if (!res.ok) {
         setActionError(body?.error ?? "Something went wrong — please try again.");
         return;
       }
-      onUpdated(body.deliverable as PortalDeliverable);
+      onUpdated(body?.deliverable as PortalDeliverable);
       setAskingChanges(false);
     } catch {
       setActionError("Could not reach the server — please try again.");

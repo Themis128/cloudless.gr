@@ -27,7 +27,18 @@ interface AnalyticsEvent {
   metric5?: number; // request_count
 }
 
-export function writeAnalyticsEvent(env: any, event: AnalyticsEvent): Promise<void> {
+interface AnalyticsEngineEnv {
+  ANALYTICS: {
+    prepare: (sql: string) => {
+      bind: (...args: unknown[]) => {
+        run: () => Promise<void>;
+        all: () => Promise<{ results: Record<string, unknown>[] }>;
+      };
+    };
+  };
+}
+
+export function writeAnalyticsEvent(env: AnalyticsEngineEnv, event: AnalyticsEvent): Promise<void> {
   const {
     timestamp = new Date(),
     index1,
@@ -69,10 +80,10 @@ export function writeAnalyticsEvent(env: any, event: AnalyticsEvent): Promise<vo
 }
 
 export async function queryAnalyticsEngine(
-  env: any,
+  env: AnalyticsEngineEnv,
   sql: string,
-  binds: any[] = []
-): Promise<any[]> {
+  binds: unknown[] = []
+): Promise<Record<string, unknown>[]> {
   const { results } = await env.ANALYTICS.prepare(sql)
     .bind(...binds)
     .all();

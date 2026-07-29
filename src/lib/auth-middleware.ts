@@ -1,29 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { NextAuth } from "@auth/nextjs";
-import { getServerSession } from "@auth/nextjs";
+/**
+ * Compatibility shim — prefer `@/lib/api-auth` for new code.
+ * Re-exports the real session/Bearer auth helpers used by API routes.
+ */
+export {
+  requireAuth,
+  requireAdmin,
+  requireVerifiedAuth,
+  isAdmin,
+  getTokenFromHeader,
+  type AuthResult,
+  type DecodedToken,
+} from "@/lib/api-auth";
 
-export async function requireAuth(request: NextRequest) {
-  const session = await auth(request);
-
-  if (!session?.user) {
-    return NextResponse.redirect(new URL("/auth/login", request.url));
-  }
-
-  return NextResponse.next();
-}
-
-export async function requireAdmin(request: NextRequest) {
-  const session = await auth(request);
-  const { user } = session || {};
-
-  if (!user || !user.role || user.role !== "admin") {
-    return NextResponse.redirect(new URL("/auth/login", request.url));
-  }
-
-  return NextResponse.next();
-}
-
-export async function optionalAuth(request: NextRequest) {
-  const session = await getSession(request);
-  return NextResponse.next({ request: { headers: { "x-auth-user": session?.user?.id || "" } } });
+/** Portal routes that only need a boolean session check. */
+export async function isAuthenticated(
+  request: Parameters<typeof import("@/lib/api-auth").requireAuth>[0]
+): Promise<boolean> {
+  const { requireAuth } = await import("@/lib/api-auth");
+  const result = await requireAuth(request);
+  return result.ok;
 }

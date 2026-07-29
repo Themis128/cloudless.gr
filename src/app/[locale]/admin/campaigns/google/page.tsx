@@ -53,8 +53,9 @@ export default function GoogleCampaignsPage() {
         return;
       }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
-      setCampaigns(((await camRes.json()) as { campaigns: any[] }).campaigns ?? []);
-      if (insRes.ok) setMetrics(((await insRes.json()) as { metrics: any }).metrics ?? null);
+      setCampaigns(((await camRes.json()) as { campaigns: GoogleCampaign[] }).campaigns ?? []);
+      if (insRes.ok)
+        setMetrics(((await insRes.json()) as { metrics: GoogleMetrics }).metrics ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {

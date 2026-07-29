@@ -7,7 +7,9 @@ triggers: when the user mentions "sst ai", "sst.cloudflare.ai", "cloudflare ai",
 # SST Cloudflare AI Integration
 
 ## Overview
+
 SST v4 supports Cloudflare's AI services through native bindings. This integrates with:
+
 - **Workers AI** (`$cf.Ai`) - On-demand LLM inference via `@cf/*` models
 - **AI Search** - Managed semantic search with vector embeddings
 
@@ -185,5 +187,6 @@ npx wrangler ai-search jobs create cloudless-docs
 | No search results | Enable hybrid search, check score-threshold |
 
 ## Related Skills
+
 - `skills/sst-cloudflare/SKILL.md` - Full SST Cloudflare provider
 - `skills/wrangler-ai-search/SKILL.md` - Wrangler AI Search CLI

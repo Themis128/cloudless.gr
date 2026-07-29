@@ -1,10 +1,10 @@
 import shutil
 from pathlib import Path
 
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 ROOT = Path(".").resolve()
 PERSIST_DIR = ".deepagents/cloudless_repo_chroma"

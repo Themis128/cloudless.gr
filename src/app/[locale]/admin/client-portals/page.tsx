@@ -764,7 +764,7 @@ function PendingClients({ onApproved }: Readonly<{ onApproved: () => void }>) {
     try {
       const res = await fetchWithAuth("/api/admin/pending-clients");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { clients: any[] };
+      const data = (await res.json()) as { clients: PendingClient[] };
       setClients((data.clients ?? []).filter((c: PendingClient) => c.status === "waiting"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load pending clients");
@@ -924,7 +924,7 @@ export default function ClientPortalsPage() {
     try {
       const res = await fetchWithAuth("/api/admin/client-portals");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { portals: any[] };
+      const data = (await res.json()) as { portals: ClientPortal[] };
       setPortals(data.portals ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load portals");

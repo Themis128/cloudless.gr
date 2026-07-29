@@ -1,6 +1,9 @@
 # API Coverage Gap Report
+
 # Cloudless.gr Workers vs Next.js Architecture Analysis
+
 # Generated: 2026-07-19 (accurate counts verified)
+
 # Updated: 2026-07-20 (D1-native auth complete, AWS migration 100% done)
 
 ## Summary
@@ -13,6 +16,7 @@
 - **Coverage at k3s**: 84.2% (139/165 endpoints on Next.js/k3s)
 
 The hybrid architecture is intentional:
+
 - **Workers (edge)**: Public-facing, low-latency, stateless operations
 - **Next.js/k3s (cluster)**: Admin operations, complex integrations, background jobs
 
@@ -21,6 +25,7 @@ The hybrid architecture is intentional:
 ## Workers Covered Endpoints
 
 ### Authentication (Layer 1 - D1-Native)
+
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
 | `/api/auth/register` | POST | D1 user creation | Signup with PBKDF2 hashing |
@@ -31,29 +36,34 @@ The hybrid architecture is intentional:
 | `/api/auth/session` | GET | Session validation | Cookie-based auth check |
 
 ### Public Contact (Layer 2 - Email + D1)
+
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
 | `/api/contact` | POST | Email + D1 logging | Contact form |
 | `/api/subscribe` | POST | Email + D1 logging | Newsletter signup |
 
 ### Chat & AI (Layer 3 - Service Binding)
+
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
 | `/api/chat` | POST | Service binding/RPC | Streaming chat (CHAT binding) |
 
 ### Commerce
+
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
 | `/api/checkout` | POST | Placeholder response | Stripe checkout (stub) |
 | `/api/webhooks/stripe` | POST | Transaction logging | Stripe events to D1 |
 
 ### Analytics
+
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
 | `/api/analytics/r2` | GET | R2 parquet streaming | DuckDB-Wasm data source |
 | `/api/analytics/query` | GET | R2 list operations | File discovery |
 
 ### Admin (D1-Native)
+
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
 | `/api/admin/users/promote` | POST | Role assignment | Admin promotion |
@@ -62,6 +72,7 @@ The hybrid architecture is intentional:
 | `/api/admin/analytics/*` | GET | Service binding | GSC analytics proxy |
 
 ### Config & Health
+
 | Endpoint | Method | Handler | Purpose |
 |----------|--------|---------|---------|
 | `/api/config` | GET | D1 app_config query | ETL config for R2 scripts |
@@ -69,6 +80,7 @@ The hybrid architecture is intentional:
 | `/api/services` | GET | Binding check | Service availability |
 
 ### Static Assets
+
 | Endpoint | Handler | Purpose |
 |----------|---------|---------|
 | `/static/*` | R2 ASSETS_BUCKET | Static file delivery |
@@ -80,8 +92,9 @@ The hybrid architecture is intentional:
 ## Coverage Gap Analysis
 
 ### Tier 1: Core Admin Coverage Implemented ✓
+
 **Priority**: High - Workers coverage verified
- 
+
  | Category | Endpoints | Count | Status |
  |----------|-----------|-------|--------|
  | Auth flow | register, login, logout, reset, session | 6 | ✅ Fully D1-native |
@@ -95,10 +108,11 @@ The hybrid architecture is intentional:
  | Config | config | 1 | ✅ D1-native (app_config table) |
  | Health | health | 1 | ✅ Native |
  | **Tier 1 Subtotal** | | **26** | |
- 
- ### Tier 2: CMS Content Endpoints (Edge Caching Candidates)
+
+### Tier 2: CMS Content Endpoints (Edge Caching Candidates)
+
   **Priority**: Medium - Good candidates for edge caching
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/blog/*` | blog, [slug], posts | 3 | ✅ CMS-sourced, cacheable, static fallback |
@@ -109,19 +123,21 @@ The hybrid architecture is intentional:
  | `/api/recommendations` | list | 1 | ✅ Product recommendations, static fallback |
  | `/api/services` | list | 1 | ✅ Static config, static fallback |
  | **Tier 2 Subtotal** | | **11** | |
- 
- ### Tier 3: User Portal & Profile
+
+### Tier 3: User Portal & Profile
+
  **Priority**: Medium - Session-based auth needed
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/portal/*` | [token]*, me, enroll | 4 | Token-based auth, D1 |
  | `/api/user/*` | profile, purchases, consultations, delete | 4 | Session-based auth |
  | **Tier 3 Subtotal** | | **8** | |
- 
- ### Tier 4: AI & Reports (Service Binding)
+
+### Tier 4: AI & Reports (Service Binding)
+
  **Priority**: Medium - Requires ADMIN_API binding
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/ai/*` | generate, copy, campaign, audience, assistant, langgraph, report-insights, analytics-orchestration/pdf/orchestration | 8 | Admin API binding |
@@ -129,48 +145,53 @@ The hybrid architecture is intentional:
  | `/api/admin/audits/*` | audits, latest | 2 | Audit log queries |
  | `/api/admin/search/reindex` | reindex | 1 | Search index |
  | **Tier 4 Subtotal** | | **14** | |
- 
- ### Tier 5: Campaign Management (OAuth Required)
+
+### Tier 5: Campaign Management (OAuth Required)
+
  **Priority**: High - External API integration
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/campaigns/*` | google, meta, linkedin, tiktok, x (with insights) | 8 | OAuth tokens, API calls |
  | `/api/admin/campaigns/crm-leads` | crm-leads | 1 | Lead integration |
  | **Tier 5 Subtotal** | | **9** | |
- 
- ### Tier 6: CRM Operations
+
+### Tier 6: CRM Operations
+
  **Priority**: Medium - EspoCRM integration
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/crm/*` | contacts, deals, companies, pipelines, tickets, owners | 6 | EspoCRM integration |
  | `/api/crm/contact` | contact | 1 | Public CRM contact |
  | **Tier 6 Subtotal** | | **7** | |
- 
- ### Tier 7: Email & Newsletter Platform
+
+### Tier 7: Email & Newsletter Platform
+
  **Priority**: Medium - ActiveCampaign/HubSpot
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/email/*` | stats, lists, contacts, campaigns, automations | 4 | Email platform integration |
  | `/api/newsletter/send` | send | 1 | Admin newsletter |
  | `/api/newsletter-slack/*` | interactions, events, commands, root | 4 | Slack bot for newsletters |
  | **Tier 7 Subtotal** | | **9** | |
- 
- ### Tier 8: Social & Content Platforms
+
+### Tier 8: Social & Content Platforms
+
  **Priority**: Medium - External service integrations
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/postiz/*` | posts, groups, integrations, analytics, notifications, slot, upload, health, etc. | 17 | PostgreSQL + Postiz API |
  | `/api/admin/appflowy/*` | blog, case-studies, testimonials, docs, faqs, tasks, projects, submissions, search, etc. | 11 | CMS operations |
  | `/api/admin/notion/*` | tasks, projects, blog, submissions, status, search, etc. | 10 | Notion API + R2 |
  | **Tier 8 Subtotal** | | **38** | |
- 
- ### Tier 9: Workflow & Automation
+
+### Tier 9: Workflow & Automation
+
  **Priority**: Medium - n8n/Temporal integration
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/n8n/*` | workflows, health, executions | 4 | n8n service dependency |
@@ -178,10 +199,11 @@ The hybrid architecture is intentional:
  | `/api/webhooks/n8n/trigger` | trigger | 1 | n8n webhook |
  | `/api/webhooks/*` | espocrm, postiz, sentry, mqtt, content, admin-alert | 6 | Various webhooks |
  | **Tier 9 Subtotal** | | **12** | |
- 
- ### Tier 10: Monitoring & Observability
+
+### Tier 10: Monitoring & Observability
+
  **Priority**: Keep on cluster - Internal services
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/cluster/*` | cluster, mqtt-status, kuma-status, watchdogs | 4 | Tailscale/internal access |
@@ -190,20 +212,22 @@ The hybrid architecture is intentional:
  | `/api/admin/integrations/status` | status | 1 | Integration checks |
  | `/api/internal/ai/generate` | generate | 1 | Internal AI |
  | **Tier 10 Subtotal** | | **14** | |
- 
- ### Tier 11: Calendar & Booking
+
+### Tier 11: Calendar & Booking
+
  **Priority**: Medium - Google Calendar integration
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/admin/calendar/*` | calendar, create, [id], [id]/publish | 4 | Admin calendar |
  | `/api/calendar/*` | availability, book | 2 | Public booking |
  | `/api/agent/book` | book | 1 | Agent booking |
  | **Tier 11 Subtotal** | | **7** | |
- 
- ### Tier 12: Background Jobs (Cron)
+
+### Tier 12: Background Jobs (Cron)
+
  **Priority**: Keep on Next.js/k3s - Scheduled operations
- 
+
  | Category | Endpoints | Count | Notes |
  |----------|-----------|-------|-------|
  | `/api/cron/*` | voice-brief, slack-digest, report-cleanup, postiz-sync, postiz-oauth-check, owner-digest, gsc-cache-refresh, client-reports, calendar-digest, analytics-rollup, ad-analytics-poll | 11 | Cron triggers |
@@ -214,6 +238,7 @@ The hybrid architecture is intentional:
 ## Recommended Next Steps
 
 ### Immediate (High Priority)
+
 1. **Content at Edge**: Serve `/api/blog`, `/api/case-studies`, `/api/faqs`, `/api/docs` from R2 with ISR pattern
     - Use R2 for storage, Workers for edge delivery
     - Cache with 1-hour TTL
@@ -226,6 +251,7 @@ The hybrid architecture is intentional:
     - Requires ADMIN_API binding to cluster service
 
 ### Medium Priority
+
 4. **User Portal**: Port `/api/portal/*` endpoints to Workers
     - Token-based auth via D1 sessions
     - R2 for deliverables storage
@@ -235,12 +261,15 @@ The hybrid architecture is intentional:
     - Return status polling endpoint
 
 ### Future Considerations
+
 6. **Hybrid Migration Pattern**: For endpoints requiring external integrations:
+
     ```
     Worker endpoint → Service binding to cluster API
     ```
 
 7. **Queue Pattern**: For cron-heavy endpoints:
+
     ```
     Worker endpoint → Queue message → Cluster worker processes
     ```

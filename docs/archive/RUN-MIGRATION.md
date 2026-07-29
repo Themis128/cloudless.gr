@@ -1,6 +1,7 @@
 # Run Your Migration - Step by Step
 
 ## Prerequisites
+
 ```bash
 # Add to your shell environment
 export AWS_PROFILE=default
@@ -10,6 +11,7 @@ export CLOUDFLARE_API_TOKEN=xxxxx  # Get from Cloudflare dashboard: My Profile �
 ## Run the Migration
 
 ### Option 1: Full automated migration
+
 ```bash
 # This requires CLOUDFLARE_API_TOKEN
 CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN \
@@ -75,14 +77,17 @@ npx wrangler secret list --env=production
 ## Common Issues
 
 ### "CLOUDFLARE_API_TOKEN environment variable is required"
+
 - Set your API token: `export CLOUDFLARE_API_TOKEN=your_token_here`
 - Get token from: Cloudflare Dashboard → My Profile → API Tokens → Create Token
 
 ### "AccessDenied" on DynamoDB scan
+
 - Run: `bash scripts/add-dynamodb-migration-permissions.sh`
 - This adds `dynamodb:Scan` permission to `cloudless-ops` user
 
 ### Build errors on Windows/WSL
+
 - Ensure line endings are correct: `dos2unix *.sh`
 - Check Node.js version: `node --version` (need >= 20)
 

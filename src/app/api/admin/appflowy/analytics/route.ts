@@ -26,15 +26,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No AppFlowy workspace found" }, { status: 404 });
     }
     const views = await listWorkspaceViews(workspaceId);
-    const events: AnalyticsEvent[] = views
-      .slice(0, 100)
-      .map((v) => ({
-        id: v.view_id,
-        name: v.name,
-        type: v.type,
-        count: 1,
-        lastEdited: v.last_edited_time,
-      }));
+    const events: AnalyticsEvent[] = views.slice(0, 100).map((v) => ({
+      id: v.view_id,
+      name: v.name,
+      type: v.type,
+      count: 1,
+      lastEdited: v.last_edited_time,
+    }));
     return NextResponse.json({ events, count: events.length, days });
   } catch (err) {
     if (err instanceof AppFlowyNotConfiguredError) {

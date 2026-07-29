@@ -5,9 +5,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-import os
 import json
+import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -21,6 +22,7 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 
+from agents.cloudless_fast_answers import try_fast_answer
 from agents.tools.cloudless_project_tools import (
     cloudless_constraints,
     list_project_files,
@@ -28,8 +30,6 @@ from agents.tools.cloudless_project_tools import (
     project_tree_summary,
     read_project_file,
 )
-from agents.cloudless_fast_answers import try_fast_answer
-from agents.skill_loader import load_skill_context
 from agents.tools.langsmith_registry_tools import (
     call_registered_langsmith_endpoint,
     describe_langsmith_endpoint,
@@ -56,7 +56,10 @@ TOPIC_SKILL_FILES = {
     "storage": ["skills/cloudless-k3s-storage/SKILL.md"],
     "omv": ["skills/cloudless-k3s-storage/SKILL.md"],
     "terraform": ["skills/terraform-doctor/SKILL.md"],
-    "cloudflare": ["skills/cloudflare-tunnel-ops/SKILL.md", "skills/cloudflare-token-doctor/SKILL.md"],
+    "cloudflare": [
+        "skills/cloudflare-tunnel-ops/SKILL.md",
+        "skills/cloudflare-token-doctor/SKILL.md",
+    ],
     "espocrm": ["skills/espocrm-operator/SKILL.md"],
     "appflowy": ["skills/appflowy-operator/SKILL.md"],
     "postiz": ["skills/postiz/SKILL.md", "skills/postiz-doctor/SKILL.md"],
@@ -144,7 +147,6 @@ def retrieve_docs(question: str, k: int = 1):
     return langchain_db.similarity_search(expand_docs_query(question), k=k)
 
 
-
 def select_skill_files(question: str) -> list[str]:
     """Select core skills plus topic-specific skills for the current question."""
     selected = list(CORE_SKILL_FILES)
@@ -180,13 +182,10 @@ def load_skill_context(question: str = "", max_chars: int = 4000) -> str:
         if not content:
             continue
 
-        parts.append(
-            "[SKILL]\\n"
-            f"File: {skill_path}\\n\\n"
-            f"{content}"
-        )
+        parts.append(f"[SKILL]\\nFile: {skill_path}\\n\\n{content}")
 
     return "\\n\\n---\\n\\n".join(parts)[:max_chars]
+
 
 def format_context(repo_docs, docs_docs) -> str:
     parts = []
@@ -194,22 +193,13 @@ def format_context(repo_docs, docs_docs) -> str:
     for i, doc in enumerate(repo_docs, start=1):
         source = doc.metadata.get("source", "Unknown file")
         content = doc.page_content[:500]
-        parts.append(
-            f"[REPO {i}]\n"
-            f"File: {source}\n\n"
-            f"{content}"
-        )
+        parts.append(f"[REPO {i}]\nFile: {source}\n\n{content}")
 
     for i, doc in enumerate(docs_docs, start=1):
         title = doc.metadata.get("title", "Untitled")
         source = doc.metadata.get("source", "Unknown source")
         content = doc.page_content[:500]
-        parts.append(
-            f"[DOCS {i}]\n"
-            f"Title: {title}\n"
-            f"Source: {source}\n\n"
-            f"{content}"
-        )
+        parts.append(f"[DOCS {i}]\nTitle: {title}\nSource: {source}\n\n{content}")
 
     return "\n\n---\n\n".join(parts)
 
@@ -251,7 +241,6 @@ agent = create_deep_agent(
         "When suggesting implementation structure, use the existing repo layout from context."
     ),
 )
-
 
 
 def answer_registered_langsmith_endpoints() -> str:
@@ -310,20 +299,11 @@ def ask(question: str) -> str:
     docs_docs = []
 
     if "registered langsmith endpoint" in question_lc or "langsmith endpoints" in question_lc:
-        context = (
-            "[LANGSMITH ENDPOINT REGISTRY]\n"
-            + list_langsmith_endpoints()[:6000]
-        )
+        context = "[LANGSMITH ENDPOINT REGISTRY]\n" + list_langsmith_endpoints()[:6000]
     elif "package.json" in question_lc and "script" in question_lc:
-        context = (
-            "[PACKAGE.JSON SCRIPTS]\n"
-            + package_scripts()[:6000]
-        )
+        context = "[PACKAGE.JSON SCRIPTS]\n" + package_scripts()[:6000]
     elif "cloudless constraint" in question_lc or "k3s storage" in question_lc:
-        context = (
-            "[CLOUDLESS CONSTRAINTS]\n"
-            + cloudless_constraints()[:3000]
-        )
+        context = "[CLOUDLESS CONSTRAINTS]\n" + cloudless_constraints()[:3000]
     else:
         repo_docs = retrieve_repo(question)
         docs_docs = retrieve_docs(question)

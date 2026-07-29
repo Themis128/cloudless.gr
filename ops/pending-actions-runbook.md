@@ -12,6 +12,7 @@ This document provides detailed procedures for the 4 pending infrastructure acti
 ## Action 1: Apply Monitoring Node Selector Fix
 
 ### Problem
+
 Prometheus and Alertmanager pods are stuck in Pending state because they lack `nodeSelector` targeting the primary node (omv). The omv-ha node has `node-type=standby:NoSchedule` taint.
 
 ### Diagnose First
@@ -43,6 +44,7 @@ The workflow `monitoring-node-selector-fix.yml` patches StatefulSets in-place:
 ```
 
 **Steps:**
+
 1. Go to GitHub → Actions → "Monitoring Node Selector Fix"
 2. Click "Run workflow"
 3. Click "Run workflow" button (no inputs required)
@@ -50,6 +52,7 @@ The workflow `monitoring-node-selector-fix.yml` patches StatefulSets in-place:
 5. Check results in issue #382 comments
 
 **Or run via CLI:**
+
 ```bash
 gh workflow run monitoring-node-selector-fix.yml --repo Themai128/cloudless.gr
 ```
@@ -109,6 +112,7 @@ curl -s http://localhost:9093/api/v1/status
 ## Action 2: Disable metoro-node-agent eBPF on Pi
 
 ### Problem
+
 The metoro-node-agent requires BTF (kernel 6.18.34+) with eBPF support, which is not available on the Pi kernel. It's in CrashLoopBackOff state.
 
 ### Approach A: Remove via Helm Values (Cleanest - Preserves Release)
@@ -122,6 +126,7 @@ metoro-node-agent:
 ```
 
 Then upgrade:
+
 ```bash
 helm -n metoro upgrade metoro-exporter \
   ./helm-charts/metoro-exporter \
@@ -170,6 +175,7 @@ kubectl -n metoro get pods | awk '/CrashLoopBackOff/ {print $1}'
 ## Action 3: Create CLOUDFLARE_API_TOKEN Secret
 
 ### Prerequisites
+
 1. Cloudflare API token with these permissions:
    - **Zone → Zone → Read** (for cloudless.gr)
    - **Zone → Load Balancing: Monitors and Pools → Edit**
@@ -181,6 +187,7 @@ kubectl -n metoro get pods | awk '/CrashLoopBackOff/ {print $1}'
 1. Go to Cloudflare → My Profile → API Tokens
 2. Click "Create Token"
 3. Use custom token template:
+
    ```
    Permissions:
    - Zone → Zone → Read
@@ -251,7 +258,9 @@ grep -A2 '"cloudflare"' mcp.json
 ## Action 4: Update Postiz PVC to 20Gi
 
 ### Current State
+
 From `infrastructure/postiz/k8s/postiz.yaml`:
+
 - `postiz-uploads` PVC is 2Gi (line 53)
 - Postiz media/images need more space
 
@@ -327,6 +336,7 @@ spec:
 ```
 
 Then apply:
+
 ```bash
 kubectl apply -f infrastructure/postiz/k8s/postiz.yaml
 ```

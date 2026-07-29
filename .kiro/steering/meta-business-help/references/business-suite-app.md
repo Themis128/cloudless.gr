@@ -81,6 +81,7 @@ Scheduled posts appear in **Posts & stories → Scheduled** — you can edit, re
 ### Best posting times for cloudless.gr (Greek tech audience)
 
 Rough starting points — validate with Insights after 4 weeks:
+
 - **LinkedIn-adjacent IT audience:** Tue–Thu 9:30–11:30 local, 14:00–16:00 local
 - **B2B content:** Weekday mornings before 11:00
 - **Personal/brand-building:** Sunday evenings 19:00–21:00 for slow scroll engagement
@@ -111,6 +112,7 @@ For content strategy, treat Stories as real-time tools — don't try to schedule
 ## 7. Inbox — unified DMs and comments
 
 Business Suite's Inbox pulls in:
+
 - FB Page messages (from Messenger)
 - IG direct messages (only Business account DMs; personal chat accounts don't route here)
 - FB Page comments
@@ -133,6 +135,7 @@ Suite → Inbox → **Automations**:
 - **FAQs** — bot-style menu of common question → canned answer pairs
 
 For cloudless.gr:
+
 - Instant reply acknowledging receipt + setting 1-business-day expectation
 - FAQs covering: pricing, service areas, tech stack, contact options
 - Away message: off-hours / weekends
@@ -215,15 +218,18 @@ Treat as drafts, always edit. Don't publish AI-raw output — tone and clichés 
 Suggested rhythm:
 
 **Monday morning (30 min)**
+
 - Review last week's Insights top-3 posts + bottom-1 post
 - Write this week's 3-5 posts in Business Suite
 - Schedule across Tue-Fri mornings
 
 **Daily (5 min)**
+
 - Check Inbox, reply to DMs + comments
 - Monitor ads (if running) via Ads Manager
 
 **Friday afternoon (15 min)**
+
 - Review week's Insights
 - Export data to Notion "Social Media Dashboard" (via Windsor MCP or manual)
 - Plan next week's themes
@@ -233,6 +239,7 @@ For scheduled automation beyond Suite (e.g., cross-post to LinkedIn, trigger a S
 ## 14. Keyboard shortcuts (web)
 
 Some useful ones buried in Suite's web UI:
+
 - `N` — New post from Home
 - `I` — Inbox
 - `P` — Posts & stories

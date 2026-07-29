@@ -60,6 +60,7 @@ bash ~/code/BRANDING/scripts/verify.sh
 Should print every installed skill, slash-command, and which env vars are set.
 
 In Claude Desktop, type `/` and you should see:
+
 - `/brand-design` (from `VicUgochukwu/brand-design-skill`)
 - `/brand-onboarding`, `/social-media-manager`, `/content-calendar`, `/caption-writer`, `/social-creative-designer`, `/social-performance-review` (from `social-ai-team`)
 

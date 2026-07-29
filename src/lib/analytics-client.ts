@@ -183,7 +183,12 @@ export async function getSeoSnapshot(): Promise<{
   // Map avg_position to avgPosition to match return type
   const row = results[0];
   return row
-    ? { ...row, avgPosition: (row as any).avg_position ?? 0 }
+    ? {
+        clicks: row.clicks,
+        impressions: row.impressions,
+        ctr: row.ctr,
+        avgPosition: row.avg_position ?? 0,
+      }
     : { clicks: 0, impressions: 0, ctr: 0, avgPosition: 0 };
 }
 

@@ -15,15 +15,26 @@ export interface StoredTokens {
 
 const TTL_DAYS = 30;
 
-function getD1Binding(): AuthDatabase | null {
-  const db = (process as any).env?.AUTH_DB || (globalThis as any).__AUTH_DB__;
-  if (db && typeof db.prepare === "function") return db as AuthDatabase;
-  return null;
+interface WorkersGlobal {
+  __AUTH_DB__?: AuthDatabase;
 }
 
-/** Detect Cloudflare Workers runtime. */
-function isWorkers(): boolean {
-  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
+interface ProcessWithAuthDb {
+  env?: { AUTH_DB?: AuthDatabase };
+}
+
+function workersGlobal(): WorkersGlobal {
+  return globalThis as unknown as WorkersGlobal;
+}
+
+function getProcessEnv(): ProcessWithAuthDb["env"] {
+  return (process as unknown as ProcessWithAuthDb).env;
+}
+
+function getD1Binding(): AuthDatabase | null {
+  const db = getProcessEnv()?.AUTH_DB ?? workersGlobal().__AUTH_DB__;
+  if (db && typeof db.prepare === "function") return db;
+  return null;
 }
 
 /** Detect if D1 is available (Workers with AUTH_DB binding). */

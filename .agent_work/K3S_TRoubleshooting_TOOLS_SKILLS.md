@@ -6,6 +6,7 @@
 ---
 
 ## Table of Contents
+
 1. [Existing MCP Infrastructure Tools](#existing-mcp-infrastructure-tools)
 2. [Existing Claude Skills](#existing-claude-skills)
 3. [GitHub Tools & Utilities](#github-tools--utilities)
@@ -100,6 +101,7 @@
 **Purpose:** Manage Pi standby image rollout via `pi-origin.cloudless.gr`
 
 **Key Procedures:**
+
 - Confirm new image ready in ECR
 - Check current pod version
 - Trigger rollout restart
@@ -108,6 +110,7 @@
 - Auto-healer cronjob management
 
 **Key Commands:**
+
 ```bash
 kubectl rollout restart deployment/cloudless -n cloudless
 kubectl get pods -n cloudless
@@ -120,12 +123,14 @@ curl http://localhost:3000/api/health
 **Purpose:** End-to-end deployment orchestration
 
 **Key Procedures:**
+
 - Lambda deploy with SST + CloudFront
 - HA sync orchestrator dispatch
 - Pi image build (if needed)
 - k3s rollout with auto-healer
 
 **SSM Parameters:**
+
 - `cloud-sha` - Lambda deploy SHA
 - `pi-sha` - Pi k3s rollout SHA (12-char)
 - `ECR_LATEST_DIGEST` - Latest Pi Docker digest
@@ -136,12 +141,14 @@ curl http://localhost:3000/api/health
 **Purpose:** Systemd hardening for GitHub Actions runners
 
 **Key Procedures:**
+
 - Decouple from k3s dependency
 - Add restart policies
 - Configure fallback DNS
 - Apply systemd overrides
 
 **Service Pattern:**
+
 ```
 actions.runner.Themis128-{repo}.{runner}.service
 ```
@@ -469,17 +476,20 @@ ip route show
 ## Recommended Tool Stack for cloudless.gr
 
 ### Primary Tools (Already Available)
+
 - ✅ `mcp_cloudless_infra_*` (comprehensive infrastructure MCP)
 - ✅ `pi-image-rollout` skill
 - ✅ `deploy-pipeline` skill
 - ✅ `runner-harden` skill
 
 ### Recommended Additions
+
 - 📦 **Troubleshoot by Preflight** - For support bundles and diagnostics
 - 📊 **k3s-monitoring** - Pre-configured Prometheus/Grafana stack
 - 🔧 **CRICTL** - Container runtime troubleshooting (already available via k3s)
 
 ### Documentation to Create
+
 - 📝 K3s Troubleshooting Runbook
 - 📝 Common Error Patterns & Solutions
 - 📝 Emergency Response Procedures
@@ -490,18 +500,22 @@ ip route show
 ## References
 
 ### Official Documentation
+
 - [K3s Documentation](https://docs.k3s.io/)
 - [Troubleshoot by Preflight](https://replicated.com/troubleshoot/)
 - [cert-manager Documentation](https://cert-manager.io/docs/)
 
 ### Community Resources
+
 - [k3s GitHub Issues](https://github.com/k3s-io/k3s/issues)
 - [CNCF K3s Community](https://k3s.io/#community)
 - [rancher-users Slack](https://rancher-users.slack.com/)
 
 ### Monitoring & Observability
+
 - [Prometheus Documentation](https://prometheus.io/docs/introduction/overview/)
 - [Grafana Documentation](https://grafana.com/docs/)
 
 ### GitOps
+
 - [Flux Documentation](https://fluxcd.io/flux/)

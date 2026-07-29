@@ -33,6 +33,7 @@ pnpm deploy (production, SST-based)
 ## open-next.config.ts — Official defineCloudflareConfig()
 
 Uses `@opennextjs/cloudflare` best practices:
+
 - **`r2IncrementalCache`** — R2 bucket for page/data cache (NEXT_INC_CACHE_R2_BUCKET)
 - **`d1TagCache`** — D1 for strongly consistent tag revalidation (NEXT_CACHE_D1_BINDING)
 - **`MemoryQueue`** — In-memory queue for dev; SST overrides for production

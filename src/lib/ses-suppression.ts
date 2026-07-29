@@ -8,64 +8,9 @@
  */
 
 import {
-  SESv2Client,
   PutSuppressedDestinationCommand,
   DeleteSuppressedDestinationCommand,
 } from "@aws-sdk/client-sesv2";
-import { getConfig } from "@/lib/ssm-config";
-
-// Lazy load D1 helper to avoid circular imports
-function getD1Binding(): AuthDatabase | null {
-  const db = (process as any).env?.AUTH_DB || (globalThis as any).__AUTH_DB__;
-  if (db && typeof db.prepare === "function") return db as AuthDatabase;
-  return null;
-}
-
-// Detect if running in Cloudflare Workers
-function isWorkers(): boolean {
-  return typeof (globalThis as any).caches !== "undefined" && typeof process === "undefined";
-}
-
-// D1 suppression operations
-async function addToSuppressionListD1(email: string): Promise<boolean> {
-  const db = getD1Binding();
-  if (!db) return false;
-
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    const expiresAt = now + 5 * 365 * 86400; // 5 years
-
-    await db
-      .prepare(
-        `INSERT INTO email_suppression (email, reason, suppressed_at, expires_at)
-         VALUES (?, 'unsubscribe', ?, ?)
-         ON CONFLICT(email) DO UPDATE SET
-           reason = excluded.reason,
-           suppressed_at = excluded.suppressed_at,
-           expires_at = excluded.expires_at`
-      )
-      .bind(email, now, expiresAt)
-      .run();
-
-    return true;
-  } catch (err) {
-    console.warn("[ses-suppression] D1 suppress failed:", err);
-    return false;
-  }
-}
-
-async function removeFromSuppressionListD1(email: string): Promise<boolean> {
-  const db = getD1Binding();
-  if (!db) return false;
-
-  try {
-    await db.prepare("DELETE FROM email_suppression WHERE email = ?").bind(email).run();
-    return true;
-  } catch (err) {
-    console.warn("[ses-suppression] D1 unsuppress failed:", err);
-    return false;
-  }
-}
 
 /**
  * Domain portion of an email, reduced to an allowlisted [a-z0-9.-] slug for
@@ -83,6 +28,13 @@ function logSafeDomain(email: string): string {
 function logSafeMessage(err: unknown): string {
   const raw = (err as Error)?.message ?? "unknown error";
   return raw.replace(/[^\x20-\x7E]/g, " ").slice(0, 200);
+}
+
+async function getSESv2() {
+  const { SESv2Client } = await import("@aws-sdk/client-sesv2");
+  const { getConfig } = await import("@/lib/ssm-config");
+  const cfg = await getConfig();
+  return new SESv2Client({ region: cfg.AWS_SES_REGION || "us-east-1" });
 }
 
 /**
@@ -134,11 +86,3 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
     return false;
   }
 }
-
-/**
- * Remove an email address from the suppression list, so a
- * re-subscribing user can receive email again.
- *
- * Returns true on success (including when email wasn't suppressed),
- * false on failure (logged, not thrown).
- */

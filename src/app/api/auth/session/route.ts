@@ -13,12 +13,13 @@ function getDb(_request: NextRequest): AuthDatabase | null {
 export async function GET(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    // Fallback to next-auth when D1 is not configured
+    // Fallback to next-auth when D1 is not configured (local Next.js).
+    // Auth.js SessionProvider expects JSON `null` (not an HTML 404 page).
     try {
       const { handlers } = await import("@/lib/auth");
       return handlers.GET(req);
     } catch {
-      return NextResponse.json({ user: null });
+      return NextResponse.json(null);
     }
   }
 

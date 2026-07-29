@@ -8,6 +8,7 @@ Kubernetes-based AI workloads running on omv-main (Pi 5, 8GB RAM, ARM64, CPU-onl
 This is **too large** for a Pi 5 (8GB RAM, no GPU).
 
 For OMV/Pi deployment, we use **Qwen2.5-7B-Instruct Q4_K_M GGUF** which:
+
 - Is a 7B parameter model (~4GB quantized)
 - Runs on ARM64 CPU via llama-cpp-python
 - Provides OpenAI-compatible `/v1/chat/completions` API
@@ -66,6 +67,7 @@ kubectl -n vibe create secret generic vibe-env \
 ## Tools Available
 
 The `agents/tools/omv_k3s_tools.py` provides functions for:
+
 - `get_cluster_pods()` - List pods in k3s cluster
 - `get_cluster_services()` - List services
 - `get_cluster_nodes()` - Node status

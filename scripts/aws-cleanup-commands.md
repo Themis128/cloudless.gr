@@ -1,4 +1,5 @@
 # AWS Credentials Setup & Monitoring Cleanup Commands
+
 # For cloudless.gr migration to Cloudflare
 
 ## Using Your Credential File
@@ -6,6 +7,7 @@
 The `rootkey.csv` file likely contains GCP credentials (not AWS). To use it with AWS:
 
 ### Option 1: If rootkey.csv is AWS credentials (CSV format)
+
 ```bash
 # Extract credentials from CSV (Linux/WSL/macOS)
 export AWS_ACCESS_KEY_ID=$(awk -F',' 'NR==2 {print $1}' /mnt/c/Users/baltz/Downloads/rootkey.csv)
@@ -14,6 +16,7 @@ export AWS_DEFAULT_REGION=us-east-1
 ```
 
 ### Option 2: If rootkey.csv is GCP credentials
+
 ```bash
 # For GCP, install gcloud CLI and use:
 gcloud auth activate-service-account --key-file=/mnt/c/Users/baltz/Downloads/rootkey.csv
@@ -22,6 +25,7 @@ gcloud auth activate-service-account --key-file=/mnt/c/Users/baltz/Downloads/roo
 ## AWS Monitoring Cleanup Commands
 
 ### 1. Preview Current Resources (Safe - Read Only)
+
 ```bash
 # List all CloudFront distributions with cloudless alias
 aws cloudfront list-distributions \
@@ -46,6 +50,7 @@ aws lambda list-functions \
 ```
 
 ### 2. Delete CloudFront Distribution (WARNING: Requires disabling first)
+
 ```bash
 # Steps to delete CloudFront distribution:
 # 1. Get distribution ID
@@ -70,6 +75,7 @@ aws cloudfront delete-distribution --id $DISTRIBUTION_ID --if-match $ETAG
 ```
 
 ### 3. Delete CloudWatch Log Groups
+
 ```bash
 # Delete Lambda logs
 aws logs delete-log-group --log-group-name /aws/lambda/cloudless-app-production
@@ -86,6 +92,7 @@ aws logs describe-log-groups \
 ```
 
 ### 4. Delete SSM Parameters
+
 ```bash
 # Delete specific parameters (only after confirming Cloudflare is primary)
 aws ssm delete-parameter --name /cloudless/production/AUTH_SECRET
@@ -102,6 +109,7 @@ aws ssm describe-parameters \
 ```
 
 ### 5. Delete Lambda Functions
+
 ```bash
 # Remove provisioned concurrency first
 aws lambda delete-provisioned-concurrency-config \

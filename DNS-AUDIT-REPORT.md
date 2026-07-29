@@ -1,5 +1,7 @@
 # Cloudflare DNS Audit Report
+
 # Generated: 2026-07-21
+
 # Zone: cloudless.gr (Tunnels + Worker)
 
 ## Summary
@@ -28,6 +30,7 @@ All configured services are accessible via Cloudflare Tunnel or Workers. DNS rec
 ## DNS Best Practices Check
 
 ### ✅ Compliant Items
+
 1. **All services use CNAME records** pointing to tunnel endpoint
 2. **HTTP to HTTPS redirect** - handled by Cloudflare Tunnel
 3. **Universal SSL** - Active on all hostnames
@@ -36,6 +39,7 @@ All configured services are accessible via Cloudflare Tunnel or Workers. DNS rec
 6. **Health checks configured** - For Load Balancer (if used)
 
 ### ⚠️ Recommendations
+
 1. **grafana.cloudless.gr** - Consider adding direct API health check endpoint
 2. **kuma.cloudless.gr** - Status page should be configured as public
 3. **docs.cloudless.gr** - Consider making primary docs source instead of /blog redirect
@@ -58,6 +62,7 @@ All configured services are accessible via Cloudflare Tunnel or Workers. DNS rec
 ## Required Secrets (Status)
 
 ### ✅ Already Configured (GitHub Secrets → D1/Wrangler)
+
 ```bash
 AUTH_SECRET ✅
 CRON_SECRET ✅ (2026-07-20)
@@ -92,6 +97,7 @@ SENTRY_PROJECT ✅
 ```
 
 ### ❌ Missing - Needs Addition
+
 ```bash
 GEMINI_API_KEY - Not configured (PRIMARY AI PROVIDER - REQUIRED)
 HUBSPOT_API_KEY - Not in GitHub secrets
@@ -99,6 +105,7 @@ HUBSPOT_CLIENT_SECRET - Not in GitHub secrets
 ```
 
 ### 💡 To Configure GEMINI_API_KEY
+
 ```bash
 npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
 ```

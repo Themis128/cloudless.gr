@@ -9,6 +9,7 @@ Visit: https://dash.cloudflare.com/profile/api-tokens
 Your API token needs these permissions:
 
 ### Account Permissions
+
 - **D1 Data**: Read, Write
 - **Workers Scripts**: Read, Write
 - **Workers Routes**: Read, Write
@@ -17,12 +18,14 @@ Your API token needs these permissions:
 - **Workers AI**: Read (optional)
 
 ### Zone Permissions (for your domain)
+
 - **Zone**: Read
 - **DNS**: Read, Write
 
 ## Create New Token
 
 Use this template:
+
 ```
 Permissions:
 - Account D1 Data: Read, Write

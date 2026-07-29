@@ -293,17 +293,20 @@ Located in `scripts/etl/`:
 ### Common Issues
 
 1. **Pod stuck in Pending**: Check node taints and resource quotas
+
    ```bash
    kubectl describe pod -n <namespace> <pod-name>
    kubectl describe nodes  # Check taint tolerations
    ```
 
 2. **PVC pending**: Check local-path storage
+
    ```bash
    kubectl get pvc -A
    ssh omv 'df -h /srv'  # Check SSD space
    ```
 
 3. **Workflow not triggering**: Check n8n webhook URL and SSM IDs
+
    ```bash
    aws ssm get-parameter --name /cloudless/production/N8N_WORKFLOW_*/ --with-decryption

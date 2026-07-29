@@ -16,11 +16,10 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendLeadEvent } from "@/lib/meta-capi";
 import { generateEventId } from "@/lib/meta-pixel";
 import { mapIntegrationError } from "@/lib/api-errors";
-import { sanitizeAttribution, formatAttribution } from "@/lib/lead-attribution";
+import { formatAttribution } from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
-import { handlers } from "@/lib/auth";
-import { requireAuth } from "@/lib/auth-middleware";
+import { auth } from "@/lib/auth";
 
 interface ContactRequestBody {
   name: string;
@@ -32,20 +31,10 @@ interface ContactRequestBody {
   attribution?: string;
 }
 
-interface AttributionData {
-  utmSource?: string;
-  utmMedium?: string;
-  utmCampaign?: string;
-  utmContent?: string;
-  utmTerm?: string;
-  referrer?: string;
-  landingPage?: string;
-}
-
 export async function POST(request: Request) {
   // Check authentication
-  const auth = await handlers.auth(request);
-  if (!auth) {
+  const session = await auth();
+  if (!session) {
     return Response.json({ error: "Authentication required." }, { status: 401 });
   }
   // Rate limit: 5 contact submissions per IP per 10 minutes
@@ -75,7 +64,6 @@ export async function POST(request: Request) {
     }
 
     const config = await getConfig();
-const user = await handlers.auth(request);
 
     const subject = `[Contact] ${String(service || "General inquiry").slice(0, 100)} — ${String(name).slice(0, 100)}`;
 
@@ -105,7 +93,7 @@ const user = await handlers.auth(request);
       subject,
       html,
       text,
-      replyTo: [email],
+      replyTo: email,
       fromLabel: "Cloudless Contact Form",
     });
 

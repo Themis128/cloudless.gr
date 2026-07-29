@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const hex = Array.from(otpBytes)
     .map((b) => "00".concat(b.toString(16)).slice(-2))
     .join("");
-  const otp = (parseInt(hex.slice(0, 8), 16) % 1_000_000).toString().padStart(6, "0");
+  const _otp = (parseInt(hex.slice(0, 8), 16) % 1_000_000).toString().padStart(6, "0");
 
   // Send our branded SES email with the new token+OTP, fire-and-forget
   sendActivationEmail(email, token).catch(() => {});

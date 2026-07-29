@@ -20,15 +20,19 @@ export interface GeoEnv {
   CF_SITE_URL?: string;
 }
 
+interface CfRequest extends Request {
+  cf?: { country?: string };
+}
+
 /**
  * Geo redirect middleware - serves regional content or redirects
  * Strips existing locale prefix before prepending /el to prevent /en/en/... cascade
  */
 export async function geoRedirectMiddleware(
   request: Request,
-  env: GeoEnv
+  _env: GeoEnv
 ): Promise<Response | null> {
-  const country = (request as any).cf?.country;
+  const country = (request as CfRequest).cf?.country;
 
   if (country === "GR") {
     const url = new URL(request.url);

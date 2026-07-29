@@ -292,7 +292,7 @@ async function handleSubmissionStatus(payload: WebhookPayload) {
         <p>— The Cloudless Team</p>
       `,
       text: `Hi ${name ?? "there"},\n\nWe've reviewed your inquiry and will follow up shortly.\n\nReply to this email if you have questions.\n\n— The Cloudless Team`,
-      replyTo: [config.SES_TO_EMAIL],
+      replyTo: config.SES_TO_EMAIL,
       fromLabel: "Cloudless",
     });
     return { emailed: true, to: email };
@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
 
   let body: WebhookPayload;
   try {
-    body = (await request.json()) as any;
+    body = (await request.json()) as WebhookPayload;
   } catch (err) {
     const _r = mapIntegrationError(err);
     if (_r) return _r;

@@ -1,11 +1,11 @@
 import re
-import requests
 from pathlib import Path
 
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import requests
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 LLMS_TXT_URL = "https://docs.langchain.com/llms.txt"
 PERSIST_DIR = ".deepagents/langchain_docs_chroma"

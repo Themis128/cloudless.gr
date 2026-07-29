@@ -90,7 +90,7 @@ export default function AdminErrorsPage() {
         if (res.status === 503) throw new Error("Sentry not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (await res.json()) as { issues: any[] };
+      const data = (await res.json()) as { issues: SentryIssue[] };
       setIssues(data.issues ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load errors");

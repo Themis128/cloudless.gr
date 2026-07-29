@@ -3,6 +3,7 @@
 ## Quick Start
 
 ### Set Required Wrangler Secrets
+
 ```bash
 # EspoCRM credentials
 npx wrangler secret put ESPOCRM_BASE_URL
@@ -45,6 +46,7 @@ All critical AWS services have been successfully migrated to Cloudflare. See `.c
 ## ETL Scripts Migration Status
 
 ### Migrated (R2 + Env vars) - ALL COMPLETE
+
 - ✅ `espocrm-to-r2.mjs` - Uses `getS3Client()` + env vars (GitHub secrets)
 - ✅ `linkedin-ads-to-lake.mjs` - Uses `getS3Client()` + env vars
 - ✅ `postiz-to-lake.mjs` - Uses `getS3Client()` + env vars (no AWS_REGION)
@@ -52,13 +54,16 @@ All critical AWS services have been successfully migrated to Cloudflare. See `.c
 - ✅ `clients-to-r2.mjs` - Uses D1 via `/api/config` endpoint for config
 
 ### Legacy Scripts (Deprecated)
+
 - ⏳ `clients-to-lake.mjs` - Uses SSM only (deprecated, use clients-to-r2.mjs)
 - ⏳ `portals-to-lake.mjs` - Uses SSM only (deprecated, pending migration)
 
 ## Environment Configuration
 
 ### For Local Development
+
 Create `scripts/etl/.env.local`:
+
 ```
 ESPOCRM_BASE_URL=https://espocrm.cloudless.gr
 ESPOCRM_API_KEY=your-api-key
@@ -70,8 +75,10 @@ SSM_DISABLED=1
 ```
 
 ### For GitHub Actions (Pi Runners - Required)
+
 Cloudflare bot detection blocks GitHub Actions IPs. Use self-hosted Pi runners.
 Secrets required:
+
 - `ESPOCRM_BASE_URL`
 - `ESPOCRM_API_KEY`
 - `ESPOCRM_API_PASSWORD`
@@ -102,6 +109,7 @@ CREATE TABLE IF NOT EXISTS email_suppression (
 ```
 
 Pre-populated keys:
+
 - `ESPOCRM_BASE_URL`
 - `LINKEDIN_AD_ACCOUNT_ID`
 - `SES_FROM_EMAIL`, `SES_TO_EMAIL`

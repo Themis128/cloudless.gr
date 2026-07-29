@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -8,9 +9,9 @@ os.environ.setdefault("LANGCHAIN_TRACING_V2", "false")
 os.environ.setdefault("LANGCHAIN_TRACING", "false")
 
 from langchain_chroma import Chroma
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 
 PERSIST_DIR = ".deepagents/cloudless_repo_chroma"
 COLLECTION_NAME = "cloudless_repo"
@@ -84,11 +85,7 @@ def format_context(docs):
         source = doc.metadata.get("source", "Unknown source")
         content = doc.page_content[:2200]
 
-        parts.append(
-            f"[DOC {i}]\n"
-            f"File: {source}\n\n"
-            f"{content}"
-        )
+        parts.append(f"[DOC {i}]\nFile: {source}\n\n{content}")
 
     return "\n\n---\n\n".join(parts)
 

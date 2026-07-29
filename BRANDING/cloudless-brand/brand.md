@@ -70,6 +70,7 @@ Canonical brand gradient: `linear-gradient(135deg, #0a0a0f 0%, #12121a 50%, #1a1
 ### 2.3 Cyan glow + grid
 
 One glow per surface, top-right or bottom-left:
+
 ```css
 background: radial-gradient(closest-side, rgba(0,255,245,.18), rgba(0,255,245,0));
 filter: blur(40px);
@@ -181,6 +182,7 @@ Every public surface ends in the **cyan fade stripe** at the bottom — full cya
 ### 5.6 The "live metrics widget" element
 
 The home page renders a real-time SLO panel:
+
 - p95 latency: `12ms` (-18% / 24h)
 - Uptime 30d: `99.987%` (SLO 99.9% — target met)
 - Error rate: `0.04%` (-40% / week)

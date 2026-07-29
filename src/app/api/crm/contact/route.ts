@@ -11,18 +11,20 @@ export async function POST(request: Request) {
   if (!rl.ok) return rl.response;
 
   if (!(await isEspoCRMConfigured())) {
-    return NextResponse.json(
-      { error: "CRM not configured." },
-      {
-        // @ts-ignore
-        status: 404,
-      }
-    );
+    return NextResponse.json({ error: "CRM not configured." }, { status: 404 });
   }
 
   try {
     const { email, firstname, lastname, company, service_interest, message, lead_source } =
-      (await request.json()) as any;
+      (await request.json()) as {
+        email?: string;
+        firstname?: string;
+        lastname?: string;
+        company?: string;
+        service_interest?: string;
+        message?: string;
+        lead_source?: string;
+      };
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ error: "Valid email is required." }, { status: 400 });

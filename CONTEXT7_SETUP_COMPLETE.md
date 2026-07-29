@@ -7,33 +7,40 @@ The Context7 MCP server has been successfully set up for cloudless.gr following 
 ## Original Requirements Checklist
 
 ✅ **1. Loaded MCP documentation**
-   - Reviewed server capabilities and installation requirements
-   - Analyzed available tools and transport options
+
+- Reviewed server capabilities and installation requirements
+- Analyzed available tools and transport options
 
 ✅ **2. Used correct server name**
-   - Server name: `github.com/upstash/context7-mcp`
-   - Configured in cline_mcp_settings.json
+
+- Server name: `github.com/upstash/context7-mcp`
+- Configured in cline_mcp_settings.json
 
 ✅ **3. Created installation directory**
-   - Location: `/home/tbaltzakis/Cline/MCP/context7/`
-   - All dependencies installed
+
+- Location: `/home/tbaltzakis/Cline/MCP/context7/`
+- All dependencies installed
 
 ✅ **4. Read existing configuration before editing**
-   - Verified existing cline_mcp_settings.json structure
-   - Added new server without overwriting existing entries
+
+- Verified existing cline_mcp_settings.json structure
+- Added new server without overwriting existing entries
 
 ✅ **5. Used appropriate commands for the system**
-   - Used npx for Node.js package execution
-   - Applied shell best practices
+
+- Used npx for Node.js package execution
+- Applied shell best practices
 
 ✅ **6. Demonstrated server capabilities**
-   - Server help command verified working
-   - Tools documented with detailed examples
-   - Integration instructions provided
+
+- Server help command verified working
+- Tools documented with detailed examples
+- Integration instructions provided
 
 ## Server Installation Details
 
 ### Configuration
+
 ```json
 {
   "mcpServers": {
@@ -55,21 +62,25 @@ The Context7 MCP server has been successfully set up for cloudless.gr following 
 ### Available Tools
 
 #### 1. `resolve-library-id`
+
 - **Purpose**: Resolves library names to Context7-compatible IDs
 - **Parameters**: `query` (required), `libraryName` (required)
 
 #### 2. `query-docs`
+
 - **Purpose**: Retrieves up-to-date documentation
 - **Parameters**: `libraryId` (required), `query` (required)
 
 ## Server Verification
 
 ### Test Command
+
 ```bash
 npx @upstash/context7-mcp --help
 ```
 
 ### Expected Output
+
 ```
 Usage: context7-mcp [options]
 
@@ -98,9 +109,11 @@ To fully activate the Context7 MCP server:
 
 1. **Obtain API Key** from https://context7.com/dashboard
 2. **Set Environment Variable**:
+
    ```bash
    export CONTEXT7_API_KEY="ctx7sk_your_key_here"
    ```
+
 3. **Restart Cline** to load the MCP configuration
 4. **Test with queries** like:
    - "How do I set up authentication with JWT in Express.js? use context7"

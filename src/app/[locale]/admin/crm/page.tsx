@@ -52,7 +52,7 @@ export default function AdminCRMPage() {
         if (res.status === 503) throw new Error("EspoCRM not configured");
         throw new Error(`HTTP ${res.status}`);
       }
-      const data = (await res.json()) as { contacts: any[] };
+      const data = (await res.json()) as { contacts: Contact[] };
       setContacts(data.contacts ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load contacts");

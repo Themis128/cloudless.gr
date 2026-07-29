@@ -4,8 +4,8 @@ const REGION = process.env.AWS_REGION || "us-east-1";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Module-level singleton — avoids re-creating the connection pool on every cache miss
-let ssmClient: any = null;
-async function getSsmClient(): Promise<any> {
+let ssmClient: import("@aws-sdk/client-ssm").SSMClient | null = null;
+async function getSsmClient(): Promise<import("@aws-sdk/client-ssm").SSMClient> {
   if (!ssmClient) {
     const { SSMClient } = await import("@aws-sdk/client-ssm");
     ssmClient = new SSMClient({ region: REGION });
@@ -13,7 +13,7 @@ async function getSsmClient(): Promise<any> {
   return ssmClient;
 }
 
-interface AppConfig {
+export interface AppConfig {
   SES_FROM_EMAIL: string;
   SES_TO_EMAIL: string;
   AWS_SES_REGION: string;
@@ -148,13 +148,7 @@ interface AppConfig {
 }
 
 // Import D1 configuration functions
-import {
-  isWorkersEnvironment,
-  getD1Config,
-  getD1ConfigValue,
-  setD1ConfigValue,
-  type D1Config,
-} from "./ssm-config-d1.ts";
+import { isWorkersEnvironment, getD1Config } from "./ssm-config-d1.ts";
 
 let cached: AppConfig | null = null;
 let cachedAt = 0;

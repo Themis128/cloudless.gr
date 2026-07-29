@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q") ?? "";
   const type = searchParams.get("type");
-  const limit = Math.min(Number(searchParams.get("limit") ?? 20), 100);
+  const _limit = Math.min(Number(searchParams.get("limit") ?? 20), 100);
 
   try {
     if (type === "users") {

@@ -135,7 +135,7 @@ export default function ClusterStatusPage() {
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { watchdogs: any[]; fetchedAt: string | null };
+      const data = (await res.json()) as { watchdogs: Watchdog[]; fetchedAt: string | null };
       setWatchdogs(data.watchdogs ?? []);
       setFetchedAt(data.fetchedAt ?? null);
     } catch (e) {
@@ -150,8 +150,8 @@ export default function ClusterStatusPage() {
     try {
       const mres = await fetchWithAuth("/api/admin/cluster/mqtt-status");
       if (mres.ok) {
-        const j = (await mres.json()) as { status?: string };
-        setMqttStatus((j.status as any) ?? null);
+        const j = (await mres.json()) as { status?: MqttStatus };
+        setMqttStatus(j.status ?? null);
       }
     } catch {
       /* silent — chip degrades to — */
@@ -161,7 +161,7 @@ export default function ClusterStatusPage() {
     try {
       const kres = await fetchWithAuth("/api/admin/cluster/kuma-status");
       if (kres.ok) {
-        const j = (await kres.json()) as { summary?: any };
+        const j = (await kres.json()) as { summary?: KumaSummary };
         setKumaSummary(j.summary ?? null);
       }
     } catch {

@@ -48,6 +48,7 @@ flyctl secrets list --app cloudless-proxy
 ```
 
 Expected configuration in fly.toml:
+
 ```toml
 app = "cloudless-proxy"
 primary_region = "fra"
@@ -87,6 +88,7 @@ flyctl secrets list --app cloudless-proxy
 ```
 
 After changing secrets, redeploy:
+
 ```bash
 flyctl deploy --app cloudless-proxy
 ```
@@ -137,16 +139,19 @@ flyctl deploy --app cloudless-proxy
 ## Common Issues
 
 ### Proxy Returns 503
+
 - Check PRIMARY_HOST is reachable
 - Check health check endpoint is working: `curl https://cloudless.gr/api/health`
 - Check Fly.io logs: `flyctl logs --app cloudless-proxy --follow`
 
 ### Backend Connection Refused
+
 - Verify FALLBACK_HOST Tailscale address is correct
 - Check Tailscale connectivity on omv node
 - Verify Pi/k3s services are running
 
 ### Health Check Failing
+
 - Primary health endpoint may be down
 - Check Workers: `npx wrangler tail`
 - Consider increasing health_check_interval

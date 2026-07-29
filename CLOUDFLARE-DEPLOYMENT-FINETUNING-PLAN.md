@@ -1,9 +1,11 @@
 # Cloudflare Deployment & Fine-Tuning Plan
+
 # Generated: 2026-07-21 (Post-Sync Report)
 
 ## Executive Summary
 
 This plan covers the complete deployment workflow for cloudless.gr on Cloudflare Workers, including:
+
 - Resource provisioning (KV namespaces, secrets)
 - Worker deployment (main app + chat service)
 - Performance optimization and monitoring setup
@@ -16,6 +18,7 @@ This plan covers the complete deployment workflow for cloudless.gr on Cloudflare
 ### 1.1 KV Namespaces - ALREADY CREATED ✅
 
 Both TAG_CACHE and REVALIDATION_QUEUE have valid IDs in wrangler.jsonc:
+
 - TAG_CACHE: `e81bb5dcf84b452b978323f09a3f7428`
 - REVALIDATION_QUEUE: `b5b95ab1caed42a8b6e14f5db869bbc6`
 
@@ -40,6 +43,7 @@ npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
 ```
 
 **Verification:**
+
 ```bash
 npx wrangler secret list --config wrangler.jsonc
 ```
@@ -74,6 +78,7 @@ pnpm cf:build && pnpm cf:deploy
 ```
 
 **Build Process:**
+
 - Uses `@opennextjs/cloudflare` for Next.js optimization
 - Requires `open-next.config.ts` configuration (already in place)
 - Outputs to `./.opennext` then wrangler bundles
@@ -115,11 +120,13 @@ npx wrangler deploy -c wrangler.staging.jsonc
 ### 3.1 ISR Configuration
 
 The `open-next.config.ts` is configured with:
+
 - R2-based incremental cache (`CACHE_BUCKET`)
 - KV-based tag cache (`TAG_CACHE`)
 - KV-based queue (`REVALIDATION_QUEUE`)
 
 **Expected Performance Improvements:**
+
 | Metric | Before | After |
 |--------|--------|-------|
 | Cold start latency | ~2-3s | ~1-2s (cached) |
@@ -131,6 +138,7 @@ The `open-next.config.ts` is configured with:
 Configured paths: `/`, `/en`, `/el`, `/contact`, `/admin`
 
 **Verification After Deploy:**
+
 ```bash
 # Check if warming ran
 curl -s https://cloudless.gr/api/health | jq
@@ -171,6 +179,7 @@ curl -s https://cloudless.gr/api/analytics/health | jq
 ### 4.2 Workers Analytics
 
 Monitor via dashboard or CLI:
+
 ```bash
 # Get worker analytics
 npx wrangler tail cloudless-gr --config wrangler.jsonc
@@ -206,6 +215,7 @@ Already configured for chat service (10 req/min per IP). Consider adding:
 ### 5.2 CSP & Security Headers
 
 Already configured in `src/index.ts`:
+
 - HSTS (Max-Age: 2 years)
 - X-Frame-Options: DENY
 - Content-Security-Policy with comprehensive directives
@@ -254,6 +264,7 @@ curl -s https://cloudless.gr/api/chat \
 ### 6.3 Rollback Procedure
 
 If deployment fails:
+
 ```bash
 # Rollback to previous deployment
 npx wrangler rollback cloudless-gr --config wrangler.jsonc
@@ -357,6 +368,7 @@ Configured cron schedules in `sst.config.cloudflare.ts`:
 ### 10.1 Image Optimization (Next.js config)
 
 From `next.config.ts`:
+
 - Formats: AVIF first, WebP fallback
 - Device sizes: [640, 750, 828, 1080, 1200, 1920, 2048] (removed 3840/8K)
 - Cache TTL: 30 days for optimized variants
@@ -469,6 +481,7 @@ After running `npx wrangler kv namespace create`, update wrangler.jsonc:
 ## Architecture Summary
 
 **Current Bindings (16 total):**
+
 1. 3 Durable Objects: `CounterAgent`, `EchoAgent`, `CodingAgent`
 2. 2 KV Namespaces: `TAG_CACHE`, `REVALIDATION_QUEUE`
 3. 1 Send Email: `EMAIL`

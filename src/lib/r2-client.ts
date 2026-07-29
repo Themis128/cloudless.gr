@@ -5,16 +5,28 @@
  * Handles environment detection (Workers vs Lambda) and routing to appropriate bucket.
  */
 
+import type { R2Bucket } from "@cloudflare/workers-types";
+
+interface R2Env {
+  ASSETS_BUCKET?: R2Bucket;
+  MEDIA_BUCKET?: R2Bucket;
+  DATALAKE_BUCKET?: R2Bucket;
+}
+
+interface NodeProcess {
+  env?: { AWS_LAMBDA_FUNCTION_NAME?: string };
+}
+
 // Environment detection
 export function isCloudflareWorkers(): boolean {
   return (
-    typeof (globalThis as any).caches !== "undefined" &&
-    !(process as any).env?.AWS_LAMBDA_FUNCTION_NAME
+    typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined" &&
+    !(process as unknown as NodeProcess).env?.AWS_LAMBDA_FUNCTION_NAME
   );
 }
 
 // Get R2 bucket binding for assets (static files)
-export function getAssetsBucket(env: any): R2Bucket | null {
+export function getAssetsBucket(env: R2Env): R2Bucket | null {
   // In Workers: env.ASSETS_BUCKET
   // In Lambda: null (use CloudFront/S3)
   if (isCloudflareWorkers() && env?.ASSETS_BUCKET) {
@@ -24,7 +36,7 @@ export function getAssetsBucket(env: any): R2Bucket | null {
 }
 
 // Get R2 bucket binding for media (user uploads)
-export function getMediaBucket(env: any): R2Bucket | null {
+export function getMediaBucket(env: R2Env): R2Bucket | null {
   if (isCloudflareWorkers() && env?.MEDIA_BUCKET) {
     return env.MEDIA_BUCKET;
   }
@@ -32,7 +44,7 @@ export function getMediaBucket(env: any): R2Bucket | null {
 }
 
 // Get R2 bucket binding for analytics/datalake
-export function getDataLakeBucket(env: any): R2Bucket | null {
+export function getDataLakeBucket(env: R2Env): R2Bucket | null {
   if (isCloudflareWorkers() && env?.DATALAKE_BUCKET) {
     return env.DATALAKE_BUCKET;
   }
@@ -41,7 +53,7 @@ export function getDataLakeBucket(env: any): R2Bucket | null {
 
 // Serve static asset from R2 with proper headers
 export async function serveStaticAsset(
-  env: any,
+  env: R2Env,
   key: string,
   opts: { cacheSeconds?: number } = {}
 ): Promise<Response | null> {
@@ -85,7 +97,7 @@ export async function serveStaticAsset(
 
 // List objects in an R2 bucket (for admin operations)
 export async function listR2Objects(
-  env: any,
+  env: R2Env,
   bucketType: "assets" | "media" | "lake",
   prefix = ""
 ): Promise<string[]> {

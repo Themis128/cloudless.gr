@@ -33,19 +33,23 @@ The Context7 MCP server has been successfully installed and configured for cloud
 ### How to Activate
 
 **Step 1: Obtain API Key**
+
 - Visit: https://context7.com/dashboard
 - Create an account or log in
 - Generate an API key (starts with `ctx7sk` prefix)
 
 **Step 2: Set Environment Variable**
+
 ```bash
 export CONTEXT7_API_KEY="ctx7sk_your_key_here"
 ```
 
 **Step 3: Restart Cline**
+
 - Restart the Cline application to reload the MCP configuration
 
 **Step 4: Test the Integration**
+
 - Once restarted, you can use Context7 in your prompts:
   - "How do I set up authentication with JWT in Express.js? use context7"
   - "How do I configure Tailwind CSS in a Next.js 14 project? use context7"
@@ -81,7 +85,7 @@ Options:
 
 - **Without API Key**: Server works but has lower rate limits
 - **With API Key**: Full functionality with higher rate limits and access to more documentation
-- **Transport Options**: 
+- **Transport Options**:
   - `stdio` (default) - Best for local development
   - `http` - For remote servers (requires header-based auth)
 

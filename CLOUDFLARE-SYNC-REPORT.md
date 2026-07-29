@@ -1,4 +1,5 @@
 # Cloudflare Dashboard Cleanup & Sync Report
+
 # Generated: 2026-07-20
 
 ## Executive Summary
@@ -8,37 +9,48 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 ## Changes Made
 
 ### 1. OpenNext.js Configuration (`open-next.config.ts`)
+
 **Before:** Used `dummy` caches which disable production caching features
 **After:** Production-ready configuration with:
+
 - ✅ R2-based Incremental Cache for ISR (using CACHE_BUCKET)
 - ✅ KV-based Tag Cache for cache invalidation
 - ✅ KV-based Queue for scheduled revalidation
 - ✅ Route warming for `/`, `/en`, `/el`, `/contact`, `/admin`
 
 ### 2. Wrangler Configuration (`wrangler.jsonc`)
+
 **Added:**
+
 - ✅ `kv_namespaces` section with TAG_CACHE and REVALIDATION_QUEUE bindings
 - ✅ Staging environment KV namespace configuration
 
 **Removed:**
+
 - ❌ ADMIN_API service binding (no /services/admin folder exists)
 
 **Fixed:**
+
 - ✅ Chat service entrypoint: `cloudless-chat` → `cloudless-gr-chat`
 - ✅ Chat entrypoint class name: `ChatAgent` (matches code)
 
 ### 3. Chat Service (`services/chat/src/index.ts`)
+
 **Fixed:**
+
 - ✅ Changed `ChatEntrypoint` class to `ChatAgent` to match wrangler.jsonc entrypoint
 
 ### 4. Main Worker (`src/index.ts`)
+
 **Added:**
+
 - ✅ `TAG_CACHE` and `REVALIDATION_QUEUE` to Env interface (optional for OpenNext.js)
 - ✅ Removed ADMIN_API binding (no longer referenced)
 
 ## Current Resource State
 
 ### R2 Buckets (✅ All 8 in sync)
+
 | Name | Status |
 |------|--------|
 | cloudless-assets | ✅ Active |
@@ -51,6 +63,7 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 | datalake-bucket-preview | ✅ Active |
 
 ### D1 Databases (⚠️ Cleanup needed)
+
 | Name | Status |
 |------|--------|
 | user-auth-db | ✅ In use |
@@ -58,6 +71,7 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 | cloudless-auth | ❌ ORPHANED - should delete |
 
 ### KV Namespaces (✅ Ready)
+
 | Binding | Status |
 |---------|--------|
 | TAG_CACHE | ✅ Created with valid ID |
@@ -65,6 +79,7 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 | HEALTH_CACHE | ❌ ORPHANED - should delete |
 
 ### Secrets (⚠️ GEMINI_API_KEY Critical)
+
 | Name | Status |
 |------|--------|
 | CRON_SECRET | ✅ Set |
@@ -73,6 +88,7 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 | GEMINI_API_KEY | ❌ **CRITICAL** - Not in Wrangler (needed for chat) |
 
 ### Service Workers
+
 | Name | Status |
 |------|--------|
 | cloudless-gr | ✅ Main worker |
@@ -84,13 +100,16 @@ The Cloudflare dashboard has been analyzed and configuration files have been upd
 ## Next Steps Required (Run these commands)
 
 ### 1. KV Namespaces - ALREADY CREATED ✅
+
 Both TAG_CACHE and REVALIDATION_QUEUE have valid IDs in wrangler.jsonc:
+
 - TAG_CACHE: `e81bb5dcf84b452b978323f09a3f7428`
 - REVALIDATION_QUEUE: `b5b95ab1caed42a8b6e14f5db869bbc6`
 
 No action needed unless IDs are incorrect.
 
 ### 2. Set Critical Secrets (GEMINI_API_KEY Required)
+
 ```bash
 # CRITICAL: This enables the /api/chat endpoint
 npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
@@ -105,6 +124,7 @@ npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
 ```
 
 ### 4. Clean Up Orphaned Resources (Optional)
+
 ```bash
 # Delete orphaned D1 database
 npx wrangler d1 delete cloudless-auth --force --config wrangler.jsonc
@@ -114,6 +134,7 @@ npx wrangler kv namespace delete 9a6997af9ff5495ba72b31d2c1e5e6dd --force --conf
 ```
 
 ### 5. Deploy Chat Service
+
 ```bash
 cd services/chat
 npx wrangler deploy
@@ -135,6 +156,7 @@ curl -s https://cloudless.gr/api/auth/session | jq
 ## Configuration Summary
 
 Your worker now has exactly 16 bindings:
+
 - 3 Durable Objects (CounterAgent, EchoAgent, CodingAgent)
 - 2 KV Namespaces (TAG_CACHE, REVALIDATION_QUEUE)
 - 1 Send Email binding
@@ -149,6 +171,7 @@ Your worker now has exactly 16 bindings:
 ## Performance Benefits
 
 With the updated OpenNext.js configuration:
+
 1. **ISR (Incremental Static Regeneration)** - Will use CACHE_BUCKET for caching
 2. **Cache Invalidation** - TAG_CACHE enables on-demand revalidation
 3. **Route Warming** - Key pages will be pre-warmed after deploy

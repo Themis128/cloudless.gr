@@ -36,17 +36,20 @@ export default {
 ```
 
 **Pros:**
+
 - Easy per-endpoint rollback
 - Zero downtime
 - Test with real production traffic
 - Team builds confidence gradually
 
 **Cons:**
+
 - Slow (weeks-months)
 - 2 stacks in parallel
 - Extra latency for AWS endpoints
 
 **When to use:**
+
 - Critical production app
 - Small team, no downtime tolerance
 - Need to validate incrementally
@@ -56,6 +59,7 @@ export default {
 Full Cloudflare stack on staging, DNS cutover overnight.
 
 **Timeline:**
+
 ```
 Week 1-3: Lambda → Worker rewrite, D1/R2 schema, staging
 Week 4: End-to-end QA, load test
@@ -64,6 +68,7 @@ Week 6: DNS cutover, monitor 48h
 ```
 
 **Cutover steps (Saturday 2AM, lowest traffic):**
+
 - T-60min: Freeze writes to AWS (read-only mode)
 - T-55min: Incremental data sync (S3→R2, DynamoDB→D1 delta)
 - T-30min: Verify data parity
@@ -75,6 +80,7 @@ Week 6: DNS cutover, monitor 48h
 - T+24h: Close monitoring
 
 **When to use:**
+
 - Small app (< 20 endpoints)
 - Team has both AWS + CF experience
 - Free dev window available
@@ -90,6 +96,7 @@ User → Cloudflare Worker (auth, cache, rate limit)
 ```
 
 **When to use:**
+
 - Specialized AWS workloads (ML training, data warehouse)
 - Cannot migrate core services
 - Clear edge savings needed (WAF, cache, DDoS)
@@ -108,6 +115,7 @@ User → Cloudflare Worker (auth, cache, rate limit)
 ## Implementation Checklist
 
 ### Before Any Strategy
+
 - [ ] Cost evaluation completed
 - [ ] Non-migrable workloads identified
 - [ ] Strategy selected
@@ -116,12 +124,14 @@ User → Cloudflare Worker (auth, cache, rate limit)
 - [ ] Rollback plan documented
 
 ### During Migration
+
 - [ ] Post-deploy smoke tests (Part 12)
 - [ ] Error rate + latency monitoring
 - [ ] Data parity checks
 - [ ] Security header verification
 
 ### After Migration
+
 - [ ] 1-month cost tracking
 - [ ] Performance comparison
 - [ ] Decommission AWS resources
@@ -132,4 +142,4 @@ User → Cloudflare Worker (auth, cache, rate limit)
 - `skills/aws-migration-preflight/SKILL.md` — Pre-flight checklist
 - `skills/aws-post-migration/SKILL.md` — Post-migration cleanup
 - `MIGRATION-STATUS.md` — Current migration status
-- ` FULL-CLOUDFLARE-CUTTOVER-PLAN.md` — Full cutover plan
+- `FULL-CLOUDFLARE-CUTTOVER-PLAN.md` — Full cutover plan

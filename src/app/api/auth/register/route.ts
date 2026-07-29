@@ -43,10 +43,7 @@ export async function POST(req: NextRequest) {
   // Validate password strength
   const passwordError = validatePassword(password);
   if (passwordError) {
-    return NextResponse.json(
-      { error: passwordError },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
   // Hash the password
@@ -54,12 +51,11 @@ export async function POST(req: NextRequest) {
 
   try {
     // Create user in D1
-    const userId = await AUTH_DB.prepare(
+    await AUTH_DB.prepare(
       "INSERT INTO users (email, password_hash, full_name, created_at) VALUES (?, ?, ?, ?)"
     )
       .bind(email, hashedPassword, fullName, new Date().toISOString())
-      .run()
-      .then((result) => result.lastInsertRowId());
+      .run();
 
     // Generate activation token
     const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
@@ -69,7 +65,7 @@ export async function POST(req: NextRequest) {
     const token = `${nonce}.${exp}.${sig}`;
 
     // Derive OTP from token
-    const otp = (
+    const _otp = (
       parseInt(
         createHmac("sha256", secret)
           .update(`otp:${email}:${exp}:${nonce}`)
@@ -117,6 +113,7 @@ function validatePassword(password: string): string | null {
   if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
   if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
   if (!/[0-9]/.test(password)) return "Password must contain at least one number";
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return "Password must contain at least one special character";
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
+    return "Password must contain at least one special character";
   return null;
 }

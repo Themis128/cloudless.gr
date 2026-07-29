@@ -36,6 +36,7 @@ npx wrangler whoami
 ```
 
 Required permissions:
+
 - Account: Workers Scripts (Read/Edit)
 - Account: R2 Storage (Read/Edit)
 - Account: D1 Database (Read/Edit)
@@ -57,6 +58,7 @@ npx wrangler secret list --config wrangler-cloudflare-free.json
 ```
 
 If any secrets are missing, run:
+
 ```bash
 # Sync from SSM (if available)
 AWS_PROFILE=default pnpm tsx scripts/sync-ssm-to-wrangler.ts

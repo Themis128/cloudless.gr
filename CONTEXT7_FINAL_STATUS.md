@@ -7,12 +7,14 @@ The Context7 MCP server has been successfully installed and configured for cloud
 ## Installation Verification
 
 ### 1. Installation Directory ✅
+
 - **Location**: `/home/tbaltzakis/Cline/MCP/context7/`
 - **Node.js**: v22.22.1 (compatible)
 - **Package**: `@upstash/context7-mcp` v3.2.4
 - **Dependencies**: All 100+ packages installed successfully
 
 ### 2. Configuration ✅
+
 - **File**: `/home/tbaltzakis/.cline/data/settings/cline_mcp_settings.json`
 - **Server Name**: `github.com/upstash/context7-mcp`
 - **Transport**: stdio (default)
@@ -20,6 +22,7 @@ The Context7 MCP server has been successfully installed and configured for cloud
 - **Status**: Server disabled flag set to `false` for automatic activation
 
 ### 3. Server Functionality ✅
+
 - Help command executes successfully
 - Server loads without errors
 - Both transport modes available (stdio/http)
@@ -27,13 +30,17 @@ The Context7 MCP server has been successfully installed and configured for cloud
 ## Available Tools
 
 ### 1. `resolve-library-id`
+
 Resolves package names to Context7-compatible library IDs.
+
 - Returns matching libraries with descriptions
 - Provides code snippets and versions
 - Essential for document queries
 
 ### 2. `query-docs`
+
 Retrieves up-to-date documentation and code examples from Context7's knowledge base.
+
 - Fetches current documentation
 - Returns working code examples
 - Accessible for any library/framework
@@ -43,34 +50,42 @@ Retrieves up-to-date documentation and code examples from Context7's knowledge b
 The server is configured to use the environment variable for API key storage (security best practice).
 
 ### Step 1: Obtain API Key
+
 Visit https://context7.com/dashboard to get your API key (starts with `ctx7sk` prefix).
 
 ### Step 2: Set Environment Variable
+
 ```bash
 export CONTEXT7_API_KEY="ctx7sk_your_key_here"
 ```
 
 ### Step 3: Restart Cline
+
 Restart the Cline application to load the new MCP configuration.
 
 ### Step 4: Test
+
 After restart, use prompts like:
+
 - "How do I set up authentication with JWT in Express.js? use context7"
 - "How do I configure Tailwind CSS in a Next.js 14 project? use context7"
 
 ## Usage Examples
 
 ### Direct CLI Usage (without API key - limited)
+
 ```bash
 npx @upstash/context7-mcp --help
 ```
 
 ### With API Key
+
 ```bash
 npx @upstash/context7-mcp --api-key ctx7sk_your_key_here
 ```
 
 ### HTTP Transport (for remote servers)
+
 ```bash
 npx @upstash/context7-mcp --transport http --port 3000 --api-key ctx7sk_your_key_here
 ```
@@ -108,6 +123,7 @@ The Context7 MCP server is **READY FOR PRODUCTION USE**. The only action require
 ## Troubleshooting
 
 If the server doesn't load after setting the API key:
+
 1. Verify the environment variable is set: `echo $CONTEXT7_API_KEY`
 2. Restart Cline completely
 3. Check that the server appears in MCP servers list

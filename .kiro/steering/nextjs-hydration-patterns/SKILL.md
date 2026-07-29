@@ -9,11 +9,13 @@ Reference guide for avoiding React hydration mismatches in this codebase.
 **Hydration mismatch**: the HTML the server rendered does not match what React produces on the first client render. React bails out and throws error #418.
 
 URL format in the console:
+
 ```
 https://react.dev/errors/418?args[]=text&args[]=
 ```
 
 **When it fires:**
+
 - A component reads browser-only state (`window`, `localStorage`, `matchMedia`) during render
 - `useState` initializer calls a non-deterministic function (`Math.random()`, `Date.now()`, `crypto.randomUUID()`)
 - `useSyncExternalStore` returns a different value on server vs. first client render
@@ -141,6 +143,7 @@ const ChatWidget = dynamic(() => import("@/components/ChatWidget"), {
 **Problem:** `dynamic()` without `ssr: false` + `crypto.randomUUID()` in `useState` initializer.
 
 **Fix:**
+
 ```tsx
 // components/ChatWidget loaded via:
 const ChatWidget = dynamic(() => import("@/components/ChatWidget"), {
@@ -160,6 +163,7 @@ const [messages, setMessages] = useState([
 **Problem:** `useSyncExternalStore` reading `sessionStorage` — server snapshot `""` differed from client snapshot on first render.
 
 **Fix:** replaced `useSyncExternalStore` with `useState(false) + useEffect`:
+
 ```tsx
 const [dismissed, setDismissed] = useState(false);
 useEffect(() => {
@@ -172,6 +176,7 @@ useEffect(() => {
 **Problem:** `useSyncExternalStore` reading `window.location.hostname` — undefined on server.
 
 **Fix:**
+
 ```tsx
 const [shouldLoad, setShouldLoad] = useState(false);
 useEffect(() => {
@@ -184,6 +189,7 @@ useEffect(() => {
 ## 5. `suppressHydrationWarning` Scope
 
 `suppressHydrationWarning={true}` on an element **only** suppresses:
+
 - Attribute differences on that element
 - Text content differences of direct text children
 

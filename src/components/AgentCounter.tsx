@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 type CounterAgentResponse = {
   count?: number;
@@ -14,23 +14,26 @@ export default function AgentCounter() {
 
   const agentUrl = "/api/agents/counter-agent/default";
 
-  async function callAgent(method: string): Promise<CounterAgentResponse> {
-    try {
-      const response = await fetch(`${agentUrl}?method=${method}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
+  const callAgent = useCallback(
+    async (method: string): Promise<CounterAgentResponse> => {
+      try {
+        const response = await fetch(`${agentUrl}?method=${method}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status}`);
+        }
+        const data = (await response.json()) as CounterAgentResponse;
+        return data;
+      } catch (err) {
+        return { error: (err as Error).message };
       }
-      const data = (await response.json()) as CounterAgentResponse;
-      return data;
-    } catch (err) {
-      return { error: (err as Error).message };
-    }
-  }
+    },
+    [agentUrl]
+  );
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     const result = await callAgent("getCount");
@@ -40,7 +43,7 @@ export default function AgentCounter() {
       setCount(result.count ?? 0);
     }
     setLoading(false);
-  }
+  }, [callAgent]);
 
   async function increment() {
     const result = await callAgent("increment");
@@ -70,8 +73,10 @@ export default function AgentCounter() {
   }
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    queueMicrotask(() => {
+      void refresh();
+    });
+  }, [refresh]);
 
   return (
     <div className="space-y-4">

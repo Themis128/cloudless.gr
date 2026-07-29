@@ -5,6 +5,7 @@ Meta's "Business Portfolio" (the product formerly known as Business Manager) is 
 ## 1. Anatomy of a Business Portfolio
 
 A Portfolio has:
+
 - **An owner** (you, the person who created it)
 - **Assets** — Pages, IG accounts, ad accounts, Pixels, Catalogs, Datasets (Events Manager), WhatsApp Business Accounts
 - **People** — users with roles on the portfolio itself + specific permissions on each asset
@@ -12,6 +13,7 @@ A Portfolio has:
 - **Billing** — payment methods and tax info (separate from per-ad-account billing)
 
 Assets within a portfolio get **portfolio-level permissions** layered on top of per-asset roles. A user can be:
+
 - Admin on the portfolio (full access to all current + future assets)
 - Employee on the portfolio (limited by per-asset role)
 - Explicitly assigned to a specific asset without portfolio-wide access
@@ -27,6 +29,7 @@ https://business.facebook.com/latest/select-business
 or from any portfolio page, click the business name in the top-left to switch.
 
 **cloudless.gr context:** Themis has TWO portfolios:
+
 - `1558125105019725` — "Themistoklis Baltzakis" (auto-created, functional, has Page)
 - `1526956002406847` — "cloudless.gr" (manually created, carries the IG link but flagged "can't advertise")
 
@@ -39,6 +42,7 @@ Decision recorded in auto-memory: keep everything in `1558125105019725`; do not 
 Direct URL: `https://business.facebook.com/latest/settings/pages?business_id=<PORTFOLIO_ID>`
 
 Three flows:
+
 1. **Add a Page you own** — simplest, instant. You must be currently an admin of the Page on your personal profile.
 2. **Claim a Page** — if another portfolio owns it, you request ownership. The current owner portfolio's admin must approve (or Meta support arbitrates if the request is legitimate business transfer).
 3. **Request access (agency mode)** — you don't own the Page, you just need Admin/Editor/Advertiser access to do work. The Page admin grants access but retains ownership. THIS IS WHAT CAUSES "LITE MODE" — see `page-and-ig.md`.
@@ -50,10 +54,12 @@ Three flows:
 Direct URL: `https://business.facebook.com/latest/settings/instagram_accounts?business_id=<PORTFOLIO_ID>`
 
 Requirements:
+
 - IG must already be a **Business** or **Creator** account (switch in IG mobile app → Settings → Account)
 - You must know the IG login credentials OR the IG account must be linked to a Page inside the same portfolio
 
 Flow:
+
 1. Click "Add" → enter IG username + password OR "I already have access" (if linked via Page)
 2. Meta then asks: "Which ad accounts should this IG be available in?" — pick your portfolio's ad accounts
 
@@ -76,6 +82,7 @@ Claim existing: same workflow as Page claim; owner must approve.
 Go to: Settings → People → Add
 
 Portfolio-level roles:
+
 - **Admin** — full access, can add/remove people and assets
 - **Employee** — default role, permissions granted per-asset
 - **Finance Analyst** — only sees billing / spend reports
@@ -84,15 +91,18 @@ Portfolio-level roles:
 Per-asset roles (set by assigning the person to specific assets):
 
 For a **Page**:
+
 - Full control (Admin) — can manage everything including roles
 - Partial access: Create content, Messages and community activity, Community activity and messages, Ads, Insights, see `page-and-ig.md`
 
 For an **ad account**:
+
 - Admin — full access including billing
 - Advertiser — can create/edit ads but not billing
 - Analyst — read-only
 
 For an **IG business account**:
+
 - Full control
 - Content creator
 - Community manager
@@ -115,6 +125,7 @@ This error shows when your portfolio is flagged for one of several reasons. Try 
 URL: `https://business.facebook.com/latest/settings/info?business_id=<PORTFOLIO_ID>` → look for "Business restrictions" card.
 
 Typical reasons:
+
 1. **No verified business info** — fill in legal name, address, phone, website, tax ID (optional for EU sole proprietors but recommended)
 2. **Policy violation** — a previous ad was flagged; portfolio entered review mode
 3. **Suspicious activity** — multiple rapid asset changes triggered automated flag
@@ -126,6 +137,7 @@ Typical reasons:
 URL: `https://business.facebook.com/security/businessverification/?business_id=<PORTFOLIO_ID>`
 
 What you need:
+
 - Legal business name (matches tax documents)
 - Business address (matches a utility bill or registration cert)
 - Phone number (SMS or call verification)
@@ -133,6 +145,7 @@ What you need:
 - A document: business license, incorporation cert, VAT/tax certificate — EU sole proprietors often submit VIES / tax number
 
 Greek sole proprietors can submit:
+
 - VAT registration (AFM document) — primary
 - Business license from the local Επιμελητήριο if registered
 - Tax clearance certificate as backup
@@ -156,9 +169,11 @@ For `1558125105019725` (the functional one): verify business identity preemptive
 If you want to work with an agency or the agency wants to work in your portfolio:
 
 **You give agency access to YOUR portfolio's assets:**
+
 - Settings → Partners → Add → Give a partner access to your assets → Enter partner portfolio ID → Pick assets + roles
 
 **You access agency's portfolio:**
+
 - Agency sends you an invitation link; accept and pick which of your portfolios links in
 
 Partner relationships are per-asset; removing the partnership removes ALL asset access at once.

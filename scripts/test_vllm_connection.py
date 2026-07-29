@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -9,7 +10,9 @@ client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY", "EMPTY"),
 )
 
-model = os.getenv("LOCAL_VLLM_MODEL", os.getenv("LOCAL_MODEL_NAME", "Qwen/Qwen2.5-Coder-3B-Instruct-AWQ"))
+model = os.getenv(
+    "LOCAL_VLLM_MODEL", os.getenv("LOCAL_MODEL_NAME", "Qwen/Qwen2.5-Coder-3B-Instruct-AWQ")
+)
 
 response = client.chat.completions.create(
     model=model,

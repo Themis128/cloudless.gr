@@ -36,7 +36,11 @@ export async function POST(request: NextRequest) {
   }
 
   const config = await getConfig();
-  const secret = config.APPFLOWY_WEBHOOK_SECRET || process.env.APPFLOWY_WEBHOOK_SECRET || "";
+  const secret =
+    process.env.APPFLOWY_WEBHOOK_SECRET ||
+    process.env.CONTENT_WEBHOOK_SECRET ||
+    config.APPFLOWY_JWT_SECRET ||
+    "";
   // Verify webhook secret if configured
   const providedSecret = request.headers.get("x-content-webhook-secret") ?? "";
   if (secret && !safeEq(providedSecret, secret)) {

@@ -2,7 +2,6 @@ import argparse
 import re
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_SECTIONS = [
@@ -57,6 +56,7 @@ def contextual_forbidden_errors(text: str) -> list[str]:
 
     return errors
 
+
 RECOMMENDED_TEST_MARKERS = [
     "pnpm run ai:skills-check",
     "pnpm run ai:test:api",
@@ -73,8 +73,8 @@ def is_relative_to_repo(path: Path) -> bool:
 
 
 def review_proposal(path: Path) -> tuple[bool, list[str], list[str]]:
-    errors = []
-    warnings = []
+    errors: list[str] = []
+    warnings: list[str] = []
 
     if not path.exists():
         errors.append(f"Proposal does not exist: {path}")

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         );
       }
       const productIds = productIdsParam.split(",").map((s) => s.trim());
-      const products = await getSimilarProducts(productIds, limit);
+      const products = await getSimilarProducts({}, productIds, limit);
       recommendations = products.map((p) => ({
         id: p.id,
         name: p.name,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         image: p.image,
       }));
     } else {
-      const products = await getTrendingProducts(30, limit);
+      const products = await getTrendingProducts({}, 30, limit);
       recommendations = products.map((p) => ({
         id: p.id,
         name: p.name,

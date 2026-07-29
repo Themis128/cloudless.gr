@@ -9,7 +9,6 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.vibe_review import review_proposal
 
-
 SECTION_RE = re.compile(r"^## (?P<title>.+)$", re.MULTILINE)
 
 
@@ -58,7 +57,9 @@ def build_plan(proposal_path: Path) -> str:
         "",
         "## Review status",
         "",
-        "✅ Passed deterministic safety review." if ok else "❌ Failed deterministic safety review.",
+        "✅ Passed deterministic safety review."
+        if ok
+        else "❌ Failed deterministic safety review.",
         "",
     ]
 
@@ -144,7 +145,7 @@ def build_plan(proposal_path: Path) -> str:
         lines.extend(
             [
                 "- Open `tests/langsmith_api/test_endpoints.py`.",
-                "- Add a test that reads `get_endpoint(\"langsmith.health\")` and `get_endpoint(\"fleet.connections.list\")`.",
+                '- Add a test that reads `get_endpoint("langsmith.health")` and `get_endpoint("fleet.connections.list")`.',
                 "- Assert `langsmith.health` has `auth_required is False`.",
                 "- Assert `fleet.connections.list` has `auth_required is True`.",
                 "- Run `pnpm run ai:test:api`.",
@@ -206,9 +207,13 @@ def build_plan(proposal_path: Path) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Create an implementation plan from a reviewed vibe proposal")
+    parser = argparse.ArgumentParser(
+        description="Create an implementation plan from a reviewed vibe proposal"
+    )
     parser.add_argument("proposal", help="Path to proposal markdown file")
-    parser.add_argument("--write", action="store_true", help="Write a .plan.md next to the proposal")
+    parser.add_argument(
+        "--write", action="store_true", help="Write a .plan.md next to the proposal"
+    )
     args = parser.parse_args()
 
     proposal_path = (REPO_ROOT / args.proposal).resolve()

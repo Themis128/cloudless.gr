@@ -1,6 +1,7 @@
 # AWS → Cloudflare Migration Plan
 
 ## Overview
+
 Migrate remaining AWS services to Cloudflare equivalents to complete the cloudless.gr migration.
 
 ---
@@ -8,11 +9,13 @@ Migrate remaining AWS services to Cloudflare equivalents to complete the cloudle
 ## Current AWS Services in Use
 
 ### 1. SSM Parameters (Secrets Management)
+
 **Current:** `/cloudless/production/*` parameters stored in AWS SSM SecureString
 
 **Cloudflare Replacement:** Workers KV or D1 secrets via wrangler secret put
 
 **Services affected:**
+
 - `ADMIN_ALERT_SECRET` - For alert webhook authentication
 - `POSTIZ_ADMIN_EMAIL/PASSWORD` - Postiz admin credentials
 - `POSTIZ_API_KEY` - Postiz API key (if needed)
@@ -21,13 +24,15 @@ Migrate remaining AWS services to Cloudflare equivalents to complete the cloudle
 ### 2. Lambda Functions - TO BE MIGRATED
 
 #### pi-proxy Lambda
+
 - **Current purpose:** Tailscale → Pi failover proxy
 - **Cloudflare replacement:** Workers + Tailscale Funnel or Cloudflare Tunnel
-- **Migration path:** 
+- **Migration path:**
   - Create `/api/pi-proxy` Workers route that proxies to Pi via Tailscale IP
   - The pi-alert-api already runs on Pi - can be exposed via tunnel directly
 
 #### SES-to-EspoCRM Lambda  
+
 - **Current purpose:** Receive email from SES → Create EspoCRM contact/deal
 - **Cloudflare replacement:** Email Routing + Email Service webhook
 - **Migration path:**
@@ -57,10 +62,12 @@ npx wrangler kv:key put --binding=SECRETS "<key>" "<value>"
 ### Phase 2: Lambda Migration
 
 #### pi-proxy → Workers Proxy
+
 - Current: Standalone Lambda function proxying Tailscale traffic
 - Replace: Workers route at `/api/pi-proxy/*` that forwards to Pi Tailscale IP
 
 #### SES-to-EspoCRM → Workers Email Handler
+
 - Current: SES inbound → Lambda → EspoCRM API
 - Replace: Cloudflare Email Routing → Workers `/api/inbound-email` → EspoCRM
 

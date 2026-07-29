@@ -45,6 +45,7 @@ CLOUDFLARE_ACCOUNT_ID=fb7dc7b69b662480cd5961a4d1913c78
 ### API Token Permissions
 
 For the **bindings server**, create a token with:
+
 - Account Settings: Read
 - Workers Scripts: Read & Write
 - KV Storage: Read & Write
@@ -53,10 +54,12 @@ For the **bindings server**, create a token with:
 - Hyperdrive: Read & Write
 
 For **observability**, add:
+
 - Workers Telemetry: Read
 - Logpush: Read
 
 For **browser rendering**, add:
+
 - Browser Rendering: Read
 
 ## Available Tools by Server
@@ -64,6 +67,7 @@ For **browser rendering**, add:
 ### cloudflare-bindings (Most Relevant for cloudless.gr)
 
 Since cloudless.gr uses:
+
 - KV namespaces
 - Workers
 - R2 buckets
@@ -73,6 +77,7 @@ Since cloudless.gr uses:
 You can use these tools directly:
 
 **KV Namespaces:**
+
 - `kv_namespaces_list` - List all KV namespaces
 - `kv_namespace_create` - Create a new namespace
 - `kv_namespace_delete` - Delete a namespace
@@ -80,17 +85,20 @@ You can use these tools directly:
 - `kv_namespace_update` - Update namespace title
 
 **Workers:**
+
 - `workers_list` - List all Workers
 - `workers_get_worker` - Get Worker details
 - `workers_get_worker_code` - Get Worker source code
 
 **R2 Buckets:**
+
 - `r2_buckets_list` - List all buckets
 - `r2_bucket_create` - Create a bucket
 - `r2_bucket_get` - Get bucket details
 - `r2_bucket_delete` - Delete a bucket
 
 **D1 Databases:**
+
 - `d1_databases_list` - List all D1 databases
 - `d1_database_create` - Create a database
 - `d1_database_delete` - Delete a database
@@ -98,6 +106,7 @@ You can use these tools directly:
 - `d1_database_query` - Execute SQL queries
 
 **Hyperdrive:**
+
 - `hyperdrive_configs_list` - List Hyperdrive configs
 - `hyperdrive_config_create` - Create a config
 - `hyperdrive_config_delete` - Delete a config
@@ -107,6 +116,7 @@ You can use these tools directly:
 ### cloudflare (General Purpose)
 
 The general Cloudflare MCP server provides:
+
 - Pages deployment management
 - DNS zone/record management
 - Account information
@@ -115,6 +125,7 @@ The general Cloudflare MCP server provides:
 ### cloudflare-docs
 
 Search and read Cloudflare documentation for:
+
 - API references
 - Worker development guides
 - Feature documentation
@@ -122,6 +133,7 @@ Search and read Cloudflare documentation for:
 ### cloudflare-browser
 
 Useful for:
+
 - Screenshot capture for monitoring
 - Web page content extraction
 - Markdown conversion of web pages
@@ -129,6 +141,7 @@ Useful for:
 ### cloudflare-observability
 
 Access:
+
 - Workers logs
 - Analytics data
 - Deployment traces
@@ -165,6 +178,7 @@ If using with other MCP clients, add to your configuration:
 ### "Claude's response was interrupted"
 
 This indicates the server hit context limits. Try:
+
 - Being more specific in your queries
 - Breaking requests into smaller tool calls
 - Limiting the scope of queries
@@ -172,6 +186,7 @@ This indicates the server hit context limits. Try:
 ### Authentication Errors
 
 Ensure:
+
 - `CLOUDFLARE_API_TOKEN` is valid and not expired
 - Token has all required permissions
 - Account ID is correct
@@ -179,6 +194,7 @@ Ensure:
 ### Connection Issues
 
 If local development has connectivity issues:
+
 1. Check wrangler is logged in: `pnpm wrangler whoami`
 2. Verify API token in Cloudflare dashboard
 3. Check network connectivity to Cloudflare services

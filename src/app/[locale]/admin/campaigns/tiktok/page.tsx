@@ -43,10 +43,10 @@ export default function TikTokPage() {
         return;
       }
       if (!camRes.ok) throw new Error("Failed to load campaigns");
-      const camData = (await camRes.json()) as { campaigns: any[] };
+      const camData = (await camRes.json()) as { campaigns: TikTokCampaign[] };
       setCampaigns(camData.campaigns ?? []);
       if (insRes.ok) {
-        const insData = (await insRes.json()) as { insights: any };
+        const insData = (await insRes.json()) as { insights: Insights };
         setInsights(insData.insights ?? null);
       }
     } catch (e) {

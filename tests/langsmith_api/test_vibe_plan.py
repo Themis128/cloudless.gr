@@ -50,7 +50,7 @@ def test_vibe_plan_includes_langsmith_auth_steps(tmp_path, monkeypatch):
 
     plan = vibe_plan.build_plan(proposal)
 
-    assert "get_endpoint(\"langsmith.health\")" in plan
+    assert 'get_endpoint("langsmith.health")' in plan
     assert "fleet.connections.list" in plan
     assert "pnpm run ai:test:api" in plan
     assert "This command does not modify source files" in plan

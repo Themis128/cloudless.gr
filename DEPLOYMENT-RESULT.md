@@ -6,12 +6,14 @@
 ## Deployment Summary
 
 ### Build Process
+
 - ✅ OpenNext Cloudflare build completed successfully
 - ✅ Server function built and cached
 - ✅ Incremental cache populated
 - ✅ Assets directory prepared
 
 ### Deployment Details
+
 - **Worker Name:** cloudless-gr
 - **Worker ID:** edeb8dcc3c534ecd88097dbd888dc86e
 - **Version ID:** efc2cc2d-c46a-4d0a-a2fa-677a79a4a3f7
@@ -20,6 +22,7 @@
 - **Worker Startup Time:** 42ms
 
 ### Bindings Configured
+
 | Binding | Resource |
 |---------|----------|
 | CounterAgent | Durable Object |
@@ -40,6 +43,7 @@
 | ASSETS | Assets (out directory) |
 
 ### Files Modified
+
 - `src/index.ts` - Main Worker entry with Durable Objects
 - `sst.config.cloudflare.ts` - Updated to use `.open-next/worker.js` path
 - `open-next.config.ts` - Configured for cloudflare-node wrapper
@@ -53,14 +57,17 @@
 - `.mcp.json` - MCP server configuration
 
 ### Files Deleted
+
 - `src/components/TrainingBanner.tsx` - Removed (no longer needed)
 - `src/proxy.ts` - Removed (Node.js middleware compatibility issue)
 
 ### Health Check
+
 - **HTTP Status:** 200 OK
 - **Site:** https://cloudless.gr operational
 
 ### Cron Triggers Deployed
+
 - Daily analytics rollup: `0 1 * * *`
 - Weekday calendar digest: `0 6 * * 1-5`
 - Hourly monitoring: `0 * * * *`
@@ -68,6 +75,7 @@
 - Weekly voice brief: `0 5 * * 1`
 
 ## Notes
+
 - The inline Worker (`src/index-cloudflare-free.js`) was not used; instead the full OpenNext build with agents was deployed
 - Durable Objects (CounterAgent, EchoAgent, CodingAgent) are active and functional
 - All migrations and secrets are properly configured via wrangler.jsonc

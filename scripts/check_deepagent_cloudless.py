@@ -60,6 +60,7 @@ except Exception as exc:
 print("\nTesting deepagents import...")
 try:
     import deepagents  # noqa: F401
+
     print("✅ deepagents import OK")
 except Exception as exc:
     print("❌ deepagents import failed")
