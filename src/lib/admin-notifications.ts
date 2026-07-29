@@ -25,13 +25,7 @@ import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
  */
 
 export type NotificationCategory =
-  | "contact"
-  | "subscribe"
-  | "booking"
-  | "order"
-  | "error"
-  | "auth"
-  | "portal";
+  "contact" | "subscribe" | "booking" | "order" | "error" | "auth" | "portal";
 
 export type NotificationType = "info" | "warning" | "error" | "success";
 
@@ -252,7 +246,10 @@ async function listNotificationsD1(
                LIMIT ?`;
   binds.push(limit);
 
-  const result = await db.prepare(sql).bind(...binds).all<D1NotificationRow>();
+  const result = await db
+    .prepare(sql)
+    .bind(...binds)
+    .all<D1NotificationRow>();
   return (result.results ?? []).map(fromD1Row);
 }
 
