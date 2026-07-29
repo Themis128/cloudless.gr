@@ -5,6 +5,14 @@ import {
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
+import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
+
+/**
+ * Stripe revenue / event analytics snapshot.
+ *
+ * Cloudflare-first: prefer D1 `stripe_transaction` when AUTH_DB is bound.
+ * Legacy fallback: DynamoDB `STRIPE_TRANSACTIONS_TABLE`.
+ */
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
@@ -56,18 +64,26 @@ function getDayRange(days: number): string[] {
   return range;
 }
 
-function deriveDay(item: Record<string, AttributeValue>): string | undefined {
-  const explicitDay = attrToString(item.eventDay);
-  if (explicitDay) return explicitDay;
+/** Normalized row shared by D1 + Dynamo aggregation. */
+interface AnalyticsRow {
+  eventDay?: string;
+  stripeCreatedAt?: number;
+  receivedAt?: number;
+  tagCategory?: string;
+  processingStatus?: string;
+  currency?: string;
+  amountMinor?: number;
+}
 
-  const stripeCreatedAt = attrToNumber(item.stripeCreatedAt);
-  if (typeof stripeCreatedAt === "number") {
-    return toDayString(new Date(stripeCreatedAt * 1000));
+function deriveDay(row: AnalyticsRow): string | undefined {
+  if (row.eventDay) return row.eventDay;
+
+  if (typeof row.stripeCreatedAt === "number") {
+    return toDayString(new Date(row.stripeCreatedAt * 1000));
   }
 
-  const receivedAt = attrToNumber(item.receivedAt);
-  if (typeof receivedAt === "number") {
-    return toDayString(new Date(receivedAt));
+  if (typeof row.receivedAt === "number") {
+    return toDayString(new Date(row.receivedAt));
   }
 
   return undefined;
@@ -119,12 +135,12 @@ function emptySnapshot(days: number): StripeAnalyticsSnapshot {
   };
 }
 
-function applyItem(snapshot: StripeAnalyticsSnapshot, item: Record<string, AttributeValue>): void {
-  const day = deriveDay(item);
-  const category = attrToString(item.tagCategory) || "other";
-  const status = attrToString(item.processingStatus) || "unknown";
-  const currency = attrToString(item.currency) || "unknown";
-  const amountMinor = attrToNumber(item.amountMinor) || 0;
+function applyRow(snapshot: StripeAnalyticsSnapshot, row: AnalyticsRow): void {
+  const day = deriveDay(row);
+  const category = row.tagCategory || "other";
+  const status = row.processingStatus || "unknown";
+  const currency = row.currency || "unknown";
+  const amountMinor = row.amountMinor || 0;
 
   snapshot.totals.events += 1;
   snapshot.totals.revenueMinor += amountMinor;
@@ -151,6 +167,86 @@ function applyItem(snapshot: StripeAnalyticsSnapshot, item: Record<string, Attri
   if (status === "handler_failed") point.failed += 1;
 }
 
+function dynamoItemToRow(item: Record<string, AttributeValue>): AnalyticsRow {
+  return {
+    eventDay: attrToString(item.eventDay),
+    stripeCreatedAt: attrToNumber(item.stripeCreatedAt),
+    receivedAt: attrToNumber(item.receivedAt),
+    tagCategory: attrToString(item.tagCategory),
+    processingStatus: attrToString(item.processingStatus),
+    currency: attrToString(item.currency),
+    amountMinor: attrToNumber(item.amountMinor),
+  };
+}
+
+function amountFromPayload(payloadJson: string | null | undefined): number | undefined {
+  if (!payloadJson) return undefined;
+  try {
+    const object = JSON.parse(payloadJson) as Record<string, unknown>;
+    const candidates = [object.amount_total, object.amount_due, object.amount_paid];
+    for (const value of candidates) {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+    }
+  } catch {
+    /* ignore malformed payloads */
+  }
+  return undefined;
+}
+
+function currencyFromPayload(payloadJson: string | null | undefined): string | undefined {
+  if (!payloadJson) return undefined;
+  try {
+    const object = JSON.parse(payloadJson) as Record<string, unknown>;
+    return typeof object.currency === "string" ? object.currency : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+interface D1StripeRow {
+  event_day: string | null;
+  tag_category: string | null;
+  processing_status: string | null;
+  currency: string | null;
+  amount_minor: number | null;
+  received_at: number | null;
+  payload_json: string | null;
+}
+
+function d1RowToAnalytics(row: D1StripeRow): AnalyticsRow {
+  const amountMinor =
+    typeof row.amount_minor === "number" && Number.isFinite(row.amount_minor)
+      ? row.amount_minor
+      : amountFromPayload(row.payload_json);
+  const currency = row.currency || currencyFromPayload(row.payload_json);
+  return {
+    eventDay: row.event_day ?? undefined,
+    receivedAt: typeof row.received_at === "number" ? row.received_at : undefined,
+    tagCategory: row.tag_category ?? undefined,
+    processingStatus: row.processing_status ?? undefined,
+    currency: currency ?? undefined,
+    amountMinor,
+  };
+}
+
+async function queryD1Rows(db: AuthDatabase, days: number): Promise<AnalyticsRow[]> {
+  const dayRange = getDayRange(days);
+  const startDay = dayRange[0];
+  const endDay = dayRange[dayRange.length - 1];
+
+  const result = await db
+    .prepare(
+      `SELECT event_day, tag_category, processing_status, currency, amount_minor,
+              received_at, payload_json
+       FROM stripe_transaction
+       WHERE event_day >= ? AND event_day <= ?`
+    )
+    .bind(startDay, endDay)
+    .all<D1StripeRow>();
+
+  return (result.results ?? []).map(d1RowToAnalytics);
+}
+
 function isMissingIndexError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const message = "message" in error ? String(error.message || "") : "";
@@ -162,7 +258,7 @@ function isMissingIndexError(error: unknown): boolean {
   );
 }
 
-async function queryByDayOrScan(days: number): Promise<Array<Record<string, AttributeValue>>> {
+async function queryByDayOrScan(days: number): Promise<AnalyticsRow[]> {
   const tableName = getTransactionsTableName();
   const client = getDynamoClient();
   const dayRange = getDayRange(days);
@@ -188,7 +284,7 @@ async function queryByDayOrScan(days: number): Promise<Array<Record<string, Attr
         lastEvaluatedKey = response.LastEvaluatedKey;
       } while (lastEvaluatedKey);
     }
-    return allItems;
+    return allItems.map(dynamoItemToRow);
   } catch (error) {
     if (!isMissingIndexError(error)) throw error;
   }
@@ -214,7 +310,7 @@ async function queryByDayOrScan(days: number): Promise<Array<Record<string, Attr
     lastEvaluatedKey = response.LastEvaluatedKey;
   } while (lastEvaluatedKey);
 
-  return allItems;
+  return allItems.map(dynamoItemToRow);
 }
 
 export async function getStripeAnalyticsSnapshot(
@@ -222,10 +318,12 @@ export async function getStripeAnalyticsSnapshot(
 ): Promise<StripeAnalyticsSnapshot> {
   const days = Math.max(1, Math.min(365, Math.trunc(inputDays)));
   const snapshot = emptySnapshot(days);
-  const items = await queryByDayOrScan(days);
 
-  for (const item of items) {
-    applyItem(snapshot, item);
+  const db = getAuthDbFromEnv();
+  const rows = db ? await queryD1Rows(db, days) : await queryByDayOrScan(days);
+
+  for (const row of rows) {
+    applyRow(snapshot, row);
   }
 
   return snapshot;

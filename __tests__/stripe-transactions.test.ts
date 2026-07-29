@@ -52,6 +52,8 @@ function createMemoryAuthDb(): AuthDatabase & { rows: Map<string, Record<string,
               event_type: binds[1],
               processing_status: binds[7],
               received_at: binds[8],
+              amount_minor: binds[9],
+              currency: binds[10],
             });
             return { success: true, meta: { changes: 1 } };
           }
@@ -150,6 +152,8 @@ describe("stripe transactions D1 idempotency", () => {
     expect(await persistStripeEvent(event)).toEqual({ duplicate: false });
     expect(await persistStripeEvent(event)).toEqual({ duplicate: true });
     expect(db.rows.get("evt_d1_1")?.processing_status).toBe("received");
+    expect(db.rows.get("evt_d1_1")?.amount_minor).toBe(4900);
+    expect(db.rows.get("evt_d1_1")?.currency).toBe("eur");
   });
 
   it("marks processed and failed on D1 rows", async () => {
