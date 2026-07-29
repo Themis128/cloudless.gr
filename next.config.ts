@@ -64,7 +64,20 @@ const nextConfig: NextConfig = {
     "@aws-sdk/client-ses",
     "@aws-sdk/client-sesv2",
     "@aws-sdk/client-ssm",
+    // Free Workers = 3 MiB gzip. Keep OG font/WASM out of the traced server
+    // package; OpenNext still pre-renders opengraph-image routes at build time.
+    "@vercel/og",
   ],
+  // Drop traced copies of OG binaries from the OpenNext server function package.
+  // See https://opennext.js.org/cloudflare/troubleshooting (Worker size limit).
+  outputFileTracingExcludes: {
+    "*": [
+      "node_modules/@vercel/og/**/*",
+      "node_modules/next/dist/compiled/@vercel/og/**/*",
+      "node_modules/@resvg/**/*",
+      "node_modules/satori/**/*",
+    ],
+  },
   // In WSL dev, set NEXT_DIST_DIR to a native Linux path (e.g. ~/next-cloudless)
   // to avoid the slow NTFS→WSL filesystem benchmark warning.
   // Production and CI leave this unset so the default .next dir is used.
