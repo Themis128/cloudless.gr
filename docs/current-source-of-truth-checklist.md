@@ -21,9 +21,12 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `SKIPPED` Rotate Cloudflare API token and store in SSM.
   Decision 2026-07-29: operator deferred rotation; do not mint/store a new token in this pass.
   Proof: left untouched per explicit instruction.
-- [ ] `BLOCKED-OPERATOR` Wire Sentry webhook secret (`SENTRY_WEBHOOK_SECRET`) to SSM (+ Pi secret).
-  Workflow ready: `.github/workflows/store-sentry-webhook-secret.yml` (dispatch with Client Secret).
-  Proof: _pending — paste Internal Integration Client Secret → workflow run ID + SSM version_
+- [x] `DONE` Wire Sentry webhook secret (`SENTRY_WEBHOOK_SECRET`) to SSM (+ Pi secret).
+  Workflow: `.github/workflows/store-sentry-webhook-secret.yml` run `30468613018` → SSM version **1**.
+  Cluster patch failed in CI (stale kubeconfig TLS); completed locally 2026-07-29:
+  `cloudless-secrets` key present (len 64) + `cloudless-app` rollout OK.
+  Proof 2026-07-29: signed in-cluster POST → HTTP 200 `{ ok: true }` (notifyAdmin
+  returned slack/ntfy soft-skips; issue delivery path verified).
 - [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy (+ Slack bridge).
   Proof 2026-07-29: slug `cloudless`, 12 monitors, ntfy notification id=1; in-cluster
   `GET http://uptime-kuma…/api/status-page/cloudless` → 200; app ConfigMap
@@ -94,5 +97,5 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
 ## Notes
 
 - `docs/master-todo-list.md` remains the detailed ledger (rationale, history, phase context).
-- Operator: CF rotation skipped; Sentry still needs one secret paste; Kuma done; ESP32 partial reconstruct done.
+- Operator: CF rotation skipped; Sentry secret stored (SSM v1 + Pi secret); Kuma done; ESP32 partial reconstruct done.
 - This file is intentionally concise and execution-focused to avoid roadmap drift.

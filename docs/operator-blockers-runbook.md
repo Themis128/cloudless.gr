@@ -12,14 +12,16 @@ Operator deferred rotation this pass. Do **not** mint or overwrite
 When resumed, follow `skills/cloudflare-token-doctor/SKILL.md` and
 `store-cloudflare-token.yml` / `verify-cloudflare-token.yml`.
 
-## 2. Sentry webhook secret
+## 2. Sentry webhook secret — DONE (2026-07-29)
 
 **Closes:** R8 inbound issue events → `/api/webhooks/sentry`.
 
-1. Sentry → Settings → Developer Settings → New Internal Integration.
-2. Webhook URL: `https://cloudless.gr/api/webhooks/sentry`
-3. Subscribe to **issue** events.
-4. Copy Client Secret → dispatch:
+Stored SSM `/cloudless/production/SENTRY_WEBHOOK_SECRET` version **1** via
+workflow run `30468613018`. Pi `cloudless-secrets` patched locally (CI
+kubectl TLS against stale Tailscale kubeconfig failed). Signed smoke POST
+returned HTTP 200.
+
+Re-store / rotate later:
 
 ```bash
 gh workflow run store-sentry-webhook-secret.yml \
@@ -27,10 +29,8 @@ gh workflow run store-sentry-webhook-secret.yml \
   -f update_cluster_secret=true
 ```
 
-(Pi runs with `SSM_DISABLED=1`, so the workflow also merge-patches
-`cloudless/cloudless-secrets` and restarts `cloudless-app`.)
-
-**Proof to log:** workflow run ID + SSM parameter version + a test issue event reaching Slack/ntfy.
+(If cluster patch fails in CI, patch `cloudless/cloudless-secrets` from a
+host with a working kubeconfig, then `rollout restart deploy/cloudless-app`.)
 
 ## 3. Kuma status page + ntfy + Slack — DONE (2026-07-29)
 
