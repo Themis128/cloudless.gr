@@ -1,6 +1,7 @@
 // || (not ??) so that SSM_PREFIX="" falls back to the default instead of fetching from "/"
 const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
-const REGION = process.env.AWS_REGION || "us-east-1";
+const DEFAULT_REGION = "us-east-1";
+const REGION = process.env.AWS_REGION || DEFAULT_REGION;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Module-level singleton — avoids re-creating the connection pool on every cache miss
@@ -209,7 +210,7 @@ function validateRequiredKeys(params: Map<string, string>): void {
 function buildConfigFromParams(params: Map<string, string>): AppConfig {
   const sesFrom = params.get("SES_FROM_EMAIL") || "noreply@cloudless.gr";
   const sesTo = params.get("SES_TO_EMAIL") || "tbaltzakis@cloudless.gr";
-  const sesRegion = params.get("AWS_SES_REGION") || "us-east-1";
+  const sesRegion = params.get("AWS_SES_REGION") || DEFAULT_REGION;
 
   if (!sesFrom.includes("@") || !sesTo.includes("@")) {
     console.warn(
@@ -334,7 +335,7 @@ function buildConfigFromEnv(): AppConfig {
   return {
     SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || "noreply@cloudless.gr",
     SES_TO_EMAIL: process.env.SES_TO_EMAIL || "tbaltzakis@cloudless.gr",
-    AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
+    AWS_SES_REGION: process.env.AWS_SES_REGION || DEFAULT_REGION,
     NEWSLETTER_SEND_SECRET: process.env.NEWSLETTER_SEND_SECRET || "",
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",

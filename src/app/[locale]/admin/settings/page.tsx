@@ -37,8 +37,36 @@ export default function AdminSettingsPage() {
   }, []);
 
   useEffect(() => {
-    loadConfigs().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [loadConfigs]);
+    let cancelled = false;
+    async function run() {
+      setConfigError(null);
+      try {
+        const res = await fetchWithAuth("/api/admin/config");
+        if (cancelled) return;
+        const data = (await res.json()) as {
+          configured?: boolean;
+          configs?: ConfigRow[];
+          error?: string;
+        };
+        if (res.status === 503) {
+          setConfigs([]);
+          setConfigError(data.error ?? "AUTH_DB not bound — D1 app_config unavailable");
+          return;
+        }
+        if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+        setConfigs(data.configs ?? []);
+      } catch (err) {
+        if (!cancelled) {
+          setConfigError(err instanceof Error ? err.message : "Failed to load app_config");
+          setConfigs([]);
+        }
+      }
+    }
+    run().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSaveConfig() {
     setConfigSaving(true);
@@ -235,7 +263,7 @@ export default function AdminSettingsPage() {
               className="min-h-[44px] rounded-lg border border-red-900/50 px-4 py-2.5 font-mono text-xs text-red-400 transition-all hover:bg-red-950/30"
               onClick={() => {
                 if (window.confirm("Delete all Notion cache? Active requests will re-fetch.")) {
-                  handleClearCache();
+                  handleClearCache().catch(() => {});
                 }
               }}
             >

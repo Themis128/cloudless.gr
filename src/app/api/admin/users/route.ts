@@ -14,6 +14,8 @@ import { requireAdmin } from "@/lib/api-auth";
 // Shared user shape (Cognito user shape)
 // ---------------------------------------------------------------------------
 
+const ADMIN_GROUP = "admin";
+
 interface AdminUser {
   username: string;
   email: string;
@@ -70,7 +72,7 @@ async function listCognitoUsers(
         const grRes = await client.send(
           new AdminListGroupsForUserCommand({ UserPoolId: userPoolId, Username: u.Username ?? "" })
         );
-        isAdmin = (grRes.Groups ?? []).some((g) => g.GroupName === "admin");
+        isAdmin = (grRes.Groups ?? []).some((g) => g.GroupName === ADMIN_GROUP);
       } catch {
         /* default non-admin */
       }
@@ -87,7 +89,7 @@ async function listCognitoUsers(
         emailVerified: cognitoAttr(attrs, "email_verified") === "true",
         status: u.Enabled ? "active" : "disabled",
         userStatus: u.UserStatus ?? "UNKNOWN",
-        role: isAdmin ? "admin" : "user",
+        role: isAdmin ? ADMIN_GROUP : "user",
         created: u.UserCreateDate?.toISOString(),
         lastModified: u.UserLastModifiedDate?.toISOString(),
       } satisfies AdminUser;
@@ -117,7 +119,7 @@ async function mutateCognitoUser(
         new AdminAddUserToGroupCommand({
           UserPoolId: userPoolId,
           Username: username,
-          GroupName: "admin",
+          GroupName: ADMIN_GROUP,
         })
       );
       return { success: true, message: "User promoted to admin" };
@@ -126,7 +128,7 @@ async function mutateCognitoUser(
         new AdminRemoveUserFromGroupCommand({
           UserPoolId: userPoolId,
           Username: username,
-          GroupName: "admin",
+          GroupName: ADMIN_GROUP,
         })
       );
       return { success: true, message: "User removed from admin group" };
