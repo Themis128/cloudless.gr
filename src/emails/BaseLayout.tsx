@@ -1,4 +1,4 @@
-import { Body, Container, Head, Hr, Html, Preview, Text } from "@react-email/components";
+import { Body, Container, Head, Hr, Html, Preview, Text } from "react-email";
 import * as React from "react";
 
 interface BaseLayoutProps {
