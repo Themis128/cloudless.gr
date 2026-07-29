@@ -69,7 +69,7 @@ jobs:
           head -c 4096 "$BODY" || true
           echo
           if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
-            echo "::error::Cloudflare managed challenge intercepted the cron call (not an app 403). Re-run workflow cloudflare-skip-cron-challenge.yml or check Bot Fight Mode skip for /api/cron/*."
+            echo "::error::Cloudflare Bot Fight Mode intercepted the cron call (not an app 403). Re-run workflow cloudflare-skip-cron-challenge.yml (disables bot_fight_mode) or turn Bot Fight Mode off in the CF dashboard."
             exit 1
           fi
           if [ "$STATUS" != "200" ]; then
