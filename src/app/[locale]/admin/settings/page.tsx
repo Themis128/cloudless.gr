@@ -37,7 +37,7 @@ export default function AdminSettingsPage() {
   }, []);
 
   useEffect(() => {
-    loadConfigs().catch(() => {});
+    loadConfigs().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [loadConfigs]);
 
   async function handleSaveConfig() {

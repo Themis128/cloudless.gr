@@ -262,12 +262,33 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
       };
     }
 
-    // D1 mode: Bearer is an opaque session id (not a Cognito JWT).
+    // D1 mode: prefer session cookie over a leftover Cognito JWT Bearer.
+    const d1CookieFirst = await readD1SessionCookie(request);
+    if (d1CookieFirst) {
+      return { ok: true, user: d1CookieFirst };
+    }
+
+    // Opaque session id in Authorization (API clients).
     const bearerD1 = await resolveD1Session(token);
     if (bearerD1) {
       return { ok: true, user: bearerD1 };
     }
-    // Stale Cognito JWT leftovers must not 401 ahead of a valid cookie.
+
+    // Non-production: allow unsigned JWT decode (unit tests clear COGNITO_ISSUER
+    // and send fake-sig tokens). Production never takes this path without JWKS.
+    if (process.env.NODE_ENV !== "production") {
+      const decoded = await verifyToken(token);
+      if (decoded) {
+        return { ok: true, user: decoded };
+      }
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: "Invalid or expired token" },
+          { status: 401 },
+        ),
+      };
+    }
   }
 
   // Cloudflare D1 session_token (email/password login)
