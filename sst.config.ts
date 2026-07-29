@@ -331,6 +331,9 @@ export default {
         dns: false,
         cert: "arn:aws:acm:us-east-1:278585680617:certificate/f505905a-97b4-46b0-a2b0-fb1900f425b2",
       },
+      // Regional server Lambdas only — Lambda@Edge middleware is rejected by
+      // current SST. open-next.config.ts keeps middleware internal.
+      regions: ["us-east-1"],
       environment: buildSiteEnvironment(
         stage,
         isProd,

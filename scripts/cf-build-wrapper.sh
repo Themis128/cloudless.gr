@@ -70,6 +70,7 @@ echo "▶ Ensuring middleware.js.nft.json stub exists for OpenNext..."
 node scripts/opennext-middleware-fix.mjs || true
 
 echo "▶ Running OpenNext Cloudflare build..."
-NEXT_TELEMETRY_DISABLED=1 pnpm exec opennextjs-cloudflare build
+NEXT_TELEMETRY_DISABLED=1 pnpm exec opennextjs-cloudflare build \
+  --openNextConfigPath open-next.config.cloudflare.ts
 
 echo "✅ Cloudflare build complete"

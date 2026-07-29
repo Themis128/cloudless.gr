@@ -15,19 +15,27 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const serverDir = path.join(root, ".next", "server");
 const nftPath = path.join(serverDir, "middleware.js.nft.json");
+const middlewareJsPath = path.join(serverDir, "middleware.js");
 
-function ensureNftStub() {
+function ensureMiddlewareStubs() {
   try {
     if (!fs.existsSync(serverDir)) return;
-    if (fs.existsSync(nftPath)) return;
-    fs.writeFileSync(nftPath, JSON.stringify({ files: [] }));
+    if (!fs.existsSync(middlewareJsPath)) {
+      // Next finalization copyfile()'s this into standalone/; edge wrapper
+      // may not exist yet — empty stub unblocks the copy, then
+      // opennext-middleware-fix overwrites with the real edge-wrapper.
+      fs.writeFileSync(middlewareJsPath, "// middleware stub for Next 16 finalization\n");
+    }
+    if (!fs.existsSync(nftPath)) {
+      fs.writeFileSync(nftPath, JSON.stringify({ files: ["middleware.js"] }));
+    }
   } catch {
     // Best-effort — next may race mkdir/rmdir during clean.
   }
 }
 
-const poll = setInterval(ensureNftStub, 50);
-ensureNftStub();
+const poll = setInterval(ensureMiddlewareStubs, 50);
+ensureMiddlewareStubs();
 
 const nextBin = path.join(root, "node_modules", "next", "dist", "bin", "next");
 const child = spawn(process.execPath, [nextBin, "build"], {
@@ -38,7 +46,7 @@ const child = spawn(process.execPath, [nextBin, "build"], {
 
 child.on("exit", (code, signal) => {
   clearInterval(poll);
-  ensureNftStub();
+  ensureMiddlewareStubs();
 
   const fix = spawn(process.execPath, [path.join(root, "scripts", "opennext-middleware-fix.mjs")], {
     cwd: root,
@@ -53,9 +61,14 @@ child.on("exit", (code, signal) => {
     }
     // If Next only failed because the stub was briefly missing, but the build
     // tree + nft stub now exist, treat as success so OpenNext can continue.
-    if (code !== 0 && fs.existsSync(nftPath) && fs.existsSync(path.join(serverDir, "middleware-manifest.json"))) {
+    if (
+      code !== 0 &&
+      fs.existsSync(nftPath) &&
+      fs.existsSync(middlewareJsPath) &&
+      fs.existsSync(path.join(serverDir, "middleware-manifest.json"))
+    ) {
       console.warn(
-        "[sst-next-build] next build exited non-zero but middleware NFT + manifest exist; continuing.",
+        "[sst-next-build] next build exited non-zero but middleware stubs + manifest exist; continuing.",
       );
       process.exit(0);
       return;
