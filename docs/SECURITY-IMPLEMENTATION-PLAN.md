@@ -1474,6 +1474,6 @@ alerts:
 ## References
 
 - [GitHub AW Security Architecture](https://docs.github.com/en/actions/security-for-github-actions)
-- [MCP Security Best Practices](https://modelcontextprotocol.io/docs/security)
+- [MCP specification](https://modelcontextprotocol.io/specification/latest)
 - [OWASP Top 10 for LLMs](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
 - [Prompt Injection Defense](https://www.anthropic.com/engineering/building-effective-agents)

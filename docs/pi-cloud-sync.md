@@ -96,7 +96,7 @@ morning Athens time. Output is `ALL_HEALTHY` or a per-workflow failure report.
 
 ### 4. SHA drift detector
 
-[.github/workflows/sha-drift-detector.yml](../.github/workflows/sha-drift-detector.yml)
+[.github/workflows/sha-drift-watchdog.yml](../.github/workflows/sha-drift-watchdog.yml)
 runs every 6h (00:45, 06:45, 12:45, 18:45 UTC) and after every HA sync
 orchestrator completion. It compares three values:
 

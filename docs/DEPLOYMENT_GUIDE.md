@@ -41,7 +41,7 @@ This guide walks you through deploying the infrastructure optimization for Light
 **Trigger:**
 
 ```bash
-gh workflow run deploy-infrastructure.yml -f phase=cloudfront -R Themis128/cloudless.gr
+gh workflow run sst-infra-deploy.yml -f phase=cloudfront -R Themis128/cloudless.gr
 # OR via UI: Select "cloudfront" phase
 ```
 
@@ -72,7 +72,7 @@ gh workflow run deploy-infrastructure.yml -f phase=cloudfront -R Themis128/cloud
 **Trigger:**
 
 ```bash
-gh workflow run deploy-infrastructure.yml -f phase=lambda-concurrency -R Themis128/cloudless.gr
+gh workflow run sst-infra-deploy.yml -f phase=lambda-concurrency -R Themis128/cloudless.gr
 # OR via UI: Select "lambda-concurrency" phase
 ```
 
@@ -136,7 +136,7 @@ kubectl get hpa -n cloudless
 **Trigger:**
 
 ```bash
-gh workflow run deploy-infrastructure.yml -f phase=rds-proxy -R Themis128/cloudless.gr
+gh workflow run sst-infra-deploy.yml -f phase=rds-proxy -R Themis128/cloudless.gr
 # OR via UI: Select "rds-proxy" phase
 ```
 
@@ -173,7 +173,7 @@ gh workflow run deploy-infrastructure.yml -f phase=rds-proxy -R Themis128/cloudl
 To deploy everything at once:
 
 ```bash
-gh workflow run deploy-infrastructure.yml -f phase=all -R Themis128/cloudless.gr
+gh workflow run sst-infra-deploy.yml -f phase=all -R Themis128/cloudless.gr
 # OR via UI: Select "all" phase
 ```
 
@@ -303,7 +303,7 @@ GitHub takes a few minutes to index new workflow files. Try:
 
 1. Refresh the page
 2. Wait 5 minutes
-3. Check if file exists: https://github.com/Themis128/cloudless.gr/blob/main/.github/workflows/deploy-infrastructure.yml
+3. Check if file exists: https://github.com/Themis128/cloudless.gr/blob/main/.github/workflows/sst-infra-deploy.yml
 
 ### "role-to-assume error" in workflow
 
@@ -345,7 +345,7 @@ kubectl delete pod -l app=cloudless-app -n cloudless
 
 - **Terraform IaC:** `infrastructure/terraform/lambda-optimization.tf`
 - **k8s Manifests:** `k8s/cloudless-app-optimized.yaml`
-- **Workflow:** `.github/workflows/deploy-infrastructure.yml`
+- **Workflow:** `.github/workflows/sst-infra-deploy.yml`
 - **Memory/Playbook:** `memory/project_infra_optimization.md`
 - **Lighthouse Task:** Issue #773
 

@@ -63,8 +63,8 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
 
 ### Workflows
 
-- [.github/workflows/weekly-article-draft.yml](../.github/workflows/weekly-article-draft.yml) — `cron: "0 6 * * 1"` (Mondays 06:00 UTC, 08:00 Athens).
-- [.github/workflows/weekly-newsletter.yml](../.github/workflows/weekly-newsletter.yml) — `cron: "0 9 * * 1"` (Mondays 09:00 UTC, 11:00 Athens).
+- `weekly-article-draft.yml` (retired — use Postiz / ops-cadence) — `cron: "0 6 * * 1"` (Mondays 06:00 UTC, 08:00 Athens).
+- `weekly-newsletter.yml` (retired — use Postiz / ops-cadence) — `cron: "0 9 * * 1"` (Mondays 09:00 UTC, 11:00 Athens).
 - `.github/workflows/weekly-subscriber-report.yml` _(removed in PR #1043 alongside the EspoCRM decom — superseded by the daily espocrm-to-lake ETL workflow)_ — historically `cron: "0 10 * * 1"` (Mondays 10:00 UTC, 12:00 Athens).
 - All three have `workflow_dispatch` for manual triggering from the Actions UI.
 

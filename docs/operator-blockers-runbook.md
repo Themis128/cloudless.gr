@@ -32,42 +32,31 @@ gh workflow run store-sentry-webhook-secret.yml \
 
 **Proof to log:** workflow run ID + SSM parameter version + a test issue event reaching Slack/ntfy.
 
-## 3. Kuma status page + ntfy — DONE (2026-07-29)
+## 3. Kuma status page + ntfy + Slack — DONE (2026-07-29)
 
 Bootstrapped in-cluster via `scripts/kuma-bootstrap.cjs`:
 
-- Admin already present; DB = sqlite (`UPTIME_KUMA_DB_TYPE=sqlite`)
-- Status page slug: **`cloudless`**
-- **12** HTTP monitors (public + self-hosted + cluster)
+- Status page slug: **`cloudless`**, **12** HTTP monitors
 - Notification: ntfy → `https://ntfy.cloudless.gr` topic `cloudless-alerts`
-- App ConfigMap: `KUMA_BASE_URL=http://uptime-kuma.uptime-kuma.svc.cluster.local:3001`,
-  `KUMA_STATUS_PAGE_SLUG=cloudless` (public `kuma.cloudless.gr` is CF-challenged from pods)
-
-Optional leftover: add Slack Incoming Webhook in Kuma UI (or re-run bootstrap with
-`KUMA_SLACK_WEBHOOK=…`) — no webhook URL was present in cluster secrets.
-
-**Proof:** in-cluster `GET /api/status-page/cloudless` → 200, `monitors=12`.
-
-## 4. ESP32 Notion page — PARTIAL reconstruct (2026-07-29)
-
-Page history restore is still UI-only when retention exists (incident 2026-06-02;
-Plus history is ~30 days — may be gone by 2026-07-29).
-
-API reconstruct applied:
+- Slack: Incoming Webhook was revoked (2026-05-25). Use the bot-token bridge instead:
+  - Route: `POST /api/webhooks/kuma` (Bearer `ADMIN_ALERT_SECRET`)
+  - Register: `scripts/kuma-slack-bridge.cjs` (after app image includes the route)
 
 ```bash
-# from cloudless-app pod (has NOTION_API_KEY)
-node scripts/notion-restore-esp32.mjs
+POD=$(kubectl -n uptime-kuma get pod -l app=uptime-kuma -o jsonpath='{.items[0].metadata.name}')
+TOKEN=$(kubectl -n cloudless get secret cloudless-secrets -o jsonpath='{.data.ADMIN_ALERT_SECRET}' | base64 -d)
+kubectl -n uptime-kuma cp scripts/kuma-slack-bridge.cjs "$POD":/tmp/kuma-slack-bridge.cjs
+kubectl -n uptime-kuma exec "$POD" -- env NODE_PATH=/app/node_modules \
+  KUMA_USER=tbaltzakis KUMA_PASS='…' KUMA_BRIDGE_TOKEN="$TOKEN" \
+  node /tmp/kuma-slack-bridge.cjs
 ```
 
-Page: https://www.notion.so/ESP32-ESPHome-Watchdog-Pi-Cluster-Monitor-v2-3677d82c410a81e4a6dbe9ae89578fda
+## 4. ESP32 Notion page — PARTIAL (history expired)
 
-Devices + Telemetry DBs remain empty (never populated). If history still shows a
-pre-15:19 UTC 2026-06-02 revision, restore that for full prose.
-
-Skill: `.claude/skills/esp32-notion-restore/SKILL.md`.
-
-**Proof to log:** reconstruct timestamp above + optional history restore timestamp.
+Re-checked 2026-07-29: page has reconstructed skeleton (16 blocks). Notion API
+does not expose page history; Plus retention (~30 days) for the 2026-06-02
+incident is past. Treat reconstruct as baseline; seed Devices/Telemetry when
+hardware is online.
 
 ## 5. Grafana Athena SCP — DEFERRED
 

@@ -96,11 +96,11 @@ describe("GET /api/calendar/availability", () => {
     expect(mockGetAvailableSlots).toHaveBeenCalledWith(7);
   });
 
-  it("returns 500 when getAvailableSlots throws", async () => {
+  it("returns 503 when getAvailableSlots throws", async () => {
     mockGetAvailableSlots.mockRejectedValue(new Error("Google API error"));
     const { GET } = await import("@/app/api/calendar/availability/route");
     const res = await GET(new Request(AVAILABILITY_URL));
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(503);
   });
 });
 
