@@ -23,6 +23,7 @@ on:
       - 'scripts/cf-build-wrapper.sh'
       - 'scripts/sst-next-build.mjs'
       - 'scripts/opennext-middleware-fix.mjs'
+      - 'scripts/strip-opennext-bin-fonts.mjs'
       - 'open-next.config.cloudflare.ts'
   workflow_dispatch:
     inputs:
@@ -68,8 +69,8 @@ jobs:
       - name: Build Next.js app with OpenNext
         run: pnpm run cf:build
 
-      - name: Delete .bin font files (prevents SST loader error)
-        run: find .open-next -name "*.bin" -delete || echo "No .bin files found"
+      - name: Strip @vercel/og .bin fonts (SST esbuild)
+        run: node scripts/strip-opennext-bin-fonts.mjs
 
       - name: Unlock SST (handle concurrent lock)
         run: npx sst unlock --config sst.config.cloudflare.ts --stage production || true
