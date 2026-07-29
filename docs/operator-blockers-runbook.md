@@ -38,9 +38,13 @@ Bootstrapped in-cluster via `scripts/kuma-bootstrap.cjs`:
 
 - Status page slug: **`cloudless`**, **12** HTTP monitors
 - Notification: ntfy → `https://ntfy.cloudless.gr` topic `cloudless-alerts`
-- Slack: Incoming Webhook was revoked (2026-05-25). Use the bot-token bridge instead:
-  - Route: `POST /api/webhooks/kuma` (Bearer `ADMIN_ALERT_SECRET`)
-  - Register: `scripts/kuma-slack-bridge.cjs` (after app image includes the route)
+- Slack: Incoming Webhook was revoked (2026-05-25). Live path is the
+  in-cluster bridge Deployment (Pi hostpath standalone still 404s
+  `/api/webhooks/kuma`):
+  - Manifest: `infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml`
+  - Service: `http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/`
+  - Auth: Bearer `ADMIN_ALERT_SECRET`
+  - App route (future): `POST /api/webhooks/kuma` after standalone rebuild
 
 ```bash
 POD=$(kubectl -n uptime-kuma get pod -l app=uptime-kuma -o jsonpath='{.items[0].metadata.name}')

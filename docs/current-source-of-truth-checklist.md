@@ -27,8 +27,9 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy (+ Slack bridge).
   Proof 2026-07-29: slug `cloudless`, 12 monitors, ntfy notification id=1; in-cluster
   `GET http://uptime-kuma…/api/status-page/cloudless` → 200; app ConfigMap
-  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack uses
-  `/api/webhooks/kuma` bot bridge (`scripts/kuma-slack-bridge.cjs`) — Incoming
+  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack uses live
+  `kuma-slack-bridge` Deployment (`infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml`)
+  because Pi hostpath standalone still 404s `/api/webhooks/kuma`. Incoming
   Webhook URL not required.
 - [x] `PARTIAL` Restore ESP32 Notion page (API reconstruct; history UI expired).
   Proof 2026-07-29: `scripts/notion-restore-esp32.mjs` rebuilt 16 blocks on page
