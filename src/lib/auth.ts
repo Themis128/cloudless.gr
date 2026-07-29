@@ -1,6 +1,6 @@
 import NextAuth, { type DefaultSession } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import { D1Database } from "@cloudflare/workers-types";
-import { createHmac, randomBytes } from "crypto";
 import {
   recordNotification,
   sendActivationEmail,
@@ -11,9 +11,12 @@ import {
   rateLimit,
   getClientIp,
 } from "@/lib/auth-utils";
+
 const REFRESH_TOKEN_ERROR = "RefreshTokenError" as const;
-declare const AUTH_DB: D1Database;
 type RefreshTokenError = typeof REFRESH_TOKEN_ERROR;
+type NextAuthResult = ReturnType<typeof NextAuth>;
+
+declare const AUTH_DB: D1Database;
 
 declare module "next-auth" {
   interface Session {
@@ -74,7 +77,6 @@ function resolveAuthEnv(): AuthEnv {
   };
 }
 
-declare const AUTH_DB: D1Database;
 /**
  * Handles the initial sign-in: create session in D1 and populate claims.
  */
@@ -132,8 +134,12 @@ async function handleTokenRefresh(token: JWT, env: AuthEnv, now: number): Promis
 }
 
 function buildNextAuth(env: AuthEnv): NextAuthResult {
-  const { authUrl } = env;
   return NextAuth({
+    // Local/dev often has AUTH_SECRET without IdP providers — still serve
+    // /api/auth/session as JSON null instead of throwing Configuration.
+    providers: [],
+    secret: env.authSecret,
+    trustHost: true,
     callbacks: {
       async jwt({ token, user }) {
         if (user) {

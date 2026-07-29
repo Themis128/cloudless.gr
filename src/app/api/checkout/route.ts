@@ -3,7 +3,7 @@ import { getProductById } from "@/lib/store-products";
 import { getCampaign } from "@/data/campaigns";
 import { routing } from "@/i18n/routing";
 import { canonicalOrigin } from "@/lib/canonical-origin";
-import { requireAuth } from "'lib/auth-middleware'";
+import { requireAuth } from "@/lib/api-auth";
 
 interface CheckoutItem {
   id: string;

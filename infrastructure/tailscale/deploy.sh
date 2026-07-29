@@ -51,6 +51,9 @@ kubectl apply -f "$ROOT/infrastructure/tailscale/proxygroup.yaml"
 echo "==> Ingresses (Grafana / Loki / Meili → shared ProxyGroup)"
 kubectl apply -f "$ROOT/infrastructure/tailscale/ingresses.yaml"
 
+echo "==> RBAC for Tailscale kubeconfig (impersonated logins)"
+kubectl apply -f "$ROOT/infrastructure/tailscale/rbac-kubeconfig.yaml"
+
 echo
 echo "==> Status"
 kubectl get connector,proxygroup,proxyclass -A 2>/dev/null || \

@@ -13,7 +13,7 @@ async function getSsmClient(): Promise<any> {
   return ssmClient;
 }
 
-interface AppConfig {
+export interface AppConfig {
   SES_FROM_EMAIL: string;
   SES_TO_EMAIL: string;
   AWS_SES_REGION: string;
