@@ -63,12 +63,12 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 
 ## ⏳ Still operator-only
 
-| Item                           | Notes                                                          |
-| ------------------------------ | -------------------------------------------------------------- |
-| Rotate after Variable exposure | Stripe / Slack / Notion / Cognito / Google / SES (table above) |
-| Optional ads/Sentry secrets    | Leave empty if unused                                          |
-| Cloudflare API token rotation  | If MCP CF tools 401                                            |
-| ESP32 Notion DBs               | Empty (no hardware data); page reconstruct partial             |
+| Item                           | Notes                                                                                                                                                                                                                                                             |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rotate after Variable exposure | Stripe / Slack / Notion / Cognito / Google / SES (table above)                                                                                                                                                                                                    |
+| Optional ads/Sentry secrets    | Leave empty if unused                                                                                                                                                                                                                                             |
+| Cloudflare API token rotation  | If MCP CF tools 401                                                                                                                                                                                                                                               |
+| ESP32 Notion DBs               | Empty (no hardware data); page reconstruct partial                                                                                                                                                                                                                |
 | Bot Fight Mode vs GHA crons    | Free BFM cannot be WAF-skipped. Workflow `cloudflare-skip-cron-challenge.yml` turns `bot_fight_mode=off` (needs Zone Settings:Edit). If that 403s, disable **Security → Bots → Bot Fight Mode** in the CF dashboard so LinkedIn/postiz crons reach `/api/cron/*`. |
 
 ---
