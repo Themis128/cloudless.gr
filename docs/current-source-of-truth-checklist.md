@@ -112,6 +112,11 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
       API user `cloudless-app` + role ACL; `ESPOCRM_API_KEY` in GH + `cloudless-secrets`.
       Run https://github.com/Themis128/cloudless.gr/actions/runs/30485173560 — **5/5** entities
       → `lake/espocrm-{contacts,accounts,opportunities,cases,campaigns}/*.parquet`.
+- [x] `DONE` Kuma push monitors for ETL + cluster alerts (2026-07-29).
+      Evidence: 8 push monitors in Kuma SQLite; GH secret `KUMA_PUSH_ETL_ESPOCRM`;
+      `cluster-alerts-kuma` populated in monitoring/appflowy/espocrm/n8n/postiz;
+      ETL run https://github.com/Themis128/cloudless.gr/actions/runs/30486610424
+      shows non-empty `KUMA_PUSH_URL` on Ping Kuma step.
 - [x] `DONE` Search funnel analytics on Cloudflare D1 (query → result → click; buy hook ready).
       Evidence: `migrations/0008-search-funnel-events.sql`, `src/lib/search-funnel.ts`,
       `src/lib/funnel-client.ts`, `StoreGrid` beacons, `POST /api/analytics/track` D1 sink,
@@ -163,8 +168,10 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
       Stripe webhook **idempotency** prefers D1 `stripe_transaction` when `AUTH_DB`
       is bound (`persistStripeEvent` / mark helpers in `stripe-transactions.ts`);
       Dynamo `STRIPE_TRANSACTIONS_TABLE` remains legacy fallback.
-      Still AWS (follow-up): Athena cost/datalake UI reads; admin-notifications
-      Dynamo primary store; `stripe-analytics-read` Dynamo queries.
+      Still AWS (follow-up): Athena cost/datalake UI reads;
+      `stripe-analytics-read` Dynamo queries.
+      Admin-notifications prefer D1 `admin_notification` when `AUTH_DB` bound
+      (`src/lib/admin-notifications.ts` + migration 0011); Dynamo table is fallback.
 - [x] `DEFERRED` ESLint 10 + TypeScript 7 majors (ecosystem blockers 2026-07-29).
       ESLint 10 crashes `eslint-plugin-react` (`getFilename is not a function`);
       `eslint-plugin-import` / `jsx-a11y` peers stop at eslint 9. TypeScript 7
