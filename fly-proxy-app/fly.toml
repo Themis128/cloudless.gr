@@ -1,6 +1,6 @@
-# Fly.io HA failover proxy (Workers → Pi tunnel)
-# Deploy from repo root:
-#   flyctl deploy --remote-only --config fly-proxy-app/fly.toml --app cloudless-proxy
+# Fly.io HA failover proxy (Workers → Pi via Tailscale)
+# Deploy from fly-proxy-app/:
+#   flyctl deploy --remote-only --config fly.toml --app cloudless-proxy
 
 app = "cloudless-proxy"
 
@@ -26,8 +26,14 @@ primary_region = "fra"
     health_check_interval = "30s"
 
 [env]
-  PRIMARY_HOST = "cloudless.gr"
-  FALLBACK_HOST = "pi-origin.cloudless.gr"
+  # Health + proxy primary: workers.dev avoids custom-domain Bot Fight from Fly IPs
+  PRIMARY_BASE = "https://cloudless2.baltzakis-themis.workers.dev"
+  # omv Tailscale IP → k3s NodePort (reachable after start.sh joins the mesh)
+  FALLBACK_BASE = "http://100.74.191.58:30300"
+  PUBLIC_HOST = "cloudless.gr"
+  TS_USERSPACE = "true"
+  TS_HOSTNAME = "cloudless-fly-proxy"
+  # TS_AUTHKEY via: flyctl secrets set TS_AUTHKEY=...
 
 [[vm]]
   cpu_kind = "shared"

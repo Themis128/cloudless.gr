@@ -1,13 +1,10 @@
-# Thin pointer — real config lives next to the proxy image.
-# Deploy: flyctl deploy --remote-only --config fly-proxy-app/fly.toml --app cloudless-proxy
-# Or: gh workflow run deploy-fly-proxy.yml -f apply=true
+# Thin pointer — real config lives in fly-proxy-app/fly.toml
+# Deploy: gh workflow run deploy-fly-proxy.yml -f apply=true
 
 app = "cloudless-proxy"
 primary_region = "fra"
 
-[build]
-  dockerfile = "fly-proxy-app/Dockerfile"
-
 [env]
-  PRIMARY_HOST = "cloudless.gr"
-  FALLBACK_HOST = "pi-origin.cloudless.gr"
+  PRIMARY_BASE = "https://cloudless2.baltzakis-themis.workers.dev"
+  FALLBACK_BASE = "http://100.74.191.58:30300"
+  PUBLIC_HOST = "cloudless.gr"

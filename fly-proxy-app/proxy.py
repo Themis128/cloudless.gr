@@ -1,8 +1,10 @@
 """Fly.io HA Failover Proxy for cloudless.gr.
 
-Primary: Cloudflare Workers thin edge (cloudless.gr → Pi)
-Fallback: pi-origin.cloudless.gr (Tunnel → k3s NodePort, bypasses Workers)
+Primary: workers.dev thin edge (no custom-domain Bot Fight from datacenter IPs)
+Fallback: Pi k3s NodePort over Tailscale (bypasses Cloudflare Bot Fight entirely)
 """
+from __future__ import annotations
+
 import os
 import time
 
@@ -11,11 +13,29 @@ from fastapi import FastAPI, Request, Response
 
 app = FastAPI()
 
-PRIMARY_HOST = os.getenv("PRIMARY_HOST", "cloudless.gr")
-FALLBACK_HOST = os.getenv("FALLBACK_HOST", "pi-origin.cloudless.gr")
+PRIMARY_BASE = os.getenv(
+    "PRIMARY_BASE", "https://cloudless2.baltzakis-themis.workers.dev"
+).rstrip("/")
+# Tailscale IP of omv → NodePort 30300 (set after tailscale up in the container)
+FALLBACK_BASE = os.getenv(
+    "FALLBACK_BASE", "http://100.74.191.58:30300"
+).rstrip("/")
+PUBLIC_HOST = os.getenv("PUBLIC_HOST", "cloudless.gr")
 
 health_cache = {"healthy": True, "timestamp": 0.0}
 CACHE_TTL = 30
+
+
+def backend_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
+    headers: dict[str, str] = {
+        "user-agent": "cloudless-fly-proxy/1.0",
+        "accept": "application/json, text/html, */*",
+        "x-forwarded-host": PUBLIC_HOST,
+        "x-forwarded-proto": "https",
+    }
+    if extra:
+        headers.update(extra)
+    return headers
 
 
 async def check_primary_health() -> bool:
@@ -25,7 +45,10 @@ async def check_primary_health() -> bool:
 
     try:
         async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
-            resp = await client.get(f"https://{PRIMARY_HOST}/api/health")
+            resp = await client.get(
+                f"{PRIMARY_BASE}/api/health",
+                headers=backend_headers(),
+            )
             healthy = resp.status_code == 200
             if healthy:
                 try:
@@ -42,8 +65,8 @@ async def check_primary_health() -> bool:
     return healthy
 
 
-async def proxy_to_backend(request: Request, backend_host: str) -> Response:
-    url = f"https://{backend_host}{request.url.path}"
+async def proxy_to_backend(request: Request, base: str) -> Response:
+    url = f"{base}{request.url.path}"
     if request.url.query:
         url += f"?{request.url.query}"
 
@@ -60,6 +83,7 @@ async def proxy_to_backend(request: Request, backend_host: str) -> Response:
         "upgrade",
     ]:
         headers.pop(h, None)
+    headers.update(backend_headers())
 
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
         body = await request.body()
@@ -86,11 +110,27 @@ async def proxy_to_backend(request: Request, backend_host: str) -> Response:
 @app.get("/health")
 async def health():
     healthy = await check_primary_health()
+    fallback_ok = False
+    fallback_status = 0
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(
+                f"{FALLBACK_BASE}/api/health",
+                headers=backend_headers(),
+            )
+            fallback_status = r.status_code
+            fallback_ok = r.status_code == 200
+    except Exception:
+        fallback_ok = False
+
     return {
-        "status": "healthy" if healthy else "degraded",
-        "primary": PRIMARY_HOST,
-        "fallback": FALLBACK_HOST,
+        "status": "healthy" if healthy else ("degraded" if fallback_ok else "unhealthy"),
+        "primary": PRIMARY_BASE,
+        "fallback": FALLBACK_BASE,
+        "public_host": PUBLIC_HOST,
         "primary_healthy": healthy,
+        "fallback_healthy": fallback_ok,
+        "fallback_status": fallback_status,
     }
 
 
@@ -100,5 +140,5 @@ async def health():
 )
 async def proxy(request: Request, path: str):
     healthy = await check_primary_health()
-    backend = PRIMARY_HOST if healthy else FALLBACK_HOST
-    return await proxy_to_backend(request, backend)
+    base = PRIMARY_BASE if healthy else FALLBACK_BASE
+    return await proxy_to_backend(request, base)
