@@ -20,9 +20,16 @@ Schedules staggered 15 min apart.
 
 ## Credentials (Cloudflare R2)
 
-1. In Cloudflare Dashboard → R2 → Manage R2 API Tokens → create a token with
-   Object Read & Write on `datalake-bucket` (or account-wide).
-2. Store into each backup namespace (and AppFlowy WAL-G if enabling R16):
+Account ID: `fb7dc7b69b662480cd5961a4d1913c78`  
+Endpoint: `https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com`  
+Bucket: `datalake-bucket`
+
+**Preferred (API):** dispatch `create-r2-credentials.yml` with `confirm=create`.
+It mints a User API token with R2 Storage R/W and derives S3 keys as
+`Access Key ID = token id`, `Secret = SHA-256(token value)` (Cloudflare R2 docs).
+
+**Dashboard:** R2 → Manage API Tokens → Object Read & Write on `datalake-bucket`,
+then `store-r2-backup-credentials.yml` or:
 
 ```bash
 # From a machine with kubectl (no AWS CLI):
@@ -33,20 +40,12 @@ for ns in appflowy espocrm postiz n8n; do
     --dry-run=client -o yaml | kubectl apply -f -
 done
 
-# Optional: same token for AppFlowy continuous WAL (R16)
 kubectl -n appflowy create secret generic appflowy-walg-r2 \
   --from-literal=AWS_ACCESS_KEY_ID='…' \
   --from-literal=AWS_SECRET_ACCESS_KEY='…' \
   --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f infrastructure/appflowy/walg-sidecar.yaml
 ```
-
-Or dispatch `.github/workflows/store-r2-backup-credentials.yml` with the two
-values (writes GitHub secrets + optional cluster patch via `KUBECONFIG_B64`).
-
-`create-r2-credentials.yml` can mint tokens only when `CLOUDFLARE_API_TOKEN`
-has R2 permission (currently returns auth error until token is rotated with
-R2 scopes).
 
 ## Deploy CronJobs
 

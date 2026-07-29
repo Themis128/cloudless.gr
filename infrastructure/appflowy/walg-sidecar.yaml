@@ -41,7 +41,7 @@ metadata:
     app.kubernetes.io/part-of: appflowy
 data:
   # Cloudflare account id (same as CF_ACCOUNT_ID / wrangler account_id).
-  AWS_ENDPOINT: "https://c6d6b805741159c062a3e0b0d7f9d89a.r2.cloudflarestorage.com"
+  AWS_ENDPOINT: "https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com"
   AWS_REGION: "auto"
   AWS_S3_FORCE_PATH_STYLE: "true"
   WALG_S3_PREFIX: "s3://datalake-bucket/appflowy-wal/wal/"
