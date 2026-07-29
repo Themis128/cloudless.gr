@@ -10,6 +10,11 @@ permissions:
   contents: read
 strict: false
 engine: claude
+model: claude-haiku-4-5
+models:
+  default-ai-credits-pricing:
+    input: 1.0
+    output: 5.0
 safe-outputs:
   report-failure-as-issue: false
 ---
