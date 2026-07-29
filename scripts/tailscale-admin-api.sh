@@ -9,6 +9,10 @@ API="${TAILSCALE_API_BASE:-https://api.tailscale.com/api/v2}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ACL_PATCH="${ACL_PATCH:-$ROOT/infrastructure/tailscale/acl-policy.example.json}"
 DRY_RUN="${DRY_RUN:-0}"
+case "${DRY_RUN}" in
+  1|true|TRUE|yes|YES) DRY_RUN=1 ;;
+  *) DRY_RUN=0 ;;
+esac
 
 # Hostnames / prefixes to keep even if tagged k8s
 KEEP_RE='^(office|github-omv|omv-ha|cloudless-k3s-operator)$'
