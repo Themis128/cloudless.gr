@@ -20,6 +20,7 @@ type SortOption = "default" | "price-asc" | "price-desc" | "name-asc";
 
 const SEARCH_DEBOUNCE_MS = 250;
 const SEARCH_LIMIT = 20;
+const LOCAL_FALLBACK_SOURCE = "local-fallback";
 
 const sortLabels: Record<SortOption, string> = {
   default: "Featured",
@@ -111,10 +112,7 @@ function ProductCard({
 
       {/* Content */}
       <div className="p-6">
-        <Link
-          href={`/store/${product.id}`}
-          onClick={() => onNavigate?.(product.id)}
-        >
+        <Link href={`/store/${product.id}`} onClick={() => onNavigate?.(product.id)}>
           <h3 className="font-heading group-hover:text-neon-cyan text-lg font-semibold text-white transition-colors">
             {product.name}
           </h3>
@@ -186,8 +184,8 @@ export default function StoreGrid() {
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;
           console.warn("[StoreGrid] /api/search failed; using local keyword filter:", err);
-          setSemanticSearch({ query: q, hitIds: null, source: "local-fallback" });
-          trackFunnelEvent("search_query", { query: q, source: "local-fallback" });
+          setSemanticSearch({ query: q, hitIds: null, source: LOCAL_FALLBACK_SOURCE });
+          trackFunnelEvent("search_query", { query: q, source: LOCAL_FALLBACK_SOURCE });
         });
     }, SEARCH_DEBOUNCE_MS);
 
@@ -198,10 +196,8 @@ export default function StoreGrid() {
   }, [searchQuery]);
 
   const qTrim = searchQuery.trim();
-  const semanticHitIds =
-    semanticSearch.query === qTrim ? semanticSearch.hitIds : null;
-  const searchSource =
-    semanticSearch.query === qTrim ? semanticSearch.source : null;
+  const semanticHitIds = semanticSearch.query === qTrim ? semanticSearch.hitIds : null;
+  const searchSource = semanticSearch.query === qTrim ? semanticSearch.source : null;
 
   const filtered = useMemo(() => {
     let products =
@@ -239,7 +235,7 @@ export default function StoreGrid() {
     trackFunnelEvent("search_click", {
       query: q,
       product_id: productId,
-      source: searchSource ?? "local-fallback",
+      source: searchSource ?? LOCAL_FALLBACK_SOURCE,
     });
   }
 
