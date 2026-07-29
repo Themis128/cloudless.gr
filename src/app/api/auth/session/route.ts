@@ -18,7 +18,14 @@ export async function GET(req: NextRequest) {
     // Auth.js SessionProvider expects JSON `null` (not an HTML 404 page).
     try {
       const { handlers } = await import("@/lib/auth");
-      return handlers.GET(req);
+      const res = await handlers.GET(req);
+      const ct = res.headers.get("content-type") ?? "";
+      if (!ct.includes("application/json")) {
+        // Auth.js sometimes returns HTML error/signin pages — never leak those
+        // to the browser session poller (ClientFetchError on "<!DOCTYPE").
+        return NextResponse.json(null);
+      }
+      return res;
     } catch {
       return NextResponse.json(null);
     }
