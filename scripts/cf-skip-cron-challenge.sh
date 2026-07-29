@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
-# Skip Cloudflare managed challenges for /api/cron/* so GitHub Actions cron
-# workflows (linkedin-poll, postiz-crons, platform-crons) can authenticate with
-# Bearer CRON_SECRET instead of receiving a "Just a moment…" interstitial.
+# Unblock GitHub Actions cron callers from Cloudflare Bot Fight Mode.
 #
-# Auth: CLOUDFLARE_API_TOKEN (Zone → Firewall Services Edit + Zone Read).
-# Zone: CLOUDFLARE_ZONE_ID / CF_ZONE_ID, else resolve DOMAIN (default cloudless.gr).
-# Idempotent: replaces the rule with the same description if present.
+# Bot Fight Mode (free) cannot be skipped via WAF custom rules — Skip/Allow
+# have no effect on that pipeline. See:
+#   https://developers.cloudflare.com/bots/get-started/bot-fight-mode/#limitations
+#
+# This script turns Bot Fight Mode OFF zone-wide so Bearer CRON_SECRET polls
+# (linkedin-poll, postiz-crons, etc.) reach the Worker. Auth remains CRON_SECRET.
+#
+# Auth: CLOUDFLARE_API_TOKEN with Zone:Read + Zone Settings:Edit
+# Zone: CLOUDFLARE_ZONE_ID / CF_ZONE_ID, else resolve DOMAIN (default cloudless.gr)
 set -euo pipefail
 
 DOMAIN="${DOMAIN:-cloudless.gr}"
 ZONE_ID="${CLOUDFLARE_ZONE_ID:-${CF_ZONE_ID:-}}"
 TOKEN="${CLOUDFLARE_API_TOKEN:-}"
-RULE_DESC="Skip Bot Fight / Managed Challenge for /api/cron/* (GHA crons)"
-EXPRESSION='(starts_with(http.request.uri.path, "/api/cron/"))'
 API="https://api.cloudflare.com/client/v4"
 
 if [[ -z "$TOKEN" ]]; then
-  echo "::error::CLOUDFLARE_API_TOKEN is required (Zone:Read + Zone → Firewall Services:Edit)"
+  echo "::error::CLOUDFLARE_API_TOKEN is required (Zone:Read + Zone Settings:Edit)"
   exit 1
 fi
 
@@ -42,91 +44,40 @@ if [[ -z "$ZONE_ID" ]]; then
 fi
 echo "==> zone: ${ZONE_ID}"
 
-ENTRY="${API}/zones/${ZONE_ID}/rulesets/phases/http_request_firewall_custom/entrypoint"
-echo "==> fetching custom firewall entrypoint"
-CURRENT="$(cf GET "$ENTRY" || true)"
-
-PAYLOAD_FILE="$(mktemp)"
-python3 - "$CURRENT" "$RULE_DESC" "$EXPRESSION" <<'PY' > "$PAYLOAD_FILE"
+SETTING_URL="${API}/zones/${ZONE_ID}/settings/bot_fight_mode"
+echo "==> current bot_fight_mode"
+CUR="$(cf GET "$SETTING_URL" || true)"
+python3 - "$CUR" <<'PY' || true
 import json, sys
-
-raw, desc, expression = sys.argv[1], sys.argv[2], sys.argv[3]
 try:
-    data = json.loads(raw) if raw.strip() else {}
-except json.JSONDecodeError:
-    data = {}
-
-result = data.get("result") or {}
-ruleset_id = result.get("id") or ""
-existing = list(result.get("rules") or [])
-
-new_rule = {
-    "action": "skip",
-    "description": desc,
-    "enabled": True,
-    "expression": expression,
-    "action_parameters": {
-        # Skip managed WAF + Super Bot Fight Mode phases that emit
-        # "Just a moment…" challenge pages for datacenter IPs (GHA runners).
-        "phases": [
-            "http_request_firewall_managed",
-            "http_request_sbfm",
-        ],
-        "products": [
-            "bic",
-            "hot",
-            "rateLimit",
-            "securityLevel",
-            "uaBlock",
-            "waf",
-            "zoneLockdown",
-        ],
-    },
-}
-
-out = []
-replaced = False
-for r in existing:
-    if r.get("description") == desc:
-        if "id" in r:
-            new_rule = {**new_rule, "id": r["id"]}
-        out.append(new_rule)
-        replaced = True
-    else:
-        out.append(r)
-if not replaced:
-    out.append(new_rule)
-
-json.dump({"rules": out, "_ruleset_id": ruleset_id}, sys.stdout)
+    d = json.loads(sys.argv[1])
+except Exception:
+    print("    (could not parse current setting)")
+    raise SystemExit(0)
+if not d.get("success"):
+    print("    API:", json.dumps(d.get("errors"), indent=2))
+    raise SystemExit(0)
+print("    value:", (d.get("result") or {}).get("value"))
 PY
 
-RULESET_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("_ruleset_id",""))' "$PAYLOAD_FILE")"
-python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); p.pop("_ruleset_id", None); json.dump(p, open(sys.argv[1],"w"))' "$PAYLOAD_FILE"
-
-if [[ -n "$RULESET_ID" ]]; then
-  echo "==> updating ruleset ${RULESET_ID}"
-  RESP="$(cf PUT "${API}/zones/${ZONE_ID}/rulesets/${RULESET_ID}" "$(cat "$PAYLOAD_FILE")")"
-else
-  echo "==> creating custom firewall entrypoint"
-  RESP="$(cf PUT "$ENTRY" "$(cat "$PAYLOAD_FILE")")"
-fi
-rm -f "$PAYLOAD_FILE"
-
-python3 - "$RESP" "$RULE_DESC" <<'PY'
+echo "==> setting bot_fight_mode=off"
+RESP="$(cf PATCH "$SETTING_URL" '{"value":"off"}')"
+python3 - "$RESP" <<'PY'
 import json, sys
 resp = json.loads(sys.argv[1])
-desc = sys.argv[2]
 if not resp.get("success"):
     print("Cloudflare API error:", json.dumps(resp.get("errors"), indent=2), file=sys.stderr)
+    print(
+        "::error::Failed to disable bot_fight_mode — token needs Zone Settings:Edit "
+        "(or disable Bot Fight Mode manually in CF dashboard → Security → Bots).",
+        file=sys.stderr,
+    )
     sys.exit(1)
-rules = (resp.get("result") or {}).get("rules") or []
-match = [r for r in rules if r.get("description") == desc]
-if not match:
-    print("Rule not found after update", file=sys.stderr)
+val = (resp.get("result") or {}).get("value")
+print(f"✓ bot_fight_mode={val}")
+if val != "off":
+    print(f"::error::expected off, got {val}", file=sys.stderr)
     sys.exit(1)
-r = match[0]
-print(f"✓ rule id={r.get('id')} enabled={r.get('enabled')}")
-print(f"  expression={r.get('expression')}")
 PY
 
-echo "==> done"
+echo "==> done — GHA cron polls should no longer see Just a moment…"
