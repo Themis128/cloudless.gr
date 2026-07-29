@@ -20,7 +20,7 @@ import { sanitizeAttribution, formatAttribution } from "@/lib/lead-attribution";
 import { scoreLead, bandEmoji } from "@/lib/lead-scoring";
 import { enrollLeadInAutomation } from "@/lib/activecampaign";
 import { handlers } from "@/lib/auth";
-import { requireAuth } from "@/lib/auth-middleware";
+import { requireAuth } from "@/lib/api-auth";
 
 interface ContactRequestBody {
   name: string;

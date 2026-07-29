@@ -354,4 +354,112 @@ export async function slackRegistrationNotify(email: string): Promise<boolean> {
   return notify(email);
 }
 
+export async function sendContactAcknowledgment(opts: {
+  name: string;
+  email: string;
+  service?: string;
+}): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const safeName = escapeHtml(opts.name);
+  const serviceLine = opts.service
+    ? `<p>We noted your interest in <strong>${escapeHtml(opts.service)}</strong>.</p>`
+    : "";
+  await sendEmail({
+    to: opts.email,
+    subject: "We received your message — Cloudless",
+    html: `
+      <p>Hi ${safeName},</p>
+      <p>Thanks for contacting Cloudless. We review every enquiry and typically reply within 24 hours.</p>
+      ${serviceLine}
+      <p>— Themis at Cloudless<br/><a href="https://cloudless.gr">cloudless.gr</a></p>
+    `,
+    text: [
+      `Hi ${opts.name},`,
+      ``,
+      `Thanks for contacting Cloudless. We review every enquiry and typically reply within 24 hours.`,
+      opts.service ? `We noted your interest in: ${opts.service}` : "",
+      ``,
+      `— Themis at Cloudless`,
+      `https://cloudless.gr`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    fromLabel: "Themis at Cloudless",
+  });
+}
+
+/**
+ * Confirmation email after a consultation is booked (chat or calendar).
+ */
+
+export async function sendBookingConfirmation(opts: {
+  name: string;
+  email: string;
+  slotLabel: string;
+  meetLink?: string;
+  notes?: string;
+}): Promise<void> {
+  const { escapeHtml } = await import("@/lib/escape-html");
+  const meet = opts.meetLink
+    ? `<p><strong>Google Meet:</strong> <a href="${escapeHtml(opts.meetLink)}">${escapeHtml(opts.meetLink)}</a></p>`
+    : "";
+  await sendEmail({
+    to: opts.email,
+    subject: `Consultation confirmed — ${opts.slotLabel}`,
+    html: `
+      <p>Hi ${escapeHtml(opts.name)},</p>
+      <p>Your consultation is booked:</p>
+      <p><strong>${escapeHtml(opts.slotLabel)}</strong></p>
+      ${meet}
+      ${opts.notes ? `<p>Notes: ${escapeHtml(opts.notes)}</p>` : ""}
+      <p>— Cloudless</p>
+    `,
+    text: [
+      `Hi ${opts.name},`,
+      ``,
+      `Your consultation is booked: ${opts.slotLabel}`,
+      opts.meetLink ? `Google Meet: ${opts.meetLink}` : "",
+      opts.notes ? `Notes: ${opts.notes}` : "",
+      ``,
+      `— Cloudless`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    fromLabel: "Cloudless Bookings",
+  });
+}
+
+/**
+ * Confirmation email sent when a subscriber successfully unsubscribes.
+ */
+
+export async function sendUnsubscribeConfirmation(email: string): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: "You've been unsubscribed — Cloudless",
+    fromLabel: "Cloudless",
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0f; padding: 32px; border-radius: 12px;">
+        <h2 style="color: #00fff5; margin-top: 0;">Unsubscribed ✓</h2>
+        <p>You've been successfully removed from the Cloudless newsletter. You won't receive any further emails from us.</p>
+        <p>If this was a mistake, you can <a href="https://cloudless.gr/#newsletter" style="color: #00fff5;">re-subscribe here</a>.</p>
+        <hr style="border: none; border-top: 1px solid #222; margin: 24px 0;" />
+        <p style="color: #555; font-size: 12px;">Cloudless · <a href="https://cloudless.gr" style="color: #555;">cloudless.gr</a></p>
+      </div>
+    `,
+    text: [
+      "Unsubscribed",
+      "",
+      "You've been successfully removed from the Cloudless newsletter.",
+      "If this was a mistake, visit https://cloudless.gr/#newsletter to re-subscribe.",
+      "",
+      "Cloudless · cloudless.gr",
+    ].join("\n"),
+  });
+}
+
+/**
+ * Account activation email with link + optional OTP fallback.
+ */
+
 export type { SendEmailCommandInput } from "@aws-sdk/client-sesv2";
