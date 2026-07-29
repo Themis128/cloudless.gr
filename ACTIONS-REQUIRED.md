@@ -2,19 +2,19 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 23:05 EEST — Kuma push monitors live; aw Claude haiku pin
+# Last Updated: 2026-07-29 23:10 EEST — aw engines → Gemini (GEMINI_API_KEY)
 
 ---
 
-## ✅ Agentic workflows use Claude Haiku (2026-07-29)
+## ✅ Agentic workflows use Gemini (2026-07-29)
 
-Switched all 9 gh-aw workflows from `engine: copilot` → `engine: claude` using repo secret `ANTHROPIC_API_KEY`.
+Switched all 9 gh-aw workflows to `engine: gemini` with repo secret `GEMINI_API_KEY`.
 
-Pinned `model: claude-haiku-4-5` (cheapest current Claude) and set `models.default-ai-credits-pricing` (`input: 1.0`, `output: 5.0` $/1M) so AWF does not reject unrecognized model IDs with HTTP 400.
+Pinned `model: gemini-2.5-flash-lite` (cheapest current Gemini) and set `models.default-ai-credits-pricing` (`input: 0.10`, `output: 0.40` $/1M) so AWF does not reject unrecognized model IDs with HTTP 400.
 
-Fine-grained PAT UI often has no "Account → Copilot Requests" (user-owned PAT only; under Account permissions). Copilot inference was HTTP 401 anyway.
+Copilot and Claude were abandoned for aw: Copilot PAT lacked Copilot Requests / 401; `ANTHROPIC_API_KEY` returned 401 invalid key.
 
-Env secret `COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN` is unused by these workflows now.
+Env secret `COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN` and Claude/`ANTHROPIC_API_KEY` are unused by these workflows now.
 
 ---
 
