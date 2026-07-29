@@ -1,28 +1,26 @@
-# Tailscale Ingress Rules for Self-Hosted Services
-# These Ingress resources make services accessible via Tailscale MagicDNS
-# After applying, services will be reachable at: https://<hostname>.ts.cloudless.gr
-
+# Tailscale L7 Ingresses — private fabric only (no Funnel / no public exposure).
+# MagicDNS host is taken from tls.hosts (or metadata annotation hostname).
+# Shared ProxyGroup keeps device count at ~1 instead of N proxies.
+#
+# Reachable as: https://grafana.<tailnet>.ts.net  (or custom split-DNS if configured)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: grafana-tailscale
   namespace: monitoring
   annotations:
-    tailscale.com/hostname: "grafana"
-    tailscale.com/allowlist: "tag:developers"  # Only developers can access
+    tailscale.com/proxy-group: ingress
+    tailscale.com/hostname: grafana
 spec:
   ingressClassName: tailscale
-  rules:
-    - host: grafana.ts.cloudless.gr
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: kube-prom-grafana
-                port:
-                  number: 80
+  tls:
+    - hosts:
+        - grafana
+  defaultBackend:
+    service:
+      name: kube-prom-grafana
+      port:
+        number: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -30,21 +28,18 @@ metadata:
   name: loki-tailscale
   namespace: monitoring
   annotations:
-    tailscale.com/hostname: "loki"
-    tailscale.com/allowlist: "tag:developers"
+    tailscale.com/proxy-group: ingress
+    tailscale.com/hostname: loki
 spec:
   ingressClassName: tailscale
-  rules:
-    - host: loki.ts.cloudless.gr
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: loki
-                port:
-                  number: 3100
+  tls:
+    - hosts:
+        - loki
+  defaultBackend:
+    service:
+      name: loki
+      port:
+        number: 3100
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -52,22 +47,15 @@ metadata:
   name: meilisearch-tailscale
   namespace: search
   annotations:
-    tailscale.com/hostname: "meilisearch"
-    tailscale.com/allowlist: "tag:developers"
+    tailscale.com/proxy-group: ingress
+    tailscale.com/hostname: meilisearch
 spec:
   ingressClassName: tailscale
-  rules:
-    - host: meilisearch.ts.cloudless.gr
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: meilisearch
-                port:
-                  number: 7700
----
-# NOTE: pi-origin.cloudless.gr removed - application now runs on Cloudflare Workers
-# The main application is served at https://cloudless.gr (Cloudflare Workers)
-# Failover endpoint: https://cloudless-failover.baltzakis-themis.workers.dev
+  tls:
+    - hosts:
+        - meilisearch
+  defaultBackend:
+    service:
+      name: meilisearch
+      port:
+        number: 7700

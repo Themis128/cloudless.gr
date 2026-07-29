@@ -1,46 +1,34 @@
-# Tailscale Operator Deployment for K3S Cluster
+# Tailscale Operator (fabric interconnect)
 
-# Generated: 2026-07-06
+Canonical guide: [`docs/TAILSCALE-FABRIC.md`](../../docs/TAILSCALE-FABRIC.md)
 
-## Overview
-
-Tailscale operates as the **fabric interconnect** for the k3s cluster, providing:
-
-- Secure mesh networking between omv-main (192.168.1.128) and omv-ha (192.168.1.130)
-- MagicDNS endpoint resolution (`*.ts.cloudless.gr`)
-- Cross-node service access (services on omv-ha accessible from omv-main's Cloudflare tunnel)
-
-## Prerequisites
-
-1. Tailscale OAuth Client ID and Secret (stored in AWS SSM or .env.local)
-2. Kubernetes cluster access via kubeconfig
-3. Namespace creation permissions
-
-## Files in this directory
-
-- `namespace.yaml` - Tailscale namespace and RBAC
-- `subnet-router.yaml` - K3S subnet router for Tailscale fabric access
-- `ingress-class.yaml` - Tailscale ingress class definition
-- `ingresses.yaml` - Tailscale ingress rules for Grafana, Loki, Meilisearch
-- `proxygroup-monitoring.yaml` - ProxyGroup for monitoring tools (Grafana, Loki)
-- `deploy.sh` - Automated deployment script
-
-## Services Accessible via Tailscale
-
-| Service | MagicDNS Endpoint | Node |
-|---------|-------------------|------|
-| Grafana | grafana.ts.cloudless.gr | omv-main |
-| Loki | loki.ts.cloudless.gr | omv-main |
-| Meilisearch | meilisearch.ts.cloudless.gr | omv-ha |
-
-## Deployment
+## Quick deploy
 
 ```bash
-# Deploy Tailscale operator
-kubectl apply -f namespace.yaml
-kubectl apply -f ingress-class.yaml
-kubectl apply -f proxygroup-monitoring.yaml
-kubectl apply -f ingresses.yaml
+export TS_CLIENT_ID=…          # OAuth client, tag:k8s-operator
+export TS_CLIENT_SECRET=…
+export KUBECONFIG=~/.kube/config-cloudless-ts
+bash infrastructure/tailscale/deploy.sh
+```
 
-# Or use the automated script
-./deploy.sh
+Then merge `acl-policy.example.json` into Tailscale Access controls and delete
+stale `tag:k8s` Machines from the Jul rebuild.
+
+## Layout
+
+| File | Purpose |
+|------|---------|
+| `connector.yaml` | `Connector` advertises `10.42/16` + `10.43/16` (HA replicas: 2) |
+| `proxygroup.yaml` | Shared `ingress` ProxyGroup + `kube-apiserver` ProxyGroup |
+| `ingresses.yaml` | Grafana / Loki / Meili with `tailscale.com/proxy-group: ingress` |
+| `acl-policy.example.json` | tagOwners + autoApprovers |
+| `deploy.sh` | Helm install (no AWS SSM) |
+| `subnet-router.yaml` / `proxygroup-monitoring.yaml` | Deprecated stubs |
+
+## Design rules (from Tailscale docs)
+
+1. **Subnet routes → Connector**, never ProxyGroup.
+2. **Many services → one ingress ProxyGroup** (annotate `proxy-group`).
+3. **HA subnet routers** advertise identical CIDR strings.
+4. **kubectl remotely → kube-apiserver ProxyGroup** (`tailscale configure kubeconfig`).
+5. **No Funnel** for these GUIs — Cloudflare Access covers public admin HTTP.

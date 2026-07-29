@@ -1,0 +1,98 @@
+# Deploy Tailscale fabric interconnect (operator + Connector + ProxyGroups).
+# Runs on the omv Pi runner so kubectl hits the local API (no TUN/SOCKS needed).
+# Secrets stay in GitHub — never echoed.
+#
+# Manual only. After ACL merge in Tailscale admin:
+#   gh workflow run tailscale-fabric-deploy.yml --ref <branch>
+
+name: Tailscale fabric deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tailscale-fabric-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy operator + fabric CRs
+    runs-on: [self-hosted, omv, pi]
+    timeout-minutes: 25
+    env:
+      TS_CLIENT_ID: ${{ secrets.TS_CLIENT_ID }}
+      TS_CLIENT_SECRET: ${{ secrets.TS_CLIENT_SECRET }}
+      # Fallbacks if only legacy names are populated
+      TAILSCALE_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+      TAILSCALE_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+      TS_OPERATOR_NS: tailscale
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Resolve OAuth credentials
+        id: oauth
+        run: |
+          set -euo pipefail
+          ID="${TS_CLIENT_ID:-$TAILSCALE_CLIENT_ID}"
+          SECRET="${TS_CLIENT_SECRET:-$TAILSCALE_CLIENT_SECRET}"
+          # TAILSCALE_OAUTH_SECRET is client secret in older workflows
+          if [ -z "$SECRET" ]; then
+            SECRET="${{ secrets.TAILSCALE_OAUTH_SECRET }}"
+          fi
+          if [ -z "$ID" ] || [ -z "$SECRET" ]; then
+            echo "::error::Missing Tailscale OAuth (TS_CLIENT_ID/SECRET or TAILSCALE_OAUTH_*)"
+            exit 1
+          fi
+          echo "client_id=$ID" >> "$GITHUB_OUTPUT"
+          echo "has_secret=true" >> "$GITHUB_OUTPUT"
+          # Export for deploy.sh without printing
+          echo "TS_CLIENT_ID=$ID" >> "$GITHUB_ENV"
+          echo "TS_CLIENT_SECRET=$SECRET" >> "$GITHUB_ENV"
+
+      - name: Ensure helm + kubectl
+        run: |
+          set -euo pipefail
+          command -v kubectl
+          sudo -n true 2>/dev/null && KCTL="sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl" || KCTL="kubectl"
+          $KCTL get nodes
+          if ! command -v helm >/dev/null; then
+            curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          fi
+          helm version -c
+
+      - name: Deploy fabric
+        run: |
+          set -euo pipefail
+          # Prefer root kubeconfig on the Pi control-plane runner
+          if [ -r /etc/rancher/k3s/k3s.yaml ]; then
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+            # Non-root runners often need sudo to read k3s.yaml
+            if ! kubectl get ns >/dev/null 2>&1; then
+              echo "Wrapping kubectl/helm via sudo for k3s.yaml"
+              sudo -E env \
+                "PATH=$PATH" \
+                "TS_CLIENT_ID=$TS_CLIENT_ID" \
+                "TS_CLIENT_SECRET=$TS_CLIENT_SECRET" \
+                "TS_OPERATOR_NS=$TS_OPERATOR_NS" \
+                "KUBECONFIG=/etc/rancher/k3s/k3s.yaml" \
+                bash infrastructure/tailscale/deploy.sh
+              exit 0
+            fi
+          fi
+          bash infrastructure/tailscale/deploy.sh
+
+      - name: Verify
+        if: always()
+        run: |
+          set +e
+          KCTL=kubectl
+          if [ -r /etc/rancher/k3s/k3s.yaml ] && ! kubectl get ns >/dev/null 2>&1; then
+            KCTL="sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl"
+          fi
+          $KCTL get connector,proxygroup,proxyclass -A 2>/dev/null || $KCTL get connector,proxygroup,proxyclass
+          $KCTL get pods -n tailscale -o wide
+          $KCTL get ingress -A | grep -i tail || true

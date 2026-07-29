@@ -1,80 +1,62 @@
-#!/bin/bash
-# Tailscale Operator Deployment Script for K3S
-# Requires: kubectl, helm, Tailscale OAuth credentials
-set -e
+#!/usr/bin/env bash
+# Deploy Tailscale Kubernetes Operator + fabric interconnect (free tier).
+# Docs: docs/TAILSCALE-FABRIC.md
+# Official: https://tailscale.com/docs/kubernetes-operator/install-operator
+set -euo pipefail
 
-echo "🚀 Deploying Tailscale Operator to K3S cluster..."
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+NS="${TS_OPERATOR_NS:-tailscale}"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+need() { command -v "$1" >/dev/null || { echo "missing $1"; exit 1; }; }
+need kubectl
+need helm
 
-# Step 1: Add Tailscale Helm Repository
-echo -e "${YELLOW}Step 1: Adding Tailscale Helm repository...${NC}"
-helm repo add tailscale https://pkgs.tailscale.com/helmcharts
-helm repo update
-
-# Step 2: Create tailscale-operator namespace
-echo -e "${YELLOW}Step 2: Creating tailscale-operator namespace...${NC}"
-kubectl create namespace tailscale-operator --dry-run=client -o yaml | kubectl apply -f -
-
-# Step 3: Apply namespace and RBAC (credentials from SSM)
-echo -e "${YELLOW}Step 3: Applying namespace configuration...${NC}"
-kubectl apply -f infrastructure/tailscale/namespace.yaml
-
-# Step 4: Get credentials from SSM (if available)
-echo -e "${YELLOW}Step 4: Loading credentials...${NC}"
-if command -v aws &> /dev/null; then
-  echo "Loading Tailscale OAuth credentials from AWS SSM..."
-  CLIENT_ID=$(aws ssm get-parameter --name /cloudless/production/TAILSCALE_CLIENT_ID --with-decryption --query Parameter.Value --output text 2>/dev/null || echo "")
-  CLIENT_SECRET=$(aws ssm get-parameter --name /cloudless/production/TAILSCALE_CLIENT_SECRET --with-decryption --query Parameter.Value --output text 2>/dev/null || echo "")
-  
-  if [ -n "$CLIENT_ID" ] && [ -n "$CLIENT_SECRET" ]; then
-    echo "Credentials loaded from SSM successfully"
-    kubectl patch secret tailscale-operator-secrets -n tailscale-operator --type merge -p "{\"stringData\":{\"TS_CLIENT_ID\":\"$CLIENT_ID\",\"TS_CLIENT_SECRET\":\"$CLIENT_SECRET\"}}"
-  else
-    echo -e "${RED}Warning: Could not load credentials from SSM. Using existing secret or .env.local${NC}"
-  fi
+CLIENT_ID="${TS_CLIENT_ID:-${TAILSCALE_CLIENT_ID:-}}"
+CLIENT_SECRET="${TS_CLIENT_SECRET:-${TAILSCALE_CLIENT_SECRET:-}}"
+if [[ -z "$CLIENT_ID" || -z "$CLIENT_SECRET" ]]; then
+  echo "Set TS_CLIENT_ID and TS_CLIENT_SECRET (OAuth client tagged tag:k8s-operator)."
+  echo "Create at: https://login.tailscale.com/admin/settings/oauth"
+  echo "Scopes: Devices Core write, Auth Keys write. Tags: tag:k8s-operator"
+  exit 2
 fi
 
-# Step 5: Install Tailscale Operator
-echo -e "${YELLOW}Step 5: Installing Tailscale Operator...${NC}"
-helm install tailscale-operator tailscale/tailscale-operator \
-  --namespace tailscale-operator \
+echo "==> Helm repo"
+helm repo add tailscale https://pkgs.tailscale.com/helmcharts >/dev/null
+helm repo update tailscale >/dev/null
+
+echo "==> Install/upgrade operator (ns=$NS)"
+helm upgrade --install tailscale-operator tailscale/tailscale-operator \
+  --namespace "$NS" \
   --create-namespace \
-  --set-string oauth.clientID="${CLIENT_ID:-}" \
-  --set-string oauth.clientSecret="${CLIENT_SECRET:-}" \
-  --set operatorLogLevel=info \
+  --set-string oauth.clientId="$CLIENT_ID" \
+  --set-string oauth.clientSecret="$CLIENT_SECRET" \
+  --set operatorConfig.defaultTags="{tag:k8s-operator}" \
+  --set-string proxyConfig.defaultTags="tag:k8s" \
+  --set-string apiServerProxyConfig.allowImpersonation="true" \
   --wait
 
-# Step 6: Deploy Subnet Router
-echo -e "${YELLOW}Step 6: Deploying K3S subnet router...${NC}"
-kubectl apply -f infrastructure/tailscale/subnet-router.yaml
+echo "==> IngressClass + Connector/ProxyClass + ProxyGroups"
+kubectl apply -f "$ROOT/infrastructure/tailscale/ingress-class.yaml"
+kubectl apply -f "$ROOT/infrastructure/tailscale/connector.yaml"
 
-# Step 7: Deploy ProxyGroup for monitoring
-echo -e "${YELLOW}Step 7: Deploying monitoring proxies...${NC}"
-kubectl apply -f infrastructure/tailscale/proxygroup-monitoring.yaml
+echo "==> ProxyGroups (ingress + kube-apiserver)"
+kubectl apply -f "$ROOT/infrastructure/tailscale/proxygroup.yaml"
 
-# Step 8: Create Tailscale Ingress Class
-echo -e "${YELLOW}Step 8: Creating Tailscale ingress class...${NC}"
-kubectl apply -f infrastructure/tailscale/ingress-class.yaml 2>/dev/null || true
+echo "==> Ingresses (Grafana / Loki / Meili → shared ProxyGroup)"
+kubectl apply -f "$ROOT/infrastructure/tailscale/ingresses.yaml"
 
-# Step 9: Verify deployment
-echo -e "${YELLOW}Step 9: Verifying deployment...${NC}"
-echo "Pods in tailscale-operator namespace:"
-kubectl get pods -n tailscale-operator
-echo ""
-echo "Subnet router status:"
-kubectl get proxysgroup -n tailscale-operator 2>/dev/null || kubectl get ProxyGroup -n tailscale-operator
+echo
+echo "==> Status"
+kubectl get connector,proxygroup,proxyclass -A 2>/dev/null || \
+  kubectl get connector,proxygroup,proxyclass
+kubectl get pods -n "$NS"
 
-echo ""
-echo -e "${GREEN}✅ Tailscale Operator deployed successfully!${NC}"
-echo ""
-echo "Next steps:"
-echo "  1. Configure Tailscale ACLs to allow subnet access"
-echo "  2. Enable MagicDNS in Tailscale admin console"
-echo "  3. Add Tailscale ingress to services:"
-echo "     kubectl annotate svc <service> -n <namespace> tailscale.com/hostname=<name>"
-echo "  4. Access services via: https://<service>.ts.cloudless.gr"
+echo
+echo "Next:"
+echo "  1. Merge infrastructure/tailscale/acl-policy.example.json into Access controls"
+echo "  2. Delete stale Machines (monitoring-proxies-*, old app proxies) in admin UI"
+echo "  3. Approve subnet routes if autoApprovers not live yet"
+echo "  4. kubectl wait connector k3s-cidrs --for=condition=ConnectorReady=true --timeout=5m"
+echo "  5. kubectl wait proxygroup kube --for=condition=ProxyGroupReady=true --timeout=5m"
+echo "  6. tailscale configure kubeconfig \$(kubectl get proxygroup kube -o jsonpath='{.status.url}')"
+echo "  7. Add k3s tls-san for Tailscale IP (see docs/TAILSCALE-FABRIC.md) if dialing :6443 directly"
