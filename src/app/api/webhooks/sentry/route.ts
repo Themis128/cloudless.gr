@@ -74,6 +74,16 @@ function verifySignature(rawBody: string, signature: string, secret: string): bo
   return timingSafeEqual(a, b);
 }
 
+/** Browser / health probe — webhooks are POST-only. */
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    method: "POST",
+    usage:
+      "Configure this URL as a Sentry Internal Integration webhook (issue events). Do not open it in a browser for delivery tests.",
+  });
+}
+
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get("sentry-hook-signature") ?? "";
