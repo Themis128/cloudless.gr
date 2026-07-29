@@ -59,8 +59,11 @@ describe("auth/public accessibility", () => {
   it("login page exposes labeled, autocomplete-enabled credentials fields", () => {
     render(<LoginPage />);
 
-    const kcButton = screen.getByRole("button", { name: /continue with aws/i });
-    expect(kcButton).toBeTruthy();
+    const email = screen.getByLabelText("Email") as HTMLInputElement;
+    const password = screen.getByLabelText("Password") as HTMLInputElement;
+    expect(email.autocomplete).toBe("email");
+    expect(password.autocomplete).toBe("current-password");
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeTruthy();
   });
 
   it("signup page exposes verification-safe fields and password constraints", () => {
