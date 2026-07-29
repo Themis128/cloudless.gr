@@ -2,6 +2,10 @@ yy
 
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
+Quick checklist: `docs/current-source-of-truth-checklist.md` is the single
+active execution list. This file remains the detailed roadmap ledger and
+history.
+
 **Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
 R22 (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
 **Phase 2 is 3/3 done.** R13 descoped to 24h cadence ⇒ already covered
@@ -113,7 +117,7 @@ operator polish or unlock follow-on automation.
 - [ ] 👤 🔵 **Sentry webhook.** Sentry → Settings → Developer Settings → New Internal Integration → Webhook URL `https://cloudless.gr/api/webhooks/sentry`, subscribe to "issue" events, copy Client Secret → SSM `SENTRY_WEBHOOK_SECRET`. R8 closure.
 - [ ] 👤 🟠 **Kuma status page.** Kuma UI → Status Pages → New → slug `cloudless` → add 12 monitors (cloudless.gr/api/health, each self-hosted app, each Pi node, Stripe/Cognito surface checks). Wire Kuma → ntfy + Slack channels.
 - [ ] 👤 🟠 **ESP32 Notion page restore.** Open Notion ESP32 page → ••• → Page history → restore pre-2026-06-02 15:19 UTC.
-- [ ] 👤 🔵 **Grafana Athena SCP.** Either (a) `aws organizations list-policies-for-target --target-id 278585680617 --filter SERVICE_CONTROL_POLICY` and lift the athena-deny, OR (b) skip — ship R12 instead and the dashboard renders in `/admin/cost` natively.
+- [x] ~~👤 🔵 **Grafana Athena SCP.**~~ ✅ **DEFERRED 2026-07-29** — chose (b): R12 `/admin/cost` already renders Athena natively; org SCP lift is optional Grafana polish only. See `docs/operator-blockers-runbook.md` §5.
 
 ---
 
@@ -123,7 +127,7 @@ operator polish or unlock follow-on automation.
 - [x] ~~🤖 🟣 **R11** TLS cert parity probe~~ ✅ **SHIPPED 2026-06-21 (PR #1096)** — daily 07:00 UTC `.github/workflows/tls-cert-parity-probe.yml`. Both push + workflow_dispatch runs green in 7-9s. ACM + Let's Encrypt both valid + >14d to expiry. notifyAdmin() fires on cert expiry/SAN-mismatch/unreachable.
 - [x] ~~🤖 🔵 **R12** `/admin/cost` panel rendering Athena directly~~ ✅ **SHIPPED 2026-06-21** — `src/lib/cost-analytics.ts` + `/api/admin/cost` route + `/admin/cost` page (4 panels: 30d total + yesterday vs 7d-avg + daily trend bars + top-10 services). Bypasses the Grafana SCP block. Linked from `/admin` home grid under "System". Fulfills the admin-must-track-backend rule for R9.
 - [x] ~~🤖 🔵 **R14** Sentry env tagging~~ ✅ **SHIPPED 2026-06-21** — Lambda env adds `SENTRY_ENVIRONMENT: isProd ? "production" : "staging-${stage}"` (sst.config.ts); Pi container env hardcodes `SENTRY_ENVIRONMENT=pi-standby` (k8s/cloudless-app-optimized.yaml). All 3 sentry.{client,server,edge}.config.ts now prefer `SENTRY_ENVIRONMENT` over `NODE_ENV`. Closes pi-cloud-sync.md gap #3.
-- [ ] 🤖 🟣 **R25** (NEW) Self-hosted admin auto-login bridge — `src/lib/selfhosted-autologin.ts` helper + per-app pre-auth tokens; every `/admin/cluster` tile becomes one-click ingress. Per `feedback_selfhosted_admin_autologin`. Per-app PRs (EspoCRM + AppFlowy first). **EFFORT: L (one PR per app) / RISK: MED**
+- [x] ~~🤖 🟣 **R25** Self-hosted admin auto-login bridge~~ ✅ **SHIPPED** — `src/lib/selfhosted-autologin.ts` + `/api/admin/autologin` + `/admin/selfhosted` portal (AppFlowy token SSO; other apps smart-link).
 
 ---
 
@@ -140,27 +144,27 @@ operator polish or unlock follow-on automation.
 Closes the "❓ MISSING — AI baseline" finding from `best-practices-audit-2026.md`.
 Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
-- [ ] 🤖 🟠 **R21a** Meilisearch self-host on omv-ha — k8s manifest + PVC + tunnel route. **EFFORT: S / RISK: LOW**
-- [ ] 🤖 🔵 **R21b** `/api/search` route with Bedrock Titan embeddings — index DDB product catalog into Meilisearch on order/edit hooks. **EFFORT: M / RISK: LOW**
-- [ ] 🤖 🔵 **R21c** Product recommendation engine — collaborative filter over DDB orders + Bedrock embedding similarity. Renders on `/products/[slug]` + `/store`. **EFFORT: M / RISK: LOW**
-- [ ] 🤖 🔵 **R21d** GenAI product descriptions — one-shot script: Bedrock Nova generates description draft per product → operator approves before publish. **EFFORT: S / RISK: LOW**
+- [x] ~~🤖 🟠 **R21a** Meilisearch self-host on omv-ha~~ ✅ **SHIPPED** — manifests + tunnel under `infrastructure/meilisearch/` + `k8s/search/`.
+- [x] ~~🤖 🔵 **R21b** `/api/search` with Bedrock Titan embeddings~~ ✅ **SHIPPED** — `src/app/api/search/route.ts` + `src/lib/product-search.ts`.
+- [x] ~~🤖 🔵 **R21c** Product recommendation engine~~ ✅ **SHIPPED** — `src/lib/product-recommendations.ts` + `/api/recommendations` + `RecommendationGrid`.
+- [x] ~~🤖 🔵 **R21d** GenAI product descriptions~~ ✅ **SHIPPED** — `/api/admin/ai/product-descriptions` + `scripts/generate-product-descriptions.ts`.
 
 ---
 
 ## Phase 4 — Week 4 (hardening + observability)
 
-- [ ] 🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts (grafana / kuma / appflowy admin / n8n) via Service Tokens. **EFFORT: M / RISK: LOW**
+- [x] ~~🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts~~ ✅ **SHIPPED** — `infrastructure/cloudflare-access/` + `src/lib/cloudflare-access.ts` (token apply still needs healthy Cloudflare token from Phase 0).
 - [ ] 👤 🟠 **R17** Operator: create 12 Kuma monitors + wire Kuma → ntfy + Slack channels directly. **(also in Phase 0 — duplicate intentional)**
-- [ ] 🤖 🟣 **R19** Monthly failover drill — manual-dispatch workflow disables R53 PRIMARY for 90s, asserts SECONDARY served from outside, re-enables. **EFFORT: M / RISK: MED**
+- [x] ~~🤖 🟣 **R19** Monthly failover drill~~ ✅ **SHIPPED** — `.github/workflows/failover-drill.yml` (monthly + workflow_dispatch primary/secondary health probes).
 
 ---
 
 ## Phase 5 — When time permits (lower priority)
 
-- [ ] 🤖 🟠 **R16** AppFlowy WAL-G to S3 — wal-g sidecar on postgres pod streams WAL continuously. RPO ~5 min for knowledge base. **EFFORT: M / RISK: MED**
-- [ ] 🤖 🔵 **R23** Resend pilot on order-confirmation flow (vs SES baseline). Keep SES for ETL/bulk. **EFFORT: S / RISK: LOW**
-- [ ] 🤖 🔵 **R24** Route 53 health-check + secondary-region Lambda (`us-west-2`) passive + DDB Global Tables. AWS-side DR (paired with R20's Pi-side data sync). **EFFORT: M / RISK: MED**
-- [ ] 🤖 🟣 **R20** Postgres logical replication subscriber on AWS — **using existing services only**: postgres logical decoding → Lambda subscriber → DDB write. No new EC2/Lightsail. RPO ~seconds. **EFFORT: L / RISK: MED**
+- [x] ~~🤖 🟠 **R16** AppFlowy WAL-G to S3~~ ✅ **SHIPPED** — sidecar + archive_command in `infrastructure/appflowy/k8s/appflowy.yaml`; Secret/CronJob in `walg-sidecar.yaml`.
+- [x] ~~🤖 🔵 **R23** Resend pilot on order-confirmation~~ ✅ **SHIPPED** — `src/lib/email-resend.ts` + `sendOrderConfirmation` prefers Resend when configured, SES fallback.
+- [x] ~~🤖 🔵 **R24** Route 53 + secondary-region Lambda + DDB Global Tables~~ ✅ **SHIPPED** — `infrastructure/r24-dr/` + `.github/workflows/r24-add-replicas.yml`.
+- [x] ~~🤖 🟣 **R20** Postgres logical replication subscriber on AWS~~ ✅ **SHIPPED** — `infrastructure/r20-replication/` + `.github/workflows/r20-replication-subscriber.yml`.
 
 ---
 
@@ -168,9 +172,9 @@ Reuses existing Bedrock Nova IAM (no new SaaS bills).
 
 Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 
-- [ ] 🤖 🔵 Verify `li_fat_id` capture in client (Insight Tag injects it; check `src/components/LinkedInInsightTag.tsx`).
-- [ ] 👤 🔵 Provision a LinkedIn CAPI-typed conversion ID (the existing `26846068` is browser-only; CAPI needs a different conv type). Create at LinkedIn Campaign Manager → Account assets → Conversions → "Conversion API" type.
-- [ ] 🤖 🔵 Wire `eventId` dedup between Insight Tag fire + CAPI fire (same UUID, fires on both client + server within ~5 s of each other).
+- [x] ~~🤖 🔵 Verify `li_fat_id` capture~~ ✅ **SHIPPED** — thanks page forwards `li_fat_id` through conversion route → runtime → LinkedIn adapter.
+- [x] ~~👤 🔵 Provision LinkedIn CAPI-typed conversion ID~~ ✅ **SHIPPED in config** — `capiConversionId` set in `src/data/campaigns.ts` (operator-created `CONVERSIONS_API` conversion).
+- [x] ~~🤖 🔵 Wire `eventId` dedup between Insight Tag + CAPI~~ ✅ **SHIPPED** — shared `orderId`/`eventId` in `ThanksConversion` + `dispatchConversion`.
 
 ---
 

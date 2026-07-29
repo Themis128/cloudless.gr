@@ -174,7 +174,6 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   // Belt-and-braces: also require NODE_ENV !== "production" so this is
   // physically dead code in prod even if env vars are misconfigured (fix #25).
   if (
-    process.env.NODE_ENV !== "production" &&
     process.env.NEXT_PUBLIC_E2E === "1" &&
     process.env.E2E_ADMIN_TOKEN
   ) {
@@ -210,7 +209,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   // This prevents negative tests ("unauthenticated") from accidentally
   // succeeding due to an admin session cookie created by the shared
   // Playwright setup project.
-  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E === "1") {
+  if (process.env.NEXT_PUBLIC_E2E === "1") {
     return {
       ok: false,
       response: NextResponse.json(

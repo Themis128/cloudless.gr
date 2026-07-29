@@ -73,7 +73,7 @@ const BASE_CONFIG = {
   GRAFANA_API_TOKEN: "grafana-token",
   // Kuma
   KUMA_BASE_URL: "https://kuma.cloudless.gr",
-  KUMA_STATUS_PAGE_SLUG: "default",
+  KUMA_STATUS_PAGE_SLUG: "cloudless",
   // Other required fields
   STRIPE_SECRET_KEY: "sk_test_123",
   STRIPE_WEBHOOK_SECRET: "whsec_test",

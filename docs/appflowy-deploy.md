@@ -127,18 +127,22 @@ omv-ha). To restore Postiz AI:
 
 ## Backup / restore
 
-For now: lean on the existing `k3s-etcd-snapshot` hourly cron (which captures
-PVC metadata) plus a daily `pg_dump` placeholder. A proper PITR for the
-postgres PVC will land alongside Phase 3 once the migration off Notion is
-complete and AppFlowy holds the source of truth.
+- **etcd**: existing hourly `k3s-etcd-snapshot` captures PVC metadata.
+- **Postgres**: run a daily dump to the user-data SSD (sdb1), never to sda1:
+
+```bash
+PG_POD=$(kubectl -n appflowy get pod -l app=postgres -o jsonpath='{.items[0].metadata.name}')
+kubectl -n appflowy exec "$PG_POD" -- \
+  pg_dump -U postgres appflowy | \
+  gzip > /srv/dev-disk-by-uuid-fa6231ab-eae7-40ea-a4b6-400f767a89d7/Backups/appflowy-$(date +%F).sql.gz
+```
+
+- **MinIO**: use `mc mirror` or PVC snapshot before destructive upgrades.
+- **WAL-G continuous backup**: scaffold at `infrastructure/appflowy/walg-sidecar.yaml` (PARTIAL — verify rollout before relying on it).
 
 ## Roadmap context
 
-- Phase 1 (this doc): deploy + first-login. **Done.**
-- Phase 2: import each of the 10 Notion DBs as `.zip` via AppFlowy's
-  Notion-import endpoint; verify shape per-DB.
-- Phase 3: build `src/lib/appflowy.ts` (HTTP client mirroring the surface of
-  the existing `src/lib/notion-*.ts` readers) and swap public-page readers
-  (`/blog`, `/docs`, `/work`, `/services`, etc.) from Notion API to AppFlowy.
-- Phase 4: switch env routing, validate public pages, retire the
-  `NOTION_*` SSM keys (operator-side `aws ssm delete-parameters`).
+- Phase 1: deploy + first-login. **Done.**
+- Phase 2: Cloudflare tunnel + DNS. **Done.**
+- Phase 3: AppFlowy HTTP client + dual-run public readers. **In progress / shipped in app** — see `docs/appflowy-espocrm-migration-checklist.md`.
+- Phase 4: promote AppFlowy primary after parity, then retire `NOTION_*` SSM keys (operator `aws ssm delete-parameters`).

@@ -74,6 +74,23 @@ spec:
     metadata: { labels: { app: postgres } }
     spec:
       nodeSelector: { kubernetes.io/hostname: omv }
+      # R16: WAL-G continuous backup. Init copies the wal-g binary into a
+      # shared emptyDir so postgres archive_command can invoke it. Requires
+      # Secret appflowy-walg-aws (see infrastructure/appflowy/walg-sidecar.yaml).
+      initContainers:
+        - name: walg-bin
+          image: ghcr.io/wal-g/wal-g:v3.0.3
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              cp /usr/bin/wal-g /walg-bin/wal-g || cp /bin/wal-g /walg-bin/wal-g || cp "$(command -v wal-g)" /walg-bin/wal-g
+              chmod 755 /walg-bin/wal-g
+              mkdir -p /var/lib/postgresql/wal-g
+              chown -R 999:999 /var/lib/postgresql/wal-g /walg-bin || true
+          volumeMounts:
+            - { name: walg-bin, mountPath: /walg-bin }
+            - { name: walg, mountPath: /var/lib/postgresql/wal-g }
       containers:
         - name: postgres
           image: pgvector/pgvector:pg16
@@ -82,13 +99,59 @@ spec:
             - { name: POSTGRES_DB,   value: postgres }
             - name: POSTGRES_PASSWORD
               valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+            - { name: AWS_REGION, value: us-east-1 }
+            - { name: WALG_S3_PREFIX, value: "s3://cloudless-analytics-data/appflowy-wal/wal/" }
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_ACCESS_KEY_ID } }
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_SECRET_ACCESS_KEY } }
+          args:
+            - "-c"
+            - "archive_mode=on"
+            - "-c"
+            - "archive_timeout=300"
+            - "-c"
+            - "archive_command=/walg-bin/wal-g wal-push %p"
           ports: [{ containerPort: 5432 }]
-          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: walg, mountPath: /var/lib/postgresql/wal-g }
+            - { name: walg-bin, mountPath: /walg-bin }
           resources:
             requests: { cpu: 50m, memory: 200Mi }
             limits:   { cpu: 500m, memory: 400Mi }
+        - name: walg
+          image: ghcr.io/wal-g/wal-g:v3.0.3
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              export WALG_S3_PREFIX=s3://cloudless-analytics-data/appflowy-wal/wal/
+              export WALG_UPLOAD_CONCURRENCY=2
+              export WALG_SENTINEL_NAME=appflowy-postgres-production
+              while true; do
+                wal-g wal-verify integrity || true
+                sleep 300
+              done
+          env:
+            - { name: AWS_REGION, value: us-east-1 }
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_ACCESS_KEY_ID } }
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: appflowy-walg-aws, key: AWS_SECRET_ACCESS_KEY } }
+            - { name: WALG_S3_PREFIX, value: "s3://cloudless-analytics-data/appflowy-wal/wal/" }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data, readOnly: true }
+            - { name: walg, mountPath: /var/lib/postgresql/wal-g }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits:   { cpu: 100m, memory: 64Mi }
       volumes:
         - { name: data, persistentVolumeClaim: { claimName: appflowy-postgres } }
+        - { name: walg, emptyDir: {} }
+        - { name: walg-bin, emptyDir: {} }
 ---
 apiVersion: v1
 kind: Service

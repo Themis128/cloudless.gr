@@ -193,7 +193,7 @@ export async function POST(request: Request) {
       }),
     ])
       .then((results) => {
-        const labels = ["slack", "hubspot", "notion", "activecampaign"];
+        const labels = ["slack", "espocrm", "notion", "activecampaign"];
         results.forEach((r, i) => {
           if (r.status === "rejected") {
             console.error("[Contact] Background task " + labels[i] + " failed:", r.reason);

@@ -1,0 +1,79 @@
+name: r20-replication-subscriber
+
+# R20: package + deploy the logical-replication subscriber Lambda.
+# Manual dispatch only. Creates/updates function cloudless-r20-subscriber.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "When true, updates the Lambda. Package-only dry run otherwise."
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FUNCTION_NAME: cloudless-r20-subscriber
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Bundle subscriber
+        working-directory: infrastructure/r20-replication
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null
+          npm install --omit=dev @aws-sdk/client-dynamodb @aws-sdk/util-dynamodb esbuild
+          npx esbuild subscriber.ts --bundle --platform=node --target=node20 --outfile=dist/index.js
+          (cd dist && zip -q ../subscriber.zip index.js)
+          ls -la subscriber.zip
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Lambda code
+        if: ${{ github.event.inputs.apply == 'true' }}
+        working-directory: infrastructure/r20-replication
+        run: |
+          set -euo pipefail
+          if aws lambda get-function --function-name "$FUNCTION_NAME" >/dev/null 2>&1; then
+            aws lambda update-function-code \
+              --function-name "$FUNCTION_NAME" \
+              --zip-file fileb://subscriber.zip
+          else
+            ROLE_ARN=$(aws iam get-role --role-name cloudless-r24-standby-lambda --query 'Role.Arn' --output text 2>/dev/null || true)
+            if [ -z "$ROLE_ARN" ] || [ "$ROLE_ARN" = "None" ]; then
+              echo "Create IAM role for the subscriber first (or deploy R24 standby role)."
+              exit 1
+            fi
+            aws lambda create-function \
+              --function-name "$FUNCTION_NAME" \
+              --runtime nodejs20.x \
+              --handler index.handler \
+              --role "$ROLE_ARN" \
+              --zip-file fileb://subscriber.zip \
+              --timeout 30 \
+              --memory-size 256 \
+              --environment "Variables={R20_DDB_TABLE=cloudless-ReplicationMirror-production}"
+          fi
+
+      - name: Dry-run note
+        if: ${{ github.event.inputs.apply != 'true' }}
+        run: echo "Bundle built. Re-dispatch with apply=true to update Lambda."

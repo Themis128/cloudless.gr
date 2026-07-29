@@ -1,0 +1,69 @@
+name: r24-add-replicas
+
+# R24: add DynamoDB Global Tables replicas (us-west-2) to production tables.
+# Idempotent — safe to re-run. Manual dispatch only (costful / irreversible
+# without delete-replica).
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "When true, runs update-table --replicas. Dry-run otherwise."
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  add-replicas:
+    runs-on: ubuntu-latest
+    env:
+      PRIMARY_REGION: us-east-1
+      REPLICA_REGION: us-west-2
+      TABLES: >-
+        cloudless-StripeTransactions-production
+        cloudless-UserProfile-production
+        cloudless-AdminNotifications-production
+        cloudless-AnalyticsCache-production
+        cloudless-SessionTokenStore-production
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.PRIMARY_REGION }}
+
+      - name: Describe current replica state
+        run: |
+          set -euo pipefail
+          for t in $TABLES; do
+            echo "::group::$t"
+            aws dynamodb describe-table --table-name "$t" --region "$PRIMARY_REGION" \
+              --query 'Table.{Name:TableName,Status:TableStatus,Replicas:Replicas}' \
+              --output json || echo "missing: $t"
+            echo "::endgroup::"
+          done
+
+      - name: Add us-west-2 replicas
+        if: ${{ github.event.inputs.apply == 'true' }}
+        run: |
+          set -euo pipefail
+          for t in $TABLES; do
+            echo "Updating $t → replica $REPLICA_REGION"
+            aws dynamodb update-table \
+              --table-name "$t" \
+              --region "$PRIMARY_REGION" \
+              --replica-updates "Create={RegionName=$REPLICA_REGION}" \
+              || echo "skip/already: $t"
+          done
+
+      - name: Dry-run note
+        if: ${{ github.event.inputs.apply != 'true' }}
+        run: |
+          echo "Dry-run only. Re-dispatch with apply=true to create replicas."

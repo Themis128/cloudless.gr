@@ -33,6 +33,7 @@ type Body = {
   conversionId?: number | null;
   url?: string | null;
   userAgent?: string | null;
+  liFatId?: string | null;
   utm?: {
     source?: string;
     medium?: string;
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
     conversionId: body.conversionId ?? null,
     url: body.url ?? undefined,
     userAgent: body.userAgent ?? undefined,
+    liFatId: body.liFatId ?? undefined,
     country: request.headers.get("cf-ipcountry") ?? undefined,
     ipAddress:
       request.headers.get("cf-connecting-ip") ??

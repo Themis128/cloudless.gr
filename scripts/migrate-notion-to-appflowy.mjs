@@ -122,6 +122,28 @@ function extractTitle(page) {
   return "Untitled";
 }
 
+/** Map Notion DB titles to AppFlowy page prefixes used by src/lib/appflowy-*.ts */
+const DB_PREFIX_RULES = [
+  { match: /^(blog posts|blog)$/i, prefix: "[Blog]" },
+  { match: /^(internal docs|knowledge base|docs)$/i, prefix: "[Docs]" },
+  { match: /^services$/i, prefix: "[Service]" },
+  { match: /^faqs$/i, prefix: "[FAQ]" },
+  { match: /^testimonials$/i, prefix: "[Testimonial]" },
+  { match: /^case studies$/i, prefix: "[CaseStudy]" },
+];
+
+function prefixForDatabase(dbTitle) {
+  const rule = DB_PREFIX_RULES.find((r) => r.match.test(dbTitle.trim()));
+  return rule?.prefix ?? null;
+}
+
+function titledForAppFlowy(dbTitle, pageTitle) {
+  const prefix = prefixForDatabase(dbTitle);
+  if (!prefix) return pageTitle;
+  if (pageTitle.startsWith(prefix)) return pageTitle;
+  return `${prefix} ${pageTitle}`;
+}
+
 // ── Notion pagination ───────────────────────────────────────────────────────
 
 async function queryDatabaseAll(dbId, notionToken) {
@@ -219,7 +241,7 @@ async function main() {
 
     let migrated = 0;
     for (const page of rows) {
-      const title = extractTitle(page);
+      const title = titledForAppFlowy(dbTitle, extractTitle(page));
       const markdown = pageToMarkdown(page);
 
       if (!DRY_RUN) {

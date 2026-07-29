@@ -5,6 +5,11 @@ import {
 } from "@/lib/blog";
 import { isConfiguredAsync } from "@/lib/integrations";
 import {
+  getPosts as getAppFlowyPosts,
+  getPostBySlug as getAppFlowyPostBySlug,
+  type AppFlowyPost,
+} from "@/lib/appflowy-blog";
+import {
   getPosts as getNotionPosts,
   getPostBySlug as getNotionPostBySlug,
   type NotionBlock,
@@ -134,7 +139,48 @@ function mapNotionPost(post: NotionPost & { content: NotionBlock[] }): BlogPost 
   };
 }
 
+function mapAppFlowyListingPost(post: AppFlowyPost): BlogPost {
+  return {
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    date: post.date,
+    readTime: post.readTime || "5 min read",
+    category: (post.category || DEFAULT_CATEGORY) as BlogPost["category"],
+    content: "",
+  };
+}
+
+function stripHtml(input: string): string {
+  return input.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function mapAppFlowyPost(post: AppFlowyPost): BlogPost {
+  return {
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    date: post.date,
+    readTime: post.readTime || "5 min read",
+    category: (post.category || DEFAULT_CATEGORY) as BlogPost["category"],
+    content: stripHtml(post.html || ""),
+  };
+}
+
 export async function getBlogPosts(): Promise<BlogPost[]> {
+  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  if (appFlowyConfigured) {
+    try {
+      const appFlowyPosts = await getAppFlowyPosts();
+      const published = appFlowyPosts.filter((post) => post.published);
+      if (published.length > 0) {
+        return published.map(mapAppFlowyListingPost);
+      }
+    } catch {
+      // Fall through to Notion/static provider chain.
+    }
+  }
+
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
     return staticPosts;
   }
@@ -148,6 +194,18 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  if (appFlowyConfigured) {
+    try {
+      const appFlowyPost = await getAppFlowyPostBySlug(slug);
+      if (appFlowyPost?.published) {
+        return mapAppFlowyPost(appFlowyPost);
+      }
+    } catch {
+      // Fall through to Notion/static provider chain.
+    }
+  }
+
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
     return getStaticPostBySlug(slug);
   }

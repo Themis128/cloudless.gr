@@ -24,7 +24,9 @@ function getDb(_request: NextRequest): AuthDatabase | null {
 export async function POST(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
+    // When the D1 binding isn't present, treat auth storage as unavailable.
+    // Playwright tests accept 503 in local/dev environments.
+    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
 
   // Validate SESSION_SECRET

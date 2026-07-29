@@ -25,6 +25,8 @@ data:
   NTFY_BASE_URL: "https://ntfy.cloudless.gr"
   GRAFANA_URL: "https://grafana.cloudless.gr"
   KUMA_URL: "https://kuma.cloudless.gr"
+  KUMA_BASE_URL: "http://uptime-kuma.uptime-kuma.svc.cluster.local:3001"
+  KUMA_STATUS_PAGE_SLUG: "cloudless"
 ---
 apiVersion: apps/v1
 kind: Deployment

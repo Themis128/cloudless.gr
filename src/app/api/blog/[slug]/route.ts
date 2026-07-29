@@ -1,24 +1,25 @@
 import { NextResponse } from "next/server";
-import { getPostBySlug } from "@/lib/notion-blog";
+import { getBlogPostBySlug } from "@/lib/blog-source";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
-    const blogModule = await import("@/lib/blog");
-    const blogPosts = blogModule.posts;
+  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+
+  if (!appFlowyConfigured && !notionConfigured) {
+    const { posts: blogPosts } = await import("@/lib/blog");
     const post = blogPosts.find((p: { slug: string }) => p.slug === slug);
     if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
     return NextResponse.json({ post, source: "static" });
   }
 
   try {
-    const post = await getPostBySlug(slug);
+    const post = await getBlogPostBySlug(slug);
     if (!post) {
-      // Notion returned null — fall back to static
-      const blogModule = await import("@/lib/blog");
-      const staticPost = (blogModule.posts as Array<{ slug: string }>).find((p) => p.slug === slug);
+      const { posts } = await import("@/lib/blog");
+      const staticPost = (posts as Array<{ slug: string }>).find((p) => p.slug === slug);
       if (!staticPost) {
         return NextResponse.json({ error: "Post not found" }, { status: 404 });
       }
@@ -27,20 +28,20 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
         { headers: { "x-blog-source": "static" } }
       );
     }
+    const source = appFlowyConfigured ? "appflowy" : "notion";
     return NextResponse.json(
-      { post, source: "notion" },
+      { post, source },
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
-          "x-blog-source": "notion",
+          "x-blog-source": source,
         },
       }
     );
   } catch (err) {
     console.error("[Blog] Fetch post error:", err);
-    // Notion threw — fall back to static
-    const blogModule = await import("@/lib/blog");
-    const staticPost = (blogModule.posts as Array<{ slug: string }>).find((p) => p.slug === slug);
+    const { posts } = await import("@/lib/blog");
+    const staticPost = (posts as Array<{ slug: string }>).find((p) => p.slug === slug);
     if (!staticPost) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }

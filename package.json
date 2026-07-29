@@ -48,6 +48,8 @@
     "devcontainer:doctor": "bash scripts/devcontainer-doctor.sh",
     "devcontainer:stop": "bash scripts/devcontainer-stop.sh",
     "notion:test": "tsx --tsconfig scripts/tsconfig.json scripts/notion-test.ts",
+    "cms:parity": "node scripts/cms-parity-check.mjs",
+    "omv:selfhosted:health": "node scripts/omv-selfhosted-health.mjs",
     "cms:populate": "node scripts/populate-cms.mjs",
     "gh:secrets": "tsx --tsconfig scripts/tsconfig.json scripts/gh-secrets.ts",
     "ses:provision": "tsx --tsconfig scripts/tsconfig.json scripts/provision-ses-smtp.ts",

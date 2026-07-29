@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { getPosts } from "@/lib/notion-blog";
+import { getBlogPosts } from "@/lib/blog-source";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 export async function GET() {
-  if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
-    // Fall back to static blog data when Notion is not configured
-    const blogModule = await import("@/lib/blog");
-    const blogPosts = blogModule.posts;
+  const appFlowyConfigured = await isConfiguredAsync("APPFLOWY_API_URL", "APPFLOWY_JWT_SECRET");
+  const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID");
+
+  if (!appFlowyConfigured && !notionConfigured) {
+    const { posts: blogPosts } = await import("@/lib/blog");
     return NextResponse.json(
       { posts: blogPosts, source: "static", fallbackReason: "not-configured" },
       { headers: { "x-blog-source": "static" } }
@@ -14,22 +15,29 @@ export async function GET() {
   }
 
   try {
-    const posts = await getPosts();
+    const posts = await getBlogPosts();
+    if (!posts || posts.length === 0) {
+      const { posts: blogPosts } = await import("@/lib/blog");
+      return NextResponse.json(
+        { posts: blogPosts, source: "static", fallbackReason: "cms-empty" },
+        { headers: { "x-blog-source": "static" } }
+      );
+    }
+    const source = appFlowyConfigured ? "appflowy" : "notion";
     return NextResponse.json(
-      { posts, source: "notion" },
+      { posts, source },
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=30",
-          "x-blog-source": "notion",
+          "x-blog-source": source,
         },
       }
     );
   } catch (err) {
     console.error("[Blog] Fetch error:", err);
-    const blogModule = await import("@/lib/blog");
-    const blogPosts = blogModule.posts;
+    const { posts: blogPosts } = await import("@/lib/blog");
     return NextResponse.json(
-      { posts: blogPosts, source: "static", fallbackReason: "notion-error" },
+      { posts: blogPosts, source: "static", fallbackReason: "cms-error" },
       { headers: { "x-blog-source": "static" } }
     );
   }

@@ -82,6 +82,9 @@ spec:
           env:
             - { name: UPTIME_KUMA_HOST, value: "0.0.0.0" }
             - { name: UPTIME_KUMA_PORT, value: "3001" }
+            # After first-run setup, pin sqlite so the pod does not bounce
+            # back to the setup-database entry page on restart.
+            - { name: UPTIME_KUMA_DB_TYPE, value: "sqlite" }
           volumeMounts:
             - { name: data, mountPath: /app/data }
           # Probes target the embedded /api/entry-page which is unauth

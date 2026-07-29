@@ -146,6 +146,7 @@ export async function dispatchConversion(event: AdConversionEvent): Promise<Disp
         user: {
           userAgent: event.userAgent,
           ipAddress: event.ipAddress,
+          liFatId: event.liFatId,
           emailSha256: event.customer?.email
             ? await sha256(event.customer.email.toLowerCase().trim())
             : undefined,

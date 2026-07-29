@@ -172,20 +172,24 @@ GROUP BY 1, 2, 3
 HAVING COUNT(*) > 1
 ORDER BY revenue DESC NULLS LAST, sessions DESC;
 
--- ---- v_hubspot_funnel ------------------------------------------------------
--- EspoCRM contact lifecycle stage breakdown joined to whether they have a
--- closed-won deal in EspoCRM. Lets us see lead-source ROI by stage.
-CREATE OR REPLACE VIEW cloudless_analytics.v_hubspot_funnel AS
+-- ---- v_espocrm_funnel (canonical) / v_hubspot_funnel (legacy alias) --------
+-- EspoCRM contact lead-source rollup joined to closed-won opportunities.
+CREATE OR REPLACE VIEW cloudless_analytics.v_espocrm_funnel AS
 SELECT
-  COALESCE(c.lifecyclestage, 'unknown') AS lifecycle_stage,
-  COALESCE(c.lead_source, '(none)')     AS lead_source,
-  COUNT(DISTINCT c.contact_id)          AS contact_count,
-  COUNT(DISTINCT d.deal_id) FILTER (WHERE d.dealstage IN ('closedwon', 'closed-won')) AS closed_won_deals,
-  SUM(d.amount)             FILTER (WHERE d.dealstage IN ('closedwon', 'closed-won')) AS closed_won_revenue
-FROM cloudless_analytics.hubspot_contacts c
-LEFT JOIN cloudless_analytics.hubspot_deals d ON d.hubspot_owner_id IS NOT NULL  -- placeholder join, refine when association table lands
+  'contact' AS lifecycle_stage,
+  COALESCE(c.lead_source, '(none)') AS lead_source,
+  COUNT(DISTINCT c.contact_id) AS contact_count,
+  COUNT(DISTINCT o.opportunity_id) FILTER (WHERE o.stage = 'Closed Won') AS closed_won_deals,
+  SUM(o.amount) FILTER (WHERE o.stage = 'Closed Won') AS closed_won_revenue
+FROM cloudless_analytics.espocrm_contacts c
+LEFT JOIN cloudless_analytics.espocrm_opportunities o ON o.account_id = c.account_id
+WHERE c.contact_id <> '__placeholder__'
 GROUP BY 1, 2
 ORDER BY contact_count DESC;
+
+-- Temporary alias for dashboards still referencing the HubSpot-era name.
+CREATE OR REPLACE VIEW cloudless_analytics.v_hubspot_funnel AS
+SELECT * FROM cloudless_analytics.v_espocrm_funnel;
 
 -- ---- v_lead_to_customer ----------------------------------------------------
 -- Cross-source funnel join: EspoCRM contact → Cognito client → first Stripe
