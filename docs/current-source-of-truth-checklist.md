@@ -80,8 +80,10 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
   Continuous `archive_command` **live** (2026-07-29): rclone →
   `r2://datalake-bucket/appflowy-wal/wal/` (`archive_command=/walg-bin/archive.sh %p %f`
   in `k8s/appflowy.yaml`). Re-test same day: `pg_switch_wal` → `archived_count`
-  advanced; objects `00000001…017` listed in R2. Daily basebackup CronJob uses
-  `pg_basebackup` + rclone → `appflowy-wal/base/` (wal-g push hangs on omv).
+  advanced; objects `00000001…017` listed in R2. Daily CronJob uses
+  `pg_dump -Fc` + rclone → `appflowy-wal/base/` (wal-g hang + `pg_basebackup`
+  blocked by replication HBA on omv). Smoke 2026-07-29:
+  `postgres-20260729T182641Z.dump` uploaded; re-verify `20260729T182822Z` OK.
   Never set `WALG_LOG_LEVEL=INFO` (only NORMAL|DEVEL|ERROR). Do not apply empty
   Secret stubs from `walg-sidecar.yaml` (wipes live R2 keys).
 - [x] `DONE` R23 Resend pilot for order confirmations.
