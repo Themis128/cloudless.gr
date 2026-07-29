@@ -17,8 +17,12 @@ jobs:
   audit:
     name: Route-level Lighthouse
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # Audit the Pi NodePort directly — GH-hosted runners get HTTP 403
+    # challenge interstitials from Cloudflare (IP reputation), and even
+    # successful CF responses embed `/cdn-cgi/challenge-platform/scripts/jsd`
+    # which previously false-failed our warm step.
+    runs-on: [self-hosted, omv, build]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -30,14 +34,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      # The omv runner is arm64 and has no system Chrome/Chromium. Reuse the
-      # Playwright-bundled Chromium (Chrome for Testing has arm64 builds).
+      # omv is arm64 — Playwright ships arm64 Chrome for Testing.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install Playwright Chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
@@ -55,75 +58,68 @@ jobs:
           echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
           echo "Using CHROME_PATH=$CHROME_BIN"
 
-      - name: Warm CDN cache
+      - name: Warm Pi origin (NodePort 30300)
         id: warm
         run: |
           set -euo pipefail
-          # Real browser UA — datacenter "bot" UAs still get challenged even when
-          # Bot Fight Mode is off (managed challenge / IP reputation).
-          UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
-          warm_host() {
-            local host="$1"
-            for path in "" /en /en/services /en/contact /en/store; do
-              local url="https://${host}${path}"
-              BODY=$(mktemp)
-              CODE=$(curl -sS -L -o "$BODY" -w "%{http_code}" --max-time 30 \
-                -H "User-Agent: ${UA}" \
-                -H "Accept: text/html,application/xhtml+xml" \
-                "$url" || echo 000)
-              echo "$url → HTTP $CODE"
-              if grep -qiE 'Just a moment|challenge-platform|cf-browser-verification' "$BODY"; then
-                echo "::warning::$url serves Cloudflare challenge HTML"
-                rm -f "$BODY"
-                return 1
-              fi
-              if [[ "$CODE" != "200" && "$CODE" != "304" ]]; then
-                echo "::warning::$url returned HTTP $CODE"
-                rm -f "$BODY"
-                return 1
-              fi
-              rm -f "$BODY"
-            done
-            return 0
-          }
-
-          if warm_host cloudless.gr; then
-            echo "base_host=cloudless.gr" >> "$GITHUB_OUTPUT"
-          elif warm_host pi-origin.cloudless.gr; then
-            echo "::warning::cloudless.gr challenged GitHub runner IPs — auditing pi-origin.cloudless.gr instead"
-            echo "base_host=pi-origin.cloudless.gr" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::Both cloudless.gr and pi-origin.cloudless.gr challenged or non-200 from this runner."
-            echo "::error::Disable Bot Fight / Under Attack Mode (or allowlist GH Actions), then re-run."
+          # Prefer local NodePort (Tunnel origin). Fall back to LAN IP if the
+          # runner is on another Pi. Never hit cloudless.gr from CI — CF
+          # challenges GitHub/datacenter IPs even with Bot Fight Mode off.
+          BASE=""
+          for candidate in http://127.0.0.1:30300 http://192.168.1.128:30300; do
+            CODE=$(curl -sS -o /tmp/cwv-health.json -w "%{http_code}" --max-time 5 \
+              "${candidate}/api/health" || echo 000)
+            echo "${candidate}/api/health → HTTP ${CODE}"
+            if [[ "$CODE" == "200" ]]; then
+              BASE="$candidate"
+              break
+            fi
+          done
+          if [[ -z "$BASE" ]]; then
+            echo "::error::Pi origin NodePort 30300 unreachable from this runner"
             exit 1
           fi
+
+          for path in "" /en /en/services /en/contact /en/store; do
+            url="${BASE}${path}"
+            BODY=$(mktemp)
+            CODE=$(curl -sS -L -o "$BODY" -w "%{http_code}" --max-time 30 "$url" || echo 000)
+            echo "$url → HTTP $CODE"
+            # Real interstitial only — do NOT match cdn-cgi/challenge-platform
+            # scripts (Cloudflare injects jsd/main.js into normal 200 HTML).
+            if grep -qiE 'Just a moment|cf-browser-verification' "$BODY"; then
+              echo "::error::$url returned a Cloudflare challenge interstitial (unexpected on NodePort)"
+              rm -f "$BODY"
+              exit 1
+            fi
+            if [[ "$CODE" != "200" && "$CODE" != "304" ]]; then
+              echo "::error::$url returned HTTP $CODE"
+              rm -f "$BODY"
+              exit 1
+            fi
+            rm -f "$BODY"
+          done
+          echo "base_url=${BASE}" >> "$GITHUB_OUTPUT"
 
       - name: Run Lighthouse on key routes
         id: lhci
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
           configPath: .github/lighthouserc.cjs
-          # Audit the locale-resolved URLs directly. The bare `/services`,
-          # `/contact`, `/store` paths all 307-redirect through next-intl
-          # middleware to `/en/<path>` (this is by design — `localePrefix:
-          # always`). Auditing the bare paths makes Lighthouse pay for the
-          # redirect round-trip on every probe, which (a) doesn't measure
-          # the actual page perf and (b) varies more between runs.
-          # When GH Actions IPs are CF-challenged on apex, warm falls back to
-          # pi-origin (same app via Tunnel).
+          # Origin-only audit (bypasses CF). Measures app CWV the Tunnel serves.
           urls: |
-            https://${{ steps.warm.outputs.base_host }}
-            https://${{ steps.warm.outputs.base_host }}/en
-            https://${{ steps.warm.outputs.base_host }}/en/services
-            https://${{ steps.warm.outputs.base_host }}/en/contact
-            https://${{ steps.warm.outputs.base_host }}/en/store
+            ${{ steps.warm.outputs.base_url }}
+            ${{ steps.warm.outputs.base_url }}/en
+            ${{ steps.warm.outputs.base_url }}/en/services
+            ${{ steps.warm.outputs.base_url }}/en/contact
+            ${{ steps.warm.outputs.base_url }}/en/store
           budgetPath: .github/lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true
       - name: Surface per-route CWV scores inline
         env:
           MANIFEST: ${{ steps.lhci.outputs.manifest }}
-          BASE_HOST: ${{ steps.warm.outputs.base_host }}
+          BASE_URL: ${{ steps.warm.outputs.base_url }}
         run: |
           # Group multi-run manifest by URL and reduce to the median per metric.
           MEDIANS=$(echo "$MANIFEST" | jq '[
@@ -139,6 +135,8 @@ jobs:
 
           echo "## 📊 Core Web Vitals Route Audit (median of 3 runs)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Origin: \`${BASE_URL}\` (Pi NodePort — CF-bypass)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Route | Perf | A11y | Best Practices | SEO |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-------|------|------|----------------|-----|" >> "$GITHUB_STEP_SUMMARY"
 
@@ -146,13 +144,10 @@ jobs:
             "| \(.url) | \((.perf * 100) | round) | \((.a11y * 100) | round) | \((.bp * 100) | round) | \((.seo * 100) | round) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
-          # Fail if any route's median falls below thresholds.
-          # The bare apex URL triggers a locale redirect (307 → /en) which
-          # penalizes Lighthouse perf by ~20-30 points. Skip perf check for
-          # that URL — `/en` already covers the actual page performance.
-          ROOT="https://${BASE_HOST}/"
+          # Bare origin URL may 308 → /en; skip perf gate for that URL only.
+          ROOT="${BASE_URL}/"
           FAILED=$(echo "$MEDIANS" | jq --arg root "$ROOT" '[.[] | select(
-            (if .url == $root then false else .perf < 0.60 end) or
+            (if (.url == $root or .url == ($root | rtrimstr("/"))) then false else .perf < 0.60 end) or
             .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
 
@@ -163,7 +158,7 @@ jobs:
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "Failing routes:" >> "$GITHUB_STEP_SUMMARY"
             echo "$MEDIANS" | jq -r --arg root "$ROOT" '.[] | select(
-              (if .url == $root then false else .perf < 0.60 end) or
+              (if (.url == $root or .url == ($root | rtrimstr("/"))) then false else .perf < 0.60 end) or
               .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
             ) | "- \(.url) perf=\((.perf*100)|round) a11y=\((.a11y*100)|round) bp=\((.bp*100)|round) seo=\((.seo*100)|round)"' >> "$GITHUB_STEP_SUMMARY"
             exit 1
