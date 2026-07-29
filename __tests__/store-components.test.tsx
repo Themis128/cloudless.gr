@@ -368,6 +368,7 @@ describe("StoreGrid", () => {
 
     fireEvent.change(search, { target: { value: "serverless" } });
 
+    // Immediate local keyword filter (before / while /api/search resolves)
     expect(view.getByText("Serverless Starter Package")).toBeTruthy();
     expect(view.getByText("Serverless Masterclass")).toBeTruthy();
     expect(view.queryByText("Cloudless T-Shirt")).toBeNull();
@@ -386,6 +387,54 @@ describe("StoreGrid", () => {
 
     expect(view.getByText("No products match your search.")).toBeTruthy();
     expect(view.getByText("Clear filters")).toBeTruthy();
+  });
+
+  it("debounces and calls /api/search, then ranks by hit order", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        query: "audit",
+        source: "fallback",
+        hits: [
+          { id: "srv-cloud", name: "Cloud Architecture Audit" },
+          { id: "dig-cloud-playbook", name: "Cloud Migration Playbook" },
+        ],
+      }),
+    });
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const { container } = render(
+        <Wrapper>
+          <StoreGrid />
+        </Wrapper>
+      );
+      const search = container.querySelector('input[type="text"]')!;
+
+      fireEvent.change(search, { target: { value: "audit" } });
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      await waitFor(
+        () => {
+          expect(fetchMock).toHaveBeenCalled();
+        },
+        { timeout: 1500 }
+      );
+
+      const calledUrl = String(fetchMock.mock.calls[0]?.[0] ?? "");
+      expect(calledUrl).toContain("/api/search?");
+      expect(calledUrl).toContain("q=audit");
+
+      await waitFor(() => {
+        expect(search.getAttribute("data-search-source")).toBe("fallback");
+      });
+
+      const cards = container.querySelectorAll('a[href^="/store/"]');
+      expect(cards[0]?.getAttribute("href")).toBe("/store/srv-cloud");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it("sorts products by price ascending", () => {

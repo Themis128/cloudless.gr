@@ -6,23 +6,13 @@ import {
   checkFailedAttempts,
   logSessionActivity,
   validateSessionSecret,
+  getAuthDbFromEnv,
   type AuthDatabase,
 } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-// D1 binding interface - provided by Worker context
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
 function getDb(_request: NextRequest): AuthDatabase | null {
-  // In Workers, AUTH_DB is provided as a binding
-  // In Next.js serverless, we need to check if it's configured
-  const env = process.env as unknown as Env;
-  if (!env.AUTH_DB) {
-    return null;
-  }
-  return env.AUTH_DB;
+  return getAuthDbFromEnv();
 }
 
 export async function POST(req: NextRequest) {

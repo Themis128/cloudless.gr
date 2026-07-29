@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { signIn as nextAuthSignIn } from "next-auth/react";
 import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
+
+const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+const USE_COGNITO = AUTH_PROVIDER === "cognito";
 
 /**
  * Returns true when `path` is a safe same-origin internal path that the
@@ -43,7 +45,7 @@ function normalizeRedirectPath(path: string): string {
 function LoginContent() {
   const [locale] = useCurrentLocale();
   const t = (key: string, fallback: string) => translate(locale, key, fallback);
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isLoading, signIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   // ?next= (preferred) or ?redirect= (legacy / AdminLayoutClient compat)
@@ -51,6 +53,8 @@ function LoginContent() {
   const activated = searchParams.get("activated") === "1";
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -62,16 +66,20 @@ function LoginContent() {
     }
   }, [user, isAdmin, isLoading, router, nextParam]);
 
-  const callbackUrl = isSafeRedirectPath(nextParam)
-    ? normalizeRedirectPath(nextParam)
-    : "/auth/post-login";
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      await nextAuthSignIn("cognito", { callbackUrl });
+      if (USE_COGNITO) {
+        await signIn("", "");
+      } else {
+        if (!email.trim() || !password) {
+          setError(t("auth.emailPasswordRequired", "Email and password are required"));
+          return;
+        }
+        await signIn(email.trim(), password);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -93,7 +101,9 @@ function LoginContent() {
         <div className="mb-8 text-center">
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">SECURE_AUTH</span>
+            <span className="text-neon-cyan font-mono text-xs">
+              {USE_COGNITO ? "SECURE_AUTH" : "D1_AUTH"}
+            </span>
           </div>
           <h1 className="font-heading text-3xl font-bold text-white">
             {t("auth.login", "Sign In")}
@@ -116,6 +126,46 @@ function LoginContent() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
+            {!USE_COGNITO && (
+              <>
+                <div>
+                  <label htmlFor="email" className="mb-2 block font-mono text-xs text-slate-400">
+                    {t("auth.email", "Email")}
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="mb-2 block font-mono text-xs text-slate-400">
+                    {t("auth.password", "Password")}
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
+                  />
+                </div>
+                <p className="text-right">
+                  <Link
+                    href="/auth/reset-password"
+                    className="font-mono text-xs text-slate-500 hover:text-neon-cyan"
+                  >
+                    {t("auth.forgotPassword", "Forgot Password?")}
+                  </Link>
+                </p>
+              </>
+            )}
             <button
               type="submit"
               disabled={submitting}
@@ -123,7 +173,9 @@ function LoginContent() {
             >
               {submitting
                 ? t("auth.signingIn", "Signing In...")
-                : t("auth.continueWithCognito", "Continue with AWS")}
+                : USE_COGNITO
+                  ? t("auth.continueWithCognito", "Continue with AWS")
+                  : t("auth.login", "Sign In")}
             </button>
           </form>
 

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getUserProfile, putUserProfile } from "@/lib/user-profile";
+import { getAuthDbFromEnv, getUserBySession } from "@/lib/auth-d1";
 
 export const dynamic = "force-dynamic";
 
@@ -11,27 +12,44 @@ interface ProfileBody {
   preferences?: unknown;
 }
 
+async function resolveUser(
+  req: NextRequest
+): Promise<{ id: string; email?: string; name?: string } | null> {
+  const sessionId = req.cookies.get("session_token")?.value;
+  const db = getAuthDbFromEnv();
+  if (sessionId && db) {
+    const user = await getUserBySession(db, sessionId);
+    if (user) {
+      return { id: user.id, email: user.email, name: user.name ?? undefined };
+    }
+  }
+
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  return {
+    id: userId,
+    email: session?.user?.email ?? undefined,
+    name: session?.user?.name ?? undefined,
+  };
+}
+
 /**
  * GET /api/user/profile
  *
- * Reads the signed-in user's stored profile (name + company/phone/preferences)
- * from DynamoDB so the dashboard Profile/Settings forms render previously-saved
- * values. Provider-agnostic: keyed by the OIDC `sub`, so it works identically
- * across OIDC providers. `name`/`email` fall back to the session when no
- * stored record exists yet.
+ * Cloudflare-first: D1 `user` row when AUTH_DB bound; else DynamoDB fallback.
  */
-export async function GET() {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
+export async function GET(req: NextRequest) {
+  const user = await resolveUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {
-    const profile = await getUserProfile(userId);
+    const profile = await getUserProfile(user.id);
     return NextResponse.json({
-      name: profile.name ?? session.user.name ?? undefined,
-      email: session.user.email ?? undefined,
+      name: profile.name ?? user.name ?? undefined,
+      email: user.email ?? undefined,
       company: profile.company,
       phone: profile.phone,
       preferences: profile.preferences,
@@ -39,8 +57,8 @@ export async function GET() {
   } catch (err) {
     if (err instanceof Error && err.message.includes("USER_PROFILE_TABLE")) {
       return NextResponse.json({
-        name: session.user.name ?? undefined,
-        email: session.user.email ?? undefined,
+        name: user.name ?? undefined,
+        email: user.email ?? undefined,
       });
     }
     return NextResponse.json({ error: "Could not read profile" }, { status: 502 });
@@ -50,13 +68,11 @@ export async function GET() {
 /**
  * POST /api/user/profile
  *
- * Upserts the signed-in user's profile fields in DynamoDB. Partial update:
- * only the keys present in the body are written (empty string clears a field).
+ * Upserts profile fields (D1 preferred, DynamoDB legacy).
  */
-export async function POST(req: Request) {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
+export async function POST(req: NextRequest) {
+  const user = await resolveUser(req);
+  if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
@@ -68,7 +84,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    await putUserProfile(userId, {
+    await putUserProfile(user.id, {
       name: body.name,
       company: body.company,
       phone: body.phone,
@@ -78,8 +94,6 @@ export async function POST(req: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[user/profile] PUT failed:", msg);
-    // When USER_PROFILE_TABLE is not configured (e.g., Pi k3s origin without
-    // DynamoDB), return 503 so the Cloudflare Worker falls through to AWS.
     if (msg.includes("USER_PROFILE_TABLE")) {
       return NextResponse.json(
         { error: "Profile storage not available — please retry" },

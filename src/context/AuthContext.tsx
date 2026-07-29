@@ -23,6 +23,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 /** Same-origin route that reads (GET) and writes (POST) user profile attributes. */
 const PROFILE_ENDPOINT = "/api/user/profile";
 
+const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+const USE_COGNITO = AUTH_PROVIDER === "cognito";
 const OIDC_PROVIDER = "cognito";
 
 export interface AuthUser {
@@ -151,12 +153,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           groups?: string[];
           roles?: string[];
         };
+        isAdmin?: boolean;
         error?: string;
       } | null;
 
       if (data?.error === "RefreshTokenError") {
         // Refresh token expired — clear session so login page shows
-        await nextAuthSignOut({ redirect: false });
+        if (USE_COGNITO) {
+          await nextAuthSignOut({ redirect: false });
+        } else {
+          await globalThis.fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
+        }
         setUser(null);
         setIsAdmin(false);
         return;
@@ -169,7 +176,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           name: data.user.name ?? undefined,
           preferences: { ...DEFAULT_PREFERENCES },
         };
-        setIsAdmin(isAdminFromSession(data.user));
+        setIsAdmin(Boolean(data.isAdmin) || isAdminFromSession(data.user));
         // Render the session-only user immediately so isLoading flips false
         // and the admin layout stops showing the centred spinner. The profile
         // enrichment (company/phone/preferences) runs without await — when it
@@ -199,34 +206,83 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth().catch(() => {}); // eslint-disable-line react-hooks/set-state-in-effect
   }, [checkAuth]);
 
-  // Sign-in delegates to Cognito's hosted flow. The email/password arguments
-  // are ignored — Cognito Hosted UI shows its own login page. They're kept in
-  // the signature for interface compat with any callers that pass them.
-  const handleSignIn = async (_email: string, _password: string): Promise<SignInResult> => {
-    await nextAuthSignIn(OIDC_PROVIDER, { redirect: true });
+  // D1: email/password → POST /api/auth/login (session_token cookie).
+  // Cognito: Hosted UI via next-auth (email/password ignored).
+  const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
+    if (USE_COGNITO) {
+      await nextAuthSignIn(OIDC_PROVIDER, { redirect: true });
+      return {};
+    }
+
+    const res = await globalThis.fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = (await res.json().catch(() => null)) as {
+      ok?: boolean;
+      error?: string;
+      user?: { id?: string; email?: string; name?: string; company?: string; phone?: string };
+      isAdmin?: boolean;
+    } | null;
+
+    if (!res.ok || !data?.ok || !data.user) {
+      throw new Error(data?.error ?? "Sign in failed");
+    }
+
+    const base: AuthUser = {
+      username: data.user.id ?? data.user.email ?? email,
+      email: data.user.email ?? email,
+      name: data.user.name ?? undefined,
+      company: data.user.company ?? undefined,
+      phone: data.user.phone ?? undefined,
+      preferences: { ...DEFAULT_PREFERENCES },
+    };
+    setIsAdmin(Boolean(data.isAdmin));
+    setUser(base);
+    void enrichWithProfile(base).then((enriched) => {
+      if (enriched !== base) setUser(enriched);
+    });
     return {};
   };
 
   const handleSignUp = async (_email: string, _password: string, _name?: string) => {
-    // Cognito Hosted UI handles registration. Route through next-auth so it
-    // manages the OAuth state/PKCE on the callback.
-    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
+    if (USE_COGNITO) {
+      await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
+      return;
+    }
+    // D1 signup is handled by the signup page → /api/auth/register*
   };
 
   const handleSignOut = async () => {
     setUser(null);
     setIsAdmin(false);
     clearSessionCache();
-    await nextAuthSignOut({ callbackUrl: "/" });
+    if (USE_COGNITO) {
+      await nextAuthSignOut({ callbackUrl: "/" });
+      return;
+    }
+    await globalThis.fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
   };
 
   const handleConfirmSignUp = async (_email: string, _code: string) => {
-    // The provider handles email verification via its own hosted flow.
+    // Cognito: hosted flow. D1: activate routes on signup page.
   };
 
-  const handleForgotPassword = async (_email: string) => {
-    // Cognito Hosted UI carries the "Forgot your password?" link.
-    await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
+  const handleForgotPassword = async (email: string) => {
+    if (USE_COGNITO) {
+      await nextAuthSignIn(OIDC_PROVIDER, { callbackUrl: "/auth/post-login" });
+      return;
+    }
+    const res = await globalThis.fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error ?? "Password reset failed");
+    }
   };
 
   const handleConfirmForgotPassword = async (
@@ -234,11 +290,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     _code: string,
     _newPassword: string
   ) => {
-    // Handled by Cognito Hosted UI — no client-side step needed.
+    // Cognito Hosted UI / D1 reset-confirm page.
   };
 
   const handleCompleteNewPassword = async (_newPassword: string) => {
-    // Handled by Cognito Hosted UI.
+    // Cognito Hosted UI only.
   };
 
   const handleUpdateProfile = async (attrs: {

@@ -114,6 +114,7 @@ const adminGroups: AdminGroup[] = [
       { href: "/admin/reports", label: "Reports", Icon: ClipboardList },
       { href: "/admin/ai-assistant", label: "AI Assistant", Icon: Bot },
       { href: "/admin/ai-generator", label: "AI Generator", Icon: Bot },
+      { href: "/admin/product-descriptions", label: "Product Copy", Icon: Package },
       { href: "/admin/voice-brief", label: "Voice Brief", Icon: Mic },
     ],
   },

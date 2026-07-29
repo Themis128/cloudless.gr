@@ -482,3 +482,119 @@ export function validateSessionSecret(): { valid: boolean; error?: string } {
   }
   return { valid: true };
 }
+
+/** Resolve AUTH_DB from process.env or Workers global (Cloudflare-first). */
+export function getAuthDbFromEnv(): AuthDatabase | null {
+  const fromEnv = (process as unknown as { env?: { AUTH_DB?: AuthDatabase } }).env?.AUTH_DB;
+  const fromGlobal = (globalThis as unknown as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__;
+  const db = fromEnv ?? fromGlobal;
+  if (db && typeof db.prepare === "function") return db;
+  return null;
+}
+
+export async function getUserById(db: AuthDatabase, userId: string): Promise<D1User | null> {
+  return db
+    .prepare(
+      "SELECT id, email, name, company, phone, preferences_json, created_at, updated_at FROM user WHERE id = ?"
+    )
+    .bind(userId)
+    .first<D1User>();
+}
+
+export interface ListedD1User {
+  id: string;
+  email: string;
+  name: string | null;
+  company: string | null;
+  phone: string | null;
+  created_at: number;
+  role: "admin" | "user";
+}
+
+export async function listUsers(
+  db: AuthDatabase,
+  opts: { limit?: number; emailPrefix?: string } = {}
+): Promise<ListedD1User[]> {
+  const limit = Math.max(1, Math.min(opts.limit ?? 20, 60));
+  const prefix = opts.emailPrefix?.trim().toLowerCase() ?? "";
+
+  const rows = prefix
+    ? await db
+        .prepare(
+          `SELECT u.id, u.email, u.name, u.company, u.phone, u.created_at,
+                  CASE WHEN r.role = 'admin' THEN 'admin' ELSE 'user' END AS role
+           FROM user u
+           LEFT JOIN user_role r ON r.user_id = u.id AND r.role = 'admin'
+           WHERE lower(u.email) LIKE ?
+           ORDER BY u.created_at DESC
+           LIMIT ?`
+        )
+        .bind(`${prefix}%`, limit)
+        .all<ListedD1User>()
+    : await db
+        .prepare(
+          `SELECT u.id, u.email, u.name, u.company, u.phone, u.created_at,
+                  CASE WHEN r.role = 'admin' THEN 'admin' ELSE 'user' END AS role
+           FROM user u
+           LEFT JOIN user_role r ON r.user_id = u.id AND r.role = 'admin'
+           ORDER BY u.created_at DESC
+           LIMIT ?`
+        )
+        .bind(limit)
+        .all<ListedD1User>();
+
+  return (rows.results ?? []).map((r) => ({
+    ...r,
+    role: r.role === "admin" ? "admin" : "user",
+  }));
+}
+
+export async function setUserAdminRole(
+  db: AuthDatabase,
+  userId: string,
+  makeAdmin: boolean
+): Promise<boolean> {
+  const user = await getUserById(db, userId);
+  if (!user) return false;
+
+  if (makeAdmin) {
+    await db
+      .prepare("INSERT OR REPLACE INTO user_role (user_id, role) VALUES (?, 'admin')")
+      .bind(userId)
+      .run();
+  } else {
+    await db
+      .prepare("DELETE FROM user_role WHERE user_id = ? AND role = 'admin'")
+      .bind(userId)
+      .run();
+  }
+  return true;
+}
+
+/** Partial profile update — only provided fields change; "" clears to null. */
+export async function patchUserProfile(
+  db: AuthDatabase,
+  userId: string,
+  fields: { name?: string; company?: string; phone?: string; preferences?: unknown }
+): Promise<boolean> {
+  const current = await getUserById(db, userId);
+  if (!current) return false;
+
+  const nextName = fields.name !== undefined ? fields.name || null : (current.name ?? null);
+  const nextCompany =
+    fields.company !== undefined ? fields.company || null : (current.company ?? null);
+  const nextPhone = fields.phone !== undefined ? fields.phone || null : (current.phone ?? null);
+  let nextPrefs = current.preferences_json ?? null;
+  if (fields.preferences !== undefined) {
+    nextPrefs = JSON.stringify(fields.preferences);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare(
+      "UPDATE user SET name = ?, company = ?, phone = ?, preferences_json = ?, updated_at = ? WHERE id = ?"
+    )
+    .bind(nextName, nextCompany, nextPhone, nextPrefs, now, userId)
+    .run();
+  return true;
+}

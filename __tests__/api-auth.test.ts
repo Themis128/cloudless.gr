@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 // Mock @/lib/auth so readSessionCookie() is controllable in tests.
@@ -32,6 +32,7 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
     // the default: no session. Tests that need a session configure mockOnce() explicitly.
     authMock.mockReset();
     authMock.mockResolvedValue(null);
+    delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
     // Clear the issuer so verifyToken takes the decode-only fallback path.
     // (Global setup.ts already does this + resetJwksCache(); belt-and-suspenders.)
   });
@@ -198,22 +199,140 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       if (!result.ok) expect(result.response.status).toBe(401);
     });
 
-    it("returns 401 for expired Bearer token", async () => {
-      const { requireAuth } = await import("@/lib/api-auth");
+    it("returns 401 for expired Bearer token (cognito provider)", async () => {
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      vi.resetModules();
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
       const result = await requireAuth(makeRequest(makeExpiredJwt()));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(401);
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
     });
 
-    it("returns ok:true with user for valid Bearer token", async () => {
-      const { requireAuth } = await import("@/lib/api-auth");
+    it("returns ok:true with user for valid Bearer token (cognito provider)", async () => {
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      vi.resetModules();
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
       const result = await requireAuth(makeRequest(makeValidJwt({ email: "x@x.com" })));
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.user.sub).toBe("user-1");
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+    });
+
+    it("D1 mode: opaque Bearer session id authenticates without Cognito JWKS", async () => {
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_LEFTOVER";
+      vi.resetModules();
+      vi.doMock("@/lib/auth-d1", () => ({
+        getAuthDbFromEnv: () => ({ prepare: vi.fn() }),
+        getUserBySession: vi.fn().mockResolvedValue({
+          id: "d1-bearer",
+          email: "bearer@d1.test",
+          name: "Bearer D1",
+        }),
+        isAdmin: vi.fn().mockResolvedValue(false),
+      }));
+      const { requireAuth, resetJwksCache, isCognitoAuthEnabled } = await import("@/lib/api-auth");
+      resetJwksCache();
+      expect(isCognitoAuthEnabled()).toBe(false);
+      const result = await requireAuth(makeRequest("opaque-session-id"));
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.user.sub).toBe("d1-bearer");
+      delete process.env.COGNITO_ISSUER;
+    });
+
+    it("D1 mode: stale Cognito JWT Bearer falls through to session_token cookie", async () => {
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      vi.resetModules();
+      vi.doMock("@/lib/auth-d1", () => ({
+        getAuthDbFromEnv: () => ({ prepare: vi.fn() }),
+        getUserBySession: vi.fn().mockImplementation((_db: unknown, sid: string) => {
+          if (sid === "good-cookie") {
+            return Promise.resolve({ id: "from-cookie", email: "c@d1.test", name: null });
+          }
+          return Promise.resolve(null);
+        }),
+        isAdmin: vi.fn().mockResolvedValue(false),
+      }));
+      const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const req = new NextRequest("http://localhost/api/test", {
+        headers: {
+          authorization: `Bearer ${makeValidJwt({ email: "stale@cognito.test" })}`,
+          cookie: "session_token=good-cookie",
+        },
+      });
+      const result = await requireAuth(req);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.user.sub).toBe("from-cookie");
     });
   });
 
-  describe("requireAuth() — session cookie path (no Bearer header)", () => {
+  describe("requireAuth() — D1 session_token cookie", () => {
+    it("returns ok:true with admin groups when D1 session is admin", async () => {
+      vi.resetModules();
+      authMock.mockResolvedValue(null);
+      vi.doMock("@/lib/auth-d1", () => ({
+        getAuthDbFromEnv: () => ({ prepare: vi.fn() }),
+        getUserBySession: vi.fn().mockResolvedValue({
+          id: "d1-admin",
+          email: "admin@d1.test",
+          name: "D1 Admin",
+        }),
+        isAdmin: vi.fn().mockResolvedValue(true),
+      }));
+      const { requireAuth, requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const req = new NextRequest("http://localhost/api/test", {
+        headers: { cookie: "session_token=d1-session-abc" },
+      });
+      const result = await requireAuth(req);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.user.sub).toBe("d1-admin");
+        expect(result.user.groups).toContain("admin");
+      }
+      const admin = await requireAdmin(req);
+      expect(admin.ok).toBe(true);
+    });
+
+    it("returns ok:true without admin when D1 user is not admin", async () => {
+      vi.resetModules();
+      authMock.mockResolvedValue(null);
+      vi.doMock("@/lib/auth-d1", () => ({
+        getAuthDbFromEnv: () => ({ prepare: vi.fn() }),
+        getUserBySession: vi.fn().mockResolvedValue({
+          id: "d1-user",
+          email: "user@d1.test",
+          name: null,
+        }),
+        isAdmin: vi.fn().mockResolvedValue(false),
+      }));
+      const { requireAuth, requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      const req = new NextRequest("http://localhost/api/test", {
+        headers: { cookie: "session_token=d1-session-xyz" },
+      });
+      const result = await requireAuth(req);
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.user.groups ?? []).not.toContain("admin");
+      const admin = await requireAdmin(req);
+      expect(admin.ok).toBe(false);
+      if (!admin.ok) expect(admin.response.status).toBe(403);
+    });
+  });
+
+  describe("requireAuth() — Cognito next-auth session cookie", () => {
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+    });
+
+    afterEach(() => {
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+    });
+
     it("returns ok:true when next-auth session provides a valid user", async () => {
       // Reset modules so api-auth re-imports @/lib/auth with our mock applied.
       vi.resetModules();
@@ -270,20 +389,29 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
 
   describe("requireAdmin()", () => {
     it("returns 403 when Bearer token user is not in admin group", async () => {
-      const { requireAdmin } = await import("@/lib/api-auth");
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      vi.resetModules();
+      const { requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
       const result = await requireAdmin(makeRequest(makeValidJwt()));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(403);
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
     });
 
     it("returns ok:true for a valid admin Bearer token (groups claim)", async () => {
-      const { requireAdmin } = await import("@/lib/api-auth");
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      vi.resetModules();
+      const { requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
       const token = makeValidJwt({ groups: ["admin"] });
       const result = await requireAdmin(makeRequest(token));
       expect(result.ok).toBe(true);
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
     });
 
     it("returns ok:true when session cookie user is in the admin group", async () => {
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
       vi.resetModules();
       authMock.mockResolvedValueOnce({
         user: {
@@ -298,9 +426,11 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       const result = await requireAdmin(makeRequest()); // no Bearer header
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.user.sub).toBe("admin-1");
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
     });
 
     it("returns 403 when session cookie user is not in admin group", async () => {
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
       vi.resetModules();
       authMock.mockResolvedValueOnce({
         user: { id: "plain-user", email: "user@cloudless.gr", groups: [], roles: [] },
@@ -310,6 +440,7 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       const result = await requireAdmin(makeRequest());
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(403);
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
     });
   });
 });
@@ -343,11 +474,13 @@ describe("api-auth.ts (coverage backfill)", () => {
           createRemoteJWKSet: vi.fn(() => "jwks-stub" as unknown),
         };
       });
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
       process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
       const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
       const decoded = await verifyToken("any.fake.jwt");
       expect(decoded?.sub).toBe("verified-user");
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
       vi.doUnmock("jose");
     });
 
@@ -361,11 +494,32 @@ describe("api-auth.ts (coverage backfill)", () => {
           createRemoteJWKSet: vi.fn(() => "jwks-stub" as unknown),
         };
       });
+      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
       process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
       const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
       const decoded = await verifyToken("any.fake.jwt");
       expect(decoded).toBeNull();
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      vi.doUnmock("jose");
+    });
+
+    it("skips JWKS when AUTH_PROVIDER is not cognito even if issuer is set", async () => {
+      vi.resetModules();
+      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
+      const createRemoteJWKSet = vi.fn();
+      vi.doMock("jose", async () => {
+        const real = await vi.importActual<typeof import("jose")>("jose");
+        return { ...real, createRemoteJWKSet };
+      });
+      const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
+      resetJwksCache();
+      // Dev decode-only path (no JWKS) — must not call createRemoteJWKSet
+      const decoded = await verifyToken(makeValidJwt({ email: "d1@test.com" }));
+      expect(createRemoteJWKSet).not.toHaveBeenCalled();
+      expect(decoded?.email).toBe("d1@test.com");
+      delete process.env.COGNITO_ISSUER;
       vi.doUnmock("jose");
     });
   });

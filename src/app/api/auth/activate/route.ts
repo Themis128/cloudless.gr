@@ -5,6 +5,7 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac, timingSafeEqual } from "crypto";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { getAuthDbFromEnv } from "@/lib/auth-d1";
 
 function makeClient(): CognitoIdentityProviderClient {
   const issuer = process.env.COGNITO_ISSUER ?? "";
@@ -62,6 +63,23 @@ async function confirmUser(userPoolId: string, email: string): Promise<boolean> 
   }
 }
 
+async function confirmUserD1(email: string): Promise<boolean> {
+  const db = getAuthDbFromEnv();
+  if (!db) return false;
+  try {
+    await db
+      .prepare(
+        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?"
+      )
+      .bind(email)
+      .run();
+    return true;
+  } catch (err) {
+    console.error("[auth/activate] D1 verify failed:", err);
+    return false;
+  }
+}
+
 /** GET /api/auth/activate?email=...&token=...  — one-tap link from email */
 export async function GET(req: NextRequest) {
   const ipRl = rateLimit(`auth-activate:ip:${getClientIp(req)}`, 10, 60_000);
@@ -79,10 +97,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/en/auth/signup?activated=invalid`);
 
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (!userPoolId) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
-
-  const ok = await confirmUser(userPoolId, email);
-  if (!ok) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
+  if (userPoolId) {
+    const ok = await confirmUser(userPoolId, email);
+    if (!ok) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
+  } else {
+    const ok = await confirmUserD1(email);
+    if (!ok) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
+  }
 
   return NextResponse.redirect(`${origin}/en/auth/login?activated=1`);
 }
@@ -111,10 +132,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
 
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (!userPoolId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
-
-  const ok = await confirmUser(userPoolId, email);
-  if (!ok) return NextResponse.json({ error: "Activation failed" }, { status: 500 });
+  if (userPoolId) {
+    const ok = await confirmUser(userPoolId, email);
+    if (!ok) return NextResponse.json({ error: "Activation failed" }, { status: 500 });
+  } else {
+    const ok = await confirmUserD1(email);
+    if (!ok) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -5,19 +5,17 @@ import {
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
+import {
+  getAuthDbFromEnv,
+  getUserById,
+  patchUserProfile as patchD1Profile,
+} from "@/lib/auth-d1";
 
 /**
- * Provider-agnostic user-profile store on DynamoDB.
+ * Provider-agnostic user-profile store.
  *
- * The dashboard Profile/Settings form needs to persist name / company / phone /
- * preferences. These used to live in the IdP account store, which ties the
- * profile to a specific IdP and is unavailable under Cognito (its custom
- * attributes can't be added to an existing pool without replacing it). Storing
- * the profile in DynamoDB keyed by the user's `sub` decouples it from the IdP,
- * so it works identically for any OIDC provider.
- *
- * Table (sst.config.ts → "UserProfile"): hashKey `userId` = the OIDC `sub`.
- * Access is granted to the site Lambda via SST resource linking.
+ * Cloudflare-first: D1 `user` row when AUTH_DB is bound.
+ * Legacy fallback: DynamoDB UserProfile table (USER_PROFILE_TABLE).
  */
 
 const REGION = process.env.AWS_REGION || "us-east-1";
@@ -43,6 +41,26 @@ export interface UserProfile {
 
 /** Read a user's stored profile. Returns {} when no record exists yet. */
 export async function getUserProfile(userId: string): Promise<UserProfile> {
+  const db = getAuthDbFromEnv();
+  if (db) {
+    const user = await getUserById(db, userId);
+    if (!user) return {};
+    let preferences: unknown;
+    if (user.preferences_json) {
+      try {
+        preferences = JSON.parse(user.preferences_json);
+      } catch {
+        // ignore malformed
+      }
+    }
+    return {
+      name: user.name ?? undefined,
+      company: user.company ?? undefined,
+      phone: user.phone ?? undefined,
+      preferences,
+    };
+  }
+
   const res = await getDynamoClient().send(
     new GetItemCommand({
       TableName: getTableName(),
@@ -75,10 +93,15 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
  *
  * Partial update: only the keys present in `fields` are written. A string set
  * to "" clears (REMOVEs) that attribute; `undefined` leaves it untouched.
- * `name` is a DynamoDB reserved word, so all attributes go through expression
- * attribute names.
  */
 export async function putUserProfile(userId: string, fields: UserProfile): Promise<void> {
+  const db = getAuthDbFromEnv();
+  if (db) {
+    const ok = await patchD1Profile(db, userId, fields);
+    if (!ok) throw new Error("User not found");
+    return;
+  }
+
   const setParts: string[] = [];
   const removeParts: string[] = [];
   const names: Record<string, string> = {};

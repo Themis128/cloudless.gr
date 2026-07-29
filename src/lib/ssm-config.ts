@@ -188,12 +188,11 @@ async function fetchSsmParams(): Promise<Map<string, string>> {
 }
 
 function validateRequiredKeys(params: Map<string, string>): void {
-  const required = [
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "COGNITO_USER_POOL_ID",
-    "COGNITO_CLIENT_ID",
-  ] as const;
+  const required = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"] as string[];
+  // Cognito keys only required when still on Cognito Hosted UI path
+  if ((process.env.NEXT_PUBLIC_AUTH_PROVIDER ?? "d1") === "cognito") {
+    required.push("COGNITO_USER_POOL_ID", "COGNITO_CLIENT_ID");
+  }
   const missing: string[] = [];
   for (const key of required) {
     if (!params.get(key)) {
@@ -441,44 +440,35 @@ function buildConfigFromEnv(): AppConfig {
 }
 
 /**
- * Fetches all /cloudless/production/* parameters from SSM.
- * Cache expires after 5 minutes to pick up rotated secrets without redeploy.
- * In test environments (NODE_ENV=test), reads from process.env directly.
- * When SSM_DISABLED=1 (e.g. K3s Pi deployment where all config is injected
- * via Kubernetes secret), skips SSM entirely and reads from process.env.
- * In Workers environment, tries D1 first, then falls back to environment variables.
+ * Fetches config from D1 app_config, SSM, or process.env.
+ * Prefer D1 whenever AUTH_DB is bound (Workers *or* Pi with binding).
+ * Secrets in process.env always win over D1 values.
  */
 export async function getConfig(): Promise<AppConfig> {
-  // 1. Check if we're in Workers environment
-  if (isWorkersEnvironment()) {
-    // 2. Try D1 first if available
-    try {
-      // In a real Workers environment, we'd get the D1 binding from env
-      // For now, we'll check if we can access it through global scope
-      // This is a simplified check - in practice, the D1 binding would be passed in
-      const maybeEnv = (typeof process !== "undefined" ? process.env : {}) as Record<
-        string,
-        unknown
-      >;
-      const db = maybeEnv.AUTH_DB as D1Database | undefined;
+  // 1. Prefer Cloudflare D1 app_config when AUTH_DB is bound (any runtime)
+  try {
+    const maybeEnv = (typeof process !== "undefined" ? process.env : {}) as Record<
+      string,
+      unknown
+    >;
+    const db = maybeEnv.AUTH_DB as D1Database | undefined;
 
-      if (db) {
-        // Try to get config from D1
-        const d1Config = await getD1Config(db);
-        // Merge with environment variables (secrets take precedence)
-        const envConfig = buildConfigFromEnv();
-        return { ...d1Config, ...envConfig } as AppConfig;
-      }
-    } catch (err) {
-      // Fall back to environment if D1 fails
-      console.warn("[SSM] D1 lookup failed, falling back to environment:", err);
+    if (db && typeof db.prepare === "function") {
+      const d1Config = await getD1Config(db);
+      const envConfig = buildConfigFromEnv();
+      // Env/secrets win; D1 fills non-secret gaps
+      return { ...d1Config, ...envConfig } as AppConfig;
     }
+  } catch (err) {
+    console.warn("[config] D1 lookup failed, continuing:", err);
+  }
 
-    // Fallback to environment variables in Workers environment
+  // 2. Workers without D1 → env only
+  if (isWorkersEnvironment()) {
     return buildConfigFromEnv();
   }
 
-  // 3. Fall back to AWS SSM for non-Worker environments (existing logic)
+  // 3. Fall back to AWS SSM for non-Worker environments (legacy Lambda)
 
   // In tests, skip SSM entirely and read from process.env. Still cache the
   // result so successive getConfig() calls return the same object reference;

@@ -58,12 +58,15 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 
 - [x] `DONE` R21a self-host Meilisearch on `omv-ha` (manifests/tunnel assets in repo).
   Evidence: `infrastructure/meilisearch/k8s.yaml`, `k8s/search/meilisearch.yaml`, `infrastructure/search/cloudflare-tunnel.yaml`, `infrastructure/search/README.md`.
-- [x] `DONE` R21b `/api/search` with Bedrock embeddings.
-  Evidence: `src/app/api/search/route.ts`, `src/lib/product-search.ts`, `src/lib/search-index.ts`, `src/lib/meilisearch.ts`.
+- [x] `DONE` R21b `/api/search` with Bedrock embeddings + store UI wire-up.
+  Evidence: `src/app/api/search/route.ts`, `src/lib/product-search.ts`, `src/lib/search-index.ts`,
+  `src/lib/meilisearch.ts`, `src/components/store/StoreGrid.tsx` (debounced `/api/search`, local fallback).
 - [x] `DONE` R21c product recommendations.
   Evidence: `src/lib/product-recommendations.ts`, `src/app/api/recommendations/route.ts`, `src/components/store/RecommendationGrid.tsx`.
-- [x] `DONE` R21d GenAI-assisted product description flow.
-  Evidence: `src/app/api/admin/ai/product-descriptions/route.ts`, `scripts/generate-product-descriptions.ts`.
+- [x] `DONE` R21d GenAI product descriptions + admin approve UI.
+  Evidence: `src/app/api/admin/ai/product-descriptions/route.ts`,
+  `scripts/generate-product-descriptions.ts`,
+  `src/app/[locale]/admin/product-descriptions/page.tsx`.
 
 - [x] `DONE` R15 Cloudflare Access hardening artifacts.
   Evidence: `infrastructure/cloudflare-access/access-apps.tf`, `infrastructure/cloudflare-access/applications.yaml`, `infrastructure/cloudflare-access/README.md`, `src/lib/cloudflare-access.ts`.
@@ -74,8 +77,13 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
   Evidence: `infrastructure/appflowy/walg-sidecar.yaml` + `appflowy-walg-env` /
   `appflowy-walg-r2` live; daily `appflowy-walg-basebackup` CronJob created.
   Account endpoint `https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com`.
-  Continuous `archive_command` sidecar still optional (requires postgres Deployment
-  apply from `k8s/appflowy.yaml`); daily basebackup + R10 `pg_dump` cover offsite.
+  Continuous `archive_command` **live** (2026-07-29): rclone →
+  `r2://datalake-bucket/appflowy-wal/wal/` (`archive_command=/walg-bin/archive.sh %p %f`
+  in `k8s/appflowy.yaml`). Re-test same day: `pg_switch_wal` → `archived_count`
+  advanced; objects `00000001…017` listed in R2. Daily basebackup CronJob uses
+  `pg_basebackup` + rclone → `appflowy-wal/base/` (wal-g push hangs on omv).
+  Never set `WALG_LOG_LEVEL=INFO` (only NORMAL|DEVEL|ERROR). Do not apply empty
+  Secret stubs from `walg-sidecar.yaml` (wipes live R2 keys).
 - [x] `DONE` R23 Resend pilot for order confirmations.
   Evidence: `src/lib/email-resend.ts` plus pilot switch/fallback in `src/lib/email.ts` (`sendOrderConfirmation` prefers Resend when configured, falls back to SES).
 - [x] `DEFERRED` R24 AWS secondary-region DR path (legacy).
@@ -98,6 +106,19 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` Smoke PVC backup Job to R2.
   Proof: `pvc-backup-appflowy` Job Completed; uploaded **1178437** bytes to
   `r2://datalake-bucket/pvc-backups/appflowy/daily/2026-07-29T170155Z.sql.custom`.
+- [x] `DONE` Search funnel analytics on Cloudflare D1 (query → result → click; buy hook ready).
+  Evidence: `migrations/0008-search-funnel-events.sql`, `src/lib/search-funnel.ts`,
+  `src/lib/funnel-client.ts`, `StoreGrid` beacons, `POST /api/analytics/track` D1 sink,
+  `GET /api/admin/analytics/search-funnel`. Remote D1 tables verified 2026-07-29:
+  `search_funnel_events` + `analytics_events` present on `user-auth-db`.
+- [x] `DONE` Recommendation A/B vs no-rec baseline (flag + instrumentation).
+  Evidence: `store-recommendations` in `src/lib/ab-flags.ts`, `GET /api/experiments/[flagId]`,
+  `RecommendationGrid` holdout + `rec_impression`/`rec_click` funnel events. Enable flag in
+  `/admin/ab-tests` to start traffic split.
+- [x] `DONE` Admin UI to review/approve GenAI product descriptions (R21d).
+  Evidence: `src/app/[locale]/admin/product-descriptions/page.tsx` + nav link in
+  `AdminLayoutClient.tsx` (Workers AI primary / Gemini fallback API already shipped).
+
 ## LinkedIn CAPI finalization
 
 - [x] `DONE` Verify/wire `li_fat_id` capture path in code flow.
@@ -126,6 +147,23 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
 - **Do not install AWS CLI or AWS SDK** for agent/operator work on this repo; use Cloudflare tooling and existing in-repo paths instead.
 - AWS-backed roadmap items (old R16→S3, R20→AWS, R24 secondary region) are
   **legacy** — R16 + R10 live on R2 (2026-07-29 smoke: 1.1 MiB AppFlowy dump).
+
+### Platform migration pillars (2026-07-29)
+
+- [x] `DONE` Drop S3 analytics **event** sink → D1 `analytics_events` (migration 0009).
+  Evidence: `src/lib/analytics.ts` (`trackAnalyticsEvent`), `POST /api/analytics/track` (no S3).
+- [x] `DONE` Stripe + admin-notification **lake** PutObject → R2 `DATALAKE_BUCKET`
+  (`getDataLakeBucketFromEnv` in `r2-client.ts`; no S3 SDK in those sinks).
+  Still AWS (out of scope for this cut): Athena cost/datalake UI reads, Dynamo idempotency table.
+- [x] `DONE` Cognito → D1 auth cutover (JWKS gated).
+  Evidence: login/register/activate D1 paths; `requireAuth` uses Cognito JWKS
+  **only** when `NEXT_PUBLIC_AUTH_PROVIDER=cognito`; otherwise opaque
+  `session_token` (Bearer or cookie) via `auth-d1`; next-auth cookie skipped
+  in D1 mode; `fetchWithAuth` does not attach Cognito ID tokens when D1.
+  Leftover `COGNITO_ISSUER` alone no longer enables JWKS.
+- [x] `PARTIAL` SSM → D1 `app_config`: `getConfig()` prefers `AUTH_DB` on any runtime;
+  admin PUT at `/api/admin/config` (non-secret keys); Cognito keys not required
+  unless `NEXT_PUBLIC_AUTH_PROVIDER=cognito`. Secrets stay Wrangler/k8s.
 
 ## Notes
 

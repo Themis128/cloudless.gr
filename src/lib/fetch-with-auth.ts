@@ -1,26 +1,21 @@
 "use client";
 
 /**
- * Fetch wrapper that adds the access token from the next-auth session.
+ * Fetch wrapper that authenticates admin/API calls.
  *
- * For same-origin browser requests, the next-auth session cookie is sent
- * automatically and api-auth.ts reads it server-side via auth(). The Bearer
- * header is still set as defense-in-depth (external reverse proxies,
- * non-cookie contexts, and for the portal pages that call fetchWithAuth
- * from WaitingRoomClient).
+ * Cognito (`NEXT_PUBLIC_AUTH_PROVIDER=cognito`): attaches next-auth ID token
+ * as Bearer (defense-in-depth alongside the session cookie).
  *
- * The session is cached at module scope for a short TTL so the admin layout's
- * parallel fan-out (PendingClients + ClientPortals + Workspaces + …) doesn't
- * trigger N separate /api/auth/session round-trips on boot. Measured on real
- * traffic before this cache: 9× /api/auth/session in 15s during the admin
- * page paint. After: typically 1×. TTL is intentionally short so a fresh
- * sign-in / sign-out / token refresh is reflected within ~5s. On any 401
- * response we clear the cache so the next call refetches a possibly-rotated
- * session.
+ * D1 (default): relies on the HttpOnly `session_token` cookie — same-origin
+ * fetch sends cookies; do not attach leftover Cognito JWTs.
+ *
+ * Cognito session cache: short TTL so admin layout parallel fan-out doesn't
+ * hammer /api/auth/session. Cleared on 401.
  */
 
 import { getSession } from "next-auth/react";
 
+const USE_COGNITO = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
 const CACHE_TTL_MS = 5000;
 
 let cachedSession: {
@@ -44,24 +39,24 @@ export function clearSessionCache(): void {
 }
 
 export async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
-  const session = await getCachedSession();
-  const idToken = session?.idToken;
-
   const headers: Record<string, string> = {
     ...((init?.headers as Record<string, string>) || {}),
   };
 
-  if (idToken) {
-    headers.Authorization = `Bearer ${idToken}`;
+  if (USE_COGNITO) {
+    const session = await getCachedSession();
+    const idToken = session?.idToken;
+    if (idToken) {
+      headers.Authorization = `Bearer ${idToken}`;
+    }
   }
 
   const res = await globalThis.fetch(url, {
     ...init,
+    credentials: init?.credentials ?? "same-origin",
     headers,
   });
 
-  // A 401 means the cached token is stale (refresh rotation, sign-out from
-  // another tab, etc.). Clear so the next caller refetches the session.
   if (res.status === 401) clearSessionCache();
   return res;
 }
