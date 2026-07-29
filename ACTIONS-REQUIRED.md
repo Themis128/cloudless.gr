@@ -70,7 +70,7 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 | Cloudflare API token rotation  | If MCP CF tools 401                                                                                                                                                                                                                                                    |
 | ESP32 Notion DBs               | Empty (no hardware data); page reconstruct partial                                                                                                                                                                                                                     |
 | Bot Fight Mode vs GHA crons    | Free BFM cannot be WAF-skipped. Workflow `cloudflare-skip-cron-challenge.yml` turns `bot_fight_mode=off` (needs Zone Settings:Edit). If that 403s/400s, disable **Security → Bots → Bot Fight Mode** in the CF dashboard so LinkedIn/postiz crons reach `/api/cron/*`. |
-| Workers Paid (3→10 MiB)        | Cloudflare Workers Deploy hits error **10027** (free 3 MiB script cap) for OpenNext Next 16. Upgrade **Workers & Pages → Plans → Paid** (~$5/mo), then re-run `cloudflare-deploy.yml`. Frontend is this Worker on `cloudless.gr` (not Pages).                          |
+| Workers Free size (no Paid)    | Stay on **Workers Free** (3 MiB gzip). Deploy uses `--minify` + `strip-opennext-bin-fonts` + `strip-opennext-vercel-og`. If still over: prune more deps or serve via **Pi Tunnel** (`deploy-pi.yml`) without Workers SSR — do **not** upgrade to Paid. Docs: [Workers limits](https://developers.cloudflare.com/workers/platform/limits/#worker-size), [OpenNext troubleshooting](https://opennext.js.org/cloudflare/troubleshooting). |
 
 ---
 

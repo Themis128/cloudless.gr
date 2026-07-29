@@ -24,6 +24,7 @@ on:
       - 'scripts/sst-next-build.mjs'
       - 'scripts/opennext-middleware-fix.mjs'
       - 'scripts/strip-opennext-bin-fonts.mjs'
+      - 'scripts/strip-opennext-vercel-og.mjs'
       - 'open-next.config.cloudflare.ts'
   workflow_dispatch:
     inputs:
@@ -79,8 +80,11 @@ jobs:
           let t = fs.readFileSync(path, "utf8");
           t = t.replace(/"main"\s*:\s*"[^"]*"/, '"main": ".open-next/worker.js"');
           t = t.replace(/"directory"\s*:\s*"\.\/out"/, '"directory": ".open-next/assets"');
+          if (!/"minify"\s*:/.test(t)) {
+            t = t.replace(/"compatibility_date"/, '"minify": true,\n  "compatibility_date"');
+          }
           fs.writeFileSync(path, t);
-          console.log("wrangler.jsonc → main=.open-next/worker.js assets=.open-next/assets");
+          console.log("wrangler.jsonc → main=.open-next/worker.js assets=.open-next/assets minify=true");
           NODE
 
       - name: Report OpenNext Worker size
@@ -94,9 +98,10 @@ jobs:
         run: |
           set -euo pipefail
           set -o pipefail
+          # --minify is in package.json cf:deploy (free-tier size reduction).
           if ! pnpm cf:deploy 2>&1 | tee /tmp/cf-deploy.log; then
             if grep -qE '10027|size limit of 3 MiB' /tmp/cf-deploy.log; then
-              echo "::error::Worker exceeds Cloudflare free-plan 3 MiB limit. Upgrade Workers to Paid (10 MiB) at https://dash.cloudflare.com → Workers & Pages → Plans, then re-run this workflow."
+              echo "::error::Worker still over free 3 MiB gzip after minify + OG strip. Free options: (1) re-check strip scripts / exclude more deps, (2) serve via Pi Tunnel only (deploy-pi.yml) without Workers SSR. Do not upgrade to Paid unless you choose to."
             fi
             exit 1
           fi
@@ -109,5 +114,4 @@ jobs:
 # CF_ACCOUNT_ID - Cloudflare account ID
 # CLOUDFLARE_ZONE_ID - Cloudflare zone ID for custom domain binding
 # CRON_SECRET - Shared secret for cron job authorization
-# NOTE: Free Workers plan caps script size at 3 MiB (gzip). Full OpenNext
-# Next.js 16 apps often need Workers Paid (10 MiB).
+# NOTE: Stay on Workers Free — minify + strip @vercel/og (see cf-build-wrapper).

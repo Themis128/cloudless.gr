@@ -95,7 +95,7 @@
     "analyze": "ANALYZE=true next build",
     "cf:build": "bash scripts/cf-build-wrapper.sh",
     "cf:build:opennext": "bash scripts/cf-build-wrapper.sh",
-    "cf:deploy": "opennextjs-cloudflare deploy",
+    "cf:deploy": "opennextjs-cloudflare deploy --minify",
     "cf:preview": "opennextjs-cloudflare preview",
     "cf:upload": "opennextjs-cloudflare upload"
   },

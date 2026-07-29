@@ -76,4 +76,15 @@ echo "▶ Running OpenNext Cloudflare build..."
 NEXT_TELEMETRY_DISABLED=1 pnpm exec opennextjs-cloudflare build \
   --openNextConfigPath open-next.config.cloudflare.ts
 
+# Free plan = 3 MiB gzip Worker script. Strip OG fonts/WASM + .bin stubs so
+# we stay under the limit without Workers Paid (~$5/mo).
+echo "▶ Slimming OpenNext output for Workers Free (strip OG + .bin fonts)..."
+node scripts/strip-opennext-bin-fonts.mjs
+node scripts/strip-opennext-vercel-og.mjs
+
+if [ -f .open-next/worker.js ]; then
+  bytes=$(gzip -c .open-next/worker.js | wc -c)
+  awk -v b="$bytes" 'BEGIN {printf "▶ worker.js gzip ≈ %.2f MiB (free limit 3.00)\n", b/1024/1024}'
+fi
+
 echo "✅ Cloudflare build complete"
