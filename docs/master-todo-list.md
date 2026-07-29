@@ -4,7 +4,7 @@ Quick checklist: `docs/current-source-of-truth-checklist.md` is the single
 active execution list. This file remains the detailed roadmap ledger and
 history.
 
-**Status as of 2026-07-29:** Phases 0–6 roadmap rows are closed in
+**Status as of 2026-07-30:** Phases 0–6 roadmap rows are closed in
 `docs/current-source-of-truth-checklist.md` (DONE / PARTIAL / DEFERRED /
 SKIPPED). R10 PVC backups + R16 WAL-G now land on **Cloudflare R2**
 (not S3). R20/R24 AWS DR paths are **legacy-deferred**. Customer-facing
@@ -12,8 +12,9 @@ R21b store search is wired to `/api/search`; R21d admin Product Copy UI,
 D1 search/rec funnel (`0008`), and `store-recommendations` A/B holdout
 shipped 2026-07-29. Auth: register + activate fall back to D1 when Cognito
 unset; lake sinks (Stripe events, admin notifications) write R2 not S3.
-**Still open:** Phase 7 operator cadence; Cognito JWKS retirement; Athena
-cost UI → R2/Workers.
+**Workers Free:** OpenNext SSR (~5.5 MiB) cannot deploy; production uses
+tiny `pi-origin-proxy` + Pi Tunnel (`deploy-pi.yml` for app). **Still open:**
+Phase 7 operator cadence; Cognito JWKS retirement; Athena cost UI → R2.
 
 Quick execution list → `docs/current-source-of-truth-checklist.md`.
 This file remains the detailed ledger + history.

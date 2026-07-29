@@ -7,14 +7,29 @@
 # Insert BEFORE the catch-all "http_status:404" rule.
 # Last Updated: 2026-07-20 - All endpoints verified working
 
-# cloudless.gr - Main website (Workers.dev) - Apex domain
-# Routes to cloudless-gr.baltzakis-themis.workers.dev
-# Status: ✅ Workers deployed, apex domain DNS should resolve
+# cloudless.gr / manage / pi-origin — Pi NodePort 30300 (Workers Free proxy target)
+# Apex/manage also have Worker routes (pi-origin-proxy). pi-origin MUST stay on
+# Tunnel→Pi only or the free proxy Worker loops.
 - hostname: cloudless.gr
-  service: https://cloudless-gr.baltzakis-themis.workers.dev
+  service: http://192.168.1.128:30300
   originRequest:
-    connectTimeout: 15s
+    connectTimeout: 30s
     tcpKeepAlive: 30s
+    httpHostHeader: cloudless.gr
+
+- hostname: manage.cloudless.gr
+  service: http://192.168.1.128:30300
+  originRequest:
+    connectTimeout: 30s
+    tcpKeepAlive: 30s
+    httpHostHeader: manage.cloudless.gr
+
+- hostname: pi-origin.cloudless.gr
+  service: http://192.168.1.128:30300
+  originRequest:
+    connectTimeout: 30s
+    tcpKeepAlive: 30s
+    httpHostHeader: pi-origin.cloudless.gr
 
 # grafana.cloudless.gr - Monitoring dashboard
 # Runs on omv-main NodePort 30850 (fixed from 18443 which was internal container port)
