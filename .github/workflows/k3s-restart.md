@@ -10,12 +10,12 @@ permissions:
   contents: read
   issues: read
 strict: false
-engine: claude
-model: claude-haiku-4-5
+engine: gemini
+model: gemini-2.5-flash-lite
 models:
   default-ai-credits-pricing:
-    input: 1.0
-    output: 5.0
+    input: 0.10
+    output: 0.40
 safe-outputs:
   report-failure-as-issue: false
 ---
