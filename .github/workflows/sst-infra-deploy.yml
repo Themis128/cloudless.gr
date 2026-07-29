@@ -58,8 +58,8 @@ jobs:
       - name: Build Next.js app with OpenNext
         run: pnpm run cf:build
 
-      - name: Remove .bin font files (fixes SST loader error)
-        run: find .open-next -name "*.bin" -delete || echo "No .bin files found"
+      - name: Strip @vercel/og .bin fonts (SST esbuild)
+        run: node scripts/strip-opennext-bin-fonts.mjs
 
       - name: Deploy SST Cloudflare stack
         run: pnpm exec sst deploy --config sst.config.cloudflare.ts --stage production
