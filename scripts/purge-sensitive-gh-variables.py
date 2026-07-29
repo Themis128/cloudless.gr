@@ -126,9 +126,7 @@ SAFE_KEEP = {
 
 
 def run(cmd: list[str], *, input_text: str | None = None) -> str:
-    return subprocess.check_output(
-        cmd, text=True, input=input_text, stderr=subprocess.STDOUT
-    )
+    return subprocess.check_output(cmd, text=True, input=input_text, stderr=subprocess.STDOUT)
 
 
 def list_secret_names() -> set[str]:
@@ -149,9 +147,7 @@ def list_secret_names() -> set[str]:
 
 
 def list_variables() -> list[dict]:
-    raw = run(
-        ["gh", "api", f"repos/{REPO}/actions/variables", "--paginate"]
-    )
+    raw = run(["gh", "api", f"repos/{REPO}/actions/variables", "--paginate"])
     variables: list[dict] = []
     decoder = json.JSONDecoder()
     idx = 0
@@ -197,6 +193,7 @@ def ensure_secret(name: str, value: str) -> None:
 
 def delete_variable(name: str) -> None:
     run(["gh", "variable", "delete", name, "--repo", REPO])
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
