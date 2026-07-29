@@ -467,14 +467,18 @@ export async function getConfig(): Promise<AppConfig> {
     return buildConfigFromEnv();
   }
 
-  // 3. Fall back to AWS SSM for non-Worker environments (legacy Lambda /
-  // Pi without AUTH_DB). Prefer SSM_DISABLED=1 + env secrets on k3s
-  // (infrastructure/cloudless/README.md).
+  // 3. AWS SSM is opt-in legacy (LocalStack CI / old Lambda). Production Pi
+  // sets SSM_DISABLED=1 + envFrom secrets; Workers use D1/env. Require
+  // SSM_ENABLED=1 to hit SSM so Cloudflare-first runtimes never call AWS.
 
   // In tests, skip SSM entirely and read from process.env. Still cache the
   // result so successive getConfig() calls return the same object reference;
   // resetSsmCache() clears `cached` so per-test vi.stubEnv() changes are picked up.
-  if (process.env.NODE_ENV === "test" || process.env.SSM_DISABLED === "1") {
+  if (
+    process.env.NODE_ENV === "test" ||
+    process.env.SSM_DISABLED === "1" ||
+    process.env.SSM_ENABLED !== "1"
+  ) {
     if (cached) return cached;
     cached = buildConfigFromEnv();
     cachedAt = Date.now();
