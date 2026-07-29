@@ -25,12 +25,13 @@ jobs:
         # Exclude framework-level packages whose node_modules content is read by
         # AI agents via AGENTS.md. Those packages must go through human review to
         # prevent supply-chain prompt injection even for patch bumps.
+        # dependency-names is a comma-separated string, not JSON — do not fromJson it.
         if: |
           (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
            steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-          !contains(fromJson(steps.meta.outputs.dependency-names), 'next') &&
-          !contains(fromJson(steps.meta.outputs.dependency-names), 'react') &&
-          !contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom')
+          !contains(format(',{0},', steps.meta.outputs.dependency-names), ',next,') &&
+          !contains(format(',{0},', steps.meta.outputs.dependency-names), ',react,') &&
+          !contains(format(',{0},', steps.meta.outputs.dependency-names), ',react-dom,')
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -40,9 +41,9 @@ jobs:
         if: |
           (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
            steps.meta.outputs.update-type == 'version-update:semver-minor') &&
-          (contains(fromJson(steps.meta.outputs.dependency-names), 'next') ||
-           contains(fromJson(steps.meta.outputs.dependency-names), 'react') ||
-           contains(fromJson(steps.meta.outputs.dependency-names), 'react-dom'))
+          (contains(format(',{0},', steps.meta.outputs.dependency-names), ',next,') ||
+           contains(format(',{0},', steps.meta.outputs.dependency-names), ',react,') ||
+           contains(format(',{0},', steps.meta.outputs.dependency-names), ',react-dom,'))
         run: |
           echo "::warning::Framework package update detected (next/react/react-dom)."
           echo "::warning::AGENTS.md reads from node_modules — human review required before merge."
