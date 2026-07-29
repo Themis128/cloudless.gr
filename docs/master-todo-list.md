@@ -113,10 +113,10 @@ within 24h instead of surfacing as a runtime crash.
 These are the 5 items that ONLY you can resolve. None block users; all are
 operator polish or unlock follow-on automation.
 
-- [ ] 👤 🔵 **Cloudflare API token rotation.** Mint at Cloudflare dashboard → SSM `CLOUDFLARE_API_TOKEN` → `gh workflow run store-cloudflare-token.yml -f cloudflare_token=… -f apply=true`. **Unlocks 3 stale items:** HA LB setup, email-obfuscation fix, infra MCP. See `skills/cloudflare-token-doctor/SKILL.md`.
-- [ ] 👤 🔵 **Sentry webhook.** Sentry → Settings → Developer Settings → New Internal Integration → Webhook URL `https://cloudless.gr/api/webhooks/sentry`, subscribe to "issue" events, copy Client Secret → SSM `SENTRY_WEBHOOK_SECRET`. R8 closure.
-- [ ] 👤 🟠 **Kuma status page.** Kuma UI → Status Pages → New → slug `cloudless` → add 12 monitors (cloudless.gr/api/health, each self-hosted app, each Pi node, Stripe/Cognito surface checks). Wire Kuma → ntfy + Slack channels.
-- [ ] 👤 🟠 **ESP32 Notion page restore.** Open Notion ESP32 page → ••• → Page history → restore pre-2026-06-02 15:19 UTC.
+- [x] ~~👤 🔵 **Cloudflare API token rotation.**~~ ✅ **SKIPPED 2026-07-29** — operator deferred; do not mint/store this pass. See checklist + runbook §1.
+- [x] ~~👤 🔵 **Sentry webhook.**~~ ✅ **DONE 2026-07-29** — SSM `SENTRY_WEBHOOK_SECRET` v1 + Pi secret; `notifyAdmin` Slack DM + in-cluster ntfy verified (`slack.ok` + `ntfy.ok`). Runbook §2.
+- [x] ~~👤 🟠 **Kuma status page.**~~ ✅ **DONE 2026-07-29** — slug `cloudless`, 12 monitors, ntfy + `kuma-slack-bridge`. Runbook §3.
+- [x] ~~👤 🟠 **ESP32 Notion page restore.**~~ ✅ **PARTIAL 2026-07-29** — API reconstruct 16 blocks; history UI/API unavailable past Plus retention. Runbook §4.
 - [x] ~~👤 🔵 **Grafana Athena SCP.**~~ ✅ **DEFERRED 2026-07-29** — chose (b): R12 `/admin/cost` already renders Athena natively; org SCP lift is optional Grafana polish only. See `docs/operator-blockers-runbook.md` §5.
 
 ---
