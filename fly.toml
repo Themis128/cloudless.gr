@@ -9,8 +9,9 @@ app = "cloudless-proxy"
 primary_region = "fra"
 
 [build]
+  # Paths are relative to this fly.toml (repo root), not the context dir.
   context = "fly-proxy-app"
-  dockerfile = "Dockerfile"
+  dockerfile = "fly-proxy-app/Dockerfile"
 
 [[services]]
   internal_port = 8080

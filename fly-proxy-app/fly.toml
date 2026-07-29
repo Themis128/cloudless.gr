@@ -8,6 +8,9 @@ app = "cloudless-proxy"
 
 primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
 
+[build]
+  dockerfile = "Dockerfile"
+
 [[services]]
   internal_port = 8080
   protocol = "tcp"
