@@ -162,9 +162,11 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
   `session_token` (Bearer or cookie) via `auth-d1`; next-auth cookie skipped
   in D1 mode; `fetchWithAuth` does not attach Cognito ID tokens when D1.
   Leftover `COGNITO_ISSUER` alone no longer enables JWKS.
-- [x] `PARTIAL` SSM → D1 `app_config`: `getConfig()` prefers `AUTH_DB` on any runtime;
-  admin PUT at `/api/admin/config` (non-secret keys); Cognito keys not required
-  unless `NEXT_PUBLIC_AUTH_PROVIDER=cognito`. Secrets stay Wrangler/k8s.
+- [x] `PARTIAL` SSM → D1 `app_config`: `getConfig()` prefers D1 via `getAuthDbFromEnv()`
+  (`AUTH_DB` / `__AUTH_DB__`); admin PUT at `/api/admin/config` (non-secret keys);
+  Cognito keys not required unless `NEXT_PUBLIC_AUTH_PROVIDER=cognito`. Secrets stay
+  Wrangler/k8s. Remaining: drop AWS SSM fallback once every runtime always binds AUTH_DB
+  (Pi today: `SSM_DISABLED=1` + env, or legacy SSM).
 
 ## Notes
 
