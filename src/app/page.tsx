@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { redirect, headers } from "next/navigation";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import type { Metadata, Viewport } from "next";
 import { routing } from "@/i18n/routing";
 

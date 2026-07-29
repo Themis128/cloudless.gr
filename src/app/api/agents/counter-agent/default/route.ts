@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { isAuthenticated } from "@/lib/auth-middleware";
 
 // Simple in-memory counter state (for demo purposes)
 // In production, this would be backed by DynamoDB or similar
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
   const rl = rateLimit(`counter-agent:${getClientIp(request)}`, 10, 60_000);
   if (!rl.ok) return rl.response;
   // Add authentication check
-  if (!isAuthenticated(request)) {
+  if (!(await isAuthenticated(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const url = new URL(request.url);

@@ -175,7 +175,7 @@ function WaitingRoomContent() {
             // the entry so the next user action (refresh, retry) can retry.
             enrollAttemptedFor.current.add(planParam);
             if (!enrollRes.ok) {
-              const data = await enrollRes.json().catch(() => ({}));
+              const data = (await enrollRes.json().catch(() => ({}))) as { error?: string };
               throw new Error(data.error ?? `Enrollment failed (HTTP ${enrollRes.status})`);
             }
             const refreshed = await fetchWithAuth("/api/portal/me");

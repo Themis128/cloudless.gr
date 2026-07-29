@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { ChatRequest } from "@cloudless/ai";
 import { requireAuth } from "@/lib/api-auth";
 
 // Chat AI endpoint supporting multiple providers for free tier coverage

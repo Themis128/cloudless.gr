@@ -51,12 +51,11 @@ export async function POST(req: NextRequest) {
 
   try {
     // Create user in D1
-    const _userId = await AUTH_DB.prepare(
+    await AUTH_DB.prepare(
       "INSERT INTO users (email, password_hash, full_name, created_at) VALUES (?, ?, ?, ?)"
     )
       .bind(email, hashedPassword, fullName, new Date().toISOString())
-      .run()
-      .then((result) => result.lastInsertRowId());
+      .run();
 
     // Generate activation token
     const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";

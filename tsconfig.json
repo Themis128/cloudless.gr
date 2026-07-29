@@ -47,6 +47,14 @@
     "scripts",
     "tools",
     "workers",
-    "cloudless-campaigns-code"
+    "agents",
+    "cloudflare-pages-mcp",
+    "fast-markdown-mcp",
+    "__tests__",
+    "tests",
+    "cloudless-campaigns-code",
+    "src/index.ts",
+    "src/index-cloudflare-free.js",
+    "src/agents"
   ]
 }
