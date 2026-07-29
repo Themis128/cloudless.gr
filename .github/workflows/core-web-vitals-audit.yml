@@ -56,29 +56,47 @@ jobs:
           echo "Using CHROME_PATH=$CHROME_BIN"
 
       - name: Warm CDN cache
+        id: warm
         run: |
           set -euo pipefail
-          for url in \
-            https://cloudless.gr \
-            https://cloudless.gr/en \
-            https://cloudless.gr/en/services \
-            https://cloudless.gr/en/contact \
-            https://cloudless.gr/en/store; do
-            BODY=$(mktemp)
-            CODE=$(curl -sS -L -o "$BODY" -w "%{http_code}" --max-time 30 \
-              -H "User-Agent: Mozilla/5.0 (compatible; CloudlessCWV/1.0)" \
-              "$url" || echo 000)
-            echo "$url → HTTP $CODE"
-            if grep -qiE 'Just a moment|challenge-platform|cf-browser-verification' "$BODY"; then
-              echo "::error::$url still serves Cloudflare challenge HTML — disable Bot Fight / Under Attack Mode, then re-run."
-              exit 1
-            fi
-            if [[ "$CODE" != "200" && "$CODE" != "304" ]]; then
-              echo "::error::$url returned HTTP $CODE (expected 200 after redirects)"
-              exit 1
-            fi
-            rm -f "$BODY"
-          done
+          # Real browser UA — datacenter "bot" UAs still get challenged even when
+          # Bot Fight Mode is off (managed challenge / IP reputation).
+          UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+          warm_host() {
+            local host="$1"
+            for path in "" /en /en/services /en/contact /en/store; do
+              local url="https://${host}${path}"
+              BODY=$(mktemp)
+              CODE=$(curl -sS -L -o "$BODY" -w "%{http_code}" --max-time 30 \
+                -H "User-Agent: ${UA}" \
+                -H "Accept: text/html,application/xhtml+xml" \
+                "$url" || echo 000)
+              echo "$url → HTTP $CODE"
+              if grep -qiE 'Just a moment|challenge-platform|cf-browser-verification' "$BODY"; then
+                echo "::warning::$url serves Cloudflare challenge HTML"
+                rm -f "$BODY"
+                return 1
+              fi
+              if [[ "$CODE" != "200" && "$CODE" != "304" ]]; then
+                echo "::warning::$url returned HTTP $CODE"
+                rm -f "$BODY"
+                return 1
+              fi
+              rm -f "$BODY"
+            done
+            return 0
+          }
+
+          if warm_host cloudless.gr; then
+            echo "base_host=cloudless.gr" >> "$GITHUB_OUTPUT"
+          elif warm_host pi-origin.cloudless.gr; then
+            echo "::warning::cloudless.gr challenged GitHub runner IPs — auditing pi-origin.cloudless.gr instead"
+            echo "base_host=pi-origin.cloudless.gr" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Both cloudless.gr and pi-origin.cloudless.gr challenged or non-200 from this runner."
+            echo "::error::Disable Bot Fight / Under Attack Mode (or allowlist GH Actions), then re-run."
+            exit 1
+          fi
 
       - name: Run Lighthouse on key routes
         id: lhci
@@ -91,21 +109,21 @@ jobs:
           # always`). Auditing the bare paths makes Lighthouse pay for the
           # redirect round-trip on every probe, which (a) doesn't measure
           # the actual page perf and (b) varies more between runs.
-          # The user-perceived perf for someone landing on `cloudless.gr/`
-          # is captured by auditing `https://cloudless.gr` (apex → locale
-          # redirect) and `https://cloudless.gr/en` (the resolved root).
+          # When GH Actions IPs are CF-challenged on apex, warm falls back to
+          # pi-origin (same app via Tunnel).
           urls: |
-            https://cloudless.gr
-            https://cloudless.gr/en
-            https://cloudless.gr/en/services
-            https://cloudless.gr/en/contact
-            https://cloudless.gr/en/store
+            https://${{ steps.warm.outputs.base_host }}
+            https://${{ steps.warm.outputs.base_host }}/en
+            https://${{ steps.warm.outputs.base_host }}/en/services
+            https://${{ steps.warm.outputs.base_host }}/en/contact
+            https://${{ steps.warm.outputs.base_host }}/en/store
           budgetPath: .github/lighthouse-budget.json
           uploadArtifacts: true
           temporaryPublicStorage: true
       - name: Surface per-route CWV scores inline
         env:
           MANIFEST: ${{ steps.lhci.outputs.manifest }}
+          BASE_HOST: ${{ steps.warm.outputs.base_host }}
         run: |
           # Group multi-run manifest by URL and reduce to the median per metric.
           MEDIANS=$(echo "$MANIFEST" | jq '[
@@ -129,10 +147,11 @@ jobs:
           ' >> "$GITHUB_STEP_SUMMARY"
 
           # Fail if any route's median falls below thresholds.
-          # The bare `https://cloudless.gr/` triggers a locale redirect (307 → /en)
-          # which penalizes Lighthouse perf by ~20-30 points. Skip perf check for
+          # The bare apex URL triggers a locale redirect (307 → /en) which
+          # penalizes Lighthouse perf by ~20-30 points. Skip perf check for
           # that URL — `/en` already covers the actual page performance.
-          FAILED=$(echo "$MEDIANS" | jq --arg root "https://cloudless.gr/" '[.[] | select(
+          ROOT="https://${BASE_HOST}/"
+          FAILED=$(echo "$MEDIANS" | jq --arg root "$ROOT" '[.[] | select(
             (if .url == $root then false else .perf < 0.60 end) or
             .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
@@ -143,7 +162,7 @@ jobs:
             echo "Thresholds: Performance ≥ 60 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "Failing routes:" >> "$GITHUB_STEP_SUMMARY"
-            echo "$MEDIANS" | jq -r --arg root "https://cloudless.gr/" '.[] | select(
+            echo "$MEDIANS" | jq -r --arg root "$ROOT" '.[] | select(
               (if .url == $root then false else .perf < 0.60 end) or
               .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
             ) | "- \(.url) perf=\((.perf*100)|round) a11y=\((.a11y*100)|round) bp=\((.bp*100)|round) seo=\((.seo*100)|round)"' >> "$GITHUB_STEP_SUMMARY"
