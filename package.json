@@ -21,7 +21,7 @@
     "e2e:full": "bash scripts/e2e-smart-run.sh full",
     "e2e:k3s": "bash scripts/e2e-smart-run.sh k3s",
     "e2e:prod": "bash scripts/e2e-smart-run.sh prod",
-    "build": "node scripts/opennext-middleware-fix.mjs && next build && node scripts/opennext-middleware-fix.mjs",
+    "build": "node scripts/sst-next-build.mjs",
     "start": "next start -p 4000",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
