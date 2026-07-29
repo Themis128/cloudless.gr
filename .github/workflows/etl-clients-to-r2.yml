@@ -1,4 +1,4 @@
-name: ETL: Clients to R2
+name: "ETL: Clients to R2"
 # ETL sync: Cognito users + portals + ML scores → unified clients parquet in R2.
 # Reads config from D1 app_config via /api/config endpoint.
 # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
@@ -7,11 +7,6 @@ on:
   schedule:
     - cron: "45 6 * * *" # daily at 06:45 UTC
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/etl-clients-to-r2.yml"
-      - "scripts/etl/clients-to-r2.mjs"
-      - "scripts/etl/_r2-config.mjs"
 
 permissions:
   contents: read

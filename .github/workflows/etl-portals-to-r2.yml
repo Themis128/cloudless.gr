@@ -1,4 +1,4 @@
-name: ETL: Portals to R2
+name: "ETL: Portals to R2"
 # ETL sync: Client portals from D1 app_config → portals parquet in R2.
 # Reads config from D1 app_config via /api/config endpoint.
 # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
@@ -7,11 +7,6 @@ on:
   schedule:
     - cron: "30 6 * * *" # daily at 06:30 UTC (offset from clients at 06:45)
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/etl-portals-to-r2.yml"
-      - "scripts/etl/portals-to-r2.mjs"
-      - "scripts/etl/_r2-config.mjs"
 
 permissions:
   contents: read

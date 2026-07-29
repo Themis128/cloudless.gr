@@ -1,4 +1,4 @@
-name: ETL: EspoCRM to R2
+name: "ETL: EspoCRM to R2"
 # Hourly ETL sync from EspoCRM to R2 data lake. Uses Wrangler secrets, no AWS dependency.
 # Must run on self-hosted Pi runners — Cloudflare blocks data-center IPs.
 
@@ -6,10 +6,6 @@ on:
   schedule:
     - cron: "20 * * * *" # hourly at :20 (offset from EspoCRM 03:15 + Stripe 03:30)
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/etl-espocrm-to-r2.yml"
-      - "scripts/etl/espocrm-to-r2.mjs"
 
 permissions:
   contents: read

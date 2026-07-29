@@ -34,18 +34,11 @@ echo "▶ Patching OpenNext for Next.js 16.3.0-preview.6 middleware compatibilit
 node scripts/patch-opennext-build.mjs
 
 echo "▶ Running Next.js build..."
-# Pre-create the middleware.js.nft.json stub before next build runs,
-# because Next.js 16.3.0-preview.6 in standalone mode tries to open
-# this file during finalization. If it doesn't exist, the build fails
-# with ENOENT (though the build output is still created).
-node scripts/opennext-middleware-fix.mjs || true
-# Run with error tolerance because Next.js 16.3.0-preview.6's useTypeScriptCli
-# experiment generates type files with syntax errors in the local env.
-# The build output is still created even when type checking fails.
-set +e
-NEXT_TELEMETRY_DISABLED=1 NEXT_OUTPUT_STANDALONE=1 pnpm exec next build
-set -e
-echo "⚠ Next.js build completed (may have type-check errors in local env, build output should be available)"
+# Keep middleware.js.nft.json present for the whole Next build — Next 16
+# finalization opens it, but recreating `.next/` wipes any pre-build stub.
+export NEXT_OUTPUT_STANDALONE=1
+node scripts/sst-next-build.mjs
+echo "⚠ Next.js build completed (SST wrapper keeps middleware NFT stub alive)"
 
 # Ensure standalone build exists for OpenNext.
 # Next.js with output: "standalone" creates .next/standalone/ during build.
