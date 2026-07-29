@@ -1,7 +1,7 @@
 """Fly.io HA Failover Proxy for cloudless.gr.
 
-Primary: workers.dev thin edge (no custom-domain Bot Fight from datacenter IPs)
-Fallback: Pi k3s NodePort over Tailscale (bypasses Cloudflare Bot Fight entirely)
+Primary: workers.dev thin edge (direct HTTPS, no Bot Fight)
+Fallback: Pi k3s NodePort over Tailscale userspace SOCKS5
 """
 from __future__ import annotations
 
@@ -16,11 +16,12 @@ app = FastAPI()
 PRIMARY_BASE = os.getenv(
     "PRIMARY_BASE", "https://cloudless2.baltzakis-themis.workers.dev"
 ).rstrip("/")
-# Tailscale IP of omv → NodePort 30300 (set after tailscale up in the container)
 FALLBACK_BASE = os.getenv(
     "FALLBACK_BASE", "http://100.74.191.58:30300"
 ).rstrip("/")
 PUBLIC_HOST = os.getenv("PUBLIC_HOST", "cloudless.gr")
+# Set by start.sh when Tailscale userspace SOCKS is listening
+TS_SOCKS_PROXY = os.getenv("TS_SOCKS_PROXY", "").strip()
 
 health_cache = {"healthy": True, "timestamp": 0.0}
 CACHE_TTL = 30
@@ -38,13 +39,24 @@ def backend_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
     return headers
 
 
+def client_for(base: str) -> httpx.AsyncClient:
+    """Primary = direct; Tailscale fallback = SOCKS5 userspace proxy."""
+    kwargs: dict = {"timeout": 30.0, "follow_redirects": False, "trust_env": False}
+    if base == FALLBACK_BASE and TS_SOCKS_PROXY:
+        kwargs["proxy"] = TS_SOCKS_PROXY
+        kwargs["timeout"] = 10.0
+    return httpx.AsyncClient(**kwargs)
+
+
 async def check_primary_health() -> bool:
     now = time.time()
     if now - health_cache["timestamp"] < CACHE_TTL:
         return bool(health_cache["healthy"])
 
     try:
-        async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(
+            timeout=5.0, follow_redirects=True, trust_env=False
+        ) as client:
             resp = await client.get(
                 f"{PRIMARY_BASE}/api/health",
                 headers=backend_headers(),
@@ -85,7 +97,7 @@ async def proxy_to_backend(request: Request, base: str) -> Response:
         headers.pop(h, None)
     headers.update(backend_headers())
 
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
+    async with client_for(base) as client:
         body = await request.body()
         resp = await client.request(
             request.method,
@@ -112,16 +124,18 @@ async def health():
     healthy = await check_primary_health()
     fallback_ok = False
     fallback_status = 0
+    fallback_error = ""
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with client_for(FALLBACK_BASE) as client:
             r = await client.get(
                 f"{FALLBACK_BASE}/api/health",
                 headers=backend_headers(),
             )
             fallback_status = r.status_code
             fallback_ok = r.status_code == 200
-    except Exception:
+    except Exception as e:
         fallback_ok = False
+        fallback_error = type(e).__name__
 
     return {
         "status": "healthy" if healthy else ("degraded" if fallback_ok else "unhealthy"),
@@ -131,6 +145,8 @@ async def health():
         "primary_healthy": healthy,
         "fallback_healthy": fallback_ok,
         "fallback_status": fallback_status,
+        "fallback_error": fallback_error or None,
+        "socks_configured": bool(TS_SOCKS_PROXY),
     }
 
 

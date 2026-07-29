@@ -6,7 +6,7 @@ mkdir -p /var/run/tailscale /var/lib/tailscale
 SOCKS="127.0.0.1:1055"
 
 if [ -n "${TS_AUTHKEY:-}" ]; then
-  # Userspace mode: no /dev/net/tun. App traffic must use the SOCKS5 proxy.
+  # Userspace mode: no /dev/net/tun. Fallback HTTP uses TS_SOCKS_PROXY only.
   tailscaled \
     --state=/var/lib/tailscale/tailscaled.state \
     --socket=/var/run/tailscale/tailscaled.sock \
@@ -44,10 +44,8 @@ if [ -n "${TS_AUTHKEY:-}" ]; then
     done
   fi
 
-  export ALL_PROXY="socks5h://${SOCKS}"
-  export HTTP_PROXY="socks5h://${SOCKS}"
-  export HTTPS_PROXY="socks5h://${SOCKS}"
-  export NO_PROXY="127.0.0.1,localhost"
+  # Do NOT set HTTP(S)_PROXY globally — that breaks workers.dev primary.
+  export TS_SOCKS_PROXY="socks5h://${SOCKS}"
 else
   echo "warn: TS_AUTHKEY unset — Tailscale fallback disabled" >&2
 fi
