@@ -109,7 +109,9 @@ export default function ProductDescriptionsPage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Failed to apply descriptions");
       }
-      setStatus(`Applied ${data.applied ?? 0} description${(data.applied ?? 0) === 1 ? "" : "s"} to product cache.`);
+      setStatus(
+        `Applied ${data.applied ?? 0} description${(data.applied ?? 0) === 1 ? "" : "s"} to product cache.`
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -138,8 +140,8 @@ export default function ProductDescriptionsPage() {
         </div>
         <h1 className="font-heading text-2xl font-bold text-white">Product Copy</h1>
         <p className="mt-2 font-mono text-sm text-slate-400">
-          Generate store descriptions with Cloudflare Workers AI, edit drafts, then apply only
-          what you approve.
+          Generate store descriptions with Cloudflare Workers AI, edit drafts, then apply only what
+          you approve.
         </p>
       </div>
 
@@ -152,14 +154,14 @@ export default function ProductDescriptionsPage() {
             <button
               type="button"
               onClick={() => selectAll(true)}
-              className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-300 hover:border-neon-cyan/40"
+              className="hover:border-neon-cyan/40 min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-300"
             >
               Select all
             </button>
             <button
               type="button"
               onClick={() => selectAll(false)}
-              className="min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-300 hover:border-neon-cyan/40"
+              className="hover:border-neon-cyan/40 min-h-[44px] rounded-lg border border-slate-700 px-3 py-2 font-mono text-xs text-slate-300"
             >
               Clear
             </button>
@@ -168,7 +170,7 @@ export default function ProductDescriptionsPage() {
         <ul className="grid gap-2 sm:grid-cols-2">
           {catalog.map((p) => (
             <li key={p.id}>
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-slate-800 px-3 py-2 hover:border-neon-cyan/30">
+              <label className="hover:border-neon-cyan/30 flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-slate-800 px-3 py-2">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(p.id)}
@@ -197,8 +199,8 @@ export default function ProductDescriptionsPage() {
       )}
 
       {status && (
-        <div className="mb-4 rounded-lg border border-neon-cyan/20 bg-neon-cyan/5 px-4 py-3">
-          <p className="font-mono text-sm text-neon-cyan">{status}</p>
+        <div className="border-neon-cyan/20 bg-neon-cyan/5 mb-4 rounded-lg border px-4 py-3">
+          <p className="text-neon-cyan font-mono text-sm">{status}</p>
         </div>
       )}
 
@@ -233,7 +235,7 @@ export default function ProductDescriptionsPage() {
           {drafts.map((draft, idx) => (
             <div
               key={draft.id}
-              className="bg-void-light/50 rounded-xl border border-slate-800 p-4 open:border-neon-cyan/30"
+              className="bg-void-light/50 open:border-neon-cyan/30 rounded-xl border border-slate-800 p-4"
             >
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <label className="flex min-h-[44px] items-center gap-2">
@@ -247,7 +249,9 @@ export default function ProductDescriptionsPage() {
                     }}
                     className="accent-neon-cyan"
                   />
-                  <span className="font-heading text-sm font-semibold text-white">{draft.name}</span>
+                  <span className="font-heading text-sm font-semibold text-white">
+                    {draft.name}
+                  </span>
                 </label>
                 <span className="font-mono text-[10px] text-slate-500">{draft.id}</span>
               </div>

@@ -105,8 +105,7 @@ export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean>
       .run();
     return true;
   } catch (err) {
-    const safe =
-      err instanceof Error ? err.message.replace(/[\x00-\x1F\x7F]/g, "") : "unknown";
+    const safe = err instanceof Error ? err.message.replace(/[\x00-\x1F\x7F]/g, "") : "unknown";
     console.warn("[analytics] D1 write failed:", safe);
     return false;
   }

@@ -5,10 +5,7 @@ export const runtime = "nodejs";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ flagId: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ flagId: string }> }) {
   const { flagId } = await context.params;
   const id = (flagId || "").trim().slice(0, 64);
   if (!id) {

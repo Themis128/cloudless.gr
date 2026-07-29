@@ -174,7 +174,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ users, count: users.length, provider: "d1" });
     }
 
-    return NextResponse.json({ error: "No auth provider configured (Cognito or D1)" }, { status: 503 });
+    return NextResponse.json(
+      { error: "No auth provider configured (Cognito or D1)" },
+      { status: 503 }
+    );
   } catch (err) {
     console.error("Failed to list users:", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
@@ -212,7 +215,10 @@ export async function POST(request: NextRequest) {
     const { getAuthDbFromEnv, setUserAdminRole } = await import("@/lib/auth-d1");
     const db = getAuthDbFromEnv();
     if (!db) {
-      return NextResponse.json({ error: "No auth provider configured (Cognito or D1)" }, { status: 503 });
+      return NextResponse.json(
+        { error: "No auth provider configured (Cognito or D1)" },
+        { status: 503 }
+      );
     }
 
     if (action === "enable" || action === "disable") {
