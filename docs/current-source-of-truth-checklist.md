@@ -70,12 +70,12 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` R19 monthly failover drill workflow.
   Evidence: `.github/workflows/failover-drill.yml` (monthly schedule + manual dispatch probes for primary/secondary health).
 
-- [x] `PARTIAL` R16 AppFlowy WAL-G → **Cloudflare R2** (replaces S3 design).
-  Evidence: `infrastructure/appflowy/walg-sidecar.yaml` + postgres wiring in
-  `infrastructure/appflowy/k8s/appflowy.yaml` retargeted to R2 endpoint
-  (`datalake-bucket/appflowy-wal/`). Secret `appflowy-walg-r2` still needs R2
-  API token from Cloudflare (`.github/workflows/create-r2-credentials.yml` or
-  dashboard) before apply — **no AWS CLI/SSM**.
+- [x] `DONE` R16 AppFlowy WAL-G → **Cloudflare R2** (replaces S3 design).
+  Evidence: `infrastructure/appflowy/walg-sidecar.yaml` + `appflowy-walg-env` /
+  `appflowy-walg-r2` live; daily `appflowy-walg-basebackup` CronJob created.
+  Account endpoint `https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com`.
+  Continuous `archive_command` sidecar still optional (requires postgres Deployment
+  apply from `k8s/appflowy.yaml`); daily basebackup + R10 `pg_dump` cover offsite.
 - [x] `DONE` R23 Resend pilot for order confirmations.
   Evidence: `src/lib/email-resend.ts` plus pilot switch/fallback in `src/lib/email.ts` (`sendOrderConfirmation` prefers Resend when configured, falls back to SES).
 - [x] `DEFERRED` R24 AWS secondary-region DR path (legacy).
@@ -90,12 +90,14 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` Retarget R10 PVC backup CronJobs to R2 via rclone (no `apk add aws-cli`).
   Evidence: `infrastructure/backup/cronjob-*.yaml`, `README.md`,
   `.github/workflows/store-r2-backup-credentials.yml`.
-- [ ] `BLOCKED-OPERATOR` Create Cloudflare R2 S3 API token for `datalake-bucket`, then run
-  `store-r2-backup-credentials.yml` (or kubectl create `pvc-backup-r2` /
-  `appflowy-walg-r2` per `infrastructure/backup/README.md`).
-  Blocker 2026-07-29: `create-r2-credentials.yml` → API **10000 Authentication error**.
-- [ ] `OPEN` After secrets land: apply CronJobs + WAL-G ConfigMap; smoke a
-  `pvc-backup-appflowy` Job.
+- [x] `DONE` Provision R2 S3 API credentials + cluster secrets (2026-07-29).
+  Derived Access Key ID / Secret from User API Token with R2 Storage R/W on account
+  `fb7dc7b69b662480cd5961a4d1913c78` (SHA-256 of token value per Cloudflare R2 docs).
+  Applied `pvc-backup-r2` in appflowy/espocrm/postiz/n8n + `appflowy-walg-r2` +
+  `appflowy-walg-env`. Stored `CF_R2_*` + corrected `CF_ACCOUNT_ID` in GitHub secrets.
+- [x] `DONE` Smoke PVC backup Job to R2.
+  Proof: `pvc-backup-appflowy` Job Completed; uploaded **1178437** bytes to
+  `r2://datalake-bucket/pvc-backups/appflowy/daily/2026-07-29T170155Z.sql.custom`.
 ## LinkedIn CAPI finalization
 
 - [x] `DONE` Verify/wire `li_fat_id` capture path in code flow.
@@ -123,7 +125,7 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
 - **Migrate off AWS → Cloudflare.** Prefer Workers / R2 / D1 / Access / Tunnel over expanding SSM, S3, Lambda, Athena, Cognito, etc.
 - **Do not install AWS CLI or AWS SDK** for agent/operator work on this repo; use Cloudflare tooling and existing in-repo paths instead.
 - AWS-backed roadmap items (old R16→S3, R20→AWS, R24 secondary region) are
-  **legacy** — R16 + R10 retargeted to R2 in-repo; apply blocked on R2 API token.
+  **legacy** — R16 + R10 live on R2 (2026-07-29 smoke: 1.1 MiB AppFlowy dump).
 
 ## Notes
 
