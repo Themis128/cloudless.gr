@@ -1,0 +1,90 @@
+name: "ETL: AWS Cost → R2 + D1"
+
+# Daily Cost Explorer snapshot → Cloudflare R2 (parquet + JSON) and D1
+# `aws_cost_daily` for /admin/cost. Source API is still AWS CE; storage is CF.
+
+on:
+  schedule:
+    - cron: "30 6 * * *" # 06:30 UTC daily
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/etl-aws-cost-to-r2.yml"
+      - "scripts/etl/aws-cost-to-r2.mjs"
+      - "scripts/etl/aws-cost-to-lake.mjs"
+      - "migrations/0013-aws-cost-daily.sql"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: us-east-1
+
+jobs:
+  etl:
+    name: AWS Cost → R2 + D1
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4.3.1
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
+
+      - name: Install ETL dependencies
+        working-directory: scripts/etl
+        run: npm ci --omit=dev
+
+      - name: Run AWS Cost → R2
+        working-directory: scripts/etl
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+          ANALYTICS_BUCKET: datalake-bucket
+          AWS_COST_LOOKBACK_DAYS: "60"
+          AWS_COST_D1_SQL_OUT: /tmp/aws-cost-d1.sql
+        run: node aws-cost-to-r2.mjs
+
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+
+      - name: Apply D1 cost rows
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          npx wrangler d1 execute user-auth-db --remote --file=migrations/0013-aws-cost-daily.sql --config wrangler.jsonc || true
+          npx wrangler d1 execute user-auth-db --remote --file=/tmp/aws-cost-d1.sql --config wrangler.jsonc
+
+      - name: Materialize datalake admin snapshot
+        working-directory: scripts/etl
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+          ANALYTICS_BUCKET: datalake-bucket
+        run: node materialize-datalake-snapshots.mjs
+        continue-on-error: true
+
+      - name: Notify Slack on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -s -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"text\":\":x: ETL — AWS Cost → R2/D1 failed (#$GITHUB_RUN_NUMBER). https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"}"
+          fi

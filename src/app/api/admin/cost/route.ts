@@ -1,13 +1,12 @@
 /**
- * GET /api/admin/cost — admin-gated AWS cost summary backed by the
- * `cloudless_analytics.v_aws_cost_by_service` Athena view (R9 ETL).
+ * GET /api/admin/cost — admin-gated AWS cost summary.
  *
- * Drives the /admin/cost page (R12). Avoids the Grafana SCP block —
- * the Next.js Lambda's deploy IAM role has direct Athena access.
+ * Cloudflare-first: D1 `aws_cost_daily` → R2 `lake/aws-cost/cost.json` →
+ * legacy Athena `v_aws_cost_by_service`. Source ETL is Cost Explorer → R2/D1
+ * (`scripts/etl/aws-cost-to-r2.mjs`).
  *
  * Returns {total_30d, yesterday, topServices, dailyTrend, lastEtlAt}.
- * 503 with `{configured: false}` when the Athena view doesn't exist yet
- * (operator hasn't run the R9 DDL) — UI shows a "configure me" placeholder.
+ * 503 with `{configured: false}` when no cost source is available.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
