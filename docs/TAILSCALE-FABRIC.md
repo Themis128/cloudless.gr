@@ -52,9 +52,15 @@ Aligned with current Tailscale Kubernetes Operator docs (validated mid-2026):
    https://login.tailscale.com/admin/settings/oauth
 
 2. Merge `infrastructure/tailscale/acl-policy.example.json` into Access controls
-   (`tagOwners` + `autoApprovers` for routes + `svc:*`).
+   (`tagOwners` + `autoApprovers` for routes + `svc:*`). Workflows:
+   `Tailscale admin API`, `Tailscale fix fabric ACL`.
 
-3. Install:
+3. **Enable HTTPS Certificates** (required — no public API):
+   https://login.tailscale.com/admin/dns → **HTTPS Certificates** → **Enable HTTPS**.
+   Without this, Ingress `ADDRESS` stays empty and `ProxyGroup kube` stays
+   `KubeAPIServerProxyNoBackends` (TLS Secrets have empty `tls.crt`/`tls.key`).
+
+4. Install:
 
 ```bash
 export TS_CLIENT_ID=…
@@ -63,17 +69,23 @@ export KUBECONFIG=~/.kube/config-cloudless-ts   # LAN works at office
 bash infrastructure/tailscale/deploy.sh
 ```
 
-4. Delete stale Machines in the admin UI (old `tag:k8s` proxies last seen Jul 11).
+5. After HTTPS is on, force cert re-issue if Secrets are empty:
 
-5. Wait:
+```bash
+kubectl -n tailscale delete secret \
+  grafana.tail4ecae1.ts.net kube.tail4ecae1.ts.net meilisearch.tail4ecae1.ts.net
+```
+
+6. Wait:
 
 ```bash
 kubectl wait connector k3s-cidrs --for=condition=ConnectorReady=true --timeout=5m
 kubectl wait proxygroup ingress --for=condition=ProxyGroupReady=true --timeout=5m
 kubectl wait proxygroup kube --for=condition=ProxyGroupReady=true --timeout=5m
+kubectl get ingress -A   # ADDRESS should populate
 ```
 
-6. kubectl via API proxy (preferred off-LAN):
+7. kubectl via API proxy (preferred off-LAN):
 
 ```bash
 URL=$(kubectl get proxygroup kube -o jsonpath='{.status.url}')

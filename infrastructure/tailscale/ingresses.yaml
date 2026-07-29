@@ -21,31 +21,14 @@ spec:
       name: kube-prom-grafana
       port:
         number: 80
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: loki-tailscale
-  namespace: monitoring
-  annotations:
-    tailscale.com/proxy-group: ingress
-    tailscale.com/hostname: loki
-spec:
-  ingressClassName: tailscale
-  tls:
-    - hosts:
-        - loki
-  defaultBackend:
-    service:
-      name: loki
-      port:
-        number: 3100
+# Loki Ingress omitted — no Loki Service/Deploy on cluster yet.
+# Re-add when monitoring/loki (or equivalent) exists.
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: meilisearch-tailscale
-  namespace: search
+  namespace: meilisearch
   annotations:
     tailscale.com/proxy-group: ingress
     tailscale.com/hostname: meilisearch
