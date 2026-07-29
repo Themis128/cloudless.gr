@@ -89,8 +89,7 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` R23 Resend pilot for order confirmations.
   Evidence: `src/lib/email-resend.ts` plus pilot switch/fallback in `src/lib/email.ts` (`sendOrderConfirmation` prefers Resend when configured, falls back to SES).
 - [x] `DEFERRED` R24 AWS secondary-region DR path (legacy).
-  Decision 2026-07-29: do not provision; prefer Cloudflare Tunnel HA + R2 offsite
-  + R19 failover drill. Manifests retained under `infrastructure/r24-dr/`.
+  Decision 2026-07-29: do not provision; prefer Cloudflare Tunnel HA + R2 offsite + R19 failover drill. Manifests retained under `infrastructure/r24-dr/`.
 - [x] `DEFERRED` R20 Postgres logical replication subscriber to AWS (legacy).
   Decision 2026-07-29: do not provision AWS subscriber; prefer R16→R2 WAL + ETL
   `scripts/etl/appflowy-to-r2.mjs`. Manifests retained under `infrastructure/r20-replication/`.
@@ -163,9 +162,11 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
   `session_token` (Bearer or cookie) via `auth-d1`; next-auth cookie skipped
   in D1 mode; `fetchWithAuth` does not attach Cognito ID tokens when D1.
   Leftover `COGNITO_ISSUER` alone no longer enables JWKS.
-- [x] `PARTIAL` SSM → D1 `app_config`: `getConfig()` prefers `AUTH_DB` on any runtime;
-  admin PUT at `/api/admin/config` (non-secret keys); Cognito keys not required
-  unless `NEXT_PUBLIC_AUTH_PROVIDER=cognito`. Secrets stay Wrangler/k8s.
+- [x] `PARTIAL` SSM → D1 `app_config`: `getConfig()` prefers D1 via `getAuthDbFromEnv()`
+  (`AUTH_DB` / `__AUTH_DB__`); admin PUT at `/api/admin/config` (non-secret keys);
+  Cognito keys not required unless `NEXT_PUBLIC_AUTH_PROVIDER=cognito`. Secrets stay
+  Wrangler/k8s. Remaining: drop AWS SSM fallback once every runtime always binds AUTH_DB
+  (Pi today: `SSM_DISABLED=1` + env, or legacy SSM).
 
 ## Notes
 

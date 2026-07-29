@@ -442,17 +442,18 @@ function buildConfigFromEnv(): AppConfig {
 
 /**
  * Fetches config from D1 app_config, SSM, or process.env.
- * Prefer D1 whenever AUTH_DB is bound (Workers *or* Pi with binding).
+ * Prefer D1 whenever AUTH_DB is bound (Workers *or* Pi with binding),
+ * including the `__AUTH_DB__` Workers global via getAuthDbFromEnv().
  * Secrets in process.env always win over D1 values.
  */
 export async function getConfig(): Promise<AppConfig> {
   // 1. Prefer Cloudflare D1 app_config when AUTH_DB is bound (any runtime)
   try {
-    const maybeEnv = (typeof process !== "undefined" ? process.env : {}) as Record<string, unknown>;
-    const db = maybeEnv.AUTH_DB as D1Database | undefined;
+    const { getAuthDbFromEnv } = await import("@/lib/auth-d1");
+    const db = getAuthDbFromEnv();
 
-    if (db && typeof db.prepare === "function") {
-      const d1Config = await getD1Config(db);
+    if (db) {
+      const d1Config = await getD1Config(db as D1Database);
       const envConfig = buildConfigFromEnv();
       // Env/secrets win; D1 fills non-secret gaps
       return { ...d1Config, ...envConfig } as AppConfig;
@@ -466,7 +467,9 @@ export async function getConfig(): Promise<AppConfig> {
     return buildConfigFromEnv();
   }
 
-  // 3. Fall back to AWS SSM for non-Worker environments (legacy Lambda)
+  // 3. Fall back to AWS SSM for non-Worker environments (legacy Lambda /
+  // Pi without AUTH_DB). Prefer SSM_DISABLED=1 + env secrets on k3s
+  // (infrastructure/cloudless/README.md).
 
   // In tests, skip SSM entirely and read from process.env. Still cache the
   // result so successive getConfig() calls return the same object reference;
