@@ -2,7 +2,7 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 23:10 EEST — aw engines → Gemini (GEMINI_API_KEY)
+# Last Updated: 2026-07-29 23:30 EEST — aw Gemini fine-tune (flash + safe-outputs)
 
 ---
 
@@ -10,7 +10,9 @@
 
 Switched all 9 gh-aw workflows to `engine: gemini` with repo secret `GEMINI_API_KEY`.
 
-Pinned `model: gemini-2.5-flash-lite` (cheapest current Gemini) and set `models.default-ai-credits-pricing` (`input: 0.10`, `output: 0.40` $/1M) so AWF does not reject unrecognized model IDs with HTTP 400.
+Pinned `model: gemini-2.5-flash` (flash-lite hit free-tier quota during smoke) with `models.default-ai-credits-pricing` (`input: 0.15`, `output: 0.60` $/1M).
+
+Fine-tune: per-workflow safe-outputs (`create-issue` / `create-pull-request` / `add-comment`+`add-labels`), `noop.report-as-issue: false`, Gemini runtime notes (`github` + `safeoutputs` CLIs), and matching `permissions` for GitHub toolsets.
 
 Copilot and Claude were abandoned for aw: Copilot PAT lacked Copilot Requests / 401; `ANTHROPIC_API_KEY` returned 401 invalid key.
 

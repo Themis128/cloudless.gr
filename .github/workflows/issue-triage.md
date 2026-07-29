@@ -10,13 +10,23 @@ permissions:
   contents: read
 strict: false
 engine: gemini
-model: gemini-2.5-flash-lite
+model: gemini-2.5-flash
 models:
   default-ai-credits-pricing:
-    input: 0.10
-    output: 0.40
+    input: 0.15
+    output: 0.60
+tools:
+  github:
+    toolsets: [default, labels]
+  bash: true
 safe-outputs:
   report-failure-as-issue: false
+  noop:
+    report-as-issue: false
+  add-comment:
+    max: 1
+  add-labels:
+    max: 5
 ---
 
 # Issue Triage
@@ -61,6 +71,12 @@ Post a single concise triage comment on the issue containing:
 - high: major feature broken, degraded core flow, payment or deployment blocker.
 - medium: workaround exists, localized bug, minor regression.
 - low: documentation, enhancement, cosmetic, or nice-to-have feedback.
+
+## Runtime notes (gh-aw + Gemini)
+
+- GitHub **reads**: use the `github` CLI on PATH (MCP bridge). Start with `github --help`. Do **not** invent names like `github_mcp_server` or bare `create_issue`.
+- GitHub **writes / completion**: use only the `safeoutputs` CLI (e.g. `safeoutputs create_issue --help`, `safeoutputs noop --message "..."`).
+- Prefer one successful `safeoutputs` call at the end. If nothing to do, call `noop` once — do not open tracker issues for no-ops.
 
 ## Guardrails
 

@@ -9,15 +9,27 @@ on:
         default: true
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
 strict: false
 engine: gemini
-model: gemini-2.5-flash-lite
+model: gemini-2.5-flash
 models:
   default-ai-credits-pricing:
-    input: 0.10
-    output: 0.40
+    input: 0.15
+    output: 0.60
+tools:
+  github:
+    toolsets: [default]
+  bash: true
 safe-outputs:
   report-failure-as-issue: false
+  noop:
+    report-as-issue: false
+  create-issue:
+    title-prefix: "[fly-proxy] "
+    labels: [infrastructure, agentic-workflows]
+    max: 1
 ---
 
 # Deploy Fly.io Proxy
@@ -43,6 +55,12 @@ Deploy the Fly.io high-availability failover proxy.
 3. Create Fly.io app `cloudless-proxy` (skip if exists)
 4. Deploy the proxy from `fly-proxy-app/` directory
 5. Show deployment status and list IPs
+
+## Runtime notes (gh-aw + Gemini)
+
+- GitHub **reads**: use the `github` CLI on PATH (MCP bridge). Start with `github --help`. Do **not** invent names like `github_mcp_server` or bare `create_issue`.
+- GitHub **writes / completion**: use only the `safeoutputs` CLI (e.g. `safeoutputs create_issue --help`, `safeoutputs noop --message "..."`).
+- Prefer one successful `safeoutputs` call at the end. If nothing to do, call `noop` once — do not open tracker issues for no-ops.
 
 ## Guardrails
 

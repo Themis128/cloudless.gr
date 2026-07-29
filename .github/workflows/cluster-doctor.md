@@ -15,15 +15,24 @@ on:
 permissions:
   contents: read
   issues: read
+  pull-requests: read
 strict: false
 engine: gemini
-model: gemini-2.5-flash-lite
+model: gemini-2.5-flash
 models:
   default-ai-credits-pricing:
-    input: 0.10
-    output: 0.40
+    input: 0.15
+    output: 0.60
+tools:
+  github:
+    toolsets: [default]
+  bash: true
 safe-outputs:
   report-failure-as-issue: false
+  noop:
+    report-as-issue: false
+  add-comment:
+    max: 1
 ---
 
 # Cluster Doctor
@@ -51,6 +60,12 @@ Read-only visibility into the omv k3s cluster from CI.
 4. Run `scripts/cluster-doctor.sh` and capture output
 5. Post output as comment to the specified issue
 6. If no output, post a message indicating kubectl could not reach the cluster
+
+## Runtime notes (gh-aw + Gemini)
+
+- GitHub **reads**: use the `github` CLI on PATH (MCP bridge). Start with `github --help`. Do **not** invent names like `github_mcp_server` or bare `create_issue`.
+- GitHub **writes / completion**: use only the `safeoutputs` CLI (e.g. `safeoutputs create_issue --help`, `safeoutputs noop --message "..."`).
+- Prefer one successful `safeoutputs` call at the end. If nothing to do, call `noop` once — do not open tracker issues for no-ops.
 
 ## Guardrails
 
