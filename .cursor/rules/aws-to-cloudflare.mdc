@@ -1,0 +1,23 @@
+---
+description: Prefer Cloudflare over AWS; never install AWS CLI/SDK for agent work
+alwaysApply: true
+---
+
+# AWS → Cloudflare migration preference
+
+## Direction
+
+- **Target platform is Cloudflare** (Workers, R2, D1, Access, Tunnel, DNS/CDN). New work should prefer Cloudflare-native services over AWS.
+- Treat remaining AWS usage (SSM, SES, Cognito, S3, Lambda, Athena, etc.) as **legacy to migrate off**, not expand.
+- When a checklist item depends on AWS (e.g. WAL-G → S3, secondary-region DR, Postgres → AWS replication), propose a **Cloudflare equivalent** (R2, D1, Workers, Queues) instead of completing the AWS path—unless the user explicitly asks to keep AWS for that item.
+
+## Tooling — hard rule
+
+- **Do not install the AWS CLI** (`aws`, `awscli`, snap/apt packages) on developer machines, Pi hosts, or CI agents for cloudless.gr work.
+- **Do not add the AWS SDK** (`@aws-sdk/*`, `boto3`, etc.) to new code or scripts. Prefer existing in-repo wrappers only when touching legacy paths that already depend on them; do not introduce new AWS SDK dependencies.
+- Prefer Cloudflare APIs / Wrangler / existing `cloudflare-*` skills and repo scripts over any AWS tooling.
+
+## Agent behavior
+
+- If a task seems to require `aws ssm` / `aws s3` / installing AWS tools: stop, use an existing Cloudflare/repo path, or ask the user—do **not** install AWS CLI/SDK.
+- Document migrations and blockers in `docs/current-source-of-truth-checklist.md` with Cloudflare as the destination.

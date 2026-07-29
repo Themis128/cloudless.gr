@@ -37,7 +37,8 @@ const ENDPOINTS = [
 ];
 
 function buildHeaders() {
-  const headers = { Accept: "application/json" };
+  // Prefer identity so undici does not mis-parse Fly/CF compressed bodies as empty JSON.
+  const headers = { Accept: "application/json", "Accept-Encoding": "identity" };
 
   if (process.env.CMS_PARITY_HEADERS_JSON) {
     try {

@@ -3,6 +3,7 @@
 ## Working Style
 
 - **Never use placeholders.** No `<paste-output-here>`, no `TODO`, no `# TODO`, no `# fill in`, no `# replace this`, no `your-value-here`, no `xxx`, no `???`. If a value isn't known, fetch it, ask one direct question, or stop — do not write code/configs/docs that contain placeholders the user has to find and replace.
+- **AWS → Cloudflare (operator decision 2026-07-29).** Prefer Cloudflare (Workers, R2, D1, Access, Tunnel) over expanding AWS. Do **not** install AWS CLI or add AWS SDK for agent/operator work. Treat R16/R20/R24-style AWS paths as legacy; propose Cloudflare replacements. See `.cursor/rules/aws-to-cloudflare.mdc` and the platform-direction note in `docs/current-source-of-truth-checklist.md`.
 
 ## Pending One-Time Setup (human action required)
 
