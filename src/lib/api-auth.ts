@@ -73,6 +73,8 @@ type AuthSuccess = { ok: true; user: DecodedToken };
 type AuthError = { ok: false; response: NextResponse };
 export type AuthResult = AuthSuccess | AuthError;
 
+const ADMIN_GROUP = "admin";
+
 /** Extract a JWT from the Authorization header (Bearer scheme). */
 export function getTokenFromHeader(request: NextRequest): string | null {
   const authHeader = request.headers.get("authorization");
@@ -119,7 +121,7 @@ async function resolveD1Session(sessionId: string): Promise<DecodedToken | null>
       email: user.email,
       name: user.name ?? undefined,
       email_verified: true,
-      groups: admin ? ["admin"] : [],
+      groups: admin ? [ADMIN_GROUP] : [],
     };
   } catch {
     return null;
@@ -196,31 +198,74 @@ export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
   // Group membership: Cognito `cognito:groups`. Legacy `groups` claim is still
   // honoured for the session-cookie path, which projects them to the same key.
   const groups = [...(decoded.groups ?? []), ...(decoded["cognito:groups"] ?? [])];
-  if (groups.includes("admin")) return true;
+  if (groups.includes(ADMIN_GROUP)) return true;
   const roles = decoded.realm_access?.roles ?? [];
-  return roles.includes("admin") || roles.includes("realm:admin");
+  return roles.includes(ADMIN_GROUP) || roles.includes("realm:admin");
+}
+
+/**
+ * Authenticate a request that carries a Bearer token. Returns an AuthResult
+ * on a definitive pass/fail, or `null` to signal "fall through to cookie auth".
+ *
+ * Cognito mode: full RS256/JWKS verification; any failure → 401.
+ * D1 mode: prefer the session_token cookie first (guards against stale
+ *   Cognito JWTs), then treat Bearer as an opaque D1 session id.
+ *   Non-production only: fall back to unsigned JWT decode for unit tests.
+ */
+async function authenticateBearer(
+  request: NextRequest,
+  token: string,
+): Promise<AuthResult | null> {
+  if (isCognitoAuthEnabled()) {
+    const decoded = await verifyToken(token);
+    if (decoded) return { ok: true, user: decoded };
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      ),
+    };
+  }
+
+  // D1 mode: prefer session cookie over a leftover Cognito JWT Bearer.
+  const d1CookieFirst = await readD1SessionCookie(request);
+  if (d1CookieFirst) return { ok: true, user: d1CookieFirst };
+
+  // Opaque session id in Authorization (API clients).
+  const bearerD1 = await resolveD1Session(token);
+  if (bearerD1) return { ok: true, user: bearerD1 };
+
+  // Non-production: allow unsigned JWT decode (unit tests clear COGNITO_ISSUER
+  // and send fake-sig tokens). Production never takes this path without JWKS.
+  if (process.env.NODE_ENV !== "production") {
+    const decoded = await verifyToken(token);
+    if (decoded) return { ok: true, user: decoded };
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
+      ),
+    };
+  }
+
+  return null;
 }
 
 /**
  * Require authentication. Tries:
  *   1. Bearer token in Authorization header (fetchWithAuth, external callers)
- *   2. next-auth session cookie (browser same-origin without Bearer)
+ *   2. D1 session_token cookie (email/password login)
+ *   3. next-auth session cookie — Cognito Hosted UI (cognito provider only)
  * Returns user or 401.
- *
- * Bearer is checked first because all admin page JS sends it via
- * fetchWithAuth, and it carries the full Cognito JWT with groups.
- * The session cookie fallback handles edge cases where the browser hits
- * an API route directly (e.g. form action, link).
  */
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   // E2E test bypass: only active when BOTH NEXT_PUBLIC_E2E=1 AND a matching
   // E2E_ADMIN_TOKEN env var are configured AND the Bearer token matches.
   // Belt-and-braces: also require NODE_ENV !== "production" so this is
   // physically dead code in prod even if env vars are misconfigured (fix #25).
-  if (
-    process.env.NEXT_PUBLIC_E2E === "1" &&
-    process.env.E2E_ADMIN_TOKEN
-  ) {
+  if (process.env.NEXT_PUBLIC_E2E === "1" && process.env.E2E_ADMIN_TOKEN) {
     const e2eToken = getTokenFromHeader(request);
     if (e2eToken && e2eToken === process.env.E2E_ADMIN_TOKEN) {
       return {
@@ -228,7 +273,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
         user: {
           sub: "e2e-admin",
           email: "e2e-admin@cloudless.test",
-          "cognito:groups": ["admin"],
+          "cognito:groups": [ADMIN_GROUP],
         } as DecodedToken,
       };
     }
@@ -248,61 +293,18 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
 
   const token = getTokenFromHeader(request);
   if (token) {
-    if (isCognitoAuthEnabled()) {
-      const decoded = await verifyToken(token);
-      if (decoded) {
-        return { ok: true, user: decoded };
-      }
-      return {
-        ok: false,
-        response: NextResponse.json(
-          { error: "Invalid or expired token" },
-          { status: 401 },
-        ),
-      };
-    }
-
-    // D1 mode: prefer session cookie over a leftover Cognito JWT Bearer.
-    const d1CookieFirst = await readD1SessionCookie(request);
-    if (d1CookieFirst) {
-      return { ok: true, user: d1CookieFirst };
-    }
-
-    // Opaque session id in Authorization (API clients).
-    const bearerD1 = await resolveD1Session(token);
-    if (bearerD1) {
-      return { ok: true, user: bearerD1 };
-    }
-
-    // Non-production: allow unsigned JWT decode (unit tests clear COGNITO_ISSUER
-    // and send fake-sig tokens). Production never takes this path without JWKS.
-    if (process.env.NODE_ENV !== "production") {
-      const decoded = await verifyToken(token);
-      if (decoded) {
-        return { ok: true, user: decoded };
-      }
-      return {
-        ok: false,
-        response: NextResponse.json(
-          { error: "Invalid or expired token" },
-          { status: 401 },
-        ),
-      };
-    }
+    const bearerResult = await authenticateBearer(request, token);
+    if (bearerResult) return bearerResult;
   }
 
   // Cloudflare D1 session_token (email/password login)
   const d1User = await readD1SessionCookie(request);
-  if (d1User) {
-    return { ok: true, user: d1User };
-  }
+  if (d1User) return { ok: true, user: d1User };
 
   // next-auth / Cognito Hosted UI — only when Cognito is the active provider
   if (isCognitoAuthEnabled()) {
     const sessionUser = await readSessionCookie();
-    if (sessionUser) {
-      return { ok: true, user: sessionUser };
-    }
+    if (sessionUser) return { ok: true, user: sessionUser };
   }
 
   return {
