@@ -12,7 +12,7 @@
  *
  * Usage:
  *
- *   import { integrationFetch } from "@/lib/integrations/http";
+ *   import { integrationFetch } from "@/lib/integration-http";
  *
  *   const data = await integrationFetch<MyResponse>("espocrm", url, {
  *     method: "POST",

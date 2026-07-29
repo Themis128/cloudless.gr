@@ -79,7 +79,7 @@ signal: init?.signal ?? AbortSignal.timeout(timeoutMs)
 signal: AbortSignal.timeout(timeoutMs)
 ```
 
-This is already fixed in `src/lib/integrations/http.ts`. Do NOT pass `init?.signal` through.
+This is already fixed in `src/lib/integration-http.ts`. Do NOT pass `init?.signal` through.
 
 ### 5. SSM secrets not available as env vars on Lambda
 
@@ -156,7 +156,7 @@ try {
 | `src/app/api/cron/*/route.ts` | #1 (async guard), #5 (SSM) |
 | `src/app/api/portal/[token]/route.ts` | #2 (data leak) |
 | `src/app/api/admin/*/route.ts` | #3 (timing), #5 (SSM) |
-| `src/lib/integrations/http.ts` | #4 (AbortSignal) |
+| `src/lib/integration-http.ts` | #4 (AbortSignal) |
 | `src/context/AuthContext.tsx` | #6 (admin lockout) |
 
 ## After fixing

@@ -10,6 +10,10 @@ vi.mock("@/lib/stripe", () => ({
 vi.mock("@/lib/api-auth", () => ({
   getTokenFromHeader: vi.fn(() => null),
   verifyToken: vi.fn(() => Promise.resolve(null)),
+  requireAuth: vi.fn(async () => ({
+    ok: true,
+    user: { sub: "test-user", email: "test@cloudless.gr", groups: [], roles: [] },
+  })),
 }));
 
 // ---------------------------------------------------------------------------
