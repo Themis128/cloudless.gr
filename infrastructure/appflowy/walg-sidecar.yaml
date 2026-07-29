@@ -1,28 +1,33 @@
-# R16: AppFlowy WAL-G continuous backup to S3
+# R16 → Cloudflare R2: AppFlowy WAL-G continuous backup (S3-compatible API).
 #
-# Apply after creating the AWS secret from SSM:
-#   kubectl -n appflowy create secret generic appflowy-walg-aws \
-#     --from-literal=AWS_ACCESS_KEY_ID=… \
-#     --from-literal=AWS_SECRET_ACCESS_KEY=…
+# Do NOT use AWS S3 / AWS CLI / SSM AWS keys. Create an R2 API token
+# (Cloudflare dashboard or create-r2-credentials.yml) with write access to
+# datalake-bucket, then:
 #
-# Then patch the postgres Deployment (already wired in k8s/appflowy.yaml)
-# or apply this Secret + ConfigMap and restart postgres.
+#   kubectl -n appflowy create secret generic appflowy-walg-r2 \
+#     --from-literal=AWS_ACCESS_KEY_ID='<r2_access_key_id>' \
+#     --from-literal=AWS_SECRET_ACCESS_KEY='<r2_secret_access_key>'
+#
+# Env var names stay AWS_* because WAL-G's S3 client expects them; values
+# are Cloudflare R2 credentials. Set AWS_ENDPOINT to the account R2 URL.
+#
+# Apply ConfigMap + CronJob, then ensure postgres Deployment matches
+# infrastructure/appflowy/k8s/appflowy.yaml (WALG_* + AWS_ENDPOINT).
 #
 # RPO target: ~5 min (archive_timeout=300)
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: appflowy-walg-aws
+  name: appflowy-walg-r2
   namespace: appflowy
   labels:
     app.kubernetes.io/component: walg
     app.kubernetes.io/part-of: appflowy
 type: Opaque
 stringData:
-  # Populate from SSM before apply — do not commit real values.
-  # /cloudless/production/APPFLOWY_WALG_AWS_ACCESS_KEY_ID
-  # /cloudless/production/APPFLOWY_WALG_AWS_SECRET_ACCESS_KEY
+  # Populate from Cloudflare R2 API token — do not commit real values.
+  # Keys are S3-API compatible names used by wal-g (not AWS IAM).
   AWS_ACCESS_KEY_ID: ""
   AWS_SECRET_ACCESS_KEY: ""
 ---
@@ -35,8 +40,11 @@ metadata:
     app.kubernetes.io/component: walg
     app.kubernetes.io/part-of: appflowy
 data:
-  AWS_REGION: "us-east-1"
-  WALG_S3_PREFIX: "s3://cloudless-analytics-data/appflowy-wal/wal/"
+  # Cloudflare account id (same as CF_ACCOUNT_ID / wrangler account_id).
+  AWS_ENDPOINT: "https://c6d6b805741159c062a3e0b0d7f9d89a.r2.cloudflarestorage.com"
+  AWS_REGION: "auto"
+  AWS_S3_FORCE_PATH_STYLE: "true"
+  WALG_S3_PREFIX: "s3://datalake-bucket/appflowy-wal/wal/"
   WALG_UPLOAD_CONCURRENCY: "2"
   WALG_SENTINEL_NAME: "appflowy-postgres-production"
   PGDATA: "/var/lib/postgresql/data/pgdata"
@@ -80,7 +88,7 @@ spec:
                 - configMapRef:
                     name: appflowy-walg-env
                 - secretRef:
-                    name: appflowy-walg-aws
+                    name: appflowy-walg-r2
               env:
                 - name: POSTGRES_PASSWORD
                   valueFrom:

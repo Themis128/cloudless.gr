@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 /**
- * Add Slack bridge webhook notification to an already-bootstrapped Kuma.
- * Posts to in-cluster kuma-slack-bridge (bot → #general). Prefer
- * KUMA_BRIDGE_URL override to cloudless-app /api/webhooks/kuma once the
- * Pi hostpath standalone includes that route.
+ * Register Slack webhook notification on an already-bootstrapped Kuma.
+ * Default target: cloudless-app POST /api/webhooks/kuma (Bearer ADMIN_ALERT_SECRET).
+ * Override KUMA_BRIDGE_URL only for rollback to the legacy kuma-slack-bridge Service.
  *
  * Env:
  *   KUMA_USER / KUMA_PASS — admin creds
- *   KUMA_BRIDGE_URL — default kuma-slack-bridge Service
+ *   KUMA_BRIDGE_URL — default cloudless-app webhook
  *   KUMA_BRIDGE_TOKEN — ADMIN_ALERT_SECRET (Bearer)
  */
 const { io } = require("socket.io-client");
@@ -15,10 +14,11 @@ const { io } = require("socket.io-client");
 const BASE = process.env.KUMA_URL || "http://127.0.0.1:3001";
 const USER = process.env.KUMA_USER || "tbaltzakis";
 const PASS = process.env.KUMA_PASS || "";
-// Default to the in-cluster bridge Deployment until the Pi hostpath
-// standalone includes POST /api/webhooks/kuma (currently 404).
+# Default: cloudless-app webhook (Pi hostpath standalone mounts this route).
+# Legacy bridge Deployment is scaled to 0; keep for rollback only.
 const BRIDGE_URL =
-  process.env.KUMA_BRIDGE_URL || "http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/";
+  process.env.KUMA_BRIDGE_URL ||
+  "http://cloudless-app.cloudless.svc.cluster.local/api/webhooks/kuma";
 const TOKEN = process.env.KUMA_BRIDGE_TOKEN || "";
 
 if (!PASS || !TOKEN) {
@@ -55,7 +55,7 @@ async function main() {
     socket,
     "addNotification",
     {
-      name: "Slack via cloudless bridge",
+      name: "Slack via cloudless-app webhook",
       active: true,
       isDefault: true,
       type: "webhook",

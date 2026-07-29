@@ -1,23 +1,21 @@
-# Kuma → Slack bot-token bridge (Incoming Webhooks revoked 2026-05-25).
+# Kuma → Slack via cloudless-app webhook (Incoming Webhooks revoked 2026-05-25).
 #
-# Live path until Pi hostpath standalone includes POST /api/webhooks/kuma.
-# Apply:
-#   kubectl -n cloudless get secret cloudless-secrets \
-#     -o jsonpath='{.data.ADMIN_ALERT_SECRET}' | base64 -d > /tmp/aas
-#   kubectl -n cloudless get secret cloudless-secrets \
-#     -o jsonpath='{.data.SLACK_BOT_TOKEN}' | base64 -d > /tmp/sbt
-#   kubectl -n uptime-kuma create secret generic kuma-slack-bridge \
-#     --from-file=ADMIN_ALERT_SECRET=/tmp/aas \
-#     --from-file=SLACK_BOT_TOKEN=/tmp/sbt \
-#     --dry-run=client -o yaml | kubectl apply -f -
-#   kubectl -n uptime-kuma create configmap kuma-slack-bridge-src \
-#     --from-file=server.js=infrastructure/uptime-kuma/k8s/kuma-slack-bridge.js \
-#     --dry-run=client -o yaml | kubectl apply -f -
-#   kubectl apply -f infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml
+# LIVE path (2026-07-29): Uptime Kuma posts to
+#   http://cloudless-app.cloudless.svc.cluster.local/api/webhooks/kuma
+# with Authorization: Bearer <ADMIN_ALERT_SECRET>. Route:
+#   src/app/api/webhooks/kuma/route.ts → SlackClient (#general).
 #
-# Register notification (from uptime-kuma pod):
-#   KUMA_BRIDGE_URL=http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/ \
-#   KUMA_BRIDGE_TOKEN=<ADMIN_ALERT_SECRET> node scripts/kuma-slack-bridge.cjs
+# This Deployment is OPTIONAL rollback only (replicas: 0). Prefer the app route.
+#
+# Re-register notification (from uptime-kuma pod or any node with socket.io-client):
+#   KUMA_BRIDGE_URL=http://cloudless-app.cloudless.svc.cluster.local/api/webhooks/kuma \
+#   KUMA_BRIDGE_TOKEN=<ADMIN_ALERT_SECRET> \
+#   KUMA_PASS=… node scripts/kuma-slack-bridge.cjs
+#
+# Rollback to this bridge:
+#   kubectl -n uptime-kuma scale deploy/kuma-slack-bridge --replicas=1
+#   then point notification webhookURL at
+#   http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -27,7 +25,7 @@ metadata:
   labels:
     app: kuma-slack-bridge
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: kuma-slack-bridge
@@ -78,6 +76,4 @@ spec:
   selector:
     app: kuma-slack-bridge
   ports:
-    - name: http
-      port: 8080
-      targetPort: 8080
+    - { name: http, port: 8080, targetPort: 8080 }
