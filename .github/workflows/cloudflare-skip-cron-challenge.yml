@@ -1,13 +1,13 @@
 name: Skip Cloudflare challenge on /api/cron/*
 
-# GitHub-hosted runners hit Cloudflare Bot Fight / Managed Challenge
-# ("Just a moment…") on /api/cron/*, which breaks Bearer CRON_SECRET polls
-# (linkedin-poll, etc.). This workflow installs a custom WAF skip rule for
-# that path prefix.
+# GitHub-hosted runners hit Cloudflare Bot Fight Mode ("Just a moment…") on
+# public HTTPS, which breaks Bearer CRON_SECRET polls (linkedin-poll, etc.).
+# Free Bot Fight Mode cannot be skipped with WAF custom rules — this workflow
+# turns Bot Fight Mode OFF zone-wide (Zone Settings:Edit). App auth remains
+# CRON_SECRET on /api/cron/*.
 #
 # HOW TO RUN: push a change to this file / the script, or workflow_dispatch.
-# Token: secrets.CLOUDFLARE_API_TOKEN needs Zone:Read + Firewall Services:Edit.
-# Zone: secrets.CLOUDFLARE_ZONE_ID (optional — script resolves cloudless.gr).
+# Token: secrets.CLOUDFLARE_API_TOKEN needs Zone:Read + Zone Settings:Edit.
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Install WAF skip rule for /api/cron/*
+      - name: Disable Bot Fight Mode (zone setting)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
@@ -54,7 +54,7 @@ jobs:
           head -c 512 "$BODY" || true
           echo
           if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
-            echo "::error::still receiving Cloudflare challenge HTML — WAF skip not effective yet (propagation?) or token lacks Firewall Services:Edit"
+            echo "::error::still receiving Cloudflare challenge HTML — bot_fight_mode may still be on or cached"
             exit 1
           fi
           if [[ "$STATUS" == "000" ]]; then

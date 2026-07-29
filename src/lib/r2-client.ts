@@ -46,10 +46,7 @@ export function getMediaBucket(env: R2Env): R2Bucket | null {
 // Get R2 bucket binding for analytics/datalake (read and/or write)
 export function getDataLakeBucket(env: R2Env): R2Bucket | null {
   const bucket = env?.DATALAKE_BUCKET;
-  if (
-    bucket &&
-    (typeof bucket.put === "function" || typeof bucket.get === "function")
-  ) {
+  if (bucket && (typeof bucket.put === "function" || typeof bucket.get === "function")) {
     return bucket;
   }
   return null;
