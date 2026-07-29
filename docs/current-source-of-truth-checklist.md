@@ -163,8 +163,10 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
       Stripe webhook **idempotency** prefers D1 `stripe_transaction` when `AUTH_DB`
       is bound (`persistStripeEvent` / mark helpers in `stripe-transactions.ts`);
       Dynamo `STRIPE_TRANSACTIONS_TABLE` remains legacy fallback.
-      Still AWS (follow-up): Athena cost/datalake UI reads; admin-notifications
-      Dynamo primary store; `stripe-analytics-read` Dynamo queries.
+      Still AWS (follow-up): Athena cost/datalake UI reads;
+      `stripe-analytics-read` Dynamo queries.
+      Admin-notifications prefer D1 `admin_notification` when `AUTH_DB` bound
+      (`src/lib/admin-notifications.ts` + migration 0011); Dynamo table is fallback.
 - [x] `DEFERRED` ESLint 10 + TypeScript 7 majors (ecosystem blockers 2026-07-29).
       ESLint 10 crashes `eslint-plugin-react` (`getFilename is not a function`);
       `eslint-plugin-import` / `jsx-a11y` peers stop at eslint 9. TypeScript 7
