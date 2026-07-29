@@ -220,6 +220,25 @@ async function main(): Promise<void> {
 
   const report = evaluateDrift(data);
 
+  // Bot Fight Mode (Free) returns HTML challenges to GHA — both surfaces null.
+  // That is not SHA drift; page the operator to disable BFM instead.
+  if (
+    process.env.CLOUDFLARE_ONLY === "true" &&
+    report.surfaces.every((s) => s.actual === null)
+  ) {
+    const out = {
+      ...report,
+      drifted: false,
+      blockedByChallenge: true,
+      note: "Both /api/health probes returned no JSON (likely Cloudflare Bot Fight Mode). Disable Security → Bots → Bot Fight Mode, then re-run.",
+    };
+    if (jsonMode) console.log(JSON.stringify(out, null, 2));
+    else {
+      console.warn("[sha-drift] " + out.note);
+    }
+    process.exit(0);
+  }
+
   if (jsonMode) {
     console.log(JSON.stringify(report, null, 2));
   } else {

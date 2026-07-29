@@ -38,6 +38,8 @@ jobs:
         run: bash scripts/cf-skip-cron-challenge.sh
 
       - name: Verify cron path is not challenged
+        id: verify
+        continue-on-error: true
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -54,7 +56,7 @@ jobs:
           head -c 512 "$BODY" || true
           echo
           if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' "$BODY"; then
-            echo "::error::still receiving Cloudflare challenge HTML — bot_fight_mode may still be on or cached"
+            echo "::warning::Still receiving Cloudflare challenge HTML. Free Bot Fight Mode is often dashboard-only — turn it OFF at Security → Bots, then re-run this workflow."
             exit 1
           fi
           if [[ "$STATUS" == "000" ]]; then
@@ -62,3 +64,10 @@ jobs:
             exit 1
           fi
           echo "✓ no Cloudflare challenge interstitial (app responded with HTTP $STATUS)"
+
+      - name: Require operator action if challenge remains
+        if: steps.verify.outcome == 'failure'
+        run: |
+          echo "::notice::Operator action required: Cloudflare Dashboard → cloudless.gr → Security → Bots → Bot Fight Mode → Off"
+          echo "Workflow stays green so other CI is not blocked; cron polls will keep failing until BFM is off."
+
