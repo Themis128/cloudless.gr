@@ -8,26 +8,26 @@ credentials-file: /etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json
 no-autoupdate: true
 
 ingress:
-  # cloudless.gr - Main website (Workers.dev)
-  - hostname: cloudless.gr
-    service: https://cloudless-gr.baltzakis-themis.workers.dev
-    originRequest:
-      noTLSVerify: true
-      connectTimeout: 30s
-
-  # manage.cloudless.gr - Management interface
-  - hostname: manage.cloudless.gr
-    service: https://cloudless-gr.baltzakis-themis.workers.dev
-    originRequest:
-      noTLSVerify: true
-      connectTimeout: 30s
-
-  # pi-origin.cloudless.gr - Legacy origin
+  # cloudless.gr — Worker (pi-origin-proxy) owns the route; tunnel unused for apex.
+  # pi-origin must hit Pi NodePort directly (never the Worker) to avoid loops.
   - hostname: pi-origin.cloudless.gr
-    service: https://cloudless-gr.baltzakis-themis.workers.dev
+    service: http://192.168.1.128:30300
     originRequest:
-      noTLSVerify: true
       connectTimeout: 30s
+      httpHostHeader: pi-origin.cloudless.gr
+
+  # manage.cloudless.gr — same Worker route as apex (see workers/pi-origin-proxy)
+  - hostname: manage.cloudless.gr
+    service: http://192.168.1.128:30300
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: manage.cloudless.gr
+
+  - hostname: cloudless.gr
+    service: http://192.168.1.128:30300
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: cloudless.gr
 
   # grafana.cloudless.gr - Monitoring dashboard
   - hostname: grafana.cloudless.gr

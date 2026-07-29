@@ -27,6 +27,8 @@ DEFAULT_HOSTS = (
 def load_env() -> dict[str, str]:
     out: dict[str, str] = {}
     path = REPO / ".env"
+    if not path.is_file():
+        return out
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "cloudless2",
+  "main": "src/index.ts",
+  "account_id": "fb7dc7b69b662480cd5961a4d1913c78",
+  "compatibility_date": "2026-07-05",
+  "minify": true,
+  "routes": [
+    { "pattern": "cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
+    { "pattern": "www.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" },
+    { "pattern": "manage.cloudless.gr", "zone_id": "7025298073d6a5c645a6ad9add0cbf0e" }
+  ],
+  "vars": {
+    "PI_ORIGIN_HOST": "pi-origin.cloudless.gr",
+    "PI_TIMEOUT_MS": "30000"
+  }
+}

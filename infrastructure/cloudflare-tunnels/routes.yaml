@@ -3,30 +3,41 @@
 # This file is used by tunnel:sync to configure cloudflared
 
 routes:
-  # Main application - Cloudflare Workers (migrated from k3s)
+  # Main application — Workers Free: tiny pi-origin-proxy on cloudless2;
+  # Tunnel pi-origin → NodePort 30300; app image via deploy-pi.yml
   - hostname: cloudless.gr
-    service: cloudflare-workers
-    port: 443
+    service: cloudless-app
+    port: 30300
     healthPath: /api/health
-    node: cloudflare
+    node: omv
     status: active
-    description: Main cloudless.gr application (Cloudflare Workers)
+    description: Apex via Worker proxy → pi-origin → Pi (Workers Free)
 
   - hostname: manage.cloudless.gr
-    service: cloudflare-workers
-    port: 443
+    service: cloudless-app
+    port: 30300
     healthPath: /api/health
-    node: cloudflare
+    node: omv
     status: active
-    description: Management interface (same as main app, Cloudflare Workers)
+    description: Management UI (same as apex)
 
-  - hostname: *.cloudless.gr
-    service: cloudflare-workers
-    port: 443
+  - hostname: pi-origin.cloudless.gr
+    service: cloudless-app
+    port: 30300
     healthPath: /api/health
-    node: cloudflare
+    node: omv
     status: active
-    description: Wildcard catch-all for all subdomains (Cloudflare Workers)
+    description: Direct Tunnel origin for Worker proxy (must not loop to Worker)
+
+  # Wildcard catch-all disabled — subdomains have explicit Tunnel routes.
+  # Do not send * to Workers (OpenNext exceeds Free 3 MiB).
+  - hostname: "*.cloudless.gr"
+    service: http_status
+    port: 404
+    healthPath: /
+    node: omv
+    status: inactive
+    description: Disabled catch-all (was Workers; Free plan cannot host OpenNext)
 
   # Infrastructure services
   - hostname: omv.cloudless.gr
