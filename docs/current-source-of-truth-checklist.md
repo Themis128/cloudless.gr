@@ -32,10 +32,10 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy (+ Slack bridge).
   Proof 2026-07-29: slug `cloudless`, 12 monitors, ntfy notification id=1; in-cluster
   `GET http://uptime-kuma…/api/status-page/cloudless` → 200; app ConfigMap
-  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack uses live
-  `kuma-slack-bridge` Deployment (`infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml`)
-  because Pi hostpath standalone still 404s `/api/webhooks/kuma`. Incoming
-  Webhook URL not required.
+  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack fan-out via
+  `kuma-slack-bridge` Deployment (`infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml`).
+  App route `POST /api/webhooks/kuma` is mounted on Pi hostpath after 2026-07-29
+  standalone rebuild (unauth → **401**, not 404). Incoming Webhook URL not required.
 - [x] `PARTIAL` Restore ESP32 Notion page (API reconstruct; history UI expired).
   Proof 2026-07-29: `scripts/notion-restore-esp32.mjs` rebuilt 16 blocks on page
   `3677d82c-410a-81e4-a6db-e9ae89578fda` (Devices/Telemetry DBs still empty).
@@ -95,6 +95,12 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
 ## Already done baseline
 
 - [x] R10, R11, R12, R13 (descoped), R14, R18, R22.
+
+## Platform direction (operator decision 2026-07-29)
+
+- **Migrate off AWS → Cloudflare.** Prefer Workers / R2 / D1 / Access / Tunnel over expanding SSM, S3, Lambda, Athena, Cognito, etc.
+- **Do not install AWS CLI or AWS SDK** for agent/operator work on this repo; use Cloudflare tooling and existing in-repo paths instead.
+- AWS-backed roadmap items still labeled `DONE` in-repo (R16 WAL-G→S3, R20→AWS, R24 secondary region) are **legacy designs** — next work should replace them with Cloudflare equivalents rather than provisioning AWS secrets/CLI.
 
 ## Notes
 
