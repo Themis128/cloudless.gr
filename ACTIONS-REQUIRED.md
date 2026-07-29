@@ -2,7 +2,7 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 22:15 EEST — aw workflows use copilot env PAT secret
+# Last Updated: 2026-07-29 22:37 EEST — EspoCRM ETL → R2 green (NodePort + API key)
 
 ---
 
@@ -63,6 +63,7 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 | PVC backups → R2 | smoke dump OK |
 | SSM default path retired | Pi `SSM_DISABLED=1`; code needs `SSM_ENABLED=1` for AWS SSM |
 | ETL runner label bug | `runs-on` default is JSON array `["self-hosted","omv","build"]` |
+| EspoCRM ETL → R2 | NodePort `127.0.0.1:30700` (#1397); API user `cloudless-app` + role ACL; `ESPOCRM_API_KEY` in GH + `cloudless-secrets`; run [30485173560](https://github.com/Themis128/cloudless.gr/actions/runs/30485173560) **5/5 entities** |
 
 ---
 
@@ -70,8 +71,9 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 
 | Item | Notes |
 |------|-------|
-| Copilot fine-grained PAT | See section above |
-| Optional ads/Sentry/Kuma secrets | Leave empty if unused |
+| Copilot fine-grained PAT | See section above — refresh env `copilot` secret if agents 401 |
+| Rotate after Variable exposure | Stripe / Slack / Notion / Cognito / Google / SES (table above) |
+| Optional ads/Sentry/Kuma secrets | `KUMA_PUSH_ETL_ESPOCRM` empty (ping skipped); leave unused empty |
 | Cloudflare API token rotation | If MCP CF tools 401 |
 | ESP32 Notion DBs | Empty (no hardware data); page reconstruct partial |
 
@@ -79,7 +81,7 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 
 ## 🔧 Verification
 
-1. `gh workflow run etl-espocrm-to-r2.yml` — should pick `omv-build` (not queue forever)
+1. `gh workflow run etl-espocrm-to-r2.yml` — green; picks `omv`/`build`; writes `lake/espocrm-*/*.parquet`
 2. Continuous WAL: `archived_count` advances, `failed_count=0`
 3. Daily CronJob `appflowy-walg-basebackup` at `30 2 * * *`
 4. `npx wrangler secret list --config wrangler.jsonc` includes SESSION + AGENT
