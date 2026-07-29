@@ -36,9 +36,9 @@ jobs:
       - name: Run EspoCRM-to-R2 sync
         working-directory: scripts/etl
         env:
-          ESPOCRM_BASE_URL: https://espocrm.cloudless.gr
+          # Bypass Cloudflare bot challenge — runner is on omv (NodePort 30700).
+          ESPOCRM_BASE_URL: http://127.0.0.1:30700
           ESPOCRM_API_KEY: ${{ secrets.ESPOCRM_API_KEY }}
-          ESPOCRM_API_PASSWORD: ${{ secrets.ESPOCRM_API_PASSWORD }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
           CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
