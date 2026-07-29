@@ -10,6 +10,8 @@ permissions:
   contents: read
 strict: false
 engine: copilot
+safe-outputs:
+  report-failure-as-issue: false
 ---
 
 # Issue Triage
