@@ -2,28 +2,28 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 22:05 EEST — purged sensitive GH Variables; Copilot auth next
+# Last Updated: 2026-07-29 22:10 EEST — aw workflows use copilot env PAT secret
 
 ---
 
-## 🔴 Copilot agentic workflows — mint fine-grained PAT (operator)
+## ✅ Copilot agentic workflows — use env secret (2026-07-29)
 
-Personal repo `Themis128/cloudless.gr` needs a **fine-grained PAT** for Copilot inference.
-OAuth tokens (`gho_…` from `gh auth`) are rejected. Current `COPILOT_GITHUB_TOKEN` (set 2026-07-18) is returning HTTP 401.
+Agentic workflows run in GitHub Environment **`copilot`** and map:
 
-1. Create a fine-grained PAT: https://github.com/settings/personal-access-tokens/new  
-   (see [gh-aw auth docs](https://github.github.com/gh-aw/reference/auth/))
-2. Resource owner = **your user** (`Themis128`), not an org.
-3. Account permission: **Copilot Requests = Read** (required).
-4. Store it:
+`COPILOT_GITHUB_TOKEN` ← `secrets.COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN`
+
+That secret lives under **Settings → Environments → copilot** (updated 2025-07-15), not repo Actions secrets / `.env`.
+
+If agents still 401, refresh **that** environment secret (fine-grained PAT, `github_pat_…`, Account → Copilot Requests: Read):
 
 ```bash
-gh aw secrets set COPILOT_GITHUB_TOKEN --repo Themis128/cloudless.gr
-# paste the fine-grained PAT (github_pat_…)
+# UI: Settings → Environments → copilot → COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN
+# or:
+gh secret set COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN --repo Themis128/cloudless.gr --env copilot
 gh aw run activity-report --repo Themis128/cloudless.gr
 ```
 
-Workflows also declare `permissions.copilot-requests: write` (uses `GITHUB_TOKEN` when org billing supports it). On this personal repo the PAT is still required until that path works.
+Do **not** use OAuth `gho_…` tokens. Repo secret `COPILOT_GITHUB_TOKEN` is unused by these workflows now.
 
 ---
 
