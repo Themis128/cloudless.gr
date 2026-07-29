@@ -1,0 +1,43 @@
+# One-shot: merge fabric ACL + delete stale Tailscale devices via Admin API.
+# Uses TS_CLIENT_* / TAILSCALE_OAUTH_* secrets (never printed).
+name: Tailscale admin API
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Set true to preview without POST/DELETE"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tailscale-admin-api
+  cancel-in-progress: false
+
+jobs:
+  acl-and-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TS_CLIENT_ID: ${{ secrets.TS_CLIENT_ID }}
+      TS_CLIENT_SECRET: ${{ secrets.TS_CLIENT_SECRET }}
+      TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+      TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+      TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      TAILSCALE_TAILNET: tail4ecae1.ts.net
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Install jq
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+
+      - name: Run Tailscale Admin API script
+        run: bash scripts/tailscale-admin-api.sh
