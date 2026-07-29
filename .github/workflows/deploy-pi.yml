@@ -294,9 +294,18 @@ jobs:
           fi
       - name: Set image and roll out
         run: |
+          SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
+          FULL_SHA="${{ github.sha }}"
+          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHORT_SHA}"
           kubectl set image deployment/${{ env.K3S_DEPLOYMENT }} \
-            ${{ env.K3S_DEPLOYMENT }}=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ needs.build-and-push.outputs.short_sha }} \
+            ${{ env.K3S_DEPLOYMENT }}=${IMAGE} \
             -n ${{ env.K3S_NAMESPACE }}
+          # Runtime ENV so /api/health.version is the deploy SHA even if an older
+          # layer baked APP_VERSION=dev/0.1.0 at next build.
+          kubectl set env deployment/${{ env.K3S_DEPLOYMENT }} \
+            -n ${{ env.K3S_NAMESPACE }} \
+            APP_VERSION="${FULL_SHA}" \
+            NEXT_PUBLIC_APP_VERSION="${FULL_SHA}"
           kubectl rollout status deployment/${{ env.K3S_DEPLOYMENT }} -n ${{ env.K3S_NAMESPACE }} --timeout=600s
 
       - name: Ensure NodePort 30300 for Tunnel origin
