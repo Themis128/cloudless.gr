@@ -30,9 +30,15 @@ CREATE INDEX idx_session_expires ON session(expires_at);
 CREATE TABLE stripe_transaction (
     event_id TEXT NOT NULL PRIMARY KEY,
     event_type TEXT NOT NULL,
+    tag_category TEXT,
+    tag_stage TEXT,
+    stage_category TEXT,
+    event_day TEXT,
     customer_id TEXT,
     processing_status TEXT,
     received_at INTEGER NOT NULL,
+    processed_at INTEGER,
+    processing_error TEXT,
     payload_json TEXT
 );
 
