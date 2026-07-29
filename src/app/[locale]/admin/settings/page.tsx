@@ -183,14 +183,14 @@ export default function AdminSettingsPage() {
               value={editKey}
               onChange={(e) => setEditKey(e.target.value.toUpperCase())}
               placeholder="KEY_NAME"
-              className="min-h-[40px] min-w-[12rem] flex-1 rounded-lg border border-slate-700 bg-void px-3 font-mono text-xs text-white"
+              className="bg-void min-h-[40px] min-w-[12rem] flex-1 rounded-lg border border-slate-700 px-3 font-mono text-xs text-white"
             />
             <input
               type="text"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               placeholder="value"
-              className="min-h-[40px] min-w-[12rem] flex-[2] rounded-lg border border-slate-700 bg-void px-3 font-mono text-xs text-white"
+              className="bg-void min-h-[40px] min-w-[12rem] flex-[2] rounded-lg border border-slate-700 px-3 font-mono text-xs text-white"
             />
             <button
               type="button"
@@ -198,7 +198,7 @@ export default function AdminSettingsPage() {
               onClick={() => {
                 handleSaveConfig().catch(() => {});
               }}
-              className="min-h-[40px] rounded-lg border border-neon-cyan/40 px-4 py-2 font-mono text-xs text-neon-cyan transition-all hover:border-neon-cyan disabled:opacity-50"
+              className="border-neon-cyan/40 text-neon-cyan hover:border-neon-cyan min-h-[40px] rounded-lg border px-4 py-2 font-mono text-xs transition-all disabled:opacity-50"
             >
               {configSaving ? "Saving…" : "Save"}
             </button>
@@ -209,7 +209,7 @@ export default function AdminSettingsPage() {
                 <li key={row.key} className="flex gap-2 border-b border-slate-800/80 py-1">
                   <button
                     type="button"
-                    className="text-left text-neon-cyan hover:underline"
+                    className="text-neon-cyan text-left hover:underline"
                     onClick={() => setEditKey(row.key)}
                   >
                     {row.key}
@@ -223,7 +223,6 @@ export default function AdminSettingsPage() {
             <p className="font-mono text-xs text-slate-600">No app_config rows yet.</p>
           )}
         </div>
-
         {/* Danger Zone */}{" "}
         <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-6">
           {" "}

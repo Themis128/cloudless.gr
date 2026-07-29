@@ -5,11 +5,7 @@ import {
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
-import {
-  getAuthDbFromEnv,
-  getUserById,
-  patchUserProfile as patchD1Profile,
-} from "@/lib/auth-d1";
+import { getAuthDbFromEnv, getUserById, patchUserProfile as patchD1Profile } from "@/lib/auth-d1";
 
 /**
  * Provider-agnostic user-profile store.

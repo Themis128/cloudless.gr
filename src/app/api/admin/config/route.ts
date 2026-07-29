@@ -34,7 +34,10 @@ export async function GET(request: NextRequest) {
   const key = new URL(request.url).searchParams.get("key")?.trim();
   if (key) {
     if (BLOCKED_KEYS.has(key)) {
-      return NextResponse.json({ error: "Secret keys are not readable via this API" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Secret keys are not readable via this API" },
+        { status: 403 }
+      );
     }
     const value = await getD1ConfigValue(db as unknown as D1Database, key);
     if (value === undefined) {
@@ -79,10 +82,7 @@ export async function PUT(request: NextRequest) {
   const description = typeof body.description === "string" ? body.description : undefined;
 
   if (!key || key.length > 128 || !/^[A-Z][A-Z0-9_]*$/.test(key)) {
-    return NextResponse.json(
-      { error: "key must be UPPER_SNAKE_CASE (max 128)" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "key must be UPPER_SNAKE_CASE (max 128)" }, { status: 400 });
   }
   if (BLOCKED_KEYS.has(key)) {
     return NextResponse.json(

@@ -125,8 +125,7 @@ export async function recordFunnelEvent(raw: FunnelEventInput): Promise<boolean>
       .run();
     return true;
   } catch (err) {
-    const safe =
-      err instanceof Error ? err.message.replace(/[\x00-\x1F\x7F]/g, "") : "unknown";
+    const safe = err instanceof Error ? err.message.replace(/[\x00-\x1F\x7F]/g, "") : "unknown";
     console.warn("[search-funnel] D1 insert failed:", safe);
     return false;
   }
@@ -157,8 +156,7 @@ export async function getFunnelSummary(days = 30): Promise<FunnelSummaryRow[] | 
       .all<{ event_type: string; ab_variant: string | null; count: number }>();
     return result.results ?? [];
   } catch (err) {
-    const safe =
-      err instanceof Error ? err.message.replace(/[\x00-\x1F\x7F]/g, "") : "unknown";
+    const safe = err instanceof Error ? err.message.replace(/[\x00-\x1F\x7F]/g, "") : "unknown";
     console.warn("[search-funnel] D1 summary failed:", safe);
     return null;
   }

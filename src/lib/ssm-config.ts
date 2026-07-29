@@ -447,10 +447,7 @@ function buildConfigFromEnv(): AppConfig {
 export async function getConfig(): Promise<AppConfig> {
   // 1. Prefer Cloudflare D1 app_config when AUTH_DB is bound (any runtime)
   try {
-    const maybeEnv = (typeof process !== "undefined" ? process.env : {}) as Record<
-      string,
-      unknown
-    >;
+    const maybeEnv = (typeof process !== "undefined" ? process.env : {}) as Record<string, unknown>;
     const db = maybeEnv.AUTH_DB as D1Database | undefined;
 
     if (db && typeof db.prepare === "function") {
