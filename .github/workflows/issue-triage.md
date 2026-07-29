@@ -8,9 +8,12 @@ permissions:
   issues: read
   pull-requests: read
   contents: read
-  copilot-requests: write
 strict: false
-engine: copilot
+environment: copilot
+engine:
+  id: copilot
+  env:
+    COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN }}
 safe-outputs:
   report-failure-as-issue: false
 ---
