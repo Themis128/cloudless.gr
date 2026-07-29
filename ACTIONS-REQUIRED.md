@@ -2,28 +2,18 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 22:37 EEST — EspoCRM ETL → R2 green (NodePort + API key)
+# Last Updated: 2026-07-29 22:50 EEST — aw engines → Claude (ANTHROPIC_API_KEY)
 
 ---
 
-## ✅ Copilot agentic workflows — use env secret (2026-07-29)
+## ✅ Agentic workflows use Claude (2026-07-29)
 
-Agentic workflows run in GitHub Environment **`copilot`** and map:
+Switched all 9 gh-aw workflows from `engine: copilot` → `engine: claude` using repo secret `ANTHROPIC_API_KEY`.
 
-`COPILOT_GITHUB_TOKEN` ← `secrets.COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN`
+Fine-grained PAT UI often has no "Account → Copilot Requests" (user-owned PAT only; under Account permissions). Copilot inference was HTTP 401 anyway.
 
-That secret lives under **Settings → Environments → copilot** (updated 2025-07-15), not repo Actions secrets / `.env`.
+Env secret `COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN` is unused by these workflows now.
 
-If agents still 401, refresh **that** environment secret (fine-grained PAT, `github_pat_…`, Account → Copilot Requests: Read):
-
-```bash
-# UI: Settings → Environments → copilot → COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN
-# or:
-gh secret set COPILOT_MCP_GITHUB_PERSONAL_ACCESS_TOKEN --repo Themis128/cloudless.gr --env copilot
-gh aw run activity-report --repo Themis128/cloudless.gr
-```
-
-Do **not** use OAuth `gho_…` tokens. Repo secret `COPILOT_GITHUB_TOKEN` is unused by these workflows now.
 
 ---
 
