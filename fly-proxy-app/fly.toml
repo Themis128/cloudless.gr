@@ -1,12 +1,10 @@
-# Fly.io Proxy Configuration for cloudless.gr
-# Free Tier: Automatic HA Failover (Cloudflare Workers → Pi/k3s)
-#
-# This config deploys a reverse proxy app that handles failover.
-# FastAPI proxy with automatic failover to Pi backup.
+# Fly.io HA failover proxy (Workers → Pi tunnel)
+# Deploy from repo root:
+#   flyctl deploy --remote-only --config fly-proxy-app/fly.toml --app cloudless-proxy
 
 app = "cloudless-proxy"
 
-primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
+primary_region = "fra"
 
 [build]
   dockerfile = "Dockerfile"
@@ -14,18 +12,16 @@ primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
 [[services]]
   internal_port = 8080
   protocol = "tcp"
-  
+
   [[services.ports]]
     port = 80
     handlers = ["http"]
-    
+
   [[services.http_options]]
     health_check_path = "/health"
     health_check_interval = "30s"
 
 [env]
-  # Backends to proxy to
-  # Cloudflare Workers (free tier) - primary
   PRIMARY_HOST = "cloudless.gr"
   FALLBACK_HOST = "pi-origin.cloudless.gr"
 
