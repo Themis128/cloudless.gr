@@ -51,7 +51,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Build Next.js app with OpenNext
-        run: pnpm run cf:build:opennext
+        run: pnpm run cf:build
 
       - name: Delete .bin font files (prevents SST loader error)
         run: find .open-next -name "*.bin" -delete || echo "No .bin files found"

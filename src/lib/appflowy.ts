@@ -307,10 +307,9 @@ export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyVie
   }
 
   try {
-    const r = await callThrowing<{ data: unknown }>(
-      `/workspace/${workspaceId}/folder?depth=10`,
-      { timeoutMs: 30_000 }
-    );
+    const r = await callThrowing<{ data: unknown }>(`/workspace/${workspaceId}/folder?depth=10`, {
+      timeoutMs: 30_000,
+    });
     const views = flattenFolderViews(r.data);
     if (views.length > 0) {
       // Deduplicate by view_id (folder walk can revisit parents).
@@ -329,9 +328,7 @@ export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyVie
   }
 
   try {
-    const r = await callThrowing<{ data: AppFlowyView[] }>(
-      `/admin/workspace/${workspaceId}/views`
-    );
+    const r = await callThrowing<{ data: AppFlowyView[] }>(`/admin/workspace/${workspaceId}/views`);
     const value = r.data ?? [];
     cachedViewsByWorkspace.set(workspaceId, {
       value,
@@ -401,7 +398,10 @@ function extractStringsFromCollab(encoded: unknown): string {
     const keyRe = new RegExp(`(?:^|[^A-Za-z])${key}(?![A-Za-z])`, "g");
     let match: RegExpExecArray | null;
     while ((match = keyRe.exec(latin)) !== null) {
-      const window = latin.slice(match.index + match[0].length, match.index + match[0].length + 900);
+      const window = latin.slice(
+        match.index + match[0].length,
+        match.index + match[0].length + 900
+      );
       const valueMatch = /:\s*([^']{1,800})'/.exec(window);
       if (valueMatch?.[1]) {
         const value = Buffer.from(valueMatch[1], "latin1")

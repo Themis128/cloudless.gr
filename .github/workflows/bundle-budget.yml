@@ -35,7 +35,9 @@ jobs:
       #   1900KB → 2300KB (analytics warehouse): @aws-sdk/client-s3 server-side only;
       #   2300KB → 2310KB (2026-06-23): minor baseline drift, current static chunks 2303KB.
       #     client bundle growth from portal/dashboard/admin expansion (~292KB).
-      BUNDLE_MAX_KB: "2310"
+      #   2310KB → 2800KB (2026-07-29): AppFlowy CMS dual-run + admin surface growth;
+      #     measured static chunks 2736KB on PR #1368.
+      BUNDLE_MAX_KB: "2800"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
