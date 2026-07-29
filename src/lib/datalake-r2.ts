@@ -150,7 +150,10 @@ const ATHENA_QUERIES: Array<{ section: string; sql: string }> = [
 
 function sectionUsable(section: DatalakeSectionResult | undefined): boolean {
   return Boolean(
-    section && !section.error && Array.isArray(section.rows) && (section.rowCount ?? section.rows.length) >= 0
+    section &&
+    !section.error &&
+    Array.isArray(section.rows) &&
+    (section.rowCount ?? section.rows.length) >= 0
   );
 }
 
