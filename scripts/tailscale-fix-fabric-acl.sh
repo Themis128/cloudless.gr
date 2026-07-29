@@ -31,6 +31,8 @@ for cidr in ('10.42.0.0/16','10.43.0.0/16'):
     routes[cidr]=list(dict.fromkeys((routes.get(cidr) or []) + ['tag:k8s']))
 svcs=aa.setdefault('services',{})
 svcs['svc:*']=list(dict.fromkeys((svcs.get('svc:*') or []) + ['tag:k8s']))
+# Tag-keyed form (services tagged tag:k8s advertised by tag:k8s proxies)
+svcs['tag:k8s']=list(dict.fromkeys((svcs.get('tag:k8s') or []) + ['tag:k8s']))
 json.dump(cur, open(sys.argv[2],'w'), indent=2)
 print('tagOwners', owners)
 print('autoApprovers', aa)

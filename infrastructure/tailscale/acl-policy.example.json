@@ -1,27 +1,52 @@
 {
   "tagOwners": {
-    "tag:k8s-operator": ["autogroup:admin"],
-    "tag:k8s": ["tag:k8s-operator"]
+    "tag:k8s-operator": [
+      "autogroup:admin"
+    ],
+    "tag:k8s": [
+      "tag:k8s-operator"
+    ]
   },
   "autoApprovers": {
     "routes": {
-      "10.42.0.0/16": ["tag:k8s"],
-      "10.43.0.0/16": ["tag:k8s"]
+      "10.42.0.0/16": [
+        "tag:k8s"
+      ],
+      "10.43.0.0/16": [
+        "tag:k8s"
+      ]
     },
     "services": {
-      "svc:*": ["tag:k8s"]
+      "svc:*": [
+        "tag:k8s"
+      ],
+      "tag:k8s": [
+        "tag:k8s"
+      ]
     }
   },
   "grants": [
     {
-      "src": ["autogroup:member"],
-      "dst": ["tag:k8s"],
-      "ip": ["*"]
+      "src": [
+        "autogroup:member"
+      ],
+      "dst": [
+        "tag:k8s"
+      ],
+      "ip": [
+        "*"
+      ]
     },
     {
-      "src": ["autogroup:member"],
-      "dst": ["autogroup:self"],
-      "ip": ["*"]
+      "src": [
+        "autogroup:member"
+      ],
+      "dst": [
+        "autogroup:self"
+      ],
+      "ip": [
+        "*"
+      ]
     }
   ]
 }

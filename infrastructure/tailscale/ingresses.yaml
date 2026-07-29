@@ -11,6 +11,10 @@ metadata:
   annotations:
     tailscale.com/proxy-group: ingress
     tailscale.com/hostname: grafana
+    # Advertise before TLS exists — otherwise CertDomains never includes the
+    # Service VIP name and Let's Encrypt issuance deadlocks (HTTPS-only HA).
+    # Docs/operator: advertise only after hasCerts unless http-endpoint is on.
+    tailscale.com/http-endpoint: enabled
 spec:
   ingressClassName: tailscale
   tls:
@@ -32,6 +36,7 @@ metadata:
   annotations:
     tailscale.com/proxy-group: ingress
     tailscale.com/hostname: meilisearch
+    tailscale.com/http-endpoint: enabled
 spec:
   ingressClassName: tailscale
   tls:
