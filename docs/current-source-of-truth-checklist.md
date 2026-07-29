@@ -89,8 +89,7 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` R23 Resend pilot for order confirmations.
   Evidence: `src/lib/email-resend.ts` plus pilot switch/fallback in `src/lib/email.ts` (`sendOrderConfirmation` prefers Resend when configured, falls back to SES).
 - [x] `DEFERRED` R24 AWS secondary-region DR path (legacy).
-  Decision 2026-07-29: do not provision; prefer Cloudflare Tunnel HA + R2 offsite
-  + R19 failover drill. Manifests retained under `infrastructure/r24-dr/`.
+  Decision 2026-07-29: do not provision; prefer Cloudflare Tunnel HA + R2 offsite + R19 failover drill. Manifests retained under `infrastructure/r24-dr/`.
 - [x] `DEFERRED` R20 Postgres logical replication subscriber to AWS (legacy).
   Decision 2026-07-29: do not provision AWS subscriber; prefer R16→R2 WAL + ETL
   `scripts/etl/appflowy-to-r2.mjs`. Manifests retained under `infrastructure/r20-replication/`.

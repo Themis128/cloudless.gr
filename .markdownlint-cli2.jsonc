@@ -64,6 +64,9 @@
     // (MD059 "[here]" link text, MD056 malformed tables) — file upstream
     // rather than patching local copies.
     ".claude/skills/**",
+    // .agents/skills/** are Cursor-injected skill docs (Vercel, Workers, Wrangler
+    // best-practices, etc.). Same principle as .claude/skills — external content.
+    ".agents/**",
     ".kiro/**",
     "logs_failed.md",
     "**/*logs*.md",
