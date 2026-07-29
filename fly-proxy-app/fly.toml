@@ -8,6 +8,9 @@ app = "cloudless-proxy"
 
 primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
 
+[build]
+  dockerfile = "Dockerfile"
+
 [[services]]
   internal_port = 8080
   protocol = "tcp"
@@ -24,7 +27,7 @@ primary_region = "fra"  # Frankfurt (EU) - closest to GR/BG
   # Backends to proxy to
   # Cloudflare Workers (free tier) - primary
   PRIMARY_HOST = "cloudless.gr"
-  FALLBACK_HOST = "omv.tail8eb71.ts.net"
+  FALLBACK_HOST = "pi-origin.cloudless.gr"
 
 [[vm]]
   cpu_kind = "shared"
