@@ -10,15 +10,24 @@ on:
 permissions:
   contents: read
   issues: read
+  pull-requests: read
 strict: false
 engine: gemini
-model: gemini-2.5-flash-lite
+model: gemini-2.5-flash
 models:
   default-ai-credits-pricing:
-    input: 0.10
-    output: 0.40
+    input: 0.15
+    output: 0.60
+tools:
+  github:
+    toolsets: [default]
+  bash: true
 safe-outputs:
   report-failure-as-issue: false
+  noop:
+    report-as-issue: false
+  add-comment:
+    max: 1
 ---
 
 # Monitoring Node Selector Fix
@@ -50,3 +59,10 @@ Patch monitoring pods (Prometheus, Alertmanager, kube-state-metrics, cloudwatch-
    - Patch with: `{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"omv"}}}}}`
    - Wait for rollout completion
 5. If component not found, log that it may already be running
+
+
+## Runtime notes (gh-aw + Gemini)
+
+- GitHub **reads**: use the `github` CLI on PATH (MCP bridge). Start with `github --help`. Do **not** invent names like `github_mcp_server` or bare `create_issue`.
+- GitHub **writes / completion**: use only the `safeoutputs` CLI (e.g. `safeoutputs create_issue --help`, `safeoutputs noop --message "..."`).
+- Prefer one successful `safeoutputs` call at the end. If nothing to do, call `noop` once — do not open tracker issues for no-ops.

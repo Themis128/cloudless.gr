@@ -8,15 +8,26 @@ permissions:
   contents: read
   issues: read
   pull-requests: read
+  actions: read
 strict: false
 engine: gemini
-model: gemini-2.5-flash-lite
+model: gemini-2.5-flash
 models:
   default-ai-credits-pricing:
-    input: 0.10
-    output: 0.40
+    input: 0.15
+    output: 0.60
+tools:
+  github:
+    toolsets: [default, actions]
+  bash: true
 safe-outputs:
   report-failure-as-issue: false
+  noop:
+    report-as-issue: false
+  create-issue:
+    title-prefix: "[activity-report] "
+    labels: [activity-report, agentic-workflows]
+    max: 1
 ---
 
 # Activity Report
@@ -60,6 +71,12 @@ Post a single issue comment or issue body with:
 - Bulleted sections for each group above.
 - Links to the most important items.
 - A short “Needs Attention” section at the top if there are blockers.
+
+## Runtime notes (gh-aw + Gemini)
+
+- GitHub **reads**: use the `github` CLI on PATH (MCP bridge). Start with `github --help`. Do **not** invent names like `github_mcp_server` or bare `create_issue`.
+- GitHub **writes / completion**: use only the `safeoutputs` CLI (e.g. `safeoutputs create_issue --help`, `safeoutputs noop --message "..."`).
+- Prefer one successful `safeoutputs` call at the end. If nothing to do, call `noop` once — do not open tracker issues for no-ops.
 
 ## Guardrails
 
