@@ -1,14 +1,24 @@
 name: Cloudflare Workers Deploy
 
+# Production frontend + App Router API for cloudless.gr.
+# OpenNext builds the Next.js app and SST deploys it as a Cloudflare Worker
+# (custom domain cloudless.gr). This is NOT Cloudflare Pages — there is no
+# Pages project for the main site.
+
 on:
   push:
     branches: [main]
     paths:
+      # Full app surface — OpenNext Worker serves pages + API (not CF Pages).
       - 'migrations/*.sql'
-      - 'src/**/*.ts'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - 'wrangler.jsonc'
       - 'sst.config.cloudflare.ts'
-      - 'opennext.config.js'
+      - 'opennext.config.*'
+      - 'next.config.*'
       - '.github/workflows/cloudflare-deploy.yml'
   workflow_dispatch:
     inputs:
