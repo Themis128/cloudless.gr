@@ -2,7 +2,7 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 22:10 EEST — aw workflows use copilot env PAT secret
+# Last Updated: 2026-07-29 22:15 EEST — aw workflows use copilot env PAT secret
 
 ---
 
@@ -32,10 +32,8 @@ Do **not** use OAuth `gho_…` tokens. Repo secret `COPILOT_GITHUB_TOKEN` is unu
 ~57 credential-like **Actions Variables** were moved into **Actions Secrets** (or deleted when already present) via `scripts/purge-sensitive-gh-variables.py`.
 
 - Non-secret config (URLs, DB IDs, public client IDs) remains as Variables.
-- `sync-secrets-to-vars.yml` archived → `.github/workflows.archived/sync-secrets-to-vars.yml.disabled` (it was copying secrets into Variables for Claude cloud sessions).
-- Repo hit the **100 Actions secrets** cap during migration; freed slots by removing unused `HUBSPOT_ACCESS_TOKEN`, `COMPOSIO_API_KEY`, `SLACK_APP_ID`.
-
-Re-run anytime:
+- `sync-secrets-to-vars.yml` archived → `.github/workflows.archived/sync-secrets-to-vars.yml.disabled`.
+- Repo hit the **100 Actions secrets** cap; freed slots by removing unused `HUBSPOT_ACCESS_TOKEN`, `COMPOSIO_API_KEY`, `SLACK_APP_ID`.
 
 ```bash
 python3 scripts/purge-sensitive-gh-variables.py          # dry-run
@@ -43,8 +41,6 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 ```
 
 ### Rotate after Variable exposure (recommended)
-
-Values lived as Variables (API-readable). Prioritize rotation:
 
 | Priority | Credentials |
 |----------|-------------|
@@ -55,89 +51,43 @@ Values lived as Variables (API-readable). Prioritize rotation:
 
 ---
 
-## ✅ Agentic workflow failure issues (cleared 2026-07-29)
+## ✅ Cleared (2026-07-29)
 
-Closed ~28 open `[aw] … failed` issues + #1313.  
-`safe-outputs.report-failure-as-issue: false` on all 9 agentic workflows (PR #1386).
-
----
-
-## ✅ GitHub secrets (verified 2026-07-29)
-
-| Secret | Status | Purpose |
-|--------|--------|---------|
-| `CLOUDFLARE_API_TOKEN` | ✅ | Deploy, SST, CF APIs |
-| `CF_ACCOUNT_ID` | ✅ | Deploy, ETL (`fb7dc7b69b662480cd5961a4d1913c78`) |
-| `CLOUDFLARE_ACCOUNT_ID` | ✅ | Same account id (alias) |
-| `CLOUDFLARE_ZONE_ID` | ✅ | Custom domains |
-| `CF_R2_ACCESS_KEY_ID` | ✅ | R2 S3 API (ETL + backups) |
-| `CF_R2_SECRET_ACCESS_KEY` | ✅ | R2 S3 API |
-
-Cluster: `pvc-backup-r2` (appflowy/espocrm/postiz/n8n) + `appflowy-walg-r2` live.
-Smoke: AppFlowy PVC dump + continuous WAL + daily `pg_dump` CronJob → `datalake-bucket`.
+| Item | Evidence |
+|------|----------|
+| GitHub R2 + CF account secrets | `CF_R2_*`, `CF_ACCOUNT_ID`, `CLOUDFLARE_*` set |
+| Wrangler `SESSION_SECRET` | present (`wrangler secret list`) |
+| Wrangler `AGENT_AUTH_TOKEN` | present |
+| Agentic `[aw] failed` issue spam | `report-failure-as-issue: false` (#1386) |
+| AppFlowy R16 WAL + daily dump → R2 | live; `failed_count=0` |
+| PVC backups → R2 | smoke dump OK |
+| SSM default path retired | Pi `SSM_DISABLED=1`; code needs `SSM_ENABLED=1` for AWS SSM |
+| ETL runner label bug | `runs-on` default is JSON array `["self-hosted","omv","build"]` |
 
 ---
 
-## ⏳ Still needs operator (Wrangler / optional)
+## ⏳ Still operator-only
 
-### Wrangler secrets (Workers runtime)
-
-```bash
-npx wrangler secret put SESSION_SECRET --config wrangler.jsonc
-npx wrangler secret put AGENT_AUTH_TOKEN --config wrangler.jsonc
-# optional Gemini fallback:
-npx wrangler secret put GEMINI_API_KEY --config wrangler.jsonc
-```
-
-| Secret | Priority | Notes |
-|--------|----------|-------|
-| `SESSION_SECRET` | 🔴 | 32+ bytes; session signing |
-| `AGENT_AUTH_TOKEN` | 🔴 | Agent endpoints |
-| `GEMINI_API_KEY` | 🟡 | Workers AI works without it |
-
-### Optional product features
-
-| Secret | Purpose |
-|--------|---------|
-| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | LinkedIn ads |
-| `NEXT_PUBLIC_META_PIXEL_ID` | Meta ads |
-| `SENTRY_AUTH_TOKEN` / `NEXT_PUBLIC_SENTRY_DSN` | Error tracking |
-| `KUMA_PUSH_ETL_ESPOCRM` | ETL monitoring |
+| Item | Notes |
+|------|-------|
+| Copilot fine-grained PAT | See section above |
+| Optional ads/Sentry/Kuma secrets | Leave empty if unused |
+| Cloudflare API token rotation | If MCP CF tools 401 |
+| ESP32 Notion DBs | Empty (no hardware data); page reconstruct partial |
 
 ---
 
 ## 🔧 Verification
 
-1. `gh workflow run etl-espocrm-to-r2.yml` — should no longer fail on missing R2 keys
-2. `gh workflow run cloudflare-deploy.yml`
-3. Continuous WAL: `archived_count` advances, `failed_count=0` on AppFlowy postgres
-4. Daily CronJob `appflowy-walg-basebackup` at `30 2 * * *`
-5. After Copilot PAT: `gh aw run activity-report`
-
----
-
-## 📝 Google Calendar (optional)
-
-Not required for core chat. To enable booking, set Wrangler secrets
-`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_CALENDAR_ID`, or non-secret
-keys via D1 `app_config` / admin Settings. Keep `GOOGLE_PRIVATE_KEY` in Wrangler.
-
----
-
-## 🔗 Links
-
-- [GitHub Secrets](https://github.com/Themis128/cloudless.gr/settings/secrets/actions)
-- [R2 credentials workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/create-r2-credentials.yml)
-- [ETL workflow](https://github.com/Themis128/cloudless.gr/actions/workflows/etl-espocrm-to-r2.yml)
-- Checklist: `docs/current-source-of-truth-checklist.md`
+1. `gh workflow run etl-espocrm-to-r2.yml` — should pick `omv-build` (not queue forever)
+2. Continuous WAL: `archived_count` advances, `failed_count=0`
+3. Daily CronJob `appflowy-walg-basebackup` at `30 2 * * *`
+4. `npx wrangler secret list --config wrangler.jsonc` includes SESSION + AGENT
 
 ---
 
 ## Notes
 
-1. Prefer D1 `app_config` + Wrangler/k8s secrets over AWS SSM (legacy Lambda path only).
-2. Never `kubectl apply` empty Secret stubs for `appflowy-walg-r2` / `pvc-backup-r2`.
-3. `WALG_LOG_LEVEL` must be `NORMAL|DEVEL|ERROR` (not `INFO`).
-4. Cloudflare token rotation remains an operator SKIPPED item if MCP CF tools 401.
-5. Actions Secrets hard cap is **100** per repo — prune unused before adding more.
-6. Do **not** store credentials in Actions Variables.
+1. Never `kubectl apply` empty Secret stubs for `appflowy-walg-r2` / `pvc-backup-r2`.
+2. `WALG_LOG_LEVEL` must be `NORMAL|DEVEL|ERROR` (not `INFO`).
+3. Checklist: `docs/current-source-of-truth-checklist.md`

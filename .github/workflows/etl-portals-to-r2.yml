@@ -14,7 +14,7 @@ permissions:
 jobs:
   etl:
     name: Run Portals → R2 sync
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"self-hosted,omv,build"') }}
+    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted","omv","build"]') }}
     timeout-minutes: 15
 
     steps:
