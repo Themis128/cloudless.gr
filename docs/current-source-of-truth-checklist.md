@@ -171,9 +171,16 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
       `getStripeAnalyticsSnapshot` (`stripe-analytics-read.ts`) also prefers D1
       (amount_minor/currency + tag_*/event_day catch-up via migration 0012;
       payload_json backfill for legacy rows); Dynamo queries remain legacy fallback.
-      Still AWS (follow-up): Athena cost/datalake UI reads.
       Admin-notifications prefer D1 `admin_notification` when `AUTH_DB` bound
       (`src/lib/admin-notifications.ts` + migration 0011); Dynamo table is fallback.
+- [x] `DONE` Athena cost/datalake UI reads → Cloudflare-first (2026-07-29).
+      `/admin/cost` prefers D1 `aws_cost_daily` (migration 0013) then R2
+      `lake/aws-cost/cost.json` (`cost-analytics.ts`); Athena is legacy fallback.
+      ETL: `scripts/etl/aws-cost-to-r2.mjs` + `.github/workflows/etl-aws-cost-to-r2.yml`
+      (CE source → R2 + D1). Datalake dashboard prefers D1 `analytics_events` +
+      R2 `lake/snapshots/admin-datalake.json` (`datalake-r2.ts` /
+      `materialize-datalake-snapshots.mjs`); Athena fills missing sections only.
+      Billing source remains AWS Cost Explorer (no CF equivalent).
 - [x] `DEFERRED` ESLint 10 + TypeScript 7 majors (ecosystem blockers 2026-07-29).
       ESLint 10 crashes `eslint-plugin-react` (`getFilename is not a function`);
       `eslint-plugin-import` / `jsx-a11y` peers stop at eslint 9. TypeScript 7

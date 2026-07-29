@@ -1,15 +1,16 @@
 /**
- * Cost analytics helper — queries the `cloudless_analytics.v_aws_cost_by_service`
- * Athena view (created in R9, populated daily by `scripts/etl/aws-cost-to-lake.mjs`).
+ * Cost analytics for `/admin/cost` (R12).
  *
- * Powers the `/admin/cost` page (R12). Bypasses the SCP-blocked Grafana
- * Athena path by querying directly from the Next.js Lambda (which has its
- * own IAM grant on Athena via the deploy role — verified working).
+ * Cloudflare-first read path:
+ *   1. D1 `aws_cost_daily` when AUTH_DB is bound (ETL: aws-cost-to-r2 + wrangler)
+ *   2. R2 `lake/aws-cost/cost.json` when DATALAKE_BUCKET is bound
+ *   3. Legacy Athena `v_aws_cost_by_service` (optional fallback)
  *
- * All queries are bounded by date + grouped server-side; result sets are
- * small (≤200 rows for the 30-day-by-service shape).
+ * Source data still comes from AWS Cost Explorer (billing API); only the
+ * analytics *store/query* path is Cloudflare-native.
  */
-import { runAthenaQuery } from "@/lib/athena";
+import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
+import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 
 export interface CostByServiceRow {
   service: string;
@@ -17,114 +18,246 @@ export interface CostByServiceRow {
 }
 
 export interface DailyCostRow {
-  cost_date: string; // YYYY-MM-DD
+  cost_date: string;
   total_usd: number;
 }
 
 export interface CostSummary {
   total_30d: number;
   yesterday: number;
-  topServices: CostByServiceRow[]; // top 10
-  dailyTrend: DailyCostRow[]; // last 30 days
-  lastEtlAt: string | null; // ISO timestamp of the most recent ETL load
+  topServices: CostByServiceRow[];
+  dailyTrend: DailyCostRow[];
+  lastEtlAt: string | null;
 }
 
-/**
- * Top N services by 30-day spend.
- * Returns highest → lowest. Default 10.
- */
-export async function getTopServicesByCost(limit = 10): Promise<CostByServiceRow[]> {
-  const safeLimit = Math.max(1, Math.min(limit, 50));
-  const sql = `
-    SELECT service, round(sum(amount_usd), 2) AS total_usd
-    FROM cloudless_analytics.v_aws_cost_by_service
-    WHERE cost_date >= date_format(current_date - interval '30' day, '%Y-%m-%d')
-    GROUP BY service
-    ORDER BY total_usd DESC
-    LIMIT ${safeLimit}
-  `;
-  const { rows } = await runAthenaQuery(sql);
-  return rows.map((r) => ({
-    service: String(r.service ?? "unknown"),
-    total_usd: Number.parseFloat(String(r.total_usd ?? "0")) || 0,
+interface CostRow {
+  cost_date: string;
+  service: string;
+  amount_usd: number;
+  currency?: string;
+}
+
+interface CostSource {
+  rows: CostRow[];
+  lastEtlAt: string | null;
+}
+
+function daysAgoIso(days: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function yesterdayIso(): string {
+  return daysAgoIso(1);
+}
+
+function withinLastDays(costDate: string, days: number): boolean {
+  return costDate >= daysAgoIso(days);
+}
+
+function enumerateDays(days: number): string[] {
+  const out: string[] = [];
+  for (let i = days - 1; i >= 0; i -= 1) out.push(daysAgoIso(i));
+  return out;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function summarize(source: CostSource, limit = 10): CostSummary {
+  const windowRows = source.rows.filter((row) => withinLastDays(row.cost_date, 30));
+  const total_30d = round2(windowRows.reduce((sum, row) => sum + row.amount_usd, 0));
+
+  const yday = yesterdayIso();
+  const yesterday = round2(
+    windowRows.filter((row) => row.cost_date === yday).reduce((sum, row) => sum + row.amount_usd, 0)
+  );
+
+  const byService = new Map<string, number>();
+  for (const row of windowRows) {
+    byService.set(row.service, (byService.get(row.service) || 0) + row.amount_usd);
+  }
+  const topServices = [...byService.entries()]
+    .map(([service, total_usd]) => ({ service, total_usd: round2(total_usd) }))
+    .sort((a, b) => b.total_usd - a.total_usd)
+    .slice(0, Math.max(1, Math.min(limit, 50)));
+
+  const byDay = new Map<string, number>();
+  for (const day of enumerateDays(30)) byDay.set(day, 0);
+  for (const row of windowRows) {
+    if (!byDay.has(row.cost_date)) continue;
+    byDay.set(row.cost_date, (byDay.get(row.cost_date) || 0) + row.amount_usd);
+  }
+  const dailyTrend = [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([cost_date, total_usd]) => ({ cost_date, total_usd: round2(total_usd) }));
+
+  return { total_30d, yesterday, topServices, dailyTrend, lastEtlAt: source.lastEtlAt };
+}
+
+async function loadFromD1(db: AuthDatabase): Promise<CostSource | null> {
+  const result = await db
+    .prepare(
+      `SELECT cost_date, service, amount_usd, currency, synced_at
+       FROM aws_cost_daily`
+    )
+    .all<{
+      cost_date: string;
+      service: string;
+      amount_usd: number;
+      currency: string | null;
+      synced_at: number | null;
+    }>();
+
+  const rows = (result.results ?? []).map((row) => ({
+    cost_date: String(row.cost_date),
+    service: String(row.service || "unknown"),
+    amount_usd: Number(row.amount_usd) || 0,
+    currency: row.currency ?? "USD",
   }));
+  if (rows.length === 0) return null;
+
+  let maxSynced = 0;
+  for (const row of result.results ?? []) {
+    if (typeof row.synced_at === "number" && row.synced_at > maxSynced) maxSynced = row.synced_at;
+  }
+
+  return {
+    rows,
+    lastEtlAt: maxSynced > 0 ? new Date(maxSynced).toISOString() : null,
+  };
 }
 
-/**
- * Daily total spend, last 30 days (oldest → newest).
- * Used for the time-series chart on /admin/cost.
- */
-export async function getDailyCostTrend(): Promise<DailyCostRow[]> {
-  const sql = `
-    SELECT cost_date, round(sum(amount_usd), 2) AS total_usd
-    FROM cloudless_analytics.v_aws_cost_by_service
-    WHERE cost_date >= date_format(current_date - interval '30' day, '%Y-%m-%d')
-    GROUP BY cost_date
-    ORDER BY cost_date ASC
-  `;
-  const { rows } = await runAthenaQuery(sql);
-  return rows.map((r) => ({
-    cost_date: String(r.cost_date ?? ""),
-    total_usd: Number.parseFloat(String(r.total_usd ?? "0")) || 0,
-  }));
+async function loadFromR2(): Promise<CostSource | null> {
+  const bucket = getDataLakeBucketFromEnv();
+  if (!bucket) return null;
+
+  const object = await bucket.get("lake/aws-cost/cost.json");
+  if (!object) return null;
+
+  const parsed = JSON.parse(await object.text()) as {
+    generated_at?: string;
+    rows?: Array<Record<string, unknown>>;
+  };
+  const rows = (parsed.rows ?? [])
+    .map((row) => ({
+      cost_date: String(row.cost_date ?? ""),
+      service: String(row.service ?? "unknown"),
+      amount_usd: Number(row.amount_usd) || 0,
+      currency: typeof row.currency === "string" ? row.currency : "USD",
+    }))
+    .filter((row) => row.cost_date);
+
+  if (rows.length === 0) return null;
+
+  const uploaded =
+    "uploaded" in object && object.uploaded instanceof Date
+      ? object.uploaded.toISOString()
+      : (parsed.generated_at ?? null);
+
+  return { rows, lastEtlAt: uploaded };
 }
 
-/** 30-day total — single number. */
-export async function getTotal30d(): Promise<number> {
-  const sql = `
-    SELECT round(sum(amount_usd), 2) AS total_usd
-    FROM cloudless_analytics.v_aws_cost_by_service
-    WHERE cost_date >= date_format(current_date - interval '30' day, '%Y-%m-%d')
-  `;
-  const { rows } = await runAthenaQuery(sql);
-  return Number.parseFloat(String(rows[0]?.total_usd ?? "0")) || 0;
-}
-
-/**
- * Yesterday's total — single number. Useful for surfacing sudden spikes on
- * the operator's first-thing-Monday glance.
- */
-export async function getYesterdayCost(): Promise<number> {
-  const sql = `
-    SELECT round(sum(amount_usd), 2) AS total_usd
-    FROM cloudless_analytics.v_aws_cost_by_service
-    WHERE cost_date = date_format(current_date - interval '1' day, '%Y-%m-%d')
-  `;
-  const { rows } = await runAthenaQuery(sql);
-  return Number.parseFloat(String(rows[0]?.total_usd ?? "0")) || 0;
-}
-
-/**
- * Most recent ETL upload timestamp — proves the data is fresh. Read from
- * the S3 LastModified of `lake/aws-cost/cost.parquet` rather than from the
- * Athena view (Athena doesn't expose ingestion time).
- *
- * Failure to fetch returns null — the UI shows "—" instead of crashing.
- */
-export async function getLastEtlAt(): Promise<string | null> {
+async function loadFromAthena(): Promise<CostSource | null> {
   try {
+    const { runAthenaQuery } = await import("@/lib/athena");
     const { S3Client, HeadObjectCommand } = await import("@aws-sdk/client-s3");
-    const s3 = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
-    const out = await s3.send(
-      new HeadObjectCommand({
-        Bucket: process.env.ANALYTICS_BUCKET || "cloudless-analytics-data",
-        Key: "lake/aws-cost/cost.parquet",
-      })
+
+    const sql = `
+      SELECT cost_date, service, amount_usd, currency
+      FROM cloudless_analytics.v_aws_cost_by_service
+      WHERE cost_date >= date_format(current_date - interval '60' day, '%Y-%m-%d')
+    `;
+    const { rows } = await runAthenaQuery(sql);
+    const mapped: CostRow[] = rows
+      .map((r) => ({
+        cost_date: String(r.cost_date ?? ""),
+        service: String(r.service ?? "unknown"),
+        amount_usd: Number.parseFloat(String(r.amount_usd ?? "0")) || 0,
+        currency: String(r.currency ?? "USD"),
+      }))
+      .filter((r) => r.cost_date);
+
+    if (mapped.length === 0) return null;
+
+    let lastEtlAt: string | null = null;
+    try {
+      const s3 = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+      const out = await s3.send(
+        new HeadObjectCommand({
+          Bucket: process.env.ANALYTICS_BUCKET || "cloudless-analytics-data",
+          Key: "lake/aws-cost/cost.parquet",
+        })
+      );
+      lastEtlAt = out.LastModified ? out.LastModified.toISOString() : null;
+    } catch {
+      lastEtlAt = null;
+    }
+
+    return { rows: mapped, lastEtlAt };
+  } catch (error) {
+    console.warn(
+      "[cost-analytics] Athena fallback failed:",
+      error instanceof Error ? error.message : error
     );
-    return out.LastModified ? out.LastModified.toISOString() : null;
-  } catch {
     return null;
   }
 }
 
-/** One-shot bundler — the `/api/admin/cost` route returns this shape. */
+async function loadCostSource(): Promise<CostSource> {
+  const db = getAuthDbFromEnv();
+  if (db) {
+    try {
+      const fromD1 = await loadFromD1(db);
+      if (fromD1) return fromD1;
+    } catch (error) {
+      console.warn(
+        "[cost-analytics] D1 read failed:",
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  try {
+    const fromR2 = await loadFromR2();
+    if (fromR2) return fromR2;
+  } catch (error) {
+    console.warn(
+      "[cost-analytics] R2 read failed:",
+      error instanceof Error ? error.message : error
+    );
+  }
+
+  const fromAthena = await loadFromAthena();
+  if (fromAthena) return fromAthena;
+
+  return { rows: [], lastEtlAt: null };
+}
+
+export async function getTopServicesByCost(limit = 10): Promise<CostByServiceRow[]> {
+  const summary = await getCostSummary();
+  return summary.topServices.slice(0, Math.max(1, Math.min(limit, 50)));
+}
+
+export async function getDailyCostTrend(): Promise<DailyCostRow[]> {
+  return (await getCostSummary()).dailyTrend;
+}
+
+export async function getTotal30d(): Promise<number> {
+  return (await getCostSummary()).total_30d;
+}
+
+export async function getYesterdayCost(): Promise<number> {
+  return (await getCostSummary()).yesterday;
+}
+
+export async function getLastEtlAt(): Promise<string | null> {
+  return (await getCostSummary()).lastEtlAt;
+}
+
 export async function getCostSummary(): Promise<CostSummary> {
-  const [total_30d, yesterday, topServices, dailyTrend, lastEtlAt] = await Promise.all([
-    getTotal30d(),
-    getYesterdayCost(),
-    getTopServicesByCost(10),
-    getDailyCostTrend(),
-    getLastEtlAt(),
-  ]);
-  return { total_30d, yesterday, topServices, dailyTrend, lastEtlAt };
+  const source = await loadCostSource();
+  return summarize(source, 10);
 }

@@ -48,6 +48,19 @@ CREATE INDEX idx_stripe_event_type ON stripe_transaction(event_type);
 CREATE INDEX idx_stripe_received_at ON stripe_transaction(received_at);
 CREATE INDEX idx_stripe_event_day ON stripe_transaction(event_day);
 
+-- AWS Cost Explorer daily rows (admin /cost; ETL aws-cost-to-r2)
+CREATE TABLE aws_cost_daily (
+    cost_date TEXT NOT NULL,
+    service TEXT NOT NULL,
+    amount_usd REAL NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    synced_at INTEGER NOT NULL,
+    PRIMARY KEY (cost_date, service)
+);
+
+CREATE INDEX idx_aws_cost_date ON aws_cost_daily(cost_date);
+CREATE INDEX idx_aws_cost_synced ON aws_cost_daily(synced_at);
+
 -- Admin notifications table
 CREATE TABLE admin_notification (
     pk TEXT NOT NULL,
