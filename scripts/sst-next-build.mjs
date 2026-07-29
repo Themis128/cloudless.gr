@@ -6,6 +6,11 @@
  * never emits that legacy file (edge wrapper lives under edge/chunks). A
  * pre-build stub is wiped when `next build` recreates `.next/`, so we keep the
  * stub present for the whole build, then run the OpenNext middleware bridge.
+ *
+ * When `scripts/cf-build-wrapper.sh` already ran `next build` and then invokes
+ * `opennextjs-cloudflare build`, OpenNext calls `pnpm build` again. That second
+ * pass must no-op: re-running `next build` races `rmdir .next/server` (ENOTEMPTY).
+ * Guard: OPEN_NEXT_BUILD_ACTIVE=1 from the wrapper.
  */
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -16,6 +21,19 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const serverDir = path.join(root, ".next", "server");
 const nftPath = path.join(serverDir, "middleware.js.nft.json");
 const middlewareJsPath = path.join(serverDir, "middleware.js");
+
+if (process.env.OPEN_NEXT_BUILD_ACTIVE === "1") {
+  const hasManifest = fs.existsSync(path.join(serverDir, "middleware-manifest.json"));
+  if (hasManifest) {
+    console.warn(
+      "[sst-next-build] OPEN_NEXT_BUILD_ACTIVE — skipping nested next build (reuse existing .next).",
+    );
+    process.exit(0);
+  }
+  console.warn(
+    "[sst-next-build] OPEN_NEXT_BUILD_ACTIVE set but .next/server incomplete — running next build.",
+  );
+}
 
 function ensureMiddlewareStubs() {
   try {
