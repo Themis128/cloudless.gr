@@ -14,6 +14,8 @@ on:
       - "__tests__/**"
       - "sst.config.ts"
       - "next.config.ts"
+      - "open-next.config.ts"
+      - "wrangler.jsonc"
       - "package.json"
       - "pnpm-lock.yaml"
       - "tsconfig.json"
