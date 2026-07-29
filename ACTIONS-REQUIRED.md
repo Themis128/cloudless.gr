@@ -2,7 +2,26 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 21:40 EEST — R2 + account secrets verified set
+# Last Updated: 2026-07-29 21:55 EEST — closed [aw] noise issues; disabled failure-issue spam
+
+---
+
+## ✅ Agentic workflow failure issues (cleared 2026-07-29)
+
+Closed ~28 open `[aw] … failed` issues (Copilot engine HTTP 401 at provider `172.30.0.30:10002`).
+Also closed #1313 (stale ETL lock) — agentic `etl-espocrm-to-r2.md` is gone; regular `etl-espocrm-to-r2.yml` remains.
+
+**To stop new issues:** `safe-outputs.report-failure-as-issue: false` is set on all 9 agentic `.md` workflows (recompiled).
+
+**To make agents work again (operator):** refresh Copilot auth for gh-aw:
+
+```bash
+# Token used by engine: copilot (gh aw secrets bootstrap reports this as present)
+# If runs still 401, rotate COPILOT_GITHUB_TOKEN (fine-grained PAT / Copilot CLI token)
+gh secret set COPILOT_GITHUB_TOKEN --repo Themis128/cloudless.gr
+```
+
+Until that token works against the Copilot provider proxy, scheduled agents will still fail — they just will not open GitHub issues.
 
 ---
 
