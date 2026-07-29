@@ -10,7 +10,7 @@ Account: `278585680617` · Region: `us-east-1`
 | Principal | Type | Used by | Trust / auth |
 |---|---|---|---|
 | `GitHubActionsOIDC` | Role | Deploy workflow ([deploy.yml](../.github/workflows/deploy.yml)) | OIDC, trust restricted to `Themis128/cloudless.gr` |
-| `cloudless-github-actions` | Role | Pi-image workflow ([build-pi-image.yml](../.github/workflows/build-pi-image.yml)) | OIDC, same trust |
+| `cloudless-github-actions` | Role | Pi-image workflow (`deploy-pi.yml` / `build-pi-image` (see `docs/runners.md`)) | OIDC, same trust |
 | `cloudless-ops` | IAM user | Operator (you, locally) | Long-term access keys |
 | (root) | Account root | Bootstrap only | Avoid. See [Security note](#security-note) |
 
@@ -43,7 +43,7 @@ Assumed by the `build pi image` workflow to push images to the
   `:latest` before re-tagging the new image. See the project-aware Claude
   skill `ecr-immutable-tags-ci` (in `~/.claude/skills/`) for the why.
 
-If this permission is ever revoked, the workflow [falls back to SHA-only push](../.github/workflows/build-pi-image.yml) and warns — it does not break.
+If this permission is ever revoked, the workflow falls back to SHA-only push (see `deploy-pi.yml`) and warns — it does not break.
 
 ## `cloudless-ops` — the operator user
 

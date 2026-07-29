@@ -53,6 +53,8 @@ jobs:
             --exclude "^https://github\.com/cloudless-gr"
             --exclude "^https://github\.com/.*/settings"
             --exclude "^https://www\.notion\.so/[0-9a-f]"
+            --exclude "^https://photos\.google\.com/settings"
+            --exclude "modelcontextprotocol\.io/docs/security"
             "README.md"
             "docs/**/*.md"
             ".github/**/*.md"

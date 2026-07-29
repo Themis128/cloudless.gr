@@ -158,6 +158,32 @@ async function main() {
     if (slack && slack.ok && slack.id != null) notificationIDList[slack.id] = true;
   }
 
+  // Preferred when Incoming Webhook is unavailable: bot-token bridge in the app.
+  const BRIDGE_URL = process.env.KUMA_BRIDGE_URL || "";
+  const BRIDGE_TOKEN = process.env.KUMA_BRIDGE_TOKEN || "";
+  if (BRIDGE_URL && BRIDGE_TOKEN) {
+    const bridge = await emit(
+      socket,
+      "addNotification",
+      {
+        name: "Slack via cloudless bridge",
+        active: true,
+        isDefault: true,
+        type: "webhook",
+        webhookURL: BRIDGE_URL,
+        webhookContentType: "json",
+        additionalHeadersEnabled: true,
+        additionalHeaders: JSON.stringify({
+          Authorization: `Bearer ${BRIDGE_TOKEN}`,
+          "Content-Type": "application/json",
+        }),
+      },
+      null
+    );
+    console.log("slack bridge notification", bridge);
+    if (bridge && bridge.ok && bridge.id != null) notificationIDList[bridge.id] = true;
+  }
+
   const monitorIds = [];
   for (const m of MONITORS) {
     const payload = httpMonitor(m);

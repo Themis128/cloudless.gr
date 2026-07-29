@@ -24,15 +24,18 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [ ] `BLOCKED-OPERATOR` Wire Sentry webhook secret (`SENTRY_WEBHOOK_SECRET`) to SSM (+ Pi secret).
   Workflow ready: `.github/workflows/store-sentry-webhook-secret.yml` (dispatch with Client Secret).
   Proof: _pending — paste Internal Integration Client Secret → workflow run ID + SSM version_
-- [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy.
+- [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy (+ Slack bridge).
   Proof 2026-07-29: slug `cloudless`, 12 monitors, ntfy notification id=1; in-cluster
   `GET http://uptime-kuma…/api/status-page/cloudless` → 200; app ConfigMap
-  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack webhook channel still optional
-  (no Incoming Webhook URL in cluster secrets).
-- [x] `PARTIAL` Restore ESP32 Notion page (API reconstruct; history UI may be expired).
+  `KUMA_BASE_URL` + `KUMA_STATUS_PAGE_SLUG=cloudless`. Slack uses
+  `/api/webhooks/kuma` bot bridge (`scripts/kuma-slack-bridge.cjs`) — Incoming
+  Webhook URL not required.
+- [x] `PARTIAL` Restore ESP32 Notion page (API reconstruct; history UI expired).
   Proof 2026-07-29: `scripts/notion-restore-esp32.mjs` rebuilt 16 blocks on page
-  `3677d82c-410a-81e4-a6db-e9ae89578fda` (Devices/Telemetry DBs still empty). Full
-  pre-2026-06-02 history restore remains UI-only if plan retention still has it.
+  `3677d82c-410a-81e4-a6db-e9ae89578fda` (Devices/Telemetry DBs still empty).
+  Re-check 2026-07-29T14:50Z: page live, 16 blocks, `last_edited` = reconstruct
+  time; Notion public API still has **no page-history** — Plus ~30d retention
+  for 2026-06-02 incident is past; reconstruct is the durable baseline.
 - [x] `DEFERRED` Grafana Athena SCP lift.
   Decision 2026-07-29: skip SCP change; R12 `/admin/cost` already renders Athena natively.
   Proof: `src/lib/cost-analytics.ts`, `/admin/cost`, runbook §5.

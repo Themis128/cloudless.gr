@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   if (!rl.ok) return rl.response;
 
   if (!(await isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY"))) {
-    return NextResponse.json({ error: "Calendar booking is not yet available." }, { status: 404 });
+    return NextResponse.json({ error: "Calendar booking is not yet available." }, { status: 503 });
   }
 
   try {

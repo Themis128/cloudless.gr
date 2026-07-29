@@ -27,7 +27,7 @@ This is your entry point for the complete Cognito setup automation system.
 | [tools/cognito-setup-mcp/src/index.ts](../tools/cognito-setup-mcp/src/index.ts) | MCP server for programmatic access | `npx tsx tools/cognito-setup-mcp/src/index.ts` |
 | [tools/cognito-setup-mcp/README.md](../tools/cognito-setup-mcp/README.md) | MCP API documentation | Reference when using MCP tools |
 | [.claude/skills/cognito-setup/](../.claude/skills/cognito-setup/) | Claude Code skill | `/cognito-setup` in Claude Code |
-| [.github/workflows/cognito-setup.yml](../.github/workflows/cognito-setup.yml) | GitHub Actions automation | `gh workflow run cognito-setup.yml` |
+| `cognito-setup.yml` (removed — manage users in Cognito console) | GitHub Actions automation | `# cognito-setup.yml removed — use Cognito console / AWS CLI` |
 
 ### ⚙️ Configuration
 
@@ -54,7 +54,7 @@ pnpm cognito:setup:quick
 
 ```bash
 # Trigger GitHub Actions workflow
-gh workflow run cognito-setup.yml
+# cognito-setup.yml removed — use Cognito console / AWS CLI
 ```
 
 ### For Debugging
@@ -101,9 +101,9 @@ pnpm cognito:setup
 > "I want to automate Cognito setup in our GitHub Actions pipeline"
 
 ```bash
-# The workflow is already created at .github/workflows/cognito-setup.yml
+# The workflow is already created at `cognito-setup.yml` (removed)
 # Just trigger it
-gh workflow run cognito-setup.yml
+# cognito-setup.yml removed — use Cognito console / AWS CLI
 ```
 
 ### Debugging Issues
@@ -139,7 +139,7 @@ cat /tmp/dev-test.log
 
 - CLI: `bash scripts/cognito-setup.sh`
 - pnpm: `pnpm cognito:setup`
-- GitHub Actions: `gh workflow run cognito-setup.yml`
+- GitHub Actions: `# cognito-setup.yml removed — use Cognito console / AWS CLI`
 - MCP: Programmatic access via tools
 - Claude Code: `/cognito-setup` skill
 
