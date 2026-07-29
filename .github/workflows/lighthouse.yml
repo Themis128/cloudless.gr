@@ -85,7 +85,7 @@ jobs:
         id: lighthouse
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
-          configPath: .github/lighthouserc.js
+          configPath: .github/lighthouserc.cjs
           urls: |
             ${{ github.event.inputs.url || 'https://cloudless.gr' }}
             ${{ github.event.inputs.url || 'https://cloudless.gr/en' }}

@@ -70,7 +70,7 @@ jobs:
         id: lhci
         uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # v12
         with:
-          configPath: .github/lighthouserc.js
+          configPath: .github/lighthouserc.cjs
           # Audit the locale-resolved URLs directly. The bare `/services`,
           # `/contact`, `/store` paths all 307-redirect through next-intl
           # middleware to `/en/<path>` (this is by design — `localePrefix:

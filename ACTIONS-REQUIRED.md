@@ -69,8 +69,8 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 | Optional ads/Sentry secrets    | Leave empty if unused                                                                                                                                                                                                                                                  |
 | Cloudflare API token rotation  | If MCP CF tools 401                                                                                                                                                                                                                                                    |
 | ESP32 Notion DBs               | Empty (no hardware data); page reconstruct partial                                                                                                                                                                                                                     |
-| Bot Fight Mode vs GHA crons    | Free BFM cannot be WAF-skipped. Workflow `cloudflare-skip-cron-challenge.yml` turns `bot_fight_mode=off` (needs Zone Settings:Edit). If that 403s/400s, disable **Security → Bots → Bot Fight Mode** in the CF dashboard so LinkedIn/postiz crons reach `/api/cron/*`. |
 | Workers Free (Pi proxy)        | OpenNext SSR is ~5.5 MiB gzip — **cannot** deploy on Free. `cloudflare-deploy.yml` deploys tiny `workers/pi-origin-proxy` as `cloudless2` and points Tunnel `pi-origin` → `http://192.168.1.128:30300`. App code: `deploy-pi.yml`. Do **not** upgrade to Paid. Optional: `workflow_dispatch` + `try_opennext=true` only to re-measure. |
+| Bot Fight Mode vs GHA crons    | Free BFM cannot be WAF-skipped. Run `cloudflare-skip-cron-challenge.yml` (API `bot_fight_mode=off`) or disable **Security → Bots → Bot Fight Mode** in the CF dashboard so LinkedIn/postiz crons reach `/api/cron/*`. |
 
 ---
 
