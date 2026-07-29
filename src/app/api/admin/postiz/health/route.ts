@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
         headers: { "Content-Type": "text/plain; version=0.0.4" },
       });
     }
-    return NextResponse.json({ ...snapshot, error: "postiz_not_configured" }, { status: 404 });
+    return NextResponse.json({ ...snapshot, error: "postiz_not_configured" }, { status: 503 });
   }
 
   const startedAt = Date.now();
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       }
       return NextResponse.json(
         { ...snapshot, configured: false, error: "postiz_not_configured" },
-        { status: 404 }
+        { status: 503 }
       );
     }
     if (err instanceof PostizApiError) {

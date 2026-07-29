@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const key = url.searchParams.get("key");
 
   if (!db) {
-    return NextResponse.json({ error: "Database not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
   if (key) {

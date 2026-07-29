@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID"))) {
-    return NextResponse.json({ error: "Notion Docs not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Notion Docs not configured" }, { status: 503 });
   }
 
   const docs = await getDocs();

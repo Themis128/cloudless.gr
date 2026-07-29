@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   // Get D1 binding
   const env = process.env as unknown as { AUTH_DB: AuthDatabase };
   if (!env.AUTH_DB) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
   const db = env.AUTH_DB;
 

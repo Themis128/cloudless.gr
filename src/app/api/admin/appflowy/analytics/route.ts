@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events, count: events.length, days });
   } catch (err) {
     if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 404 });
+      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 503 });
     }
     return NextResponse.json({ error: "Failed to fetch analytics" }, { status: 500 });
   }

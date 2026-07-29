@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
   // Set the cookie so the freshly-created workspace becomes active for
   // subsequent requests on this session. Mirrors localStorage in the client.
   // E2E contract expects 200 (not 201) for workspace creation.
-  const res = NextResponse.json({ workspace }, { status: 200 });
+  const res = NextResponse.json({ workspace }, { status: 201 });
   res.cookies.set({
     name: WORKSPACE_COOKIE,
     value: workspace.id,

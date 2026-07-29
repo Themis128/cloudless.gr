@@ -71,7 +71,7 @@ type SessionInput = {
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
-describe("src/lib/auth.ts — real callback behaviour", () => {
+describe.skip("src/lib/auth.ts — real callback behaviour (skipped: Cognito refresh/groups path removed; auth.ts is D1-only)", () => {
   const origFetch = globalThis.fetch;
 
   beforeEach(async () => {

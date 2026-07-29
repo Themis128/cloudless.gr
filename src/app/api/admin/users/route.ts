@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ users, count: users.length, provider: "cognito" });
     }
 
-    return NextResponse.json({ error: "Cognito not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Cognito not configured" }, { status: 503 });
   } catch (err) {
     console.error("Failed to list users:", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
     }
 
-    return NextResponse.json({ error: "Cognito not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Cognito not configured" }, { status: 503 });
   } catch (err) {
     const status = (err as { status?: number }).status ?? 500;
     console.error("Failed to modify user:", err instanceof Error ? err.message : String(err));

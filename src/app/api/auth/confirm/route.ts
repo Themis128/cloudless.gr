@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email and code required" }, { status: 400 });
 
   const clientId = process.env.COGNITO_CLIENT_ID;
-  if (!clientId) return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
+  if (!clientId) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
 
   try {
     await makeClient().send(

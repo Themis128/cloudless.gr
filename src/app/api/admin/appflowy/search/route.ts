@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ results, total: results.length });
   } catch (err) {
     if (err instanceof AppFlowyNotConfiguredError) {
-      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 404 });
+      return NextResponse.json({ error: "AppFlowy not configured" }, { status: 503 });
     }
     return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }

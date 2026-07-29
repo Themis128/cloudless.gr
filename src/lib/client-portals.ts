@@ -27,7 +27,7 @@ function getClient(): SSMClient {
 // E2E fallback:
 // Playwright runs in environments without AWS credentials, but we still want
 // admin flows to be testable. In those cases, persist portals in-memory.
-const E2E_MODE = process.env.NEXT_PUBLIC_E2E === "1" || process.env.NODE_ENV === "test";
+const E2E_MODE = process.env.NEXT_PUBLIC_E2E === "1";
 let e2ePortals: ClientPortal[] = [];
 
 export interface PortalComment {

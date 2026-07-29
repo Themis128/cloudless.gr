@@ -21,14 +21,10 @@ describe("R14 Sentry environment tagging", () => {
     expect(deploy).toContain("NEXT_PUBLIC_SENTRY_ENVIRONMENT: prod");
   });
 
-  it("sets pi-standby Sentry tags in Pi workflows", () => {
-    for (const workflow of [
-      ".github/workflows/deploy-pi.yml",
-      ".github/workflows/build-pi-image.yml",
-    ]) {
-      const body = read(workflow);
-      expect(body).toContain("SENTRY_ENVIRONMENT=pi-standby");
-      expect(body).toContain("NEXT_PUBLIC_SENTRY_ENVIRONMENT=pi-standby");
-    }
+  it("sets pi-standby Sentry tags in the hostpath Pi manifest", () => {
+    // deploy-pi.yml / build-pi-image.yml were removed (hostpath standalone).
+    // Pi standby env is baked into the k8s ConfigMap instead.
+    const hostpath = read("k8s/cloudless-app-hostpath.yaml");
+    expect(hostpath).toContain('SENTRY_ENVIRONMENT: "pi-standby"');
   });
 });

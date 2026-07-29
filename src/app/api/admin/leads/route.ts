@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     if (!espocrmConfigured && pending.length === 0) {
       return NextResponse.json(
         { error: "No lead source configured (EspoCRM key missing, no portal leads)." },
-        { status: 404 }
+        { status: 503 }
       );
     }
 

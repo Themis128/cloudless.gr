@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(uploaded, { status: 201 });
   } catch (err) {
     if (err instanceof PostizNotConfiguredError) {
-      return NextResponse.json({ error: "postiz_not_configured" }, { status: 404 });
+      return NextResponse.json({ error: "postiz_not_configured" }, { status: 503 });
     }
     if (err instanceof PostizApiError) {
       return NextResponse.json(

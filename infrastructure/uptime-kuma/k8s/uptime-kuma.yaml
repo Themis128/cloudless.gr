@@ -60,7 +60,7 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: Recreate     # SQLite — must not have two pods touching the same DB file
+    type: Recreate # SQLite — must not have two pods touching the same DB file
   selector:
     matchLabels: { app: uptime-kuma }
   template:
@@ -68,7 +68,7 @@ spec:
       labels: { app: uptime-kuma }
     spec:
       nodeSelector:
-        kubernetes.io/hostname: omv     # Pi 5 — Pi 4 (omv-ha) is full
+        kubernetes.io/hostname: omv # Pi 5 — Pi 4 (omv-ha) is full
       containers:
         - name: uptime-kuma
           # Pinned major + minor for reproducibility. v2 is the current
@@ -102,7 +102,7 @@ spec:
             periodSeconds: 30
           resources:
             requests: { cpu: 50m, memory: 96Mi }
-            limits:   { cpu: 500m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 256Mi }
       volumes:
         - name: data
           persistentVolumeClaim:

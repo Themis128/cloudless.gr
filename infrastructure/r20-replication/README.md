@@ -1,15 +1,16 @@
 # R20: Postgres logical replication subscriber (AppFlowy → AWS)
-#
-# Constraint: existing AWS services only (Lambda + DynamoDB). No EC2/RDS.
-#
-# Flow:
-#   1. AppFlowy postgres publishes logical decoding via wal2json.
-#   2. In-cluster relay CronJob / sidecar posts change batches to
-#      POST /api/admin/ops/replication (or a dedicated Lambda URL).
-#   3. Lambda subscriber writes normalized rows into DynamoDB.
-#
-# This tree is the AWS-side subscriber + postgres publisher config.
-# Full RPO-seconds HA is optional; daily R10 backups remain the baseline.
+
+Constraint: existing AWS services only (Lambda + DynamoDB). No EC2/RDS.
+
+Flow:
+
+1. AppFlowy postgres publishes logical decoding via wal2json.
+2. In-cluster relay CronJob / sidecar posts change batches to
+   `POST /api/admin/ops/replication` (or a dedicated Lambda URL).
+3. Lambda subscriber writes normalized rows into DynamoDB.
+
+This tree is the AWS-side subscriber + postgres publisher config.
+Full RPO-seconds HA is optional; daily R10 backups remain the baseline.
 
 ## Files
 

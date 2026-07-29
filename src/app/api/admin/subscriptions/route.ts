@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const stripe = await getStripe();
-    if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 404 });
+    if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") ?? "active";
     const limit = Math.min(Number(searchParams.get("limit") ?? "50"), 100);
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const stripe = await getStripe();
-    if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 404 });
+    if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
 
     if (action === "portal" && customerId) {
       const baseUrl =
