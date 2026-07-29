@@ -88,7 +88,7 @@ export default function AdminUsersPage() {
       const data = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
 
-      setActionMsg(data.message);
+      setActionMsg(data.message ?? null);
       // Refresh the list
       await fetchUsers();
     } catch (err) {
