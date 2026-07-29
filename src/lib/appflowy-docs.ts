@@ -179,8 +179,8 @@ export async function getDocContentWithToc(docId: string): Promise<AppFlowyDocCo
   }
 
   const document = await getDocument(workspaceId, docId);
-  const markdown = extractDocText(document);
-  const html = await Promise.resolve(markdownToHtml(markdown));
+  const markdown = await extractDocText(document);
+  const html = await markdownToHtml(markdown);
   const toc = extractTocFromMarkdown(markdown);
 
   return {

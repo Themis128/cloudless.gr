@@ -114,8 +114,8 @@ export async function getPosts(): Promise<AppFlowyPost[]> {
       let html = "";
       try {
         const doc = await getDocument(workspaceId, view.view_id);
-        const text = extractDocText(doc);
-        html = markdownToHtml(text);
+        const text = await extractDocText(doc);
+        html = await markdownToHtml(text);
       } catch {
         html = "";
       }

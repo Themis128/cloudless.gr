@@ -97,11 +97,11 @@ async function handleTokenRefresh(token: JWT, env: AuthEnv, now: number): Promis
 
   try {
     // Check if session exists in D1
-    const session = await AUTH_DB.prepare("SELECT expires_at FROM sessions WHERE user_id = ?")
+    const session = (await AUTH_DB.prepare("SELECT expires_at FROM sessions WHERE user_id = ?")
       .bind(userId)
-      .first();
+      .first()) as { expires_at?: number } | null;
 
-    if (!session || session.expires_at <= now) {
+    if (!session || (session.expires_at ?? 0) <= now) {
       token.error = REFRESH_TOKEN_ERROR;
       return token;
     }

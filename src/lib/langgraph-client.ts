@@ -1,9 +1,12 @@
-/** * LangGraph Agent Server client stub * * This stub implementation is used when @langchain/langgraph-sdk is not installed. * It provides the same API surface so routes don't crash, but throws runtime * errors if actually called. */ export type {
-  Thread,
-  ThreadState,
-  Run,
-  Assistant,
-};
+/**
+ * LangGraph Agent Server client stub
+ *
+ * This stub implementation is used when @langchain/langgraph-sdk is not installed.
+ * It provides the same API surface so routes don't crash, but throws runtime
+ * errors if actually called.
+ */
+export type { Thread, ThreadState, Run, Assistant } from "@langchain/langgraph-sdk";
+
 export interface StreamRunOptions {
   streamMode?: ("messages" | "updates" | "values" | "events" | "debug" | "custom")[];
   interruptBefore?: string[] | "*";
