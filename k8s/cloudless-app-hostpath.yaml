@@ -22,7 +22,10 @@ data:
   N8N_API_URL: "https://n8n.cloudless.gr"
   APPFLOWY_API_URL: "https://appflowy.cloudless.gr"
   MEILI_HOST: "https://meili.cloudless.gr"
-  NTFY_BASE_URL: "https://ntfy.cloudless.gr"
+  # In-cluster only — public https://ntfy.cloudless.gr is CF-challenged from pods.
+  # cloudless-secrets may also set NTFY_BASE_URL (secretRef wins over this ConfigMap).
+  NTFY_BASE_URL: "http://ntfy.ntfy.svc.cluster.local"
+  ADMIN_PUSH_VIA_NTFY: "1"
   GRAFANA_URL: "https://grafana.cloudless.gr"
   KUMA_URL: "https://kuma.cloudless.gr"
   KUMA_BASE_URL: "http://uptime-kuma.uptime-kuma.svc.cluster.local:3001"

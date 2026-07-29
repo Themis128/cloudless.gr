@@ -14,12 +14,33 @@ When resumed, follow `skills/cloudflare-token-doctor/SKILL.md` and
 
 ## 2. Sentry webhook secret — DONE (2026-07-29)
 
-**Closes:** R8 inbound issue events → `/api/webhooks/sentry`.
+**Closes:** R8 inbound issue events → `/api/webhooks/sentry` → `notifyAdmin()`.
 
 Stored SSM `/cloudless/production/SENTRY_WEBHOOK_SECRET` version **1** via
 workflow run `30468613018`. Pi `cloudless-secrets` patched locally (CI
-kubectl TLS against stale Tailscale kubeconfig failed). Signed smoke POST
-returned HTTP 200.
+kubectl TLS against stale Tailscale kubeconfig failed).
+
+**Pi fan-out (verified 2026-07-29):**
+
+| Key | Where | Value / note |
+|-----|--------|--------------|
+| `SENTRY_WEBHOOK_SECRET` | SSM + `cloudless-secrets` | integration Client Secret |
+| `SLACK_OPS_USERS` | `cloudless-secrets` (env wins over SSM) | Slack member ID(s), comma-separated |
+| `ADMIN_PUSH_VIA_NTFY` | ConfigMap + secret | `1` |
+| `NTFY_BASE_URL` | **Pi secret** must be in-cluster | `http://ntfy.ntfy.svc.cluster.local` — `https://ntfy.cloudless.gr` returns Cloudflare 403 to the pod |
+| `NTFY_TOPIC` | secret | `cloudless-ops` |
+
+Do **not** put the cluster DNS URL into SSM for Lambda; Lambda should keep the
+public tunnel + `NTFY_TOKEN`. Hostpath ConfigMap mirror:
+`k8s/cloudless-app-hostpath.yaml` (`NTFY_BASE_URL` + `ADMIN_PUSH_VIA_NTFY`).
+Secret keys still override ConfigMap when both define the same name.
+
+Smoke (from app pod):
+
+```bash
+# signed POST → expect slack.ok + ntfy.ok
+# (HMAC with SENTRY_WEBHOOK_SECRET over body; header sentry-hook-signature)
+```
 
 Re-store / rotate later:
 

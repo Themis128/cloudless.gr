@@ -25,8 +25,10 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
   Workflow: `.github/workflows/store-sentry-webhook-secret.yml` run `30468613018` → SSM version **1**.
   Cluster patch failed in CI (stale kubeconfig TLS); completed locally 2026-07-29:
   `cloudless-secrets` key present (len 64) + `cloudless-app` rollout OK.
-  Proof 2026-07-29: signed in-cluster POST → HTTP 200 `{ ok: true }` (notifyAdmin
-  returned slack/ntfy soft-skips; issue delivery path verified).
+  Ops fan-out live 2026-07-29: `SLACK_OPS_USERS=U09AF5VU7LY`, `ADMIN_PUSH_VIA_NTFY=1`,
+  Pi `NTFY_BASE_URL=http://ntfy.ntfy.svc.cluster.local` (public tunnel hits CF challenge).
+  Proof: signed POST → `{ ok: true, result: { slack: { ok: true }, ntfy: { ok: true } } }`;
+  Slack DM + ntfy topic `cloudless-ops` both received.
 - [x] `DONE` Create Kuma status page and wire monitor alerts to ntfy (+ Slack bridge).
   Proof 2026-07-29: slug `cloudless`, 12 monitors, ntfy notification id=1; in-cluster
   `GET http://uptime-kuma…/api/status-page/cloudless` → 200; app ConfigMap
@@ -97,5 +99,5 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
 ## Notes
 
 - `docs/master-todo-list.md` remains the detailed ledger (rationale, history, phase context).
-- Operator: CF rotation skipped; Sentry secret stored (SSM v1 + Pi secret); Kuma done; ESP32 partial reconstruct done.
+- Operator: CF rotation skipped; Sentry secret + Slack/ntfy fan-out verified; Kuma done; ESP32 partial reconstruct done.
 - This file is intentionally concise and execution-focused to avoid roadmap drift.
