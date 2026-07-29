@@ -48,7 +48,7 @@ export async function GET() {
   } catch (err) {
     console.error("[Docs API] Failed to fetch docs:", err);
     return NextResponse.json(
-      { docs: [], source: "static", fallbackReason: "notion-error" },
+      { docs: [], source: "static", fallbackReason: "cms-error" },
       { headers: { "x-cms-source": "static" } }
     );
   }

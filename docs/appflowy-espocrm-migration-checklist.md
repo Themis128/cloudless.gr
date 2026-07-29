@@ -45,13 +45,30 @@ Response headers:
 node scripts/migrate-notion-to-appflowy.mjs --dry-run
 
 # Live import (requires APPFLOWY_* + NOTION_API_KEY)
+# Uses page_data on create (not /doc/:id — 404 on our AppFlowy build).
 node scripts/migrate-notion-to-appflowy.mjs
 
-# Parity probe against a running app
-CMS_PARITY_BASE_URL=https://cloudless.gr pnpm cms:parity
+# Backfill bodies for titled pages created without content
+node scripts/backfill-appflowy-cms-bodies.mjs --dry-run
+node scripts/backfill-appflowy-cms-bodies.mjs
+
+# Parity probe against a running app (local dual-run server)
+CMS_PARITY_BASE_URL=http://localhost:4000 CMS_PARITY_REQUIRE_APPFLOWY=1 pnpm cms:parity
+
+# Production — Cloudflare bot challenge blocks anonymous cloudless.gr probes.
+# Use the Fly HA proxy (bypasses the challenge) or an Access service token:
+CMS_PARITY_BASE_URL=https://cloudless-proxy.fly.dev CMS_PARITY_REQUIRE_APPFLOWY=1 pnpm cms:parity
+
+# Optional Access service token (when probing hosts behind Cloudflare Access):
+CF_ACCESS_CLIENT_ID=… CF_ACCESS_CLIENT_SECRET=… \
+  CMS_PARITY_BASE_URL=https://cloudless.gr CMS_PARITY_REQUIRE_APPFLOWY=1 pnpm cms:parity
 ```
 
 Promote AppFlowy as primary only when parity counts/slugs match and public pages render correctly.
+
+**Auth note:** `APPFLOWY_PASSWORD` must match k8s `appflowy-secrets` / `GOTRUE_ADMIN_PASSWORD` (not a stale longer `.env` value). Prefer LAN NodePort (`http://<omv-ip>:30810`) when `appflowy.cloudless.gr` returns a Cloudflare bot challenge.
+
+**Prod config:** Lambda/Pi must have `APPFLOWY_API_URL`, `APPFLOWY_EMAIL`, `APPFLOWY_PASSWORD`, and `APPFLOWY_JWT_SECRET` from SSM (`/cloudless/production/APPFLOWY_*`). Without them the dual-run path falls back to Notion/static.
 
 ## 4) CRM semantic standardization
 

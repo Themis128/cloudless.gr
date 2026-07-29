@@ -23,7 +23,7 @@ export async function GET(
   const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID");
 
   if (!appFlowyConfigured && !notionConfigured) {
-    return NextResponse.json({ error: "Docs not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Docs not configured" }, { status: 503 });
   }
 
   const { slug } = await params;

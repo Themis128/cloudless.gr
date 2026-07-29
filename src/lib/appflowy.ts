@@ -49,6 +49,10 @@ interface AppFlowyConfig {
 }
 
 let cachedUserToken: { token: string; expiresAtMs: number } | null = null;
+const VIEWS_TTL_MS = 60_000;
+const WORKSPACES_TTL_MS = 60_000;
+let cachedWorkspaces: { value: AppFlowyWorkspace[]; expiresAtMs: number } | null = null;
+const cachedViewsByWorkspace = new Map<string, { value: AppFlowyView[]; expiresAtMs: number }>();
 
 async function getAppFlowyConfig(): Promise<AppFlowyConfig> {
   const cfg = await getConfig();
@@ -187,10 +191,18 @@ export interface AppFlowyUserSummary {
 }
 
 export async function listAllWorkspaces(): Promise<AppFlowyWorkspace[]> {
+  const now = Date.now();
+  if (cachedWorkspaces && cachedWorkspaces.expiresAtMs > now) {
+    return cachedWorkspaces.value;
+  }
+
   try {
     // User API (works on self-hosted cloudless build)
     const r = await callThrowing<{ data: AppFlowyWorkspace[] }>("/workspace");
-    if (r.data?.length) return r.data;
+    if (r.data?.length) {
+      cachedWorkspaces = { value: r.data, expiresAtMs: now + WORKSPACES_TTL_MS };
+      return r.data;
+    }
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) return [];
     // Fall through to admin surface when user path fails.
@@ -198,7 +210,9 @@ export async function listAllWorkspaces(): Promise<AppFlowyWorkspace[]> {
 
   try {
     const r = await callThrowing<{ data: AppFlowyWorkspace[] }>("/admin/workspace");
-    return r.data ?? [];
+    const value = r.data ?? [];
+    cachedWorkspaces = { value, expiresAtMs: now + WORKSPACES_TTL_MS };
+    return value;
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) return [];
     throw e;
@@ -286,14 +300,28 @@ function flattenFolderViews(node: unknown, out: AppFlowyView[] = []): AppFlowyVi
 }
 
 export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyView[]> {
+  const now = Date.now();
+  const cached = cachedViewsByWorkspace.get(workspaceId);
+  if (cached && cached.expiresAtMs > now) {
+    return cached.value;
+  }
+
   try {
-    const r = await callThrowing<{ data: unknown }>(`/workspace/${workspaceId}/folder?depth=10`);
+    const r = await callThrowing<{ data: unknown }>(
+      `/workspace/${workspaceId}/folder?depth=10`,
+      { timeoutMs: 30_000 }
+    );
     const views = flattenFolderViews(r.data);
     if (views.length > 0) {
       // Deduplicate by view_id (folder walk can revisit parents).
       const byId = new Map<string, AppFlowyView>();
       for (const v of views) byId.set(v.view_id, v);
-      return Array.from(byId.values());
+      const value = Array.from(byId.values());
+      cachedViewsByWorkspace.set(workspaceId, {
+        value,
+        expiresAtMs: now + VIEWS_TTL_MS,
+      });
+      return value;
     }
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) return [];
@@ -301,13 +329,52 @@ export async function listAllViewsDeep(workspaceId: string): Promise<AppFlowyVie
   }
 
   try {
-    const r = await callThrowing<{ data: AppFlowyView[] }>(`/admin/workspace/${workspaceId}/views`);
-    return r.data ?? [];
+    const r = await callThrowing<{ data: AppFlowyView[] }>(
+      `/admin/workspace/${workspaceId}/views`
+    );
+    const value = r.data ?? [];
+    cachedViewsByWorkspace.set(workspaceId, {
+      value,
+      expiresAtMs: now + VIEWS_TTL_MS,
+    });
+    return value;
   } catch (e) {
     if (e instanceof AppFlowyNotConfiguredError) return [];
     throw e;
   }
 }
+
+/** Keys adapters parse from CMS page bodies (longest-first to avoid Price⊂StripePriceId). */
+const CMS_FIELD_KEYS = [
+  "StripePriceId",
+  "Description",
+  "CoverImage",
+  "Challenge",
+  "Solution",
+  "Results",
+  "Category",
+  "Features",
+  "Industry",
+  "Summary",
+  "Company",
+  "Service",
+  "Featured",
+  "Published",
+  "Locale",
+  "Answer",
+  "Client",
+  "Rating",
+  "Quote",
+  "Price",
+  "Order",
+  "Slug",
+  "Icon",
+  "Name",
+  "Role",
+  "Tags",
+  "Date",
+  "CTA",
+] as const;
 
 function extractStringsFromCollab(encoded: unknown): string {
   if (!encoded) return "";
@@ -326,7 +393,35 @@ function extractStringsFromCollab(encoded: unknown): string {
     return "";
   }
 
-  const matches = blob.toString("latin1").match(/[\x20-\x7e]{4,}/g) ?? [];
+  const latin = blob.toString("latin1");
+  // Markdown `**Key**: value` is stored as rich-text bold(Key) + ": value".
+  // Reconstruct from CRDT bytes where the key string sits near `: value'`.
+  const fields: string[] = [];
+  for (const key of CMS_FIELD_KEYS) {
+    const keyRe = new RegExp(`(?:^|[^A-Za-z])${key}(?![A-Za-z])`, "g");
+    let match: RegExpExecArray | null;
+    while ((match = keyRe.exec(latin)) !== null) {
+      const window = latin.slice(match.index + match[0].length, match.index + match[0].length + 900);
+      const valueMatch = /:\s*([^']{1,800})'/.exec(window);
+      if (valueMatch?.[1]) {
+        const value = Buffer.from(valueMatch[1], "latin1")
+          .toString("utf8")
+          .replace(/[\u0000-\u001f\u007f-\u009f\ufffd]+/g, "")
+          .replace(/[^\w\s.,;:!?'"€$%()/%+\-–—/]+$/u, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (value) {
+          fields.push(`**${key}**: ${value}`);
+          break;
+        }
+      }
+    }
+  }
+  if (fields.length > 0) {
+    return Array.from(new Set(fields)).join("\n");
+  }
+
+  const matches = latin.match(/[\x20-\x7e]{4,}/g) ?? [];
   const skip = new Set([
     "data",
     "document",
@@ -342,17 +437,21 @@ function extractStringsFromCollab(encoded: unknown): string {
     "external_type",
     "paragraph",
     "text",
+    "bold",
+    "true",
+    "null",
   ]);
-  const meaningful = matches.filter((s) => {
-    if (skip.has(s)) return false;
-    if (s.startsWith("$") || s.startsWith("w$")) return false;
-    if (/^[A-Za-z0-9_-]{6,14}\(?$/.test(s)) return false; // CRDT block ids
-    // Keep markdown field lines and real prose only.
-    if (/^\*\*[A-Za-z][^*]+\*\*:/.test(s)) return true;
-    if (s.includes(" ") && s.length >= 24) return true;
-    return false;
-  });
-  return meaningful.join("\n");
+  return matches
+    .map((raw) => raw.replace(/'+$/g, "").trim())
+    .filter((s) => {
+      if (!s || skip.has(s)) return false;
+      if (s.startsWith("$") || s.startsWith("w$")) return false;
+      if (/^[A-Za-z0-9_-]{6,14}\(?$/.test(s)) return false;
+      if (/^\*\*[A-Za-z][^*]+\*\*:/.test(s)) return true;
+      if (s.includes(" ") && s.length >= 24) return true;
+      return false;
+    })
+    .join("\n");
 }
 
 export async function getDocument(workspaceId: string, viewId: string): Promise<unknown> {
