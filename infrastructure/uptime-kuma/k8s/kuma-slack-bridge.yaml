@@ -1,0 +1,83 @@
+# Kuma → Slack bot-token bridge (Incoming Webhooks revoked 2026-05-25).
+#
+# Live path until Pi hostpath standalone includes POST /api/webhooks/kuma.
+# Apply:
+#   kubectl -n cloudless get secret cloudless-secrets \
+#     -o jsonpath='{.data.ADMIN_ALERT_SECRET}' | base64 -d > /tmp/aas
+#   kubectl -n cloudless get secret cloudless-secrets \
+#     -o jsonpath='{.data.SLACK_BOT_TOKEN}' | base64 -d > /tmp/sbt
+#   kubectl -n uptime-kuma create secret generic kuma-slack-bridge \
+#     --from-file=ADMIN_ALERT_SECRET=/tmp/aas \
+#     --from-file=SLACK_BOT_TOKEN=/tmp/sbt \
+#     --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl -n uptime-kuma create configmap kuma-slack-bridge-src \
+#     --from-file=server.js=infrastructure/uptime-kuma/k8s/kuma-slack-bridge.js \
+#     --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl apply -f infrastructure/uptime-kuma/k8s/kuma-slack-bridge.yaml
+#
+# Register notification (from uptime-kuma pod):
+#   KUMA_BRIDGE_URL=http://kuma-slack-bridge.uptime-kuma.svc.cluster.local:8080/ \
+#   KUMA_BRIDGE_TOKEN=<ADMIN_ALERT_SECRET> node scripts/kuma-slack-bridge.cjs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuma-slack-bridge
+  namespace: uptime-kuma
+  labels:
+    app: kuma-slack-bridge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kuma-slack-bridge
+  template:
+    metadata:
+      labels:
+        app: kuma-slack-bridge
+    spec:
+      containers:
+        - name: bridge
+          image: node:22-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["node", "/src/server.js"]
+          ports:
+            - { containerPort: 8080, name: http }
+          env:
+            - name: ADMIN_ALERT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: kuma-slack-bridge
+                  key: ADMIN_ALERT_SECRET
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: kuma-slack-bridge
+                  key: SLACK_BOT_TOKEN
+            - name: SLACK_CHANNEL
+              value: "#general"
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+          volumeMounts:
+            - { name: src, mountPath: /src }
+      volumes:
+        - name: src
+          configMap:
+            name: kuma-slack-bridge-src
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuma-slack-bridge
+  namespace: uptime-kuma
+  labels:
+    app: kuma-slack-bridge
+spec:
+  type: ClusterIP
+  selector:
+    app: kuma-slack-bridge
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
