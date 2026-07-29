@@ -298,9 +298,9 @@ export async function getConfig<T extends Record<string, string> = Record<string
     const d1Config = await getD1Config(db);
     // Merge with environment variables (secrets take precedence)
     const envConfig = buildConfigFromEnv();
-    return { ...d1Config, ...envConfig } as T;
+    return { ...d1Config, ...envConfig } as unknown as T;
   }
 
   // In development or when no D1 binding, use environment
-  return buildConfigFromEnv() as T;
+  return buildConfigFromEnv() as unknown as T;
 }

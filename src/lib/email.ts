@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
+
+interface CloudflareEmailBinding {
+  send: (message: Record<string, unknown>) => Promise<void>;
+}
+
+interface WorkersGlobal {
+  caches?: CacheStorage;
+  __ENV__?: { EMAIL_BINDING?: CloudflareEmailBinding };
+}
+
 const isWorkers =
-  typeof (globalThis as unknown as Record<string, unknown>).caches !== "undefined" &&
+  typeof (globalThis as unknown as WorkersGlobal).caches !== "undefined" &&
   typeof process === "undefined";
 
 /**
@@ -21,14 +31,14 @@ export async function sendEmail(options: {
 }) {
   if (isWorkers) {
     // Cloudflare Workers email binding
-    const email = globalThis.__ENV__.EMAIL_BINDING;
+    const email = (globalThis as unknown as WorkersGlobal).__ENV__?.EMAIL_BINDING;
     if (!email) {
       console.warn("[email-sender] No email binding available. Skipping send.");
       return NextResponse.json({ error: "Email service not configured" }, { status: 503 });
     }
 
     try {
-      const headers = {};
+      const headers: Record<string, string> = {};
       if (options.listUnsubscribeUrl) {
         headers["List-Unsubscribe"] = `<${options.listUnsubscribeUrl}>`;
       }
@@ -49,7 +59,7 @@ export async function sendEmail(options: {
     // AWS SES or R2-based email
     try {
       const cfg = await getConfig();
-      const client = new SESv2Client({ region: cfg.AWS_REGION || "eu-west-1" });
+      const client = new SESv2Client({ region: cfg.AWS_SES_REGION || "eu-west-1" });
 
       const command = new SendEmailCommand({
         Destination: {
@@ -62,14 +72,13 @@ export async function sendEmail(options: {
               Text: { Data: options.text },
             },
             Subject: { Data: options.subject },
+            Headers: options.listUnsubscribeUrl
+              ? [{ Name: "List-Unsubscribe", Value: `<${options.listUnsubscribeUrl}>` }]
+              : undefined,
           },
         },
         FromEmailAddress: `${options.fromLabel || "Cloudless"} <noreply@cloudless.gr>`,
         ReplyToAddresses: options.replyTo ? [options.replyTo] : undefined,
-        ReturnPath: "noreply@cloudless.gr",
-        Headers: options.listUnsubscribeUrl
-          ? [{ Name: "List-Unsubscribe", Value: `<${options.listUnsubscribeUrl}>` }]
-          : undefined,
       });
 
       await client.send(command);

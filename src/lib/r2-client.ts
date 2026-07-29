@@ -64,7 +64,7 @@ export async function serveStaticAsset(
   if (!asset) return null;
 
   const headers = new Headers();
-  asset.writeHttpMetadata(headers);
+  asset.writeHttpMetadata(headers as unknown as import("@cloudflare/workers-types").Headers);
   headers.set("Cache-Control", `public, max-age=${opts.cacheSeconds || 31536000}, immutable`);
 
   // Set CORS headers
@@ -92,7 +92,7 @@ export async function serveStaticAsset(
     }
   }
 
-  return new Response(asset.body, { headers });
+  return new Response(asset.body as unknown as BodyInit, { headers });
 }
 
 // List objects in an R2 bucket (for admin operations)

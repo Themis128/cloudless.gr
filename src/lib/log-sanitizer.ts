@@ -32,17 +32,11 @@ const SENSITIVE_PATTERNS = [
 ];
 
 export function sanitizeLog(input: string, maxLength = 500): string {
-  return (
-    input
-      // First mask sensitive patterns
-      .replace(SENSITIVE_PATTERNS, (match) => `[REDACTED:${match.length}]`)
-      // Then remove control characters and format specifiers
-      .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
-      .replace(/%/g, "") // Remove format specifier marker
-      .replace(/\r?\n/g, " ") // Replace newlines with spaces
-      .slice(0, maxLength)
-  );
-  return input
+  let sanitized = input;
+  for (const pattern of SENSITIVE_PATTERNS) {
+    sanitized = sanitized.replace(pattern, (match) => `[REDACTED:${match.length}]`);
+  }
+  return sanitized
     .replace(/[\x00-\x1F\x7F]/g, "") // Remove control characters
     .replace(/%/g, "") // Remove format specifier marker
     .replace(/\r?\n/g, " ") // Replace newlines with spaces

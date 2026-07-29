@@ -8,6 +8,30 @@ async function getACConfig(): Promise<{ url: string; token: string }> {
   return { url: url.replace(/\/$/, ""), token };
 }
 
+interface ACMetaResponse {
+  meta?: { total?: string };
+}
+
+interface ACCampaignsResponse extends ACMetaResponse {
+  campaigns?: ACCampaign[];
+}
+
+interface ACCampaignResponse {
+  campaign?: ACCampaign;
+}
+
+interface ACContactsResponse extends ACMetaResponse {
+  contacts?: ACContact[];
+}
+
+interface ACListsResponse extends ACMetaResponse {
+  lists?: ACList[];
+}
+
+interface ACAutomationsResponse {
+  automations?: ACAutomation[];
+}
+
 async function acFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const { url, token } = await getACConfig();
   return fetch(`${url}/api/3${path}`, {
@@ -86,7 +110,7 @@ export async function listCampaigns(limit = 20): Promise<ACCampaign[]> {
   try {
     const res = await acFetch(`/campaigns?limit=${limit}&orders[sdate]=DESC`);
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as ACCampaignsResponse;
     return data.campaigns ?? [];
   } catch {
     return [];
@@ -97,7 +121,7 @@ export async function getCampaign(id: string): Promise<ACCampaign | null> {
   try {
     const res = await acFetch(`/campaigns/${id}`);
     if (!res.ok) return null;
-    const data = await res.json();
+    const data = (await res.json()) as ACCampaignResponse;
     return data.campaign ?? null;
   } catch {
     return null;
@@ -135,7 +159,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<ACCamp
       }),
     });
     if (!res.ok) return null;
-    const data = await res.json();
+    const data = (await res.json()) as ACCampaignResponse;
     return data.campaign ?? null;
   } catch {
     return null;
@@ -157,7 +181,7 @@ export async function listACContacts(limit = 20): Promise<ACContact[]> {
   try {
     const res = await acFetch(`/contacts?limit=${limit}&orders[cdate]=DESC`);
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as ACContactsResponse;
     return data.contacts ?? [];
   } catch {
     return [];
@@ -176,7 +200,7 @@ export async function listACLists(): Promise<ACList[]> {
   try {
     const res = await acFetch("/lists?limit=100");
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as ACListsResponse;
     return data.lists ?? [];
   } catch {
     return [];
@@ -197,7 +221,7 @@ export async function listAutomations(): Promise<ACAutomation[]> {
   try {
     const res = await acFetch("/automations?limit=50");
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as ACAutomationsResponse;
     return data.automations ?? [];
   } catch {
     return [];
@@ -271,11 +295,11 @@ export async function getEmailStats(): Promise<{
       acFetch("/campaigns?limit=1"),
       acFetch("/lists?limit=1"),
     ]);
-    const [contactsData, campaignsData, listsData] = await Promise.all([
+    const [contactsData, campaignsData, listsData] = (await Promise.all([
       contactsRes.ok ? contactsRes.json() : { meta: { total: 0 } },
       campaignsRes.ok ? campaignsRes.json() : { meta: { total: 0 } },
       listsRes.ok ? listsRes.json() : { meta: { total: 0 } },
-    ]);
+    ])) as [ACContactsResponse, ACCampaignsResponse, ACListsResponse];
     return {
       totalContacts: parseInt(contactsData.meta?.total ?? "0", 10),
       totalCampaigns: parseInt(campaignsData.meta?.total ?? "0", 10),

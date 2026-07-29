@@ -191,7 +191,7 @@ export async function listGoogleCampaigns(): Promise<GoogleCampaign[]> {
       body: JSON.stringify({ query }),
     });
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as { results?: GoogleCampaignRow[] };
     return (data.results ?? []).map((r: GoogleCampaignRow) => mapCampaignRow(r));
   } catch {
     return [];
@@ -220,7 +220,7 @@ export async function getGoogleMetrics(dateStart: string, dateEnd: string): Prom
       body: JSON.stringify({ query }),
     });
     if (!res.ok) return emptyMetrics();
-    const data = await res.json();
+    const data = (await res.json()) as { results?: Array<{ metrics?: GoogleMetricsRow }> };
     return parseMetricsRow(data.results?.[0]?.metrics);
   } catch {
     return emptyMetrics();

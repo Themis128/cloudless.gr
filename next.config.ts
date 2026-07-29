@@ -28,12 +28,6 @@ const nextConfig: NextConfig = {
   // doesn't recompress what's already compressed). Default is true; set
   // explicitly so anyone reading config sees that compression is on.
   compress: true,
-  // Temporary: DOM `Response.json()` is `unknown` under current TS libs and
-  // trips next build across many call sites. Lint/typecheck jobs still run;
-  // remove once remaining casts are cleaned up.
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   // Strip the X-Powered-By: Next.js header — small attack-surface reduction.
   poweredByHeader: false,
   // Emit browser source maps so Playwright CDP coverage of /_next/static chunks

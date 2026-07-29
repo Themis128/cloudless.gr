@@ -108,6 +108,22 @@ export interface WebAnalyticsData {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Response shapes                                                    */
+/* ------------------------------------------------------------------ */
+
+interface GscAnalyticsRow {
+  keys?: string[];
+  clicks?: number;
+  impressions?: number;
+  ctr?: number;
+  position?: number;
+}
+
+interface GscQueryResponse {
+  rows?: GscAnalyticsRow[];
+}
+
+/* ------------------------------------------------------------------ */
 /*  Public API                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -133,7 +149,7 @@ export async function getSeoSnapshot(
       console.error("[GSC] Overview error:", await totalsRes.text());
       return null;
     }
-    const totals = await totalsRes.json();
+    const totals = (await totalsRes.json()) as GscQueryResponse;
     const row = totals.rows?.[0] ?? {};
 
     // Count unique keywords
@@ -142,7 +158,7 @@ export async function getSeoSnapshot(
       dimensions: ["query"],
       rowLimit: 25000, // GSC max
     });
-    const kwData = kwRes.ok ? await kwRes.json() : {};
+    const kwData = (kwRes.ok ? await kwRes.json() : {}) as GscQueryResponse;
     const organicKeywords: number = kwData.rows?.length ?? 0;
 
     return {
@@ -176,9 +192,9 @@ export async function getTopKeywords(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
-    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+    return (data.rows ?? []).map((r) => ({
       keyword: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
       impressions: Math.round((r.impressions as number) ?? 0),
@@ -228,9 +244,9 @@ export async function getPerformanceHistory(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
-    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+    return (data.rows ?? []).map((r) => ({
       date: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
       impressions: Math.round((r.impressions as number) ?? 0),
@@ -261,9 +277,9 @@ export async function getTopPages(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
-    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+    return (data.rows ?? []).map((r) => ({
       page: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
       impressions: Math.round((r.impressions as number) ?? 0),
@@ -294,7 +310,7 @@ export async function getWebAnalytics(
       rowLimit: 1,
     });
 
-    const totalsData = totalsRes.ok ? await totalsRes.json() : {};
+    const totalsData = (totalsRes.ok ? await totalsRes.json() : {}) as GscQueryResponse;
     const total = totalsData.rows?.[0] ?? {};
 
     // Top pages
@@ -305,12 +321,12 @@ export async function getWebAnalytics(
       orderBy: [{ fieldName: "clicks", sortOrder: SORT_DESCENDING }],
     });
 
-    const pagesData = pagesRes.ok ? await pagesRes.json() : {};
-    const topPages = (pagesData.rows ?? []).map((r: Record<string, unknown>) => ({
-      page: (r.keys as string[])?.[0] ?? "",
-      clicks: Math.round((r.clicks as number) ?? 0),
-      impressions: Math.round((r.impressions as number) ?? 0),
-      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    const pagesData = (pagesRes.ok ? await pagesRes.json() : {}) as GscQueryResponse;
+    const topPages = (pagesData.rows ?? []).map((r) => ({
+      page: r.keys?.[0] ?? "",
+      clicks: Math.round(r.clicks ?? 0),
+      impressions: Math.round(r.impressions ?? 0),
+      position: parseFloat((r.position ?? 0).toFixed(1)),
     }));
 
     return {
@@ -357,30 +373,27 @@ export async function getCtrOpportunities(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
     const opportunities = (data.rows ?? [])
-      .filter((r: Record<string, unknown>) => {
-        const position = (r.position as number) ?? 0;
-        const ctr = ((r.ctr as number) ?? 0) * 100;
-        const impressions = (r.impressions as number) ?? 0;
+      .filter((r) => {
+        const position = r.position ?? 0;
+        const ctr = (r.ctr ?? 0) * 100;
+        const impressions = r.impressions ?? 0;
         return position >= 4 && position <= 20 && ctr < 5 && impressions > 10;
       })
-      .sort(
-        (a: Record<string, unknown>, b: Record<string, unknown>) =>
-          ((b.impressions as number) ?? 0) - ((a.impressions as number) ?? 0)
-      )
+      .sort((a, b) => (b.impressions ?? 0) - (a.impressions ?? 0))
       .slice(0, limit)
-      .map((r: Record<string, unknown>) => {
-        const impressions = Math.round((r.impressions as number) ?? 0);
-        const clicks = Math.round((r.clicks as number) ?? 0);
+      .map((r) => {
+        const impressions = Math.round(r.impressions ?? 0);
+        const clicks = Math.round(r.clicks ?? 0);
         const potentialClicks = Math.max(0, Math.round(impressions * 0.05) - clicks);
         return {
-          keyword: (r.keys as string[])?.[0] ?? "",
+          keyword: r.keys?.[0] ?? "",
           clicks,
           impressions,
-          ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
-          position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+          ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
+          position: parseFloat((r.position ?? 0).toFixed(1)),
           potentialClicks,
         };
       });
@@ -417,9 +430,9 @@ export async function getDeviceBreakdown(siteUrl = DEFAULT_SITE): Promise<Device
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
-    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+    return (data.rows ?? []).map((r) => ({
       device: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
       impressions: Math.round((r.impressions as number) ?? 0),
@@ -474,9 +487,9 @@ export async function getProductPageMetrics(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
-    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+    return (data.rows ?? []).map((r) => ({
       page: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
       impressions: Math.round((r.impressions as number) ?? 0),
@@ -520,9 +533,9 @@ export async function getQueryPageMapping(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
-    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+    return (data.rows ?? []).map((r) => ({
       query: (r.keys as string[])?.[0] ?? "",
       page: (r.keys as string[])?.[1] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
@@ -583,7 +596,7 @@ export async function getSearchIntentBreakdown(
     });
 
     if (!res.ok) return empty;
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
     const brandRe = /cloudless/i;
     const productRe =
@@ -591,12 +604,12 @@ export async function getSearchIntentBreakdown(
     const infoRe =
       /\b(how|what|why|when|where|guide|tutorial|tips|learn|blog|article|example|comparison|vs|review)\b/i;
 
-    const toKeyword = (r: Record<string, unknown>): IntentKeyword => ({
-      keyword: (r.keys as string[])?.[0] ?? "",
-      clicks: Math.round((r.clicks as number) ?? 0),
-      impressions: Math.round((r.impressions as number) ?? 0),
-      ctr: parseFloat((((r.ctr as number) ?? 0) * 100).toFixed(2)),
-      position: parseFloat(((r.position as number) ?? 0).toFixed(1)),
+    const toKeyword = (r: GscAnalyticsRow): IntentKeyword => ({
+      keyword: r.keys?.[0] ?? "",
+      clicks: Math.round(r.clicks ?? 0),
+      impressions: Math.round(r.impressions ?? 0),
+      ctr: parseFloat(((r.ctr ?? 0) * 100).toFixed(2)),
+      position: parseFloat((r.position ?? 0).toFixed(1)),
     });
 
     const result: SearchIntentBreakdown = {
@@ -607,7 +620,7 @@ export async function getSearchIntentBreakdown(
     };
 
     for (const row of data.rows ?? []) {
-      const kw = (row.keys as string[])?.[0] ?? "";
+      const kw = row.keys?.[0] ?? "";
       const mapped = toKeyword(row);
 
       if (brandRe.test(kw)) {
@@ -665,9 +678,9 @@ export async function getTrafficByCountry(
     });
 
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = (await res.json()) as GscQueryResponse;
 
-    return (data.rows ?? []).map((r: Record<string, unknown>) => ({
+    return (data.rows ?? []).map((r) => ({
       country: (r.keys as string[])?.[0] ?? "",
       clicks: Math.round((r.clicks as number) ?? 0),
       impressions: Math.round((r.impressions as number) ?? 0),

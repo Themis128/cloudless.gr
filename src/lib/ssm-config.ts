@@ -148,7 +148,8 @@ export interface AppConfig {
 }
 
 // Import D1 configuration functions
-import { isWorkersEnvironment, getD1Config } from "./ssm-config-d1.ts";
+import type { D1Database } from "@cloudflare/workers-types";
+import { isWorkersEnvironment, getD1Config } from "./ssm-config-d1";
 
 let cached: AppConfig | null = null;
 let cachedAt = 0;
@@ -449,8 +450,11 @@ export async function getConfig(): Promise<AppConfig> {
       // In a real Workers environment, we'd get the D1 binding from env
       // For now, we'll check if we can access it through global scope
       // This is a simplified check - in practice, the D1 binding would be passed in
-      const maybeEnv = typeof process !== "undefined" ? process.env : {};
-      const db = maybeEnv.AUTH_DB as unknown as D1Config["AUTH_DB"];
+      const maybeEnv = (typeof process !== "undefined" ? process.env : {}) as Record<
+        string,
+        unknown
+      >;
+      const db = maybeEnv.AUTH_DB as D1Database | undefined;
 
       if (db) {
         // Try to get config from D1
