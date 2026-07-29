@@ -7,19 +7,7 @@
  * dumps in stack frames) and any client-side fetch URLs that include tokens.
  */
 
-type ErrorEvent = {
-  request?: {
-    headers?: Record<string, string>;
-    url?: string;
-    query_string?: string;
-    data?: unknown;
-    cookies?: Record<string, string>;
-  };
-  extra?: Record<string, unknown>;
-  contexts?: Record<string, unknown>;
-};
-type EventHint = unknown;
-type Breadcrumb = { data?: Record<string, unknown> };
+import type { Breadcrumb, ErrorEvent, EventHint } from "@sentry/core";
 
 const REDACT = "[REDACTED]";
 
@@ -122,13 +110,22 @@ function redactCookies(cookies: Record<string, string>): Record<string, string> 
 }
 
 function scrubRequest(req: NonNullable<ErrorEvent["request"]>): void {
-  if (req.headers) req.headers = redactHeaders(req.headers);
+  if (req.headers && typeof req.headers === "object" && !Array.isArray(req.headers)) {
+    req.headers = redactHeaders(req.headers as Record<string, string>);
+  }
   if (typeof req.url === "string") req.url = redactUrl(req.url);
   if (typeof req.query_string === "string") {
     req.query_string = redactQueryString(req.query_string);
+  } else if (Array.isArray(req.query_string)) {
+    req.query_string = req.query_string.map(([k, v]) => {
+      if (SENSITIVE_KEY_RE.test(k) || looksLikeToken(v)) return [k, REDACT] as [string, string];
+      return [k, v] as [string, string];
+    });
   }
   if (req.data !== undefined) req.data = redactObject(req.data);
-  if (req.cookies !== undefined) req.cookies = redactCookies(req.cookies);
+  if (req.cookies !== undefined && typeof req.cookies === "object" && !Array.isArray(req.cookies)) {
+    req.cookies = redactCookies(req.cookies as Record<string, string>);
+  }
 }
 
 export function scrubEvent(event: ErrorEvent, _hint: EventHint): ErrorEvent | null {
