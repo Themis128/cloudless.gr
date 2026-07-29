@@ -82,19 +82,25 @@ jobs:
           body="$(cat /tmp/body 2>/dev/null || true)"
           echo "HTTP ${code}: $(head -c 200 <<<"$body")"
           if [ "$code" = "403" ]; then
-            # Free Bot Fight often blocks GH datacenter IPs on custom domains.
-            echo "::warning::health returned 403 (Bot Fight / WAF from GH runners). TLS+DNS ok; body not validated."
-          elif [ "$code" != "200" ]; then
+            # Free Bot Fight often blocks GH IPs on custom domains — validate via workers.dev.
+            echo "::warning::${HOST} returned 403 (Bot Fight). Falling back to workers.dev body check."
+            code=$(curl -sS --max-time 20 --retry 2 --retry-delay 5 \
+              -H "User-Agent: cloudless-https-health-probe" \
+              -o /tmp/body -w "%{http_code}" \
+              "https://cloudless2.baltzakis-themis.workers.dev/api/health" || true)
+            body="$(cat /tmp/body 2>/dev/null || true)"
+            echo "workers.dev HTTP ${code}: $(head -c 200 <<<"$body")"
+          fi
+          if [ "$code" != "200" ]; then
             echo "::error::health returned ${code} (expect 200; 503 means edge up but Pi origin down)"
             exit 1
-          else
-            status=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))" <<<"$body" 2>/dev/null || echo "")
-            if [ "$status" != "ok" ]; then
-              echo "::error::health JSON status='${status}' (expected 'ok') — origin likely degraded"
-              exit 1
-            fi
-            echo "✓ health ok"
           fi
+          status=$(python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))" <<<"$body" 2>/dev/null || echo "")
+          if [ "$status" != "ok" ]; then
+            echo "::error::health JSON status='${status}' (expected 'ok') — origin likely degraded"
+            exit 1
+          fi
+          echo "✓ health ok"
 
           {
             echo "## PRIMARY — ${HOST}"
