@@ -107,6 +107,11 @@ Runbook: [`docs/operator-blockers-runbook.md`](operator-blockers-runbook.md).
 - [x] `DONE` Smoke PVC backup Job to R2.
       Proof: `pvc-backup-appflowy` Job Completed; uploaded **1178437** bytes to
       `r2://datalake-bucket/pvc-backups/appflowy/daily/2026-07-29T170155Z.sql.custom`.
+- [x] `DONE` EspoCRM hourly ETL → R2 (NodePort + API key).
+      Evidence: `.github/workflows/etl-espocrm-to-r2.yml` uses `http://127.0.0.1:30700`;
+      API user `cloudless-app` + role ACL; `ESPOCRM_API_KEY` in GH + `cloudless-secrets`.
+      Run https://github.com/Themis128/cloudless.gr/actions/runs/30485173560 — **5/5** entities
+      → `lake/espocrm-{contacts,accounts,opportunities,cases,campaigns}/*.parquet`.
 - [x] `DONE` Search funnel analytics on Cloudflare D1 (query → result → click; buy hook ready).
       Evidence: `migrations/0008-search-funnel-events.sql`, `src/lib/search-funnel.ts`,
       `src/lib/funnel-client.ts`, `StoreGrid` beacons, `POST /api/analytics/track` D1 sink,
