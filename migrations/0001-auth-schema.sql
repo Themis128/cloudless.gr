@@ -62,9 +62,24 @@ CREATE TABLE IF NOT EXISTS admin_notification (
   pk TEXT NOT NULL,
   sk TEXT NOT NULL,
   category TEXT NOT NULL,
+  id TEXT,
+  type TEXT,
+  title TEXT,
+  message TEXT,
+  actor TEXT,
+  route TEXT,
+  read INTEGER NOT NULL DEFAULT 0,
+  archived_at TEXT,
+  cat_pk TEXT,
+  cat_sk TEXT,
   payload_json TEXT,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_admin_notif_sk ON admin_notification(sk);
+CREATE INDEX IF NOT EXISTS idx_admin_notif_category ON admin_notification(category);
+CREATE INDEX IF NOT EXISTS idx_admin_notif_id ON admin_notification(id);
+CREATE INDEX IF NOT EXISTS idx_admin_notif_cat_pk ON admin_notification(cat_pk);
 
 
 -- Analytics cache (replaces AnalyticsCache DynamoDB table)

@@ -2,13 +2,15 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 22:50 EEST — aw engines → Claude (ANTHROPIC_API_KEY)
+# Last Updated: 2026-07-29 23:00 EEST — aw Claude → haiku + AI credits pricing
 
 ---
 
-## ✅ Agentic workflows use Claude (2026-07-29)
+## ✅ Agentic workflows use Claude Haiku (2026-07-29)
 
 Switched all 9 gh-aw workflows from `engine: copilot` → `engine: claude` using repo secret `ANTHROPIC_API_KEY`.
+
+Pinned `model: claude-haiku-4-5` (cheapest current Claude) and set `models.default-ai-credits-pricing` (`input: 1.0`, `output: 5.0` $/1M) so AWF does not reject unrecognized model IDs with HTTP 400.
 
 Fine-grained PAT UI often has no "Account → Copilot Requests" (user-owned PAT only; under Account permissions). Copilot inference was HTTP 401 anyway.
 

@@ -52,11 +52,13 @@ describe("admin-notifications", () => {
     updateCalls.length = 0;
     batchWriteCalls.length = 0;
     process.env.ADMIN_NOTIFICATIONS_TABLE = "test-notifs";
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   });
 
   afterEach(() => {
     if (originalTable === undefined) delete process.env.ADMIN_NOTIFICATIONS_TABLE;
     else process.env.ADMIN_NOTIFICATIONS_TABLE = originalTable;
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   });
 
   describe("recordNotification", () => {
@@ -361,6 +363,131 @@ describe("admin-notifications", () => {
       const n = await purgeArchivedOlderThan("2026-01-01");
       expect(n).toBe(2);
       expect(batchWriteCalls).toHaveLength(2);
+    });
+  });
+
+  describe("D1 path", () => {
+    type Row = Record<string, unknown>;
+    function createMemoryDb() {
+      const rows: Row[] = [];
+      return {
+        rows,
+        prepare(query: string) {
+          const binds: unknown[] = [];
+          const stmt = {
+            bind(...args: unknown[]) {
+              binds.push(...args);
+              return stmt;
+            },
+            async run() {
+              if (query.includes("INSERT INTO admin_notification")) {
+                rows.push({
+                  pk: binds[0],
+                  sk: binds[1],
+                  category: binds[2],
+                  id: binds[3],
+                  type: binds[4],
+                  title: binds[5],
+                  message: binds[6],
+                  actor: binds[7],
+                  route: binds[8],
+                  read: binds[9],
+                  archived_at: binds[10],
+                  cat_pk: binds[11],
+                  cat_sk: binds[12],
+                  payload_json: binds[13],
+                  created_at: binds[14],
+                });
+                return { success: true, meta: { changes: 1 } };
+              }
+              if (query.includes("UPDATE admin_notification SET read")) {
+                const id = binds[0];
+                for (const r of rows) {
+                  if (r.id === id) r.read = 1;
+                }
+                return { success: true, meta: { changes: 1 } };
+              }
+              if (query.includes("DELETE FROM admin_notification")) {
+                const cutoff = String(binds[0]);
+                let changes = 0;
+                for (let i = rows.length - 1; i >= 0; i--) {
+                  const archived = rows[i].archived_at;
+                  if (typeof archived === "string" && archived && archived < cutoff) {
+                    rows.splice(i, 1);
+                    changes++;
+                  }
+                }
+                return { success: true, meta: { changes } };
+              }
+              return { success: true, meta: { changes: 0 } };
+            },
+            async all<T = Row>() {
+              let filtered = [...rows];
+              // Minimal SQL interpreter for the list query shape used in D1 path
+              if (query.includes("FROM admin_notification")) {
+                let bi = 0;
+                if (query.includes("category = ?")) {
+                  const cat = binds[bi++];
+                  filtered = filtered.filter((r) => r.category === cat);
+                } else if (query.includes("pk = ?")) {
+                  const pk = binds[bi++];
+                  filtered = filtered.filter((r) => r.pk === pk);
+                }
+                if (query.includes("sk >= ?")) {
+                  const since = String(binds[bi++]);
+                  filtered = filtered.filter((r) => String(r.sk) >= since);
+                }
+                if (query.includes("sk < ?")) {
+                  const until = String(binds[bi++]);
+                  filtered = filtered.filter((r) => String(r.sk) < until);
+                }
+                if (query.includes("archived_at IS NULL")) {
+                  filtered = filtered.filter((r) => !r.archived_at);
+                }
+                const limit = Number(binds[binds.length - 1] ?? 50);
+                filtered.sort((a, b) => String(b.sk).localeCompare(String(a.sk)));
+                filtered = filtered.slice(0, limit);
+              }
+              return { results: filtered as T[], success: true };
+            },
+            async first() {
+              return null;
+            },
+          };
+          return stmt;
+        },
+      };
+    }
+
+    it("records and lists via D1 without touching Dynamo", async () => {
+      const db = createMemoryDb();
+      (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__ = db;
+      const r = await recordNotification({
+        category: "contact",
+        title: "Hi",
+        message: "There",
+        actor: "a@b.c",
+      });
+      expect(r).not.toBeNull();
+      expect(mockDynamoSend).not.toHaveBeenCalled();
+      expect(db.rows).toHaveLength(1);
+      const listed = await listNotifications({ limit: 10 });
+      expect(listed).toHaveLength(1);
+      expect(listed[0].title).toBe("Hi");
+      expect(listed[0].actor).toBe("a@b.c");
+    });
+
+    it("marks read and purges archived on D1", async () => {
+      const db = createMemoryDb();
+      (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__ = db;
+      const r = await recordNotification({ category: "order", title: "T", message: "M" });
+      expect(r?.id).toBeTruthy();
+      await markNotificationsRead([r!.id]);
+      expect(db.rows[0].read).toBe(1);
+      db.rows[0].archived_at = "2020-01-01T00:00:00.000Z";
+      const purged = await purgeArchivedOlderThan("2021-01-01");
+      expect(purged).toBe(1);
+      expect(db.rows).toHaveLength(0);
     });
   });
 });
