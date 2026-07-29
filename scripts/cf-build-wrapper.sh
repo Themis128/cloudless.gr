@@ -11,6 +11,9 @@ set -euo pipefail
 # 3. The incomplete .next/ then causes ENOENT errors in OpenNext's bundle phase
 #
 # Instead, we just ensure the middleware stub exists and exit successfully.
+# NOTE: package.json "build" is scripts/sst-next-build.mjs (not this file).
+# OpenNext's nested `pnpm build` hits that script — it also honors
+# OPEN_NEXT_BUILD_ACTIVE (see sst-next-build.mjs).
 if [ -n "${OPEN_NEXT_BUILD_ACTIVE:-}" ]; then
   echo "⚠ Recursive build detected — skipping next build (already built above)..."
   # Ensure middleware.js.nft.json stub exists for OpenNext's bundle phase
