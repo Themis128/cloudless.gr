@@ -9,6 +9,8 @@ permissions:
   pull-requests: read
 strict: false
 engine: copilot
+safe-outputs:
+  report-failure-as-issue: false
 ---
 
 # AGENTS.md Maintainer
