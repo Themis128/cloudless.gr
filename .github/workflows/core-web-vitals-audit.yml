@@ -57,13 +57,27 @@ jobs:
 
       - name: Warm CDN cache
         run: |
+          set -euo pipefail
           for url in \
             https://cloudless.gr \
             https://cloudless.gr/en \
             https://cloudless.gr/en/services \
             https://cloudless.gr/en/contact \
             https://cloudless.gr/en/store; do
-            curl -s -o /dev/null -w "%{url_effective} → %{http_code} (%{time_total}s)\n" "$url"
+            BODY=$(mktemp)
+            CODE=$(curl -sS -L -o "$BODY" -w "%{http_code}" --max-time 30 \
+              -H "User-Agent: Mozilla/5.0 (compatible; CloudlessCWV/1.0)" \
+              "$url" || echo 000)
+            echo "$url → HTTP $CODE"
+            if grep -qiE 'Just a moment|challenge-platform|cf-browser-verification' "$BODY"; then
+              echo "::error::$url still serves Cloudflare challenge HTML — disable Bot Fight / Under Attack Mode, then re-run."
+              exit 1
+            fi
+            if [[ "$CODE" != "200" && "$CODE" != "304" ]]; then
+              echo "::error::$url returned HTTP $CODE (expected 200 after redirects)"
+              exit 1
+            fi
+            rm -f "$BODY"
           done
 
       - name: Run Lighthouse on key routes
@@ -127,6 +141,12 @@ jobs:
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "❌ **$FAILED route(s) fell below score thresholds (median of 3 runs).**" >> "$GITHUB_STEP_SUMMARY"
             echo "Thresholds: Performance ≥ 60 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Failing routes:" >> "$GITHUB_STEP_SUMMARY"
+            echo "$MEDIANS" | jq -r --arg root "https://cloudless.gr/" '.[] | select(
+              (if .url == $root then false else .perf < 0.60 end) or
+              .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
+            ) | "- \(.url) perf=\((.perf*100)|round) a11y=\((.a11y*100)|round) bp=\((.bp*100)|round) seo=\((.seo*100)|round)"' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
