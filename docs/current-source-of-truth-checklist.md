@@ -168,8 +168,10 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
       Stripe webhook **idempotency** prefers D1 `stripe_transaction` when `AUTH_DB`
       is bound (`persistStripeEvent` / mark helpers in `stripe-transactions.ts`);
       Dynamo `STRIPE_TRANSACTIONS_TABLE` remains legacy fallback.
-      Still AWS (follow-up): Athena cost/datalake UI reads;
-      `stripe-analytics-read` Dynamo queries.
+      `getStripeAnalyticsSnapshot` (`stripe-analytics-read.ts`) also prefers D1
+      (amount_minor/currency + tag_*/event_day catch-up via migration 0012;
+      payload_json backfill for legacy rows); Dynamo queries remain legacy fallback.
+      Still AWS (follow-up): Athena cost/datalake UI reads.
       Admin-notifications prefer D1 `admin_notification` when `AUTH_DB` bound
       (`src/lib/admin-notifications.ts` + migration 0011); Dynamo table is fallback.
 - [x] `DEFERRED` ESLint 10 + TypeScript 7 majors (ecosystem blockers 2026-07-29).

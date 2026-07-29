@@ -60,7 +60,6 @@ Patch monitoring pods (Prometheus, Alertmanager, kube-state-metrics, cloudwatch-
    - Wait for rollout completion
 5. If component not found, log that it may already be running
 
-
 ## Runtime notes (gh-aw + Gemini)
 
 - GitHub **reads**: use the `github` CLI on PATH (MCP bridge). Start with `github --help`. Do **not** invent names like `github_mcp_server` or bare `create_issue`.

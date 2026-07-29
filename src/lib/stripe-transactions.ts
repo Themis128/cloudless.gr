@@ -151,7 +151,7 @@ async function persistStripeEventD1(
   db: AuthDatabase,
   event: Stripe.Event
 ): Promise<PersistStripeEventResult> {
-  const { customerId } = extractObjectFields(event);
+  const { customerId, amountMinor, currency } = extractObjectFields(event);
   const tags = getStripeEventTags(event.type);
   const eventDay = toEventDay(event.created);
   const stageCategory = `${tags.tagStage}#${tags.tagCategory}`;
@@ -162,8 +162,9 @@ async function persistStripeEventD1(
       .prepare(
         `INSERT INTO stripe_transaction (
           event_id, event_type, tag_category, tag_stage, stage_category,
-          event_day, customer_id, processing_status, received_at, payload_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          event_day, customer_id, processing_status, received_at,
+          amount_minor, currency, payload_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         event.id,
@@ -175,6 +176,8 @@ async function persistStripeEventD1(
         customerId ?? null,
         "received",
         receivedAt,
+        typeof amountMinor === "number" ? amountMinor : null,
+        currency ?? null,
         toJson(event.data.object)
       )
       .run();

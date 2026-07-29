@@ -39,11 +39,14 @@ CREATE TABLE stripe_transaction (
     received_at INTEGER NOT NULL,
     processed_at INTEGER,
     processing_error TEXT,
+    amount_minor INTEGER,
+    currency TEXT,
     payload_json TEXT
 );
 
 CREATE INDEX idx_stripe_event_type ON stripe_transaction(event_type);
 CREATE INDEX idx_stripe_received_at ON stripe_transaction(received_at);
+CREATE INDEX idx_stripe_event_day ON stripe_transaction(event_day);
 
 -- Admin notifications table
 CREATE TABLE admin_notification (
