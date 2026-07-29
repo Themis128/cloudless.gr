@@ -23,6 +23,8 @@
 #   ETCD_S3_FOLDER    etcd
 #   TLS_SAN_VIP       192.168.1.200
 #   TLS_SAN_LAN       192.168.1.128
+#   TLS_SAN_TS        100.74.191.58          (github-omv Tailscale IPv4)
+#   TLS_SAN_MAGICDNS  github-omv.tail4ecae1.ts.net
 #   DATA_DIR          /srv/dev-disk-by-uuid-a9a5a108-8095-4b7b-8011-716889995cd7/k3s
 #
 # After writing the config, restart k3s to apply:
@@ -38,6 +40,9 @@ ETCD_S3_REGION="${ETCD_S3_REGION:-us-east-1}"
 ETCD_S3_FOLDER="${ETCD_S3_FOLDER:-etcd}"
 TLS_SAN_VIP="${TLS_SAN_VIP:-192.168.1.200}"
 TLS_SAN_LAN="${TLS_SAN_LAN:-192.168.1.128}"
+# Optional Tailscale fabric SANs (direct kubectl to 100.x / MagicDNS)
+TLS_SAN_TS="${TLS_SAN_TS:-100.74.191.58}"
+TLS_SAN_MAGICDNS="${TLS_SAN_MAGICDNS:-github-omv.tail4ecae1.ts.net}"
 
 if [[ ${EUID} -ne 0 ]]; then
   echo "run as root (sudo)" >&2; exit 1
@@ -64,6 +69,8 @@ flannel-backend: wireguard-native
 tls-san:
   - "${TLS_SAN_VIP}"
   - "${TLS_SAN_LAN}"
+  - "${TLS_SAN_TS}"
+  - "${TLS_SAN_MAGICDNS}"
 
 kube-apiserver-arg:
   - "service-node-port-range=1000-32767"

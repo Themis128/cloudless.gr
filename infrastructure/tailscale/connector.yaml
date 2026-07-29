@@ -1,0 +1,41 @@
+# Connector: advertise k3s pod + Service CIDRs to the tailnet.
+# Docs: https://tailscale.com/docs/kubernetes-operator/connector/deploy-subnet-router
+# API:  https://github.com/tailscale/tailscale/blob/main/k8s-operator/api.md#connector
+#
+# Do NOT use ProxyGroup for subnet routes — ProxyGroup is ingress|egress|kube-apiserver only.
+# HA: both replicas must advertise the *exact same* prefixes (failover does not fall back
+# from a broader route to a more-specific one).
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: k3s-cidrs
+spec:
+  replicas: 2
+  hostnamePrefix: k3s-subnet-router
+  proxyClass: pi-fabric
+  tags:
+    - tag:k8s
+  subnetRouter:
+    advertiseRoutes:
+      - "10.42.0.0/16" # pods
+      - "10.43.0.0/16" # ClusterIP services
+---
+# Pi-friendly ProxyClass for Connector + ProxyGroup pods.
+# Docs: https://tailscale.com/docs/kubernetes-operator/concepts/proxyclass
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: pi-fabric
+spec:
+  statefulSet:
+    pod:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi

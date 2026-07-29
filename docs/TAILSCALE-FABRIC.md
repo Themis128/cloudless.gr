@@ -1,117 +1,144 @@
 # Tailscale Fabric Interconnect
 
-## Overview
+Private mesh for the Pi k3s cluster. **Not** a public Funnel edge — public
+traffic stays on Cloudflare Workers / Access / tunnels. Tailscale is for
+admin fabric: nodes, ClusterIP/pod CIDRs, private GUIs, and kubectl.
 
-Tailscale operates as the **fabric interconnect** for the k3s cluster, providing secure mesh networking between nodes and enabling cross-node service access.
+Aligned with current Tailscale Kubernetes Operator docs (validated mid-2026):
 
-## Architecture
+- [Connector / subnet router](https://tailscale.com/docs/kubernetes-operator/connector/deploy-subnet-router)
+- [ProxyGroup](https://tailscale.com/docs/kubernetes-operator/concepts/proxygroup)
+- [API server over Tailscale](https://tailscale.com/docs/kubernetes-operator/api-server-access/setup-api-over-tailscale)
+- [ProxyClass](https://tailscale.com/docs/kubernetes-operator/concepts/proxyclass)
+- [HA overlapping routes](https://tailscale.com/docs/how-to/set-up-high-availability)
+- CRD reference: [k8s-operator/api.md](https://github.com/tailscale/tailscale/blob/main/k8s-operator/api.md)
+
+## Target architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Tailscale Network                                    │
-│  - MagicDNS: *.ts.cloudless.gr → Internal services                           │
-│  - Mesh: omv (192.168.1.128) ↔ omv-ha (192.168.1.130)                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         omv (Primary Node)                                   │
-│  - Tailscale Funnel: Public endpoints                                       │
-│  - Cloudflare Tunnel: cloudflared service                                   │
-│  - k3s Control Plane + Worker                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         omv-ha (Standby Node)                                  │
-│  - No workloads scheduled (taint: node-type=standby:NoSchedule)             │
-│  - Tailscale node for cross-node access                                    │
-│  - Rancher management                                                     │
-└─────────────────────────────────────────────────────────────────────────────┘
+ office (WSL) ──tailnet── github-omv (host TS) ── :6443 / SSH / NodePorts
+       │                      │
+       │                      ├── Connector k3s-cidrs×2  → 10.42/16 + 10.43/16
+       │                      ├── ProxyGroup ingress×1   → grafana/loki/meili Serve
+       │                      └── ProxyGroup kube×1      → kubectl (auth impersonation)
+       └── omv-ha (host TS)
 ```
 
-## Node Configuration
+| Layer | Resource | Purpose | Devices on Machines |
+|-------|----------|---------|---------------------|
+| Host mesh | `tailscaled` on omv + omv-ha | SSH, NodePort, direct `:6443` | `github-omv`, `omv-ha` |
+| Subnet | `Connector` `k3s-cidrs` | Pod + ClusterIP reachability | `k3s-subnet-router-0/1` |
+| L7 GUI | `ProxyGroup` `ingress` + Ingress | MagicDNS HTTPS to apps | `ingress-0` (+ Tailscale Services) |
+| API | `ProxyGroup` `kube` | `tailscale configure kubeconfig` | `kube-0` |
 
-| Node | IP | Tailscale IP | Role | Labels |
-|------|-----|-------------|------|--------|
-| omv | 192.168.1.128 | 100.113.41.119 | Primary | node-type=primary, storage-type=ssd |
-| omv-ha | 192.168.1.130 | - | Standby | - |
+**Do not** create one Tailscale proxy per Service — that spawned
+`monitoring-proxies-0..9` plus per-app devices. Always set
+`tailscale.com/proxy-group: ingress`.
 
-## Services Accessible via Tailscale
+## What was wrong in the old repo manifests
 
-| Service | MagicDNS Endpoint | Node | Type |
-|---------|-----------------|------|------|
-| Grafana | grafana.ts.cloudless.gr | omv | Tailscale Ingress |
-| Loki | loki.ts.cloudless.gr | omv | Tailscale Ingress |
-| Meilisearch | meilisearch.ts.cloudless.gr | omv-ha | Tailscale Ingress |
+| Old | Problem | Fix |
+|-----|---------|-----|
+| `ProxyGroup` + `routes:` | Invalid — ProxyGroup is `ingress`/`egress`/`kube-apiserver` only | `Connector.subnetRouter.advertiseRoutes` |
+| Missing `spec.type` | Operator cannot reconcile | `type: ingress` / `kube-apiserver` |
+| No `proxy-group` annotation | One device per Ingress | Shared ProxyGroup |
+| Funnel / public `*.ts.cloudless.gr` | Wrong trust boundary | Private Serve + CF Access for public |
+| AWS SSM in `deploy.sh` | Forbidden on free-tier policy | Env `TS_CLIENT_ID` / `TS_CLIENT_SECRET` |
+| Operator absent on cluster | CRDs/pods gone after rebuild | Re-run `deploy.sh` |
 
-## Tailscale Operator
+## Deploy
 
-### Deployment
+1. Create an OAuth client (Devices Core + Auth Keys write) tagged **`tag:k8s-operator`**:
+   https://login.tailscale.com/admin/settings/oauth
+
+2. Merge `infrastructure/tailscale/acl-policy.example.json` into Access controls
+   (`tagOwners` + `autoApprovers` for routes + `svc:*`).
+
+3. Install:
 
 ```bash
-kubectl apply -f infrastructure/tailscale/namespace.yaml
-kubectl apply -f infrastructure/tailscale/ingress-class.yaml
-kubectl apply -f infrastructure/tailscale/proxygroup-monitoring.yaml
-kubectl apply -f infrastructure/tailscale/ingresses.yaml
+export TS_CLIENT_ID=…
+export TS_CLIENT_SECRET=…
+export KUBECONFIG=~/.kube/config-cloudless-ts   # LAN works at office
+bash infrastructure/tailscale/deploy.sh
 ```
 
-### Configuration Files
+4. Delete stale Machines in the admin UI (old `tag:k8s` proxies last seen Jul 11).
 
-- `infrastructure/tailscale/namespace.yaml` - Namespace and RBAC
-- `infrastructure/tailscale/ingress-class.yaml` - IngressClass definition
-- `infrastructure/tailscale/proxygroup-monitoring.yaml` - ProxyGroup for monitoring
-- `infrastructure/tailscale/ingresses.yaml` - Tailscale ingress rules
+5. Wait:
 
-## Tailscale Funnel
+```bash
+kubectl wait connector k3s-cidrs --for=condition=ConnectorReady=true --timeout=5m
+kubectl wait proxygroup ingress --for=condition=ProxyGroupReady=true --timeout=5m
+kubectl wait proxygroup kube --for=condition=ProxyGroupReady=true --timeout=5m
+```
 
-### Public Endpoints
+6. kubectl via API proxy (preferred off-LAN):
 
-- `grafana.ts.cloudless.gr` - Grafana monitoring
-- `loki.ts.cloudless.gr` - Loki log aggregation
+```bash
+URL=$(kubectl get proxygroup kube -o jsonpath='{.status.url}')
+tailscale configure kubeconfig "$URL"
+kubectl get nodes
+```
 
-### Funnel Configuration
+## k3s TLS SANs (direct `:6443` over Tailscale)
 
-Funnel is configured via Ingress resources with the `tailscale` ingress class.
+Cert today includes `192.168.1.128` but **not** `100.74.191.58`. For direct
+API dialing (without the kube ProxyGroup), add SANs then restart k3s:
 
-## Cross-Node Access
+```yaml
+# on omv /etc/rancher/k3s/config.yaml — or via scripts/configure-k3s.sh
+tls-san:
+  - "192.168.1.128"
+  - "100.74.191.58"
+  - "github-omv.tail4ecae1.ts.net"
+```
 
-### From omv to omv-ha
+```bash
+sudo TLS_SAN_TS=100.74.191.58 TLS_SAN_MAGICDNS=github-omv.tail4ecae1.ts.net \
+  ETCD_S3_ACCESS_KEY=… ETCD_S3_SECRET_KEY=… \
+  ./scripts/configure-k3s.sh
+sudo systemctl restart k3s
+```
 
-Services on omv-ha (like Meilisearch) can be accessed from omv via Tailscale network.
+Clients accepting subnet routes:
 
-### From omv-ha to omv
+```bash
+sudo tailscale set --accept-routes   # Linux with TUN
+```
 
-All services on omv are accessible via Tailscale.
+WSL userspace still needs SOCKS/TUN for `100.x` TCP — prefer LAN or the
+`kube` ProxyGroup URL over HTTPS Serve.
+
+## Node reference
+
+| Node | LAN | Tailscale | Role |
+|------|-----|-----------|------|
+| omv (`github-omv`) | 192.168.1.128 | 100.74.191.58 | control-plane |
+| omv-ha | 192.168.1.130 | 100.95.117.84 | worker |
+| office (WSL) | — | 100.98.121.44 | admin laptop |
+
+## Files
+
+| File | Role |
+|------|------|
+| `connector.yaml` | HA Connector + `pi-fabric` ProxyClass |
+| `proxygroup.yaml` | ingress + kube-apiserver ProxyGroups |
+| `ingresses.yaml` | Grafana / Loki / Meili → shared group |
+| `acl-policy.example.json` | tagOwners / autoApprovers / grants |
+| `deploy.sh` | Helm operator + apply manifests |
+| `ingress-class.yaml` | `IngressClass` `tailscale` |
 
 ## Troubleshooting
 
-### Check Tailscale Status
-
 ```bash
-# On omv
-sudo systemctl status tailscaled
+kubectl get connector,proxygroup,proxyclass
+kubectl get pods -n tailscale
+kubectl logs -n tailscale -l app.kubernetes.io/name=operator
 tailscale status
-tailscale ping omv-ha
 ```
 
-### Check Tailscale Operator
+Offline / stale devices: delete in admin UI — see
+`OFFLINE-DEVICE-TROUBLESHOOTING.md` (device IPs will differ after redeploy).
 
-```bash
-kubectl get pods -n tailscale-system
-kubectl logs -n tailscale-system -l app=tailscale-operator
-```
-
-### Check Tailscale Ingress
-
-```bash
-kubectl get ingress -A
-kubectl describe ingress <name> -n <namespace>
-```
-
-## Related Files
-
-- `infrastructure/tailscale/README.md` - Original Tailscale documentation
-- `infrastructure/tailscale/ingresses.yaml` - Tailscale ingress configuration
-- `k8s/ingressroute-manage.yaml` - Traefik IngressRoute for manage.cloudless.gr
-- `docs/CLOUDFLARE-ARCHITECTURE.md` - Cloudflare architecture documentation
+Related: `docs/kubectl-tailscale.md`, `docs/CLUSTER-MAP.md`.

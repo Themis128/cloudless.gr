@@ -1,0 +1,36 @@
+# Shared ingress ProxyGroup — one small StatefulSet serves many Tailscale Ingresses.
+# Docs: https://tailscale.com/docs/kubernetes-operator/concepts/proxygroup
+#
+# Annotate each Ingress/Service with:
+#   tailscale.com/proxy-group: ingress
+# Without that annotation the operator spawns a dedicated proxy per resource
+# (this is what created monitoring-proxies-0..9 + per-app devices).
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyGroup
+metadata:
+  name: ingress
+spec:
+  type: ingress
+  replicas: 1 # raise to 2 when omv-ha has spare RAM
+  hostnamePrefix: ingress
+  tags:
+    - tag:k8s
+  proxyClass: pi-fabric
+---
+# Optional: kubectl over Tailscale with identity impersonation.
+# Docs: https://tailscale.com/docs/kubernetes-operator/api-server-access/setup-api-over-tailscale
+# After Ready:  tailscale configure kubeconfig <status.url>
+# Requires helm value apiServerProxyConfig.allowImpersonation=true (see deploy.sh).
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyGroup
+metadata:
+  name: kube
+spec:
+  type: kube-apiserver
+  replicas: 1
+  hostnamePrefix: kube
+  tags:
+    - tag:k8s
+  proxyClass: pi-fabric
+  kubeAPIServer:
+    mode: auth
