@@ -196,20 +196,18 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
 }
 
 // ---------------------------------------------------------------------------
-// Data Lake sink — writes Stripe events to S3 for Athena analytics.
+// Data Lake sink — writes Stripe events to R2 (Cloudflare DATALAKE_BUCKET).
 // ---------------------------------------------------------------------------
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-
-const LAKE_BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
-
-let s3Lake: S3Client | null = null;
-function getLakeS3(): S3Client {
-  s3Lake ??= new S3Client({ region: REGION });
-  return s3Lake;
-}
+import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 
 async function sinkStripeEventToLake(event: Stripe.Event): Promise<void> {
+  const bucket = getDataLakeBucketFromEnv();
+  if (!bucket) {
+    console.warn("[stripe-transactions] DATALAKE_BUCKET not bound — lake sink skipped");
+    return;
+  }
+
   const d = new Date(event.created * 1000);
   const year = d.getUTCFullYear();
   const month = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -232,12 +230,7 @@ async function sinkStripeEventToLake(event: Stripe.Event): Promise<void> {
     properties: { stripe_event_id: event.id, type: event.type },
   });
 
-  await getLakeS3().send(
-    new PutObjectCommand({
-      Bucket: LAKE_BUCKET,
-      Key: key,
-      Body: record,
-      ContentType: "application/x-ndjson",
-    })
-  );
+  await bucket.put(key, record, {
+    httpMetadata: { contentType: "application/x-ndjson" },
+  });
 }

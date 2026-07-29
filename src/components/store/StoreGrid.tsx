@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { useCart } from "@/context/CartContext";
 import {
@@ -12,10 +12,14 @@ import {
 } from "@/lib/store-products-client";
 import { formatPrice } from "@/lib/format-price";
 import ProductIcon from "@/components/store/ProductIcon";
+import { trackFunnelEvent } from "@/lib/funnel-client";
 
 const categories: ("all" | ProductCategory)[] = ["all", "service", "digital", "physical"];
 
 type SortOption = "default" | "price-asc" | "price-desc" | "name-asc";
+
+const SEARCH_DEBOUNCE_MS = 250;
+const SEARCH_LIMIT = 20;
 
 const sortLabels: Record<SortOption, string> = {
   default: "Featured",
@@ -31,7 +35,33 @@ const categoryCounts: Record<"all" | ProductCategory, number> = {
   physical: defaultProducts.filter((p) => p.category === "physical").length,
 };
 
-function ProductCard({ product }: { product: StoreProduct }) {
+function localKeywordFilter(products: StoreProduct[], query: string): StoreProduct[] {
+  const q = query.toLowerCase();
+  return products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      (p.features && p.features.some((f) => f.toLowerCase().includes(q)))
+  );
+}
+
+function orderByHitIds(products: StoreProduct[], hitIds: string[]): StoreProduct[] {
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const ordered: StoreProduct[] = [];
+  for (const id of hitIds) {
+    const product = byId.get(id);
+    if (product) ordered.push(product);
+  }
+  return ordered;
+}
+
+function ProductCard({
+  product,
+  onNavigate,
+}: {
+  product: StoreProduct;
+  onNavigate?: (productId: string) => void;
+}) {
   const { addItem } = useCart();
   const [hovered, setHovered] = useState(false);
 
@@ -81,7 +111,10 @@ function ProductCard({ product }: { product: StoreProduct }) {
 
       {/* Content */}
       <div className="p-6">
-        <Link href={`/store/${product.id}`}>
+        <Link
+          href={`/store/${product.id}`}
+          onClick={() => onNavigate?.(product.id)}
+        >
           <h3 className="font-heading group-hover:text-neon-cyan text-lg font-semibold text-white transition-colors">
             {product.name}
           </h3>
@@ -113,6 +146,59 @@ export default function StoreGrid() {
   const [activeCategory, setActiveCategory] = useState<"all" | ProductCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("default");
+  const [semanticHitIds, setSemanticHitIds] = useState<string[] | null>(null);
+  const [searchSource, setSearchSource] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    // Drop previous ranking immediately so a new query uses local filter
+    // until /api/search responds (avoids flashing stale hit order).
+    setSemanticHitIds(null);
+    setSearchSource(null);
+
+    if (!q) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = globalThis.setTimeout(() => {
+      const url = `/api/search?q=${encodeURIComponent(q)}&limit=${SEARCH_LIMIT}`;
+      globalThis
+        .fetch(url, { signal: controller.signal })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`search ${res.status}`);
+          const data = (await res.json()) as {
+            source?: string;
+            hits?: Array<{ id?: string }>;
+          };
+          const ids = Array.isArray(data.hits)
+            ? data.hits.map((h) => h.id).filter((id): id is string => Boolean(id))
+            : [];
+          setSemanticHitIds(ids);
+          const source = typeof data.source === "string" ? data.source : "api";
+          setSearchSource(source);
+          trackFunnelEvent("search_query", { query: q, source });
+          trackFunnelEvent("search_result", {
+            query: q,
+            source,
+            result_ids: ids,
+            result_count: ids.length,
+          });
+        })
+        .catch((err: unknown) => {
+          if (controller.signal.aborted) return;
+          console.warn("[StoreGrid] /api/search failed; using local keyword filter:", err);
+          setSemanticHitIds(null);
+          setSearchSource("local-fallback");
+          trackFunnelEvent("search_query", { query: q, source: "local-fallback" });
+        });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      globalThis.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   const filtered = useMemo(() => {
     let products =
@@ -120,14 +206,17 @@ export default function StoreGrid() {
         ? defaultProducts
         : defaultProducts.filter((p) => p.category === activeCategory);
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      products = products.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          (p.features && p.features.some((f) => f.toLowerCase().includes(q)))
-      );
+    const q = searchQuery.trim();
+    if (q) {
+      if (semanticHitIds && semanticHitIds.length > 0) {
+        products = orderByHitIds(products, semanticHitIds);
+      } else if (semanticHitIds && semanticHitIds.length === 0) {
+        // Authoritative empty result from /api/search
+        products = [];
+      } else {
+        // Loading or API error — snappy local keyword fallback
+        products = localKeywordFilter(products, q);
+      }
     }
 
     if (sortBy !== "default") {
@@ -139,7 +228,17 @@ export default function StoreGrid() {
     }
 
     return products;
-  }, [activeCategory, searchQuery, sortBy]);
+  }, [activeCategory, searchQuery, sortBy, semanticHitIds]);
+
+  function handleSearchClick(productId: string) {
+    const q = searchQuery.trim();
+    if (!q) return;
+    trackFunnelEvent("search_click", {
+      query: q,
+      product_id: productId,
+      source: searchSource ?? "local-fallback",
+    });
+  }
 
   return (
     <>
@@ -161,6 +260,8 @@ export default function StoreGrid() {
             placeholder="Search products..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search products"
+            data-search-source={searchSource ?? undefined}
             className="bg-void-light focus:border-neon-cyan/50 w-full rounded-lg border border-slate-800 py-2.5 pr-4 pl-10 font-mono text-sm text-white transition-colors placeholder:text-slate-600 focus:outline-none"
           />
         </div>
@@ -201,7 +302,11 @@ export default function StoreGrid() {
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onNavigate={searchQuery.trim() ? handleSearchClick : undefined}
+            />
           ))}
         </div>
       ) : (

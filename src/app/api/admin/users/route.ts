@@ -155,7 +155,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ users, count: users.length, provider: "cognito" });
     }
 
-    return NextResponse.json({ error: "Cognito not configured" }, { status: 503 });
+    const { getAuthDbFromEnv, listUsers } = await import("@/lib/auth-d1");
+    const db = getAuthDbFromEnv();
+    if (db) {
+      const rows = await listUsers(db, { limit, emailPrefix: filter || undefined });
+      const users = rows.map((u) => ({
+        username: u.id,
+        email: u.email,
+        name: u.name ?? "",
+        company: u.company ?? "",
+        phone: u.phone ?? "",
+        status: "active" as const,
+        emailVerified: true,
+        userStatus: "CONFIRMED",
+        role: u.role,
+        created: u.created_at ? new Date(u.created_at * 1000).toISOString() : undefined,
+      }));
+      return NextResponse.json({ users, count: users.length, provider: "d1" });
+    }
+
+    return NextResponse.json({ error: "No auth provider configured (Cognito or D1)" }, { status: 503 });
   } catch (err) {
     console.error("Failed to list users:", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: "Failed to list users" }, { status: 500 });
@@ -179,7 +198,8 @@ export async function POST(request: NextRequest) {
   const cognitoIssuer = process.env.COGNITO_ISSUER ?? "";
 
   // Cognito usernames: alphanumeric, hyphens, dots, +, @, underscore; max 128 chars.
-  if (cognitoIssuer && !/^[\w.@+\-]{1,128}$/.test(username)) {
+  // D1 user ids are UUIDs / opaque strings — same charset is fine.
+  if (!/^[\w.@+\-]{1,128}$/.test(username)) {
     return NextResponse.json({ error: "Invalid username" }, { status: 400 });
   }
 
@@ -189,7 +209,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result);
     }
 
-    return NextResponse.json({ error: "Cognito not configured" }, { status: 503 });
+    const { getAuthDbFromEnv, setUserAdminRole } = await import("@/lib/auth-d1");
+    const db = getAuthDbFromEnv();
+    if (!db) {
+      return NextResponse.json({ error: "No auth provider configured (Cognito or D1)" }, { status: 503 });
+    }
+
+    if (action === "enable" || action === "disable") {
+      return NextResponse.json(
+        { error: "enable/disable is not supported for D1 users (delete/recreate instead)" },
+        { status: 400 }
+      );
+    }
+
+    const ok = await setUserAdminRole(db, username, action === "promote");
+    if (!ok) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    return NextResponse.json({
+      success: true,
+      message: action === "promote" ? "User promoted to admin" : "User removed from admin group",
+      provider: "d1",
+    });
   } catch (err) {
     const status = (err as { status?: number }).status ?? 500;
     console.error("Failed to modify user:", err instanceof Error ? err.message : String(err));

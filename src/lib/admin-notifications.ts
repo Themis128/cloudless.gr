@@ -6,8 +6,8 @@ import {
   BatchWriteItemCommand,
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
+import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 
 /**
  * Durable admin notifications store on DynamoDB.
@@ -27,7 +27,7 @@ import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
  *   portal    — client-portal action
  *
  * Retention policy: 90 days hot in Dynamo. After 90 days, the daily archive
- * cron job sets `archivedAt` and exports the row to S3 (see PR B). Rows with
+ * cron job sets `archivedAt` and exports the row to R2 datalake. Rows with
  * `archivedAt` set are excluded from the admin UI by default.
  */
 
@@ -154,7 +154,7 @@ export async function recordNotification(input: {
     read: false,
   };
 
-  // Always write to data lake (S3) for analytics — fire and forget.
+  // Always write to data lake (R2) for analytics — fire and forget.
   sinkToLake(notif).catch(() => {});
 
   if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
@@ -369,19 +369,17 @@ export async function purgeArchivedOlderThan(olderThan: string): Promise<number>
 }
 
 // ---------------------------------------------------------------------------
-// Data Lake sink — writes notifications to S3 as NDJSON for Athena queries.
+// Data Lake sink — writes notifications to R2 (DATALAKE_BUCKET).
 // Partitioned by year/month for the notifications table schema.
 // ---------------------------------------------------------------------------
 
-const LAKE_BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
-
-let s3Client: S3Client | null = null;
-function getS3(): S3Client {
-  s3Client ??= new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
-  return s3Client;
-}
-
 async function sinkToLake(notif: AdminNotification): Promise<void> {
+  const bucket = getDataLakeBucketFromEnv();
+  if (!bucket) {
+    console.warn("[admin-notifications] DATALAKE_BUCKET not bound — lake sink skipped");
+    return;
+  }
+
   const d = new Date(notif.createdAt);
   const year = String(d.getUTCFullYear());
   const month = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -398,12 +396,7 @@ async function sinkToLake(notif: AdminNotification): Promise<void> {
     metadata: notif.metadata ? JSON.stringify(notif.metadata) : null,
   });
 
-  await getS3().send(
-    new PutObjectCommand({
-      Bucket: LAKE_BUCKET,
-      Key: key,
-      Body: record,
-      ContentType: "application/json",
-    })
-  );
+  await bucket.put(key, record, {
+    httpMetadata: { contentType: "application/json" },
+  });
 }

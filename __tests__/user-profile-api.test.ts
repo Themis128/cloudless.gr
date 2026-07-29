@@ -9,6 +9,7 @@
  * @vitest-environment node
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { NextRequest } from "next/server";
 
 const authMock = vi.fn();
 vi.mock("@/lib/auth", () => ({ auth: authMock }));
@@ -22,8 +23,13 @@ vi.mock("@/lib/user-profile", () => ({
   putUserProfile: putUserProfileMock,
 }));
 
-function makeReq(body: unknown): Request {
-  return new Request("http://localhost/api/user/profile", {
+vi.mock("@/lib/auth-d1", () => ({
+  getAuthDbFromEnv: () => null,
+  getUserBySession: vi.fn(),
+}));
+
+function makeReq(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/user/profile", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -55,7 +61,7 @@ describe("POST /api/user/profile", () => {
   it("400 on invalid JSON body", async () => {
     authMock.mockResolvedValue({ user: { id: "u1" } });
     const { POST } = await import("@/app/api/user/profile/route");
-    const bad = new Request("http://localhost/api/user/profile", {
+    const bad = new NextRequest("http://localhost/api/user/profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{not json",
@@ -96,7 +102,7 @@ describe("GET /api/user/profile", () => {
   it("401 when there is no session", async () => {
     authMock.mockResolvedValue(null);
     const { GET } = await import("@/app/api/user/profile/route");
-    const res = await GET();
+    const res = await GET(new NextRequest("http://localhost/api/user/profile"));
     expect(res.status).toBe(401);
   });
 
@@ -109,7 +115,7 @@ describe("GET /api/user/profile", () => {
       preferences: { theme: "light", language: "el" },
     });
     const { GET } = await import("@/app/api/user/profile/route");
-    const res = await GET();
+    const res = await GET(new NextRequest("http://localhost/api/user/profile"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       name: "Stored Name",
@@ -124,7 +130,7 @@ describe("GET /api/user/profile", () => {
     authMock.mockResolvedValue({ user: { id: "sub-1", email: "u@x.gr", name: "Session Name" } });
     getUserProfileMock.mockResolvedValue({});
     const { GET } = await import("@/app/api/user/profile/route");
-    const res = await GET();
+    const res = await GET(new NextRequest("http://localhost/api/user/profile"));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe("Session Name");
@@ -136,7 +142,7 @@ describe("GET /api/user/profile", () => {
     authMock.mockResolvedValue({ user: { id: "u1" } });
     getUserProfileMock.mockRejectedValue(new Error("dynamo down"));
     const { GET } = await import("@/app/api/user/profile/route");
-    const res = await GET();
+    const res = await GET(new NextRequest("http://localhost/api/user/profile"));
     expect(res.status).toBe(502);
   });
 });

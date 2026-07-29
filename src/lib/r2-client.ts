@@ -45,10 +45,22 @@ export function getMediaBucket(env: R2Env): R2Bucket | null {
 
 // Get R2 bucket binding for analytics/datalake
 export function getDataLakeBucket(env: R2Env): R2Bucket | null {
-  if (isCloudflareWorkers() && env?.DATALAKE_BUCKET) {
+  if (env?.DATALAKE_BUCKET && typeof env.DATALAKE_BUCKET.put === "function") {
     return env.DATALAKE_BUCKET;
   }
   return null;
+}
+
+/** Resolve DATALAKE_BUCKET from Workers global / env object (no AWS S3). */
+export function getDataLakeBucketFromEnv(): R2Bucket | null {
+  const g = globalThis as unknown as {
+    __DATALAKE_BUCKET__?: R2Bucket;
+    __R2__?: { DATALAKE_BUCKET?: R2Bucket };
+  };
+  const fromProcess = (process as unknown as { env?: R2Env }).env?.DATALAKE_BUCKET;
+  // Prefer explicit globals — Node process.env cannot hold R2 binding objects.
+  const candidate = g.__DATALAKE_BUCKET__ ?? g.__R2__?.DATALAKE_BUCKET ?? fromProcess;
+  return getDataLakeBucket({ DATALAKE_BUCKET: candidate });
 }
 
 // Serve static asset from R2 with proper headers

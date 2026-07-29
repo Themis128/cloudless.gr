@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { type AuthDatabase } from "@/lib/auth-d1";
+import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
 function getDb(_request: NextRequest): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  if (!env.AUTH_DB) {
-    return null;
-  }
-  return env.AUTH_DB;
+  return getAuthDbFromEnv();
 }
 
 async function verifyToken(email: string, token: string): Promise<boolean> {

@@ -5,18 +5,22 @@ import { auth } from "@/lib/auth";
 /**
  * Server-side authentication helpers for API routes.
  *
- * Two auth paths (tried in order):
- *   1. next-auth session cookie (primary) -- browser same-origin requests
- *      carry the `authjs.session-token` cookie automatically. We read it
- *      via `auth()` from src/lib/auth.ts. No Bearer header needed.
- *   2. Bearer token (fallback) -- external callers (cron, Slack, scripts)
- *      send `Authorization: Bearer <token>`. Verified against the Cognito
- *      JWKS at `${COGNITO_ISSUER}/.well-known/jwks.json`.
+ * Auth paths (tried in order after E2E bypass):
+ *   1. Bearer — Cognito JWKS only when `NEXT_PUBLIC_AUTH_PROVIDER=cognito`;
+ *      otherwise opaque D1 `session_token` (header or cookie)
+ *   2. D1 `session_token` cookie — email/password login (`auth-d1`)
+ *   3. next-auth session cookie — Cognito Hosted UI (cognito provider only)
  *
- * Admin check: Cognito `admin` group (cognito:groups claim).
+ * Admin: Cognito `cognito:groups` / `groups` includes `admin`, or D1 admin role.
  */
 
+/** Cognito JWKS + Hosted UI only when explicitly selected. */
+export function isCognitoAuthEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
+}
+
 function getIssuer(): string {
+  if (!isCognitoAuthEnabled()) return "";
   return (process.env.COGNITO_ISSUER ?? "").replace(/\/+$/, "");
 }
 
@@ -29,8 +33,15 @@ let jwksCache: ReturnType<typeof createRemoteJWKSet> | null | undefined;
 
 function getJWKS() {
   if (jwksCache !== undefined) return jwksCache;
+  if (!isCognitoAuthEnabled()) {
+    jwksCache = null;
+    return null;
+  }
   const issuer = getIssuer();
-  if (!issuer) { jwksCache = null; return null; }
+  if (!issuer) {
+    jwksCache = null;
+    return null;
+  }
   jwksCache = createRemoteJWKSet(new URL(getCertsUrl(issuer)));
   return jwksCache;
 }
@@ -89,6 +100,39 @@ async function readSessionCookie(): Promise<DecodedToken | null> {
   } catch {
     return null;
   }
+}
+
+/** Resolve a D1 user from an opaque session id (cookie or Bearer). */
+async function resolveD1Session(sessionId: string): Promise<DecodedToken | null> {
+  if (!sessionId) return null;
+  try {
+    const { getAuthDbFromEnv, getUserBySession, isAdmin: d1IsAdmin } = await import(
+      "@/lib/auth-d1"
+    );
+    const db = getAuthDbFromEnv();
+    if (!db) return null;
+    const user = await getUserBySession(db, sessionId);
+    if (!user) return null;
+    const admin = await d1IsAdmin(db, user.id);
+    return {
+      sub: user.id,
+      email: user.email,
+      name: user.name ?? undefined,
+      email_verified: true,
+      groups: admin ? ["admin"] : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cloudflare D1 session_token cookie (primary when AUTH_PROVIDER ≠ cognito).
+ */
+async function readD1SessionCookie(request: NextRequest): Promise<DecodedToken | null> {
+  const sessionId = request.cookies.get("session_token")?.value;
+  if (!sessionId) return null;
+  return resolveD1Session(sessionId);
 }
 
 /**
@@ -190,25 +234,8 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     }
   }
 
-  const token = getTokenFromHeader(request);
-  if (token) {
-    const decoded = await verifyToken(token);
-    if (decoded) {
-      return { ok: true, user: decoded };
-    }
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Invalid or expired token" },
-        { status: 401 },
-      ),
-    };
-  }
-
-  // In E2E we only trust the explicit Bearer token.
-  // This prevents negative tests ("unauthenticated") from accidentally
-  // succeeding due to an admin session cookie created by the shared
-  // Playwright setup project.
+  // In E2E we only trust the explicit E2E_ADMIN_TOKEN Bearer above.
+  // Reject all other cookies/sessions so negative tests stay honest.
   if (process.env.NEXT_PUBLIC_E2E === "1") {
     return {
       ok: false,
@@ -219,9 +246,42 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     };
   }
 
-  const sessionUser = await readSessionCookie();
-  if (sessionUser) {
-    return { ok: true, user: sessionUser };
+  const token = getTokenFromHeader(request);
+  if (token) {
+    if (isCognitoAuthEnabled()) {
+      const decoded = await verifyToken(token);
+      if (decoded) {
+        return { ok: true, user: decoded };
+      }
+      return {
+        ok: false,
+        response: NextResponse.json(
+          { error: "Invalid or expired token" },
+          { status: 401 },
+        ),
+      };
+    }
+
+    // D1 mode: Bearer is an opaque session id (not a Cognito JWT).
+    const bearerD1 = await resolveD1Session(token);
+    if (bearerD1) {
+      return { ok: true, user: bearerD1 };
+    }
+    // Stale Cognito JWT leftovers must not 401 ahead of a valid cookie.
+  }
+
+  // Cloudflare D1 session_token (email/password login)
+  const d1User = await readD1SessionCookie(request);
+  if (d1User) {
+    return { ok: true, user: d1User };
+  }
+
+  // next-auth / Cognito Hosted UI — only when Cognito is the active provider
+  if (isCognitoAuthEnabled()) {
+    const sessionUser = await readSessionCookie();
+    if (sessionUser) {
+      return { ok: true, user: sessionUser };
+    }
   }
 
   return {

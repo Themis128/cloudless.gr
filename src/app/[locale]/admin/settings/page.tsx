@@ -1,9 +1,70 @@
 "use client";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+type ConfigRow = { key: string; description: string | null; updated_at: number };
+
 export default function AdminSettingsPage() {
   const [cacheClearing, setCacheClearing] = useState(false);
   const [cacheMsg, setCacheMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [configs, setConfigs] = useState<ConfigRow[] | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [editKey, setEditKey] = useState("");
+  const [editValue, setEditValue] = useState("");
+  const [configSaving, setConfigSaving] = useState(false);
+  const [configMsg, setConfigMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const loadConfigs = useCallback(async () => {
+    setConfigError(null);
+    try {
+      const res = await fetchWithAuth("/api/admin/config");
+      const data = (await res.json()) as {
+        configured?: boolean;
+        configs?: ConfigRow[];
+        error?: string;
+      };
+      if (res.status === 503) {
+        setConfigs([]);
+        setConfigError(data.error ?? "AUTH_DB not bound — D1 app_config unavailable");
+        return;
+      }
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      setConfigs(data.configs ?? []);
+    } catch (err) {
+      setConfigError(err instanceof Error ? err.message : "Failed to load app_config");
+      setConfigs([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConfigs().catch(() => {});
+  }, [loadConfigs]);
+
+  async function handleSaveConfig() {
+    setConfigSaving(true);
+    setConfigMsg(null);
+    try {
+      const res = await fetchWithAuth("/api/admin/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: editKey.trim(), value: editValue }),
+      });
+      const data = (await res.json()) as { error?: string; ok?: boolean };
+      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+      setConfigMsg({ ok: true, text: `Saved ${editKey.trim()}` });
+      setEditValue("");
+      await loadConfigs();
+    } catch (err) {
+      setConfigMsg({
+        ok: false,
+        text: err instanceof Error ? err.message : "Save failed",
+      });
+    } finally {
+      setConfigSaving(false);
+      setTimeout(() => setConfigMsg(null), 5000);
+    }
+  }
+
   async function handleClearCache(prefix?: string) {
     setCacheClearing(true);
     setCacheMsg(null);
@@ -93,6 +154,76 @@ export default function AdminSettingsPage() {
             ))}{" "}
           </div>{" "}
         </div>{" "}
+        {/* D1 app_config */}
+        <div className="bg-void-light/50 rounded-xl border border-slate-800 p-6">
+          <h2 className="font-heading mb-1 font-semibold text-white">D1 App Config</h2>
+          <p className="mb-4 text-xs text-slate-500">
+            Non-secret keys in Cloudflare D1 <code className="text-slate-400">app_config</code>.
+            Secrets stay in Wrangler / k8s — blocked keys return 403.
+          </p>
+          {configError && (
+            <div className="mb-4 rounded-lg border border-amber-900/40 bg-amber-950/20 px-4 py-2 font-mono text-xs text-amber-300">
+              {configError}
+            </div>
+          )}
+          {configMsg && (
+            <div
+              className={`mb-4 rounded-lg border px-4 py-2 font-mono text-xs ${
+                configMsg.ok
+                  ? "border-neon-green/20 bg-neon-green/5 text-neon-green"
+                  : "border-red-900/30 bg-red-950/10 text-red-400"
+              }`}
+            >
+              {configMsg.ok ? "✓" : "✗"} {configMsg.text}
+            </div>
+          )}
+          <div className="mb-4 flex flex-wrap gap-2">
+            <input
+              type="text"
+              value={editKey}
+              onChange={(e) => setEditKey(e.target.value.toUpperCase())}
+              placeholder="KEY_NAME"
+              className="min-h-[40px] min-w-[12rem] flex-1 rounded-lg border border-slate-700 bg-void px-3 font-mono text-xs text-white"
+            />
+            <input
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              placeholder="value"
+              className="min-h-[40px] min-w-[12rem] flex-[2] rounded-lg border border-slate-700 bg-void px-3 font-mono text-xs text-white"
+            />
+            <button
+              type="button"
+              disabled={configSaving || !editKey.trim() || editValue === ""}
+              onClick={() => {
+                handleSaveConfig().catch(() => {});
+              }}
+              className="min-h-[40px] rounded-lg border border-neon-cyan/40 px-4 py-2 font-mono text-xs text-neon-cyan transition-all hover:border-neon-cyan disabled:opacity-50"
+            >
+              {configSaving ? "Saving…" : "Save"}
+            </button>
+          </div>
+          {configs && configs.length > 0 && (
+            <ul className="max-h-48 space-y-1 overflow-y-auto font-mono text-xs text-slate-400">
+              {configs.map((row) => (
+                <li key={row.key} className="flex gap-2 border-b border-slate-800/80 py-1">
+                  <button
+                    type="button"
+                    className="text-left text-neon-cyan hover:underline"
+                    onClick={() => setEditKey(row.key)}
+                  >
+                    {row.key}
+                  </button>
+                  <span className="truncate text-slate-600">{row.description ?? ""}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {configs && configs.length === 0 && !configError && (
+            <p className="font-mono text-xs text-slate-600">No app_config rows yet.</p>
+          )}
+        </div>
+
         {/* Danger Zone */}{" "}
         <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-6">
           {" "}

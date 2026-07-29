@@ -47,6 +47,17 @@ export const DEFAULT_FLAGS: ABFlag[] = [
       b: "Now Accepting Clients",
     },
   },
+  {
+    id: "store-recommendations",
+    name: "Store Recommendations",
+    description: "Show product recommendation grid vs holdout (no-rec baseline)",
+    enabled: false,
+    trafficSplit: 50,
+    variants: {
+      a: "show",
+      b: "hide",
+    },
+  },
 ];
 
 export async function getABFlags(): Promise<ABFlag[]> {

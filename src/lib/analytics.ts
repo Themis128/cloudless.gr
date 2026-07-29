@@ -1,23 +1,15 @@
 /**
- * Analytics event sink — writes NDJSON to S3 partitioned by date.
- * Path: events/year=YYYY/month=MM/day=DD/<timestamp>-<random>.ndjson
- * Queryable via Athena using the DDL in docs/analytics-athena.sql
+ * Analytics event sink — Cloudflare D1 (replaces S3 NDJSON / Athena path).
+ *
+ * Funnel events (search_*, rec_*) still go through `search-funnel.ts`.
+ * Generic product events land in `analytics_events` (migration 0009).
  */
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { createHash, randomBytes } from "crypto";
 
-const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_S3_BUCKET || "cloudless-analytics-data";
-
-let s3: S3Client | null = null;
-function getS3(): S3Client {
-  s3 ??= new S3Client({ region: REGION });
-  return s3;
-}
+import type { AuthDatabase } from "@/lib/auth-d1";
 
 export interface AnalyticsEvent {
-  event: string; // e.g. "signup", "purchase", "page_view"
-  user_id?: string; // Cognito sub
+  event: string;
+  user_id?: string;
   email?: string;
   session_id?: string;
   page?: string;
@@ -25,7 +17,6 @@ export interface AnalyticsEvent {
   country?: string;
   ip?: string;
   user_agent?: string;
-  // domain-specific
   amount?: number;
   currency?: string;
   plan?: string;
@@ -34,37 +25,94 @@ export interface AnalyticsEvent {
   source?: string;
   campaign?: string;
   medium?: string;
-  // freeform extras
   properties?: Record<string, unknown>;
 }
 
-/** One-way SHA-256 hash of an IP — GDPR-safe pseudonym, not reversible. */
-function pseudonymiseIp(ip: string | undefined): string | undefined {
-  if (!ip || ip === "unknown") return undefined;
-  return createHash("sha256").update(ip).digest("hex").slice(0, 16);
+interface WorkersGlobal {
+  __AUTH_DB__?: AuthDatabase;
 }
 
+interface ProcessWithAuthDb {
+  env?: { AUTH_DB?: AuthDatabase };
+}
+
+function workersGlobal(): WorkersGlobal {
+  return globalThis as unknown as WorkersGlobal;
+}
+
+function getProcessEnv(): ProcessWithAuthDb["env"] {
+  return (process as unknown as ProcessWithAuthDb).env;
+}
+
+function getD1Binding(): AuthDatabase | null {
+  const db = getProcessEnv()?.AUTH_DB ?? workersGlobal().__AUTH_DB__;
+  if (db && typeof db.prepare === "function") return db;
+  return null;
+}
+
+function newEventId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `evt_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
+}
+
+/**
+ * Persist a generic analytics event to D1.
+ * Returns true when written, false when D1 unavailable or invalid.
+ *
+ * @deprecated Name kept as trackS3Event for call-site compatibility during migration;
+ *           no longer writes to S3.
+ */
+export async function trackAnalyticsEvent(evt: AnalyticsEvent): Promise<boolean> {
+  const event = typeof evt.event === "string" ? evt.event.trim().slice(0, 100) : "";
+  if (!event) return false;
+
+  const db = getD1Binding();
+  if (!db) return false;
+
+  const props = {
+    ...(evt.properties ?? {}),
+    ...(evt.email ? { email: evt.email } : {}),
+    ...(evt.amount != null ? { amount: evt.amount } : {}),
+    ...(evt.currency ? { currency: evt.currency } : {}),
+    ...(evt.plan ? { plan: evt.plan } : {}),
+    ...(evt.service ? { service: evt.service } : {}),
+    ...(evt.country ? { country: evt.country } : {}),
+    // IP intentionally dropped — do not store raw IP in D1
+  };
+
+  try {
+    await db
+      .prepare(
+        `INSERT INTO analytics_events
+          (id, event, session_id, user_id, page, referrer, source, campaign, medium, product_id, properties_json, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'))`
+      )
+      .bind(
+        newEventId(),
+        event,
+        evt.session_id?.slice(0, 128) ?? null,
+        evt.user_id?.slice(0, 128) ?? null,
+        evt.page?.slice(0, 500) ?? null,
+        evt.referrer?.slice(0, 500) ?? null,
+        evt.source?.slice(0, 128) ?? null,
+        evt.campaign?.slice(0, 128) ?? null,
+        evt.medium?.slice(0, 128) ?? null,
+        evt.product_id?.slice(0, 120) ?? null,
+        Object.keys(props).length > 0 ? JSON.stringify(props).slice(0, 4000) : null
+      )
+      .run();
+    return true;
+  } catch (err) {
+    const safe =
+      err instanceof Error ? err.message.replace(/[\x00-\x1F\x7F]/g, "") : "unknown";
+    console.warn("[analytics] D1 write failed:", safe);
+    return false;
+  }
+}
+
+/** @deprecated Use trackAnalyticsEvent — kept for transitional imports. */
 export function trackS3Event(evt: AnalyticsEvent): void {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(now.getUTCDate()).padStart(2, "0");
-  const key = `events/year=${y}/month=${m}/day=${d}/${now.getTime()}-${randomBytes(4).toString("hex")}.ndjson`;
-
-  const record = JSON.stringify({
-    timestamp: now.toISOString(),
-    ...evt,
-    ip: pseudonymiseIp(evt.ip),
-  });
-
-  getS3()
-    .send(
-      new PutObjectCommand({
-        Bucket: BUCKET,
-        Key: key,
-        Body: record,
-        ContentType: "application/x-ndjson",
-      })
-    )
-    .catch((e) => console.error("[analytics] S3 write failed:", e));
+  trackAnalyticsEvent(evt).catch(() => {});
 }

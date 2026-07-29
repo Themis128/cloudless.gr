@@ -1,24 +1,27 @@
-yy
-
 # Master TODO — cloudless.gr perfection roadmap (post-R12)
 
 Quick checklist: `docs/current-source-of-truth-checklist.md` is the single
 active execution list. This file remains the detailed roadmap ledger and
 history.
 
-**Status as of 2026-06-22:** R10, R11, R12, R14 (Phase 1) + R13, R18,
-R22 (Phase 2) all shipped. Phase 1 is 4/5 done (only R25 open).
-**Phase 2 is 3/3 done.** R13 descoped to 24h cadence ⇒ already covered
-by R10's daily EspoCRM CronJob; R22 audit confirmed the existing
-ConditionalWrite-dedup pattern is safe at SMB volume. The 2026-06-22
-session ran a 22-PR ops sweep on top of that — see the "Session log"
-section below. **Next R-row: R21a** (Meilisearch self-host on omv-ha —
-entry to the AI baseline arc).
+**Status as of 2026-07-29:** Phases 0–6 roadmap rows are closed in
+`docs/current-source-of-truth-checklist.md` (DONE / PARTIAL / DEFERRED /
+SKIPPED). R10 PVC backups + R16 WAL-G now land on **Cloudflare R2**
+(not S3). R20/R24 AWS DR paths are **legacy-deferred**. Customer-facing
+R21b store search is wired to `/api/search`; R21d admin Product Copy UI,
+D1 search/rec funnel (`0008`), and `store-recommendations` A/B holdout
+shipped 2026-07-29. Auth: register + activate fall back to D1 when Cognito
+unset; lake sinks (Stripe events, admin notifications) write R2 not S3.
+**Still open:** Phase 7 operator cadence; Cognito JWKS retirement; Athena
+cost UI → R2/Workers.
 
-The single canonical action list for taking the AWS-serverless + Pi-cluster
-stack to "production-perfect with full data-analytics features", under the
-**same-hardware constraint**: no new AWS service categories beyond what we
-already use, no new Pi nodes beyond omv + omv-ha.
+Quick execution list → `docs/current-source-of-truth-checklist.md`.
+This file remains the detailed ledger + history.
+
+Platform direction (2026-07-29): **migrate off AWS → Cloudflare**
+(Workers / R2 / D1 / Access / Tunnel). Do not expand AWS or install
+AWS CLI/SDK for agent work. Same-hardware constraint still applies:
+no new Pi nodes beyond omv + omv-ha.
 
 Synthesizes:
 
@@ -30,9 +33,9 @@ Synthesizes:
 
 ## Constraints
 
-- **AWS side:** existing services only — Lambda, DDB, S3, SES, SSM, Cognito,
-  Athena/Glue, CloudFront, Route 53, ECR, Bedrock. **No** new EC2, Aurora,
-  Lightsail, MSK, RDS.
+- **Cloudflare-first:** prefer Workers / R2 / D1 / Access / Tunnel for new
+  work. Remaining AWS (Lambda, DDB, SES, SSM, Cognito, Athena, …) is
+  legacy — do not expand; do not install AWS CLI/SDK for operator work.
 - **Pi side:** omv + omv-ha only. No third node, no NAS migration.
 - **Solo Greek SMB volume.** Budget per change must match value — reject
   $50/mo+ recurring costs unless ROI is obvious.
@@ -91,11 +94,14 @@ SSM key under `/cloudless/production/*` today. From now on, any
 "added SSM key, forgot Pi" drift will fire a Slack + ntfy alert
 within 24h instead of surfacing as a runtime crash.
 
-**Operator-side blockers documented** (still pending — see Phase 0):
+**Operator-side blockers (reconciled 2026-07-29 — see Phase 0):**
 
-- Cloudflare token rotation (gates HA LB, email-obfuscation fix, infra MCP, AND `etl-espocrm-to-lake` move-off-Pi)
-- LinkedIn `LINKEDIN_*` SSM keys (for `ad-readiness.yml`)
-- Healthchecks.io URLs (6 of them) — workflow skips gracefully without them
+- Cloudflare token rotation — **SKIPPED** (operator deferred)
+- Sentry webhook + Kuma status/ntfy — **DONE**
+- ESP32 Notion restore — **PARTIAL** (API reconstruct; DBs empty)
+- Grafana Athena SCP — **DEFERRED** (R12 `/admin/cost` covers it)
+- LinkedIn CAPI config path — **DONE** in `src/data/campaigns.ts`
+- Healthchecks.io URLs (6) — still optional; workflows skip without them
 
 ## Legend
 
@@ -154,17 +160,17 @@ Reuses existing Bedrock Nova IAM (no new SaaS bills).
 ## Phase 4 — Week 4 (hardening + observability)
 
 - [x] ~~🤖 🟠 **R15** Cloudflare Access on admin tunnel hosts~~ ✅ **SHIPPED** — `infrastructure/cloudflare-access/` + `src/lib/cloudflare-access.ts` (token apply still needs healthy Cloudflare token from Phase 0).
-- [ ] 👤 🟠 **R17** Operator: create 12 Kuma monitors + wire Kuma → ntfy + Slack channels directly. **(also in Phase 0 — duplicate intentional)**
+- [x] ~~👤 🟠 **R17** Operator: create 12 Kuma monitors + wire Kuma → ntfy + Slack~~ ✅ **DONE 2026-07-29** — slug `cloudless`, 12 monitors (`scripts/kuma-bootstrap.cjs`), ntfy + `POST /api/webhooks/kuma` on `cloudless-app` (Bearer `ADMIN_ALERT_SECRET`); legacy `kuma-slack-bridge` scaled to 0. Also Phase 0.
 - [x] ~~🤖 🟣 **R19** Monthly failover drill~~ ✅ **SHIPPED** — `.github/workflows/failover-drill.yml` (monthly + workflow_dispatch primary/secondary health probes).
 
 ---
 
 ## Phase 5 — When time permits (lower priority)
 
-- [x] ~~🤖 🟠 **R16** AppFlowy WAL-G to S3~~ ✅ **SHIPPED** — sidecar + archive_command in `infrastructure/appflowy/k8s/appflowy.yaml`; Secret/CronJob in `walg-sidecar.yaml`.
+- [x] ~~🤖 🟠 **R16** AppFlowy WAL-G → **Cloudflare R2**~~ ✅ **SHIPPED 2026-07-29** — `infrastructure/appflowy/walg-sidecar.yaml` + live `appflowy-walg-r2` / daily basebackup CronJob (S3 design superseded).
 - [x] ~~🤖 🔵 **R23** Resend pilot on order-confirmation~~ ✅ **SHIPPED** — `src/lib/email-resend.ts` + `sendOrderConfirmation` prefers Resend when configured, SES fallback.
-- [x] ~~🤖 🔵 **R24** Route 53 + secondary-region Lambda + DDB Global Tables~~ ✅ **SHIPPED** — `infrastructure/r24-dr/` + `.github/workflows/r24-add-replicas.yml`.
-- [x] ~~🤖 🟣 **R20** Postgres logical replication subscriber on AWS~~ ✅ **SHIPPED** — `infrastructure/r20-replication/` + `.github/workflows/r20-replication-subscriber.yml`.
+- [x] ~~🤖 🔵 **R24** Route 53 + secondary-region Lambda + DDB Global Tables~~ ✅ **DEFERRED 2026-07-29 (legacy)** — manifests retained under `infrastructure/r24-dr/`; prefer Tunnel HA + R2 + R19 drill.
+- [x] ~~🤖 🟣 **R20** Postgres logical replication subscriber on AWS~~ ✅ **DEFERRED 2026-07-29 (legacy)** — manifests retained under `infrastructure/r20-replication/`; prefer R16→R2 WAL + `scripts/etl/appflowy-to-r2.mjs`.
 
 ---
 
@@ -179,6 +185,9 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 ---
 
 ## Phase 7 — Lifestyle changes (no PRs, just cadence)
+
+Tracking scaffold: `.github/ISSUE_TEMPLATE/ops-cadence.yml` (checklist marks
+tracking DONE). Checkboxes below stay open as **recurring operator work**.
 
 - [ ] 👤 🟠 Annual rotation: `APPFLOWY_PASSWORD`, `ESPOCRM_API_KEY`, `POSTIZ_API_KEY`, `GRAFANA_API_TOKEN`, `NTFY_TOKEN`. Use `skills/selfhosted-admin-bootstrap/SKILL.md` rotation runbook.
 - [ ] 👤 🟠 Update `infrastructure/n8n/workflows/*.json` in git after every UI change to the live workflows.
@@ -210,15 +219,15 @@ Closes the half-done CAPI work from `project_linkedin_capi_source_bound` memory.
 - ✅ `/admin/analytics` consolidated dashboard
 - ✅ `/admin/cluster` real-time health chips (MQTT + Kuma + Grafana + AppFlowy + EspoCRM + Postiz + n8n + ntfy)
 - ✅ Grafana per-app dashboards (kube-prom + 2 custom)
-- ⬜ **Phase 1:** `/admin/cost` Athena-backed panel (R12)
-- ⬜ **Phase 3:** AI semantic-search funnel analytics (query → result → click → buy) — added when R21 lands
-- ⬜ **Phase 3:** AI recommendation A/B vs no-rec baseline analytics — added when R21c lands
+- ✅ **Phase 1:** `/admin/cost` Athena-backed panel (R12) — live
+- ✅ **Phase 3:** AI semantic-search funnel analytics (query → result → click) — **D1** `search_funnel_events` + `/api/admin/analytics/search-funnel` (buy hook typed; wire at checkout next)
+- ✅ **Phase 3:** AI recommendation A/B vs no-rec baseline — `store-recommendations` flag + `RecommendationGrid` holdout + funnel `ab_variant`
 
 ### Customer-facing data features
 
-- ⬜ **Phase 3:** Personalized product recommendations (R21c) — biggest 2026 SMB e-shop expectation
-- ⬜ **Phase 3:** Semantic search box on `/store` (R21b) — replaces keyword-only search
-- ⬜ **Phase 3:** AI-generated product descriptions (R21d) — operator-approved before publish
+- ✅ **Phase 3:** Product recommendations engine (R21c) — API + PDP related + store `trending`; user-personalized homepage signals still light
+- ✅ **Phase 3:** Semantic search box on `/store` (R21b) — `StoreGrid` debounces to `/api/search` (Meili/Bedrock with local keyword fallback)
+- ✅ **Phase 3:** AI-generated product descriptions (R21d) — API + CLI + `/admin/product-descriptions` approve UI
 
 ---
 
