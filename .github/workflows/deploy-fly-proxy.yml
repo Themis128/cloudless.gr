@@ -19,16 +19,21 @@ jobs:
   deploy:
     name: Fly cloudless-proxy
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - name: Require FLY_API_TOKEN
+      - name: Require secrets
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
         run: |
           if [ -z "$FLY_API_TOKEN" ]; then
             echo "::error::FLY_API_TOKEN secret is not set"
+            exit 1
+          fi
+          if [ -z "$TS_AUTHKEY" ]; then
+            echo "::error::TS_AUTHKEY secret is not set (Tailscale fallback)"
             exit 1
           fi
 
@@ -40,6 +45,13 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: flyctl apps create cloudless-proxy --org personal 2>/dev/null || true
+
+      - name: Set Tailscale auth on Fly
+        if: ${{ inputs.apply }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
+        run: flyctl secrets set TS_AUTHKEY="$TS_AUTHKEY" --app cloudless-proxy --stage
 
       - name: Deploy
         if: ${{ inputs.apply }}
@@ -54,4 +66,9 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           flyctl status --app cloudless-proxy || true
-          curl -sS --max-time 20 https://cloudless-proxy.fly.dev/health || true
+          echo "--- /health ---"
+          curl -sS --max-time 25 https://cloudless-proxy.fly.dev/health || true
+          echo
+          echo "--- /api/health via Fly ---"
+          curl -sS --max-time 25 https://cloudless-proxy.fly.dev/api/health || true
+          echo
