@@ -1,6 +1,8 @@
 /**
- * Materialize admin datalake dashboard sections from R2 parquet → one JSON snapshot.
- * Writes lake/snapshots/admin-datalake.json
+ * Materialize admin datalake dashboard sections from R2 parquet → JSON snapshots.
+ * Writes:
+ *   - lake/snapshots/admin-datalake.json
+ *   - lake/snapshots/gsc-weekly.json (weekly GSC rollups)
  */
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetReader } from "@dsnp/parquetjs";
@@ -11,6 +13,7 @@ import { getS3Client, BUCKET } from "./_r2-config.mjs";
 
 const s3 = getS3Client();
 const SNAPSHOT_KEY = "lake/snapshots/admin-datalake.json";
+const GSC_WEEKLY_KEY = "lake/snapshots/gsc-weekly.json";
 
 async function readParquet(key) {
 	const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
@@ -78,6 +81,72 @@ function topKeywords(rows) {
 		.slice(0, 25);
 }
 
+function gscWeeklyReports(rows) {
+	const byWeek = new Map();
+
+	for (const row of rows) {
+		const end = String(row.end_date ?? "");
+		if (!end) continue;
+
+		let week = byWeek.get(end);
+		if (!week) {
+			week = {
+				clicks: 0,
+				impressions: 0,
+				position_sum: 0,
+				position_n: 0,
+				keywords: new Set(),
+				ctr_opportunities: 0,
+				queryRows: [],
+			};
+			byWeek.set(end, week);
+		}
+
+		const clicks = Number(row.clicks) || 0;
+		const impressions = Number(row.impressions) || 0;
+		const ctr = impressions > 0 ? clicks / impressions : Number(row.ctr) || 0;
+		const query = String(row.query ?? "");
+
+		week.clicks += clicks;
+		week.impressions += impressions;
+		if (query) week.keywords.add(query);
+		week.position_sum += Number(row.position) || 0;
+		week.position_n += 1;
+		if (impressions >= 20 && ctr < 0.02) week.ctr_opportunities += 1;
+		week.queryRows.push({ query, clicks, ctr });
+	}
+
+	return [...byWeek.entries()]
+		.sort(([a], [b]) => b.localeCompare(a))
+		.map(([end, week]) => {
+			const topKeywords = week.queryRows
+				.sort((a, b) => b.clicks - a.clicks)
+				.slice(0, 5)
+				.map((r) => ({ q: r.query, clicks: r.clicks, ctr: r.ctr }));
+
+			return {
+				id: end,
+				week: `Week of ${end}`,
+				date: end,
+				clicks: week.clicks,
+				impressions: week.impressions,
+				ctrPct:
+					week.impressions > 0
+						? Math.round((100 * week.clicks) / week.impressions * 100) / 100
+						: 0,
+				avgPosition:
+					week.position_n > 0
+						? Math.round((week.position_sum / week.position_n) * 100) / 100
+						: 0,
+				keywords: week.keywords.size,
+				topKeywords,
+				topCountry: "",
+				mobilePct: 0,
+				ctrOpportunities: week.ctr_opportunities,
+			};
+		});
+}
+
 function topErrors(rows) {
 	return [...rows]
 		.sort((a, b) => (Number(b.count_14d) || 0) - (Number(a.count_14d) || 0))
@@ -136,24 +205,54 @@ function espocrmFunnel(contacts, opportunities) {
 	return [...bySource.values()].sort((a, b) => b.contact_count - a.contact_count).slice(0, 20);
 }
 
+async function putJson(key, payload) {
+	await s3.send(
+		new PutObjectCommand({
+			Bucket: BUCKET,
+			Key: key,
+			Body: Buffer.from(JSON.stringify(payload), "utf8"),
+			ContentType: "application/json",
+		})
+	);
+}
+
 async function main() {
 	console.log(`Materializing datalake snapshot → R2://${BUCKET}/${SNAPSHOT_KEY}`);
 	const sections = [];
 	const gsc = await safeParquet("lake/gsc-keywords/keywords.parquet");
-	sections.push(gsc ? sectionOk("top_keywords", topKeywords(gsc)) : sectionErr("top_keywords", "missing gsc parquet"));
+	sections.push(
+		gsc ? sectionOk("top_keywords", topKeywords(gsc)) : sectionErr("top_keywords", "missing gsc parquet")
+	);
+
+	if (gsc) {
+		const reports = gscWeeklyReports(gsc);
+		await putJson(GSC_WEEKLY_KEY, { generated_at: new Date().toISOString(), reports });
+		console.log(`✅ Wrote GSC weekly snapshot (${reports.length} weeks) → ${GSC_WEEKLY_KEY}`);
+	}
+
 	const sentry = await safeParquet("lake/sentry-issues/issues.parquet");
-	sections.push(sentry ? sectionOk("top_errors", topErrors(sentry)) : sectionErr("top_errors", "missing sentry parquet"));
+	sections.push(
+		sentry ? sectionOk("top_errors", topErrors(sentry)) : sectionErr("top_errors", "missing sentry parquet")
+	);
 	const linkedin = await safeParquet("lake/linkedin-ads/insights.parquet");
-	sections.push(linkedin ? sectionOk("linkedin_ads", linkedinSummary(linkedin)) : sectionErr("linkedin_ads", "missing linkedin parquet"));
+	sections.push(
+		linkedin
+			? sectionOk("linkedin_ads", linkedinSummary(linkedin))
+			: sectionErr("linkedin_ads", "missing linkedin parquet")
+	);
 	const contacts = await safeParquet("lake/espocrm-contacts/contacts.parquet");
 	const opportunities = await safeParquet("lake/espocrm-opportunities/opportunities.parquet");
 	const funnel = espocrmFunnel(contacts, opportunities);
-	sections.push(funnel ? sectionOk("espocrm_funnel", funnel) : sectionErr("espocrm_funnel", "missing espocrm parquet"));
-	sections.push(sectionErr("acquisition_funnel", "use D1 analytics_events via API (not materialized from R2)"));
-	sections.push(sectionErr("attribution", "use D1 analytics_events via API (not materialized from R2)"));
-	const payload = { generated_at: new Date().toISOString(), cache: "r2-snapshot", sections };
-	await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: SNAPSHOT_KEY, Body: Buffer.from(JSON.stringify(payload), "utf8"), ContentType: "application/json" }));
+	sections.push(
+		funnel ? sectionOk("espocrm_funnel", funnel) : sectionErr("espocrm_funnel", "missing espocrm parquet")
+	);
+
+	const payload = { generated_at: new Date().toISOString(), cache: "cloudflare", sections };
+	await putJson(SNAPSHOT_KEY, payload);
 	console.log(`✅ Wrote snapshot with ${sections.length} sections`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+	console.error(e);
+	process.exit(1);
+});

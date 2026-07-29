@@ -173,14 +173,17 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
       payload_json backfill for legacy rows); Dynamo queries remain legacy fallback.
       Admin-notifications prefer D1 `admin_notification` when `AUTH_DB` bound
       (`src/lib/admin-notifications.ts` + migration 0011); Dynamo table is fallback.
-- [x] `DONE` Athena cost/datalake UI reads → Cloudflare-first (2026-07-29).
-      `/admin/cost` prefers D1 `aws_cost_daily` (migration 0013) then R2
-      `lake/aws-cost/cost.json` (`cost-analytics.ts`); Athena is legacy fallback.
+- [x] `DONE` Athena cost/datalake UI reads → Cloudflare-only (2026-07-30).
+      `/admin/cost`: D1 `aws_cost_daily` (migration 0013) then R2
+      `lake/aws-cost/cost.json` (`cost-analytics.ts`) — no Athena fallback.
       ETL: `scripts/etl/aws-cost-to-r2.mjs` + `.github/workflows/etl-aws-cost-to-r2.yml`
-      (CE source → R2 + D1). Datalake dashboard prefers D1 `analytics_events` +
+      (CE source → R2 + D1). Datalake dashboard: D1 `analytics_events` +
       R2 `lake/snapshots/admin-datalake.json` (`datalake-r2.ts` /
-      `materialize-datalake-snapshots.mjs`); Athena fills missing sections only.
-      Billing source remains AWS Cost Explorer (no CF equivalent).
+      `materialize-datalake-snapshots.mjs`); missing sections error instead of
+      Athena. GSC weekly reports: R2 `lake/snapshots/gsc-weekly.json`
+      (`notion-gsc-reports.ts`). Notion analytics reads: D1 `analytics_events`
+      (`notion-analytics.ts`). Billing source remains AWS Cost Explorer (no CF
+      equivalent).
 - [x] `DEFERRED` ESLint 10 + TypeScript 7 majors (ecosystem blockers 2026-07-29).
       ESLint 10 crashes `eslint-plugin-react` (`getFilename is not a function`);
       `eslint-plugin-import` / `jsx-a11y` peers stop at eslint 9. TypeScript 7

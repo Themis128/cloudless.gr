@@ -1,10 +1,11 @@
 /**
- * Admin datalake dashboard reads — Cloudflare-first.
+ * Admin datalake dashboard reads — Cloudflare only (D1 + R2).
  *
- * Prefer R2 snapshot `lake/snapshots/admin-datalake.json` (written by
- * scripts/etl/materialize-datalake-snapshots.mjs). Acquisition/attribution
- * prefer live D1 `analytics_events` when AUTH_DB is bound. Athena remains
- * a legacy per-section fallback.
+ * Acquisition/attribution: live D1 `analytics_events` when AUTH_DB is bound.
+ * GSC / Sentry / LinkedIn / EspoCRM: R2 snapshot
+ * `lake/snapshots/admin-datalake.json` (ETL: materialize-datalake-snapshots.mjs).
+ *
+ * Missing sections return an error — no Athena fallback.
  */
 
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
@@ -34,6 +35,11 @@ const SECTION_ORDER = [
   "top_errors",
   "espocrm_funnel",
 ] as const;
+
+/** Sections served from D1 — excluded when merging R2 snapshot rows. */
+const D1_SECTIONS = new Set<string>(["acquisition_funnel", "attribution"]);
+
+const MISSING_ERROR = "not available (D1/R2 unbound or ETL snapshot missing)";
 
 function daysAgoUnix(days: number): number {
   return Math.floor(Date.now() / 1000) - days * 24 * 60 * 60;
@@ -106,47 +112,10 @@ export async function loadDatalakeSnapshotFromR2(): Promise<DatalakeDashboardPay
   if (!parsed?.sections || !Array.isArray(parsed.sections)) return null;
   return {
     generated_at: parsed.generated_at || new Date().toISOString(),
-    cache: parsed.cache || "r2-snapshot",
-    sections: parsed.sections,
+    cache: "cloudflare",
+    sections: parsed.sections.filter((s) => !D1_SECTIONS.has(s.section)),
   };
 }
-
-async function athenaSection(
-  section: string,
-  sql: string,
-  skipCache: boolean
-): Promise<DatalakeSectionResult> {
-  const { runAthenaQuery } = await import("@/lib/athena");
-  const result = await runAthenaQuery(sql, { skipCache });
-  return { section, ...result };
-}
-
-const ATHENA_QUERIES: Array<{ section: string; sql: string }> = [
-  {
-    section: "acquisition_funnel",
-    sql: "SELECT * FROM cloudless_analytics.v_acquisition_funnel WHERE day >= current_date - interval '30' day ORDER BY day DESC",
-  },
-  {
-    section: "attribution",
-    sql: "SELECT * FROM cloudless_analytics.v_attribution_by_source LIMIT 25",
-  },
-  {
-    section: "top_keywords",
-    sql: "SELECT * FROM cloudless_analytics.v_gsc_top_keywords LIMIT 25",
-  },
-  {
-    section: "linkedin_ads",
-    sql: "SELECT * FROM cloudless_analytics.v_linkedin_ads_summary",
-  },
-  {
-    section: "top_errors",
-    sql: "SELECT * FROM cloudless_analytics.v_sentry_top_issues LIMIT 10",
-  },
-  {
-    section: "espocrm_funnel",
-    sql: "SELECT * FROM cloudless_analytics.v_espocrm_funnel LIMIT 20",
-  },
-];
 
 function sectionUsable(section: DatalakeSectionResult | undefined): boolean {
   return Boolean(
@@ -154,50 +123,37 @@ function sectionUsable(section: DatalakeSectionResult | undefined): boolean {
   );
 }
 
-function mergeSections(
-  preferred: DatalakeSectionResult[],
-  fallback: DatalakeSectionResult[]
-): DatalakeSectionResult[] {
-  const byName = new Map(fallback.map((s) => [s.section, s]));
-  for (const section of preferred) {
-    const hasRows = Array.isArray(section.rows);
-    const usable = !section.error && hasRows;
-    if (usable) byName.set(section.section, section);
-    else if (!byName.has(section.section)) byName.set(section.section, section);
-  }
-  return SECTION_ORDER.map((section) => byName.get(section) ?? { section, error: "missing" });
+function d1SectionError(section: string, error: unknown): DatalakeSectionResult {
+  return {
+    section,
+    error: error instanceof Error ? error.message.slice(0, 300) : String(error),
+  };
 }
 
 export async function getDatalakeDashboard(options: {
   refresh?: boolean;
 }): Promise<DatalakeDashboardPayload> {
   const refresh = options.refresh === true;
-  const preferred: DatalakeSectionResult[] = [];
+  const collected: DatalakeSectionResult[] = [];
 
   const db = getAuthDbFromEnv();
   if (db) {
     try {
-      preferred.push(await acquisitionFromD1(db));
+      collected.push(await acquisitionFromD1(db));
     } catch (error) {
-      preferred.push({
-        section: "acquisition_funnel",
-        error: error instanceof Error ? error.message.slice(0, 300) : String(error),
-      });
+      collected.push(d1SectionError("acquisition_funnel", error));
     }
     try {
-      preferred.push(await attributionFromD1(db));
+      collected.push(await attributionFromD1(db));
     } catch (error) {
-      preferred.push({
-        section: "attribution",
-        error: error instanceof Error ? error.message.slice(0, 300) : String(error),
-      });
+      collected.push(d1SectionError("attribution", error));
     }
   }
 
   if (!refresh) {
     try {
       const snap = await loadDatalakeSnapshotFromR2();
-      if (snap) preferred.push(...snap.sections);
+      if (snap) collected.push(...snap.sections);
     } catch (error) {
       console.warn(
         "[datalake-r2] snapshot read failed:",
@@ -206,39 +162,17 @@ export async function getDatalakeDashboard(options: {
     }
   }
 
-  const hasAllUsable = SECTION_ORDER.every((section) =>
-    sectionUsable(preferred.find((s) => s.section === section))
-  );
-
-  if (hasAllUsable) {
-    return {
-      generated_at: new Date().toISOString(),
-      cache: refresh ? "skipped" : "cloudflare",
-      sections: mergeSections(preferred, []),
-    };
-  }
-
-  if (refresh) {
-    try {
-      const { resetAthenaCache } = await import("@/lib/athena");
-      resetAthenaCache();
-    } catch {
-      /* Athena optional */
-    }
-  }
-
-  const settled = await Promise.allSettled(
-    ATHENA_QUERIES.map(({ section, sql }) => athenaSection(section, sql, refresh))
-  );
-  const athenaSections: DatalakeSectionResult[] = settled.map((s, i) => {
-    if (s.status === "fulfilled") return s.value;
-    const err = s.reason instanceof Error ? s.reason.message : String(s.reason);
-    return { section: ATHENA_QUERIES[i].section, error: err.slice(0, 300) };
+  const byName = new Map(collected.map((s) => [s.section, s]));
+  const sections = SECTION_ORDER.map((section) => {
+    const existing = byName.get(section);
+    if (sectionUsable(existing)) return existing!;
+    if (existing?.error) return existing;
+    return { section, error: MISSING_ERROR };
   });
 
   return {
     generated_at: new Date().toISOString(),
-    cache: refresh ? "skipped" : preferred.length ? "cloudflare+athena" : "athena",
-    sections: mergeSections(preferred, athenaSections),
+    cache: "cloudflare",
+    sections,
   };
 }
