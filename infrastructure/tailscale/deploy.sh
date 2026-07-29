@@ -35,8 +35,14 @@ helm upgrade --install tailscale-operator tailscale/tailscale-operator \
   --set-string apiServerProxyConfig.allowImpersonation="true" \
   --wait
 
-echo "==> IngressClass + Connector/ProxyClass + ProxyGroups"
-kubectl apply -f "$ROOT/infrastructure/tailscale/ingress-class.yaml"
+echo "==> IngressClass (skip if Helm already created it)"
+if ! kubectl get ingressclass tailscale >/dev/null 2>&1; then
+  kubectl apply -f "$ROOT/infrastructure/tailscale/ingress-class.yaml"
+else
+  echo "    IngressClass tailscale already exists — leaving controller field alone"
+fi
+
+echo "==> Connector/ProxyClass + ProxyGroups"
 kubectl apply -f "$ROOT/infrastructure/tailscale/connector.yaml"
 
 echo "==> ProxyGroups (ingress + kube-apiserver)"
