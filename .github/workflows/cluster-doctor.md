@@ -15,6 +15,7 @@ on:
 permissions:
   contents: read
   issues: read
+  copilot-requests: write
 strict: false
 engine: copilot
 safe-outputs:

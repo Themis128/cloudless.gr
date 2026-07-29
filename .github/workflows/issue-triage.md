@@ -8,6 +8,7 @@ permissions:
   issues: read
   pull-requests: read
   contents: read
+  copilot-requests: write
 strict: false
 engine: copilot
 safe-outputs:
