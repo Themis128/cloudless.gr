@@ -7,6 +7,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  copilot-requests: write
 strict: false
 engine: copilot
 safe-outputs:

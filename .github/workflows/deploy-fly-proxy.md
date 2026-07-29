@@ -9,6 +9,7 @@ on:
         default: true
 permissions:
   contents: read
+  copilot-requests: write
 strict: false
 engine: copilot
 safe-outputs:
