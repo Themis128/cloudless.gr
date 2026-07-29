@@ -160,7 +160,16 @@ Issue template: `.github/ISSUE_TEMPLATE/ops-cadence.yml`.
       Evidence: `src/lib/analytics.ts` (`trackAnalyticsEvent`), `POST /api/analytics/track` (no S3).
 - [x] `DONE` Stripe + admin-notification **lake** PutObject → R2 `DATALAKE_BUCKET`
       (`getDataLakeBucketFromEnv` in `r2-client.ts`; no S3 SDK in those sinks).
-      Still AWS (out of scope for this cut): Athena cost/datalake UI reads, Dynamo idempotency table.
+      Stripe webhook **idempotency** prefers D1 `stripe_transaction` when `AUTH_DB`
+      is bound (`persistStripeEvent` / mark helpers in `stripe-transactions.ts`);
+      Dynamo `STRIPE_TRANSACTIONS_TABLE` remains legacy fallback.
+      Still AWS (follow-up): Athena cost/datalake UI reads; admin-notifications
+      Dynamo primary store; `stripe-analytics-read` Dynamo queries.
+- [x] `DEFERRED` ESLint 10 + TypeScript 7 majors (ecosystem blockers 2026-07-29).
+      ESLint 10 crashes `eslint-plugin-react` (`getFilename is not a function`);
+      `eslint-plugin-import` / `jsx-a11y` peers stop at eslint 9. TypeScript 7
+      hard-stopped by `typescript-eslint` (`typescript: >=4.8.4 <6.1.0`). Revisit
+      when Next `eslint-config-next` + typescript-eslint ship support.
 - [x] `DONE` Cognito → D1 auth cutover (JWKS gated).
       Evidence: login/register/activate D1 paths; `requireAuth` uses Cognito JWKS
       **only** when `NEXT_PUBLIC_AUTH_PROVIDER=cognito`; otherwise opaque

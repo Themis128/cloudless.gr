@@ -6,6 +6,8 @@ import {
   type AttributeValue,
 } from "@aws-sdk/client-dynamodb";
 import type Stripe from "stripe";
+import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
+import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const APP_SOURCE_TAG = "cloudless.gr";
@@ -53,10 +55,14 @@ function toJson(value: unknown): string {
   }
 }
 
-function getTransactionsTableName(): string {
+function getTransactionsTableName(): string | null {
   const tableName = process.env.STRIPE_TRANSACTIONS_TABLE?.trim();
-  if (tableName) return tableName;
-  throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
+  return tableName || null;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return /UNIQUE constraint failed|SQLITE_CONSTRAINT|constraint failed/i.test(msg);
 }
 
 export interface StripeEventTags {
@@ -88,17 +94,24 @@ function toExpiryEpoch(unixSeconds: number): number {
   return unixSeconds + ANALYTICS_RETENTION_DAYS * 24 * 60 * 60;
 }
 
-function buildItem(event: Stripe.Event): Record<string, AttributeValue> {
+function extractObjectFields(event: Stripe.Event) {
   const object = event.data.object as unknown as Record<string, unknown>;
-  const amountMinor =
-    asNumber(object.amount_total) ?? asNumber(object.amount_due) ?? asNumber(object.amount_paid);
+  return {
+    object,
+    amountMinor:
+      asNumber(object.amount_total) ?? asNumber(object.amount_due) ?? asNumber(object.amount_paid),
+    objectId: asString(object.id),
+    currency: asString(object.currency),
+    paymentStatus: asString(object.payment_status) ?? asString(object.status),
+    customerId: asString(object.customer),
+    customerEmail: asString(object.customer_email),
+    mode: asString(object.mode),
+  };
+}
 
-  const objectId = asString(object.id);
-  const currency = asString(object.currency);
-  const paymentStatus = asString(object.payment_status) ?? asString(object.status);
-  const customerId = asString(object.customer);
-  const customerEmail = asString(object.customer_email);
-  const mode = asString(object.mode);
+function buildItem(event: Stripe.Event): Record<string, AttributeValue> {
+  const { amountMinor, objectId, currency, paymentStatus, customerId, customerEmail, mode } =
+    extractObjectFields(event);
   const tags = getStripeEventTags(event.type);
   const eventDay = toEventDay(event.created);
   const stageCategory = `${tags.tagStage}#${tags.tagCategory}`;
@@ -134,8 +147,53 @@ export interface PersistStripeEventResult {
   duplicate: boolean;
 }
 
-export async function persistStripeEvent(event: Stripe.Event): Promise<PersistStripeEventResult> {
+async function persistStripeEventD1(
+  db: AuthDatabase,
+  event: Stripe.Event
+): Promise<PersistStripeEventResult> {
+  const { customerId } = extractObjectFields(event);
+  const tags = getStripeEventTags(event.type);
+  const eventDay = toEventDay(event.created);
+  const stageCategory = `${tags.tagStage}#${tags.tagCategory}`;
+  const receivedAt = Date.now();
+
+  try {
+    await db
+      .prepare(
+        `INSERT INTO stripe_transaction (
+          event_id, event_type, tag_category, tag_stage, stage_category,
+          event_day, customer_id, processing_status, received_at, payload_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        event.id,
+        event.type,
+        tags.tagCategory,
+        tags.tagStage,
+        stageCategory,
+        eventDay,
+        customerId ?? null,
+        "received",
+        receivedAt,
+        toJson(event.data.object)
+      )
+      .run();
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return { duplicate: true };
+    }
+    throw error;
+  }
+
+  sinkStripeEventToLake(event).catch(() => {});
+  return { duplicate: false };
+}
+
+async function persistStripeEventDynamo(event: Stripe.Event): Promise<PersistStripeEventResult> {
   const tableName = getTransactionsTableName();
+  if (!tableName) {
+    throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
+  }
   const client = getDynamoClient();
 
   try {
@@ -146,7 +204,6 @@ export async function persistStripeEvent(event: Stripe.Event): Promise<PersistSt
         ConditionExpression: "attribute_not_exists(eventId)",
       })
     );
-    // Sink to data lake for analytics (fire-and-forget)
     sinkStripeEventToLake(event).catch(() => {});
     return { duplicate: false };
   } catch (error) {
@@ -160,8 +217,52 @@ export async function persistStripeEvent(event: Stripe.Event): Promise<PersistSt
   }
 }
 
-export async function markStripeEventProcessed(eventId: string): Promise<void> {
+/**
+ * Persist a Stripe webhook event for idempotency.
+ * Prefer D1 (`AUTH_DB` / `__AUTH_DB__`) when bound; else Dynamo `STRIPE_TRANSACTIONS_TABLE`.
+ */
+export async function persistStripeEvent(event: Stripe.Event): Promise<PersistStripeEventResult> {
+  const db = getAuthDbFromEnv();
+  if (db) {
+    return persistStripeEventD1(db, event);
+  }
+  return persistStripeEventDynamo(event);
+}
+
+async function markStripeEventD1(
+  db: AuthDatabase,
+  eventId: string,
+  status: "processed" | "handler_failed",
+  errorMessage?: string
+): Promise<void> {
+  const processedAt = Date.now();
+  if (status === "processed") {
+    await db
+      .prepare(
+        `UPDATE stripe_transaction
+         SET processing_status = ?, processed_at = ?, processing_error = NULL
+         WHERE event_id = ?`
+      )
+      .bind(status, processedAt, eventId)
+      .run();
+    return;
+  }
+
+  await db
+    .prepare(
+      `UPDATE stripe_transaction
+       SET processing_status = ?, processed_at = ?, processing_error = ?
+       WHERE event_id = ?`
+    )
+    .bind(status, processedAt, (errorMessage ?? "").slice(0, 1000), eventId)
+    .run();
+}
+
+async function markStripeEventProcessedDynamo(eventId: string): Promise<void> {
   const tableName = getTransactionsTableName();
+  if (!tableName) {
+    throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
+  }
   const client = getDynamoClient();
   await client.send(
     new UpdateItemCommand({
@@ -177,8 +278,11 @@ export async function markStripeEventProcessed(eventId: string): Promise<void> {
   );
 }
 
-export async function markStripeEventFailed(eventId: string, errorMessage: string): Promise<void> {
+async function markStripeEventFailedDynamo(eventId: string, errorMessage: string): Promise<void> {
   const tableName = getTransactionsTableName();
+  if (!tableName) {
+    throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
+  }
   const client = getDynamoClient();
   await client.send(
     new UpdateItemCommand({
@@ -195,11 +299,27 @@ export async function markStripeEventFailed(eventId: string, errorMessage: strin
   );
 }
 
+export async function markStripeEventProcessed(eventId: string): Promise<void> {
+  const db = getAuthDbFromEnv();
+  if (db) {
+    await markStripeEventD1(db, eventId, "processed");
+    return;
+  }
+  await markStripeEventProcessedDynamo(eventId);
+}
+
+export async function markStripeEventFailed(eventId: string, errorMessage: string): Promise<void> {
+  const db = getAuthDbFromEnv();
+  if (db) {
+    await markStripeEventD1(db, eventId, "handler_failed", errorMessage);
+    return;
+  }
+  await markStripeEventFailedDynamo(eventId, errorMessage);
+}
+
 // ---------------------------------------------------------------------------
 // Data Lake sink — writes Stripe events to R2 (Cloudflare DATALAKE_BUCKET).
 // ---------------------------------------------------------------------------
-
-import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 
 async function sinkStripeEventToLake(event: Stripe.Event): Promise<void> {
   const bucket = getDataLakeBucketFromEnv();
