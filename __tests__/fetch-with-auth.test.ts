@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { clearSessionCache } from "@/lib/fetch-with-auth";
 
 const mockGetSession = vi.fn();
 
@@ -13,36 +12,36 @@ vi.mock("next-auth/react", () => ({
 
 describe("fetch-with-auth.ts", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal("fetch", vi.fn());
-    // Reset the module-level session cache so each test starts fresh.
-    clearSessionCache();
+    vi.resetModules();
+    mockGetSession.mockReset();
+    mockGetSession.mockResolvedValue(null);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new globalThis.Response("{}", { status: 200 })));
+    delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
   });
 
-  it("calls fetch without Authorization when no session", async () => {
-    mockGetSession.mockResolvedValueOnce(null);
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response("{}", { status: 200 })
-    );
+  it("D1 mode: skips getSession and does not attach Authorization", async () => {
+    mockGetSession.mockResolvedValue({ idToken: "should-not-attach" });
 
-    const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
+    const { fetchWithAuth, clearSessionCache } = await import("@/lib/fetch-with-auth");
+    clearSessionCache();
     await fetchWithAuth("/api/test");
 
+    expect(mockGetSession).not.toHaveBeenCalled();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
+        credentials: "same-origin",
         headers: expect.not.objectContaining({ Authorization: expect.anything() }),
       })
     );
   });
 
-  it("calls fetch with Authorization header when session has idToken", async () => {
-    mockGetSession.mockResolvedValueOnce({ idToken: "test-token-abc" });
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response(JSON.stringify({ ok: true }), { status: 200 })
-    );
+  it("cognito: calls fetch with Authorization header when session has idToken", async () => {
+    process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+    mockGetSession.mockResolvedValue({ idToken: "test-token-abc" });
 
-    const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
+    const { fetchWithAuth, clearSessionCache } = await import("@/lib/fetch-with-auth");
+    clearSessionCache();
     const res = await fetchWithAuth("/api/admin/data");
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -54,13 +53,12 @@ describe("fetch-with-auth.ts", () => {
     expect(res.status).toBe(200);
   });
 
-  it("merges existing headers with the Authorization header", async () => {
-    mockGetSession.mockResolvedValueOnce({ idToken: "tok" });
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response("{}", { status: 200 })
-    );
+  it("cognito: merges existing headers with the Authorization header", async () => {
+    process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+    mockGetSession.mockResolvedValue({ idToken: "tok" });
 
-    const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
+    const { fetchWithAuth, clearSessionCache } = await import("@/lib/fetch-with-auth");
+    clearSessionCache();
     await fetchWithAuth("/api/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -78,15 +76,20 @@ describe("fetch-with-auth.ts", () => {
     );
   });
 
-  it("still calls fetch when getSession returns session without idToken", async () => {
-    mockGetSession.mockResolvedValueOnce({ user: { email: "a@b.com" } });
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new globalThis.Response("{}", { status: 200 })
-    );
+  it("cognito: still calls fetch when getSession returns session without idToken", async () => {
+    process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+    mockGetSession.mockResolvedValue({ user: { email: "a@b.com" } });
 
-    const { fetchWithAuth } = await import("@/lib/fetch-with-auth");
+    const { fetchWithAuth, clearSessionCache } = await import("@/lib/fetch-with-auth");
+    clearSessionCache();
     const res = await fetchWithAuth("/api/public");
 
     expect(res.status).toBe(200);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/public",
+      expect.objectContaining({
+        headers: expect.not.objectContaining({ Authorization: expect.anything() }),
+      })
+    );
   });
 });

@@ -96,11 +96,24 @@ describe("AuthContext provider handoff", () => {
     );
   });
 
-  it("default (no provider set): signIn hands off to the cognito provider", async () => {
+  it("default (no provider set): signIn posts to D1 /api/auth/login", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        user: { id: "u1", email: "e@x.com" },
+        isAdmin: false,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
     const get = await mountWith(undefined);
     await act(async () => {
       await get().signIn("e@x.com", "pw");
     });
-    expect(signInMock).toHaveBeenCalledWith("cognito", expect.objectContaining({ redirect: true }));
+    expect(signInMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/login",
+      expect.objectContaining({ method: "POST" })
+    );
   });
 });

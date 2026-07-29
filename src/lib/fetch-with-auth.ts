@@ -15,8 +15,12 @@
 
 import { getSession } from "next-auth/react";
 
-const USE_COGNITO = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
-const CACHE_TTL_MS = 5000;
+const CACHE_TTL_MS = process.env.VITEST === "true" || process.env.NODE_ENV === "test" ? 0 : 5000;
+
+/** Read at call time so Vitest can toggle NEXT_PUBLIC_AUTH_PROVIDER per test. */
+function cognitoBearerEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
+}
 
 let cachedSession: {
   value: Awaited<ReturnType<typeof getSession>>;
@@ -43,7 +47,7 @@ export async function fetchWithAuth(url: string, init?: RequestInit): Promise<Re
     ...((init?.headers as Record<string, string>) || {}),
   };
 
-  if (USE_COGNITO) {
+  if (cognitoBearerEnabled()) {
     const session = await getCachedSession();
     const idToken = session?.idToken;
     if (idToken) {
