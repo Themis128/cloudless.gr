@@ -11,6 +11,7 @@ Set-Location -Path "D:\cloudless.gr"
 Write-Host "==> 1. Confirm the new files exist" -ForegroundColor Cyan
 $paths = @(
     "src/lib/integrations/http.ts",
+    "src/lib/integration-http.ts",
     "__tests__/integrations-http.test.ts"
 )
 foreach ($p in $paths) {

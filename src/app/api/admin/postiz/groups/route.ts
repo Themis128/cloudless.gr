@@ -37,9 +37,6 @@ export async function GET(req: NextRequest) {
         { status: 502 }
       );
     }
-    return NextResponse.json(
-      { error: "postiz_unreachable" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "postiz_unreachable" }, { status: 404 });
   }
 }

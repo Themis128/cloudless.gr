@@ -16,22 +16,39 @@ Creates a secondary-region (us-west-2) passive Lambda + DDB Global Tables for AW
 
 ## Usage
 
+### Option A — Terraform (full stack)
+
 ```bash
-# Deploy to us-west-2
 cd infrastructure/r24-dr
-terraform init -backend-config="bucket=cloudless-analytics-data" -backend-config="key=r24-dr/terraform.tfstate" -backend-config="region=us-west-2"
-terraform apply -var="primary_region=us-east-1"
+terraform init \
+  -backend-config="bucket=cloudless-analytics-data" \
+  -backend-config="key=r24-dr/terraform.tfstate" \
+  -backend-config="region=us-east-1"
+terraform apply \
+  -var="primary_region=us-east-1" \
+  -var="hosted_zone_id=Z…" \
+  -var="primary_alias_dns_name=d3k7muo3c6lw6s.cloudfront.net"
+```
+
+### Option B — CI for Global Tables only
+
+```bash
+# dry-run
+gh workflow run r24-add-replicas.yml -f apply=false
+# apply replicas
+gh workflow run r24-add-replicas.yml -f apply=true
 ```
 
 ## Failover procedure
 
 1. Route 53 health check detects primary unhealthy
-2. Operator manually switches DNS to standby
-3. Standby Lambda activates with replicated data
-4. When primary recovers, switch back
+2. DNS fails over to SECONDARY (standby Lambda URL)
+3. Standby serves health + minimal surface with replicated DDB data
+4. When primary recovers, switch back (PRIMARY health check healthy)
 
 ## Files
 
-- `main.tf` - Primary resources (Lambda, IAM)
-- `route53.tf` - Health check + failover record
-- `dynamodb.tf` - Global table configurations (updates existing tables)
+- `main.tf` — standby Lambda + IAM (us-west-2)
+- `route53.tf` — health check + failover records
+- `dynamodb.tf` — Global Tables replica provisioner
+- `.github/workflows/r24-add-replicas.yml` — CI path for replicas

@@ -1,5 +1,5 @@
 /**
- * Notion-backed CMS coverage.
+ * AppFlowy-backed CMS coverage.
  *
  * Covers all 8 Notion databases surfaced by the app:
  *   blog, docs, testimonials, services, faqs, case-studies
@@ -35,7 +35,7 @@ const FIRST_STATIC_CASE_SLUG = staticCaseStudies[0]?.slug;
 // Blog
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /blog", () => {
+test.describe("AppFlowy CMS — /blog", () => {
   test("renders the blog header and search input", async ({ page }) => {
     await page.goto("/blog");
     await expect(
@@ -64,7 +64,7 @@ test.describe("Notion CMS — /blog", () => {
   });
 });
 
-test.describe("Notion CMS — /blog/[slug]", () => {
+test.describe("AppFlowy CMS — /blog/[slug]", () => {
   test.skip(!FIRST_STATIC_POST_SLUG, "no static posts configured");
 
   test("static fallback post renders an article heading", async ({ page }) => {
@@ -81,7 +81,7 @@ test.describe("Notion CMS — /blog/[slug]", () => {
   });
 });
 
-test.describe("Notion CMS — /api/blog/posts contract", () => {
+test.describe("AppFlowy CMS — /api/blog/posts contract", () => {
   test("returns a non-empty array of posts with required fields", async ({ request }) => {
     const res = await request.get("/api/blog/posts");
     expect(res.status()).toBe(200);
@@ -100,7 +100,7 @@ test.describe("Notion CMS — /api/blog/posts contract", () => {
 // Docs
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /docs", () => {
+test.describe("AppFlowy CMS — /docs", () => {
   test("renders the docs header and search input", async ({ page }) => {
     await page.goto("/docs");
     await page.waitForLoadState("networkidle");
@@ -126,7 +126,7 @@ test.describe("Notion CMS — /docs", () => {
   });
 });
 
-test.describe("Notion CMS — /api/docs contract", () => {
+test.describe("AppFlowy CMS — /api/docs contract", () => {
   test("returns an array (empty or populated) with required fields", async ({ request }) => {
     const res = await request.get("/api/docs");
     expect(res.status()).toBe(200);
@@ -146,7 +146,7 @@ test.describe("Notion CMS — /api/docs contract", () => {
 // Testimonials
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /api/testimonials contract", () => {
+test.describe("AppFlowy CMS — /api/testimonials contract", () => {
   test("returns an array with required fields", async ({ request }) => {
     const res = await request.get("/api/testimonials");
     expect(res.status()).toBe(200);
@@ -176,7 +176,7 @@ test.describe("Notion CMS — /api/testimonials contract", () => {
   });
 });
 
-test.describe("Notion CMS — testimonials on homepage", () => {
+test.describe("AppFlowy CMS — testimonials on homepage", () => {
   test("homepage renders at least one testimonial quote", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
@@ -194,7 +194,7 @@ test.describe("Notion CMS — testimonials on homepage", () => {
 // Services
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /services page", () => {
+test.describe("AppFlowy CMS — /services page", () => {
   test("renders the services heading", async ({ page }) => {
     await page.goto("/services");
     await page.waitForLoadState("networkidle");
@@ -216,7 +216,7 @@ test.describe("Notion CMS — /services page", () => {
   });
 });
 
-test.describe("Notion CMS — /api/services contract", () => {
+test.describe("AppFlowy CMS — /api/services contract", () => {
   test("returns a non-empty array with required fields", async ({ request }) => {
     const res = await request.get("/api/services");
     expect(res.status()).toBe(200);
@@ -248,7 +248,7 @@ test.describe("Notion CMS — /api/services contract", () => {
 // FAQs
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /api/faqs contract", () => {
+test.describe("AppFlowy CMS — /api/faqs contract", () => {
   test("returns a non-empty array with required fields", async ({ request }) => {
     const res = await request.get("/api/faqs");
     expect(res.status()).toBe(200);
@@ -287,7 +287,7 @@ test.describe("Notion CMS — /api/faqs contract", () => {
 // Case Studies
 // ---------------------------------------------------------------------------
 
-test.describe("Notion CMS — /case-studies page", () => {
+test.describe("AppFlowy CMS — /case-studies page", () => {
   test("renders the case studies heading", async ({ page }) => {
     await page.goto("/case-studies");
     await page.waitForLoadState("networkidle");
@@ -304,7 +304,7 @@ test.describe("Notion CMS — /case-studies page", () => {
   });
 });
 
-test.describe("Notion CMS — /case-studies/[slug]", () => {
+test.describe("AppFlowy CMS — /case-studies/[slug]", () => {
   test.skip(!FIRST_STATIC_CASE_SLUG, "no static case studies configured");
 
   test("static fallback case study renders an article heading", async ({ page }) => {
@@ -321,7 +321,7 @@ test.describe("Notion CMS — /case-studies/[slug]", () => {
   });
 });
 
-test.describe("Notion CMS — /api/case-studies contract", () => {
+test.describe("AppFlowy CMS — /api/case-studies contract", () => {
   test("returns an array with required fields", async ({ request }) => {
     const res = await request.get("/api/case-studies");
     expect(res.status()).toBe(200);

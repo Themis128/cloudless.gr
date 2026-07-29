@@ -108,6 +108,8 @@ export interface AdConversionEvent {
   country?: string;
   /** Client IP for CAPI user matching (from x-forwarded-for or cf-connecting-ip). */
   ipAddress?: string;
+  /** LinkedIn first-party click ID from `?li_fat_id=` landing param. */
+  liFatId?: string;
   /** Customer details enriched from Stripe checkout session. */
   customer?: {
     name?: string;

@@ -4,10 +4,10 @@ EspoCRM (SugarCRM lineage, same family as SuiteCRM) replaces EspoCRM for
 `cloudless.gr`. Deployed on the k3s cluster on `omv`, exposed via Cloudflare
 Tunnel at `https://espocrm.cloudless.gr`.
 
-**Status (2026-06-20):** ✅ DEPLOYED + LIVE on omv. Both pods 1/1 Running, HTTP 200
-from inside the cluster. Pending operator action: Cloudflare tunnel ingress +
-DNS CNAME + initial admin UI login + API key issuance into SSM. See
-"Operator next steps" below.
+**Status (2026-07-29):** ✅ LIVE on omv. App runtime uses `src/lib/espocrm.ts`
+with SSM keys `ESPOCRM_BASE_URL` / `ESPOCRM_API_KEY` / `ESPOCRM_WEBHOOK_SECRET`.
+HubSpot naming is decommissioned in UI/API; leftover `HUBSPOT_*` SSM params may
+be deleted by the operator.
 
 ## Why EspoCRM and not SuiteCRM (the original ask)
 

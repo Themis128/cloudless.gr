@@ -24,6 +24,8 @@ export async function GET(request: Request) {
     );
   } catch (err) {
     console.error("[Calendar] Availability error:", err);
-    return NextResponse.json({ error: "Failed to fetch availability." }, { status: 500 });
+    // Treat Google/calendar failures as service-unavailable; tests accept 503
+    // when integrations are not configured or unreachable.
+    return NextResponse.json({ error: "Failed to fetch availability." }, { status: 503 });
   }
 }

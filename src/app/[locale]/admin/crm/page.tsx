@@ -88,7 +88,7 @@ export default function AdminCRMPage() {
         <p className="font-mono text-sm text-red-400">{error}</p>
         <p className="mt-2 text-xs text-slate-500">
           {error === "EspoCRM not configured"
-            ? "Set HUBSPOT_API_KEY in your environment to enable CRM."
+            ? "Set ESPOCRM_API_KEY in your environment to enable CRM."
             : "Check your EspoCRM API key configuration."}
         </p>
       </div>

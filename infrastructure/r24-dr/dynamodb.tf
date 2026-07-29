@@ -9,6 +9,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.4"
+    }
   }
   backend "s3" {}
 }
@@ -17,7 +21,6 @@ provider "aws" {
   region = var.primary_region
 }
 
-# us-west-2 provider
 provider "aws" {
   alias  = "west"
   region = "us-west-2"
@@ -26,6 +29,11 @@ provider "aws" {
 variable "primary_region" {
   type    = string
   default = "us-east-1"
+}
+
+variable "project" {
+  type    = string
+  default = "cloudless"
 }
 
 # Note: SST v4 doesn't directly support Global Tables replicas in the
@@ -49,23 +57,23 @@ resource "null_resource" "add_global_tables_replicas" {
       set -e
       # StripeTransactions
       aws dynamodb update-table --table-name cloudless-StripeTransactions-production --region ${var.primary_region} \
-        --replicas "RegionName=us-west-2" || true
-      
-      # UserProfile  
+        --replica-updates "Create={RegionName=us-west-2}" || true
+
+      # UserProfile
       aws dynamodb update-table --table-name cloudless-UserProfile-production --region ${var.primary_region} \
-        --replicas "RegionName=us-west-2" || true
-        
+        --replica-updates "Create={RegionName=us-west-2}" || true
+
       # AdminNotifications
       aws dynamodb update-table --table-name cloudless-AdminNotifications-production --region ${var.primary_region} \
-        --replicas "RegionName=us-west-2" || true
-        
+        --replica-updates "Create={RegionName=us-west-2}" || true
+
       # AnalyticsCache
       aws dynamodb update-table --table-name cloudless-AnalyticsCache-production --region ${var.primary_region} \
-        --replicas "RegionName=us-west-2" || true
-        
+        --replica-updates "Create={RegionName=us-west-2}" || true
+
       # SessionTokenStore
       aws dynamodb update-table --table-name cloudless-SessionTokenStore-production --region ${var.primary_region} \
-        --replicas "RegionName=us-west-2,AWSRegion=us-west-2,GlobalTableName=cloudless-SessionTokenStore-production" || true
+        --replica-updates "Create={RegionName=us-west-2}" || true
     EOT
   }
 }

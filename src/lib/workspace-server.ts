@@ -52,6 +52,12 @@ interface WorkspaceCache {
 
 let cached: WorkspaceCache | null = null;
 
+// In E2E runs we often don't have AWS credentials available. Keep a small
+// in-memory store so `/api/admin/workspaces` still behaves deterministically.
+const USE_E2E_IN_MEMORY =
+  process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E === "1";
+let e2eWorkspaces: Workspace[] = [];
+
 /** Reset the SSM cache — primarily for tests. */
 export function resetWorkspaceCache(): void {
   cached = null;
@@ -59,6 +65,7 @@ export function resetWorkspaceCache(): void {
 
 export async function readWorkspaces(): Promise<Workspace[]> {
   if (cached && Date.now() < cached.expiresAt) return cached.data;
+  if (USE_E2E_IN_MEMORY) return e2eWorkspaces;
   try {
     const client = new SSMClient({ region: REGION });
     const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
@@ -71,6 +78,11 @@ export async function readWorkspaces(): Promise<Workspace[]> {
 }
 
 export async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
+  if (USE_E2E_IN_MEMORY) {
+    e2eWorkspaces = workspaces;
+    cached = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
+    return;
+  }
   const client = new SSMClient({ region: REGION });
   await client.send(
     new PutParameterCommand({

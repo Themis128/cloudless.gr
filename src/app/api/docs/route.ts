@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { getDocs, groupDocsByCategory } from "@/lib/notion-docs";
+import {
+  getDocs as getAppFlowyDocs,
+  groupDocsByCategory as groupAppFlowyDocs,
+} from "@/lib/appflowy-docs";
+import {
+  getDocs as getNotionDocs,
+  groupDocsByCategory as groupNotionDocs,
+} from "@/lib/notion-docs";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
 import { isConfiguredAsync } from "@/lib/integrations";
 
 /**
@@ -9,9 +17,10 @@ import { isConfiguredAsync } from "@/lib/integrations";
  * Used by the docs index page and sidebar navigation.
  */
 export async function GET() {
-  const configured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID");
+  const appFlowyConfigured = await isAppFlowyConfigured();
+  const notionConfigured = await isConfiguredAsync("NOTION_API_KEY", "NOTION_DOCS_DB_ID");
 
-  if (!configured) {
+  if (!appFlowyConfigured && !notionConfigured) {
     return NextResponse.json(
       { docs: [], source: "static", fallbackReason: "not-configured" },
       { headers: { "x-cms-source": "static" } }
@@ -19,8 +28,19 @@ export async function GET() {
   }
 
   try {
-    const docs = await getDocs();
-    const grouped = groupDocsByCategory(docs);
+    if (appFlowyConfigured) {
+      const docs = await getAppFlowyDocs();
+      const grouped = await groupAppFlowyDocs(docs);
+      if (docs.length > 0) {
+        return NextResponse.json(
+          { docs, grouped, source: "appflowy" },
+          { headers: { "x-cms-source": "appflowy" } }
+        );
+      }
+    }
+
+    const docs = await getNotionDocs();
+    const grouped = groupNotionDocs(docs);
     return NextResponse.json(
       { docs, grouped, source: "notion" },
       { headers: { "x-cms-source": "notion" } }

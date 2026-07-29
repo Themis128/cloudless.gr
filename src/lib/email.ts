@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
+import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
 
 interface CloudflareEmailBinding {
   send: (message: Record<string, unknown>) => Promise<void>;
@@ -159,7 +160,7 @@ export async function sendOrderConfirmation(
   _currency: string = "eur"
 ) {
   const safeSessionId = sessionId.replace(/[<>&']/g, "");
-  await sendEmail({
+  const payload = {
     to: email,
     subject: `Order Confirmation #${safeSessionId}`,
     html: `
@@ -198,7 +199,26 @@ Amount: $${amount.toFixed(2)}
 We appreciate your business and look forward to serving you again.
     `,
     fromLabel: "Cloudless Shop",
-  });
+  };
+
+  // R23 pilot: prefer Resend for order-confirmation flow when configured,
+  // then fall back to the existing email path for reliability.
+  if (!isWorkers && isResendConfigured()) {
+    try {
+      await sendEmailResend({
+        to: payload.to,
+        subject: payload.subject,
+        html: payload.html,
+        text: payload.text,
+        fromLabel: payload.fromLabel,
+      });
+      return;
+    } catch (err) {
+      console.warn("[email-sender] Resend pilot failed, falling back to SES:", err);
+    }
+  }
+
+  await sendEmail(payload);
 }
 
 /**

@@ -81,7 +81,7 @@ export default function EmailPage() {
         <PageHeader />
         <div className="rounded-xl border border-yellow-900/30 bg-yellow-950/10 p-6">
           <p className="font-mono text-sm text-yellow-400">
-            EspoCRM is not configured. Add <code className="text-yellow-300">HUBSPOT_API_KEY</code>{" "}
+            EspoCRM is not configured. Add <code className="text-yellow-300">ESPOCRM_API_KEY</code>{" "}
             to AWS SSM.
           </p>
         </div>

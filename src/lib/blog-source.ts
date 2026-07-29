@@ -5,11 +5,18 @@ import {
 } from "@/lib/blog";
 import { isConfiguredAsync } from "@/lib/integrations";
 import {
+  getPosts as getAppFlowyPosts,
+  getPostBySlug as getAppFlowyPostBySlug,
+  type AppFlowyPost,
+} from "@/lib/appflowy-blog";
+import { isAppFlowyConfigured } from "@/lib/appflowy";
+import {
   getPosts as getNotionPosts,
   getPostBySlug as getNotionPostBySlug,
   type NotionBlock,
   type NotionPost,
 } from "@/lib/notion-blog";
+import type { CmsSource } from "@/lib/cms-provider";
 
 const DEFAULT_CATEGORY = "Cloud" as BlogPost["category"];
 const WORDS_PER_MINUTE = 200;
@@ -134,20 +141,85 @@ function mapNotionPost(post: NotionPost & { content: NotionBlock[] }): BlogPost 
   };
 }
 
-export async function getBlogPosts(): Promise<BlogPost[]> {
+function mapAppFlowyListingPost(post: AppFlowyPost): BlogPost {
+  return {
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    date: post.date,
+    readTime: post.readTime || "5 min read",
+    category: (post.category || DEFAULT_CATEGORY) as BlogPost["category"],
+    content: "",
+  };
+}
+
+function stripHtml(input: string): string {
+  return input
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function mapAppFlowyPost(post: AppFlowyPost): BlogPost {
+  return {
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    date: post.date,
+    readTime: post.readTime || "5 min read",
+    category: (post.category || DEFAULT_CATEGORY) as BlogPost["category"],
+    content: stripHtml(post.html || ""),
+  };
+}
+
+export async function getBlogPostsWithSource(): Promise<{
+  posts: BlogPost[];
+  source: CmsSource;
+}> {
+  if (await isAppFlowyConfigured()) {
+    try {
+      const appFlowyPosts = await getAppFlowyPosts();
+      const published = appFlowyPosts.filter((post) => post.published);
+      if (published.length > 0) {
+        return {
+          posts: published.map(mapAppFlowyListingPost),
+          source: "appflowy",
+        };
+      }
+    } catch {
+      // Fall through to Notion/static provider chain.
+    }
+  }
+
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
-    return staticPosts;
+    return { posts: staticPosts, source: "static" };
   }
 
   try {
     const notionPosts = await getNotionPosts();
-    return notionPosts.map(mapNotionListingPost);
+    return { posts: notionPosts.map(mapNotionListingPost), source: "notion" };
   } catch {
-    return staticPosts;
+    return { posts: staticPosts, source: "static" };
   }
 }
 
+export async function getBlogPosts(): Promise<BlogPost[]> {
+  const { posts } = await getBlogPostsWithSource();
+  return posts;
+}
+
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+  if (await isAppFlowyConfigured()) {
+    try {
+      const appFlowyPost = await getAppFlowyPostBySlug(slug);
+      if (appFlowyPost?.published) {
+        return mapAppFlowyPost(appFlowyPost);
+      }
+    } catch {
+      // Fall through to Notion/static provider chain.
+    }
+  }
+
   if (!(await isConfiguredAsync("NOTION_API_KEY", "NOTION_BLOG_DB_ID"))) {
     return getStaticPostBySlug(slug);
   }

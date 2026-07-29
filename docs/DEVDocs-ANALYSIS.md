@@ -300,4 +300,4 @@ kubectl apply -f infrastructure/devdocs/k8s.yaml
 - `infrastructure/n8n/k8s.yaml` - n8n workflow automation
 - `infrastructure/postiz/` - Postiz social scheduler
 - `ANALYTICS-IMPLEMENTATION-STRATEGY.md` - Analytics roadmap
-- `documentation/master-todo-list.md` - Master TODO list
+- `docs/current-source-of-truth-checklist.md` - Current execution checklist

@@ -82,7 +82,7 @@ export async function buildLeadsBlocks(userId: string): Promise<unknown[]> {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: ":warning: EspoCRM not configured (HUBSPOT_API_KEY missing).",
+            text: ":warning: EspoCRM not configured (ESPOCRM_API_KEY missing).",
           },
         },
       ];

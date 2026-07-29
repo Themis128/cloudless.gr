@@ -1,5 +1,5 @@
 /**
- * Tests for src/lib/integrations/http.ts — the shared integrationFetch wrapper.
+ * Tests for src/lib/integration-http.ts — the shared integrationFetch wrapper.
  *
  * Phase 1 of the Integration Improvement Plan: prove the wrapper handles
  * timeout, retry, 429/5xx backoff, error wrapping, and passthrough mode
@@ -12,7 +12,7 @@ import {
   integrationFetchWithMeta,
   IntegrationError,
   isIntegrationError,
-} from "../src/lib/integrations/http";
+} from "../src/lib/integration-http";
 
 /**
  * Build a fake fetch that returns successive Response objects (one per call).

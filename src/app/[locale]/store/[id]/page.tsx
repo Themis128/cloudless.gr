@@ -134,12 +134,12 @@ export default async function ProductPage({
       </section>
 
       {/* Recommended Products */}
-      {recommendations.length > 0 && (
-        <section className="bg-void border-t border-slate-800 py-16 md:py-20">
-          <div className="mx-auto max-w-6xl px-6">
-            <h2 className="text-neon-cyan/60 mb-8 font-mono text-xs font-medium tracking-[0.3em]">
-              RECOMMENDED NEXT
-            </h2>
+      <section className="bg-void border-t border-slate-800 py-16 md:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <h2 className="text-neon-cyan/60 mb-8 font-mono text-xs font-medium tracking-[0.3em]">
+            You may also like
+          </h2>
+          {recommendations.length > 0 ? (
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {recommendations.map((rel) => (
                 <Link
@@ -165,9 +165,11 @@ export default async function ProductPage({
                 </Link>
               ))}
             </div>
-          </div>
-        </section>
-      )}
+          ) : (
+            <p className="text-slate-500">No related products found.</p>
+          )}
+        </div>
+      </section>
     </>
   );
 }

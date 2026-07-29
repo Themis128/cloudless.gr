@@ -52,9 +52,9 @@ const QUERIES: Array<{ section: string; sql: string }> = [
     sql: "SELECT * FROM cloudless_analytics.v_sentry_top_issues LIMIT 10",
   },
   {
-    section: "hubspot_funnel",
+    section: "espocrm_funnel",
     // Lifecycle stage breakdown
-    sql: "SELECT * FROM cloudless_analytics.v_hubspot_funnel LIMIT 20",
+    sql: "SELECT * FROM cloudless_analytics.v_espocrm_funnel LIMIT 20",
   },
 ];
 

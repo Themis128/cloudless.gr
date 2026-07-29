@@ -1,0 +1,54 @@
+name: Ops cadence checklist
+description: Monthly / quarterly operator hygiene from the roadmap cadence track
+title: "ops: cadence checklist — YYYY-MM"
+labels: ["ops", "chore"]
+body:
+  - type: dropdown
+    id: cadence
+    attributes:
+      label: Cadence window
+      options:
+        - Monthly
+        - Quarterly
+        - Annual (secrets)
+    validations:
+      required: true
+  - type: checkboxes
+    id: monthly
+    attributes:
+      label: Monthly items
+      options:
+        - label: Review `pnpm test:unit:coverage` thresholds in `vitest.config.mts`; ratchet up if coverage grew
+        - label: Confirm Cloudflare token still valid (`gh workflow run verify-cloudflare-token.yml`)
+        - label: Confirm failover drill last monthly run was green (`.github/workflows/failover-drill.yml`)
+        - label: Spot-check Kuma status page monitors still green
+  - type: checkboxes
+    id: quarterly
+    attributes:
+      label: Quarterly items
+      options:
+        - label: Re-read `docs/optimal-architecture-assessment.md`
+        - label: Re-read `docs/best-practices-audit-2026.md`
+        - label: Refresh `docs/current-source-of-truth-checklist.md` if any row drifted
+  - type: checkboxes
+    id: annual
+    attributes:
+      label: Annual secret rotation
+      options:
+        - label: Rotate `APPFLOWY_PASSWORD`
+        - label: Rotate `ESPOCRM_API_KEY`
+        - label: Rotate `POSTIZ_API_KEY`
+        - label: Rotate `GRAFANA_API_TOKEN`
+        - label: Rotate `NTFY_TOKEN`
+        - label: Follow `skills/selfhosted-admin-bootstrap/SKILL.md` rotation runbook
+  - type: checkboxes
+    id: continuous
+    attributes:
+      label: Continuous discipline (confirm still followed)
+      options:
+        - label: n8n UI changes committed as `infrastructure/n8n/workflows/*.json`
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / proof links
+      description: Workflow run IDs, PR links, or deferred decisions

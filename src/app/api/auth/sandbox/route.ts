@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
 
   const db = getDb(req);
   if (!db) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
+    // In test/dev we treat missing D1 bindings as "service unavailable"
+    // rather than a missing route/contract (the Playwright tests accept
+    // 503 when AUTH_DB isn't configured).
+    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
 
   // Check SESSION_SECRET
@@ -107,7 +110,7 @@ export async function POST(req: NextRequest) {
 
   const db = getDb(req);
   if (!db) {
-    return NextResponse.json({ error: "Auth not configured" }, { status: 404 });
+    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
 
   let action: string | undefined;

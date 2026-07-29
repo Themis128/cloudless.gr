@@ -11,7 +11,7 @@
  *   KUMA_BASE_URL          base URL of the Kuma instance.
  *                          Default https://kuma.cloudless.gr.
  *   KUMA_STATUS_PAGE_SLUG  status page slug (operator-created).
- *                          Default `default`.
+ *                          Default `cloudless`.
  *
  * Both keys are optional — missing config gracefully degrades the panel
  * to a "configure me" placeholder rather than throwing.
@@ -53,8 +53,14 @@ async function loadKumaConfig(): Promise<{ baseUrl: string; slug: string } | nul
   const cached = getKumaConfig();
   if (cached) return cached;
   const cfg = await getConfig();
-  const baseUrl = (cfg.KUMA_BASE_URL || "https://kuma.cloudless.gr").replace(/\/$/, "");
-  const slug = cfg.KUMA_STATUS_PAGE_SLUG || "default";
+  // Prefer explicit base; KUMA_URL is the public UI host (may be CF Access).
+  // On Pi (SSM_DISABLED) use in-cluster Service when KUMA_BASE_URL is unset.
+  const baseUrl = (
+    cfg.KUMA_BASE_URL ||
+    process.env.KUMA_URL ||
+    "https://kuma.cloudless.gr"
+  ).replace(/\/$/, "");
+  const slug = cfg.KUMA_STATUS_PAGE_SLUG || "cloudless";
   if (!baseUrl) return null;
   (globalThis as { __KUMA_CFG?: { baseUrl: string; slug: string } }).__KUMA_CFG = { baseUrl, slug };
   return { baseUrl, slug };

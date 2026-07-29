@@ -35,6 +35,10 @@ export default function ThanksConversion({
     }
 
     const attribution = getStoredAttribution();
+    const liFatId =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("li_fat_id")
+        : null;
     const utm = attribution
       ? {
           source: attribution.utmSource,
@@ -52,6 +56,7 @@ export default function ThanksConversion({
         campaign,
         tier,
         orderId,
+        liFatId,
         conversionId,
         url: typeof window !== "undefined" ? window.location.href : null,
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,

@@ -65,7 +65,12 @@ export async function POST(request: NextRequest) {
   };
 
   workspaces.push(workspace);
-  await writeWorkspaces(workspaces);
+  try {
+    await writeWorkspaces(workspaces);
+  } catch (err) {
+    console.error("[workspaces] writeWorkspaces failed:", err);
+    return NextResponse.json({ error: "Workspace store unavailable" }, { status: 503 });
+  }
 
   // Fire-and-forget audit log — never block on Slack failures.
   auditWorkspaceEvent("created", workspace, auth.user.email).catch((e) =>
@@ -74,7 +79,8 @@ export async function POST(request: NextRequest) {
 
   // Set the cookie so the freshly-created workspace becomes active for
   // subsequent requests on this session. Mirrors localStorage in the client.
-  const res = NextResponse.json({ workspace }, { status: 201 });
+  // E2E contract expects 200 (not 201) for workspace creation.
+  const res = NextResponse.json({ workspace }, { status: 200 });
   res.cookies.set({
     name: WORKSPACE_COOKIE,
     value: workspace.id,
