@@ -146,16 +146,15 @@ export default function StoreGrid() {
   const [activeCategory, setActiveCategory] = useState<"all" | ProductCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("default");
-  const [semanticHitIds, setSemanticHitIds] = useState<string[] | null>(null);
-  const [searchSource, setSearchSource] = useState<string | null>(null);
+  // Keyed by query so a new keystroke ignores stale hit order without sync setState.
+  const [semanticSearch, setSemanticSearch] = useState<{
+    query: string;
+    hitIds: string[] | null;
+    source: string | null;
+  }>({ query: "", hitIds: null, source: null });
 
   useEffect(() => {
     const q = searchQuery.trim();
-    // Drop previous ranking immediately so a new query uses local filter
-    // until /api/search responds (avoids flashing stale hit order).
-    setSemanticHitIds(null);
-    setSearchSource(null);
-
     if (!q) {
       return;
     }
@@ -174,9 +173,8 @@ export default function StoreGrid() {
           const ids = Array.isArray(data.hits)
             ? data.hits.map((h) => h.id).filter((id): id is string => Boolean(id))
             : [];
-          setSemanticHitIds(ids);
           const source = typeof data.source === "string" ? data.source : "api";
-          setSearchSource(source);
+          setSemanticSearch({ query: q, hitIds: ids, source });
           trackFunnelEvent("search_query", { query: q, source });
           trackFunnelEvent("search_result", {
             query: q,
@@ -188,8 +186,7 @@ export default function StoreGrid() {
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;
           console.warn("[StoreGrid] /api/search failed; using local keyword filter:", err);
-          setSemanticHitIds(null);
-          setSearchSource("local-fallback");
+          setSemanticSearch({ query: q, hitIds: null, source: "local-fallback" });
           trackFunnelEvent("search_query", { query: q, source: "local-fallback" });
         });
     }, SEARCH_DEBOUNCE_MS);
@@ -199,6 +196,12 @@ export default function StoreGrid() {
       controller.abort();
     };
   }, [searchQuery]);
+
+  const qTrim = searchQuery.trim();
+  const semanticHitIds =
+    semanticSearch.query === qTrim ? semanticSearch.hitIds : null;
+  const searchSource =
+    semanticSearch.query === qTrim ? semanticSearch.source : null;
 
   const filtered = useMemo(() => {
     let products =

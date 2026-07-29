@@ -74,22 +74,65 @@ spec:
     metadata: { labels: { app: postgres } }
     spec:
       nodeSelector: { kubernetes.io/hostname: omv }
-      # R16: WAL-G → Cloudflare R2 (S3-compatible). Init copies wal-g into a
-      # shared emptyDir so postgres archive_command can invoke it. Requires
-      # Secret appflowy-walg-r2 + ConfigMap appflowy-walg-env
-      # (see infrastructure/appflowy/walg-sidecar.yaml). AWS_* names are
-      # WAL-G's S3 client API; values are R2 tokens — not AWS IAM.
+      # R16: continuous WAL → Cloudflare R2 via rclone (wal-g Put hangs on omv).
+      # Init downloads wal-g (optional verify) + rclone, writes archive.sh into
+      # a shared emptyDir. Requires Secret appflowy-walg-r2 + ConfigMap
+      # appflowy-walg-env (see infrastructure/appflowy/walg-sidecar.yaml).
+      # AWS_* names are the S3 client API; values are R2 tokens — not AWS IAM.
       initContainers:
         - name: walg-bin
-          image: ghcr.io/wal-g/wal-g:v3.0.3
+          image: alpine:3.20
           command: ["/bin/sh", "-c"]
           args:
             - |
               set -euo pipefail
-              cp /usr/bin/wal-g /walg-bin/wal-g || cp /bin/wal-g /walg-bin/wal-g || cp "$(command -v wal-g)" /walg-bin/wal-g
-              chmod 755 /walg-bin/wal-g
+              apk add --no-cache curl ca-certificates unzip >/dev/null
+              ARCH=$(uname -m)
+              case "$ARCH" in
+                aarch64|arm64) SUFFIX=aarch64; RCLONE_ARCH=arm64 ;;
+                x86_64|amd64) SUFFIX=amd64; RCLONE_ARCH=amd64 ;;
+                *) echo "unsupported arch: $ARCH"; exit 1 ;;
+              esac
+              VER=v3.0.8
+              URL="https://github.com/wal-g/wal-g/releases/download/${VER}/wal-g-pg-24.04-${SUFFIX}.tar.gz"
+              curl -fsSL -o /tmp/wal-g.tgz "$URL"
+              tar -xzf /tmp/wal-g.tgz -C /tmp
+              install -m 755 "/tmp/wal-g-pg-24.04-${SUFFIX}" /walg-bin/wal-g
+              RCLONE_VER=v1.69.1
+              curl -fsSL -o /tmp/rclone.zip \
+                "https://github.com/rclone/rclone/releases/download/${RCLONE_VER}/rclone-${RCLONE_VER}-linux-${RCLONE_ARCH}.zip"
+              unzip -qo /tmp/rclone.zip -d /tmp
+              install -m 755 "/tmp/rclone-${RCLONE_VER}-linux-${RCLONE_ARCH}/rclone" /walg-bin/rclone
+              # Go TLS (rclone) needs a CA bundle; copy Alpine's into the shared
+              # volume so the postgres image does not need apt at runtime.
+              mkdir -p /walg-bin/certs
+              cp /etc/ssl/certs/ca-certificates.crt /walg-bin/certs/ca-certificates.crt
+              # %p may be relative to PGDATA; %f is the WAL filename for the key.
+              # Layout: r2:datalake-bucket/appflowy-wal/wal/ (raw segments).
+              printf '%s\n' \
+                '#!/bin/sh' \
+                'set -eu' \
+                'FILE=${1:?wal file path}' \
+                'NAME=${2:?wal file name}' \
+                'case "$FILE" in' \
+                '  /*) ABS="$FILE" ;;' \
+                '  *) ABS="${PGDATA%/}/$FILE" ;;' \
+                'esac' \
+                'export SSL_CERT_FILE=/walg-bin/certs/ca-certificates.crt' \
+                'export RCLONE_CONFIG_R2_TYPE=s3' \
+                'export RCLONE_CONFIG_R2_PROVIDER=Cloudflare' \
+                'export RCLONE_CONFIG_R2_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"' \
+                'export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"' \
+                'export RCLONE_CONFIG_R2_ENDPOINT="$AWS_ENDPOINT"' \
+                'export RCLONE_CONFIG_R2_REGION=auto' \
+                'export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true' \
+                'exec timeout 120s /walg-bin/rclone copyto "$ABS" "r2:datalake-bucket/appflowy-wal/wal/$NAME"' \
+                > /walg-bin/archive.sh
+              chmod 755 /walg-bin/archive.sh
               mkdir -p /var/lib/postgresql/wal-g
               chown -R 999:999 /var/lib/postgresql/wal-g /walg-bin || true
+              /walg-bin/wal-g --version || true
+              /walg-bin/rclone version | head -1 || true
           volumeMounts:
             - { name: walg-bin, mountPath: /walg-bin }
             - { name: walg, mountPath: /var/lib/postgresql/wal-g }
@@ -102,16 +145,17 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom: { secretKeyRef: { name: appflowy-secrets, key: POSTGRES_PASSWORD } }
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+            - { name: AWS_EC2_METADATA_DISABLED, value: "true" }
           envFrom:
-            - configMapRef: { name: appflowy-walg-env, optional: true }
-            - secretRef: { name: appflowy-walg-r2, optional: true }
+            - configMapRef: { name: appflowy-walg-env, optional: false }
+            - secretRef: { name: appflowy-walg-r2, optional: false }
           args:
             - "-c"
             - "archive_mode=on"
             - "-c"
             - "archive_timeout=300"
             - "-c"
-            - "archive_command=/walg-bin/wal-g wal-push %p"
+            - "archive_command=/walg-bin/archive.sh %p %f"
           ports: [{ containerPort: 5432 }]
           volumeMounts:
             - { name: data, mountPath: /var/lib/postgresql/data }
@@ -121,23 +165,24 @@ spec:
             requests: { cpu: 50m, memory: 200Mi }
             limits:   { cpu: 500m, memory: 400Mi }
         - name: walg
-          image: ghcr.io/wal-g/wal-g:v3.0.3
+          image: alpine:3.20
           command: ["/bin/sh", "-c"]
           args:
             - |
               set -euo pipefail
               while true; do
-                wal-g wal-verify integrity || true
+                /walg-bin/wal-g wal-verify integrity || true
                 sleep 300
               done
           envFrom:
-            - configMapRef: { name: appflowy-walg-env, optional: true }
-            - secretRef: { name: appflowy-walg-r2, optional: true }
+            - configMapRef: { name: appflowy-walg-env, optional: false }
+            - secretRef: { name: appflowy-walg-r2, optional: false }
           env:
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
           volumeMounts:
             - { name: data, mountPath: /var/lib/postgresql/data, readOnly: true }
             - { name: walg, mountPath: /var/lib/postgresql/wal-g }
+            - { name: walg-bin, mountPath: /walg-bin }
           resources:
             requests: { cpu: 10m, memory: 32Mi }
             limits:   { cpu: 100m, memory: 64Mi }
