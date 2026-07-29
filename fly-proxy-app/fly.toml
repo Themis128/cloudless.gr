@@ -17,6 +17,10 @@ primary_region = "fra"
     port = 80
     handlers = ["http"]
 
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
   [[services.http_options]]
     health_check_path = "/health"
     health_check_interval = "30s"
