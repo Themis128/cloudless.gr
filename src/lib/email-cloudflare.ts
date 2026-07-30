@@ -1,6 +1,7 @@
 /**
  * Cloudflare Email Service (REST) — Node/Pi path.
- * Uses CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (same as Workers AI).
+ * Prefers CLOUDFLARE_EMAIL_API_TOKEN (Email Sending Write); falls back to
+ * CLOUDFLARE_API_TOKEN. Account: CLOUDFLARE_ACCOUNT_ID.
  * https://developers.cloudflare.com/email-service/api/send-emails/rest-api/
  */
 
@@ -14,15 +15,21 @@ export interface CloudflareEmailOptions {
   listUnsubscribeUrl?: string;
 }
 
+function cloudflareEmailApiToken(): string | undefined {
+  return process.env.CLOUDFLARE_EMAIL_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+}
+
 export function isCloudflareEmailConfigured(): boolean {
-  return Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN);
+  return Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && cloudflareEmailApiToken());
 }
 
 export async function sendEmailCloudflare(options: CloudflareEmailOptions): Promise<void> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  const apiToken = cloudflareEmailApiToken();
   if (!accountId || !apiToken) {
-    throw new Error("CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN not configured");
+    throw new Error(
+      "CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_EMAIL_API_TOKEN (or CLOUDFLARE_API_TOKEN) not configured"
+    );
   }
 
   const fromAddress = options.fromLabel
