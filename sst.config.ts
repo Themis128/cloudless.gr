@@ -480,13 +480,13 @@ export default {
     // ---------------------------------------------------------------------
     // Cron jobs (production only)
     // ---------------------------------------------------------------------
-    // Each cron triggers src/lambda/cron-invoker.ts, which fetches
-    // CRON_SECRET from SSM and POSTs to the corresponding API route.
+    // LEGACY (PR-12 removed src/lambda/cron-invoker.ts). Prefer k8s CronJobs /
+    // Cloudflare Cron Triggers hitting the same /api/* routes with CRON_SECRET.
     // Schedules are in UTC; Athens is UTC+2 (EET) / UTC+3 (EEST summer).
     if (isProd) {
       const ssmPrefix = "/cloudless/production";
       const cronJobConfig = (route: string) => ({
-        handler: "src/lambda/cron-invoker.handler",
+        handler: "src/lambda/cron-invoker.handler", // removed — SST cron archive in PR-15
         memory: "256 MB",
         timeout: "60 seconds",
         architecture: "arm64" as const,

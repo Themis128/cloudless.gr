@@ -57,11 +57,9 @@ const nextConfig: NextConfig = {
   // module. Use transpilePackages so Turbopack bundles it explicitly instead.
   transpilePackages: ["next-auth"],
   serverExternalPackages: [
-    "@aws-sdk/client-athena",
     "@aws-sdk/client-bedrock-runtime",
     "@aws-sdk/client-cognito-identity-provider",
     "@aws-sdk/client-dynamodb",
-    "@aws-sdk/client-ses",
     "@aws-sdk/client-sesv2",
     "@aws-sdk/client-ssm",
     // Free Workers = 3 MiB gzip. Keep OG font/WASM out of the traced server

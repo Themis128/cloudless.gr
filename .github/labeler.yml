@@ -18,7 +18,8 @@ auth:
       - any-glob-to-any-file:
           - 'src/app/[locale]/auth/**'
           - 'src/context/AuthContext.tsx'
-          - 'src/lib/amplify-config.ts'
+          - 'src/lib/auth-d1.ts'
+          - 'src/lib/cognito-auth.ts'
 
 store:
   - changed-files:
