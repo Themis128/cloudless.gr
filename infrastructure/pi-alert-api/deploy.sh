@@ -86,7 +86,7 @@ REMOTE
 # ── 5. Verify command endpoint ────────────────────────────────────────────────
 echo "==> Verifying /api/esp32/{device_id}/command..."
 sleep 3
-RESULT=$(curl -s --max-time 10 -X POST http://192.168.1.128:30800/api/esp32/esp32-leds/command \
+RESULT=$(curl -s --max-time 10 -X POST http://192.168.1.128:30820/api/esp32/esp32-leds/command \
   -H "Content-Type: application/json" \
   -d '{"action":"led_test"}')
 echo "  Response: ${RESULT}"

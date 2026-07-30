@@ -115,7 +115,7 @@ You should also see the test message land in `#alerts` — visually verify the f
 Override URL when running off-cluster:
 
 ```bash
-ALERT_API_URL=http://192.168.1.128:30800 \
+ALERT_API_URL=http://192.168.1.128:30820 \
   bash infrastructure/pi-alert-api/tests/smoke_test_live.sh
 ```
 

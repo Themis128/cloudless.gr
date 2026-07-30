@@ -6,12 +6,13 @@
 
 | Field | Value |
 |-------|-------|
-| Kind | External |
-| Namespace | `alert-manager / host` |
+| Kind | Deployment |
+| Namespace | `alert-manager` |
 | Resource name | `alert-api` |
-| Hostname / DNS | logs.cloudless.gr · LAN `192.168.1.128:30800` · in-cluster `alert-api.alert-manager.svc:8080` |
-| Ports | 8080 / NodePort 30800 |
+| Hostname / DNS | logs.cloudless.gr · LAN `192.168.1.128:30820` · in-cluster `alert-api.alert-manager.svc:8080` |
+| Ports | 8080 / NodePort **30820** (not 30800 — reserved for omv-ai) |
 | Role | ESP32 / homelab alert API + websocket logs. |
+| Manifest | `infrastructure/pi-alert-api/k8s/alert-api.yaml` |
 
 ## How cloudless.gr uses it
 

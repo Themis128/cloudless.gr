@@ -32,8 +32,12 @@ const MONITORS = [
     accepted_statuscodes: ["200", "302"],
   },
   {
+    // In-cluster Deployment (alert-manager/alert-api). Bootstrap used to
+    // probe pi-alert-api.default.svc.cluster.local — that name never existed
+    // (ENOTFOUND), and Slack coalesced it as a "DNS flap". Prefer cluster DNS
+    // over LAN NodePort; NodePort is 30820 (30800 reserved for omv-ai).
     name: "Pi alert-api (omv)",
-    url: "http://pi-alert-api.default.svc.cluster.local:8080/health",
+    url: "http://alert-api.alert-manager.svc.cluster.local:8080/health",
     accepted_statuscodes: ["200"],
   },
   {
