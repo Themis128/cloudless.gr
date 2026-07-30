@@ -47,3 +47,24 @@ describe("escapeHtml()", () => {
     expect(escapeHtml("a & b & c")).toBe("a &amp; b &amp; c");
   });
 });
+
+describe("htmlToPlainText()", () => {
+  it("strips tags and keeps text", async () => {
+    const { htmlToPlainText } = await import("@/lib/escape-html");
+    expect(htmlToPlainText("<p>Hello <strong>world</strong></p>")).toBe("Hello world");
+  });
+
+  it("removes residual angle brackets from partial tags", async () => {
+    const { htmlToPlainText } = await import("@/lib/escape-html");
+    const out = htmlToPlainText("<scr<script>ipt>");
+    expect(out).not.toContain("<");
+    expect(out).not.toContain(">");
+  });
+});
+
+describe("sanitizeForLog()", () => {
+  it("collapses CR/LF", async () => {
+    const { sanitizeForLog } = await import("@/lib/escape-html");
+    expect(sanitizeForLog("a\nb\rc")).toBe("a b c");
+  });
+});

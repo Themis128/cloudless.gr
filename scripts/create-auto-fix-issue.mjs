@@ -7,7 +7,7 @@
  */
 
 import { readFileSync, existsSync } from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const diagnosisPath = "diagnosis.json";
 const WORKFLOW_NAME = process.env.WORKFLOW_NAME || "Unknown";
@@ -37,7 +37,7 @@ const body = `## Agentic CI Fix: ${WORKFLOW_NAME}
 - Workflow: ${WORKFLOW_NAME}
 - Branch: \`${HEAD_BRANCH}\`
 - SHA: \`${HEAD_SHA}\`
-- PR: #${PR_NUMBER || 'N/A'}
+- PR: #${PR_NUMBER || "N/A"}
 
 **Auto-fix instructions for GitHub Copilot:**
 Please analyze the failure and propose a patch. Use the CodingAgent pattern:
@@ -49,16 +49,26 @@ Please analyze the failure and propose a patch. Use the CodingAgent pattern:
 /cc @copilot-for-github-actions
 `;
 
-const cmd = [
-  "gh", "issue", "create",
-  "--title", `Auto-fix: ${WORKFLOW_NAME} failure on ${HEAD_BRANCH}`,
-  "--body", body,
-  "--label", "auto-fix",
-  "--label", "agentic-ci"
-];
+const title = `Auto-fix: ${WORKFLOW_NAME} failure on ${HEAD_BRANCH}`;
 
 try {
-  const result = execSync(cmd.join(" "), { encoding: "utf8" });
+  // execFile + argv array — no shell interpolation of env vars (CodeQL js/indirect-command-line-injection).
+  const result = execFileSync(
+    "gh",
+    [
+      "issue",
+      "create",
+      "--title",
+      title,
+      "--body",
+      body,
+      "--label",
+      "auto-fix",
+      "--label",
+      "agentic-ci",
+    ],
+    { encoding: "utf8" }
+  );
   const issueUrl = result.trim();
   console.log(`Created auto-fix issue: ${issueUrl}`);
   const match = issueUrl.match(/\/issues\/(\d+)/);
@@ -66,6 +76,7 @@ try {
     console.log(`ISSUE_NUMBER=${match[1]}`);
   }
 } catch (e) {
-  console.log(`Failed to create issue: ${e.message}`);
+  const msg = e instanceof Error ? e.message : String(e);
+  console.log(`Failed to create issue: ${msg.replace(/[\r\n\x00-\x1f\x7f]/g, " ")}`);
   console.log("ISSUE_NUMBER=");
 }

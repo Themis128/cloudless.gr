@@ -11,12 +11,13 @@
 import { CostExplorerClient, GetCostAndUsageCommand } from "@aws-sdk/client-cost-explorer";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
-import { readFileSync, unlinkSync, writeFileSync } from "fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { getS3Client, BUCKET } from "./_r2-config.mjs";
 import { shapeResults } from "./aws-cost-to-lake.mjs";
 
 const LOOKBACK_DAYS = Number.parseInt(process.env.AWS_COST_LOOKBACK_DAYS || "60", 10);
-const D1_SQL_OUT = process.env.AWS_COST_D1_SQL_OUT || "/tmp/aws-cost-d1.sql";
 
 const ce = new CostExplorerClient({ region: "us-east-1" });
 const s3 = getS3Client();
@@ -88,33 +89,43 @@ async function main() {
 		rows,
 	};
 
-	const tmp = "/tmp/aws-cost.parquet";
-	const writer = await ParquetWriter.openFile(schema, tmp);
-	for (const r of rows) await writer.appendRow(r);
-	await writer.close();
+	// Private temp dir for parquet (not a predictable fixed /tmp path).
+	const workDir = mkdtempSync(join(tmpdir(), "aws-cost-"));
+	const parquetPath = join(workDir, "aws-cost.parquet");
+	// Prefer explicit out path; otherwise a unique file that survives the parquet cleanup.
+	const d1SqlOut =
+		process.env.AWS_COST_D1_SQL_OUT ||
+		join(tmpdir(), `aws-cost-d1-${process.pid}-${Date.now()}.sql`);
 
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: "lake/aws-cost/cost.parquet",
-			Body: readFileSync(tmp),
-			ContentType: "application/octet-stream",
-		})
-	);
-	unlinkSync(tmp);
+	try {
+		const writer = await ParquetWriter.openFile(schema, parquetPath);
+		for (const r of rows) await writer.appendRow(r);
+		await writer.close();
 
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: "lake/aws-cost/cost.json",
-			Body: Buffer.from(JSON.stringify(payload), "utf8"),
-			ContentType: "application/json",
-		})
-	);
+		await s3.send(
+			new PutObjectCommand({
+				Bucket: BUCKET,
+				Key: "lake/aws-cost/cost.parquet",
+				Body: readFileSync(parquetPath),
+				ContentType: "application/octet-stream",
+			})
+		);
 
-	writeFileSync(D1_SQL_OUT, buildD1Sql(rows, syncedAt), "utf8");
-	console.log(`✅ Uploaded ${rows.length} rows → R2://${BUCKET}/lake/aws-cost/{cost.parquet,cost.json}`);
-	console.log(`✅ Wrote D1 SQL → ${D1_SQL_OUT}`);
+		await s3.send(
+			new PutObjectCommand({
+				Bucket: BUCKET,
+				Key: "lake/aws-cost/cost.json",
+				Body: Buffer.from(JSON.stringify(payload), "utf8"),
+				ContentType: "application/json",
+			})
+		);
+
+		writeFileSync(d1SqlOut, buildD1Sql(rows, syncedAt), "utf8");
+		console.log(`✅ Uploaded ${rows.length} rows → R2://${BUCKET}/lake/aws-cost/{cost.parquet,cost.json}`);
+		console.log(`✅ Wrote D1 SQL → ${d1SqlOut}`);
+	} finally {
+		rmSync(workDir, { recursive: true, force: true });
+	}
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

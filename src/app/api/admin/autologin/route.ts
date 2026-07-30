@@ -25,6 +25,7 @@ import {
   type SelfhostedApp,
   SELFHOSTED_APP_NAMES,
 } from "@/lib/selfhosted-autologin";
+import { sanitizeForLog } from "@/lib/escape-html";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
   if (!VALID_APPS.has(appParam as SelfhostedApp)) {
     return NextResponse.json(
       {
-        error: `Unknown app "${appParam}". Valid values: ${[...VALID_APPS].join(", ")}`,
+        error: `Unknown app. Valid values: ${[...VALID_APPS].join(", ")}`,
       },
       { status: 400 }
     );
@@ -56,12 +57,10 @@ export async function GET(request: NextRequest) {
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
   } catch (err) {
-    // Deliberately strip any secret values from the error message before
-    // returning to the client.
+    // Deliberately strip any secret values from the error message before logging.
     const raw = err instanceof Error ? err.message : String(err);
-    // Remove anything that looks like a token (long alphanumeric strings)
-    const safe = raw.replace(/[A-Za-z0-9_\-]{40,}/g, "[REDACTED]");
-    console.error(`[autologin] Error fetching URL for app=${app}:`, raw);
-    return NextResponse.json({ error: `Failed to get login URL: ${safe}` }, { status: 502 });
+    const safe = sanitizeForLog(raw.replace(/[A-Za-z0-9_\-]{40,}/g, "[REDACTED]"));
+    console.error("[autologin] Error fetching URL for app:", app, safe);
+    return NextResponse.json({ error: "Failed to get login URL" }, { status: 502 });
   }
 }

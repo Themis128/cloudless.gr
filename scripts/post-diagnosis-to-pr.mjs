@@ -6,13 +6,19 @@
  */
 
 import { readFileSync, existsSync } from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const diagnosisPath = "diagnosis.json";
 const prNumber = process.env.PR_NUMBER;
 
 if (!prNumber) {
   console.log("No PR_NUMBER provided — skipping PR comment.");
+  process.exit(0);
+}
+
+// Digits only — prevents shell/arg injection via PR_NUMBER (CodeQL js/indirect-command-line-injection).
+if (!/^\d+$/.test(prNumber)) {
+  console.log("PR_NUMBER must be numeric — skipping PR comment.");
   process.exit(0);
 }
 
@@ -30,16 +36,17 @@ try {
 
 const body = `## CI Failure Diagnosis
 
-Root cause: ${diagnosis.root_cause || 'Unknown'}
+Root cause: ${diagnosis.root_cause || "Unknown"}
 
-Fix: ${diagnosis.fix || 'No fix suggested'}
+Fix: ${diagnosis.fix || "No fix suggested"}
 
-Confidence: ${diagnosis.confidence || 'Unknown'}
+Confidence: ${diagnosis.confidence || "Unknown"}
 
 Auto-fix issue created - GitHub Copilot will investigate.`;
 
 try {
-  execSync(`gh pr comment ${prNumber} --body '${body}'`, { stdio: "inherit" });
+  execFileSync("gh", ["pr", "comment", prNumber, "--body", body], { stdio: "inherit" });
 } catch (e) {
-  console.log("Could not post PR comment:", e.message);
+  const msg = e instanceof Error ? e.message : String(e);
+  console.log("Could not post PR comment:", msg.replace(/[\r\n\x00-\x1f\x7f]/g, " "));
 }

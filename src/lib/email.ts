@@ -282,12 +282,13 @@ If you have any questions, please contact our support team.
  * @param body - Email body (HTML)
  */
 export async function notifyTeam(subject: string, body: string) {
+  const { htmlToPlainText } = await import("@/lib/escape-html");
   const cfg = await getConfig();
   await sendEmail({
     to: cfg.SES_TO_EMAIL,
     subject: `[Team] ${subject}`,
     html: body,
-    text: body.replace(/<[^>]*>/g, ""),
+    text: htmlToPlainText(body),
     fromLabel: "Cloudless Alerts",
   });
 }

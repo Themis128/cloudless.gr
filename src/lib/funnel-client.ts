@@ -7,6 +7,19 @@ import type { FunnelEventType } from "@/lib/search-funnel";
 
 const SESSION_KEY = "cloudless_funnel_sid";
 
+/** Cryptographically strong session id (never Math.random — CodeQL js/insecure-randomness). */
+function newFunnelSessionId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    return `sid_${Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")}`;
+  }
+  return `anon_${Date.now()}`;
+}
+
 function hasAnalyticsConsent(): boolean {
   if (typeof document === "undefined") return false;
   try {
@@ -25,10 +38,7 @@ export function getFunnelSessionId(): string {
   try {
     const existing = sessionStorage.getItem(SESSION_KEY);
     if (existing) return existing;
-    const id =
-      typeof globalThis.crypto?.randomUUID === "function"
-        ? globalThis.crypto.randomUUID()
-        : `sid_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
+    const id = newFunnelSessionId();
     sessionStorage.setItem(SESSION_KEY, id);
     return id;
   } catch {

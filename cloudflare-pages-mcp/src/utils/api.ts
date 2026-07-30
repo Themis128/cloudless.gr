@@ -3,14 +3,8 @@
  * Extracted for testability and reusability
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
-
 /**
- * Execute curl commands against Cloudflare API
- * Following error handling best practices from implementation guide
+ * Call Cloudflare API via fetch (no shell) — avoids CodeQL js/indirect-command-line-injection.
  */
 export async function cfApi<T = unknown>(
 	path: string,
@@ -34,45 +28,65 @@ export async function cfApi<T = unknown>(
 		};
 	}
 
-	const headers = [
-		`Authorization: Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-		'Content-Type: application/json',
-		'Accept: application/json',
-	];
+	const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+	// Account IDs are hex; reject anything that could alter the URL path.
+	if (!/^[a-f0-9]{32}$/i.test(accountId)) {
+		return {
+			success: false,
+			data: {} as T,
+			error: 'CLOUDFLARE_ACCOUNT_ID has unexpected format',
+		};
+	}
 
-	const curlArgs = [
-		'-s',
-		'-X',
-		method,
-		...headers.flatMap((h) => ['-H', h]),
-		data ? '-d' : '',
-		data || '',
-	].filter(Boolean);
+	if (typeof path !== 'string' || !path.startsWith('/')) {
+		return {
+			success: false,
+			data: {} as T,
+			error: 'path must be an absolute API path starting with /',
+		};
+	}
 
-	const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}${path}`;
-	const cmd = `curl ${curlArgs.map((a) => `"${a}"`).join(' ')} "${url}"`;
+	const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}${path}`;
 
 	try {
-		const { stdout } = await execAsync(cmd, {
-			timeout: 30000, // 30 second timeout for network calls
+		const response = await fetch(url, {
+			method,
+			headers: {
+				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+				'Content-Type': 'application/json',
+				Accept: 'application/json',
+			},
+			body: data,
+			signal: AbortSignal.timeout(30_000),
 		});
 
-		const response = JSON.parse(stdout) as T & {
+		const json = (await response.json()) as T & {
 			success?: boolean;
-			errors?: string[];
+			errors?: Array<{ message?: string } | string>;
 		};
 
-		if (response.errors) {
+		if (Array.isArray(json.errors) && json.errors.length > 0) {
+			const errText = json.errors
+				.map((e) => (typeof e === 'string' ? e : e.message || JSON.stringify(e)))
+				.join(', ');
 			return {
 				success: false,
-				data: response as T,
-				error: response.errors!.join(', '),
+				data: json as T,
+				error: errText,
+			};
+		}
+
+		if (!response.ok) {
+			return {
+				success: false,
+				data: json as T,
+				error: `HTTP ${response.status}`,
 			};
 		}
 
 		return {
 			success: true,
-			data: response as T,
+			data: json as T,
 		};
 	} catch (error) {
 		return {

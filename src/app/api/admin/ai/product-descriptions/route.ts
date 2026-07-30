@@ -19,6 +19,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { getProducts } from "@/lib/store-products";
 import type { StoreProduct } from "@/lib/store-products";
 import { callGemini } from "@/lib/gemini-admin";
+import { sanitizeForLog } from "@/lib/escape-html";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -217,9 +218,10 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
   // Fire-and-forget: update Stripe product metadata when configured.
   updateStripeDescriptions(descriptions).catch((err) => {
-    const safeErr =
-      err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
-    console.warn("[ai/product-descriptions] Stripe metadata update failed:", safeErr);
+    console.warn(
+      "[ai/product-descriptions] Stripe metadata update failed:",
+      sanitizeForLog(err instanceof Error ? err.message : err)
+    );
   });
 
   return NextResponse.json({ applied });
@@ -239,10 +241,11 @@ async function updateStripeDescriptions(
   await Promise.allSettled(
     descriptions.map(({ id, description }) =>
       stripe.products.update(id, { description }).catch((err) => {
-        const safeId = String(id).replace(/[\x00-\x1F\x7F]/g, "");
-        const safeErr =
-          err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
-        console.warn(`[ai/product-descriptions] Stripe update failed for ${safeId}:`, safeErr);
+        console.warn(
+          "[ai/product-descriptions] Stripe update failed for product:",
+          sanitizeForLog(id),
+          sanitizeForLog(err instanceof Error ? err.message : err)
+        );
       })
     )
   );
