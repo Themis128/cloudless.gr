@@ -11,28 +11,21 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   authenticateUser,
   createUser,
+  getAuthDbFromEnv,
   getUserBySession,
   isAdmin,
   validatePasswordStrength,
   validateSessionSecret,
-  type AuthDatabase,
 } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-interface Env {
-  AUTH_DB: AuthDatabase;
-  NODE_ENV?: string;
-}
-
-function getDb(_request: NextRequest): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  return env.AUTH_DB ?? null;
+function getDb(_request: NextRequest) {
+  return getAuthDbFromEnv();
 }
 
 // Check if sandbox is enabled (only in development)
 function isSandboxEnabled(): boolean {
-  const env = process.env as unknown as Env;
-  return env.NODE_ENV === "development";
+  return process.env.NODE_ENV === "development";
 }
 
 export async function GET(req: NextRequest) {

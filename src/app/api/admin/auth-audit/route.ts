@@ -12,7 +12,7 @@
  */
 
 import { type NextRequest, NextResponse } from "next/server";
-import { type AuthDatabase } from "@/lib/auth-d1";
+import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import { requireAdmin } from "@/lib/api-auth";
 import { queryAuditLog, getAuditLogCount, type AuditAction } from "@/lib/auth-audit";
 
@@ -22,12 +22,10 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  // Get D1 binding
-  const env = process.env as unknown as { AUTH_DB: AuthDatabase };
-  if (!env.AUTH_DB) {
+  const db = getAuthDbFromEnv();
+  if (!db) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
-  const db = env.AUTH_DB;
 
   const searchParams = request.nextUrl.searchParams;
   const action = searchParams.get("action") as AuditAction | undefined;
