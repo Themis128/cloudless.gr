@@ -2,9 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
 // Mock next-auth/jwt so getToken returns controlled token data.
-// proxy.ts calls getToken() to read the next-auth session cookie.
 const mockGetToken = vi.fn();
 vi.mock("next-auth/jwt", () => ({ getToken: (opts: unknown) => mockGetToken(opts) }));
+
+const mockGetAuthDbFromEnv = vi.fn();
+const mockGetUserBySession = vi.fn();
+const mockIsAdmin = vi.fn();
+vi.mock("@/lib/auth-d1", () => ({
+  getAuthDbFromEnv: () => mockGetAuthDbFromEnv(),
+  getUserBySession: (...args: unknown[]) => mockGetUserBySession(...args),
+  isAdmin: (...args: unknown[]) => mockIsAdmin(...args),
+}));
 
 vi.mock("next-intl/middleware", () => ({
   default: () => (_request: NextRequest) => NextResponse.next(),
@@ -21,6 +29,9 @@ function makeRequest(path: string, cookie?: string): NextRequest {
 describe("proxy protected routes access", () => {
   beforeEach(() => {
     mockGetToken.mockResolvedValue(null); // unauthenticated by default
+    mockGetAuthDbFromEnv.mockReturnValue(null);
+    mockGetUserBySession.mockReset();
+    mockIsAdmin.mockReset();
   });
 
   it("redirects unauthenticated /en/dashboard to /en/auth/login", async () => {
@@ -79,5 +90,60 @@ describe("proxy protected routes access", () => {
     expect(adminResponse.headers.get("location")).toBeNull();
     expect(adminOrdersResponse.status).toBe(200);
     expect(adminOrdersResponse.headers.get("location")).toBeNull();
+  });
+
+  it("allows D1 session_token admin through /en/admin and /en/auth/post-login", async () => {
+    mockGetAuthDbFromEnv.mockReturnValue({ prepare: vi.fn() });
+    mockGetUserBySession.mockResolvedValue({
+      id: "admin-user-001",
+      email: "admin@cloudless.gr",
+      name: "Admin",
+    });
+    mockIsAdmin.mockResolvedValue(true);
+
+    const adminResponse = await proxy(
+      makeRequest("/en/admin", "session_token=d1-session-id")
+    );
+    expect(adminResponse.status).toBe(200);
+    expect(adminResponse.headers.get("location")).toBeNull();
+
+    const postLogin = await proxy(
+      makeRequest("/en/auth/post-login", "session_token=d1-session-id")
+    );
+    expect(postLogin.status).toBe(307);
+    expect(postLogin.headers.get("location")).toContain("/en/admin");
+  });
+
+  it("routes D1 session_token non-admin from /en/admin to /en/dashboard", async () => {
+    mockGetAuthDbFromEnv.mockReturnValue({ prepare: vi.fn() });
+    mockGetUserBySession.mockResolvedValue({
+      id: "user-1",
+      email: "user@cloudless.gr",
+      name: "User",
+    });
+    mockIsAdmin.mockResolvedValue(false);
+
+    const adminResponse = await proxy(
+      makeRequest("/en/admin", "session_token=d1-session-id")
+    );
+    expect(adminResponse.status).toBe(307);
+    expect(adminResponse.headers.get("location")).toContain("/en/dashboard");
+
+    const postLogin = await proxy(
+      makeRequest("/en/auth/post-login", "session_token=d1-session-id")
+    );
+    expect(postLogin.status).toBe(307);
+    expect(postLogin.headers.get("location")).toContain("/en/dashboard");
+  });
+
+  it("bounces invalid D1 session_token to login", async () => {
+    mockGetAuthDbFromEnv.mockReturnValue({ prepare: vi.fn() });
+    mockGetUserBySession.mockResolvedValue(null);
+
+    const dashboard = await proxy(
+      makeRequest("/en/dashboard", "session_token=expired-or-forged")
+    );
+    expect(dashboard.status).toBe(307);
+    expect(dashboard.headers.get("location")).toContain("/en/auth/login");
   });
 });

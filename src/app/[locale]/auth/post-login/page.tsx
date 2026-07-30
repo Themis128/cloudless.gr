@@ -1,11 +1,11 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getAuthDbFromEnv, getUserBySession, isAdmin as d1IsAdmin } from "@/lib/auth-d1";
 import { isSupportedLocale } from "@/lib/i18n";
 
-// Post-login landing resolver. next-auth's callbackUrl is fixed at sign-in time
-// (before the session exists), so we can't decide admin-vs-dashboard there. The
-// Cognito sign-in sends users here; this reads the now-established session and
-// routes admins to /admin, everyone else to /dashboard. Server-side → no flash.
+// Post-login landing resolver. Login sets an opaque D1 `session_token` cookie;
+// this page (and proxy.ts) read that session and route admins → /admin,
+// everyone else → /dashboard. Server-side → no flash.
 export const dynamic = "force-dynamic";
 
 export default async function PostLoginPage({
@@ -17,16 +17,23 @@ export default async function PostLoginPage({
   // time, but a hand-crafted URL like /x%2F..%2Fetc/auth/post-login should
   // still fall back to a safe default rather than producing a weird redirect.
   const locale = isSupportedLocale(rawLocale) ? rawLocale : "en";
-  const session = await auth();
 
-  if (!session?.user) {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get("session_token")?.value;
+  if (!sessionId) {
     redirect(`/${locale}/auth/login`);
   }
 
-  const groups = session.user.groups ?? [];
-  const roles = session.user.roles ?? [];
-  const isAdmin =
-    groups.includes("admin") || roles.includes("admin") || roles.includes("realm:admin");
+  const db = getAuthDbFromEnv();
+  if (!db) {
+    redirect(`/${locale}/auth/login`);
+  }
 
-  redirect(`/${locale}${isAdmin ? "/admin" : "/dashboard"}`);
+  const user = await getUserBySession(db, sessionId);
+  if (!user) {
+    redirect(`/${locale}/auth/login`);
+  }
+
+  const admin = await d1IsAdmin(db, user.id);
+  redirect(`/${locale}${admin ? "/admin" : "/dashboard"}`);
 }
