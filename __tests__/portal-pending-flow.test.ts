@@ -1,6 +1,65 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
+
+vi.mock("@/lib/api-auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api-auth")>();
+  const { NextResponse } = await import("next/server");
+  const adminUser = {
+    sub: "test-admin-sub",
+    email: "admin@cloudless.gr",
+    groups: ["admin"],
+    email_verified: true,
+  };
+  const plainUser = {
+    sub: "test-user-sub",
+    email: "user@cloudless.gr",
+    groups: [] as string[],
+    email_verified: true,
+  };
+
+  function userFromRequest(request: { headers: { get: (k: string) => string | null } }) {
+    const h = request.headers.get("authorization") ?? "";
+    const token = h.startsWith("Bearer ") ? h.slice(7) : "";
+    if (token === "test-admin-session") return adminUser;
+    if (token === "test-user-session") return plainUser;
+    // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
+    if (token.startsWith("user-session:")) {
+      const email = token.slice("user-session:".length) || "user@cloudless.gr";
+      return { ...plainUser, email, sub: `user-${email}` };
+    }
+    if (token.startsWith("admin-session:")) {
+      const email = token.slice("admin-session:".length) || "admin@cloudless.gr";
+      return { ...adminUser, email, sub: `admin-${email}` };
+    }
+    return null;
+  }
+
+  return {
+    ...actual,
+    requireAuth: async (request: Parameters<typeof actual.requireAuth>[0]) => {
+      const user = userFromRequest(request);
+      if (user) return { ok: true as const, user };
+      return actual.requireAuth(request);
+    },
+    requireAdmin: async (request: Parameters<typeof actual.requireAdmin>[0]) => {
+      const user = userFromRequest(request);
+      if (!user) return actual.requireAdmin(request);
+      if (!user.groups.includes("admin")) {
+        return {
+          ok: false as const,
+          response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
+        };
+      }
+      return { ok: true as const, user };
+    },
+    requireVerifiedAuth: async (request: Parameters<typeof actual.requireVerifiedAuth>[0]) => {
+      const user = userFromRequest(request);
+      if (user) return { ok: true as const, user };
+      return actual.requireVerifiedAuth(request);
+    },
+  };
+});
 const PENDING_URL = "http://localhost/api/admin/pending-clients";
 const ENROLL_URL = "http://localhost/api/portal/enroll";
 const PORTAL_ME_URL = "http://localhost/api/portal/me";
@@ -45,18 +104,8 @@ vi.mock("@/lib/slack-notify", () => ({
 // JWT helpers
 // ---------------------------------------------------------------------------
 function makeUserToken(opts?: { email?: string; admin?: boolean }): string {
-  const payload = {
-    sub: "user-sub",
-    email: opts?.email ?? "client@example.com",
-    groups: opts?.admin ? ["admin"] : [],
-    aud: "client",
-    iss: "https://auth.cloudless.gr/realms/cloudless",
-    iat: Math.floor(Date.now() / 1000) - 10,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const h = Buffer.from("{}").toString("base64url");
-  const b = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${h}.${b}.sig`;
+  const email = opts?.email ?? "client@example.com";
+  return opts?.admin ? `admin-session:${email}` : `user-session:${email}`;
 }
 
 function authReq(
