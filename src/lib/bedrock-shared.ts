@@ -7,7 +7,9 @@
 
 export const BEDROCK_REGION = process.env.AWS_REGION ?? "us-east-1";
 export const BEDROCK_MODEL_ID =
-  process.env.BEDROCK_MODEL_ID ?? process.env.WORKERS_AI_CHAT_MODEL ?? "@cf/meta/llama-3.1-8b-instruct";
+  process.env.BEDROCK_MODEL_ID ??
+  process.env.WORKERS_AI_CHAT_MODEL ??
+  "@cf/meta/llama-3.1-8b-instruct";
 
 export type TextBlock = { text: string };
 

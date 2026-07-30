@@ -151,10 +151,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 
   if (!accountId || !apiToken) {
-    return NextResponse.json(
-      { error: "Cloudflare Workers AI not configured." },
-      { status: 503 }
-    );
+    return NextResponse.json({ error: "Cloudflare Workers AI not configured." }, { status: 503 });
   }
 
   try {

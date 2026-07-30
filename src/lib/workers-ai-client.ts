@@ -97,10 +97,7 @@ export function buildWorkersAiToolProtocol(
   }>
 ): string {
   const catalog = tools
-    .map(
-      (t) =>
-        `- ${t.name}: ${t.description}\n  args schema: ${JSON.stringify(t.input_schema)}`
-    )
+    .map((t) => `- ${t.name}: ${t.description}\n  args schema: ${JSON.stringify(t.input_schema)}`)
     .join("\n");
   return `
 When you need a tool, reply with ONLY a single JSON object (no markdown):
@@ -135,9 +132,7 @@ export async function callWorkersAiEmbed(
 
   const data = (await response.json()) as CfAiResult;
   if (!response.ok) {
-    const err = new Error(
-      data.errors?.[0]?.message ?? `Workers AI embed HTTP ${response.status}`
-    );
+    const err = new Error(data.errors?.[0]?.message ?? `Workers AI embed HTTP ${response.status}`);
     err.name =
       response.status === 401 || response.status === 403 ? "UnauthorizedException" : "AiError";
     throw err;

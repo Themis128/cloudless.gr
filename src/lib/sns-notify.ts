@@ -6,10 +6,7 @@
  */
 
 export type PortalEventType =
-  | "comment_added"
-  | "deliverable_action"
-  | "step_updated"
-  | "portal_created";
+  "comment_added" | "deliverable_action" | "step_updated" | "portal_created";
 
 export interface PortalEventPayload {
   eventType: PortalEventType;
