@@ -65,6 +65,7 @@ jobs:
         id: update
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -uo pipefail
@@ -88,6 +89,7 @@ jobs:
         if: steps.update.outputs.conflict == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
@@ -118,6 +120,7 @@ jobs:
         if: steps.update.outputs.conflict != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR: ${{ github.event.pull_request.number }}
         run: |
@@ -137,6 +140,7 @@ jobs:
       - name: Update + re-arm open PRs to main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           # Open, non-draft PRs targeting main (exclude dependabot + opt-out labels)
@@ -182,6 +186,7 @@ jobs:
       - name: Update + arm PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR: ${{ inputs.pr_number }}
         run: |
           set -euo pipefail
