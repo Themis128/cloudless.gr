@@ -362,4 +362,4 @@ pnpm dev
 
 ## See Also
 
-- [Cognito Automation](./COGNITO_AUTOMATION.md) — how the setup automation works end to end
+- [Cognito Automation](COGNITO_AUTOMATION.md) — how the setup automation works end to end

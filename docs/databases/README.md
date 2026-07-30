@@ -12,6 +12,8 @@ Passwords are **never** stored in these docs. Use `pnpm db:passwords` (k8s Secre
 | [omv-cluster.md](omv-cluster.md) | Field inventory (engines, NS, PVCs, secrets, SQLTools ports, D1 IDs, backup schedule) |
 | [ADR-001-mediated-db-access.md](ADR-001-mediated-db-access.md) | **Accepted** — mediated SQLTools access; reject public DB TCP and ms-mssql |
 
+Related: datalake / ETL / Athena SQL live under [../data/](../data/).
+
 ## Landscape at a glance
 
 ```mermaid

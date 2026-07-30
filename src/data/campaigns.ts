@@ -22,7 +22,7 @@
  *   `src/lib/ad-analytics/types.ts` for the shapes and `skills/ad-analytics/
  *   SKILL.md` for the operating playbook.
  *
- * Wiring guide: `docs/linkedin-campaigns.md` + `skills/linkedin-campaigns/SKILL.md`.
+ * Wiring guide: `docs/marketing/linkedin-campaigns.md` + `skills/linkedin-campaigns/SKILL.md`.
  */
 
 import type {

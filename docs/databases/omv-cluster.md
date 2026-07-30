@@ -1,6 +1,6 @@
 # omv k3s — cluster database inventory
 
-> Folder index: [README.md](README.md) · Landscape diagrams: [landscape.md](landscape.md)
+> Folder index: [README.md](../cloudflare/README.md) · Landscape diagrams: [landscape.md](landscape.md)
 
 Canonical reference for every data store on the Pi k3s cluster (`omv` + `omv-ha`).
 Verified live 2026-07-30. Passwords are **never** stored in this doc — pull them with
@@ -403,5 +403,5 @@ See [infrastructure/backup/README.md](../../infrastructure/backup/README.md).
 - [Meilisearch ops (R21)](../roadmap/r21-meilisearch-operations.md)
 - [PVC → R2 backups](../../infrastructure/backup/README.md)
 - EspoCRM runbook: `infrastructure/espocrm/README.md`
-- [Databases index](README.md)
+- [Databases index](../cloudflare/README.md)
 - [Landscape diagrams](landscape.md)

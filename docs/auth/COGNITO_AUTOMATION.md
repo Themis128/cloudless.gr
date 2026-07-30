@@ -374,4 +374,4 @@ All components should remain synchronized and idempotent.
 
 ## See Also
 
-- [Cognito Setup Guide](./COGNITO_SETUP.md) — detailed user guide
+- [Cognito Setup Guide](COGNITO_SETUP.md) — detailed user guide
