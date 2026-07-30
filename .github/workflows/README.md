@@ -118,7 +118,7 @@ Conventions in use today (consolidated retroactively):
 
 ## 🔧 Dev tooling (6)
 
-`ci.yml` · `dependabot-automerge.yml` · `dependency-review.yml` ·
+`ci.yml` · `pr-automerge.yml` · `dependabot-automerge.yml` · `dependency-review.yml` ·
 `labeler.yml` · `preview.yml` · `pr-review.yml` ·
 `e2e-full-coverage.yml` · `unit-coverage.yml`
 
