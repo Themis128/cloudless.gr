@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  getAuthDbFromEnv,
-  listUsers,
-  setUserAdminRole,
-  setUserDisabled,
-} from "@/lib/auth-d1";
+import { getAuthDbFromEnv, listUsers, setUserAdminRole, setUserDisabled } from "@/lib/auth-d1";
 
 interface AdminUser {
   username: string;

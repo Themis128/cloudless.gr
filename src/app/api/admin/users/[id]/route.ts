@@ -6,12 +6,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
-import {
-  getAuthDbFromEnv,
-  getUserById,
-  isAdmin,
-  patchUserProfile,
-} from "@/lib/auth-d1";
+import { getAuthDbFromEnv, getUserById, isAdmin, patchUserProfile } from "@/lib/auth-d1";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAdmin(request);

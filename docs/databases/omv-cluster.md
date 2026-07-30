@@ -96,12 +96,14 @@ All four are listed in `.vscode/extensions.json` (workspace recommendations). Co
 1. Install the four SQLTools extensions above (accept workspace recommendations if prompted).
 2. Open the **SQLTools** sidebar — not the SQL Server Object Explorer.
 3. Start TCP forwards and pull snapshots:
+
    ```bash
    pnpm db:forward
    pnpm db:passwords          # paste when SQLTools asks for MariaDB/Postgres password
    pnpm db:sqlite:pull        # required before the three omv-sqlite connections work
    pnpm db:d1:pull            # required before the three cloudflare-d1 connections work
    ```
+
 4. Click a connection under group `omv`, `omv-sqlite`, or `cloudflare-d1` and authenticate when prompted.
 5. When done: `pnpm db:forward:stop`.
 
