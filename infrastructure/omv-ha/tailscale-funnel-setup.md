@@ -1,7 +1,7 @@
 # Tailscale Funnel on omv / omv-ha — historical note
 
 > **Status:** not the production edge (updated 2026-07-30)  
-> **Canonical architecture:** [`docs/TAILSCALE-FABRIC.md`](../../docs/TAILSCALE-FABRIC.md)
+> **Canonical architecture:** [`docs/cluster/TAILSCALE-FABRIC.md`](../../docs/cluster/TAILSCALE-FABRIC.md)
 
 ## What changed
 

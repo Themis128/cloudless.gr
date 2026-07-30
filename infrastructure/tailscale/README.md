@@ -1,6 +1,6 @@
 # Tailscale Operator (fabric interconnect)
 
-Canonical architecture: [`docs/TAILSCALE-FABRIC.md`](../../docs/TAILSCALE-FABRIC.md)  
+Canonical architecture: [`docs/cluster/TAILSCALE-FABRIC.md`](../../docs/cluster/TAILSCALE-FABRIC.md)  
 kubectl day-2: [`docs/kubectl-tailscale.md`](../../docs/kubectl-tailscale.md)
 
 Private admin mesh for Pi k3s. **Public** `*.cloudless.gr` stays on Cloudflare

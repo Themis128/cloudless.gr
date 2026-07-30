@@ -4,8 +4,8 @@ This is your entry point for the complete Cognito setup automation system.
 
 ## 📖 Start Here
 
-1. **Quick Start** → Read [`COGNITO_SETUP_SUMMARY.md`](./COGNITO_SETUP_SUMMARY.md) (5 min)
-2. **Detailed Guide** → Read [`docs/COGNITO_SETUP.md`](./COGNITO_SETUP.md) (15 min)
+1. **Quick Start** → Read [`COGNITO_SETUP_SUMMARY.md`](COGNITO_SETUP_SUMMARY.md) (5 min)
+2. **Detailed Guide** → Read [`docs/COGNITO_SETUP.md`](COGNITO_SETUP.md) (15 min)
 3. **Run Setup** → Execute `pnpm cognito:setup` (2 min)
 
 ## 🗂️ Complete File Structure
@@ -14,10 +14,10 @@ This is your entry point for the complete Cognito setup automation system.
 
 | File | Purpose | Read When |
 |------|---------|-----------|
-| [COGNITO_SETUP_SUMMARY.md](./COGNITO_SETUP_SUMMARY.md) | Executive overview | First time |
-| [docs/COGNITO_SETUP.md](./COGNITO_SETUP.md) | Detailed user guide | Need detailed instructions |
-| [docs/COGNITO_AUTOMATION.md](./COGNITO_AUTOMATION.md) | Architecture & design | Want to understand how it works |
-| [COGNITO_SETUP_CHECKLIST.md](./COGNITO_SETUP_CHECKLIST.md) | Implementation status | Want to verify all features |
+| [COGNITO_SETUP_SUMMARY.md](COGNITO_SETUP_SUMMARY.md) | Executive overview | First time |
+| [docs/COGNITO_SETUP.md](COGNITO_SETUP.md) | Detailed user guide | Need detailed instructions |
+| [docs/COGNITO_AUTOMATION.md](COGNITO_AUTOMATION.md) | Architecture & design | Want to understand how it works |
+| [COGNITO_SETUP_CHECKLIST.md](COGNITO_SETUP_CHECKLIST.md) | Implementation status | Want to verify all features |
 
 ### 🛠️ Tools & Scripts
 
@@ -197,7 +197,7 @@ Step 4: Test Dev Server
 
 ## 📞 Getting Help
 
-1. **Check the docs** → Start with [COGNITO_SETUP.md](./COGNITO_SETUP.md)
+1. **Check the docs** → Start with [COGNITO_SETUP.md](COGNITO_SETUP.md)
 2. **Try dry-run** → `pnpm cognito:setup:dry` to see what would happen
 3. **Check logs** → Look at error output and `/tmp/dev-test.log`
 4. **Manual test** → Try individual steps (aws sts, aws ssm, etc.)
@@ -205,8 +205,8 @@ Step 4: Test Dev Server
 
 ## 🔗 Related Documentation
 
-- [Cognito Setup Guide](./COGNITO_SETUP.md) — detailed user guide
-- [Cognito Automation](./COGNITO_AUTOMATION.md) — how the automation works end to end
+- [Cognito Setup Guide](COGNITO_SETUP.md) — detailed user guide
+- [Cognito Automation](COGNITO_AUTOMATION.md) — how the automation works end to end
 
 ## 🏆 Implementation Status
 

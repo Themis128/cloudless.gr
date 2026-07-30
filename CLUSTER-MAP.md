@@ -1,7 +1,7 @@
 # k3s Cluster Map
 
 > **Tailscale architecture (trust boundaries, ProxyGroups, MagicDNS):**
-> [`docs/TAILSCALE-FABRIC.md`](docs/TAILSCALE-FABRIC.md).  
+> [`docs/cluster/TAILSCALE-FABRIC.md`](docs/cluster/TAILSCALE-FABRIC.md).  
 > The Tailscale rows below are a **snapshot** and may list stale per-Service
 > proxies — prefer shared `ProxyGroup/ingress` devices from the fabric doc.
 

@@ -78,7 +78,7 @@ grep -n "<<<\|===\|>>>" .github/workflows/deploy.yml
 
 Main has RUNNER_GENERIC toggle; a PR to pin back to `ubuntu-latest` conflicts here.
 
-**Resolution:** Keep `ubuntu-latest` (SST + CDK synth does not run on ARM Pi — documented in `docs/runners.md`).
+**Resolution:** Keep `ubuntu-latest` (SST + CDK synth does not run on ARM Pi — documented in `docs/deploy/runners.md`).
 
 ```yaml
     # Pinned to ubuntu-latest. SST + CDK synth + Sentry sourcemap upload

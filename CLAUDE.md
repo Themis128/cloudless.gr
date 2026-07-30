@@ -105,7 +105,7 @@ constraint, not a TODO. Do not try to produce a single server-inclusive %.
 - **Mobile-viewport specs**: navbar controls (contact link, theme/locale switcher) live inside the hamburger drawer (`button[aria-label*="menu" i]`) and the desktop instances stay hidden in the DOM — open the drawer first and select with `.filter({ visible: true })`, never bare `.first()`.
 - A broken `node_modules` (missing `@auth/core`, stale nested `@aws-sdk/*` requiring removed `@smithy/property-provider`) makes API routes 500 en masse while the lockfile is fine — fix with a clean `pnpm install --frozen-lockfile` after deleting `node_modules`, never by touching code.
 - **Verify load artifacts solo before changing code.** Under full-suite load the dev server can transiently 404 a real API route (seen once on `POST /api/admin/ai/analytics-orchestration/pdf`, both projects + retries). Re-run the failing spec alone first — if it passes (route verified: unauth → 401), it's a dev-server race, not a regression. Never widen a security assertion (e.g. adding 404 to "unauth must be 401/403") to absorb such flakes.
-- Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/notion-integration-reshare.md`](docs/notion-integration-reshare.md). AppFlowy was evaluated as a self-host alternative on 2026-06-21 and rejected: 7-pod arm64 stack + new client lib is multi-day work, the runbook fixes drift in 3 minutes per occurrence.
+- Notion integration health (verified live 2026-06-20T22:30Z from cluster pod): **all 13 DBs OK** — Blog, Docs, Projects, Tasks, Analytics, Calendar, Reports, GSC Reports, Submissions, Testimonials, Case Studies, Services, FAQs. The earlier 4-DB `object_not_found` symptom was resolved by an operator UI re-share. Re-run probe any time with `node scripts/probe-notion-dbs.mjs` (uses SSM creds). Runbook stays in place for the next time it drifts: [`docs/integrations/notion-integration-reshare.md`](docs/integrations/notion-integration-reshare.md). AppFlowy was evaluated as a self-host alternative on 2026-06-21 and rejected: 7-pod arm64 stack + new client lib is multi-day work, the runbook fixes drift in 3 minutes per occurrence.
 
 ## Git Workflow
 
@@ -228,7 +228,7 @@ Paid-acquisition landing pages live under `/<locale>/campaigns/<slug>/` via a
 single dynamic route. The operating playbook — add a new campaign, wire its
 Stripe checkout, dual-fire the LinkedIn conversion (Insight Tag + Conversions
 API) — is in `skills/linkedin-campaigns/SKILL.md`; the architecture
-reference is in `docs/linkedin-campaigns.md`. Read the skill before touching:
+reference is in `docs/marketing/linkedin-campaigns.md`. Read the skill before touching:
 
 - `src/components/LinkedInInsightTag.tsx` (consent-gated loader)
 - `src/lib/linkedin-track.ts` (`trackLinkedInConversion` helper)
@@ -335,7 +335,7 @@ When GH-hosted runner billing/capacity breaks, flip the `RUNNER_GENERIC` repo va
 .github/scripts/toggle-runner.sh hosted   # → unset (ubuntu-latest)
 ```
 
-Instrumented workflows use `runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}`. See [`docs/runners.md`](docs/runners.md) for the full design, the list of opted-in workflows, the ones that stay GH-hosted (Lighthouse, k3s-e2e, CodeQL — they need x86_64/Chrome), and the registration steps for the `omv,build` runner profile on each Pi host.
+Instrumented workflows use `runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}`. See [`docs/deploy/runners.md`](docs/deploy/runners.md) for the full design, the list of opted-in workflows, the ones that stay GH-hosted (Lighthouse, k3s-e2e, CodeQL — they need x86_64/Chrome), and the registration steps for the `omv,build` runner profile on each Pi host.
 
 ## SonarCloud
 

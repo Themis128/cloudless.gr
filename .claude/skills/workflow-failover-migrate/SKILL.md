@@ -31,7 +31,7 @@ runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '"ubuntu-latest"') }}
 
 When `RUNNER_GENERIC` is unset, behaviour is identical to before (hosted). When flipped to Pi via `.github/scripts/toggle-runner.sh pi`, the workflow uses Pi runners.
 
-**Always** also update `docs/runners.md` — move the entry from the "stay GitHub-hosted" section to the "opted in" list. Past failed-failover attempts (like `preview.yml` run 26321031309) belong in a parenthetical note, not a deletion.
+**Always** also update `docs/deploy/runners.md` — move the entry from the "stay GitHub-hosted" section to the "opted in" list. Past failed-failover attempts (like `preview.yml` run 26321031309) belong in a parenthetical note, not a deletion.
 
 If the migration is risky (cold-start SST, CodeQL on heavy projects), bump the `timeout-minutes` by 50–100% to leave headroom for slower ARM execution.
 
@@ -75,7 +75,7 @@ Use when a migrated workflow actually doesn't work on Pi and needs to go back. R
 runs-on: ubuntu-latest
 ```
 
-And update `docs/runners.md`:
+And update `docs/deploy/runners.md`:
 
 - Move entry back into the "stay GitHub-hosted" list
 - Add a one-line note explaining what broke and the run ID, so the next person doesn't re-try blindly
@@ -88,7 +88,7 @@ For each workflow being migrated:
 2. **Check the tooling** — Grep the steps for native deps, x86_64-only binaries, Chrome from system package manager (not the bundled Playwright Chromium), or anything with "linux-amd64" in its install URL.
 3. **Edit the file** with `Edit` — replace exactly one line, the `runs-on:`.
 4. **Bump the timeout** if the work is non-trivial (build, test matrices, scans).
-5. **Edit `docs/runners.md`** — move the entry between the two lists, preserving prior-attempt notes.
+5. **Edit `docs/deploy/runners.md`** — move the entry between the two lists, preserving prior-attempt notes.
 6. **Commit** with a message describing the intent and the timeout bump rationale.
 
 ## Decision tree
@@ -113,7 +113,7 @@ Workflow failing on PR?
 ## Files this skill touches
 
 - `.github/workflows/*.yml` — the workflow being migrated
-- `docs/runners.md` — the opt-in / stay-hosted lists
+- `docs/deploy/runners.md` — the opt-in / stay-hosted lists
 
 ## Toggling the runner pool itself
 
@@ -124,4 +124,4 @@ This skill does NOT toggle the `RUNNER_GENERIC` repo variable. That's the job of
 - **Setting `continue-on-error: true` at the job level and expecting branch protection to accept it.** It doesn't. See lesson 2.
 - **Adding new `runs-on: ubuntu-latest` workflows without considering the failover pattern.** Every new workflow without browser/x86_64 needs should opt in from day one.
 - **Migrating a workflow blindly because it's failing.** Confirm it failed for an outage reason (instant-fail signature) before changing the runner — a real bug stays a real bug after migration.
-- **Removing the prior-failed-attempt note from `docs/runners.md` during a re-try.** Always demote to a parenthetical, never delete — institutional memory matters when the next outage hits.
+- **Removing the prior-failed-attempt note from `docs/deploy/runners.md` during a re-try.** Always demote to a parenthetical, never delete — institutional memory matters when the next outage hits.

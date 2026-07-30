@@ -235,7 +235,7 @@ operation. Not always possible, but covers more cases than you'd think.
 - `scripts/pi-runner-doctor.sh` — single-command diagnostic + remediation
 - `.github/scripts/toggle-runner.sh` — flip `RUNNER_GENERIC` between
   Pi and hosted modes
-- `docs/runners.md` — broader design doc on the runner failover model
+- `docs/deploy/runners.md` — broader design doc on the runner failover model
 - CLAUDE.md "Cluster Incident Response" — the broader pattern (when
   the infra MCP also can't reach the Pi)
 - Memory `pi-runner-failover` — pointer to this skill

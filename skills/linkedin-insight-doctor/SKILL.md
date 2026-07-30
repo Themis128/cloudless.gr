@@ -165,7 +165,7 @@ If all three render, the campaign can resume.
 ## Cross-references
 
 - Operating playbook: `skills/linkedin-campaigns/SKILL.md`
-- Architecture reference: `docs/linkedin-campaigns.md`
+- Architecture reference: `docs/marketing/linkedin-campaigns.md`
 - Component: `src/components/LinkedInInsightTag.tsx`
 - Layout mount: `src/app/[locale]/layout.tsx` (lines 21-24, 93)
 - Browser fire: `src/app/[locale]/campaigns/[slug]/thanks/ThanksConversion.tsx`

@@ -125,4 +125,4 @@ For `us-west-2` / `eu-west-1`, substitute the region in every hostname.
 This keeps WorkMail, so the **$4.00/mo is unchanged** — it's the right call when
 the mailbox must stay and you just want Outlook as the client. The separate
 cost-reduction work (CloudTrail, Secrets Manager, Config, KMS, Route 53, SSM)
-is unaffected; see [`aws-cost-reduction.md`](./aws-cost-reduction.md).
+is unaffected; see [`aws-cost-reduction.md`](aws-cost-reduction.md).
