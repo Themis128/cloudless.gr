@@ -1,13 +1,12 @@
 /**
  * Cost analytics for `/admin/cost` (R12).
  *
- * Cloudflare-first read path:
+ * Cloudflare-only read path:
  *   1. D1 `aws_cost_daily` when AUTH_DB is bound (ETL: aws-cost-to-r2 + wrangler)
  *   2. R2 `lake/aws-cost/cost.json` when DATALAKE_BUCKET is bound
- *   3. Legacy Athena `v_aws_cost_by_service` (optional fallback)
  *
- * Source data still comes from AWS Cost Explorer (billing API); only the
- * analytics *store/query* path is Cloudflare-native.
+ * Source data still comes from AWS Cost Explorer (billing API); storage/query
+ * is Cloudflare-native. No Athena / S3 reads.
  */
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
@@ -160,52 +159,6 @@ async function loadFromR2(): Promise<CostSource | null> {
   return { rows, lastEtlAt: uploaded };
 }
 
-async function loadFromAthena(): Promise<CostSource | null> {
-  try {
-    const { runAthenaQuery } = await import("@/lib/athena");
-    const { S3Client, HeadObjectCommand } = await import("@aws-sdk/client-s3");
-
-    const sql = `
-      SELECT cost_date, service, amount_usd, currency
-      FROM cloudless_analytics.v_aws_cost_by_service
-      WHERE cost_date >= date_format(current_date - interval '60' day, '%Y-%m-%d')
-    `;
-    const { rows } = await runAthenaQuery(sql);
-    const mapped: CostRow[] = rows
-      .map((r) => ({
-        cost_date: String(r.cost_date ?? ""),
-        service: String(r.service ?? "unknown"),
-        amount_usd: Number.parseFloat(String(r.amount_usd ?? "0")) || 0,
-        currency: String(r.currency ?? "USD"),
-      }))
-      .filter((r) => r.cost_date);
-
-    if (mapped.length === 0) return null;
-
-    let lastEtlAt: string | null = null;
-    try {
-      const s3 = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
-      const out = await s3.send(
-        new HeadObjectCommand({
-          Bucket: process.env.ANALYTICS_BUCKET || "cloudless-analytics-data",
-          Key: "lake/aws-cost/cost.parquet",
-        })
-      );
-      lastEtlAt = out.LastModified ? out.LastModified.toISOString() : null;
-    } catch {
-      lastEtlAt = null;
-    }
-
-    return { rows: mapped, lastEtlAt };
-  } catch (error) {
-    console.warn(
-      "[cost-analytics] Athena fallback failed:",
-      error instanceof Error ? error.message : error
-    );
-    return null;
-  }
-}
-
 async function loadCostSource(): Promise<CostSource> {
   const db = getAuthDbFromEnv();
   if (db) {
@@ -229,9 +182,6 @@ async function loadCostSource(): Promise<CostSource> {
       error instanceof Error ? error.message : error
     );
   }
-
-  const fromAthena = await loadFromAthena();
-  if (fromAthena) return fromAthena;
 
   return { rows: [], lastEtlAt: null };
 }
