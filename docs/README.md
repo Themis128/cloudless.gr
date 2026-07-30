@@ -19,6 +19,7 @@ Topic-oriented documentation for cloudless.gr. Pick a folder by subject; each fo
 | [marketing/](marketing/) | Campaigns, LinkedIn, Meta, Agency Hub |
 | [mcp/](mcp/) | MCP rules and bridges |
 | [performance/](performance/) | Lighthouse / CWV |
+| [pods/](pods/) | **Per-workload atlas** — every omv Deployment/StatefulSet + how the app uses it |
 | [product/](product/) | Design system, use cases, tooling inventory |
 | [pull-requests/](pull-requests/) | PR notes and replies |
 | [roadmap/](roadmap/) | Product and agent roadmaps |
