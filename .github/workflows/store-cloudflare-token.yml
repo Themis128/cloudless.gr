@@ -1,24 +1,19 @@
-name: Store Cloudflare API token → SSM → apply HA load balancer
+name: Store Cloudflare API token → GitHub Secret → apply HA load balancer
 
-# Accepts the Cloudflare API token as a workflow_dispatch input, masks it from
-# logs immediately, stores it to SSM /cloudless/production/CLOUDFLARE_API_TOKEN,
-# then optionally runs the HA load-balancer apply in the same job.
+# Accepts the Cloudflare API token as a workflow_dispatch input, masks it,
+# stores it as the GitHub Actions secret CLOUDFLARE_API_TOKEN (no AWS SSM),
+# then optionally runs the HA load-balancer apply in the same job
+# (token passed to setup-cloudflare-lb.sh as env from the dispatch input).
 #
-# Use this from a Claude Code cloud session (mcp__github__actions_run_trigger)
-# or from the GitHub Actions UI. Once the token is in SSM the LB workflows
-# pick it up automatically without needing a GitHub Secret.
+# REQUIRED SECRETS:
+#   GH_PAT — PAT with `repo` scope. GITHUB_TOKEN cannot write Actions secrets.
 #
 # HOW TO USE:
 #   1. Cloudflare dashboard → My Profile → API Tokens → Create Token
-#      "Create custom token" with:
-#        Zone → Zone → Read           (cloudless.gr)
-#        Zone → Load Balancing: Monitors and Pools → Edit
-#        Zone → Load Balancing: Load Balancers → Edit
-#        Zone → DNS → Edit
-#      Zone Resources: Include → Specific zone → cloudless.gr
-#   2. Run this workflow (dispatch) with the token value.
+#      (Zone:Read, LB:Edit, DNS:Edit for cloudless.gr — see cloudflare-token-doctor skill)
+#   2. Run this workflow with the token value.
 #      apply=true (default) immediately wires the LB.
-#      apply=false stores only — run cloudflare-lb.yml to verify first.
+#      apply=false stores only.
 
 on:
   workflow_dispatch:
@@ -33,7 +28,6 @@ on:
         default: true
 
 permissions:
-  id-token: write   # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:PutParameter
   contents: read
   issues: write
 
@@ -48,21 +42,18 @@ jobs:
   store-and-apply:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ github.token }}
+      # Issue comments use the default token; secret writes use GH_PAT below.
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Store Cloudflare token to SSM
+      - name: Store Cloudflare token as GitHub Actions secret
         id: store
         env:
           CF_TOKEN: ${{ github.event.inputs.cloudflare_token }}
-          AWS_DEFAULT_REGION: us-east-1
+          # GITHUB_TOKEN cannot write secrets — need GH_PAT with repo scope.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
         run: |
           set -uo pipefail
           echo "::add-mask::$CF_TOKEN"
@@ -70,14 +61,15 @@ jobs:
             echo "::error::cloudflare_token input is empty"
             exit 1
           fi
-          aws ssm put-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --type SecureString \
-            --overwrite \
-            --value "$CF_TOKEN" \
-            --description "Cloudflare API token for HA LB — stored via store-cloudflare-token workflow" \
-            >/dev/null
-          echo "✓ Token stored to SSM /cloudless/production/CLOUDFLARE_API_TOKEN"
+          if [ "$GH_PAT_SET" != "true" ]; then
+            echo "::error::GH_PAT secret is not set. Add a repo-scoped PAT as GH_PAT so this workflow can write CLOUDFLARE_API_TOKEN."
+            exit 1
+          fi
+          if ! printf '%s' "$CF_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN --repo "${{ github.repository }}" --body -; then
+            echo "::error::Failed to store GitHub Actions secret CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+          echo "✓ Token stored as GitHub secret CLOUDFLARE_API_TOKEN"
           echo "stored=true" >> "$GITHUB_OUTPUT"
 
       - name: Apply Cloudflare HA load balancer
@@ -87,7 +79,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
           MODE: apply
           CONFIRM: "1"
-          AWS_DEFAULT_REGION: us-east-1
         run: |
           echo "::add-mask::$CLOUDFLARE_API_TOKEN"
           set -o pipefail
@@ -100,7 +91,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ github.event.inputs.cloudflare_token }}
           MODE: report
           CONFIRM: "0"
-          AWS_DEFAULT_REGION: us-east-1
         run: |
           echo "::add-mask::$CLOUDFLARE_API_TOKEN"
           set -o pipefail
@@ -113,13 +103,11 @@ jobs:
           {
             echo "# Cloudflare HA load balancer — $(date -u '+%F %T')Z"
             echo ""
-            echo "**Mode:** $( [ "$APPLY" = "true" ] && echo 'apply (token stored + LB wired)' || echo 'store-only (token stored, report run)' )"
+            echo "**Mode:** $( [ "$APPLY" = "true" ] && echo 'apply (token stored + LB wired)' || echo 'store-only (token in GH secret, report run)' )"
             echo "**Job:** ${{ job.status }}"
             echo ""
             echo '```'
-            cat cloudflare-lb.log 2>/dev/null || echo '(no log — token stored to SSM)'
+            cat cloudflare-lb.log 2>/dev/null || echo '(no log — token stored as GitHub secret)'
             echo '```'
-            echo ""
-            echo "**Next:** $( [ "$APPLY" = "true" ] && echo 'Check above for LB/DNS status. Re-run with apply=true if any pool is pending.' || echo 'Run `cloudflare-lb.yml` → dispatch with apply=true to wire the LB.' )"
           } > c.md
           gh issue comment 382 --repo "${{ github.repository }}" --body-file c.md
