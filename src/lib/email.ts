@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
+import { isCloudflareEmailConfigured, sendEmailCloudflare } from "@/lib/email-cloudflare";
 import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
 
 interface CloudflareEmailBinding {
@@ -17,8 +18,8 @@ const isWorkers =
 
 /**
  * Send an email using the configured email provider.
- * @param options - Email options
- * @returns Promise<NextResponse>
+ * Node/Pi: Cloudflare Email Service REST (preferred) → Resend fallback.
+ * Workers: EMAIL_BINDING when present.
  */
 export async function sendEmail(options: {
   to: string;
@@ -55,23 +56,32 @@ export async function sendEmail(options: {
       console.error("[email-sender] Cloudflare Email failed:", err);
       throw new Error(`Email send failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-  } else {
-    if (!isResendConfigured()) {
-      throw new Error(
-        "Email is not configured — set RESEND_API_KEY (Node) or deploy on Workers with EMAIL binding"
-      );
-    }
-
-    await sendEmailResend({
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-      text: options.text,
-      fromLabel: options.fromLabel,
-      replyTo: options.replyTo ? [options.replyTo] : undefined,
-      listUnsubscribeUrl: options.listUnsubscribeUrl,
-    });
+    return;
   }
+
+  const payload = {
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    text: options.text,
+    fromLabel: options.fromLabel,
+    replyTo: options.replyTo ? [options.replyTo] : undefined,
+    listUnsubscribeUrl: options.listUnsubscribeUrl,
+  };
+
+  if (isCloudflareEmailConfigured()) {
+    await sendEmailCloudflare(payload);
+    return;
+  }
+
+  if (isResendConfigured()) {
+    await sendEmailResend(payload);
+    return;
+  }
+
+  throw new Error(
+    "Email is not configured — set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (Email Sending) or RESEND_API_KEY"
+  );
 }
 
 /**

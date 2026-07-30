@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const mockSendEmailCloudflare = vi.fn();
 const mockSendEmailResend = vi.fn();
 
+vi.mock("@/lib/email-cloudflare", () => ({
+  isCloudflareEmailConfigured: vi.fn(() => true),
+  sendEmailCloudflare: (...args: unknown[]) => mockSendEmailCloudflare(...args),
+}));
+
 vi.mock("@/lib/email-resend", () => ({
-  isResendConfigured: vi.fn(() => true),
+  isResendConfigured: vi.fn(() => false),
   sendEmailResend: (...args: unknown[]) => mockSendEmailResend(...args),
 }));
 
@@ -17,13 +23,16 @@ vi.mock("@/lib/ssm-config", () => ({
 describe("email.ts", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockSendEmailCloudflare.mockResolvedValue(undefined);
     mockSendEmailResend.mockResolvedValue(undefined);
+    const { isCloudflareEmailConfigured } = await import("@/lib/email-cloudflare");
     const { isResendConfigured } = await import("@/lib/email-resend");
-    vi.mocked(isResendConfigured).mockReturnValue(true);
+    vi.mocked(isCloudflareEmailConfigured).mockReturnValue(true);
+    vi.mocked(isResendConfigured).mockReturnValue(false);
   });
 
   describe("sendEmail()", () => {
-    it("calls Resend with correct recipient and subject", async () => {
+    it("calls Cloudflare Email with correct recipient and subject", async () => {
       const { sendEmail } = await import("@/lib/email");
       await sendEmail({
         to: "user@example.com",
@@ -31,8 +40,8 @@ describe("email.ts", () => {
         html: "<p>Hello</p>",
         text: "Hello",
       });
-      expect(mockSendEmailResend).toHaveBeenCalledOnce();
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledOnce();
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "user@example.com",
           subject: "Test Subject",
@@ -40,7 +49,7 @@ describe("email.ts", () => {
       );
     });
 
-    it("passes listUnsubscribeUrl to Resend when provided", async () => {
+    it("passes listUnsubscribeUrl when provided", async () => {
       const { sendEmail } = await import("@/lib/email");
       await sendEmail({
         to: "user@example.com",
@@ -49,15 +58,33 @@ describe("email.ts", () => {
         text: "hi",
         listUnsubscribeUrl: "https://cloudless.gr/api/unsubscribe?email=user@example.com",
       });
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           listUnsubscribeUrl: "https://cloudless.gr/api/unsubscribe?email=user@example.com",
         })
       );
     });
 
-    it("throws when Resend is not configured", async () => {
+    it("falls back to Resend when Cloudflare Email is not configured", async () => {
+      const { isCloudflareEmailConfigured } = await import("@/lib/email-cloudflare");
       const { isResendConfigured } = await import("@/lib/email-resend");
+      vi.mocked(isCloudflareEmailConfigured).mockReturnValue(false);
+      vi.mocked(isResendConfigured).mockReturnValue(true);
+      const { sendEmail } = await import("@/lib/email");
+      await sendEmail({
+        to: "user@example.com",
+        subject: "Fallback",
+        html: "<p>hi</p>",
+        text: "hi",
+      });
+      expect(mockSendEmailCloudflare).not.toHaveBeenCalled();
+      expect(mockSendEmailResend).toHaveBeenCalledOnce();
+    });
+
+    it("throws when neither Cloudflare Email nor Resend is configured", async () => {
+      const { isCloudflareEmailConfigured } = await import("@/lib/email-cloudflare");
+      const { isResendConfigured } = await import("@/lib/email-resend");
+      vi.mocked(isCloudflareEmailConfigured).mockReturnValue(false);
       vi.mocked(isResendConfigured).mockReturnValue(false);
       const { sendEmail } = await import("@/lib/email");
       await expect(
@@ -65,12 +92,12 @@ describe("email.ts", () => {
       ).rejects.toThrow("Email is not configured");
     });
 
-    it("rethrows Resend errors", async () => {
-      mockSendEmailResend.mockRejectedValueOnce(new Error("Resend failure"));
+    it("rethrows Cloudflare Email errors", async () => {
+      mockSendEmailCloudflare.mockRejectedValueOnce(new Error("CF email failure"));
       const { sendEmail } = await import("@/lib/email");
       await expect(
         sendEmail({ to: "u@e.com", subject: "S", html: "<p/>", text: "t" })
-      ).rejects.toThrow("Resend failure");
+      ).rejects.toThrow("CF email failure");
     });
   });
 
@@ -78,8 +105,8 @@ describe("email.ts", () => {
     it("sends an email with the order ID in the subject", async () => {
       const { sendOrderConfirmation } = await import("@/lib/email");
       await sendOrderConfirmation("customer@example.com", "sess_abc123", 4900, "eur");
-      expect(mockSendEmailResend).toHaveBeenCalledOnce();
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledOnce();
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: expect.stringContaining("sess_abc123"),
         })
@@ -89,7 +116,7 @@ describe("email.ts", () => {
     it("escapes special characters in the session ID", async () => {
       const { sendOrderConfirmation } = await import("@/lib/email");
       await sendOrderConfirmation("customer@example.com", "<script>", 4900, "eur");
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           html: expect.not.stringContaining("<script>"),
         })
@@ -101,8 +128,8 @@ describe("email.ts", () => {
     it("sends an email mentioning the invoice ID", async () => {
       const { sendPaymentFailureNotice } = await import("@/lib/email");
       await sendPaymentFailureNotice("cust@example.com", "inv_xyz789");
-      expect(mockSendEmailResend).toHaveBeenCalledOnce();
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledOnce();
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           html: expect.stringContaining("inv_xyz789"),
         })
@@ -114,8 +141,8 @@ describe("email.ts", () => {
     it("sends a welcome email with unsubscribe link", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      expect(mockSendEmailResend).toHaveBeenCalledOnce();
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledOnce();
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           html: expect.stringContaining("unsubscribe"),
         })
@@ -125,7 +152,7 @@ describe("email.ts", () => {
     it("sends from 'Themis at Cloudless' with branded subject", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           fromLabel: "Themis at Cloudless",
           subject: "Welcome to the Cloudless newsletter!",
@@ -136,7 +163,7 @@ describe("email.ts", () => {
     it("includes what-to-expect content areas in the HTML", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      const call = mockSendEmailResend.mock.calls[0]?.[0] as { html: string };
+      const call = mockSendEmailCloudflare.mock.calls[0]?.[0] as { html: string };
       expect(call.html).toContain("What to expect");
       expect(call.html).toContain("Weekly updates on cloud technologies");
       expect(call.html).toContain("Exclusive content and offers");
@@ -145,7 +172,7 @@ describe("email.ts", () => {
     it("encodes the subscriber email in the unsubscribe URL", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("user+test@example.com");
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           listUnsubscribeUrl: expect.stringContaining(encodeURIComponent("user+test@example.com")),
         })
@@ -155,7 +182,7 @@ describe("email.ts", () => {
     it("passes listUnsubscribeUrl for RFC 8058 one-click", async () => {
       const { sendSubscriberWelcome } = await import("@/lib/email");
       await sendSubscriberWelcome("sub@example.com");
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           listUnsubscribeUrl: expect.stringContaining("unsubscribe"),
         })
@@ -167,7 +194,7 @@ describe("email.ts", () => {
     it("sends to SES_TO_EMAIL from config", async () => {
       const { notifyTeam } = await import("@/lib/email");
       await notifyTeam("Alert: Something happened", "<p>Details here</p>");
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "team@cloudless.gr",
         })
@@ -177,12 +204,12 @@ describe("email.ts", () => {
     it("strips HTML tags for the plain-text part", async () => {
       const { notifyTeam } = await import("@/lib/email");
       await notifyTeam("Subject", "<p>Hello <strong>world</strong></p>");
-      expect(mockSendEmailResend).toHaveBeenCalledWith(
+      expect(mockSendEmailCloudflare).toHaveBeenCalledWith(
         expect.objectContaining({
           text: expect.stringContaining("world"),
         })
       );
-      const call = mockSendEmailResend.mock.calls[0]?.[0] as { text: string };
+      const call = mockSendEmailCloudflare.mock.calls[0]?.[0] as { text: string };
       expect(call.text).not.toContain("<");
     });
   });

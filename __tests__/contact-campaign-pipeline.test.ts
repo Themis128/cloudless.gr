@@ -2,7 +2,7 @@
 /**
  * Tests the full /api/contact pipeline with campaign tier context
  * (the payload shape produced by the inline TierTable form).
- * Verifies Resend, Slack, EspoCRM, and Notion all receive the tier data.
+ * Verifies Cloudflare Email, Slack, EspoCRM, and Notion all receive the tier data.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -12,11 +12,15 @@ vi.mock("@/lib/rate-limit", () => ({
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
-// Mock Resend delivery path
-const mockSendEmailResend = vi.fn().mockResolvedValue(undefined);
+// Mock Cloudflare Email Service REST delivery path
+const mockSendEmailCloudflare = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/email-cloudflare", () => ({
+  isCloudflareEmailConfigured: vi.fn(() => true),
+  sendEmailCloudflare: (...args: unknown[]) => mockSendEmailCloudflare(...args),
+}));
 vi.mock("@/lib/email-resend", () => ({
-  isResendConfigured: vi.fn(() => true),
-  sendEmailResend: (...args: unknown[]) => mockSendEmailResend(...args),
+  isResendConfigured: vi.fn(() => false),
+  sendEmailResend: vi.fn(),
 }));
 
 // Mock Slack
@@ -71,7 +75,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockSendEmailResend.mockResolvedValue(undefined);
+    mockSendEmailCloudflare.mockResolvedValue(undefined);
     const mod = await import("@/app/api/contact/route");
     POST = mod.POST;
   });
@@ -90,7 +94,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     expect(data.eventId).toBeTruthy();
   });
 
-  it("sends Resend email with campaign/tier context in subject and body", async () => {
+  it("sends Cloudflare email with campaign/tier context in subject and body", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -99,8 +103,8 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
     await POST(request);
 
-    expect(mockSendEmailResend).toHaveBeenCalled();
-    const emailInput = mockSendEmailResend.mock.calls[0][0];
+    expect(mockSendEmailCloudflare).toHaveBeenCalled();
+    const emailInput = mockSendEmailCloudflare.mock.calls[0][0];
     const subject = emailInput.subject;
     expect(subject).toContain("shop-online — E-shop Launch");
     expect(subject).toContain("Γιώργος");
