@@ -353,5 +353,6 @@ Do not expand AWS RDS / S3 backup paths for new work; R2 + existing CronJobs are
 - [omv-cluster.md](omv-cluster.md) — field-level inventory, ports, secrets
 - [README.md](README.md) — commands and SQLTools
 - [ADR-001](ADR-001-mediated-db-access.md) — mediated access decision
-- [../kubectl-tailscale.md](../kubectl-tailscale.md) — API access
+- [../kubectl-tailscale.md](../kubectl-tailscale.md) — API access (day-2)
+- [../TAILSCALE-FABRIC.md](../TAILSCALE-FABRIC.md) — Tailscale fabric architecture
 - [../../infrastructure/backup/README.md](../../infrastructure/backup/README.md) — CronJob details
