@@ -164,7 +164,7 @@ trimmed, none comes from app runtime or the mailbox.)
 ## How to execute
 
 A ready-to-run, audit-first script implements every item:
-**[`scripts/aws-cost-reduction.sh`](../scripts/aws-cost-reduction.sh)**.
+**[`scripts/aws-cost-reduction.sh`](../../scripts/aws-cost-reduction.sh)**.
 
 - Run with **no flags** → audits only (prints current state + estimated savings,
   changes nothing).
