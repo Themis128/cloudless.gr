@@ -13,8 +13,6 @@
 module.exports = {
   ci: {
     collect: {
-      // Median-of-5 damps lab noise (Lighthouse team + LHCI guidance).
-      numberOfRuns: 5,
       settings: {
         chromeFlags: "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage",
         extraHeaders: JSON.stringify({

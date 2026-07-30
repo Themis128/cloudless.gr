@@ -10,11 +10,6 @@ on:
     types: [completed]
   workflow_dispatch:
 
-# Do not pile CWV runs on the single Pi when deploys/CWV overlap.
-concurrency:
-  group: core-web-vitals-audit
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
@@ -26,13 +21,8 @@ jobs:
     # challenge interstitials from Cloudflare (IP reputation), and even
     # successful CF responses embed `/cdn-cgi/challenge-platform/scripts/jsd`
     # which previously false-failed our warm step.
-    #
-    # Use [omv, pi] NOT [omv, build]: deploy-pi exclusively needs the `build`
-    # runner. Sharing `build` left deploy queued behind Lighthouse (GitHub
-    # Actions queue contention — one busy self-hosted runner blocks the label).
-    # Warm step already falls back to 192.168.1.128:30300 from any Pi.
-    runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 25
+    runs-on: [self-hosted, omv, build]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -146,10 +136,7 @@ jobs:
               }
           ]')
 
-          # Perf floor 0.55 (not 0.60): Lighthouse lab scores routinely swing
-          # 5–10 pts on shared Pi CPU; /en just failed at median 0.59. Industry
-          # guidance is median-of-N plus a 3–5 pt score margin for CI gates.
-          echo "## 📊 Core Web Vitals Route Audit (median of 5 runs)" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 📊 Core Web Vitals Route Audit (median of 3 runs)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Origin: \`${BASE_URL}\` (Pi NodePort — CF-bypass)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -161,20 +148,20 @@ jobs:
           ' >> "$GITHUB_STEP_SUMMARY"
 
           FAILED=$(echo "$MEDIANS" | jq '[.[] | select(
-            .perf < 0.55 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
+            .perf < 0.60 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
           ) | .url] | length')
 
           if [ "$FAILED" -gt 0 ]; then
             echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "❌ **$FAILED route(s) fell below score thresholds (median of 5 runs).**" >> "$GITHUB_STEP_SUMMARY"
-            echo "Thresholds: Performance ≥ 55 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ **$FAILED route(s) fell below score thresholds (median of 3 runs).**" >> "$GITHUB_STEP_SUMMARY"
+            echo "Thresholds: Performance ≥ 60 · Accessibility ≥ 90 · Best Practices ≥ 90 · SEO ≥ 90" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "Failing routes:" >> "$GITHUB_STEP_SUMMARY"
             echo "$MEDIANS" | jq -r '.[] | select(
-              .perf < 0.55 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
+              .perf < 0.60 or .a11y < 0.90 or .bp < 0.90 or .seo < 0.90
             ) | "- \(.url) perf=\((.perf*100)|round) a11y=\((.a11y*100)|round) bp=\((.bp*100)|round) seo=\((.seo*100)|round)"' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ All routes passed Core Web Vitals thresholds (median of 5 runs; Perf ≥ 55 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 90)." >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ All routes passed Core Web Vitals thresholds (median of 3 runs; Perf ≥ 60 · A11y ≥ 90 · BP ≥ 90 · SEO ≥ 90)." >> "$GITHUB_STEP_SUMMARY"
