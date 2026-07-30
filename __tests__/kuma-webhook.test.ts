@@ -15,13 +15,16 @@ vi.mock("@/lib/slack-notify", () => ({
 }));
 
 describe("POST /api/webhooks/kuma", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     mockGetConfig.mockResolvedValue({
       ADMIN_ALERT_SECRET: "test-secret",
       NOTION_WEBHOOK_SECRET: "",
     });
     mockPost.mockResolvedValue(true);
+    const mod = await import("@/app/api/webhooks/kuma/route");
+    mod.__resetKumaDnsCoalescerForTests();
   });
 
   it("returns 401 without token", async () => {
@@ -52,5 +55,34 @@ describe("POST /api/webhooks/kuma", () => {
     expect(mockPost).toHaveBeenCalled();
     const payload = mockPost.mock.calls[0][0];
     expect(payload.text).toContain("DOWN");
+  });
+
+  it("buffers DNS EAI_AGAIN downs instead of posting per monitor", async () => {
+    vi.useFakeTimers();
+    const { POST } = await import("@/app/api/webhooks/kuma/route");
+
+    const mk = (name: string, host: string) =>
+      POST(
+        new NextRequest("http://localhost/api/webhooks/kuma", {
+          method: "POST",
+          headers: { Authorization: "Bearer test-secret", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            msg: `getaddrinfo EAI_AGAIN ${host}`,
+            monitor: { name, url: `https://${host}/` },
+            heartbeat: { status: 0 },
+          }),
+        })
+      );
+
+    const a = await mk("EspoCRM", "espocrm.cloudless.gr");
+    const b = await mk("AppFlowy", "appflowy.cloudless.gr");
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+    expect(mockPost).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(90_000);
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockPost.mock.calls[0][0].text).toContain("DNS flap");
+    vi.useRealTimers();
   });
 });
