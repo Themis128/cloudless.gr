@@ -19,7 +19,6 @@ import { requireAdmin } from "@/lib/api-auth";
 import { getProducts } from "@/lib/store-products";
 import type { StoreProduct } from "@/lib/store-products";
 import { callGemini } from "@/lib/gemini-admin";
-import { sanitizeForLog } from "@/lib/escape-html";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -217,11 +216,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   }
 
   // Fire-and-forget: update Stripe product metadata when configured.
-  updateStripeDescriptions(descriptions).catch((err) => {
-    console.warn(
-      "[ai/product-descriptions] Stripe metadata update failed:",
-      sanitizeForLog(err instanceof Error ? err.message : err)
-    );
+  updateStripeDescriptions(descriptions).catch(() => {
+    console.warn("[ai/product-descriptions] Stripe metadata update failed");
   });
 
   return NextResponse.json({ applied });
@@ -240,12 +236,9 @@ async function updateStripeDescriptions(
 
   await Promise.allSettled(
     descriptions.map(({ id, description }) =>
-      stripe.products.update(id, { description }).catch((err) => {
-        console.warn(
-          "[ai/product-descriptions] Stripe update failed for product:",
-          sanitizeForLog(id),
-          sanitizeForLog(err instanceof Error ? err.message : err)
-        );
+      stripe.products.update(id, { description }).catch(() => {
+        // Static log only — product id / error text are user-influenced (CodeQL js/log-injection).
+        console.warn("[ai/product-descriptions] Stripe product update failed");
       })
     )
   );

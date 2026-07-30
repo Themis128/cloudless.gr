@@ -65,6 +65,6 @@ describe("htmlToPlainText()", () => {
 describe("sanitizeForLog()", () => {
   it("collapses CR/LF", async () => {
     const { sanitizeForLog } = await import("@/lib/escape-html");
-    expect(sanitizeForLog("a\nb\rc")).toBe("a b c");
+    expect(sanitizeForLog("a\nb\rc")).toBe("abc");
   });
 });

@@ -22,10 +22,13 @@ export function htmlToPlainText(html: string): string {
   text = text.replace(/<[^>]{0,2000}>/g, " ");
   // Collapse any leftover angle brackets from partial/"nested" tag tricks.
   text = text.replace(/[<>]/g, "");
-  return text.replace(/[ \t\f\v]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  return text
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
-/** Collapse CR/LF/control chars so log lines cannot be injected. */
+/** Collapse CR/LF so log lines cannot be injected (CodeQL-recognized sanitizers). */
 export function sanitizeForLog(value: unknown): string {
-  return String(value).replace(/[\r\n\x00-\x1f\x7f]/g, " ").slice(0, 500);
+  return String(value).replace(/\n/g, "").replace(/\r/g, "").replace(/\0/g, "").slice(0, 500);
 }

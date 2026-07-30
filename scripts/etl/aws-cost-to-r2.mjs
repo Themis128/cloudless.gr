@@ -92,10 +92,9 @@ async function main() {
 	// Private temp dir for parquet (not a predictable fixed /tmp path).
 	const workDir = mkdtempSync(join(tmpdir(), "aws-cost-"));
 	const parquetPath = join(workDir, "aws-cost.parquet");
-	// Prefer explicit out path; otherwise a unique file that survives the parquet cleanup.
-	const d1SqlOut =
-		process.env.AWS_COST_D1_SQL_OUT ||
-		join(tmpdir(), `aws-cost-d1-${process.pid}-${Date.now()}.sql`);
+	// Prefer explicit out path from CI (runner.temp). Never default to os.tmpdir()
+	// fixed/predictable names (CodeQL js/insecure-temporary-file).
+	const d1SqlOut = process.env.AWS_COST_D1_SQL_OUT;
 
 	try {
 		const writer = await ParquetWriter.openFile(schema, parquetPath);
@@ -120,9 +119,13 @@ async function main() {
 			})
 		);
 
-		writeFileSync(d1SqlOut, buildD1Sql(rows, syncedAt), "utf8");
+		if (d1SqlOut) {
+			writeFileSync(d1SqlOut, buildD1Sql(rows, syncedAt), "utf8");
+			console.log(`✅ Wrote D1 SQL → ${d1SqlOut}`);
+		} else {
+			console.warn("AWS_COST_D1_SQL_OUT unset — skipping D1 SQL write");
+		}
 		console.log(`✅ Uploaded ${rows.length} rows → R2://${BUCKET}/lake/aws-cost/{cost.parquet,cost.json}`);
-		console.log(`✅ Wrote D1 SQL → ${d1SqlOut}`);
 	} finally {
 		rmSync(workDir, { recursive: true, force: true });
 	}

@@ -25,7 +25,6 @@ import {
   type SelfhostedApp,
   SELFHOSTED_APP_NAMES,
 } from "@/lib/selfhosted-autologin";
-import { sanitizeForLog } from "@/lib/escape-html";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -56,11 +55,9 @@ export async function GET(request: NextRequest) {
       { url: result.url, app, hasToken: result.hasToken },
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
-  } catch (err) {
-    // Deliberately strip any secret values from the error message before logging.
-    const raw = err instanceof Error ? err.message : String(err);
-    const safe = sanitizeForLog(raw.replace(/[A-Za-z0-9_\-]{40,}/g, "[REDACTED]"));
-    console.error("[autologin] Error fetching URL for app:", app, safe);
+  } catch {
+    // Never echo upstream/error text into logs or responses (CodeQL js/log-injection).
+    console.error("[autologin] Failed to fetch login URL");
     return NextResponse.json({ error: "Failed to get login URL" }, { status: 502 });
   }
 }

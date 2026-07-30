@@ -41,7 +41,11 @@ function resolveAllowedTarget(targetUrl: string): URL | null {
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
   if (parsed.username || parsed.password) return null;
   // Block obvious SSRF pivots
-  if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1") {
+  if (
+    parsed.hostname === "localhost" ||
+    parsed.hostname === "127.0.0.1" ||
+    parsed.hostname === "::1"
+  ) {
     return null;
   }
   if (parsed.hostname === "metadata.google.internal" || parsed.hostname.endsWith(".internal")) {
@@ -61,10 +65,9 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const { targetUrl, method, headers, body } = (await request.json()) as {
+    const { targetUrl, method, body } = (await request.json()) as {
       targetUrl?: string;
       method?: string;
-      headers?: Record<string, string>;
       body?: unknown;
     };
 
@@ -82,31 +85,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "method not allowed" }, { status: 400 });
     }
 
-    // Drop hop-by-hop / auth headers from the client payload
+    // Fixed headers only — never copy client-supplied header names into an object
+    // (CodeQL js/remote-property-injection).
     const safeHeaders: Record<string, string> = { "Content-Type": "application/json" };
-    if (headers && typeof headers === "object") {
-      for (const [k, v] of Object.entries(headers)) {
-        const key = k.toLowerCase();
-        if (key === "host" || key === "authorization" || key === "cookie" || key === "connection") {
-          continue;
-        }
-        if (typeof v === "string") safeHeaders[k] = v;
-      }
-    }
 
     const response = await fetch(allowed.toString(), {
       method: verb,
       headers: safeHeaders,
-      body: body !== undefined && verb !== "GET" && verb !== "HEAD" ? JSON.stringify(body) : undefined,
+      body:
+        body !== undefined && verb !== "GET" && verb !== "HEAD" ? JSON.stringify(body) : undefined,
       redirect: "manual",
     });
 
     const data = await response.json().catch(() => null);
 
     return NextResponse.json(data ?? { ok: response.ok }, { status: response.status });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : "Proxy request failed";
-    console.error("Pi-proxy error:", msg.replace(/[\r\n\x00-\x1f\x7f]/g, " "));
+  } catch {
+    console.error("Pi-proxy error: upstream request failed");
     return NextResponse.json({ error: "Proxy request failed" }, { status: 500 });
   }
 }
