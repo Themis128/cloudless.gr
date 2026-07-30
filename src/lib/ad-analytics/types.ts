@@ -170,7 +170,7 @@ export interface AdMetricsDelta {
   };
 }
 
-/** DynamoDB-backed bookmark for one (campaign, platform, metric, window)
+/** D1 (or in-memory) bookmark for one (campaign, platform, metric, window)
  *  tuple. Holds the last snapshot we posted and the timestamp we posted
  *  it. Re-posting a digest is idempotent over the same window. */
 export interface Bookmark {

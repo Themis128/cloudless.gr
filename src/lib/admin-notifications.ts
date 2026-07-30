@@ -5,8 +5,9 @@ import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
  * Durable admin notifications store.
  *
  * D1 `admin_notification` via AUTH_DB. Reads return [] when AUTH_DB is
- * unbound; writes that require persistence throw when AUTH_DB is missing.
- * Lake sink (R2) still runs on record regardless.
+ * unbound. Side-effect appends (`recordNotification`) soft-fail; explicit
+ * admin mutations throw when AUTH_DB is missing. Lake sink (R2) still runs
+ * on record regardless.
  *
  * Categories: contact | subscribe | booking | order | error | auth | portal
  */
@@ -202,9 +203,10 @@ async function purgeArchivedOlderThanD1(db: AuthDatabase, olderThan: string): Pr
 }
 
 /**
- * Append a notification. D1 insert failures are returned as null (not thrown)
- * so producer paths can keep serving. Missing AUTH_DB throws — persistence
- * requires a bound database.
+ * Append a notification (side-effect for contact/order/auth producers).
+ * Soft-fails when AUTH_DB is unbound or D1 insert fails — returns null so
+ * fire-and-forget callers (Stripe webhook, contact, subscribe) never reject
+ * the primary request path. Explicit admin mutations still fail closed.
  */
 export async function recordNotification(input: {
   category: NotificationCategory;
@@ -231,7 +233,9 @@ export async function recordNotification(input: {
   // Always write to data lake (R2) for analytics — fire and forget.
   sinkToLake(notif).catch(() => {});
 
-  return recordNotificationD1(requireAuthDb(), notif);
+  const db = getAuthDbFromEnv();
+  if (!db) return null;
+  return recordNotificationD1(db, notif);
 }
 
 export interface ListFilters {

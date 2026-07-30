@@ -110,10 +110,10 @@ describe("admin-notifications", () => {
   }
 
   describe("without AUTH_DB", () => {
-    it("throws on recordNotification", async () => {
+    it("soft-fails recordNotification (side-effect producers)", async () => {
       await expect(
         recordNotification({ category: "contact", title: "T", message: "M" })
-      ).rejects.toThrow(/AUTH_DB/);
+      ).resolves.toBeNull();
     });
 
     it("returns [] from listNotifications", async () => {

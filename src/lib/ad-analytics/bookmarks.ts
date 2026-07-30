@@ -75,9 +75,7 @@ class D1BookmarkStore implements IBookmarkStore {
   async getBookmark(key: string): Promise<Bookmark | null> {
     try {
       const row = await this.db
-        .prepare(
-          "SELECT pk, last_posted_at, snapshot_json FROM ad_analytics_bookmark WHERE pk = ?"
-        )
+        .prepare("SELECT pk, last_posted_at, snapshot_json FROM ad_analytics_bookmark WHERE pk = ?")
         .bind(key)
         .first<{ pk: string; last_posted_at: string | null; snapshot_json: string | null }>();
       if (!row?.last_posted_at || !row.snapshot_json) return null;
