@@ -166,7 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // HTML challenge / error page — treat as logged out, don't throw.
         console.warn(
           "[auth] /api/auth/session returned non-JSON (len=%d); treating as signed out",
-          raw.length,
+          raw.length
         );
         setUser(null);
         setIsAdmin(false);
