@@ -6,6 +6,8 @@ use the stable resource name.
 
 Verified inventory source: `kubectl get deploy,sts,ds -A` on omv (2026-07-30).
 
+> Probe 2026-07-30: `coredns`, `metrics-server`, `traefik` (+ `svclb-traefik`) are Running in `kube-system`. No in-cluster Deployments matched `mosquitto` / `alert-api` / `cloudflared` name patterns — those remain host or external as documented.
+
 ## Product / app-coupled
 
 | Folder | NS | App coupling |
@@ -55,6 +57,9 @@ Verified inventory source: `kubectl get deploy,sts,ds -A` on omv (2026-07-30).
 | [ingress](ingress/) | `tailscale` | Ingress or Tailscale fabric |
 | [kube](kube/) | `tailscale` | Ingress or Tailscale fabric |
 | [ts-k3s-cidrs](ts-k3s-cidrs/) | `tailscale` | Ingress or Tailscale fabric |
+| [coredns](coredns/) | `kube-system` | Ingress or Tailscale fabric |
+| [metrics-server](metrics-server/) | `kube-system` | Ingress or Tailscale fabric |
+| [traefik](traefik/) | `kube-system` | Ingress or Tailscale fabric |
 
 ## How to refresh
 
