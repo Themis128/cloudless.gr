@@ -13,7 +13,7 @@
 | PR-13 | **Done in tree** | R2 I/O via `aws4fetch` (`r2-upload.ts`, `scripts/etl/_r2-config.mjs`); `@aws-sdk/client-s3` removed |
 | PR-04 | **Done in tree** | Admin users / activate / confirm / user delete → D1 only; Cognito SDK removed from those routes |
 | PR-05 | **Done in tree** | Cognito surface removed: no Hosted UI, no JWKS, no Cognito SDK, no fake sync-users; D1 cookie auth only; Cognito operator scripts archived under `scripts/archive/cognito/` |
-| PR-06 | **In PR #1456** | Dynamo → D1: profiles, admin-notifications, GSC cache, Stripe txs/analytics, ad-analytics bookmarks; no `@aws-sdk/client-dynamodb` in `src/` |
+| PR-06 | **Done** (#1456) | Dynamo → D1: profiles, admin-notifications, GSC cache, Stripe txs/analytics, ad-analytics bookmarks; no `@aws-sdk/client-dynamodb` in `src/` |
 
 **Failure model (PR-06):** primary reads/writes on user identity & money (profile write, Stripe ledger, admin notification mutations) **fail closed** without `AUTH_DB`. Cache/digest side-effects (GSC cache, `recordNotification` append, ad-analytics bookmarks) **soft-fail** so checkout/contact never 500 on missing binding.
 
@@ -22,7 +22,7 @@
 1. Email (Node/Pi) — **Cloudflare Email Sending LIVE** from the app pod (`CLOUDFLARE_EMAIL_API_TOKEN` + `CLOUDFLARE_API_TOKEN` in `cloudless-secrets`). `RESEND_API_KEY` still optional and **not set**.
 2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET**; Workers AI embed smoke (`bge-small` → **384**) OK from app pod.
 3. Meili reindex — **done** (4 docs / 4 embeddings; `workers-ai-bge-small` @ 384; in-cluster `MEILI_HOST`). `CRON_SECRET` rotated after earlier job-log leak.
-4. **Next after #1456:** apply D1 migration `0014-ad-analytics-bookmarks.sql` on remote `user-auth-db`; confirm Pi `AUTH_DB` bound; then PR-14 (`pnpm remove` remaining `@aws-sdk/*`).
+4. **Next:** apply D1 migration `0014-ad-analytics-bookmarks.sql` on remote `user-auth-db`; confirm Pi `AUTH_DB` bound; then PR-14 (`pnpm remove` remaining `@aws-sdk/*`).
 5. Cognito is retired; tear down the User Pool in AWS when ready (PR-16).
 6. **Out of band:** Tailscale Operator deploy fails with `namespaces "tailscale-operator" not found` — fabric/docs issue, not cutover-blocking.
 
