@@ -1,0 +1,258 @@
+{
+  // cloudless.gr — workspace editor + extension tuning
+  // Stack: Next 16 · React 19 · Tailwind 4 · Vitest · Playwright · D1/Wrangler
+
+  "npm.packageManager": "pnpm",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.preferences.preferTypeOnlyAutoImports": true,
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "javascript.preferences.importModuleSpecifier": "non-relative",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.rulers": [100],
+  "editor.wordWrap": "off",
+  "editor.linkedEditing": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.stickyScroll.enabled": true,
+  "editor.inlineSuggest.enabled": true,
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "editor.suggestSelection": "first",
+
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.associations": {
+    ".env*": "dotenv",
+    ".dev.vars": "dotenv",
+    "*.css": "tailwindcss",
+    "wrangler.jsonc": "jsonc",
+    "open-next.config.*": "typescript"
+  },
+
+  "eslint.enable": true,
+  "eslint.useFlatConfig": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.options": {
+    "overrideConfigFile": "eslint.config.mjs"
+  },
+
+  "prettier.requireConfig": true,
+  "prettier.configPath": ".prettierrc",
+  "prettier.ignorePath": ".prettierignore",
+
+  // Tailwind v4 — design tokens live in @theme (globals.css), not tailwind.config.js
+  "tailwindCSS.experimental.configFile": "src/app/globals.css",
+  "tailwindCSS.classAttributes": ["class", "className", "classNames"],
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["clsx\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["className\\s*[:=]\\s*[\"'`]([^\"'`]*)[\"'`]"]
+  ],
+  "tailwindCSS.lint.invalidApply": "error",
+  "tailwindCSS.lint.cssConflict": "warning",
+
+  "path-intellisense.mappings": {
+    "@": "${workspaceFolder}/src"
+  },
+  "path-intellisense.showHiddenFiles": false,
+  "path-intellisense.autoSlashAfterDirectory": true,
+
+  "vitest.enable": true,
+  "vitest.commandLine": "pnpm exec vitest",
+  "vitest.vitestPackagePath": "node_modules/vitest/package.json",
+  "vitest.nodeEnv": {
+    "NODE_ENV": "test"
+  },
+
+  "playwright.reuseBrowser": true,
+  "playwright.showTrace": false,
+  "playwright.pickLocator.enabled": true,
+
+  "errorLens.enabledDiagnosticLevels": ["error", "warning"],
+  "errorLens.excludeBySource": ["cSpell"],
+  "errorLens.delay": 400,
+
+  "cSpell.enabled": true,
+  "cSpell.diagnosticLevel": "Hint",
+  "cSpell.language": "en",
+  "cSpell.ignorePaths": [
+    "node_modules",
+    ".next",
+    ".wrangler",
+    "coverage",
+    "pnpm-lock.yaml",
+    "package-lock.json",
+    "*.min.js",
+    "migrations/**",
+    "public/**"
+  ],
+  "cSpell.words": [
+    "appflowy",
+    "autologin",
+    "baltzakis",
+    "bedrock",
+    "cloudless",
+    "cognito",
+    "datalake",
+    "espocrm",
+    "gsap",
+    "hubspot",
+    "k3s",
+    "lenis",
+    "licdn",
+    "lintrk",
+    "miniflare",
+    "nextauth",
+    "ntfy",
+    "omv",
+    "opennext",
+    "postiz",
+    "scrypt",
+    "tailnet",
+    "turbopack",
+    "wrangler"
+  ],
+
+  "yaml.schemas": {},
+  "yaml.validate": true,
+
+  "docker.languageserver.formatter.ignoreMultilineInstructions": true,
+
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/.wrangler": true,
+    "**/coverage": true,
+    "**/playwright-report": true,
+    "**/test-results": true,
+    "**/.open-next": true,
+    "**/out": true,
+    "**/pnpm-lock.yaml": true,
+    "**/.git": true,
+    "**/agent-transcripts": true
+  },
+  "files.watcherExclude": {
+    "**/.next/**": true,
+    "**/.wrangler/**": true,
+    "**/node_modules/**": true,
+    "**/.open-next/**": true,
+    "**/coverage/**": true,
+    "**/playwright-report/**": true,
+    "**/test-results/**": true
+  },
+  "files.exclude": {
+    "**/.DS_Store": true
+  },
+
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "package.json": "pnpm-lock.yaml, .npmrc, .nvmrc, .prettierrc, eslint.config.*, vitest.config.*, playwright.config.*, next.config.*, open-next.config.*, wrangler.*, tsconfig*.json, components.json",
+    "next.config.ts": "next-env.d.ts, postcss.config.*, instrumentation.ts",
+    "*.tsx": "${capture}.test.tsx, ${capture}.spec.tsx, ${capture}.module.css",
+    "*.ts": "${capture}.test.ts, ${capture}.spec.ts",
+    "README.md": "ARCHITECTURE.md, AGENTS.md, CLAUDE.md, LICENSE*"
+  },
+
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[tailwindcss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": false
+    }
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.tabSize": 2
+  },
+  "[dockerfile]": {
+    "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+  },
+  "[dotenv]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[sql]": {
+    "editor.formatOnSave": false
+  },
+
+  // Python — this repo is primarily Next.js. Cursor Pyright + ms-python still
+  // wake up because pyrightconfig.json / pyproject.toml exist. Limit analysis
+  // to open .py files so browsing docs/TS does not full-scan scripts/.
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.autoSearchPaths": false,
+  "python.analysis.autoImportCompletions": false,
+  "python.analysis.indexing": false,
+  "python.analysis.exclude": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/.wrangler/**",
+    "**/.venv/**",
+    "**/coverage/**",
+    "**/.open-next/**",
+    "**/infrastructure/**",
+    "**/.claude/**",
+    "**/docs/**",
+    "**/e2e/**",
+    "**/src/**"
+  ],
+  "python.terminal.activateEnvironment": false,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+}

@@ -170,9 +170,12 @@ function buildCSP(nonce: string): string {
   // In dev mode, Turbopack/HMR injects inline scripts without nonces and
   // opens WebSockets on the dev origin — we need 'unsafe-inline' + ws:// to
   // make the dev server work. Production uses the strict nonced policy.
+  // snap.licdn.com — LinkedIn Insight Tag loader (LinkedInInsightTag.tsx).
+  // Already allowlisted in connect-src; must also be in script-src because the
+  // tag appends the script via document.createElement (dev has no strict-dynamic).
   const scriptSrc = isDev
-    ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`
-    : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com`;
+    ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com https://snap.licdn.com`
+    : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com https://snap.licdn.com`;
   const connectSrc = isDev
     ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com"
     : "connect-src 'self' wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com https://plausible.io https://www.clarity.ms";

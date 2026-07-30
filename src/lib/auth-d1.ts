@@ -483,12 +483,35 @@ export function validateSessionSecret(): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-/** Resolve AUTH_DB from process.env or Workers global (Cloudflare-first). */
+/**
+ * Resolve AUTH_DB from (in order):
+ * 1. process.env.AUTH_DB — Workers/OpenNext polyfill or tests
+ * 2. globalThis.__AUTH_DB__ — mirrored binding for Node libs
+ * 3. OpenNext Cloudflare context (`initOpenNextCloudflareForDev` / Worker entry)
+ * 4. Local wrangler D1 sqlite shim (`auth-db-local`) in development only
+ */
 export function getAuthDbFromEnv(): AuthDatabase | null {
   const fromEnv = (process as unknown as { env?: { AUTH_DB?: AuthDatabase } }).env?.AUTH_DB;
   const fromGlobal = (globalThis as unknown as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__;
-  const db = fromEnv ?? fromGlobal;
+  let fromCf: AuthDatabase | undefined;
+  try {
+    const ctx = (globalThis as Record<symbol, { env?: { AUTH_DB?: AuthDatabase } } | undefined>)[
+      Symbol.for("__cloudflare-context__")
+    ];
+    fromCf = ctx?.env?.AUTH_DB;
+  } catch {
+    // Context unavailable (SSG / edge without init) — fall through.
+  }
+  const db = fromEnv ?? fromGlobal ?? fromCf;
   if (db && typeof db.prepare === "function") return db;
+
+  if (process.env.NODE_ENV === "development") {
+    // Lazy require avoids pulling node:sqlite into Workers/edge bundles.
+    const { getLocalAuthDb } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- local next-dev D1 shim only
+      require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
+    return getLocalAuthDb();
+  }
   return null;
 }
 

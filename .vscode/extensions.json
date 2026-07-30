@@ -1,0 +1,25 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-playwright.playwright",
+    "vitest.explorer",
+    "takline.cloudflare-bindings-explorer",
+    "usernamehw.errorlens",
+    "yoavbls.pretty-ts-errors",
+    "christian-kohler.path-intellisense",
+    "streetsidesoftware.code-spell-checker",
+    "mikestead.dotenv",
+    "redhat.vscode-yaml",
+    "github.vscode-github-actions",
+    "ms-azuretools.vscode-docker"
+  ],
+  "unwantedRecommendations": [
+    "hookyqr.beautify",
+    "dbaeumer.jshint",
+    "msjsdiag.debugger-for-chrome",
+    "formulahendry.auto-rename-tag",
+    "coenraads.bracket-pair-colorizer-2"
+  ]
+}

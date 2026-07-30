@@ -148,7 +148,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
       const raw = await res.text();
-      let data: {
+      type SessionPayload = {
         user?: {
           id?: string;
           name?: string;
@@ -158,14 +158,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         };
         isAdmin?: boolean;
         error?: string;
-      } | null = null;
+      };
+      let data: SessionPayload | null = null;
       try {
-        data = raw ? (JSON.parse(raw) as typeof data) : null;
+        data = raw ? (JSON.parse(raw) as SessionPayload) : null;
       } catch {
         // HTML challenge / error page — treat as logged out, don't throw.
         console.warn(
           "[auth] /api/auth/session returned non-JSON (len=%d); treating as signed out",
-          raw.length,
+          raw.length
         );
         setUser(null);
         setIsAdmin(false);

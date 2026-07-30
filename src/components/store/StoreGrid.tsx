@@ -73,7 +73,7 @@ function ProductCard({
       onMouseLeave={() => setHovered(false)}
     >
       {/* Product infographic */}
-      <div className="bg-void-lighter relative aspect-[4/3] overflow-hidden">
+      <div className="bg-void-lighter relative aspect-4/3 overflow-hidden">
         <ProductIcon productId={product.id} category={product.category} />
         <span
           className={`absolute top-4 left-4 rounded-full px-3 py-1 font-mono text-[10px] font-medium ${
@@ -130,7 +130,7 @@ function ProductCard({
           </div>
           <button
             onClick={() => addItem(product)}
-            className="bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 active:bg-neon-cyan/20 min-h-[44px] rounded-lg border px-4 py-2.5 font-mono text-xs font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] active:scale-[0.98]"
+            className="bg-neon-cyan/10 border-neon-cyan/40 text-neon-cyan hover:bg-neon-cyan/20 active:bg-neon-cyan/20 min-h-11 rounded-lg border px-4 py-2.5 font-mono text-xs font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(0,255,245,0.15)] active:scale-[0.98]"
           >
             {product.recurring ? "Subscribe" : "Add to Cart"}
           </button>
@@ -284,7 +284,7 @@ export default function StoreGrid() {
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`min-h-[44px] rounded-lg px-4 py-2.5 font-mono text-xs font-medium transition-all duration-300 ${
+            className={`min-h-11 rounded-lg px-4 py-2.5 font-mono text-xs font-medium transition-all duration-300 ${
               activeCategory === cat
                 ? "bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan border shadow-[0_0_10px_rgba(0,255,245,0.1)]"
                 : "bg-void-light hover:border-neon-cyan/30 active:border-neon-cyan/30 border border-slate-800 text-slate-400 hover:text-slate-300 active:text-slate-300"
