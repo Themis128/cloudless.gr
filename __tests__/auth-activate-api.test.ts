@@ -24,9 +24,7 @@ const SECRET = "test-activate-secret";
 function makeToken(email: string): { token: string; otp: string } {
   const nonce = "nonce123";
   const exp = Date.now() + 600_000;
-  const sig = createHmac("sha256", SECRET)
-    .update(`${email}:${exp}:${nonce}`)
-    .digest("base64url");
+  const sig = createHmac("sha256", SECRET).update(`${email}:${exp}:${nonce}`).digest("base64url");
   const token = `${nonce}.${exp}.${sig}`;
   const otp = (
     parseInt(

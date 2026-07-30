@@ -1,40 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { getAuthDbFromEnv, markEmailVerified } from "@/lib/auth-d1";
-
-function verifyToken(email: string, token: string): boolean {
-  const parts = token.split(".");
-  if (parts.length !== 3) return false;
-  const [nonce, expStr, sig] = parts;
-  const exp = parseInt(expStr, 10);
-  if (isNaN(exp) || Date.now() > exp) return false;
-  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
-  const expected = createHmac("sha256", secret)
-    .update(`${email}:${exp}:${nonce}`)
-    .digest("base64url");
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-function verifyOtp(email: string, otp: string, token: string): boolean {
-  if (!verifyToken(email, token)) return false;
-  const [nonce, expStr] = token.split(".");
-  const exp = parseInt(expStr, 10);
-  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
-  const expected = (
-    parseInt(
-      createHmac("sha256", secret).update(`otp:${email}:${exp}:${nonce}`).digest("hex").slice(0, 8),
-      16
-    ) % 1_000_000
-  )
-    .toString()
-    .padStart(6, "0");
-  const a = Buffer.from(otp.trim());
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
+import { verifyActivationOtp, verifyActivationToken } from "@/lib/auth-activation";
 
 async function confirmUserD1(email: string): Promise<boolean> {
   const db = getAuthDbFromEnv();
@@ -51,10 +18,9 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get("email")?.toLowerCase().trim();
   const token = searchParams.get("token");
 
-  const base = new URL(req.url);
-  const origin = base.origin;
+  const origin = new URL(req.url).origin;
 
-  if (!email || !token || !verifyToken(email, token))
+  if (!email || !token || !verifyActivationToken(email, token))
     return NextResponse.redirect(`${origin}/en/auth/signup?activated=invalid`);
 
   const ok = await confirmUserD1(email);
@@ -83,7 +49,7 @@ export async function POST(req: NextRequest) {
   if (!email || !otp || !token)
     return NextResponse.json({ error: "email, otp, and token required" }, { status: 400 });
 
-  if (!verifyOtp(email, otp, token))
+  if (!verifyActivationOtp(email, otp, token))
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
 
   const ok = await confirmUserD1(email);
