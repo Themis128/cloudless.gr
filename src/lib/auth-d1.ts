@@ -232,14 +232,29 @@ export async function createUser(
   const id = crypto.randomUUID();
   const passwordHash = await hashPassword(password);
   const now = Math.floor(Date.now() / 1000);
+  // Production D1 (`schema.sql`) requires NOT NULL UNIQUE `username`; migrations/0001
+  // omitted it. Prefer email-as-username; fall back if the column is absent.
+  const username = email;
 
   try {
-    await db
-      .prepare(
-        "INSERT INTO user (id, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-      .bind(id, email, name || null, passwordHash, now, now)
-      .run();
+    try {
+      await db
+        .prepare(
+          "INSERT INTO user (id, username, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(id, username, email, name || null, passwordHash, now, now)
+        .run();
+    } catch (withUsernameErr) {
+      await db
+        .prepare(
+          "INSERT INTO user (id, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+        )
+        .bind(id, email, name || null, passwordHash, now, now)
+        .run();
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[auth-d1] createUser: username column missing, used email-only insert", withUsernameErr);
+      }
+    }
 
     // Default to 'user' role
     await db.prepare("INSERT INTO user_role (user_id, role) VALUES (?, ?)").bind(id, "user").run();
@@ -247,7 +262,8 @@ export async function createUser(
     return {
       user: { id, email, name, password_hash: passwordHash, created_at: now, updated_at: now },
     };
-  } catch {
+  } catch (err) {
+    console.error("[auth-d1] createUser failed:", err);
     return { error: "Failed to create user" };
   }
 }

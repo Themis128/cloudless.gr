@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserBySession, deleteSession, isAdmin, type AuthDatabase } from "@/lib/auth-d1";
+import { getUserBySession, deleteSession, isAdmin, getAuthDbFromEnv } from "@/lib/auth-d1";
 
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
-function getDb(_request: NextRequest): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  if (!env.AUTH_DB) {
-    return null;
-  }
-  return env.AUTH_DB;
+function getDb(_request: NextRequest) {
+  return getAuthDbFromEnv();
 }
 
 export async function GET(req: NextRequest) {

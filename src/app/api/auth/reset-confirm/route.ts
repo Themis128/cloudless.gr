@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { consumePasswordResetToken, type AuthDatabase } from "@/lib/auth-d1";
+import { consumePasswordResetToken, getAuthDbFromEnv } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-interface Env {
-  AUTH_DB: AuthDatabase;
-}
-
-function getDb(_request: NextRequest): AuthDatabase | null {
-  const env = process.env as unknown as Env;
-  if (!env.AUTH_DB) {
-    return null;
-  }
-  return env.AUTH_DB;
-}
-
 export async function POST(req: NextRequest) {
-  const db = getDb(req);
+  const db = getAuthDbFromEnv();
   if (!db) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
