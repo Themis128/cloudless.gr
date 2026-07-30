@@ -147,7 +147,7 @@ The output field `EvalDecision` should be `"allowed"` for all four actions.
 ## See also
 
 - [SST `defaultTags` configuration](https://sst.dev/docs/providers/#defaulttags) — explains why every managed resource is tagged
-- [`sst.config.ts`](../sst.config.ts) — this project's tag keys (`Project`, `Environment`, `Owner`, `ManagedBy`)
+- [`sst.config.ts`](../../sst.config.ts) — this project's tag keys (`Project`, `Environment`, `Owner`, `ManagedBy`)
 - [AWS IAM policy simulator docs](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_testing-policies.html)
 - [GitHub Actions OIDC with AWS](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)
 
