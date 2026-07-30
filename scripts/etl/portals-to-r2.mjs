@@ -7,7 +7,7 @@
 
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 
 const TMP = "/tmp/portals.parquet";
 
@@ -123,8 +123,7 @@ async function main() {
   await writer.close();
 
   const body = readFileSync(TMP);
-  const s3 = getS3Client();
-  await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: "lake/portals/portals.parquet", Body: body }));
+  await r2Put("lake/portals/portals.parquet", body);
   unlinkSync(TMP);
   console.log(`✅ Uploaded ${portals.length} portals → R2://${BUCKET}/lake/portals/portals.parquet`);
 }

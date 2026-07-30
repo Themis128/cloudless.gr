@@ -6,10 +6,9 @@
  * SSM has been removed — use GitHub Actions secrets or Wrangler secrets.
  */
 
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 
 const ACCOUNT = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
 
@@ -18,9 +17,12 @@ const ACCOUNT = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
  * Token should be set via LINKEDIN_ACCESS_TOKEN env var (GitHub secret / Wrangler secret).
  */
 function resolveToken() {
-	const token = process.env.LINKEDIN_ACCESS_TOKEN;
+	const token =
+		process.env.LINKEDIN_ACCESS_TOKEN || process.env.LINKEDIN_CAPI_ACCESS_TOKEN;
 	if (!token) {
-		console.error("LINKEDIN_ACCESS_TOKEN not available (env var not set)");
+		console.error(
+			"LINKEDIN_ACCESS_TOKEN (or LINKEDIN_CAPI_ACCESS_TOKEN) not available"
+		);
 		process.exit(1);
 	}
 	return token;
@@ -28,8 +30,6 @@ function resolveToken() {
 
 const TOKEN = resolveToken();
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 const LI_BASE = "https://api.linkedin.com/rest";
 const LI_HEADERS = {
 	Authorization: `Bearer ${TOKEN}`,
@@ -128,14 +128,7 @@ async function main() {
 	for (const r of rows) await writer.appendRow(r);
 	await writer.close();
 
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: "lake/linkedin-ads/insights.parquet",
-			Body: readFileSync(tmp),
-			ContentType: "application/octet-stream",
-		})
-	);
+	await r2Put("lake/linkedin-ads/insights.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
 	unlinkSync(tmp);
 	console.log(`✅ Uploaded ${rows.length} rows → R2://${BUCKET}/lake/linkedin-ads/`);
 }

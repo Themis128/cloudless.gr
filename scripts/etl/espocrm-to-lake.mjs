@@ -26,13 +26,13 @@
  * cheap because counts are well under 100k records on cloudless.gr.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
+
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const PAGE_SIZE = 100;
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const BASE = (process.env.ESPOCRM_BASE_URL || "").replace(/\/$/, "");
 const KEY = process.env.ESPOCRM_API_KEY;
 
@@ -41,7 +41,6 @@ if (!BASE || !KEY) {
   process.exit(1);
 }
 
-const s3 = new S3Client({ region: REGION });
 
 // ---------------------------------------------------------------------------
 // Schemas — flat + typed, aligned with Glue/Athena column types.
@@ -224,14 +223,7 @@ async function writeParquetAndUpload(filename, schema, rows, s3Key) {
   const writer = await ParquetWriter.openFile(schema, `/tmp/${filename}`);
   for (const r of rows) await writer.appendRow(r);
   await writer.close();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: s3Key,
-      Body: readFileSync(`/tmp/${filename}`),
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put(s3Key, readFileSync(`/tmp/${filename}`), { contentType: "application/octet-stream" });
   unlinkSync(`/tmp/${filename}`);
   console.log(`✓ ${rows.length} rows → s3://${BUCKET}/${s3Key}`);
 }

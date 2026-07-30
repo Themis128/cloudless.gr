@@ -22,12 +22,12 @@
  * fetched for a configurable rolling window (default 90d) to bound size;
  * integrations are a small snapshot.
  */
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const BASE = (process.env.POSTIZ_API_URL || "").replace(/\/$/, "");
 const KEY = process.env.POSTIZ_API_KEY;
 const DAYS = Math.max(1, Math.min(Number(process.env.POSTIZ_DAYS) || 90, 365));
@@ -37,7 +37,6 @@ if (!BASE || !KEY) {
   process.exit(1);
 }
 
-const s3 = new S3Client({ region: REGION });
 
 async function postizFetch(path) {
   const res = await fetch(`${BASE}/api/public/v1${path}`, {
@@ -81,14 +80,7 @@ async function writeParquet(rows, schema, localPath) {
 }
 
 async function uploadToS3(key, body) {
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: body,
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put(key, body, { contentType: "application/octet-stream" });
   console.log(`✓ uploaded s3://${BUCKET}/${key} (${body.length} bytes)`);
 }
 

@@ -21,12 +21,12 @@
  * are a snapshot (full refresh). Executions are last-N rolling — n8n's own
  * pruner removes old ones, so we keep what's currently retained.
  */
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const BASE = (process.env.N8N_API_URL || "").replace(/\/$/, "");
 const KEY = process.env.N8N_API_KEY;
 const EXEC_LIMIT = Math.max(1, Math.min(Number(process.env.N8N_EXEC_LIMIT) || 250, 250));
@@ -36,7 +36,6 @@ if (!BASE || !KEY) {
   process.exit(1);
 }
 
-const s3 = new S3Client({ region: REGION });
 
 async function n8nFetch(path) {
   const res = await fetch(`${BASE}/api/v1${path}`, {
@@ -79,14 +78,7 @@ async function writeParquet(rows, schema, localPath) {
 }
 
 async function uploadToS3(key, body) {
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: body,
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put(key, body, { contentType: "application/octet-stream" });
   console.log(`✓ uploaded s3://${BUCKET}/${key} (${body.length} bytes)`);
 }
 

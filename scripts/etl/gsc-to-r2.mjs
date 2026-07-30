@@ -5,11 +5,10 @@
  * Same logic as gsc-to-lake.mjs - only client configuration differs.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { SignJWT, importPKCS8 } from "jose";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 const SITE = process.env.GSC_SITE_URL || "https://cloudless.gr/";
 const EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -19,8 +18,6 @@ if (!EMAIL || !KEY) {
 	process.exit(1);
 }
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 
 const schema = new ParquetSchema({
 	query: { type: "UTF8" },
@@ -103,14 +100,7 @@ async function main() {
 	for (const r of rows) await writer.appendRow(r);
 	await writer.close();
 
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: "lake/gsc-keywords/keywords.parquet",
-			Body: readFileSync(tmp),
-			ContentType: "application/octet-stream",
-		})
-	);
+	await r2Put("lake/gsc-keywords/keywords.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
 	unlinkSync(tmp);
 	console.log(`✅ Uploaded ${rows.length} rows → R2://${BUCKET}/lake/gsc-keywords/`);
 }

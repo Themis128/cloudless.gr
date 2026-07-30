@@ -5,15 +5,12 @@
  * Same logic as compute-rfm-churn.mjs - only client configuration differs.
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetReader, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync, writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put, r2Get } from "./_r2-config.mjs";
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 
 const rfmSchema = new ParquetSchema({
 	email: { type: "UTF8" },
@@ -36,10 +33,7 @@ const churnSchema = new ParquetSchema({
 // ---------------------------------------------------------------------------
 
 async function loadTransactions() {
-	const res = await s3.send(
-		new GetObjectCommand({ Bucket: BUCKET, Key: "lake/transactions/transactions.parquet" })
-	);
-	const buf = Buffer.from(await res.Body.transformToByteArray());
+	const buf = await r2Get("lake/transactions/transactions.parquet");
 	const dir = mkdtempSync(join(tmpdir(), "rfm-"));
 	const tmp = join(dir, "data.parquet");
 	writeFileSync(tmp, buf);
@@ -170,22 +164,8 @@ async function main() {
 	await rfmWriter.close();
 	await churnWriter.close();
 
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: "ml-parquet/scores_rfm.parquet",
-			Body: readFileSync("/tmp/scores_rfm.parquet"),
-			ContentType: "application/octet-stream",
-		})
-	);
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: "ml-parquet/scores_churn.parquet",
-			Body: readFileSync("/tmp/scores_churn.parquet"),
-			ContentType: "application/octet-stream",
-		})
-	);
+	await r2Put("ml-parquet/scores_rfm.parquet", readFileSync("/tmp/scores_rfm.parquet"), { contentType: "application/octet-stream" });
+	await r2Put("ml-parquet/scores_churn.parquet", readFileSync("/tmp/scores_churn.parquet"), { contentType: "application/octet-stream" });
 	unlinkSync("/tmp/scores_rfm.parquet");
 	unlinkSync("/tmp/scores_churn.parquet");
 

@@ -17,13 +17,13 @@
  * Daily refresh — overwrites the file. Sub-second runtime.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
+
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const SENTRY_API = "https://sentry.io/api/0";
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const TOKEN = process.env.SENTRY_AUTH_TOKEN;
 const ORG = process.env.SENTRY_ORG || "baltzakisthemiscom";
 const PROJECT = process.env.SENTRY_PROJECT || "cloudless-gr";
@@ -33,7 +33,6 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-const s3 = new S3Client({ region: REGION });
 
 const schema = new ParquetSchema({
   issue_id: { type: "UTF8" },
@@ -107,14 +106,7 @@ async function main() {
   for (const r of rows) await writer.appendRow(r);
   await writer.close();
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: "lake/sentry-issues/issues.parquet",
-      Body: readFileSync(tmp),
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put("lake/sentry-issues/issues.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
   unlinkSync(tmp);
   console.log(`✅ Uploaded ${rows.length} issues → s3://${BUCKET}/lake/sentry-issues/`);
 }

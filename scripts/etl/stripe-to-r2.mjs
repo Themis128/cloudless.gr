@@ -7,13 +7,10 @@
 
 import Stripe from "stripe";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 const OUTPUT_KEY = "lake/transactions/transactions.parquet";
 const TMP_FILE = "/tmp/transactions.parquet";
 
@@ -124,7 +121,7 @@ async function main() {
 	await writer.close();
 
 	const body = readFileSync(TMP_FILE);
-	await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: OUTPUT_KEY, Body: body, ContentType: "application/octet-stream" }));
+	await r2Put(OUTPUT_KEY, body, { contentType: "application/octet-stream" });
 	unlinkSync(TMP_FILE);
 	console.log(`✅ Uploaded ${all.length} rows → R2://${BUCKET}/${OUTPUT_KEY}`);
 }

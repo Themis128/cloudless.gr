@@ -45,9 +45,6 @@ importers:
       '@aws-sdk/client-dynamodb':
         specifier: ^3.1073.0
         version: 3.1095.0
-      '@aws-sdk/client-s3':
-        specifier: ^3.1073.0
-        version: 3.1095.0
       '@aws-sdk/client-sesv2':
         specifier: ^3.1073.0
         version: 3.1095.0
@@ -69,6 +66,9 @@ importers:
       ai:
         specifier: ^7.0.42
         version: 7.0.42(zod@4.4.3)
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
       cmdk:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -448,10 +448,6 @@ packages:
 
   '@aws-sdk/client-lambda@3.984.0':
     resolution: {integrity: sha512-kqwNBIGNxGVhINwgN/UQfdsQkaMjbu9PFV2EhATWouV+RT60uMjK9JENgLDwbgJmEVbbnPsh9HaZ5KKwPSdiDg==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/client-s3@3.1095.0':
-    resolution: {integrity: sha512-eeobm3TKci47CTTHIxc5s5UDjLL0gTKfjlcyzKU+NMoeIJ3flKPq51Fhi2nUDiMNbzsY5HAynM3bHAQFHxRTUw==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-s3@3.984.0':
@@ -7476,20 +7472,6 @@ snapshots:
       '@smithy/util-stream': 4.7.14
       '@smithy/util-utf8': 4.4.14
       '@smithy/util-waiter': 4.5.14
-      tslib: 2.8.1
-
-  '@aws-sdk/client-s3@3.1095.0':
-    dependencies:
-      '@aws-sdk/checksums': 3.1000.20
-      '@aws-sdk/core': 3.977.1
-      '@aws-sdk/credential-provider-node': 3.972.72
-      '@aws-sdk/middleware-sdk-s3': 3.972.66
-      '@aws-sdk/signature-v4-multi-region': 3.996.42
-      '@aws-sdk/types': 3.974.2
-      '@smithy/core': 3.30.0
-      '@smithy/fetch-http-handler': 5.6.11
-      '@smithy/node-http-handler': 4.9.11
-      '@smithy/types': 4.16.1
       tslib: 2.8.1
 
   '@aws-sdk/client-s3@3.984.0':

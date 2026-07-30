@@ -5,10 +5,9 @@
  * Same logic as postiz-to-lake.mjs - only client configuration differs.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 const BASE = (process.env.POSTIZ_API_URL || "").replace(/\/$/, "");
 const KEY = process.env.POSTIZ_API_KEY;
 const DAYS = Math.max(1, Math.min(Number(process.env.POSTIZ_DAYS) || 90, 365));
@@ -18,8 +17,6 @@ if (!BASE || !KEY) {
 	process.exit(1);
 }
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 
 async function postizFetch(path) {
 	const res = await fetch(`${BASE}/api/public/v1${path}`, {
@@ -63,14 +60,7 @@ async function writeParquet(rows, schema, localPath) {
 }
 
 async function uploadToR2(key, body) {
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: key,
-			Body: body,
-			ContentType: "application/octet-stream",
-		})
-	);
+	await r2Put(key, body, { contentType: "application/octet-stream" });
 	console.log(`✓ uploaded R2://${BUCKET}/${key} (${body.length} bytes)`);
 }
 

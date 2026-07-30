@@ -18,13 +18,13 @@
  * Daily refresh — overwrites the file.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
+
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { SignJWT, importPKCS8 } from "jose";
 import { readFileSync, unlinkSync } from "fs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const SITE = process.env.GSC_SITE_URL || "https://cloudless.gr/";
 const EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -34,7 +34,6 @@ if (!EMAIL || !KEY) {
   process.exit(1);
 }
 
-const s3 = new S3Client({ region: REGION });
 
 const schema = new ParquetSchema({
   query: { type: "UTF8" },
@@ -117,14 +116,7 @@ async function main() {
   for (const r of rows) await writer.appendRow(r);
   await writer.close();
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: "lake/gsc-keywords/keywords.parquet",
-      Body: readFileSync(tmp),
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put("lake/gsc-keywords/keywords.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
   unlinkSync(tmp);
   console.log(`✅ Uploaded ${rows.length} rows → s3://${BUCKET}/lake/gsc-keywords/`);
 }

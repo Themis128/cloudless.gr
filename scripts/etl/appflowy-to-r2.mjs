@@ -6,13 +6,10 @@
  */
 
 import { execSync } from "node:child_process";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 
 // `kubectl exec` into the postgres pod and run a psql query
 function psqlRows(sql) {
@@ -57,14 +54,7 @@ async function writeParquet(rows, schema, localPath) {
 }
 
 async function uploadToR2(key, body) {
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: key,
-			Body: body,
-			ContentType: "application/octet-stream",
-		})
-	);
+	await r2Put(key, body, { contentType: "application/octet-stream" });
 	console.log(`✓ uploaded R2://${BUCKET}/${key} (${body.length} bytes)`);
 }
 
