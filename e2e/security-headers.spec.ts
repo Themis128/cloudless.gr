@@ -150,3 +150,27 @@ test.describe("security headers — cloud", () => {
     expect(r.status()).toBe(204);
   });
 });
+
+/**
+ * Regression: next-intl must never 307 `/_next/static/*` into `/en/_next/...`.
+ * That yields text/html 404s and breaks every CSS/JS load (MIME mismatch).
+ */
+test.describe("static assets — not locale-prefixed", () => {
+  test("/_next/static CSS from homepage is 200 text/css (no locale redirect)", async ({
+    request,
+  }) => {
+    const pageRes = await request.get("/en");
+    expect(pageRes.ok()).toBe(true);
+    const html = await pageRes.text();
+    const match = html.match(/\/_next\/static\/chunks\/[^"' ]+\.css/);
+    expect(match, "homepage HTML must reference a CSS chunk").toBeTruthy();
+
+    const assetPath = match![0];
+    const assetRes = await request.get(assetPath, { maxRedirects: 0 });
+    expect(
+      assetRes.status(),
+      `${assetPath} must not redirect (got ${assetRes.status()} → ${assetRes.headers()["location"] ?? ""})`,
+    ).toBe(200);
+    expect(assetRes.headers()["content-type"] ?? "").toMatch(/text\/css/);
+  });
+});
