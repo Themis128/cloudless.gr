@@ -161,19 +161,24 @@ jobs:
 
           for PR in "${PRS[@]}"; do
             echo "::group::PR #$PR"
+            CONFLICT=false
             if ! OUT=$(gh api -X PUT "repos/${{ github.repository }}/pulls/${PR}/update-branch" 2>&1); then
               if echo "$OUT" | grep -qi "merge conflict"; then
+                CONFLICT=true
                 echo "Conflict on #$PR — labeling needs-rebase"
                 gh label create "needs-rebase" --color B60205 --description "PR conflicts with main; auto-merge paused" 2>/dev/null || true
                 gh pr edit "$PR" --add-label "needs-rebase" || true
               else
-                echo "update-branch: $OUT"
+                # e.g. 422 "There are no new commits on the base branch" — still arm.
+                echo "update-branch (non-fatal): $OUT"
               fi
             else
               echo "Updated #$PR with main"
               gh pr edit "$PR" --remove-label "needs-rebase" || true
+            fi
+            if [ "$CONFLICT" = false ]; then
               URL=$(gh pr view "$PR" --json url -q .url)
-              gh pr merge --squash --auto "$URL" || echo "auto-merge arm note for #$PR (may already be mergeable/merged)"
+              gh pr merge --squash --auto "$URL" || echo "auto-merge arm note for #$PR"
             fi
             echo "::endgroup::"
           done
