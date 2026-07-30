@@ -3,7 +3,22 @@
     "node_modules",
     ".next",
     ".sst",
-    "infrastructure/esp32-watchdog/esphome/.esphome"
+    "infrastructure/esp32-watchdog/esphome/.esphome",
+    ".wrangler",
+    ".open-next",
+    ".venv",
+    "coverage",
+    "docs",
+    "e2e",
+    "src",
+    ".claude",
+    "cloudless-gr",
+    "cloudflare-pages-mcp",
+    "agents",
+    "infrastructure",
+    ".git",
+    "playwright-report",
+    "test-results"
   ],
   "ignore": [
     "infrastructure/pi-alert-api",

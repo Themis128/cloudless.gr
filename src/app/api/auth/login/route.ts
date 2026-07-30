@@ -18,8 +18,11 @@ function getDb(_request: NextRequest): AuthDatabase | null {
 export async function POST(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    // Fallback to Cognito when D1 not configured (AWS deployment)
-    return NextResponse.redirect(new URL("/api/auth/login/cognito", req.url));
+    // Cognito Hosted UI is entered via next-auth signIn("cognito") →
+    // /api/auth/signin/cognito, not this D1 email/password endpoint.
+    // A redirect to /api/auth/login/cognito is not a valid Auth.js action
+    // and returns 400 (UnknownAction). Match /api/auth/register.
+    return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }
 
   // Validate SESSION_SECRET
