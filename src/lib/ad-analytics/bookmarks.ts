@@ -6,27 +6,18 @@
  * Re-running a poll over the same window is idempotent — the bookmark is the
  * single source of truth for "the last snapshot we already posted."
  *
- * Two backends, swap via env:
- *  - `DynamoBookmarkStore` when `AD_ANALYTICS_BOOKMARKS_TABLE` is set in env
- *    or SSM. Schema is one row per (campaign × platform × metric × window)
- *    tuple, keyed by the string `bookmarkKeyOf(...)`.
- *  - `InMemoryBookmarkStore` otherwise — useful for dev, unit tests, and the
- *    initial Phase 2 ship where the prod DynamoDB table hasn't been
- *    provisioned yet. The runtime degrades cleanly: the first poll posts a
- *    full snapshot (no delta), the second poll posts an in-memory delta, and
- *    on Lambda cold-start the bookmark resets — at worst the operator sees a
- *    "+everything" digest after a redeploy, which is harmless.
+ * Backends:
+ *  - `D1BookmarkStore` when AUTH_DB is bound (table `ad_analytics_bookmark`)
+ *  - `InMemoryBookmarkStore` otherwise — useful for dev, unit tests, and
+ *    cold starts without D1. The first poll posts a full snapshot (no delta);
+ *    later polls in the same process post in-memory deltas.
  *
  * See `skills/ad-analytics/SKILL.md` operating principle #8 (idempotent
  * bookmarks) and the Notion architecture page §3.
  */
 
-import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
-
 import type { AdMetrics, Bookmark, AdPlatformId } from "./types";
-import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
-
-const REGION = process.env.AWS_REGION || "us-east-1";
+import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 
 export interface BookmarkKeyOpts {
   campaignSlug: string;
@@ -48,7 +39,7 @@ export interface IBookmarkStore {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory store — used when the DynamoDB table is not configured.
+// In-memory store — used when AUTH_DB is not bound.
 // ---------------------------------------------------------------------------
 
 class InMemoryBookmarkStore implements IBookmarkStore {
@@ -75,44 +66,29 @@ class InMemoryBookmarkStore implements IBookmarkStore {
 const inMemoryFallback = new InMemoryBookmarkStore();
 
 // ---------------------------------------------------------------------------
-// DynamoDB store — production backend.
+// D1 store — production backend (AUTH_DB.ad_analytics_bookmark).
 // ---------------------------------------------------------------------------
 
-let dynamoClient: DynamoDBClient | null = null;
-function getDynamoClient(): DynamoDBClient {
-  dynamoClient ??= new DynamoDBClient({
-    region: REGION,
-    endpoint: resolveDynamoEndpoint(),
-  });
-  return dynamoClient;
-}
-
-class DynamoBookmarkStore implements IBookmarkStore {
-  constructor(private readonly tableName: string) {}
+class D1BookmarkStore implements IBookmarkStore {
+  constructor(private readonly db: AuthDatabase) {}
 
   async getBookmark(key: string): Promise<Bookmark | null> {
     try {
-      const res = await getDynamoClient().send(
-        new GetItemCommand({
-          TableName: this.tableName,
-          Key: { pk: { S: key } },
-        })
-      );
-      const item = res.Item;
-      if (!item) return null;
-      const lastPostedAt = item.lastPostedAt?.S;
-      const snapshotJson = item.snapshot?.S;
-      if (!lastPostedAt || !snapshotJson) return null;
+      const row = await this.db
+        .prepare("SELECT pk, last_posted_at, snapshot_json FROM ad_analytics_bookmark WHERE pk = ?")
+        .bind(key)
+        .first<{ pk: string; last_posted_at: string | null; snapshot_json: string | null }>();
+      if (!row?.last_posted_at || !row.snapshot_json) return null;
       try {
-        const snapshot = JSON.parse(snapshotJson) as AdMetrics;
-        return { key, lastPostedAt, snapshot };
+        const snapshot = JSON.parse(row.snapshot_json) as AdMetrics;
+        return { key, lastPostedAt: row.last_posted_at, snapshot };
       } catch {
         // Corrupt row — treat as missing so the next poll re-seeds.
         return null;
       }
     } catch (err) {
       console.error(
-        `[ad-analytics/bookmarks] DynamoDB GetItem failed for ${key}:`,
+        `[ad-analytics/bookmarks] D1 getBookmark failed for ${key}:`,
         (err as Error)?.message ?? err
       );
       return null;
@@ -121,19 +97,18 @@ class DynamoBookmarkStore implements IBookmarkStore {
 
   async putBookmark(key: string, snapshot: AdMetrics): Promise<void> {
     try {
-      await getDynamoClient().send(
-        new PutItemCommand({
-          TableName: this.tableName,
-          Item: {
-            pk: { S: key },
-            lastPostedAt: { S: new Date().toISOString() },
-            snapshot: { S: JSON.stringify(snapshot) },
-          },
-        })
-      );
+      const lastPostedAt = new Date().toISOString();
+      const updatedAt = Math.floor(Date.now() / 1000);
+      await this.db
+        .prepare(
+          `INSERT OR REPLACE INTO ad_analytics_bookmark (pk, last_posted_at, snapshot_json, updated_at)
+           VALUES (?, ?, ?, ?)`
+        )
+        .bind(key, lastPostedAt, JSON.stringify(snapshot), updatedAt)
+        .run();
     } catch (err) {
       console.error(
-        `[ad-analytics/bookmarks] DynamoDB PutItem failed for ${key}:`,
+        `[ad-analytics/bookmarks] D1 putBookmark failed for ${key}:`,
         (err as Error)?.message ?? err
       );
     }
@@ -141,15 +116,15 @@ class DynamoBookmarkStore implements IBookmarkStore {
 }
 
 // ---------------------------------------------------------------------------
-// Factory: pick the backend based on env.
+// Factory: prefer AUTH_DB → D1, else in-memory.
 // ---------------------------------------------------------------------------
 
 let cached: IBookmarkStore | null = null;
 
 export function getBookmarkStore(): IBookmarkStore {
   if (cached) return cached;
-  const table = (process.env.AD_ANALYTICS_BOOKMARKS_TABLE ?? "").trim();
-  cached = table ? new DynamoBookmarkStore(table) : inMemoryFallback;
+  const db = getAuthDbFromEnv();
+  cached = db ? new D1BookmarkStore(db) : inMemoryFallback;
   return cached;
 }
 

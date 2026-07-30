@@ -1,53 +1,10 @@
-import {
-  DynamoDBClient,
-  QueryCommand,
-  ScanCommand,
-  type AttributeValue,
-} from "@aws-sdk/client-dynamodb";
-import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 
 /**
  * Stripe revenue / event analytics snapshot.
  *
- * Cloudflare-first: prefer D1 `stripe_transaction` when AUTH_DB is bound.
- * Legacy fallback: DynamoDB `STRIPE_TRANSACTIONS_TABLE`.
+ * D1 `stripe_transaction` via AUTH_DB. Throws when AUTH_DB is unbound.
  */
-
-const REGION = process.env.AWS_REGION || "us-east-1";
-
-let dynamoClient: DynamoDBClient | null = null;
-
-function getDynamoClient(): DynamoDBClient {
-  if (!dynamoClient) {
-    dynamoClient = new DynamoDBClient({
-      region: REGION,
-      endpoint: resolveDynamoEndpoint(),
-    });
-  }
-  return dynamoClient;
-}
-
-function getTransactionsTableName(): string {
-  const tableName = process.env.STRIPE_TRANSACTIONS_TABLE?.trim();
-  if (tableName) return tableName;
-  throw new Error("STRIPE_TRANSACTIONS_TABLE is not configured");
-}
-
-function attrToString(value?: AttributeValue): string | undefined {
-  if (!value) return undefined;
-  if ("S" in value) return value.S;
-  return undefined;
-}
-
-function attrToNumber(value?: AttributeValue): number | undefined {
-  if (!value) return undefined;
-  if ("N" in value) {
-    const numberValue = Number(value.N);
-    return Number.isFinite(numberValue) ? numberValue : undefined;
-  }
-  return undefined;
-}
 
 function toDayString(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -64,7 +21,6 @@ function getDayRange(days: number): string[] {
   return range;
 }
 
-/** Normalized row shared by D1 + Dynamo aggregation. */
 interface AnalyticsRow {
   eventDay?: string;
   stripeCreatedAt?: number;
@@ -167,18 +123,6 @@ function applyRow(snapshot: StripeAnalyticsSnapshot, row: AnalyticsRow): void {
   if (status === "handler_failed") point.failed += 1;
 }
 
-function dynamoItemToRow(item: Record<string, AttributeValue>): AnalyticsRow {
-  return {
-    eventDay: attrToString(item.eventDay),
-    stripeCreatedAt: attrToNumber(item.stripeCreatedAt),
-    receivedAt: attrToNumber(item.receivedAt),
-    tagCategory: attrToString(item.tagCategory),
-    processingStatus: attrToString(item.processingStatus),
-    currency: attrToString(item.currency),
-    amountMinor: attrToNumber(item.amountMinor),
-  };
-}
-
 function amountFromPayload(payloadJson: string | null | undefined): number | undefined {
   if (!payloadJson) return undefined;
   try {
@@ -247,72 +191,6 @@ async function queryD1Rows(db: AuthDatabase, days: number): Promise<AnalyticsRow
   return (result.results ?? []).map(d1RowToAnalytics);
 }
 
-function isMissingIndexError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const message = "message" in error ? String(error.message || "") : "";
-  const name = "name" in error ? String(error.name || "") : "";
-  return (
-    name.includes("ValidationException") ||
-    message.includes("Query condition missed key schema element") ||
-    message.includes("The table does not have the specified index")
-  );
-}
-
-async function queryByDayOrScan(days: number): Promise<AnalyticsRow[]> {
-  const tableName = getTransactionsTableName();
-  const client = getDynamoClient();
-  const dayRange = getDayRange(days);
-  const allItems: Array<Record<string, AttributeValue>> = [];
-
-  try {
-    for (const day of dayRange) {
-      let lastEvaluatedKey: Record<string, AttributeValue> | undefined;
-      do {
-        const response = await client.send(
-          new QueryCommand({
-            TableName: tableName,
-            IndexName: "ByDayAndTime",
-            KeyConditionExpression: "eventDay = :eventDay",
-            ExpressionAttributeValues: {
-              ":eventDay": { S: day },
-            },
-            ExclusiveStartKey: lastEvaluatedKey,
-          })
-        );
-
-        if (response.Items) allItems.push(...response.Items);
-        lastEvaluatedKey = response.LastEvaluatedKey;
-      } while (lastEvaluatedKey);
-    }
-    return allItems.map(dynamoItemToRow);
-  } catch (error) {
-    if (!isMissingIndexError(error)) throw error;
-  }
-
-  const thresholdMs = Date.now() - days * 24 * 60 * 60 * 1000;
-  let lastEvaluatedKey: Record<string, AttributeValue> | undefined;
-
-  do {
-    const response = await client.send(
-      new ScanCommand({
-        TableName: tableName,
-        ProjectionExpression:
-          "eventDay, stripeCreatedAt, tagCategory, processingStatus, currency, amountMinor, receivedAt",
-        FilterExpression: "receivedAt >= :threshold",
-        ExpressionAttributeValues: {
-          ":threshold": { N: `${thresholdMs}` },
-        },
-        ExclusiveStartKey: lastEvaluatedKey,
-      })
-    );
-
-    if (response.Items) allItems.push(...response.Items);
-    lastEvaluatedKey = response.LastEvaluatedKey;
-  } while (lastEvaluatedKey);
-
-  return allItems.map(dynamoItemToRow);
-}
-
 export async function getStripeAnalyticsSnapshot(
   inputDays: number = 30
 ): Promise<StripeAnalyticsSnapshot> {
@@ -320,8 +198,11 @@ export async function getStripeAnalyticsSnapshot(
   const snapshot = emptySnapshot(days);
 
   const db = getAuthDbFromEnv();
-  const rows = db ? await queryD1Rows(db, days) : await queryByDayOrScan(days);
+  if (!db) {
+    throw new Error("AUTH_DB is not configured");
+  }
 
+  const rows = await queryD1Rows(db, days);
   for (const row of rows) {
     applyRow(snapshot, row);
   }

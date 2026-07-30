@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import {
   listNotifications,
   markNotificationsRead,
@@ -46,14 +47,14 @@ function parseLimit(raw: string | null): number | undefined {
  *   ?limit=<1..200, default 50>
  *   ?includeArchived=1
  *
- * Reads from the Dynamo audit log (see src/lib/admin-notifications.ts).
- * Returns 503 when the table is not configured (local dev, partial deploys).
+ * Reads from D1 `admin_notification` (see src/lib/admin-notifications.ts).
+ * Returns 503 when AUTH_DB is unbound (local dev, partial deploys).
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
+  if (!getAuthDbFromEnv()) {
     return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 
@@ -83,7 +84,7 @@ export async function PATCH(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
+  if (!getAuthDbFromEnv()) {
     return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 

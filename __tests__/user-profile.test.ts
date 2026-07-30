@@ -1,60 +1,55 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import type { AuthDatabase } from "@/lib/auth-d1";
 
-const { mockDynamoSend, getCalls, updateCalls } = vi.hoisted(() => ({
-  mockDynamoSend: vi.fn(),
-  getCalls: [] as unknown[],
-  updateCalls: [] as unknown[],
+const { getUserByIdMock, patchUserProfileMock } = vi.hoisted(() => ({
+  getUserByIdMock: vi.fn(),
+  patchUserProfileMock: vi.fn(),
 }));
 
-vi.mock("@aws-sdk/client-dynamodb", () => ({
-  DynamoDBClient: vi.fn().mockImplementation(function () {
-    return { send: mockDynamoSend };
-  }),
-  GetItemCommand: vi.fn().mockImplementation(function (input: unknown) {
-    getCalls.push(input);
-    return { __cmd: "Get", input };
-  }),
-  UpdateItemCommand: vi.fn().mockImplementation(function (input: unknown) {
-    updateCalls.push(input);
-    return { __cmd: "Update", input };
-  }),
-}));
-
-vi.mock("@/lib/stripe-transactions", () => ({
-  resolveDynamoEndpoint: () => "http://localhost:8000",
-}));
+vi.mock("@/lib/auth-d1", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/auth-d1")>();
+  return {
+    ...actual,
+    getAuthDbFromEnv: () =>
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ ?? null,
+    getUserById: (...args: unknown[]) => getUserByIdMock(...args),
+    patchUserProfile: (...args: unknown[]) => patchUserProfileMock(...args),
+  };
+});
 
 import { getUserProfile, putUserProfile } from "@/lib/user-profile";
 
 describe("user-profile", () => {
-  const originalTable = process.env.USER_PROFILE_TABLE;
+  const fakeDb = { prepare: vi.fn() } as unknown as AuthDatabase;
 
   beforeEach(() => {
-    mockDynamoSend.mockReset();
-    getCalls.length = 0;
-    updateCalls.length = 0;
-    process.env.USER_PROFILE_TABLE = "test-user-profile-table";
+    getUserByIdMock.mockReset();
+    patchUserProfileMock.mockReset();
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   });
 
   afterEach(() => {
-    if (originalTable === undefined) delete process.env.USER_PROFILE_TABLE;
-    else process.env.USER_PROFILE_TABLE = originalTable;
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   });
 
   describe("getUserProfile", () => {
-    it("returns {} when DynamoDB returns no item", async () => {
-      mockDynamoSend.mockResolvedValueOnce({});
-      const r = await getUserProfile("user-1");
-      expect(r).toEqual({});
+    it("returns {} when AUTH_DB is unbound", async () => {
+      expect(await getUserProfile("user-1")).toEqual({});
     });
 
-    it("maps stored String attributes back to fields", async () => {
-      mockDynamoSend.mockResolvedValueOnce({
-        Item: {
-          name: { S: "Themis" },
-          company: { S: "Cloudless" },
-          phone: { S: "+30..." },
-        },
+    it("returns {} when D1 returns no user", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+      getUserByIdMock.mockResolvedValueOnce(null);
+      expect(await getUserProfile("user-1")).toEqual({});
+    });
+
+    it("maps stored fields back", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+      getUserByIdMock.mockResolvedValueOnce({
+        id: "user-1",
+        name: "Themis",
+        company: "Cloudless",
+        phone: "+30...",
       });
       const r = await getUserProfile("user-1");
       expect(r.name).toBe("Themis");
@@ -62,95 +57,65 @@ describe("user-profile", () => {
       expect(r.phone).toBe("+30...");
     });
 
-    it("parses JSON preferences out of the stored String", async () => {
-      mockDynamoSend.mockResolvedValueOnce({
-        Item: {
-          preferences: { S: JSON.stringify({ theme: "dark", lang: "en" }) },
-        },
+    it("parses JSON preferences", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+      getUserByIdMock.mockResolvedValueOnce({
+        id: "user-1",
+        preferences_json: JSON.stringify({ theme: "dark", lang: "en" }),
       });
       const r = await getUserProfile("user-1");
       expect(r.preferences).toEqual({ theme: "dark", lang: "en" });
     });
 
-    it("silently drops malformed JSON preferences (fallback to undefined)", async () => {
-      mockDynamoSend.mockResolvedValueOnce({
-        Item: { preferences: { S: "{not json" } },
+    it("silently drops malformed JSON preferences", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+      getUserByIdMock.mockResolvedValueOnce({
+        id: "user-1",
+        preferences_json: "{not json",
       });
       const r = await getUserProfile("user-1");
       expect(r.preferences).toBeUndefined();
     });
-
-    it("throws when USER_PROFILE_TABLE is unset", async () => {
-      delete process.env.USER_PROFILE_TABLE;
-      await expect(getUserProfile("user-1")).rejects.toThrow(/USER_PROFILE_TABLE/);
-    });
-
-    it("treats whitespace-only USER_PROFILE_TABLE as unset", async () => {
-      process.env.USER_PROFILE_TABLE = "   ";
-      await expect(getUserProfile("user-1")).rejects.toThrow(/USER_PROFILE_TABLE/);
-    });
   });
 
   describe("putUserProfile", () => {
-    it("does not call DynamoDB when no fields are provided", async () => {
+    it("throws when AUTH_DB is unbound", async () => {
+      await expect(putUserProfile("user-1", { name: "Themis" })).rejects.toThrow(/AUTH_DB/);
+    });
+
+    it("does not call patch when no fields are provided", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
       await putUserProfile("user-1", {});
-      expect(mockDynamoSend).not.toHaveBeenCalled();
+      expect(patchUserProfileMock).not.toHaveBeenCalled();
     });
 
-    it("builds a SET clause for provided string fields", async () => {
-      mockDynamoSend.mockResolvedValueOnce({});
+    it("passes string fields to patchUserProfile", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+      patchUserProfileMock.mockResolvedValueOnce(true);
       await putUserProfile("user-1", { name: "Themis", company: "Cloudless" });
-      expect(updateCalls).toHaveLength(1);
-      const input = updateCalls[0] as {
-        UpdateExpression: string;
-        ExpressionAttributeNames: Record<string, string>;
-        ExpressionAttributeValues: Record<string, { S: string }>;
-      };
-      expect(input.UpdateExpression.startsWith("SET")).toBe(true);
-      expect(input.UpdateExpression).toContain("#name = :name");
-      expect(input.UpdateExpression).toContain("#company = :company");
-      expect(input.ExpressionAttributeNames["#name"]).toBe("name");
-      expect(input.ExpressionAttributeValues[":name"]).toEqual({ S: "Themis" });
-    });
-
-    it("converts empty-string fields to REMOVE clauses", async () => {
-      mockDynamoSend.mockResolvedValueOnce({});
-      await putUserProfile("user-1", { name: "", phone: "" });
-      const input = updateCalls[0] as { UpdateExpression: string };
-      expect(input.UpdateExpression).toContain("REMOVE");
-      expect(input.UpdateExpression).toContain("#name");
-      expect(input.UpdateExpression).toContain("#phone");
-    });
-
-    it("combines SET and REMOVE in a single update", async () => {
-      mockDynamoSend.mockResolvedValueOnce({});
-      await putUserProfile("user-1", { name: "Themis", phone: "" });
-      const input = updateCalls[0] as { UpdateExpression: string };
-      expect(input.UpdateExpression).toContain("SET");
-      expect(input.UpdateExpression).toContain("REMOVE");
-    });
-
-    it("serializes preferences as JSON in a String attribute", async () => {
-      mockDynamoSend.mockResolvedValueOnce({});
-      await putUserProfile("user-1", { preferences: { theme: "dark" } });
-      const input = updateCalls[0] as {
-        ExpressionAttributeValues: Record<string, { S: string }>;
-      };
-      expect(JSON.parse(input.ExpressionAttributeValues[":preferences"].S)).toEqual({
-        theme: "dark",
+      expect(patchUserProfileMock).toHaveBeenCalledWith(fakeDb, "user-1", {
+        name: "Themis",
+        company: "Cloudless",
       });
     });
 
-    it("skips ExpressionAttributeValues when only REMOVE is needed", async () => {
-      mockDynamoSend.mockResolvedValueOnce({});
-      await putUserProfile("user-1", { name: "" });
-      const input = updateCalls[0] as {
-        UpdateExpression: string;
-        ExpressionAttributeValues?: Record<string, unknown>;
-      };
-      expect(input.UpdateExpression).toContain("REMOVE");
-      expect(input.UpdateExpression).not.toContain("SET");
-      expect(input.ExpressionAttributeValues).toBeUndefined();
+    it("passes empty-string clears through", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+      patchUserProfileMock.mockResolvedValueOnce(true);
+      await putUserProfile("user-1", { name: "", phone: "" });
+      expect(patchUserProfileMock).toHaveBeenCalledWith(fakeDb, "user-1", {
+        name: "",
+        phone: "",
+      });
+    });
+
+    it("serializes preferences object through to patch", async () => {
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+      patchUserProfileMock.mockResolvedValueOnce(true);
+      await putUserProfile("user-1", { preferences: { theme: "dark" } });
+      expect(patchUserProfileMock).toHaveBeenCalledWith(fakeDb, "user-1", {
+        preferences: { theme: "dark" },
+      });
     });
   });
 });

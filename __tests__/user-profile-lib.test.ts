@@ -1,55 +1,55 @@
 /**
- * src/lib/user-profile.ts — DynamoDB-backed profile store.
- *
- * Mocks the DynamoDB client `send` and asserts the command shapes:
- *   - getUserProfile maps the item back, parsing preferences JSON
- *   - putUserProfile builds a partial SET/REMOVE UpdateItem (name is a reserved
- *     word → expression attribute names), and is a no-op when nothing changes
+ * src/lib/user-profile.ts — D1-backed profile store.
  *
  * @vitest-environment node
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import type { AuthDatabase } from "@/lib/auth-d1";
 
-const sendMock = vi.fn();
-vi.mock("@aws-sdk/client-dynamodb", () => {
-  class Cmd {
-    input: Record<string, unknown>;
-    _t = "Base";
-    constructor(input: Record<string, unknown>) {
-      this.input = input;
-    }
-  }
-  const mk = (t: string) =>
-    class extends Cmd {
-      _t = t;
-    };
+const { getUserByIdMock, patchUserProfileMock } = vi.hoisted(() => ({
+  getUserByIdMock: vi.fn(),
+  patchUserProfileMock: vi.fn(),
+}));
+
+vi.mock("@/lib/auth-d1", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/auth-d1")>();
   return {
-    DynamoDBClient: class {
-      send = sendMock;
-    },
-    GetItemCommand: mk("GetItem"),
-    UpdateItemCommand: mk("UpdateItem"),
+    ...actual,
+    getAuthDbFromEnv: () =>
+      (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ ?? null,
+    getUserById: (...args: unknown[]) => getUserByIdMock(...args),
+    patchUserProfile: (...args: unknown[]) => patchUserProfileMock(...args),
   };
 });
 
-// resolveDynamoEndpoint is imported from stripe-transactions; stub it cheaply.
-vi.mock("@/lib/stripe-transactions", () => ({ resolveDynamoEndpoint: () => undefined }));
-
 beforeEach(() => {
-  sendMock.mockReset();
-  process.env.USER_PROFILE_TABLE = "cloudless-user-profile";
+  getUserByIdMock.mockReset();
+  patchUserProfileMock.mockReset();
+  delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
+  vi.resetModules();
 });
 
+afterEach(() => {
+  delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
+});
+
+const fakeDb = { prepare: vi.fn() } as unknown as AuthDatabase;
+
 describe("getUserProfile", () => {
-  it("maps a stored item and parses preferences JSON", async () => {
-    sendMock.mockResolvedValue({
-      Item: {
-        userId: { S: "sub-1" },
-        name: { S: "Stored Name" },
-        company: { S: "cloudless.gr" },
-        phone: { S: "+30123" },
-        preferences: { S: JSON.stringify({ theme: "light" }) },
-      },
+  it("returns {} when AUTH_DB is unbound", async () => {
+    const { getUserProfile } = await import("@/lib/user-profile");
+    expect(await getUserProfile("sub-1")).toEqual({});
+    expect(getUserByIdMock).not.toHaveBeenCalled();
+  });
+
+  it("maps a stored D1 user and parses preferences JSON", async () => {
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+    getUserByIdMock.mockResolvedValue({
+      id: "sub-1",
+      name: "Stored Name",
+      company: "cloudless.gr",
+      phone: "+30123",
+      preferences_json: JSON.stringify({ theme: "light" }),
     });
     const { getUserProfile } = await import("@/lib/user-profile");
     const p = await getUserProfile("sub-1");
@@ -59,19 +59,23 @@ describe("getUserProfile", () => {
       phone: "+30123",
       preferences: { theme: "light" },
     });
-    const call = sendMock.mock.calls[0][0];
-    expect(call._t).toBe("GetItem");
-    expect(call.input.Key).toEqual({ userId: { S: "sub-1" } });
+    expect(getUserByIdMock).toHaveBeenCalledWith(fakeDb, "sub-1");
   });
 
-  it("returns {} when no record exists", async () => {
-    sendMock.mockResolvedValue({});
+  it("returns {} when no user exists", async () => {
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+    getUserByIdMock.mockResolvedValue(null);
     const { getUserProfile } = await import("@/lib/user-profile");
     expect(await getUserProfile("sub-x")).toEqual({});
   });
 
   it("ignores malformed stored preferences", async () => {
-    sendMock.mockResolvedValue({ Item: { name: { S: "A" }, preferences: { S: "{not-json" } } });
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+    getUserByIdMock.mockResolvedValue({
+      id: "sub-1",
+      name: "A",
+      preferences_json: "{not-json",
+    });
     const { getUserProfile } = await import("@/lib/user-profile");
     const p = await getUserProfile("sub-1");
     expect(p.name).toBe("A");
@@ -80,48 +84,52 @@ describe("getUserProfile", () => {
 });
 
 describe("putUserProfile", () => {
-  it("builds a SET UpdateItem with expression attribute names", async () => {
-    sendMock.mockResolvedValue({});
+  it("throws when AUTH_DB is unbound", async () => {
+    const { putUserProfile } = await import("@/lib/user-profile");
+    await expect(putUserProfile("sub-1", { name: "N" })).rejects.toThrow(/AUTH_DB/);
+  });
+
+  it("calls patchUserProfile with fields", async () => {
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+    patchUserProfileMock.mockResolvedValue(true);
     const { putUserProfile } = await import("@/lib/user-profile");
     await putUserProfile("sub-1", { name: "N", company: "C", phone: "+30" });
-
-    const call = sendMock.mock.calls[0][0];
-    expect(call._t).toBe("UpdateItem");
-    expect(call.input.Key).toEqual({ userId: { S: "sub-1" } });
-    expect(call.input.UpdateExpression).toContain("SET");
-    expect(call.input.ExpressionAttributeNames).toMatchObject({
-      "#name": "name",
-      "#company": "company",
-      "#phone": "phone",
-    });
-    expect(call.input.ExpressionAttributeValues).toMatchObject({
-      ":name": { S: "N" },
-      ":company": { S: "C" },
-      ":phone": { S: "+30" },
+    expect(patchUserProfileMock).toHaveBeenCalledWith(fakeDb, "sub-1", {
+      name: "N",
+      company: "C",
+      phone: "+30",
     });
   });
 
-  it("serializes preferences to a JSON string", async () => {
-    sendMock.mockResolvedValue({});
+  it("serializes preferences via patchUserProfile", async () => {
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+    patchUserProfileMock.mockResolvedValue(true);
     const { putUserProfile } = await import("@/lib/user-profile");
     await putUserProfile("sub-1", { preferences: { theme: "dark", language: "en" } });
-    const call = sendMock.mock.calls[0][0];
-    expect(call.input.ExpressionAttributeValues[":preferences"].S).toBe(
-      JSON.stringify({ theme: "dark", language: "en" })
-    );
+    expect(patchUserProfileMock).toHaveBeenCalledWith(fakeDb, "sub-1", {
+      preferences: { theme: "dark", language: "en" },
+    });
   });
 
-  it("REMOVEs a field cleared with an empty string", async () => {
-    sendMock.mockResolvedValue({});
+  it("clears a field with an empty string", async () => {
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+    patchUserProfileMock.mockResolvedValue(true);
     const { putUserProfile } = await import("@/lib/user-profile");
     await putUserProfile("sub-1", { phone: "" });
-    const call = sendMock.mock.calls[0][0];
-    expect(call.input.UpdateExpression).toContain("REMOVE #phone");
+    expect(patchUserProfileMock).toHaveBeenCalledWith(fakeDb, "sub-1", { phone: "" });
   });
 
-  it("is a no-op when no fields are provided (no Dynamo call)", async () => {
+  it("is a no-op when no fields are provided", async () => {
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
     const { putUserProfile } = await import("@/lib/user-profile");
     await putUserProfile("sub-1", {});
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(patchUserProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when user is not found", async () => {
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = fakeDb;
+    patchUserProfileMock.mockResolvedValue(false);
+    const { putUserProfile } = await import("@/lib/user-profile");
+    await expect(putUserProfile("sub-1", { name: "N" })).rejects.toThrow(/User not found/);
   });
 });

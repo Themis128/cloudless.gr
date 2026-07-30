@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
+import { getAuthDbFromEnv } from "@/lib/auth-d1";
 import { notificationAnalytics } from "@/lib/admin-notifications";
 
 const DEFAULT_WINDOW_DAYS = 7;
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
+  if (!getAuthDbFromEnv()) {
     return NextResponse.json({ error: "Notifications store not configured" }, { status: 503 });
   }
 
