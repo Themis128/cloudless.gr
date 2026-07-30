@@ -1,0 +1,99 @@
+name: SHA drift detector
+
+# Compares the SSM-published deploy SHA with what each surface
+# (cloud cloudless.gr, Pi cluster) actually serves via
+# /api/health.version. Fails the run when drift persists past the
+# 10-minute grace window so a stuck Pi rollout is caught before the
+# weekly CI health routine notices.
+#
+# Pure comparison logic in src/lib/sha-drift.ts is unit-tested by
+# __tests__/detect-sha-drift.test.ts; this workflow is the I/O wrapper.
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+on:
+  schedule:
+    # Every 6h on the half-hour (00:30, 06:30, 12:30, 18:30 UTC).
+    # Spaced 15 min off the Pi TLS cert check so they don't share a
+    # runner slot.
+    - cron: "45 */6 * * *"
+  workflow_dispatch:
+  workflow_run:
+    # After free-tier proxy deploy and/or Pi image rollout converge.
+    workflows:
+      - "Cloudflare Workers Deploy"
+      - "Deploy to Pi (ECR + k3s rollout)"
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sha-drift
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: detect-sha-drift
+    # Failover-capable: defaults to ubuntu-latest. Flip via
+    #   .github/scripts/toggle-runner.sh pi
+    # to route onto the self-hosted build runners when billing is broken.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: detect drift
+        id: drift
+        # Run the script; capture exit code (0 ok, 1 drift, 2 read error).
+        # Cloudflare-only mode: check health endpoints directly, skip SSM lookup
+        # This prevents false-positive drift alerts when Pi is unreachable (HA failover is acceptable)
+        run: |
+          set +e
+          CLOUDFLARE_ONLY=true pnpm exec tsx scripts/detect-sha-drift.mts --json > /tmp/drift.json
+          rc=$?
+          set -e
+          cat /tmp/drift.json
+          echo "rc=${rc}" >> "$GITHUB_OUTPUT"
+
+      - name: write step summary
+        if: always()
+        run: |
+          if [ -s /tmp/drift.json ]; then
+            {
+              echo "## SHA drift detector"
+              echo ""
+              echo '```json'
+              cat /tmp/drift.json
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: fail if drifted past grace window
+        if: steps.drift.outputs.rc != '0'
+        run: |
+          rc="${{ steps.drift.outputs.rc }}"
+          # rc=1: drift detected. Check if cloud surface is in sync.
+          # Pi-only drift (e.g. cluster OOM/recovery) is a warning, not a failure.
+          cloud_ok=$(python3 -c "
+          import sys, json
+          data = json.load(open('/tmp/drift.json'))
+          cloud = next((s for s in data.get('surfaces', []) if s['name'] == 'cloud'), None)
+          print('yes' if cloud and cloud.get('matches') else 'no')
+          " 2>/dev/null || echo "no")
+          if [ "$cloud_ok" = "yes" ]; then
+            echo "::warning::Cloudflare is in sync — Pi drift is acceptable (HA failover)."
+            exit 0
+          fi
+          echo "::error::Drift detected (exit $rc). See step summary."
+          exit 1

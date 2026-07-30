@@ -11,6 +11,9 @@ set -euo pipefail
 # 3. The incomplete .next/ then causes ENOENT errors in OpenNext's bundle phase
 #
 # Instead, we just ensure the middleware stub exists and exit successfully.
+# NOTE: package.json "build" is scripts/sst-next-build.mjs (not this file).
+# OpenNext's nested `pnpm build` hits that script — it also honors
+# OPEN_NEXT_BUILD_ACTIVE (see sst-next-build.mjs).
 if [ -n "${OPEN_NEXT_BUILD_ACTIVE:-}" ]; then
   echo "⚠ Recursive build detected — skipping next build (already built above)..."
   # Ensure middleware.js.nft.json stub exists for OpenNext's bundle phase
@@ -72,5 +75,16 @@ node scripts/opennext-middleware-fix.mjs || true
 echo "▶ Running OpenNext Cloudflare build..."
 NEXT_TELEMETRY_DISABLED=1 pnpm exec opennextjs-cloudflare build \
   --openNextConfigPath open-next.config.cloudflare.ts
+
+# Free plan = 3 MiB gzip Worker script. Strip OG fonts/WASM + .bin stubs so
+# we stay under the limit without Workers Paid (~$5/mo).
+echo "▶ Slimming OpenNext output for Workers Free (strip OG + .bin fonts)..."
+node scripts/strip-opennext-bin-fonts.mjs
+node scripts/strip-opennext-vercel-og.mjs
+
+if [ -f .open-next/worker.js ]; then
+  bytes=$(gzip -c .open-next/worker.js | wc -c)
+  awk -v b="$bytes" 'BEGIN {printf "▶ worker.js gzip ≈ %.2f MiB (free limit 3.00)\n", b/1024/1024}'
+fi
 
 echo "✅ Cloudflare build complete"

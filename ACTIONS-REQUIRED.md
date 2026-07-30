@@ -2,7 +2,7 @@
 
 # Generated: 2026-07-19 16:44 UTC
 
-# Last Updated: 2026-07-29 23:30 EEST — aw Gemini fine-tune (flash + safe-outputs)
+# Last Updated: 2026-07-30 — Workers Free Pi proxy live; Bot Fight Mode off (operator)
 
 ---
 
@@ -63,12 +63,14 @@ python3 scripts/purge-sensitive-gh-variables.py --apply  # mutate
 
 ## ⏳ Still operator-only
 
-| Item                           | Notes                                                          |
-| ------------------------------ | -------------------------------------------------------------- |
-| Rotate after Variable exposure | Stripe / Slack / Notion / Cognito / Google / SES (table above) |
-| Optional ads/Sentry secrets    | Leave empty if unused                                          |
-| Cloudflare API token rotation  | If MCP CF tools 401                                            |
-| ESP32 Notion DBs               | Empty (no hardware data); page reconstruct partial             |
+| Item                           | Notes                                                                                                                                                                                                                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rotate after Variable exposure | Stripe / Slack / Notion / Cognito / Google / SES (table above)                                                                                                                                                                                                         |
+| Optional ads/Sentry secrets    | Leave empty if unused                                                                                                                                                                                                                                                  |
+| Cloudflare API token rotation  | If MCP CF tools 401                                                                                                                                                                                                                                                    |
+| ESP32 Notion DBs               | Empty (no hardware data); page reconstruct partial                                                                                                                                                                                                                     |
+| Workers Free (Pi proxy)        | OpenNext SSR is ~5.5 MiB gzip — **cannot** deploy on Free. `cloudflare-deploy.yml` deploys tiny `workers/pi-origin-proxy` as `cloudless2` and points Tunnel `pi-origin` → `http://192.168.1.128:30300`. App code: `deploy-pi.yml`. Do **not** upgrade to Paid. Optional: `workflow_dispatch` + `try_opennext=true` only to re-measure. |
+| Bot Fight Mode vs GHA crons    | **DONE (operator 2026-07-30):** Bot Fight Mode Off — `/api/health` and cron paths return app JSON/401 (no “Just a moment…”). Re-enable only if under real attack; free BFM breaks GHA crons + Lighthouse. Helper: `cloudflare-skip-cron-challenge.yml`. |
 
 ---
 

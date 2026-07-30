@@ -1,21 +1,43 @@
 name: Cloudflare Workers Deploy
 
+# Free-plan path for cloudless.gr:
+# - D1 migrations on user-auth-db
+# - Tunnel: pi-origin (+ apex hosts) → Pi NodePort 30300
+# - Tiny cloudless2 proxy Worker (Workers Free 3 MiB) → pi-origin
+#
+# Full OpenNext SSR is ~5.5 MiB gzip and cannot deploy on Free. App code
+# ships via deploy-pi.yml. Optional workflow_dispatch try_opennext=true
+# attempts OpenNext only when explicitly requested.
+
 on:
   push:
     branches: [main]
     paths:
       - 'migrations/*.sql'
-      - 'src/**/*.ts'
+      - 'workers/pi-origin-proxy/**'
+      - 'scripts/cf-tunnel-set-pi-origin.py'
       - 'wrangler.jsonc'
-      - 'sst.config.cloudflare.ts'
-      - 'opennext.config.js'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/cloudflare-deploy.yml'
+      - 'scripts/cf-build-wrapper.sh'
+      - 'scripts/strip-opennext-bin-fonts.mjs'
+      - 'scripts/strip-opennext-vercel-og.mjs'
+      - 'open-next.config.cloudflare.ts'
+      - 'next.config.*'
+      - 'src/**'
+      - 'public/**'
   workflow_dispatch:
     inputs:
       stage:
         description: 'Deployment stage'
         required: false
         default: 'production'
+      try_opennext:
+        description: 'Attempt full OpenNext Worker (fails if >3 MiB gzip)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -37,38 +59,67 @@ jobs:
         run: npm install -g pnpm@10
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Apply D1 migrations
-        # Wrangler 4 defaults to local .wrangler state without --remote.
         run: npx wrangler d1 migrations apply user-auth-db --remote --config wrangler.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
-      - name: Set CRON_SECRET secret
-        run: echo "${{ secrets.CRON_SECRET }}" | npx wrangler secret put CRON_SECRET --config wrangler.jsonc || echo "CRON_SECRET already set"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      - name: Build Next.js app with OpenNext
-        run: pnpm run cf:build
-
-      - name: Delete .bin font files (prevents SST loader error)
-        run: find .open-next -name "*.bin" -delete || echo "No .bin files found"
-
-      - name: Unlock SST (handle concurrent lock)
-        run: npx sst unlock --config sst.config.cloudflare.ts --stage production || true
-
-      - name: Deploy SST stack
-        run: pnpm exec sst deploy --config sst.config.cloudflare.ts --stage production
+      - name: Point Tunnel hosts at Pi NodePort (free origin)
+        # pi-origin must hit Pi directly — never the Worker — or the proxy loops.
+        run: python3 scripts/cf-tunnel-set-pi-origin.py
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          PI_NODEPORT_ORIGIN: http://192.168.1.128:30300
+          TUNNEL_HOSTS: pi-origin.cloudless.gr
+
+      - name: Deploy free Pi-origin proxy Worker
+        # Replaces fat OpenNext script on cloudless2 with a <50 KiB proxy.
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify 2>&1 | tee /tmp/cf-proxy-deploy.log
+          if grep -qE 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log; then
+            grep -E 'Total Upload:.*gzip:' /tmp/cf-proxy-deploy.log
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+      - name: Optional OpenNext attempt (manual only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.try_opennext == true }}
+        run: |
+          set -euo pipefail
+          pnpm run cf:build
+          node <<'NODE'
+          const fs = require("fs");
+          const path = "wrangler.jsonc";
+          let t = fs.readFileSync(path, "utf8");
+          t = t.replace(/"main"\s*:\s*"[^"]*"/, '"main": ".open-next/worker.js"');
+          t = t.replace(/"directory"\s*:\s*"\.\/out"/, '"directory": ".open-next/assets"');
+          if (!/"minify"\s*:/.test(t)) {
+            t = t.replace(/"compatibility_date"/, '"minify": true,\n  "compatibility_date"');
+          }
+          fs.writeFileSync(path, t);
+          NODE
+          if ! pnpm cf:deploy 2>&1 | tee /tmp/cf-opennext.log; then
+            if grep -qE '10027|size limit of 3 MiB' /tmp/cf-opennext.log; then
+              echo "::warning::OpenNext still over free 3 MiB — Pi proxy remains live. Do not upgrade to Paid."
+              # Re-assert free proxy so a partial OpenNext upload cannot leave a broken script.
+              npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify
+              exit 0
+            fi
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
 # Required secrets:
-# CLOUDFLARE_API_TOKEN - Cloudflare API token
+# CLOUDFLARE_API_TOKEN - Cloudflare API token (Tunnel Edit + Workers)
 # CF_ACCOUNT_ID - Cloudflare account ID
-# CLOUDFLARE_ZONE_ID - Cloudflare zone ID for custom domain binding
-# CRON_SECRET - Shared secret for cron job authorization
+#
+# Free plan: cloudless2 = pi-origin-proxy. App deploys: deploy-pi.yml.
+# OpenNext SSR on Workers Free is not supported for this codebase (~5.5 MiB).

@@ -139,13 +139,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
     try {
-      const res = await globalThis.fetch("/api/auth/session");
+      const res = await globalThis.fetch("/api/auth/session", {
+        headers: { Accept: "application/json" },
+      });
       if (!res.ok) {
         setUser(null);
         setIsAdmin(false);
         return;
       }
-      const data = (await res.json()) as {
+      const raw = await res.text();
+      let data: {
         user?: {
           id?: string;
           name?: string;
@@ -155,7 +158,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         };
         isAdmin?: boolean;
         error?: string;
-      } | null;
+      } | null = null;
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : null;
+      } catch {
+        // HTML challenge / error page — treat as logged out, don't throw.
+        console.warn(
+          "[auth] /api/auth/session returned non-JSON (len=%d); treating as signed out",
+          raw.length,
+        );
+        setUser(null);
+        setIsAdmin(false);
+        return;
+      }
 
       if (data?.error === "RefreshTokenError") {
         // Refresh token expired — clear session so login page shows
