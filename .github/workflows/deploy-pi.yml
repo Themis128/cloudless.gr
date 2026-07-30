@@ -76,6 +76,18 @@ jobs:
             echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
           fi
 
+      - name: Clean stale build output
+        if: steps.skip.outputs.already != 'true'
+        run: |
+          set -euo pipefail
+          if [ -d .next ]; then
+            echo "Removing stale .next/ from previous build..."
+            rm -rf .next
+            echo "Cleaned .next/"
+          else
+            echo "No stale .next/ — clean workspace"
+          fi
+
       - name: Setup Node
         if: steps.skip.outputs.already != 'true'
         uses: actions/setup-node@v4
