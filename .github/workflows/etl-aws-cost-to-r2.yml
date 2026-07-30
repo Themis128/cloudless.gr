@@ -53,7 +53,7 @@ jobs:
           CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
           ANALYTICS_BUCKET: datalake-bucket
           AWS_COST_LOOKBACK_DAYS: "60"
-          AWS_COST_D1_SQL_OUT: /tmp/aws-cost-d1.sql
+          AWS_COST_D1_SQL_OUT: ${{ runner.temp }}/aws-cost-d1.sql
         run: node aws-cost-to-r2.mjs
 
       - name: Install wrangler
@@ -65,7 +65,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: |
           npx wrangler d1 execute user-auth-db --remote --file=migrations/0013-aws-cost-daily.sql --config wrangler.jsonc || true
-          npx wrangler d1 execute user-auth-db --remote --file=/tmp/aws-cost-d1.sql --config wrangler.jsonc
+          npx wrangler d1 execute user-auth-db --remote --file="${{ runner.temp }}/aws-cost-d1.sql" --config wrangler.jsonc
 
       - name: Materialize datalake admin snapshot
         working-directory: scripts/etl

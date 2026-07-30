@@ -333,6 +333,8 @@ vi.mock("@/lib/reports", () => ({
 }));
 vi.mock("@/lib/escape-html", () => ({
   escapeHtml: (s: string) => s.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+  htmlToPlainText: (s: string) => s.replace(/<[^>]{0,2000}>/g, "").replace(/[<>]/g, ""),
+  sanitizeForLog: (s: unknown) => String(s).replace(/[\r\n\x00-\x1f\x7f]/g, " "),
 }));
 
 describe("GET /api/admin/reports/[id]/pdf", () => {

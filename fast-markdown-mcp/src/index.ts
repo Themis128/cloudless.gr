@@ -21,6 +21,14 @@ import { z } from 'zod';
 const STORAGE_PATH = process.env.DEVDOCS_STORAGE_PATH || '/home/tbaltzakis/DevDocs/storage/markdown';
 const WATCH_ENABLED = process.env.DEVDOCS_WATCH !== 'false';
 
+/** Convert a simple glob (e.g. `*.md`) to a RegExp — replaceAll so every `*` is handled. */
+function globToRegExp(pattern: string): RegExp {
+	const escaped = pattern
+		.replace(/[.+^${}()|[\]\\]/g, '\\$&')
+		.replaceAll('*', '.*');
+	return new RegExp(`^${escaped}$`, 'i');
+}
+
 // Validate storage path exists
 if (!existsSync(STORAGE_PATH)) {
 	console.error(`DevDocs storage path not found: ${STORAGE_PATH}`);
@@ -185,7 +193,7 @@ server.tool(
 					const stat = statSync(fullPath);
 					if (stat.isDirectory()) {
 						searchDirectory(fullPath);
-					} else if (entry.match(file_pattern.replace('*', '.*').replace('.', '\\.'))) {
+					} else if (globToRegExp(file_pattern).test(entry)) {
 						searchInFile(fullPath);
 					}
 				}

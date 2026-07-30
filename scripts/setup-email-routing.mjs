@@ -119,7 +119,11 @@ async function main() {
   console.log('\n[5/6] Adding SPF record...');
   try {
     const spfRecord = await api(`/zones/${ZONE_ID}/dns_records?type=TXT&name=${DOMAIN}`);
-    const hasSPF = spfRecord.result?.some(r => r.content?.includes('cloudflare.net'));
+    const hasSPF = spfRecord.result?.some((r) => {
+      const content = typeof r.content === "string" ? r.content : "";
+      // Token-aware check — avoid substring false positives (CodeQL js/incomplete-url-substring-sanitization).
+      return /(?:^|\s)include:cloudflare\.net(?:\s|$)/i.test(content);
+    });
     
     if (!hasSPF) {
       await api(`/zones/${ZONE_ID}/dns_records`, {

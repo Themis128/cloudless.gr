@@ -14,19 +14,42 @@
  */
 
 import { readFileSync } from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { resolve } from "path";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 
 function getSsm(name) {
+  // Allowlist parameter leaf name — no shell string interpolation of REGION/name.
+  if (!/^[A-Z0-9_]{1,64}$/.test(name)) {
+    return "";
+  }
+  if (!/^[a-z0-9-]{1,32}$/i.test(REGION)) {
+    return "";
+  }
   try {
-    return execSync(
-      `aws ssm get-parameter --name /cloudless/production/${name} --with-decryption --query Parameter.Value --output text --region ${REGION}`,
+    return execFileSync(
+      "aws",
+      [
+        "ssm",
+        "get-parameter",
+        "--name",
+        `/cloudless/production/${name}`,
+        "--with-decryption",
+        "--query",
+        "Parameter.Value",
+        "--output",
+        "text",
+        "--region",
+        REGION,
+      ],
       { encoding: "utf8" }
     ).trim();
   } catch (e) {
-    if (process.env.DEBUG) console.warn(`SSM ${name} not readable:`, e.message);
+    if (process.env.DEBUG) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn(`SSM ${name} not readable:`, msg.replace(/[\r\n\x00-\x1f\x7f]/g, " "));
+    }
     return "";
   }
 }
