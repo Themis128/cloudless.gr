@@ -13,10 +13,12 @@ Each stateful self-hosted app's canonical state lands in
 | EspoCRM | MariaDB | `espocrm/espocrm-mariadb` | `mariadb-dump` + gzip | 03:45 | `pvc-backups/espocrm/daily/` |
 | Postiz | Postgres | `postiz/postiz-postgres` | `pg_dump --format=custom` | 04:00 | `pvc-backups/postiz/daily/` |
 | n8n | SQLite | `n8n/n8n` (PVC `n8n-data`) | `sqlite3 .backup` + gzip | 04:15 | `pvc-backups/n8n/daily/` |
+| AppFlowy MinIO | S3 blobs | `appflowy/minio` | `rclone sync` bucket `appflowy` | 04:30 | `pvc-backups/appflowy-minio/daily/` |
+| Uptime Kuma | SQLite | PVC `uptime-kuma-data` | `sqlite3 .backup` + gzip | 04:45 | `pvc-backups/uptime-kuma/daily/` |
 
 Schedules staggered 15 min apart.
 
-**Not yet covered (lower priority):** AppFlowy MinIO blobs (R10b), Kuma SQLite (R10c), Grafana plugins, Mosquitto, ntfy.
+**Still out of scope:** Mosquitto, ntfy, Meilisearch (rebuildable), Redis (ephemeral/AOF-local).
 
 ## Credentials (Cloudflare R2)
 
@@ -33,7 +35,7 @@ then `store-r2-backup-credentials.yml` or:
 
 ```bash
 # From a machine with kubectl (no AWS CLI):
-for ns in appflowy espocrm postiz n8n; do
+for ns in appflowy espocrm postiz n8n uptime-kuma; do
   kubectl -n "$ns" create secret generic pvc-backup-r2 \
     --from-literal=ACCESS_KEY_ID='…' \
     --from-literal=SECRET_ACCESS_KEY='…' \
@@ -50,7 +52,7 @@ kubectl apply -f infrastructure/appflowy/walg-sidecar.yaml
 ## Deploy CronJobs
 
 ```bash
-for f in cronjob-appflowy.yaml cronjob-espocrm.yaml cronjob-postiz.yaml cronjob-n8n.yaml; do
+for f in cronjob-appflowy.yaml cronjob-espocrm.yaml cronjob-postiz.yaml cronjob-n8n.yaml cronjob-appflowy-minio.yaml cronjob-uptime-kuma.yaml; do
   kubectl apply -f infrastructure/backup/$f
 done
 kubectl get cronjob -A | grep pvc-backup
@@ -58,11 +60,57 @@ kubectl get cronjob -A | grep pvc-backup
 
 ## Manual test
 
+Each CronJob lives in the **same namespace as its target pods**. Use the helper
+so `-n` always matches (avoids `No resources found in <wrong-ns>`):
+
 ```bash
-kubectl -n appflowy create job --from=cronjob/pvc-backup-appflowy test-r2-$(date +%s)
-kubectl -n appflowy logs -f job/test-r2-…
-# Expect: remote size … bytes and exit 0
+bash scripts/pvc-backup-test.sh list
+bash scripts/pvc-backup-test.sh appflowy   # -n appflowy
+bash scripts/pvc-backup-test.sh minio      # -n appflowy  (MinIO pods)
+bash scripts/pvc-backup-test.sh kuma       # -n uptime-kuma
+bash scripts/pvc-backup-test.sh n8n        # -n n8n
 ```
+
+| Target | Namespace | CronJob |
+|--------|-----------|---------|
+| `appflowy` | `appflowy` | `pvc-backup-appflowy` |
+| `minio` | `appflowy` | `pvc-backup-appflowy-minio` |
+| `espocrm` | `espocrm` | `pvc-backup-espocrm` |
+| `postiz` | `postiz` | `pvc-backup-postiz` |
+| `n8n` | `n8n` | `pvc-backup-n8n` |
+| `kuma` | `uptime-kuma` | `pvc-backup-uptime-kuma` |
+
+Expect a success line and exit 0. Empty MinIO is OK (writes `.backup-ok.txt` marker).
+
+### Find backup pods (correct NS)
+
+```bash
+# All pvc-backup CronJobs
+kubectl get cronjob -A -l app.kubernetes.io/name=pvc-backup
+
+# Running/finished backup pods in a namespace (labels propagate from CronJob)
+kubectl -n appflowy get pods -l app.kubernetes.io/name=pvc-backup
+kubectl -n uptime-kuma get pods -l app.kubernetes.io/name=pvc-backup
+
+# Or by Job name after pvc-backup-test.sh prints it
+kubectl -n appflowy get pods -l job-name=test-minio-…
+```
+
+## DevOps conventions
+
+| Practice | How we apply it |
+|----------|-----------------|
+| Co-locate CronJob with workload | Same NS as target pods/PVC/Secrets (Service DNS stays in-cluster) |
+| Stable labels | `app.kubernetes.io/name=pvc-backup` + `backup.cloudless.gr/target=…` on CronJob, Job, Pod |
+| Job cleanup | `ttlSecondsAfterFinished: 86400` on CronJob Jobs; test helper patches 3600s |
+| Concurrency | `Forbid` + `startingDeadlineSeconds: 600` |
+| Image hygiene | MinIO job uses `rclone/rclone` (no `apk` each run); Kuma needs sqlite → alpine |
+| Secrets | `pvc-backup-r2` per NS; never in git; mint via `store-r2-backup-credentials.yml` |
+| Failure signal | Non-zero exit + size/object guards; Kuma already monitors the original four CronJobs |
+
+## Grafana persistence (related)
+
+`infrastructure/monitoring/kube-prom-stack-values.yaml` enables a 2Gi `local-path` PVC for Grafana. Apply with your usual Helm upgrade of kube-prometheus-stack (does not auto-apply from this backup folder).
 
 ## Legacy
 

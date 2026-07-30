@@ -34,13 +34,13 @@ flowchart LR
 | EspoCRM | MariaDB 11 | `espocrm` | `espocrm-mariadb` | 3306 | `espocrm-mariadb-data` 4Gi | yes (`mariadb-dump`) |
 | AppFlowy | Postgres 16 + pgvector | `appflowy` | `postgres` | 5432 | `appflowy-postgres` 20Gi | yes (`pg_dump`) |
 | AppFlowy | Redis 7 | `appflowy` | `redis` | 6379 | none (ephemeral) | no |
-| AppFlowy | MinIO | `appflowy` | `minio` | 9000 / 9001 | `appflowy-minio` 10Gi | not yet (R10b) |
+| AppFlowy | MinIO | `appflowy` | `minio` | 9000 / 9001 | `appflowy-minio` 10Gi | yes (`rclone sync`) |
 | Postiz | Postgres 17 | `postiz` | `postiz-postgres` | 5432 | `postiz-postgres-data` 2Gi | yes (`pg_dump`) |
 | Postiz | Redis 7 (AOF) | `postiz` | `postiz-redis` | 6379 | `postiz-redis-data` 512Mi | no |
 | Search | Meilisearch 1.48.3 | `meilisearch` | `meilisearch` | 7700 (NodePort 30902) | `meilisearch-data` 5Gi | no |
 | n8n | SQLite | `n8n` | `n8n` (HTTP only) | — | `n8n-data` 5Gi | yes (`sqlite3 .backup`) |
-| Uptime Kuma | SQLite | `uptime-kuma` | `uptime-kuma` (HTTP only) | — | `uptime-kuma-data` 1Gi | not yet (R10c) |
-| Grafana | SQLite (default) | `monitoring` | `kube-prom-grafana` | 80 | none (`emptyDir`) | no |
+| Uptime Kuma | SQLite | `uptime-kuma` | `uptime-kuma` (HTTP only) | — | `uptime-kuma-data` 1Gi | yes (`sqlite3 .backup`) |
+| Grafana | SQLite (default) | `monitoring` | `kube-prom-grafana` | 80 | PVC `2Gi` local-path | no (dashboards in-git) |
 
 Platform stores (not app RDBMS): k3s **etcd**, Prometheus TSDB, Loki chunks — see [Platform / observability](#platform--observability).
 
@@ -56,6 +56,7 @@ pnpm db:forward:status
 pnpm db:passwords        # print usernames + passwords from Secrets (do not commit)
 pnpm db:sqlite:pull      # copy n8n / Kuma / Grafana SQLite → .local/db/
 pnpm db:d1:pull          # export Cloudflare D1 → .local/db/*.sqlite
+pnpm db:refresh-snapshots # sqlite + d1 pull (avoid stale SQLTools views)
 pnpm db:forward:stop
 ```
 
@@ -89,7 +90,6 @@ All four are listed in `.vscode/extensions.json` (workspace recommendations). Co
 | `omv · Grafana SQLite` | SQLite | `${workspaceFolder}/.local/db/grafana.db` | — |
 | `cf · user-auth-db (D1 snapshot)` | SQLite | `${workspaceFolder}/.local/db/user-auth-db.sqlite` | — |
 | `cf · auth-db-preview (D1 snapshot)` | SQLite | `${workspaceFolder}/.local/db/auth-db-preview.sqlite` | — |
-| `cf · cloudless-auth (D1 snapshot)` | SQLite | `${workspaceFolder}/.local/db/cloudless-auth.sqlite` | — |
 
 #### Connect from Cursor
 
@@ -97,17 +97,16 @@ All four are listed in `.vscode/extensions.json` (workspace recommendations). Co
 2. Open the **SQLTools** sidebar — not the SQL Server Object Explorer.
 3. Start TCP forwards and pull snapshots:
 
-   ```bash
-   pnpm db:forward
-   pnpm db:passwords          # paste when SQLTools asks for MariaDB/Postgres password
-   pnpm db:sqlite:pull        # required before the three omv-sqlite connections work
-   pnpm db:d1:pull            # required before the three cloudflare-d1 connections work
-   ```
+```bash
+pnpm db:ready
+pnpm db:passwords          # paste when SQLTools asks for MariaDB/Postgres password
+pnpm db:refresh-snapshots  # SQLite + D1 copies for SQLTools (re-run after writes)
+```
 
 4. Click a connection under group `omv`, `omv-sqlite`, or `cloudflare-d1` and authenticate when prompted.
 5. When done: `pnpm db:forward:stop`.
 
-VS Code tasks also exist: `db:forward`, `db:forward:stop`, `db:passwords`, `db:sqlite:pull`, `db:d1:pull` (see `.vscode/tasks.json`).
+VS Code tasks also exist: `db:forward`, `db:forward:stop`, `db:passwords`, `db:sqlite:pull`, `db:d1:pull`, `db:ready`, `db:refresh-snapshots` (see `.vscode/tasks.json`).
 
 ### Local port map
 
@@ -126,9 +125,8 @@ VS Code tasks also exist: `db:forward`, `db:forward:stop`, `db:passwords`, `db:s
 | `.local/db/grafana.db` | Grafana snapshot | SQLTools SQLite |
 | `.local/db/user-auth-db.sqlite` | D1 `user-auth-db` snapshot | SQLTools SQLite |
 | `.local/db/auth-db-preview.sqlite` | D1 `auth-db-preview` snapshot | SQLTools SQLite |
-| `.local/db/cloudless-auth.sqlite` | D1 `cloudless-auth` snapshot | SQLTools SQLite |
 
-`.local/` is gitignored (DB snapshots + port-forward state).
+`.local/` is gitignored (DB snapshots + port-forward state). Snapshots are **stale by default** — run `pnpm db:refresh-snapshots` before forensic reads.
 
 ---
 
@@ -212,7 +210,7 @@ kubectl -n espocrm port-forward svc/espocrm-mariadb 13306:3306
 | Credentials | `appflowy-secrets`: `APPFLOWY_S3_ACCESS_KEY`, `APPFLOWY_S3_SECRET_KEY` |
 | In-cluster | `http://minio:9000` |
 | Local | `:19000` API, `:19001` console |
-| Backup | Not in daily R2 PVC dump yet (tracked as R10b) |
+| Backup | Daily R2: `pvc-backups/appflowy-minio/daily/` (`cronjob-appflowy-minio.yaml`, 04:30 UTC) |
 
 ---
 
@@ -309,7 +307,7 @@ Snapshots under `.local/db/n8n.sqlite` are **copies** — re-pull after cluster 
 | Service | `uptime-kuma` NodePort **32501** (HTTP 3001) — **no DB TCP** |
 | PVC | `uptime-kuma-data` · 1Gi |
 | Manifest | `infrastructure/uptime-kuma/k8s/uptime-kuma.yaml` |
-| Backup | Not in daily R2 set yet (R10c) |
+| Backup | Daily R2: `pvc-backups/uptime-kuma/daily/` (`cronjob-uptime-kuma.yaml`, 04:45 UTC) |
 | Local SQLTools | `omv · Uptime Kuma SQLite` after `pnpm db:sqlite:pull` |
 
 ---
@@ -324,11 +322,11 @@ Snapshots under `.local/db/n8n.sqlite` are **copies** — re-pull after cluster 
 | Namespace | `monitoring` |
 | Workload / image | Deployment `kube-prom-grafana` · `grafana/grafana:13.1.1` |
 | Service | `kube-prom-grafana` NodePort **30850** |
-| Storage | **`emptyDir`** — DB is lost on pod restart (no PVC) |
+| Storage | **PVC 2Gi** `local-path` via `grafana.persistence` in `kube-prom-stack-values.yaml` |
 | Secret | `kube-prom-grafana` keys `admin-user`, `admin-password`, `ldap-toml` |
 | Local SQLTools | `omv · Grafana SQLite` after `pnpm db:sqlite:pull` |
 
-Treat Grafana SQLite as disposable unless a PVC is added later.
+Apply persistence with a Helm upgrade of kube-prometheus-stack using that values file. Custom dashboards also live as ConfigMaps in-repo.
 
 ---
 
@@ -340,16 +338,17 @@ D1 has no localhost TCP port. Use snapshots for SQLTools:
 |---------|------|---------|----------------|
 | `user-auth-db` | `7ca74513-23c3-412a-b9ca-b0c55835973d` | `AUTH_DB` / `NEXT_CACHE_D1_BINDING` (prod) | `cf · user-auth-db (D1 snapshot)` |
 | `auth-db-preview` | `70d90155-12de-46d7-a0ea-113b3e7127cf` | preview env | `cf · auth-db-preview (D1 snapshot)` |
-| `cloudless-auth` | `0c00f32c-374b-447a-8f0a-af337004449d` | unused / empty | `cf · cloudless-auth (D1 snapshot)` |
+
+Retired: `cloudless-auth` (orphan / empty) — `pnpm d1:retire:cloudless-auth` (dry-run) or `CONFIRM=1 pnpm d1:retire:cloudless-auth`. Cognito Hosted UI prefix `cloudless-auth` in `sst.config.ts` is **unrelated** AWS naming.
 
 ```bash
-pnpm db:d1:pull                 # all three
+pnpm db:d1:pull                 # user-auth-db + auth-db-preview
 pnpm db:d1:pull user-auth-db    # one
 # live query without snapshot:
 pnpm exec wrangler d1 execute user-auth-db --remote --command 'SELECT name FROM sqlite_master'
 ```
 
-Snapshots under `.local/db/*.sqlite` are **copies** — re-pull after remote writes. For ad-hoc remote SQL, prefer `wrangler d1 execute` or the Cloudflare bindings MCP (`d1_database_query`).
+Snapshots under `.local/db/*.sqlite` are **copies** — re-pull with `pnpm db:refresh-snapshots` after remote writes. For ad-hoc remote SQL, prefer `wrangler d1 execute` or the Cloudflare bindings MCP (`d1_database_query`).
 
 ---
 
@@ -376,8 +375,10 @@ See [infrastructure/backup/README.md](../../infrastructure/backup/README.md).
 | EspoCRM MariaDB | `mariadb-dump` + gzip | 03:45 | `pvc-backups/espocrm/daily/` |
 | Postiz Postgres | `pg_dump --format=custom` | 04:00 | `pvc-backups/postiz/daily/` |
 | n8n SQLite | `sqlite3 .backup` + gzip | 04:15 | `pvc-backups/n8n/daily/` |
+| AppFlowy MinIO | `rclone sync` | 04:30 | `pvc-backups/appflowy-minio/daily/` |
+| Uptime Kuma SQLite | `sqlite3 .backup` + gzip | 04:45 | `pvc-backups/uptime-kuma/daily/` |
 
-**Not covered yet:** AppFlowy MinIO, Kuma SQLite, Grafana, Meilisearch, Redis.
+**Out of scope (accepted):** Meilisearch (rebuild), Redis (ephemeral/AOF-local), Mosquitto, ntfy. Grafana dashboards persist on PVC + in-repo ConfigMaps — not dumped to R2.
 
 ---
 

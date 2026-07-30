@@ -141,6 +141,13 @@
       "presentation": { "reveal": "always", "panel": "shared" }
     },
     {
+      "label": "db:refresh-snapshots",
+      "type": "shell",
+      "command": "pnpm db:refresh-snapshots",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
       "label": "cf:preview",
       "type": "shell",
       "command": "pnpm cf:preview",

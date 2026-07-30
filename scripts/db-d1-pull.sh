@@ -8,7 +8,6 @@
 #   bash scripts/db-d1-pull.sh              # all known D1 DBs
 #   bash scripts/db-d1-pull.sh user-auth-db
 #   bash scripts/db-d1-pull.sh auth-db-preview
-#   bash scripts/db-d1-pull.sh cloudless-auth
 #
 # Docs: Cloudflare D1 → SQLTools
 #
@@ -21,10 +20,10 @@ OUT="$ROOT/.local/db"
 mkdir -p "$OUT"
 
 # name → used as both wrangler D1 name and local basename
+# cloudless-auth retired — see scripts/d1-retire-cloudless-auth.sh
 ALL_DBS=(
   "user-auth-db"
   "auth-db-preview"
-  "cloudless-auth"
 )
 
 need_wrangler() {
