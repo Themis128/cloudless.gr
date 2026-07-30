@@ -122,26 +122,17 @@ describe("stripe transaction tags", () => {
     const tags = getStripeEventTags("charge.dispute.created");
     expect(tags.tagCategory).toBe("other");
   });
-
-  it("rejects non-https custom dynamodb endpoints", async () => {
-    process.env.DYNAMODB_ENDPOINT = "http://internal-dynamo:8000";
-    const { resolveDynamoEndpoint } = await import("@/lib/stripe-transactions");
-    expect(() => resolveDynamoEndpoint()).toThrow("must use HTTPS");
-    delete process.env.DYNAMODB_ENDPOINT;
-  });
-
-  it("allows https dynamodb endpoints", async () => {
-    process.env.DYNAMODB_ENDPOINT = "https://dynamodb.us-east-1.amazonaws.com";
-    const { resolveDynamoEndpoint } = await import("@/lib/stripe-transactions");
-    expect(resolveDynamoEndpoint()).toBe("https://dynamodb.us-east-1.amazonaws.com");
-    delete process.env.DYNAMODB_ENDPOINT;
-  });
 });
 
 describe("stripe transactions D1 idempotency", () => {
   afterEach(() => {
     delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
     vi.resetModules();
+  });
+
+  it("throws when AUTH_DB is unbound", async () => {
+    const { persistStripeEvent } = await import("@/lib/stripe-transactions");
+    await expect(persistStripeEvent(makeEvent("evt_no_db"))).rejects.toThrow(/AUTH_DB/);
   });
 
   it("persists via D1 and reports duplicates on UNIQUE", async () => {

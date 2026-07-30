@@ -232,25 +232,10 @@ describe("stripe-transactions.ts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    process.env.STRIPE_TRANSACTIONS_TABLE = "test-stripe-events";
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   });
   afterEach(() => {
-    delete process.env.STRIPE_TRANSACTIONS_TABLE;
-  });
-
-  describe("resolveDynamoEndpoint", () => {
-    it("returns undefined when DYNAMODB_ENDPOINT not set", async () => {
-      delete process.env.DYNAMODB_ENDPOINT;
-      const { resolveDynamoEndpoint } = await import("@/lib/stripe-transactions");
-      expect(resolveDynamoEndpoint()).toBeUndefined();
-    });
-
-    it("returns custom endpoint when DYNAMODB_ENDPOINT set", async () => {
-      process.env.DYNAMODB_ENDPOINT = "http://localhost:8000";
-      const { resolveDynamoEndpoint } = await import("@/lib/stripe-transactions");
-      expect(resolveDynamoEndpoint()).toBe("http://localhost:8000");
-      delete process.env.DYNAMODB_ENDPOINT;
-    });
+    delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   });
 
   describe("getStripeEventTags", () => {
@@ -287,8 +272,7 @@ describe("stripe-transactions.ts", () => {
   });
 
   describe("persistStripeEvent", () => {
-    it("throws when STRIPE_TRANSACTIONS_TABLE is not set", async () => {
-      delete process.env.STRIPE_TRANSACTIONS_TABLE;
+    it("throws when AUTH_DB is unbound", async () => {
       const { persistStripeEvent } = await import("@/lib/stripe-transactions");
       await expect(
         persistStripeEvent({
@@ -297,22 +281,7 @@ describe("stripe-transactions.ts", () => {
           data: { object: {} },
           created: 1700000000,
         } as never)
-      ).rejects.toThrow(/STRIPE_TRANSACTIONS_TABLE is not configured/);
-    });
-
-    it("proceeds with table name set (hits DynamoDB stub)", async () => {
-      process.env.STRIPE_TRANSACTIONS_TABLE = "test-table";
-      const { persistStripeEvent } = await import("@/lib/stripe-transactions");
-      // DynamoDB stub has no send method → will throw; verify it at least
-      // gets past the table name check and fails on the client, not config.
-      await expect(
-        persistStripeEvent({
-          id: "evt_1",
-          type: "checkout.session.completed",
-          data: { object: {} },
-          created: 1700000000,
-        } as never)
-      ).rejects.toThrow();
+      ).rejects.toThrow(/AUTH_DB is not configured/);
     });
   });
 });

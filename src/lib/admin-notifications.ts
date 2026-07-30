@@ -1,25 +1,12 @@
-import {
-  DynamoDBClient,
-  PutItemCommand,
-  QueryCommand,
-  UpdateItemCommand,
-  BatchWriteItemCommand,
-  type AttributeValue,
-} from "@aws-sdk/client-dynamodb";
-import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 import { getDataLakeBucketFromEnv } from "@/lib/r2-client";
 import { getAuthDbFromEnv, type AuthDatabase } from "@/lib/auth-d1";
 
 /**
  * Durable admin notifications store.
  *
- * Cloudflare-first: prefer D1 `admin_notification` when AUTH_DB is bound.
- * Legacy fallback: DynamoDB `ADMIN_NOTIFICATIONS_TABLE`.
- *
- * Dynamo schema (legacy):
- *   - pk = "NOTIF"
- *   - sk = "<createdAt-ISO8601>#<id>"
- *   - GSI categoryIndex: pk = "CAT#<category>", sk = "<createdAt-ISO8601>#<id>"
+ * D1 `admin_notification` via AUTH_DB. Reads return [] when AUTH_DB is
+ * unbound; writes that require persistence throw when AUTH_DB is missing.
+ * Lake sink (R2) still runs on record regardless.
  *
  * Categories: contact | subscribe | booking | order | error | auth | portal
  */
@@ -47,25 +34,7 @@ export interface AdminNotification {
   archivedAt?: string;
 }
 
-const REGION = process.env.AWS_REGION || "us-east-1";
-
-let dynamoClient: DynamoDBClient | null = null;
-function getDynamoClient(): DynamoDBClient {
-  dynamoClient ??= new DynamoDBClient({
-    region: REGION,
-    endpoint: resolveDynamoEndpoint(),
-  });
-  return dynamoClient;
-}
-
-function getTableName(): string {
-  const name = process.env.ADMIN_NOTIFICATIONS_TABLE?.trim();
-  if (!name) throw new Error("ADMIN_NOTIFICATIONS_TABLE is not configured");
-  return name;
-}
-
 const PK_ALL = "NOTIF";
-const CAT_INDEX = "categoryIndex";
 
 function randomId(): string {
   return `n_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -75,50 +44,12 @@ function buildSk(createdAt: string, id: string): string {
   return `${createdAt}#${id}`;
 }
 
-function toItem(notif: AdminNotification): Record<string, AttributeValue> {
-  const item: Record<string, AttributeValue> = {
-    pk: { S: PK_ALL },
-    sk: { S: buildSk(notif.createdAt, notif.id) },
-    catPk: { S: `CAT#${notif.category}` },
-    catSk: { S: buildSk(notif.createdAt, notif.id) },
-    id: { S: notif.id },
-    createdAt: { S: notif.createdAt },
-    category: { S: notif.category },
-    type: { S: notif.type },
-    title: { S: notif.title },
-    message: { S: notif.message },
-    read: { BOOL: notif.read },
-  };
-  if (notif.actor) item.actor = { S: notif.actor };
-  if (notif.route) item.route = { S: notif.route };
-  if (notif.metadata) item.metadata = { S: JSON.stringify(notif.metadata) };
-  if (notif.archivedAt) item.archivedAt = { S: notif.archivedAt };
-  return item;
-}
-
-function fromItem(item: Record<string, AttributeValue>): AdminNotification {
-  let metadata: Record<string, unknown> | undefined;
-  const rawMeta = item.metadata?.S;
-  if (rawMeta) {
-    try {
-      metadata = JSON.parse(rawMeta) as Record<string, unknown>;
-    } catch {
-      // Malformed JSON — drop silently to keep the list useful.
-    }
+function requireAuthDb(): AuthDatabase {
+  const db = getAuthDbFromEnv();
+  if (!db) {
+    throw new Error("AUTH_DB is not configured");
   }
-  return {
-    id: item.id?.S ?? "",
-    createdAt: item.createdAt?.S ?? "",
-    category: (item.category?.S ?? "error") as NotificationCategory,
-    type: (item.type?.S ?? "info") as NotificationType,
-    title: item.title?.S ?? "",
-    message: item.message?.S ?? "",
-    actor: item.actor?.S,
-    route: item.route?.S,
-    metadata,
-    read: item.read?.BOOL ?? false,
-    archivedAt: item.archivedAt?.S,
-  };
+  return db;
 }
 
 interface D1NotificationRow {
@@ -271,8 +202,9 @@ async function purgeArchivedOlderThanD1(db: AuthDatabase, olderThan: string): Pr
 }
 
 /**
- * Append a notification. Failures are returned (not thrown) so producer paths
- * can keep serving the user-facing response. Callers should log but not abort.
+ * Append a notification. D1 insert failures are returned as null (not thrown)
+ * so producer paths can keep serving. Missing AUTH_DB throws — persistence
+ * requires a bound database.
  */
 export async function recordNotification(input: {
   category: NotificationCategory;
@@ -299,30 +231,7 @@ export async function recordNotification(input: {
   // Always write to data lake (R2) for analytics — fire and forget.
   sinkToLake(notif).catch(() => {});
 
-  const db = getAuthDbFromEnv();
-  if (db) {
-    return recordNotificationD1(db, notif);
-  }
-
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    // No D1 / Dynamo — lake-only mode.
-    return notif;
-  }
-  try {
-    await getDynamoClient().send(
-      new PutItemCommand({
-        TableName: getTableName(),
-        Item: toItem(notif),
-      })
-    );
-    return notif;
-  } catch (err) {
-    console.warn(
-      "[admin-notifications] recordNotification failed:",
-      err instanceof Error ? err.message : err
-    );
-    return null;
-  }
+  return recordNotificationD1(requireAuthDb(), notif);
 }
 
 export interface ListFilters {
@@ -336,66 +245,12 @@ export interface ListFilters {
 
 /**
  * Read recent notifications, newest first. Defaults to 50 most recent
- * un-archived entries.
+ * un-archived entries. Returns [] when AUTH_DB is unbound.
  */
 export async function listNotifications(filters: ListFilters = {}): Promise<AdminNotification[]> {
   const db = getAuthDbFromEnv();
-  if (db) {
-    return listNotificationsD1(db, filters);
-  }
-
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) {
-    return [];
-  }
-
-  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
-  const useCategoryIndex = Boolean(filters.category);
-
-  const keyConditionParts: string[] = [];
-  const exprNames: Record<string, string> = {};
-  const exprValues: Record<string, AttributeValue> = {};
-
-  if (useCategoryIndex) {
-    keyConditionParts.push("#cpk = :cpk");
-    exprNames["#cpk"] = "catPk";
-    exprValues[":cpk"] = { S: `CAT#${filters.category}` };
-  } else {
-    keyConditionParts.push("#pk = :pk");
-    exprNames["#pk"] = "pk";
-    exprValues[":pk"] = { S: PK_ALL };
-  }
-
-  if (filters.since && filters.until) {
-    keyConditionParts.push("#sk BETWEEN :since AND :until");
-    exprNames["#sk"] = useCategoryIndex ? "catSk" : "sk";
-    exprValues[":since"] = { S: `${filters.since}#` };
-    exprValues[":until"] = { S: `${filters.until}~` };
-  } else if (filters.since) {
-    keyConditionParts.push("#sk >= :since");
-    exprNames["#sk"] = useCategoryIndex ? "catSk" : "sk";
-    exprValues[":since"] = { S: `${filters.since}#` };
-  }
-
-  const filterExpressions: string[] = [];
-  if (!filters.includeArchived) {
-    filterExpressions.push("attribute_not_exists(#archivedAt)");
-    exprNames["#archivedAt"] = "archivedAt";
-  }
-
-  const out = await getDynamoClient().send(
-    new QueryCommand({
-      TableName: getTableName(),
-      IndexName: useCategoryIndex ? CAT_INDEX : undefined,
-      KeyConditionExpression: keyConditionParts.join(" AND "),
-      ...(filterExpressions.length ? { FilterExpression: filterExpressions.join(" AND ") } : {}),
-      ExpressionAttributeNames: exprNames,
-      ExpressionAttributeValues: exprValues,
-      Limit: limit,
-      ScanIndexForward: false,
-    })
-  );
-
-  return (out.Items ?? []).map(fromItem);
+  if (!db) return [];
+  return listNotificationsD1(db, filters);
 }
 
 /**
@@ -403,41 +258,7 @@ export async function listNotifications(filters: ListFilters = {}): Promise<Admi
  */
 export async function markNotificationsRead(ids: string[]): Promise<void> {
   if (!ids.length) return;
-
-  const db = getAuthDbFromEnv();
-  if (db) {
-    await markNotificationsReadD1(db, ids);
-    return;
-  }
-
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) return;
-
-  for (const id of ids) {
-    const matches = await getDynamoClient().send(
-      new QueryCommand({
-        TableName: getTableName(),
-        KeyConditionExpression: "#pk = :pk",
-        FilterExpression: "#id = :id",
-        ExpressionAttributeNames: { "#pk": "pk", "#id": "id" },
-        ExpressionAttributeValues: {
-          ":pk": { S: PK_ALL },
-          ":id": { S: id },
-        },
-        Limit: 1,
-      })
-    );
-    const item = matches.Items?.[0];
-    if (!item) continue;
-    await getDynamoClient().send(
-      new UpdateItemCommand({
-        TableName: getTableName(),
-        Key: { pk: item.pk, sk: item.sk },
-        UpdateExpression: "SET #read = :true",
-        ExpressionAttributeNames: { "#read": "read" },
-        ExpressionAttributeValues: { ":true": { BOOL: true } },
-      })
-    );
-  }
+  await markNotificationsReadD1(requireAuthDb(), ids);
 }
 
 /**
@@ -483,49 +304,7 @@ export async function notificationAnalytics(
  * Hard-delete archived rows older than `olderThan` (ISO 8601 cutoff).
  */
 export async function purgeArchivedOlderThan(olderThan: string): Promise<number> {
-  const db = getAuthDbFromEnv();
-  if (db) {
-    return purgeArchivedOlderThanD1(db, olderThan);
-  }
-
-  if (!process.env.ADMIN_NOTIFICATIONS_TABLE) return 0;
-
-  let purged = 0;
-  let lastKey: Record<string, AttributeValue> | undefined;
-  do {
-    const page: QueryCommand = new QueryCommand({
-      TableName: getTableName(),
-      KeyConditionExpression: "#pk = :pk AND #sk < :until",
-      FilterExpression: "attribute_exists(#archivedAt) AND #archivedAt < :until",
-      ExpressionAttributeNames: {
-        "#pk": "pk",
-        "#sk": "sk",
-        "#archivedAt": "archivedAt",
-      },
-      ExpressionAttributeValues: {
-        ":pk": { S: PK_ALL },
-        ":until": { S: `${olderThan}~` },
-      },
-      ExclusiveStartKey: lastKey,
-      Limit: 25,
-    });
-    const res = await getDynamoClient().send(page);
-    const items = res.Items ?? [];
-    if (items.length) {
-      await getDynamoClient().send(
-        new BatchWriteItemCommand({
-          RequestItems: {
-            [getTableName()]: items.map((it) => ({
-              DeleteRequest: { Key: { pk: it.pk, sk: it.sk } },
-            })),
-          },
-        })
-      );
-      purged += items.length;
-    }
-    lastKey = res.LastEvaluatedKey;
-  } while (lastKey);
-  return purged;
+  return purgeArchivedOlderThanD1(requireAuthDb(), olderThan);
 }
 
 // ---------------------------------------------------------------------------

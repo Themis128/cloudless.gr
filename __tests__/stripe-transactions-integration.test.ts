@@ -1,27 +1,10 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+/**
+ * D1-backed integration-style tests for stripe-transactions.
+ * Uses an in-memory AUTH_DB stub (no LocalStack / Dynamo).
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
-
-const ENDPOINT = process.env.AWS_ENDPOINT_URL ?? "http://localhost:4566";
-const TABLE = process.env.STRIPE_TRANSACTIONS_TABLE ?? "cloudless-test-StripeTransactions";
-
-async function dynamoUp(): Promise<boolean> {
-  try {
-    const res = await fetch(`${ENDPOINT}/_localstack/health`, {
-      signal: AbortSignal.timeout(1500),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-function setEnv() {
-  vi.stubEnv("DYNAMODB_ENDPOINT", ENDPOINT);
-  vi.stubEnv("STRIPE_TRANSACTIONS_TABLE", TABLE);
-  vi.stubEnv("AWS_REGION", "us-east-1");
-  vi.stubEnv("AWS_ACCESS_KEY_ID", "test");
-  vi.stubEnv("AWS_SECRET_ACCESS_KEY", "test");
-}
+import type { AuthDatabase } from "@/lib/auth-d1";
 
 function makeEvent(id: string, type = "checkout.session.completed"): Stripe.Event {
   return {
@@ -48,30 +31,64 @@ function makeEvent(id: string, type = "checkout.session.completed"): Stripe.Even
   } as unknown as Stripe.Event;
 }
 
-let skipAll = false;
-beforeAll(async () => {
-  skipAll = !(await dynamoUp());
-});
-afterEach(() => {
-  vi.unstubAllEnvs();
+function createMemoryAuthDb(): AuthDatabase & { rows: Map<string, Record<string, unknown>> } {
+  const rows = new Map<string, Record<string, unknown>>();
+  return {
+    rows,
+    prepare(query: string) {
+      const binds: unknown[] = [];
+      const stmt = {
+        bind(...args: unknown[]) {
+          binds.push(...args);
+          return stmt;
+        },
+        async run() {
+          if (query.includes("INSERT INTO stripe_transaction")) {
+            const eventId = String(binds[0]);
+            if (rows.has(eventId)) {
+              throw new Error("UNIQUE constraint failed: stripe_transaction.event_id");
+            }
+            rows.set(eventId, { event_id: eventId, processing_status: binds[7] });
+            return { success: true, meta: { changes: 1 } };
+          }
+          return { success: true, meta: { changes: 0 } };
+        },
+        async all() {
+          return { results: [], success: true };
+        },
+        async first() {
+          return null;
+        },
+      };
+      return stmt;
+    },
+  };
+}
+
+beforeEach(() => {
+  delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   vi.resetModules();
 });
 
-describe("stripe-transactions integration", () => {
-  it("persistStripeEvent stores new event", async ({ skip }) => {
-    if (skipAll) return skip();
-    setEnv();
-    vi.resetModules();
+afterEach(() => {
+  delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
+  vi.resetModules();
+});
+
+describe("stripe-transactions integration (D1)", () => {
+  it("persistStripeEvent stores new event", async () => {
+    const db = createMemoryAuthDb();
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = db;
     const { persistStripeEvent } = await import("@/lib/stripe-transactions");
     const id = "evt_new_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
     const r = await persistStripeEvent(makeEvent(id));
     expect(r.duplicate).toBe(false);
+    expect(db.rows.has(id)).toBe(true);
   });
 
-  it("persistStripeEvent returns duplicate on re-write", async ({ skip }) => {
-    if (skipAll) return skip();
-    setEnv();
-    vi.resetModules();
+  it("persistStripeEvent returns duplicate on re-write", async () => {
+    const db = createMemoryAuthDb();
+    (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = db;
     const { persistStripeEvent } = await import("@/lib/stripe-transactions");
     const id = "evt_dup_" + Date.now();
     const ev = makeEvent(id);

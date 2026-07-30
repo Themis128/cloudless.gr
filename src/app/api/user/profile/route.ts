@@ -37,7 +37,7 @@ async function resolveUser(
 /**
  * GET /api/user/profile
  *
- * Cloudflare-first: D1 `user` row when AUTH_DB bound; else DynamoDB fallback.
+ * Reads profile fields from D1 `user` via AUTH_DB.
  */
 export async function GET(req: NextRequest) {
   const user = await resolveUser(req);
@@ -54,13 +54,7 @@ export async function GET(req: NextRequest) {
       phone: profile.phone,
       preferences: profile.preferences,
     });
-  } catch (err) {
-    if (err instanceof Error && err.message.includes("USER_PROFILE_TABLE")) {
-      return NextResponse.json({
-        name: user.name ?? undefined,
-        email: user.email ?? undefined,
-      });
-    }
+  } catch {
     return NextResponse.json({ error: "Could not read profile" }, { status: 502 });
   }
 }
@@ -68,7 +62,7 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/user/profile
  *
- * Upserts profile fields (D1 preferred, DynamoDB legacy).
+ * Upserts profile fields on D1 `user` (AUTH_DB required).
  */
 export async function POST(req: NextRequest) {
   const user = await resolveUser(req);
@@ -94,7 +88,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[user/profile] PUT failed:", msg);
-    if (msg.includes("USER_PROFILE_TABLE")) {
+    if (msg.includes("AUTH_DB")) {
       return NextResponse.json(
         { error: "Profile storage not available — please retry" },
         { status: 503 }

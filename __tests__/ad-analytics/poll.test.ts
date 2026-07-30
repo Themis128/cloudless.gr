@@ -10,7 +10,7 @@ import type { NotificationChannel } from "@/lib/ad-analytics/channels/notificati
 let restoreRegistries: (() => void) | null = null;
 
 beforeEach(() => {
-  delete process.env.AD_ANALYTICS_BOOKMARKS_TABLE;
+  delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
   _resetBookmarkStore();
 });
 

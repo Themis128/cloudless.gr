@@ -1,51 +1,30 @@
-import {
-  DynamoDBClient,
-  GetItemCommand,
-  PutItemCommand,
-  type AttributeValue,
-} from "@aws-sdk/client-dynamodb";
-import { resolveDynamoEndpoint } from "@/lib/stripe-transactions";
 import { createHash } from "crypto";
+import { getAuthDbFromEnv } from "@/lib/auth-d1";
 
 /**
  * Read-through cache for slow third-party data (Google Search Console).
  *
  * GSC has per-minute, per-day, and 50k-row-per-day quotas. Every admin tab
  * open used to hit the API fresh. This cache lets each route serve from
- * Dynamo if a fresh-enough entry exists, falling back to the live API when
- * not. The hourly /api/cron/gsc-cache-refresh job pre-warms the common
- * queries so admin users see instant responses.
+ * D1 `analytics_cache` if a fresh-enough entry exists, falling back to the
+ * live API when not. The hourly /api/cron/gsc-cache-refresh job pre-warms
+ * the common queries so admin users see instant responses.
  *
- * Schema:
+ * Schema (AUTH_DB.analytics_cache):
  *   pk = "<route>"                e.g. "seo", "keywords", "ctr-opportunities"
  *   sk = "<params-hash>"          deterministic for a given query-string
- *   payload (S, JSON)             the cached response body
- *   storedAt (S, ISO 8601)        when we wrote it
- *   ttlSeconds (N)                requested TTL at write time
+ *   result_json                   the cached response body
+ *   cached_at (unix seconds)      when we wrote it
+ *   expires_at (unix seconds)     cached_at + ttlSeconds
  *
- * Failure model: safe. If the table is not configured (no env var), or any
- * Dynamo operation throws, helpers return null / undefined and callers fall
- * back to the live API path. The cache is never on the critical path.
+ * Failure model: safe. If AUTH_DB is unbound, or any D1 operation throws,
+ * helpers return null / undefined and callers fall back to the live API path.
+ * The cache is never on the critical path.
  */
-
-const REGION = process.env.AWS_REGION || "us-east-1";
-
-let dynamoClient: DynamoDBClient | null = null;
-function getDynamoClient(): DynamoDBClient {
-  dynamoClient ??= new DynamoDBClient({
-    region: REGION,
-    endpoint: resolveDynamoEndpoint(),
-  });
-  return dynamoClient;
-}
-
-function getTableName(): string | null {
-  return process.env.ANALYTICS_CACHE_TABLE?.trim() || null;
-}
 
 /**
  * Hash an arbitrary params object into a short deterministic key suffix.
- * Same input → same hash, regardless of property order, on every Lambda.
+ * Same input → same hash, regardless of property order.
  */
 export function paramsHash(params: Record<string, unknown> = {}): string {
   // Sort keys so {a:1, b:2} and {b:2, a:1} hash to the same value.
@@ -64,47 +43,41 @@ export interface CacheEntry<T> {
   stale: boolean;
 }
 
-function toItem<T>(
-  route: string,
-  hash: string,
-  payload: T,
-  ttlSeconds: number
-): Record<string, AttributeValue> {
-  return {
-    pk: { S: route },
-    sk: { S: hash },
-    payload: { S: JSON.stringify(payload) },
-    storedAt: { S: new Date().toISOString() },
-    ttlSeconds: { N: String(ttlSeconds) },
-  };
+interface CacheRow {
+  result_json: string | null;
+  cached_at: number | null;
+  expires_at: number | null;
 }
 
-function fromItem<T>(
-  item: Record<string, AttributeValue>,
-  ttlSeconds: number
-): CacheEntry<T> | null {
-  const storedAt = item.storedAt?.S;
-  const raw = item.payload?.S;
-  if (!storedAt || !raw) return null;
+function rowToEntry<T>(row: CacheRow, ttlSeconds: number): CacheEntry<T> | null {
+  const raw = row.result_json;
+  const cachedAt = row.cached_at;
+  if (!raw || typeof cachedAt !== "number") return null;
+
   let payload: T;
   try {
     payload = JSON.parse(raw) as T;
   } catch {
     return null;
   }
-  const storedAtMs = Date.parse(storedAt);
-  const ageSeconds = Math.max(0, Math.floor((Date.now() - storedAtMs) / 1000));
+
+  const storedAt = new Date(cachedAt * 1000).toISOString();
+  const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - cachedAt);
+  const staleByTtl = ageSeconds > ttlSeconds;
+  const staleByExpiry =
+    typeof row.expires_at === "number" ? Math.floor(Date.now() / 1000) > row.expires_at : false;
+
   return {
     payload,
     storedAt,
     ageSeconds,
-    stale: ageSeconds > ttlSeconds,
+    stale: staleByTtl || staleByExpiry,
   };
 }
 
 /**
  * Read a cached entry. Returns null if:
- *   - the table is not configured (local dev / partial deploy)
+ *   - AUTH_DB is not bound
  *   - no entry exists for (route, hash)
  *   - the entry is malformed
  * The caller decides whether a stale entry is acceptable; both fresh and
@@ -115,18 +88,18 @@ export async function getCached<T = unknown>(
   params: Record<string, unknown> = {},
   ttlSeconds = 3600
 ): Promise<CacheEntry<T> | null> {
-  const table = getTableName();
-  if (!table) return null;
+  const db = getAuthDbFromEnv();
+  if (!db) return null;
   const hash = paramsHash(params);
   try {
-    const out = await getDynamoClient().send(
-      new GetItemCommand({
-        TableName: table,
-        Key: { pk: { S: route }, sk: { S: hash } },
-      })
-    );
-    if (!out.Item) return null;
-    return fromItem<T>(out.Item, ttlSeconds);
+    const row = await db
+      .prepare(
+        "SELECT result_json, cached_at, expires_at FROM analytics_cache WHERE pk = ? AND sk = ?"
+      )
+      .bind(route, hash)
+      .first<CacheRow>();
+    if (!row) return null;
+    return rowToEntry<T>(row, ttlSeconds);
   } catch (err) {
     console.warn("[gsc-cache] getCached failed:", err instanceof Error ? err.message : err);
     return null;
@@ -143,16 +116,18 @@ export async function setCached<T = unknown>(
   payload: T,
   ttlSeconds = 3600
 ): Promise<void> {
-  const table = getTableName();
-  if (!table) return;
+  const db = getAuthDbFromEnv();
+  if (!db) return;
   const hash = paramsHash(params);
+  const now = Math.floor(Date.now() / 1000);
   try {
-    await getDynamoClient().send(
-      new PutItemCommand({
-        TableName: table,
-        Item: toItem(route, hash, payload, ttlSeconds),
-      })
-    );
+    await db
+      .prepare(
+        `INSERT OR REPLACE INTO analytics_cache (pk, sk, result_json, cached_at, expires_at)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .bind(route, hash, JSON.stringify(payload), now, now + ttlSeconds)
+      .run();
   } catch (err) {
     console.warn("[gsc-cache] setCached failed:", err instanceof Error ? err.message : err);
   }

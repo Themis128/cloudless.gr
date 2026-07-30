@@ -3,21 +3,28 @@
  * GET /api/admin/notifications/analytics
  *
  * The route handlers delegate to src/lib/admin-notifications. We mock that
- * lib so these tests stay fast and don't need DynamoDB.
+ * lib so these tests stay fast and don't need D1.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { mockRequireAdmin, mockList, mockMarkRead, mockAnalytics } = vi.hoisted(() => ({
-  mockRequireAdmin: vi.fn(),
-  mockList: vi.fn(),
-  mockMarkRead: vi.fn(),
-  mockAnalytics: vi.fn(),
-}));
+const { mockRequireAdmin, mockList, mockMarkRead, mockAnalytics, mockGetAuthDb } = vi.hoisted(
+  () => ({
+    mockRequireAdmin: vi.fn(),
+    mockList: vi.fn(),
+    mockMarkRead: vi.fn(),
+    mockAnalytics: vi.fn(),
+    mockGetAuthDb: vi.fn(),
+  })
+);
 
 vi.mock("@/lib/api-auth", () => ({
   requireAdmin: (...a: unknown[]) => mockRequireAdmin(...a),
   requireAuth: vi.fn(),
+}));
+
+vi.mock("@/lib/auth-d1", () => ({
+  getAuthDbFromEnv: (...a: unknown[]) => mockGetAuthDb(...a),
 }));
 
 vi.mock("@/lib/admin-notifications", () => ({
@@ -35,14 +42,12 @@ function makeReq(url: string, method: string, body?: unknown) {
 }
 
 const OK_ADMIN = { ok: true as const, user: { sub: "u1" } };
+const FAKE_DB = { prepare: vi.fn() };
 
 describe("GET /api/admin/notifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.ADMIN_NOTIFICATIONS_TABLE = "TestTable";
-  });
-  afterEach(() => {
-    delete process.env.ADMIN_NOTIFICATIONS_TABLE;
+    mockGetAuthDb.mockReturnValue(FAKE_DB);
   });
 
   it("returns 401 when not admin", async () => {
@@ -56,8 +61,8 @@ describe("GET /api/admin/notifications", () => {
     expect(mockList).not.toHaveBeenCalled();
   });
 
-  it("returns 503 when table not configured", async () => {
-    delete process.env.ADMIN_NOTIFICATIONS_TABLE;
+  it("returns 503 when AUTH_DB is unbound", async () => {
+    mockGetAuthDb.mockReturnValue(null);
     mockRequireAdmin.mockResolvedValue(OK_ADMIN);
     const { GET } = await import("@/app/api/admin/notifications/route");
     const res = await GET(makeReq("http://localhost/api/admin/notifications", "GET"));
@@ -135,7 +140,7 @@ describe("GET /api/admin/notifications", () => {
 
   it("returns 500 when the lib throws", async () => {
     mockRequireAdmin.mockResolvedValue(OK_ADMIN);
-    mockList.mockRejectedValue(new Error("dynamo down"));
+    mockList.mockRejectedValue(new Error("d1 down"));
     const { GET } = await import("@/app/api/admin/notifications/route");
     const res = await GET(makeReq("http://localhost/api/admin/notifications", "GET"));
     expect(res.status).toBe(500);
@@ -145,10 +150,7 @@ describe("GET /api/admin/notifications", () => {
 describe("PATCH /api/admin/notifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.ADMIN_NOTIFICATIONS_TABLE = "TestTable";
-  });
-  afterEach(() => {
-    delete process.env.ADMIN_NOTIFICATIONS_TABLE;
+    mockGetAuthDb.mockReturnValue(FAKE_DB);
   });
 
   it("returns 401 when not admin", async () => {
@@ -163,8 +165,8 @@ describe("PATCH /api/admin/notifications", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when table not configured", async () => {
-    delete process.env.ADMIN_NOTIFICATIONS_TABLE;
+  it("returns 503 when AUTH_DB is unbound", async () => {
+    mockGetAuthDb.mockReturnValue(null);
     mockRequireAdmin.mockResolvedValue(OK_ADMIN);
     const { PATCH } = await import("@/app/api/admin/notifications/route");
     const res = await PATCH(
@@ -245,10 +247,7 @@ describe("PATCH /api/admin/notifications", () => {
 describe("GET /api/admin/notifications/analytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.ADMIN_NOTIFICATIONS_TABLE = "TestTable";
-  });
-  afterEach(() => {
-    delete process.env.ADMIN_NOTIFICATIONS_TABLE;
+    mockGetAuthDb.mockReturnValue(FAKE_DB);
   });
 
   it("returns 401 when not admin", async () => {
@@ -261,8 +260,8 @@ describe("GET /api/admin/notifications/analytics", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 503 when table not configured", async () => {
-    delete process.env.ADMIN_NOTIFICATIONS_TABLE;
+  it("returns 503 when AUTH_DB is unbound", async () => {
+    mockGetAuthDb.mockReturnValue(null);
     mockRequireAdmin.mockResolvedValue(OK_ADMIN);
     const { GET } = await import("@/app/api/admin/notifications/analytics/route");
     const res = await GET(makeReq("http://localhost/api/admin/notifications/analytics", "GET"));
