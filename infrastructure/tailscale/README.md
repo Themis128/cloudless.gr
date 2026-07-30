@@ -42,10 +42,36 @@ flowchart LR
 | `proxygroup.yaml` | Shared `ingress` ProxyGroup + `kube-apiserver` ProxyGroup |
 | `ingresses.yaml` | Grafana / Meili with `tailscale.com/proxy-group: ingress` |
 | `ingress-class.yaml` | `IngressClass` `tailscale` |
-| `acl-policy.example.json` | tagOwners + autoApprovers + grants |
+| `acl-policy.example.json` | tagOwners + autoApprovers + grants + **Apps** (`nodeAttrs` app-connectors) |
 | `deploy.sh` | Helm install (OAuth env only — no AWS SSM) |
 | `subnet-router.yaml` / `proxygroup-monitoring.yaml` | Deprecated stubs — do not apply |
 | `OFFLINE-DEVICE-TROUBLESHOOTING.md` | Stale Machines cleanup |
+
+## Tailscale Apps (SaaS app connectors)
+
+ACL patch includes `tag:app-connector` plus presets (**GitHub**, **Stripe**, **Google Workspace**) and custom domains (**Notion**, **Sentry**, **Slack**, **Cloudflare**, **Anthropic**). Merge + apply:
+
+```bash
+# From CI (preferred — uses repo OAuth secrets)
+gh workflow run tailscale-admin-api.yml -f dry_run=false
+
+# Or locally with TS_CLIENT_ID + TS_CLIENT_SECRET
+DRY_RUN=0 bash scripts/tailscale-admin-api.sh
+```
+
+Then designate a **stable Linux** node (prefer office/NAS/VPS — not overloaded omv):
+
+```bash
+sudo tailscale up --advertise-connector --advertise-tags=tag:app-connector \
+  --accept-routes --accept-dns=false
+```
+
+Approve the tag in the admin console if prompted. Apps go green at
+https://login.tailscale.com/admin/apps once a connector is online.
+Copy **Egress IPs** into SaaS IP allowlists when you tighten access.
+
+**Do not** put public `*.cloudless.gr` or Grafana/Meili Serve hosts in Apps —
+those stay on Cloudflare Tunnel / ProxyGroup.
 
 ## Design rules
 

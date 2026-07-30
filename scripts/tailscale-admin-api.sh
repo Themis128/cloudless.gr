@@ -116,6 +116,29 @@ if "grants" in patch:
     if key == "grants" and "Grants" in cur and "grants" in cur:
         del cur["Grants"]
 
+# nodeAttrs: merge tailscale.com/app-connectors by name into target "*"
+if "nodeAttrs" in patch:
+    cur_attrs = cur.setdefault("nodeAttrs", [])
+    # Find or create the catch-all attr block
+    star = None
+    for attr in cur_attrs:
+        if attr.get("target") == ["*"] or attr.get("target") == "*":
+            star = attr
+            break
+    if star is None:
+        star = {"target": ["*"], "app": {}}
+        cur_attrs.append(star)
+    app = star.setdefault("app", {})
+    key = "tailscale.com/app-connectors"
+    existing = {c.get("name"): c for c in (app.get(key) or []) if c.get("name")}
+    for conn in patch["nodeAttrs"][0].get("app", {}).get(key, []):
+        name = conn.get("name")
+        if not name:
+            continue
+        existing[name] = conn
+    app[key] = list(existing.values())
+    print("app-connectors:", ", ".join(sorted(existing)))
+
 with open(out_path, "w") as f:
     json.dump(cur, f, indent=2)
     f.write("\n")
