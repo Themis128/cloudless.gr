@@ -162,6 +162,13 @@ else
   echo "    ACL updated"
 fi
 
+if [[ "${ACL_ONLY:-0}" == "1" || "${ACL_ONLY:-}" == "true" ]]; then
+  echo "==> ACL_ONLY=1 — skipping device cleanup"
+  rm -f "$ACL_TMP" "$HDR_TMP" "$MERGED"
+  echo "==> Done"
+  exit 0
+fi
+
 echo "==> List devices"
 DEVICES=$(mktemp)
 HTTP=$(curl -sS -o "$DEVICES" -w '%{http_code}' \

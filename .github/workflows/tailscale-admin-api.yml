@@ -13,6 +13,14 @@ on:
         options:
           - "false"
           - "true"
+      acl_only:
+        description: "Merge/POST ACL only (skip stale device DELETE)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 permissions:
   contents: read
@@ -32,6 +40,7 @@ jobs:
       TAILSCALE_OAUTH_CLIENT_SECRET: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
       TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
       DRY_RUN: ${{ inputs.dry_run }}
+      ACL_ONLY: ${{ inputs.acl_only }}
       TAILSCALE_TAILNET: tail4ecae1.ts.net
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
