@@ -201,6 +201,7 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
 
     it("returns 401 for expired Bearer token (cognito provider)", async () => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       vi.resetModules();
       const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
@@ -208,10 +209,12 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(401);
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
     });
 
     it("returns ok:true with user for valid Bearer token (cognito provider)", async () => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       vi.resetModules();
       const { requireAuth, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
@@ -219,10 +222,12 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.user.sub).toBe("user-1");
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
     });
 
     it("D1 mode: opaque Bearer session id authenticates without Cognito JWKS", async () => {
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
       process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_LEFTOVER";
       vi.resetModules();
       vi.doMock("@/lib/auth-d1", () => ({
@@ -245,6 +250,7 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
 
     it("D1 mode: stale Cognito JWT Bearer falls through to session_token cookie", async () => {
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
       vi.resetModules();
       vi.doMock("@/lib/auth-d1", () => ({
         getAuthDbFromEnv: () => ({ prepare: vi.fn() }),
@@ -327,10 +333,12 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
   describe("requireAuth() — Cognito next-auth session cookie", () => {
     beforeEach(() => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
     });
 
     afterEach(() => {
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
     });
 
     it("returns ok:true when next-auth session provides a valid user", async () => {
@@ -390,6 +398,7 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
   describe("requireAdmin()", () => {
     it("returns 403 when Bearer token user is not in admin group", async () => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       vi.resetModules();
       const { requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
@@ -397,10 +406,12 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(403);
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
     });
 
     it("returns ok:true for a valid admin Bearer token (groups claim)", async () => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       vi.resetModules();
       const { requireAdmin, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
@@ -408,10 +419,12 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       const result = await requireAdmin(makeRequest(token));
       expect(result.ok).toBe(true);
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
     });
 
     it("returns ok:true when session cookie user is in the admin group", async () => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       vi.resetModules();
       authMock.mockResolvedValueOnce({
         user: {
@@ -427,10 +440,12 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       expect(result.ok).toBe(true);
       if (result.ok) expect(result.user.sub).toBe("admin-1");
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
     });
 
     it("returns 403 when session cookie user is not in admin group", async () => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       vi.resetModules();
       authMock.mockResolvedValueOnce({
         user: { id: "plain-user", email: "user@cloudless.gr", groups: [], roles: [] },
@@ -441,6 +456,7 @@ describe("api-auth.ts (fallback path — decode-only, no issuer)", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.response.status).toBe(403);
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
     });
   });
 });
@@ -475,12 +491,14 @@ describe("api-auth.ts (coverage backfill)", () => {
         };
       });
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
       const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
       const decoded = await verifyToken("any.fake.jwt");
       expect(decoded?.sub).toBe("verified-user");
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
       vi.doUnmock("jose");
     });
 
@@ -495,18 +513,21 @@ describe("api-auth.ts (coverage backfill)", () => {
         };
       });
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
+      process.env.ALLOW_LEGACY_COGNITO = "1";
       process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
       const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
       const decoded = await verifyToken("any.fake.jwt");
       expect(decoded).toBeNull();
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
       vi.doUnmock("jose");
     });
 
     it("skips JWKS when AUTH_PROVIDER is not cognito even if issuer is set", async () => {
       vi.resetModules();
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
+      delete process.env.ALLOW_LEGACY_COGNITO;
       process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
       const createRemoteJWKSet = vi.fn();
       vi.doMock("jose", async () => {

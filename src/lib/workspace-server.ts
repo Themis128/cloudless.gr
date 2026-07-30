@@ -1,14 +1,14 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { isAdmin, requireAuth, type AuthResult, type DecodedToken } from "@/lib/api-auth";
+import { readJsonConfig, writeJsonConfig } from "@/lib/app-config-json";
 
 /**
  * Multi-tenant workspace plumbing.
  *
  * Canonical home for:
- *   - the `Workspace` shape (persisted as JSON in SSM)
- *   - SSM read/write with a 30s cache
+ *   - the `Workspace` shape (persisted as JSON in D1 app_config)
+ *   - read/write with a 30s cache
  *   - cookie/localStorage active-workspace plumbing
  *   - `requireWorkspaceAdmin` — admin gate scoped to a workspace's adminEmails
  *
@@ -21,10 +21,11 @@ import { isAdmin, requireAuth, type AuthResult, type DecodedToken } from "@/lib/
  *  Browser sends it on same-origin requests; route handlers + RSC reads it. */
 export const WORKSPACE_COOKIE = "cloudless_workspace_id";
 
-/** SSM parameter that stores the entire workspaces list as a JSON array. */
-export const SSM_KEY = "/cloudless/WORKSPACES_JSON";
+/** D1 app_config key that stores the entire workspaces list as a JSON array. */
+export const WORKSPACES_CONFIG_KEY = "WORKSPACES_JSON";
+/** @deprecated alias — was SSM path */
+export const SSM_KEY = WORKSPACES_CONFIG_KEY;
 
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
 const CACHE_TTL_MS = 30_000;
 
 export interface Workspace {
@@ -52,46 +53,21 @@ interface WorkspaceCache {
 
 let cached: WorkspaceCache | null = null;
 
-// In E2E runs we often don't have AWS credentials available. Keep a small
-// in-memory store so `/api/admin/workspaces` still behaves deterministically.
-const USE_E2E_IN_MEMORY =
-  process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_E2E === "1";
-let e2eWorkspaces: Workspace[] = [];
-
-/** Reset the SSM cache — primarily for tests. */
+/** Reset the cache — primarily for tests. */
 export function resetWorkspaceCache(): void {
   cached = null;
 }
 
 export async function readWorkspaces(): Promise<Workspace[]> {
   if (cached && Date.now() < cached.expiresAt) return cached.data;
-  if (USE_E2E_IN_MEMORY) return e2eWorkspaces;
-  try {
-    const client = new SSMClient({ region: REGION });
-    const res = await client.send(new GetParameterCommand({ Name: SSM_KEY }));
-    const data = JSON.parse(res.Parameter?.Value ?? "[]") as Workspace[];
-    cached = { data, expiresAt: Date.now() + CACHE_TTL_MS };
-    return data;
-  } catch {
-    return cached?.data ?? [];
-  }
+  const data = await readJsonConfig<Workspace[]>(WORKSPACES_CONFIG_KEY, []);
+  const list = Array.isArray(data) ? data : [];
+  cached = { data: list, expiresAt: Date.now() + CACHE_TTL_MS };
+  return list;
 }
 
 export async function writeWorkspaces(workspaces: Workspace[]): Promise<void> {
-  if (USE_E2E_IN_MEMORY) {
-    e2eWorkspaces = workspaces;
-    cached = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
-    return;
-  }
-  const client = new SSMClient({ region: REGION });
-  await client.send(
-    new PutParameterCommand({
-      Name: SSM_KEY,
-      Value: JSON.stringify(workspaces),
-      Type: "String",
-      Overwrite: true,
-    })
-  );
+  await writeJsonConfig(WORKSPACES_CONFIG_KEY, workspaces, "Multi-tenant workspaces");
   cached = { data: workspaces, expiresAt: Date.now() + CACHE_TTL_MS };
 }
 

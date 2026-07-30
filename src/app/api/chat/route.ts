@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { escapeHtml } from "@/lib/escape-html";
-import { runBedrockChatLoop } from "@/lib/bedrock-chat";
+import { runWorkersAiChatLoop } from "@/lib/workers-ai-chat";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { slackChatNotify } from "@/lib/slack-notify";
 import { notifyTeam } from "@/lib/email";
@@ -138,18 +138,17 @@ export async function POST(request: NextRequest) {
 
   let finalText: string;
   try {
-    finalText = await runBedrockChatLoop(SYSTEM_PROMPT, messages);
+    finalText = await runWorkersAiChatLoop(SYSTEM_PROMPT, messages);
   } catch (err) {
     const name = err instanceof Error ? err.name : "";
-    // Log name + message only — never the full error object, which may carry
-    // SDK request context (region, model ARN, partial auth headers) into logs.
+    // Log name + message only — never the full error object.
     console.error(
-      "[chat] bedrock loop failed:",
+      "[chat] workers-ai loop failed:",
       name,
       err instanceof Error ? err.message : String(err)
     );
     // Access/auth errors → config issue on our side; surface as 503.
-    // Transient errors (throttling, model unavailable, etc.) → 502.
+    // Transient errors → 502.
     if (name === "AccessDeniedException" || name === "UnauthorizedException") {
       return Response.json(
         { error: "Chat not available right now. Please use the Contact page." },

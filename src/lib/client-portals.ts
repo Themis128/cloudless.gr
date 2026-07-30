@@ -1,10 +1,8 @@
 /**
  * Client portals — shared store + types (Phase 3 of the one-stop-shop roadmap).
  *
- * Portals are stored in SSM under /cloudless/CLIENT_PORTALS_JSON as a JSON
- * array (same pattern as pending-clients). This module is the single owner of
- * that parameter; the admin route and the public token route both go through
- * it.
+ * Portals live in D1 `app_config` key CLIENT_PORTALS_JSON (Cloudflare-first).
+ * This module is the single owner; admin + public token routes go through it.
  *
  * Phase 3 additions on top of the original timeline (steps):
  *   - deliverables: links the client reviews and approves/requests changes on
@@ -12,23 +10,10 @@
  *   - reportsEnabled/lastReportAt: monthly status email opt-in + bookkeeping
  */
 
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { readJsonConfig, writeJsonConfig } from "@/lib/app-config-json";
 
-const SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
-
-let ssm: SSMClient | null = null;
-function getClient(): SSMClient {
-  if (!ssm) ssm = new SSMClient({ region: REGION });
-  return ssm;
-}
-
-// E2E fallback:
-// Playwright runs in environments without AWS credentials, but we still want
-// admin flows to be testable. In those cases, persist portals in-memory.
-const E2E_MODE = process.env.NEXT_PUBLIC_E2E === "1";
-let e2ePortals: ClientPortal[] = [];
+const CONFIG_KEY = "CLIENT_PORTALS_JSON";
 
 export interface PortalComment {
   id: string;
@@ -113,12 +98,10 @@ export interface ClientPortal {
 export const DEFAULT_PORTAL_TOKEN_TTL_DAYS = 90;
 
 /**
- * Coerce a stored record into a well-formed portal. Legacy/partial entries in
- * SSM (written before deliverables/paymentLinks existed, or hand-edited) can be
+ * Coerce a stored record into a well-formed portal. Legacy/partial entries
+ * (written before deliverables/paymentLinks existed, or hand-edited) can be
  * missing the array fields that scoreClientHealth and the admin route iterate
- * over. A missing `steps` array threw an unhandled TypeError that surfaced as a
- * 500 on GET /api/admin/client-portals. Normalizing on read is the single choke
- * point that guarantees every consumer sees the arrays it assumes.
+ * over. Normalizing on read guarantees every consumer sees the arrays it assumes.
  */
 function normalizePortal(raw: ClientPortal): ClientPortal {
   const steps = Array.isArray(raw?.steps) ? raw.steps : [];
@@ -131,38 +114,13 @@ function normalizePortal(raw: ClientPortal): ClientPortal {
 }
 
 export async function readPortals(): Promise<ClientPortal[]> {
-  if (E2E_MODE) {
-    return (Array.isArray(e2ePortals) ? e2ePortals : []).map((p) => normalizePortal(p));
-  }
-  try {
-    const res = await getClient().send(new GetParameterCommand({ Name: SSM_KEY }));
-    const parsed: unknown = JSON.parse(res.Parameter?.Value ?? "[]");
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((p) => normalizePortal(p as ClientPortal));
-  } catch {
-    return [];
-  }
+  const parsed = await readJsonConfig<unknown>(CONFIG_KEY, []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((p) => normalizePortal(p as ClientPortal));
 }
 
 export async function writePortals(portals: ClientPortal[]): Promise<void> {
-  if (E2E_MODE) {
-    e2ePortals = portals;
-    return;
-  }
-  await getClient().send(
-    new PutParameterCommand({
-      Name: SSM_KEY,
-      Value: JSON.stringify(portals),
-      Type: "String",
-      Overwrite: true,
-      // Standard String parameters cap at 4KB; as portals accumulate (steps,
-      // comments, deliverables) the JSON crosses that and PutParameter throws,
-      // surfacing as a 500 on POST/PATCH/DELETE. Intelligent-Tiering stays
-      // Standard (free) until the value exceeds 4KB, then auto-upgrades to the
-      // 8KB Advanced tier — no crash, no cost for the common small case.
-      Tier: "Intelligent-Tiering",
-    })
-  );
+  await writeJsonConfig(CONFIG_KEY, portals, "Client portal magic-link store");
 }
 
 /** Constant-time token comparison — the token is the portal's sole credential. */

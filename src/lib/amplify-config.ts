@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Legacy shim — kept so existing callers don't break.
- * All authentication is now handled by next-auth + Cognito.
- * configureAmplifyWith returns true when an OIDC provider is configured.
+ * Legacy shim — Cognito/Amplify auth has been removed from production.
+ * Kept so existing test callers don't break. configureAmplifyWith returns true
+ * when any NEXT_PUBLIC_AUTH_PROVIDER is set (tests only).
  */
 
 export interface AmplifyAuthConfig {
