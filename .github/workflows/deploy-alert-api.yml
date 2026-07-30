@@ -5,6 +5,10 @@ name: Build + roll out alert-api
 # pre-CI history), imports it into k3s containerd, then patches the
 # Deployment to bump the tag.
 #
+# Prerequisites: namespace + Deployment from
+#   infrastructure/pi-alert-api/k8s/alert-api.yaml
+#   (NodePort 30820 → alert-api.alert-manager.svc:8080)
+#
 # Triggers:
 #   - push to main touching infrastructure/pi-alert-api/**
 #   - manual workflow_dispatch (operator can ship v3.4 from the GitHub UI
@@ -25,9 +29,9 @@ on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: "Image tag to ship (e.g. v3.4)"
+        description: "Image tag to ship (e.g. v3.5)"
         required: true
-        default: "v3.4"
+        default: "v3.5"
 
 permissions:
   contents: read
@@ -42,7 +46,7 @@ jobs:
     runs-on: [self-hosted, omv, pi]
     timeout-minutes: 15
     env:
-      TAG: ${{ inputs.version_tag || 'v3.4' }}
+      TAG: ${{ inputs.version_tag || 'v3.5' }}
     steps:
       - uses: actions/checkout@v5
 

@@ -109,8 +109,11 @@ class SlackDateTokenTest(unittest.TestCase):
 
 
 class SendAlertTest(unittest.TestCase):
-    def test_returns_false_without_webhook_url(self):
-        with mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", ""):
+    def test_returns_false_without_webhook_or_bot(self):
+        with (
+            mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", ""),
+            mock.patch.object(slack_notify, "SLACK_BOT_TOKEN", ""),
+        ):
             result = _run(
                 slack_notify.send_alert(
                     {
@@ -132,6 +135,9 @@ class SendAlertTest(unittest.TestCase):
             status_code = 200
             text = "ok"
 
+            def json(self):
+                return {"ok": True}
+
         class FakeClient:
             def __init__(self, *a, **kw):
                 pass
@@ -142,13 +148,14 @@ class SendAlertTest(unittest.TestCase):
             async def __aexit__(self, *a):
                 return False
 
-            async def post(self, url, json):
+            async def post(self, url, json=None, headers=None):
                 captured["url"] = url
                 captured["json"] = json
                 return FakeResp()
 
         with (
             mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", "https://hooks.slack.com/test"),
+            mock.patch.object(slack_notify, "SLACK_BOT_TOKEN", ""),
             mock.patch.object(slack_notify.httpx, "AsyncClient", FakeClient),
         ):
             result = _run(
@@ -192,12 +199,15 @@ class SendAlertTest(unittest.TestCase):
         self.assertIn("Alert #999", ctx_text)
         self.assertIn("severity: critical", ctx_text)
 
-    def test_resolved_status_suppresses_proposed_solution(self):
+    def test_bot_token_posts_chat_api(self):
         captured = {}
 
         class FakeResp:
             status_code = 200
-            text = "ok"
+            text = '{"ok":true}'
+
+            def json(self):
+                return {"ok": True}
 
         class FakeClient:
             def __init__(self, *a, **kw):
@@ -209,7 +219,56 @@ class SendAlertTest(unittest.TestCase):
             async def __aexit__(self, *a):
                 return False
 
-            async def post(self, url, json):
+            async def post(self, url, json=None, headers=None):
+                captured["url"] = url
+                captured["json"] = json
+                captured["headers"] = headers
+                return FakeResp()
+
+        with (
+            mock.patch.object(slack_notify, "SLACK_WEBHOOK_URL", ""),
+            mock.patch.object(slack_notify, "SLACK_BOT_TOKEN", "xoxb-test"),
+            mock.patch.object(slack_notify, "SLACK_CHANNEL_ID", "C09AF5W3X16"),
+            mock.patch.object(slack_notify.httpx, "AsyncClient", FakeClient),
+        ):
+            result = _run(
+                slack_notify.send_alert(
+                    {
+                        "code": "TEST",
+                        "host": "h",
+                        "service": "s",
+                        "severity": "info",
+                        "message": "m",
+                        "status": "FIRING",
+                    }
+                )
+            )
+        self.assertTrue(result)
+        self.assertEqual(captured["url"], slack_notify.SLACK_API_POST)
+        self.assertEqual(captured["json"]["channel"], "C09AF5W3X16")
+        self.assertIn("Bearer xoxb-test", captured["headers"]["Authorization"])
+
+    def test_resolved_status_suppresses_proposed_solution(self):
+        captured = {}
+
+        class FakeResp:
+            status_code = 200
+            text = "ok"
+
+            def json(self):
+                return {"ok": True}
+
+        class FakeClient:
+            def __init__(self, *a, **kw):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def post(self, url, json=None, headers=None):
                 captured["json"] = json
                 return FakeResp()
 

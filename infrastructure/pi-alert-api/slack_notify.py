@@ -20,7 +20,10 @@ import httpx
 logger = logging.getLogger(__name__)
 
 SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "")
+SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "C09AF5W3X16")
 SLACK_TIMEOUT = 10
+SLACK_API_POST = "https://slack.com/api/chat.postMessage"
 
 
 def _severity_emoji(severity: str) -> str:
@@ -93,8 +96,9 @@ def _slack_date(ts: datetime) -> str:
 
 
 async def send_alert(data: dict) -> bool:
-    if not SLACK_WEBHOOK_URL:
-        logger.warning("SLACK_WEBHOOK_URL not set; skipping Slack notification")
+    """Deliver alert via Incoming Webhook (legacy) or chat.postMessage (preferred)."""
+    if not SLACK_WEBHOOK_URL and not SLACK_BOT_TOKEN:
+        logger.warning("Neither SLACK_WEBHOOK_URL nor SLACK_BOT_TOKEN set; skipping Slack")
         return False
 
     code = data.get("code", "UNKNOWN")
@@ -154,22 +158,30 @@ async def send_alert(data: dict) -> bool:
         {"type": "divider"},
     ]
 
-    payload = {
-        "text": f"{sev_emoji} {severity.upper()} [{status}] {code} on {host}",
-        "blocks": blocks,
-    }
+    fallback = f"{sev_emoji} {severity.upper()} [{status}] {code} on {host}"
+    payload = {"text": fallback, "blocks": blocks}
 
     try:
         async with httpx.AsyncClient(timeout=SLACK_TIMEOUT) as client:
-            resp = await client.post(SLACK_WEBHOOK_URL, json=payload)
-            if resp.status_code == 200:
+            if SLACK_WEBHOOK_URL:
+                resp = await client.post(SLACK_WEBHOOK_URL, json=payload)
+                ok = resp.status_code == 200
+            else:
+                body = {**payload, "channel": SLACK_CHANNEL_ID}
+                resp = await client.post(
+                    SLACK_API_POST,
+                    headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}"},
+                    json=body,
+                )
+                ok = resp.status_code == 200 and bool((resp.json() or {}).get("ok"))
+            if ok:
                 logger.info("Slack alert sent: %s/%s [%s]", host, code, status)
                 return True
-            logger.error("Slack webhook %s: %s", resp.status_code, resp.text)
+            logger.error("Slack delivery %s: %s", resp.status_code, resp.text)
             return False
     except httpx.TimeoutException:
-        logger.error("Slack webhook timed out after %ds", SLACK_TIMEOUT)
+        logger.error("Slack delivery timed out after %ds", SLACK_TIMEOUT)
         return False
     except Exception as exc:
-        logger.error("Slack webhook exception: %s", exc)
+        logger.error("Slack delivery exception: %s", exc)
         return False
