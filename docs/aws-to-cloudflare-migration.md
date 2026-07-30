@@ -13,9 +13,9 @@
 
 **Operator follow-ups before / after merge to main:**
 
-1. Email (Node/Pi) — **cleared via Cloudflare Email Service REST** (`email-cloudflare.ts`); uses existing `CLOUDFLARE_*` secrets. `RESEND_API_KEY` optional fallback only.
-2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET** in `cloudless-secrets`; Workers AI + Email Sending OK on Pi.
-3. Meili reindex — **done** (`workers-ai-bge-small` @ 384-dim; in-cluster `MEILI_HOST`).
+1. Email (Node/Pi) — **Cloudflare Email Sending LIVE** from the app pod (`CLOUDFLARE_EMAIL_API_TOKEN` + `CLOUDFLARE_API_TOKEN` in `cloudless-secrets`). `RESEND_API_KEY` still optional and **not set** (no key in repo/env — paste when you want the Resend fallback).
+2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET**; Workers AI embed smoke (`bge-small` → **384**) OK from app pod.
+3. Meili reindex — **done** (4 docs / 4 embeddings; `workers-ai-bge-small` @ 384; in-cluster `MEILI_HOST`). `CRON_SECRET` rotated after earlier job-log leak.
 4. **Next:** PR-13 (R2 without `@aws-sdk/client-s3`), then PR-14 uninstall. Do not run PR-14 until PR-13 call sites are gone.
 5. Wave B (PR-04…06) still gated on Cognito/Dynamo data migration.
 
