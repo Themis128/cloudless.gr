@@ -14,23 +14,23 @@ All three share the same underlying logic and produce identical results.
 
 ## Components
 
-### 1. Bash Script: `scripts/cognito-setup.sh`
+### 1. Bash Script: `scripts/archive/cognito/cognito-setup.sh`
 
 **Purpose:** Standalone script for local or CI-based setup
 
-**Location:** `/home/tbaltzakis/code/cloudless.gr/scripts/cognito-setup.sh`
+**Location:** `/home/tbaltzakis/code/cloudless.gr/scripts/archive/cognito/cognito-setup.sh`
 
 **Usage:**
 
 ```bash
 # Full setup with verification
-bash scripts/cognito-setup.sh
+bash scripts/archive/cognito/cognito-setup.sh
 
 # Dry run (preview without changes)
-bash scripts/cognito-setup.sh --dry-run
+bash scripts/archive/cognito/cognito-setup.sh --dry-run
 
 # Skip dev server test (faster)
-bash scripts/cognito-setup.sh --skip-verify
+bash scripts/archive/cognito/cognito-setup.sh --skip-verify
 ```
 
 **What it does:**
@@ -74,7 +74,7 @@ pnpm cognito:setup
 - Colored output (✓ success, ✗ errors, ⚠ warnings)
 - Step-by-step progress
 - Automatic backup of `.env.local`
-- Built-in help: `bash scripts/cognito-setup.sh --help`
+- Built-in help: `bash scripts/archive/cognito/cognito-setup.sh --help`
 
 ---
 
@@ -156,7 +156,7 @@ const result = await client.call("cognito_full_setup", {
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Level 1: Core Logic (scripts/cognito-setup.sh)         │
+│  Level 1: Core Logic (scripts/archive/cognito/cognito-setup.sh)         │
 │  - AWS auth, SSM fetch, .env.local update, dev test     │
 └──────────────────┬──────────────────────────────────────┘
                    │
@@ -303,7 +303,7 @@ gh workflow run cognito-setup.yml --ref main
 pnpm cognito:setup:dry
 
 # Verbose output
-bash -x scripts/cognito-setup.sh
+bash -x scripts/archive/cognito/cognito-setup.sh
 
 # Manual step-by-step
 aws sts get-caller-identity              # Check auth
@@ -362,7 +362,7 @@ All scripts are fully idempotent:
 
 To extend or modify the automation:
 
-1. **Update the core script:** `scripts/cognito-setup.sh`
+1. **Update the core script:** `scripts/archive/cognito/cognito-setup.sh`
 2. **Update the skill:** `.claude/skills/cognito-setup/index.md`
 3. **Update MCP tools:** `tools/cognito-setup-mcp/src/index.ts`
 4. **Update workflows:** `.github/workflows/cognito-setup.yml`

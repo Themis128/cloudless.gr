@@ -4,7 +4,7 @@
 
 ### Core Automation
 
-- [x] `scripts/cognito-setup.sh` — Main bash script (338 lines)
+- [x] `scripts/archive/cognito/cognito-setup.sh` — Main bash script (338 lines)
   - [x] AWS CLI validation
   - [x] AWS credential checking
   - [x] SSO fallback

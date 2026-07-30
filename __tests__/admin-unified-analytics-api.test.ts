@@ -76,32 +76,11 @@ vi.mock("@/lib/stripe", () => ({
 // JWT helpers
 // ---------------------------------------------------------------------------
 function makeAdminToken(): string {
-  const payload = {
-    sub: "admin-sub",
-    email: "admin@test.com",
-    groups: ["admin"],
-    aud: "test-client",
-    iss: "https://auth.cloudless.gr/realms/cloudless",
-    iat: Math.floor(Date.now() / 1000) - 60,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const h = Buffer.from(JSON.stringify({ alg: ALG_RS256 })).toString(ENC_BASE64URL);
-  const b = Buffer.from(JSON.stringify(payload)).toString(ENC_BASE64URL);
-  return `${h}.${b}.sig`;
+  return "test-admin-session";
 }
 
 function makeUserToken(): string {
-  const payload = {
-    sub: "user-sub",
-    groups: [],
-    aud: "test-client",
-    iss: "https://auth.cloudless.gr/realms/cloudless",
-    iat: Math.floor(Date.now() / 1000) - 60,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const h = Buffer.from(JSON.stringify({ alg: ALG_RS256 })).toString(ENC_BASE64URL);
-  const b = Buffer.from(JSON.stringify(payload)).toString(ENC_BASE64URL);
-  return `${h}.${b}.sig`;
+  return "test-user-session";
 }
 
 function adminReq(url: string): NextRequest {

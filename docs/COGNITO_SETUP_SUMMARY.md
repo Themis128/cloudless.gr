@@ -6,7 +6,7 @@ I've created a comprehensive automated tooling suite for Cognito authentication 
 
 ```bash
 # Option 1: Simple bash script
-bash scripts/cognito-setup.sh
+bash scripts/archive/cognito/cognito-setup.sh
 
 # Option 2: pnpm aliases
 pnpm cognito:setup                 # Full setup
@@ -32,7 +32,7 @@ All options automatically:
 
 ### Core Script
 
-- **`scripts/cognito-setup.sh`** (338 lines)
+- **`scripts/archive/cognito/cognito-setup.sh`** (338 lines)
   - Main automation logic
   - Handles AWS auth, SSM fetch, .env update, dev test
   - Supports `--dry-run` and `--skip-verify` flags
@@ -80,7 +80,7 @@ All options automatically:
 ```
 Three-Layer Design:
 
-Layer 1: Core Script (scripts/cognito-setup.sh)
+Layer 1: Core Script (scripts/archive/cognito/cognito-setup.sh)
 ├─ AWS authentication
 ├─ SSM parameter fetch
 ├─ .env.local update
@@ -132,7 +132,7 @@ gh workflow run cognito-setup.yml
 pnpm cognito:setup:dry
 
 # Verbose output
-bash -x scripts/cognito-setup.sh
+bash -x scripts/archive/cognito/cognito-setup.sh
 
 # Skip dev server test (faster)
 pnpm cognito:setup:quick
@@ -237,7 +237,7 @@ gh workflow run cognito-setup.yml
 
 ```bash
 pnpm cognito:setup:dry
-bash -x scripts/cognito-setup.sh
+bash -x scripts/archive/cognito/cognito-setup.sh
 ```
 
 → Diagnose issues step-by-step
@@ -312,7 +312,7 @@ If something doesn't work:
 
 1. Check the error message — it includes the solution
 2. Try dry-run to see what would happen: `pnpm cognito:setup:dry`
-3. Check logs: `bash -x scripts/cognito-setup.sh`
+3. Check logs: `bash -x scripts/archive/cognito/cognito-setup.sh`
 4. Read `COGNITO_SETUP.md` (sibling) troubleshooting section
 5. Ask in #cloudless Slack or open an issue
 

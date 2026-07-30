@@ -35,28 +35,12 @@ vi.mock("@/lib/notion-cache", () => ({
 
 /** Build a fake admin JWT. No real signature -- accepted by the dev fallback. */
 function makeAdminToken(): string {
-  const payload = {
-    sub: "test-admin",
-    email: "admin@cloudless.gr",
-    groups: ["admin"],
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fake-sig`;
+  return "test-admin-session";
 }
 
 /** Build a fake non-admin JWT. */
 function makeUserToken(): string {
-  const payload = {
-    sub: "test-user",
-    email: "user@cloudless.gr",
-    groups: [],
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fake-sig`;
+  return "test-user-session";
 }
 
 /** POST with admin token and optional JSON body. */

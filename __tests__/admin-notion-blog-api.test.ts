@@ -36,19 +36,7 @@ vi.mock("@/lib/notion-blog", () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 function makeAdminToken(): string {
-  const payload = {
-    sub: "test-admin-sub",
-    email: "admin@cloudless.gr",
-    preferred_username: "admin-user",
-    groups: ["admin"],
-    aud: "test-client-id",
-    iss: "https://auth.cloudless.gr/realms/cloudless",
-    iat: Math.floor(Date.now() / 1000) - 60,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fake-sig`;
+  return "test-admin-session";
 }
 
 function adminRequest(url: string): NextRequest {

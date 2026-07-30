@@ -141,34 +141,12 @@ vi.mock("jose", async () => {
 /** Build a mock admin JWT with Cognito-style claims. No real signature —
  *  verifyToken falls back to decode-only when COGNITO_ISSUER is unset. */
 function makeAdminToken(): string {
-  const payload = {
-    sub: "test-admin-sub",
-    email: "admin@cloudless.gr",
-    preferred_username: "admin-user",
-    groups: ["admin"],
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST",
-    iat: Math.floor(Date.now() / 1000) - 60,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fake-sig`;
+  return "test-admin-session";
 }
 
 /** Build a mock non-admin JWT with Cognito-style claims. */
 function makeUserToken(): string {
-  const payload = {
-    sub: "test-user-sub",
-    email: "user@cloudless.gr",
-    preferred_username: "regular-user",
-    groups: [],
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST",
-    iat: Math.floor(Date.now() / 1000) - 60,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fake-sig`;
+  return "test-user-session";
 }
 
 function adminRequest(url: string, init?: RequestInit): NextRequest {

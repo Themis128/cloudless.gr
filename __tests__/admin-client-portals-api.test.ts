@@ -25,17 +25,7 @@ vi.mock("jose", async () => {
 // JWT helpers
 // ---------------------------------------------------------------------------
 function makeAdminToken(): string {
-  const payload = {
-    sub: "admin-sub",
-    groups: ["admin"],
-    aud: "client",
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/pool",
-    iat: Math.floor(Date.now() / 1000) - 10,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const h = Buffer.from("{}").toString("base64url");
-  const b = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${h}.${b}.sig`;
+  return "test-admin-session";
 }
 
 function adminReq(url: string, init?: { method?: string; body?: string }): NextRequest {

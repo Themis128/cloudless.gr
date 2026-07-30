@@ -7,7 +7,7 @@ This document covers automated setup of Cognito authentication for local develop
 ### Option 1: CLI Script (Recommended)
 
 ```bash
-bash scripts/cognito-setup.sh
+bash scripts/archive/cognito/cognito-setup.sh
 ```
 
 This fully automates:
@@ -95,7 +95,7 @@ The setup script updates `.env.local`:
 ### Full Setup (Recommended)
 
 ```bash
-bash scripts/cognito-setup.sh
+bash scripts/archive/cognito/cognito-setup.sh
 ```
 
 **Output:**
@@ -126,7 +126,7 @@ Next steps:
 See what would change without making modifications:
 
 ```bash
-bash scripts/cognito-setup.sh --dry-run
+bash scripts/archive/cognito/cognito-setup.sh --dry-run
 ```
 
 ### Skip Dev Server Test
@@ -134,7 +134,7 @@ bash scripts/cognito-setup.sh --dry-run
 Faster setup if you know it works:
 
 ```bash
-bash scripts/cognito-setup.sh --skip-verify
+bash scripts/archive/cognito/cognito-setup.sh --skip-verify
 ```
 
 ## Troubleshooting
@@ -299,13 +299,13 @@ Override defaults:
 
 ```bash
 # Use different AWS region
-AWS_REGION=eu-west-1 bash scripts/cognito-setup.sh
+AWS_REGION=eu-west-1 bash scripts/archive/cognito/cognito-setup.sh
 
 # Use different SSM path prefix
-SSM_PREFIX=/custom/path/COGNITO_CLIENT_ID bash scripts/cognito-setup.sh
+SSM_PREFIX=/custom/path/COGNITO_CLIENT_ID bash scripts/archive/cognito/cognito-setup.sh
 
 # Custom pool ID (for testing)
-POOL_ID=us-west-2_XYZ123 bash scripts/cognito-setup.sh
+POOL_ID=us-west-2_XYZ123 bash scripts/archive/cognito/cognito-setup.sh
 ```
 
 ## Advanced: Manual Setup
@@ -334,7 +334,7 @@ curl http://localhost:4000/en
 Enable verbose output:
 
 ```bash
-bash -x scripts/cognito-setup.sh
+bash -x scripts/archive/cognito/cognito-setup.sh
 ```
 
 Check logs:
