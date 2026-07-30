@@ -67,19 +67,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           # PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch
-          # 202 = accepted, 422 = conflict or already up to date-ish
-          HTTP=$(gh api -X PUT "repos/${{ github.repository }}/pulls/${PR}/update-branch" \
-            -f expected_head_sha="${{ github.event.pull_request.head.sha }}" \
-            --include 2>&1 | tee /tmp/update-branch.out | head -1 | awk '{print $2}')
-          echo "http=$HTTP" >> "$GITHUB_OUTPUT"
-          if grep -qi "merge conflict" /tmp/update-branch.out; then
+          # 202 = accepted; 422 = conflict OR already up-to-date / sha mismatch.
+          # Never fail the job on non-conflict 422 — still arm auto-merge.
+          set +e
+          OUT=$(gh api -X PUT "repos/${{ github.repository }}/pulls/${PR}/update-branch" \
+            -f expected_head_sha="${{ github.event.pull_request.head.sha }}" 2>&1)
+          RC=$?
+          set -e
+          printf '%s\n' "$OUT" | tee /tmp/update-branch.out
+          echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          if printf '%s' "$OUT" | grep -qi "merge conflict"; then
             echo "conflict=true" >> "$GITHUB_OUTPUT"
           else
             echo "conflict=false" >> "$GITHUB_OUTPUT"
           fi
-          cat /tmp/update-branch.out || true
 
       - name: Label + comment on merge conflicts
         if: steps.update.outputs.conflict == 'true'
