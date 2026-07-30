@@ -38,14 +38,18 @@ if (process.env.OPEN_NEXT_BUILD_ACTIVE === "1") {
 function ensureMiddlewareStubs() {
   try {
     if (!fs.existsSync(serverDir)) return;
-    if (!fs.existsSync(middlewareJsPath)) {
-      // Next finalization copyfile()'s this into standalone/; edge wrapper
-      // may not exist yet — empty stub unblocks the copy, then
-      // opennext-middleware-fix overwrites with the real edge-wrapper.
-      fs.writeFileSync(middlewareJsPath, "// middleware stub for Next 16 finalization\n");
+    // Use exclusive create (wx) to avoid TOCTOU races flagged by CodeQL js/file-system-race.
+    try {
+      fs.writeFileSync(middlewareJsPath, "// middleware stub for Next 16 finalization\n", {
+        flag: "wx",
+      });
+    } catch (err) {
+      if (err && typeof err === "object" && "code" in err && err.code !== "EEXIST") throw err;
     }
-    if (!fs.existsSync(nftPath)) {
-      fs.writeFileSync(nftPath, JSON.stringify({ files: ["middleware.js"] }));
+    try {
+      fs.writeFileSync(nftPath, JSON.stringify({ files: ["middleware.js"] }), { flag: "wx" });
+    } catch (err) {
+      if (err && typeof err === "object" && "code" in err && err.code !== "EEXIST") throw err;
     }
   } catch {
     // Best-effort — next may race mkdir/rmdir during clean.

@@ -216,10 +216,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   }
 
   // Fire-and-forget: update Stripe product metadata when configured.
-  updateStripeDescriptions(descriptions).catch((err) => {
-    const safeErr =
-      err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
-    console.warn("[ai/product-descriptions] Stripe metadata update failed:", safeErr);
+  updateStripeDescriptions(descriptions).catch(() => {
+    console.warn("[ai/product-descriptions] Stripe metadata update failed");
   });
 
   return NextResponse.json({ applied });
@@ -238,11 +236,9 @@ async function updateStripeDescriptions(
 
   await Promise.allSettled(
     descriptions.map(({ id, description }) =>
-      stripe.products.update(id, { description }).catch((err) => {
-        const safeId = String(id).replace(/[\x00-\x1F\x7F]/g, "");
-        const safeErr =
-          err instanceof Error ? err.message : String(err).replace(/[\x00-\x1F\x7F]/g, "");
-        console.warn(`[ai/product-descriptions] Stripe update failed for ${safeId}:`, safeErr);
+      stripe.products.update(id, { description }).catch(() => {
+        // Static log only — product id / error text are user-influenced (CodeQL js/log-injection).
+        console.warn("[ai/product-descriptions] Stripe product update failed");
       })
     )
   );

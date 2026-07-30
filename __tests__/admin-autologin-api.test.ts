@@ -148,7 +148,9 @@ describe("GET /api/admin/autologin — validation", () => {
     const res = await GET(adminRequest("http://localhost/api/admin/autologin?app=unknown-app"));
     expect(res.status).toBe(400);
     const data = await res.json();
-    expect(data.error).toContain("unknown-app");
+    expect(data.error).toContain("Unknown app");
+    expect(data.error).toContain("Valid values");
+    expect(data.error).not.toContain("unknown-app");
   });
 
   it("returns 400 when ?app is omitted", async () => {
@@ -355,7 +357,7 @@ describe("GET /api/admin/autologin — token security", () => {
     expect(res.status).toBe(502);
     const data = await res.json();
     expect(JSON.stringify(data)).not.toContain(longSecret);
-    expect(JSON.stringify(data)).toContain("[REDACTED]");
+    expect(data.error).toBe("Failed to get login URL");
   });
 });
 

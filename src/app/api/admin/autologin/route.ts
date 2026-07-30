@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   if (!VALID_APPS.has(appParam as SelfhostedApp)) {
     return NextResponse.json(
       {
-        error: `Unknown app "${appParam}". Valid values: ${[...VALID_APPS].join(", ")}`,
+        error: `Unknown app. Valid values: ${[...VALID_APPS].join(", ")}`,
       },
       { status: 400 }
     );
@@ -55,13 +55,9 @@ export async function GET(request: NextRequest) {
       { url: result.url, app, hasToken: result.hasToken },
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
-  } catch (err) {
-    // Deliberately strip any secret values from the error message before
-    // returning to the client.
-    const raw = err instanceof Error ? err.message : String(err);
-    // Remove anything that looks like a token (long alphanumeric strings)
-    const safe = raw.replace(/[A-Za-z0-9_\-]{40,}/g, "[REDACTED]");
-    console.error(`[autologin] Error fetching URL for app=${app}:`, raw);
-    return NextResponse.json({ error: `Failed to get login URL: ${safe}` }, { status: 502 });
+  } catch {
+    // Never echo upstream/error text into logs or responses (CodeQL js/log-injection).
+    console.error("[autologin] Failed to fetch login URL");
+    return NextResponse.json({ error: "Failed to get login URL" }, { status: 502 });
   }
 }
