@@ -62,8 +62,8 @@ flowchart TB
 
 | Boundary | Who | What travels | Auth |
 |----------|-----|--------------|------|
-| **Cloudflare public** | Humans, bots, Lighthouse (when not CF-blocked) | App HTTP/S for `*.cloudless.gr` | App session / Cognito / CRON_SECRET |
-| **Tailscale fabric** | Admins, GHA with `TS_AUTHKEY`, Cursor infra MCP | SSH, `:6443`, NodePorts, Serve HTTPS, pod CIDRs | Tailnet ACL + device identity |
+| **Cloudflare public** | Humans, bots, Lighthouse (when not CF-blocked) | App HTTP/S for `*.cloudless.gr` | App session / D1 auth / CRON_SECRET |
+| **Tailscale fabric** | Admins (full), members (HTTPS Serve only), GHA with `TS_AUTHKEY` | SSH, `:6443`, NodePorts, Serve HTTPS, pod CIDRs | Tailnet ACL grants + device identity |
 | **Never cross** | — | DB TCP, etcd, Redis | Stay ClusterIP; use `kubectl port-forward` |
 
 ---
@@ -168,8 +168,56 @@ Manifest map:
 | `proxygroup.yaml` | L7 + API |
 | `ingresses.yaml` | L7 backends |
 | `ingress-class.yaml` | `IngressClass` `tailscale` |
-| `acl-policy.example.json` | ACL tags / autoApprovers / grants |
+| `acl-policy.example.json` | ACL tags / autoApprovers / grants / ssh / Apps `nodeAttrs` |
 | `deploy.sh` | Helm operator install (OAuth env — **no AWS SSM**) |
+
+---
+
+## 4b. DNS, ACL, Apps, VIP Services (operator console)
+
+Day-2 detail also lives in
+[`infrastructure/tailscale/README.md`](../../infrastructure/tailscale/README.md).
+
+### DNS (`tail4ecae1.ts.net`)
+
+| Setting | Value | Do not |
+|---------|-------|--------|
+| MagicDNS | On | Disable / rename tailnet casually |
+| Global nameserver | `100.100.100.100` (MagicDNS) | Add Pi-hole/router as override unless intentional |
+| Search domains | `tail4ecae1.ts.net` | Stuff home-LAN domains in without need |
+| HTTPS Certificates | On | Disable (breaks Serve TLS) |
+
+Connector hosts use `--accept-dns=false` so MagicDNS is not the system
+resolver on the Pi (CoreDNS / LAN DNS stay authoritative).
+
+### Grants + Tailscale SSH (hardened 2026-07-30)
+
+| Src | Dst | Allow |
+|-----|-----|-------|
+| admin | `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` | `*` |
+| member | `tag:k8s` | `tcp:80`, `tcp:443` |
+| member | `tag:app-connector` | DNS `53` only |
+| admin SSH | self + tagged fabric | `accept` |
+| member SSH | self | `check` |
+
+Apply via CI with **`acl_only=true`** (skips dangerous Machine cleanup):
+
+```bash
+gh workflow run tailscale-admin-api.yml -f dry_run=false -f acl_only=true
+```
+
+### VIP Services vs endpoint discovery
+
+| Console surface | What it is | Action |
+|-----------------|------------|--------|
+| **Services** (`svc:grafana`, `svc:meilisearch`, `svc:kube`) | Approved Serve VIP hosts | Keep; prune orphans with `tailscale-approve-service-hosts` |
+| **Machines → discovered endpoints** | Inventory (sshd, node_exporter, k3s, …) | Ignore noise; grants control reachability |
+
+### Apps (app connectors)
+
+Live connector: **`github-omv`** with `tag:app-connector`, advertising SaaS
+CIDRs. Presets + custom domains are in `acl-policy.example.json` `nodeAttrs`.
+Do **not** put `*.cloudless.gr` or Serve VIP hosts into Apps.
 
 ---
 
@@ -307,6 +355,9 @@ Typical secrets: `TS_AUTHKEY` (ephemeral, pre-authorized), `KUBECONFIG_B64`,
 | D6 | No AWS SSM in `deploy.sh` | Free-tier / Cloudflare-first policy — OAuth env only |
 | D7 | Prefer MagicDNS over CGNAT literals | Tailscale IPs rotate; docs and new automation must not hardcode |
 | D8 | CI origin fallback = private fabric L4, not Funnel | Funnel is public Serve over DERP — intermittent timeouts from GHA; NodePort via MagicDNS after `TS_AUTHKEY` is the same origin Cloudflare Tunnel uses |
+| D9 | Members HTTPS-only to `tag:k8s`; admins `*` | Stops accidental reach to node_exporter / k3s / discovery ports over the tailnet |
+| D10 | ACL CI with `acl_only=true` by default | Full admin-api cleanup can delete Connector Machines that look “stale” |
+| D11 | App connector on a tagged Linux host + MagicDNS DNS page unchanged | SaaS egress via Apps; public site stays Cloudflare |
 
 ---
 
@@ -332,6 +383,12 @@ mindmap
       port-forward only
     AWS SSM for TS OAuth
       Use TS_CLIENT_ID/SECRET env
+    Member grants ip *
+      Re-opens :9100 / :6443
+    Disable MagicDNS or HTTPS certs
+      Breaks Serve + svc VIP names
+    Put cloudless.gr in Apps
+      Public edge is Cloudflare
 ```
 
 Checklist before merging Tailscale changes:
@@ -341,7 +398,10 @@ Checklist before merging Tailscale changes:
 - [ ] No new Funnel-primary path for `cloudless.gr`?
 - [ ] CI origin checks use **private** MagicDNS NodePort (not public Funnel)?
 - [ ] Scripts use MagicDNS or document IP refresh?
-- [ ] ACL `tag:k8s` / `tag:k8s-operator` still own the tags?
+- [ ] ACL `tag:k8s` / `tag:k8s-operator` / `tag:app-connector` still owned?
+- [ ] Member grants still HTTPS/DNS-only (not `*` to tagged nodes)?
+- [ ] ACL apply uses `acl_only=true` unless device cleanup is intentional?
+- [ ] DNS page still MagicDNS + HTTPS Certificates on?
 
 ---
 
@@ -352,15 +412,22 @@ Checklist before merging Tailscale changes:
 1. OAuth client (Devices Core + Auth Keys write) tagged **`tag:k8s-operator`**:
    https://login.tailscale.com/admin/settings/oauth
 2. Merge [`acl-policy.example.json`](../../infrastructure/tailscale/acl-policy.example.json)
-   into Access controls (`tagOwners`, `autoApprovers`, `grants`).
-3. Enable HTTPS Certificates (Serve / kube-apiserver):
+   into Access controls (`tagOwners`, `autoApprovers`, `grants`, `ssh`, `nodeAttrs`):
+
+```bash
+gh workflow run tailscale-admin-api.yml -f dry_run=false -f acl_only=true
+```
+
+3. Confirm DNS console: MagicDNS on, global NS `100.100.100.100`, HTTPS
+   Certificates on (see §4b).
+4. Enable HTTPS Certificates if the toggle was ever off:
 
 ```bash
 bash scripts/tailscale-enable-https.sh
 # Workflow: Tailscale enable HTTPS
 ```
 
-4. Approve Service hosts (HA VIPs stay dark until approved):
+5. Approve Service hosts (HA VIPs stay dark until approved):
 
 ```bash
 bash scripts/tailscale-approve-service-hosts.sh
@@ -421,7 +488,7 @@ sudo tailscale set --accept-routes   # Linux with real TUN
 | `tailscale-approve-service-hosts.yml` | Approve `svc:*` hosts |
 | `tailscale-fix-fabric-acl.yml` | ACL merge helper |
 | `tailscale-probe-posture.yml` | Posture / health of fabric |
-| `tailscale-admin-api.yml` | Admin API automation |
+| `tailscale-admin-api.yml` | ACL merge (+ optional device cleanup); prefer `acl_only=true` |
 | `scripts/tailscale-diagnose.sh` | Local diagnosis |
 | `scripts/setup-kubectl-tailscale.sh` | Client kubeconfig helper |
 | `scripts/ts-wsl.sh` | WSL userspace Tailscale |
@@ -441,6 +508,9 @@ flowchart TD
   Q -->|Funnel HTTPS times out| A5b[Expected — Funnel is not SLA<br/>use private NodePort path]
   Q -->|NodePort timeout on 100.x| A6[Stale CGNAT — resolve MagicDNS<br/>after Tailscale join]
   Q -->|Offline tagged device| A7[Delete in admin UI<br/>see OFFLINE-DEVICE-TROUBLESHOOTING]
+  Q -->|Member hits :9100/:6443| A8[Expected deny — grants are HTTPS-only<br/>promote to admin or use LAN]
+  Q -->|Apps red / SaaS not routed| A9[Connector tag + advertise-connector<br/>ACL nodeAttrs + MagicDNS on]
+  Q -->|svc VIP empty/dark| A10[Approve Service host<br/>HTTPS Certificates on]
 ```
 
 ```bash
@@ -479,4 +549,7 @@ Offline / orphaned devices: [`OFFLINE-DEVICE-TROUBLESHOOTING.md`](../../infrastr
 | **Connector** | Operator CR that advertises subnet routes |
 | **ProxyGroup** | Shared proxy StatefulSet (`ingress` / `egress` / `kube-apiserver`) |
 | **MagicDNS** | `*.tail4ecae1.ts.net` names — prefer over CGNAT IPs |
+| **VIP Service** | Approved `svc:*` Serve host (grafana / meilisearch / kube) |
+| **App connector** | Tagged node advertising SaaS routes for Tailscale Apps |
+| **Endpoint discovery** | Machines UI inventory — not an allow rule |
 | **pi-origin** | Cloudflare hostname → Tunnel → `192.168.1.128:30300` |

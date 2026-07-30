@@ -22,7 +22,8 @@ flowchart TD
 | Situation | Use |
 |-----------|-----|
 | Sitting on office LAN | LAN kubeconfig → `https://192.168.1.128:6443` |
-| Off-LAN, system Tailscale (TUN) | `ProxyGroup/kube` Serve URL |
+| Off-LAN, **admin** + system Tailscale (TUN) | `ProxyGroup/kube` Serve URL |
+| Off-LAN, **member** (non-admin) | No `:6443` over fabric — use LAN or ask an admin |
 | WSL userspace only | Prefer LAN; userspace SOCKS to `100.x:6443` is unreliable |
 
 ## Endpoints (prefer MagicDNS)
@@ -82,11 +83,16 @@ ssh -J tbaltzakis@192.168.1.130 tbaltzakis@192.168.1.128 \
   'KUBECONFIG=~/.kube/config kubectl get nodes'
 ```
 
-Over Tailscale (MagicDNS):
+Over Tailscale MagicDNS (admin ACL + `tailscale set --ssh` on the host):
 
 ```bash
+ssh tbaltzakis@github-omv 'kubectl get nodes'
+# or fully qualified:
 ssh tbaltzakis@github-omv.tail4ecae1.ts.net 'kubectl get nodes'
 ```
+
+Members cannot reach `:6443` / SSH on tagged nodes over the fabric (HTTPS-only
+grants). Prefer LAN `sshd` as break-glass. See fabric doc §4b.
 
 ## Machines hygiene
 
