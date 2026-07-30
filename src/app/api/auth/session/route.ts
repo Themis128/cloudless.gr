@@ -14,18 +14,25 @@ function getDb(_request: NextRequest): AuthDatabase | null {
 export async function GET(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    // Fallback to next-auth when D1 is not configured (local Next.js).
-    // Auth.js SessionProvider expects JSON `null` (not an HTML 404 page).
+    // Fallback to next-auth when D1 is not configured (Pi / Cognito path).
+    // Auth.js SessionProvider expects JSON `null` with HTTP 200 — never HTML
+    // and never a 4xx that triggers ClientFetchError in the browser poller.
     try {
       const { handlers } = await import("@/lib/auth");
       const res = await handlers.GET(req);
       const ct = res.headers.get("content-type") ?? "";
       if (!ct.includes("application/json")) {
-        // Auth.js sometimes returns HTML error/signin pages — never leak those
-        // to the browser session poller (ClientFetchError on "<!DOCTYPE").
         return NextResponse.json(null);
       }
-      return res;
+      const text = await res.text();
+      if (!text || text === "null") {
+        return NextResponse.json(null);
+      }
+      try {
+        return NextResponse.json(JSON.parse(text) as unknown);
+      } catch {
+        return NextResponse.json(null);
+      }
     } catch {
       return NextResponse.json(null);
     }
@@ -54,6 +61,14 @@ export async function GET(req: NextRequest) {
       phone: user.phone,
     },
     isAdmin: admin,
+  });
+}
+
+/** HEAD probes (curl -I, health checks) must not fall through to Auth.js 400. */
+export async function HEAD() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: { "content-type": "application/json" },
   });
 }
 

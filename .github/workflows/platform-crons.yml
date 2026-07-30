@@ -33,7 +33,9 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  BASE_URL: https://cloudless.gr
+  # Bypass Cloudflare Bot Fight Mode on the apex (GHA IPs get 403 interstitials).
+  # pi-origin hits the tunnel → Pi NodePort directly; app still enforces CRON_SECRET.
+  BASE_URL: https://pi-origin.cloudless.gr
 
 jobs:
   trigger:

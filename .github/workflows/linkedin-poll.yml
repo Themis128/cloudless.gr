@@ -48,9 +48,10 @@ jobs:
       - name: Curl the cron endpoint
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          # SITE_ORIGIN should be https://cloudless.gr in prod. Override via
-          # vars to point at a preview deploy.
-          SITE_ORIGIN: ${{ vars.AD_ANALYTICS_SITE_ORIGIN || 'https://cloudless.gr' }}
+          # Default to pi-origin so GitHub Actions bypasses Cloudflare Bot Fight
+          # Mode on the apex (GHA IPs get 403 interstitials). Override via
+          # vars.AD_ANALYTICS_SITE_ORIGIN for preview deploys.
+          SITE_ORIGIN: ${{ vars.AD_ANALYTICS_SITE_ORIGIN || 'https://pi-origin.cloudless.gr' }}
         run: |
           set -euo pipefail
           if [ -z "${CRON_SECRET:-}" ]; then
