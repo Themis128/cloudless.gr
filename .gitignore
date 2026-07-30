@@ -233,3 +233,6 @@ RUN-MIGRATION.md
 
 # Wrangler / miniflare local state (D1/KV/R2)
 .wrangler/
+
+# Local DB snapshots + kubectl port-forward PIDs (SQLTools)
+.local/

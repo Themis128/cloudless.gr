@@ -227,6 +227,126 @@
     "editor.formatOnSave": false
   },
 
+  // SQLTools — omv k3s via `pnpm db:forward` / `pnpm db:sqlite:pull`
+  // Cloudflare D1 via `pnpm db:d1:pull` → group cloudflare-d1
+  // Passwords: `pnpm db:passwords` (never commit). Docs: docs/databases/
+  // Do not use ms-mssql for these stores (MariaDB/Postgres/SQLite/D1 only).
+  "sqltools.useNodeRuntime": true,
+  "sqltools.autoConnectTo": [],
+  "sqltools.connections": [
+    {
+      "id": "omv-espocrm-mariadb",
+      "name": "omv · EspoCRM MariaDB",
+      "group": "omv",
+      "driver": "MySQL",
+      "server": "127.0.0.1",
+      "port": 13306,
+      "database": "espocrm",
+      "username": "espocrm",
+      "askForPassword": true,
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    },
+    {
+      "id": "omv-espocrm-mariadb-root",
+      "name": "omv · EspoCRM MariaDB (root)",
+      "group": "omv",
+      "driver": "MySQL",
+      "server": "127.0.0.1",
+      "port": 13306,
+      "database": "espocrm",
+      "username": "root",
+      "askForPassword": true,
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    },
+    {
+      "id": "omv-appflowy-postgres",
+      "name": "omv · AppFlowy Postgres",
+      "group": "omv",
+      "driver": "PostgreSQL",
+      "server": "127.0.0.1",
+      "port": 15432,
+      "database": "postgres",
+      "username": "postgres",
+      "askForPassword": true,
+      "connectionTimeout": 30,
+      "previewLimit": 50,
+      "pgOptions": { "ssl": false }
+    },
+    {
+      "id": "omv-postiz-postgres",
+      "name": "omv · Postiz Postgres",
+      "group": "omv",
+      "driver": "PostgreSQL",
+      "server": "127.0.0.1",
+      "port": 15433,
+      "database": "postiz",
+      "username": "postiz",
+      "askForPassword": true,
+      "connectionTimeout": 30,
+      "previewLimit": 50,
+      "pgOptions": { "ssl": false }
+    },
+    {
+      "id": "omv-n8n-sqlite",
+      "name": "omv · n8n SQLite",
+      "group": "omv-sqlite",
+      "driver": "SQLite",
+      "database": "${workspaceFolder}/.local/db/n8n.sqlite",
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    },
+    {
+      "id": "omv-uptime-kuma-sqlite",
+      "name": "omv · Uptime Kuma SQLite",
+      "group": "omv-sqlite",
+      "driver": "SQLite",
+      "database": "${workspaceFolder}/.local/db/uptime-kuma.db",
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    },
+    {
+      "id": "omv-grafana-sqlite",
+      "name": "omv · Grafana SQLite",
+      "group": "omv-sqlite",
+      "driver": "SQLite",
+      "database": "${workspaceFolder}/.local/db/grafana.db",
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    },
+    {
+      "id": "cf-user-auth-db",
+      "name": "cf · user-auth-db (D1 snapshot)",
+      "group": "cloudflare-d1",
+      "driver": "SQLite",
+      "database": "${workspaceFolder}/.local/db/user-auth-db.sqlite",
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    },
+    {
+      "id": "cf-auth-db-preview",
+      "name": "cf · auth-db-preview (D1 snapshot)",
+      "group": "cloudflare-d1",
+      "driver": "SQLite",
+      "database": "${workspaceFolder}/.local/db/auth-db-preview.sqlite",
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    },
+    {
+      "id": "cf-cloudless-auth",
+      "name": "cf · cloudless-auth (D1 snapshot)",
+      "group": "cloudflare-d1",
+      "driver": "SQLite",
+      "database": "${workspaceFolder}/.local/db/cloudless-auth.sqlite",
+      "connectionTimeout": 30,
+      "previewLimit": 50
+    }
+  ],
+
+  // Microsoft SQL Server extension — unused (no SQL Server in this stack).
+  "mssql.connections": [],
+
   // Python — this repo is primarily Next.js. Cursor Pyright + ms-python still
   // wake up because pyrightconfig.json / pyproject.toml exist. Limit analysis
   // to open .py files so browsing docs/TS does not full-scan scripts/.
@@ -254,5 +374,5 @@
     "editor.codeActionsOnSave": {
       "source.organizeImports": "explicit"
     }
-  },
+  }
 }
