@@ -7,9 +7,10 @@ Works from a cloud session with no direct Cloudflare or AWS access.
 ## What this command does
 
 1. Checks current LB state (report run) via issue #382.
-2. Asks the user for a Cloudflare API token if not already in SSM.
+2. Asks the user for a Cloudflare API token if not already in the GitHub Secret.
 3. Dispatches `store-cloudflare-token.yml` via `mcp__github__actions_run_trigger`
-   with the token — stores to SSM and applies the LB in one shot.
+   with the token — stores as GitHub Secret `CLOUDFLARE_API_TOKEN` and applies
+   the LB in one shot (requires repo secret `GH_PAT`).
 4. Monitors the result via issue #382.
 
 ## Steps
@@ -72,8 +73,8 @@ Once you have the token, call `mcp__github__actions_run_trigger` with:
 The workflow:
 
 - Masks the token immediately (will NOT appear in logs)
-- Writes it to SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` (SecureString)
-- Runs `scripts/setup-cloudflare-lb.sh` in apply mode
+- Writes it as GitHub Actions secret `CLOUDFLARE_API_TOKEN` (via `gh secret set`; requires `GH_PAT`)
+- Runs `scripts/setup-cloudflare-lb.sh` in apply mode with the token from the workflow input
 - Creates health monitors, origin pools (AWS + Pi), load balancers, DNS records
 - Posts the full result to issue #382
 
@@ -106,18 +107,18 @@ cloudless.gr / www.cloudless.gr
 Steady state: **all traffic goes to AWS**. Pi is on standby. Cloudflare flips to Pi
 automatically when the AWS health check fails (typically within 60s).
 
-## Key SSM parameter
+## Key secret
 
-| Parameter | Type |
+| Secret | Where |
 |---|---|
-| `/cloudless/production/CLOUDFLARE_API_TOKEN` | SecureString |
+| `CLOUDFLARE_API_TOKEN` | GitHub Actions secret (CI source of truth) |
+| `GH_PAT` | Repo secret — PAT with `repo` scope so store/rotate workflows can `gh secret set` |
 
 ## Notes
 
 - The `store-cloudflare-token.yml` workflow is idempotent — re-running with the
   same token is safe.
-- The token can also be added as a GitHub Secret (`CLOUDFLARE_API_TOKEN`) — both
-  paths work. SSM is preferred for cloud sessions.
+- Do **not** store this token with `aws ssm put-parameter` — GitHub Secrets only.
 - LB provisioning requires the **Load Balancing** add-on to be enabled on the
   Cloudflare account (it is already active for cloudless.gr).
 - Health monitors use a 60s interval with 2 consecutive failures before failover.

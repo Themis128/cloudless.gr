@@ -6,8 +6,8 @@ description: |
   `mcp__cloudless-infra__cloudflare_*` tool, when Dependabot or a deploy
   workflow mentions Cloudflare 401/403, when the Cloudflare email warning
   about Workers limits arrives and we can't read analytics to confirm, or
-  when a freshly created token needs to be wired into SSM + the infra MCP
-  in one shot.
+  when a freshly created token needs to be wired into the GitHub Secret +
+  the infra MCP in one shot.
 ---
 
 # Cloudflare Token Doctor
@@ -25,7 +25,7 @@ leaving the chat session. Order is deliberate — each stage gates the next.
   need analytics to confirm impact
 - The pending-setup table in `CLAUDE.md` lists "TOKEN NEEDED"
 - A new token has been minted in the Cloudflare dashboard and needs to
-  be propagated to SSM + the infra MCP
+  be propagated to the GitHub Secret `CLOUDFLARE_API_TOKEN` + the infra MCP
 
 ## Stage 0 — Diagnose
 
@@ -47,8 +47,8 @@ Outcomes:
 | `false / null / [{"code":10000,...}]` | Network/parse error | Stage 1 |
 
 The same check from inside CI is available via `verify-cloudflare-token.yml`
-(dispatch only). Use that when the token is already in SSM and you want a
-clean log entry rather than a one-liner.
+(dispatch only). Use that when the token is already in the GitHub Secret and
+you want a clean log entry rather than a one-liner.
 
 ## Stage 1 — Mint a new token
 
@@ -56,9 +56,9 @@ clean log entry rather than a one-liner.
 
 ### Path A — Bootstrap from an existing high-privilege token
 
-If the **invalid** token is the only one in SSM but you (the human) still
-have a working Cloudflare login, run the dashboard flow once and store the
-output. This is the path you'll take if every prior token is gone.
+If the **invalid** token is the only one in the GitHub Secret but you (the
+human) still have a working Cloudflare login, run the dashboard flow once
+and store the output. This is the path you'll take if every prior token is gone.
 
 1. https://dash.cloudflare.com/profile/api-tokens → **Create Token →
    Create Custom Token**
@@ -88,8 +88,9 @@ output. This is the path you'll take if every prior token is gone.
 
 ### Path B — Mint a scoped token from an existing high-privilege token
 
-If a working token with `User API Tokens:Edit` is already in SSM, the
-infra MCP can mint narrower derivative tokens itself:
+If a working token with `User API Tokens:Edit` is already available (GitHub
+Secret / session secret), the infra MCP can mint narrower derivative tokens
+itself:
 
 ```text
 mcp__cloudless-infra__cloudflare_list_permission_groups(filter: "analytics")
@@ -104,15 +105,17 @@ mcp__cloudless-infra__cloudflare_create_token(
 ```
 
 Use Path B for read-only consumers (Grafana, dashboards) so the wide
-`User API Tokens:Edit` token never leaves SSM.
+`User API Tokens:Edit` token never leaves the primary store.
 
 ## Stage 2 — Store the token
 
 Two stores keep them in sync:
 
-### 2a — SSM (consumed by the infra MCP, deploy workflows, the Next.js
+### 2a — GitHub Actions secret (source of truth for CI / LB workflows)
 
-runtime, and the Pi cluster)
+Requires repo secret `GH_PAT` (PAT with `repo` scope) so
+`store-cloudflare-token.yml` can run `gh secret set`. Do **not** use
+`aws ssm put-parameter`.
 
 ```bash
 gh workflow run store-cloudflare-token.yml \
@@ -124,6 +127,13 @@ gh workflow run store-cloudflare-token.yml \
 scopes are right and you actually want to re-wire the HA load balancer
 in the same run.
 
+Alternatively (local, with `gh` authenticated to an account that can
+write secrets):
+
+```bash
+echo -n "<token>" | gh secret set CLOUDFLARE_API_TOKEN --repo Themis128/cloudless.gr --body -
+```
+
 ### 2b — Cloud session secret (consumed by `cloudless-infra` MCP server)
 
 The session-start hook reads `CLOUDFLARE_API_TOKEN` from the chat session's
@@ -131,8 +141,9 @@ secret store and forwards it to the MCP server. Set it in:
 
 **Claude Code web UI → Session → Environment → Secrets**
 
-Use the **same** value as SSM. If they drift, the MCP will keep returning
-"Invalid access token" until you also rotate the session secret.
+Use the **same** value as the GitHub Secret. If they drift, the MCP will
+keep returning "Invalid access token" until you also rotate the session
+secret.
 
 ## Stage 3 — Smoke-test
 
@@ -173,8 +184,8 @@ mcp__cloudless-infra__cloudflare_list_tokens()
 
 ## Stage 4 — Verify the infra MCP works
 
-The MCP server reads from the cloud-session secret store, **not** SSM.
-After Stage 2b, every MCP call must succeed:
+The MCP server reads from the cloud-session secret store, **not** the
+GitHub Secret. After Stage 2b, every MCP call must succeed:
 
 ```text
 mcp__cloudless-infra__cloudflare_list_tokens()
@@ -242,7 +253,8 @@ know which token to expect.
   documentation.
 
 - **HA LB workflows still fail after a fresh token**
-  → They read from SSM, not the cloud-session secret. Did Stage 2a run?
+  → They read `CLOUDFLARE_API_TOKEN` (GitHub Secret / workflow input), not
+  the cloud-session secret. Did Stage 2a run?
   Re-run `store-cloudflare-token.yml -f apply=true`.
 
 - **"AUTH_INVALID_TOKEN_HEADER" from the GraphQL endpoint**

@@ -1,6 +1,6 @@
 ---
 name: cloudflare-token-rotation
-description: Step-by-step playbook for rotating the Cloudless.gr Cloudflare API token. Combines the automated workflow (SSM + GH secret) with the manual Cowork session-secret update step.
+description: Step-by-step playbook for rotating the Cloudless.gr Cloudflare API token. Combines the automated workflow (GitHub Secret) with the manual Cowork session-secret update step.
 when_to_use:
   - The current token has been exposed (e.g. accidentally pasted in a transcript)
   - Quarterly scheduled rotation
@@ -10,13 +10,18 @@ when_to_use:
 
 # Cloudflare API Token Rotation
 
-The token lives in three places. Two are automated, one is manual.
+The token lives in two places for operators. One is automated; one is manual.
 
 | Where | How to update | Status when done |
 |---|---|---|
-| AWS SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` | `cloudflare-token-rotate.yml` workflow | ✅ Auto |
-| GitHub Actions secret `CLOUDFLARE_API_TOKEN` | Same workflow (via `gh secret set`) | ✅ Auto |
+| GitHub Actions secret `CLOUDFLARE_API_TOKEN` | `cloudflare-token-rotate.yml` (or `store-cloudflare-token.yml`) | ✅ Auto |
 | Cowork session-environment secret `CLOUDFLARE_API_TOKEN` | Manual UI step — covered below | 🟡 You |
+
+Source of truth for CI is the **GitHub Actions secret**. Do **not** use
+`aws ssm put-parameter` / `get-parameter` for this token.
+
+**Required:** repo secret `GH_PAT` (PAT with `repo` scope) so the workflow
+can run `gh secret set`. `GITHUB_TOKEN` cannot write Actions secrets.
 
 ## Procedure
 
@@ -46,68 +51,48 @@ gh run watch --repo Themis128/cloudless.gr
 
 What happens:
 
-1. Workflow calls `PUT /user/tokens/{id}/value` — Cloudflare returns a new secret. **Old secret is invalidated immediately on this call.**
-2. New value is verified against `/user/tokens/verify`.
-3. AWS SSM is updated via `aws ssm put-parameter --overwrite`.
-4. GitHub Actions secret is updated via `gh secret set`.
+1. Workflow reads the current token from `secrets.CLOUDFLARE_API_TOKEN`.
+2. Calls `PUT /user/tokens/{id}/value` — Cloudflare returns a new secret. **Old secret is invalidated immediately on this call.**
+3. New value is verified against `/user/tokens/verify`.
+4. GitHub Actions secret is updated via `gh secret set` (requires `GH_PAT`).
 
-If any step fails after step 1, the token is in a half-rotated state — see "Recovery".
+If any step fails after step 2, the token is in a half-rotated state — see "Recovery".
 
 ### 3. Manual: update the Cowork session secret
 
-The rotated value is now in SSM. Copy it into your Cowork session secrets so the `cloudless-infra` MCP can use it.
-
-#### From PowerShell (Windows)
-
-```powershell
-$token = aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN --with-decryption --region us-east-1 --query 'Parameter.Value' --output text
-$token | Set-Clipboard
-Write-Host "Token copied to clipboard ($($token.Length) chars)"
-```
-
-#### From bash (macOS/Linux)
-
-```bash
-aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-  --with-decryption --region us-east-1 \
-  --query 'Parameter.Value' --output text | pbcopy
-```
+After rotation, paste the new value into Cowork session secrets so the
+`cloudless-infra` MCP can use it. The rotated secret is not readable back
+from GitHub Actions — if you did not capture it from a controlled mint,
+re-mint and run `store-cloudflare-token.yml`, then paste that same value here.
 
 #### Then in Claude Code web UI
 
 1. Open the desktop app's session menu (top-right gear or Cmd/Ctrl+,)
 2. Navigate to **Session → Environment → Secrets**
 3. Find the existing secret named **`CLOUDFLARE_API_TOKEN`** (or add it if absent)
-4. Click **Edit** → paste from clipboard → **Save**
+4. Click **Edit** → paste → **Save**
 5. Reload the Cowork session
 
 The next `mcp__cloudless-infra__cloudflare_*` call should succeed.
 
 ## Verification
 
-After the manual step, verify all three locations agree:
+After the manual step, verify both stores agree:
 
-```bash
-# From the Cowork session — uses the freshly-updated session secret via the MCP
-# (this is the canonical "session secret works" test)
-```
+Ask Claude in the Cowork session:
+> Run `mcp__cloudless-infra__cloudflare_list_tokens` and confirm the active token id matches the rotation run summary.
 
-Then ask Claude in the Cowork session:
-> Run `mcp__cloudless-infra__cloudflare_list_tokens` and confirm the active token id matches what's in SSM.
-
-The MCP wraps the session secret as the bearer. If `list_tokens` returns the rotated id and `status=active`, all three stores are aligned.
+The MCP wraps the session secret as the bearer. If `list_tokens` returns the rotated id and `status=active`, both stores are aligned.
 
 ## Recovery (token rotation half-failed)
 
-**Scenario:** Workflow's PUT call succeeded (old token dead), but SSM or GH secret update failed.
+**Scenario:** Workflow's PUT call succeeded (old token dead), but the GitHub secret update failed (e.g. missing `GH_PAT`).
 
 You're stuck — the new token value was returned ONCE in the workflow output, then masked. To recover:
 
-1. Mint a brand-new token in the Cloudflare dashboard (`https://dash.cloudflare.com/profile/api-tokens`) with the same scopes as the original. See `cloudless.gr`'s CLAUDE.md "Cloudflare HA LB" item and the `cf-token-doctor` reference for the exact scope list.
-2. Run the `store-cloudflare-token.yml` workflow with the new token + `apply=true` to repopulate SSM + the GH secret.
+1. Mint a brand-new token in the Cloudflare dashboard (`https://dash.cloudflare.com/profile/api-tokens`) with the same scopes as the original. See `cloudless.gr`'s CLAUDE.md "Cloudflare HA LB" item and the `cloudflare-token-doctor` skill for the exact scope list.
+2. Ensure `GH_PAT` is set on the repo, then run `store-cloudflare-token.yml` with the new token + `apply=true`.
 3. Update the Cowork session secret manually (step 3 above).
-
-To prevent recurrence, the rotation workflow does verify → rotate → verify-new → update-SSM → update-GH in that strict order. The SSM/GH steps are the cheap ones — if they fail, file an issue and figure out why before re-attempting.
 
 ## Scope requirements
 
@@ -125,5 +110,6 @@ curl -X PUT -H "Authorization: Bearer $ONEOFF_TOKEN" \
 ## See also
 
 - `cloudflare-token-rotate.yml` — the workflow
+- `store-cloudflare-token.yml` — mint/store path (GitHub Secret)
 - `verify-cloudflare-token.yml` — daily smoketest that catches expiries
 - CLAUDE.md "Pending One-Time Setup" → "Cloudflare infra MCP token"
