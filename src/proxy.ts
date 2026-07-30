@@ -17,7 +17,34 @@ function stripLocale(pathname: string): string {
   return pathname.slice(segment.length + 1) || "/";
 }
 
-async function readAuthToken(
+/**
+ * Primary auth for page gates: opaque D1 `session_token` from email/password
+ * login (`/api/auth/login`). Without this, post-login redirects to /admin or
+ * /dashboard bounce straight back to /auth/login even though APIs accept the cookie.
+ */
+async function readD1SessionCookie(
+  req: NextRequest,
+): Promise<{ valid: boolean; isAdmin: boolean } | null> {
+  const sessionId = req.cookies.get("session_token")?.value;
+  if (!sessionId) return null;
+
+  try {
+    const { getAuthDbFromEnv, getUserBySession, isAdmin: d1IsAdmin } = await import(
+      "@/lib/auth-d1"
+    );
+    const db = getAuthDbFromEnv();
+    if (!db) return null;
+    const user = await getUserBySession(db, sessionId);
+    if (!user) return { valid: false, isAdmin: false };
+    const admin = await d1IsAdmin(db, user.id);
+    return { valid: true, isAdmin: admin };
+  } catch {
+    return null;
+  }
+}
+
+/** Legacy Auth.js JWT cookie (chunked or whole) — kept for transitional sessions. */
+async function readNextAuthJwt(
   req: NextRequest,
 ): Promise<{ valid: boolean; isAdmin: boolean }> {
   // The session JWT can exceed the 4096-byte cookie limit when next-auth
@@ -51,6 +78,14 @@ async function readAuthToken(
   } catch {
     return { valid: false, isAdmin: false };
   }
+}
+
+async function readAuthToken(
+  req: NextRequest,
+): Promise<{ valid: boolean; isAdmin: boolean }> {
+  const d1 = await readD1SessionCookie(req);
+  if (d1) return d1;
+  return readNextAuthJwt(req);
 }
 
 // --- next-intl locale middleware ---
@@ -353,8 +388,8 @@ async function handlePageRoute(
   const locale = getLocaleFromPath(pathname);
   const prefix = `/${locale}`;
 
-  // Post-login resolver: the OIDC callbackUrl routes here; we read the session
-  // and redirect admins → /admin, everyone else → /dashboard.
+  // Post-login resolver: after D1 email/password login (or legacy Auth.js),
+  // read the session and redirect admins → /admin, everyone else → /dashboard.
   if (bare === "/auth/post-login") {
     const { valid, isAdmin: hasAdminGroup } = await readAuthToken(request);
     if (!valid) {
