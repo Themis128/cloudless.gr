@@ -196,7 +196,19 @@ GHA `ubuntu-latest` often gets **HTTP 403** on custom-domain `/api/health`
 (datacenter reputation / Bot Fight) even when TLS succeeds and the site is fine
 from residential IPs. That is a **Cloudflare** problem, not a Tailscale one.
 
-**Correct fallback (fabric L4 — used by `cloudless-https-health-probe.yml`):**
+Intermittent **HTTP 502** on apex / `pi-origin` with `x-served-by: pi-tunnel-proxy`
+means the Worker received a Tunnel 502 (or threw) — origin may still be healthy
+on fabric L4. The HTTPS probe distinguishes:
+
+| Public | Fabric NodePort | Meaning |
+|--------|-----------------|---------|
+| 200 | — | Public path OK |
+| 403 | 200 | Bot Fight; origin OK via fabric |
+| 502/503 | 200 | **Tunnel/Worker flap**; origin OK — check `cloudflared` |
+| 502/503 | fail | Origin / NodePort actually down |
+
+`cloudless2` (`workers/pi-origin-proxy`) retries once on idempotent methods for
+transient upstream 502 / network errors.
 
 ```mermaid
 sequenceDiagram
