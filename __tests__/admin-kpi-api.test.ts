@@ -60,19 +60,8 @@ vi.mock("@/lib/notion-projects", () => ({
 // ---------------------------------------------------------------------------
 // JWT helpers
 // ---------------------------------------------------------------------------
-function makeToken(groups: string[]): string {
-  const payload = {
-    sub: "user-sub",
-    email: "user@test.com",
-    groups: groups,
-    aud: "test-client",
-    iss: "https://auth.cloudless.gr/realms/cloudless",
-    iat: Math.floor(Date.now() / 1000) - 60,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const h = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
-  const b = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${h}.${b}.sig`;
+function makeToken(isAdmin = false): string {
+  return isAdmin ? "test-admin-session" : "test-user-session";
 }
 
 function adminReq(url: string): NextRequest {

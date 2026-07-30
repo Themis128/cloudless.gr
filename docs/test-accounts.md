@@ -55,7 +55,7 @@ Behavior details:
 
 ## The two test accounts
 
-These are exactly what `scripts/e2e-cognito-provision.sh` creates:
+These are exactly what `scripts/archive/cognito/e2e-cognito-provision.sh` creates:
 
 | Account        | Email                    | Group   | Can reach                                                               |
 | -------------- | ------------------------ | ------- | ----------------------------------------------------------------------- |
@@ -67,7 +67,7 @@ The plain user deliberately has **no** group — that is what proves the
 
 ## Creating the accounts (existing tooling)
 
-`scripts/e2e-cognito-provision.sh` provisions both users in the Cognito
+`scripts/archive/cognito/e2e-cognito-provision.sh` provisions both users in the Cognito
 `cloudless-auth` pool. It is idempotent (re-running only resets the password
 and group membership), ensures the `admin` group exists, and gives each user
 a **permanent** password so Playwright can drive the Hosted UI login directly

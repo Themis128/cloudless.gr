@@ -90,18 +90,8 @@ beforeEach(() => {
 // Token helpers — mirrors admin-api.test.ts pattern
 // ---------------------------------------------------------------------------
 
-function makeToken(groups: string[]): string {
-  const payload = {
-    sub: "test-sub",
-    email: "test@cloudless.gr",
-    groups,
-    iss: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST",
-    iat: Math.floor(Date.now() / 1000) - 60,
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fake-sig`;
+function makeToken(isAdmin = false): string {
+  return isAdmin ? "test-admin-session" : "test-user-session";
 }
 
 function adminRequest(url: string): NextRequest {
