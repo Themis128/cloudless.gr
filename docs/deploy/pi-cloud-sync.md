@@ -29,8 +29,8 @@ This doc is the contract for what's kept in sync, how, and what to monitor.
 | Surface | Mechanism | Drift risk |
 |---|---|---|
 | **Code (image)** | Both sides use `cloudless-pi-app` from ECR (us-east-1). Cloud builds via SST, Pi pulls via K3s. | Until both pin to the same SHA, Pi can lag arbitrarily. |
-| **Public env** | `NEXT_PUBLIC_*` baked into the image at build time (see [Dockerfile](../Dockerfile)). | Identical because identical image. |
-| **Runtime secrets** | Both read from SSM at `/cloudless/production/*` (see [sst.config.ts:31-32](../sst.config.ts)). | Pi must have `ssm:GetParametersByPath` on that prefix via `cloudless-pi-standby`. |
+| **Public env** | `NEXT_PUBLIC_*` baked into the image at build time (see [Dockerfile](../../Dockerfile)). | Identical because identical image. |
+| **Runtime secrets** | Both read from SSM at `/cloudless/production/*` (see [sst.config.ts:31-32](../../sst.config.ts)). | Pi must have `ssm:GetParametersByPath` on that prefix via `cloudless-pi-standby`. |
 | **Notion content** | Both fetch live from Notion API; ISR per-process. | Pi cache lags by up to its ISR TTL after Notion edits. |
 | **Auth sessions** | Both verify JWTs against the same Cognito JWKS. | Pi must have the `COGNITO_*` vars in SSM. |
 | **Webhooks (Stripe/Notion/EspoCRM)** | Hit `cloudless.gr` and route to whichever is live. | Pi must hold the same webhook secrets in SSM. |
@@ -41,7 +41,7 @@ This doc is the contract for what's kept in sync, how, and what to monitor.
 
 ### 1. Image SHA pin via SSM `/cloudless/production/cloud-sha`
 
-After every successful production deploy, [.github/workflows/deploy.yml](../.github/workflows/deploy.yml) writes the just-deployed commit SHA to:
+After every successful production deploy, [.github/workflows/deploy.yml](../../.github/workflows/deploy.yml) writes the just-deployed commit SHA to:
 
 ```
 arn:aws:ssm:us-east-1:278585680617:parameter/cloudless/production/cloud-sha
@@ -64,7 +64,7 @@ kubectl set image deployment/cloudless cloudless=278585680617.dkr.ecr.us-east-1.
 
 ### 2. SECONDARY-path health monitoring — `Pi TLS Cert Check` workflow
 
-[.github/workflows/pi-tls-cert-check.yml](../.github/workflows/pi-tls-cert-check.yml)
+[.github/workflows/pi-tls-cert-check.yml](../../.github/workflows/pi-tls-cert-check.yml)
 runs every 6h (00:30, 06:30, 12:30, 18:30 UTC) against the APIGW SECONDARY frontend
 (`d-uy6dmk95il.execute-api.us-east-1.amazonaws.com`) and asserts:
 
@@ -96,7 +96,7 @@ morning Athens time. Output is `ALL_HEALTHY` or a per-workflow failure report.
 
 ### 4. SHA drift detector
 
-[.github/workflows/sha-drift-watchdog.yml](../.github/workflows/sha-drift-watchdog.yml)
+[.github/workflows/sha-drift-watchdog.yml](../../.github/workflows/sha-drift-watchdog.yml)
 runs every 6h (00:45, 06:45, 12:45, 18:45 UTC) and after every HA sync
 orchestrator completion. It compares three values:
 
@@ -116,9 +116,9 @@ Tolerances:
 - SHA equivalence is **prefix-tolerant**: 7-char abbreviated, 12-char
   Docker tag, and 40-char full SHA all compare equal.
 
-The pure comparison logic lives in [`src/lib/sha-drift.ts`](../src/lib/sha-drift.ts)
+The pure comparison logic lives in [`src/lib/sha-drift.ts`](../../src/lib/sha-drift.ts)
 and is exercised by 16 unit tests in `__tests__/detect-sha-drift.test.ts`.
-The CLI wrapper is [`scripts/detect-sha-drift.mts`](../scripts/detect-sha-drift.mts);
+The CLI wrapper is [`scripts/detect-sha-drift.mts`](../../scripts/detect-sha-drift.mts);
 run it on demand with:
 
 ```bash

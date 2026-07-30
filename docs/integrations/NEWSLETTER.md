@@ -32,21 +32,21 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
 
 ### Subscriber capture and lifecycle
 
-- [src/app/api/subscribe/route.ts](../src/app/api/subscribe/route.ts) records the email in EspoCRM via `setNewsletterStatus(email, "newsletter_signup")`, clears any stale SES suppression so a returning subscriber can be emailed again, then sends the branded welcome email and a real-time Slack ping to `#subscribers`.
-- [src/app/api/unsubscribe/route.ts](../src/app/api/unsubscribe/route.ts) (POST for the in-app form, GET for the one-click `List-Unsubscribe` link) atomically adds the address to the SES suppression list and flips the EspoCRM contact to `lead_source = "newsletter_unsubscribed"`, removing it from the send audience.
-- [src/lib/espocrm.ts](../src/lib/espocrm.ts) — `setNewsletterStatus()` creates or updates a contact and sets the subscription state; `listNewsletterSubscribers()` returns every contact with `lead_source = "newsletter_signup"` (cursor-paginated search). _(EspoCRM was decommissioned in PR #1043; this lib is the drop-in replacement with the same 21 exports.)_
+- [src/app/api/subscribe/route.ts](../../src/app/api/subscribe/route.ts) records the email in EspoCRM via `setNewsletterStatus(email, "newsletter_signup")`, clears any stale SES suppression so a returning subscriber can be emailed again, then sends the branded welcome email and a real-time Slack ping to `#subscribers`.
+- [src/app/api/unsubscribe/route.ts](../../src/app/api/unsubscribe/route.ts) (POST for the in-app form, GET for the one-click `List-Unsubscribe` link) atomically adds the address to the SES suppression list and flips the EspoCRM contact to `lead_source = "newsletter_unsubscribed"`, removing it from the send audience.
+- [src/lib/espocrm.ts](../../src/lib/espocrm.ts) — `setNewsletterStatus()` creates or updates a contact and sets the subscription state; `listNewsletterSubscribers()` returns every contact with `lead_source = "newsletter_signup"` (cursor-paginated search). _(EspoCRM was decommissioned in PR #1043; this lib is the drop-in replacement with the same 21 exports.)_
 
 ### Welcome email
 
-- [src/lib/email.ts](../src/lib/email.ts) — `sendSubscriberWelcome()` sends a branded dark-theme email from `Themis at Cloudless` with subject "Welcome to Cloudless — your first issue lands Monday". The email previews the three content categories (Cloud and Serverless, Analytics and AI Marketing, Company Updates and Offers), links to the blog archive, and includes a one-click `List-Unsubscribe` header (RFC 8058).
+- [src/lib/email.ts](../../src/lib/email.ts) — `sendSubscriberWelcome()` sends a branded dark-theme email from `Themis at Cloudless` with subject "Welcome to Cloudless — your first issue lands Monday". The email previews the three content categories (Cloud and Serverless, Analytics and AI Marketing, Company Updates and Offers), links to the blog archive, and includes a one-click `List-Unsubscribe` header (RFC 8058).
 
 ### Send endpoint
 
-- [src/app/api/newsletter/send/route.ts](../src/app/api/newsletter/send/route.ts) — `POST` authenticated with the `x-newsletter-secret` header against `NEWSLETTER_SEND_SECRET`. Accepts `{ subject, html, text }`, resolves the subscriber list from EspoCRM, and delivers one email per recipient via `sendEmail()` (SES). Returns `{ sent, failed, total }`. The `%UNSUBSCRIBELINK%` token in the body is replaced per recipient with `/api/unsubscribe?email=...`, and a matching `List-Unsubscribe` header is added.
+- [src/app/api/newsletter/send/route.ts](../../src/app/api/newsletter/send/route.ts) — `POST` authenticated with the `x-newsletter-secret` header against `NEWSLETTER_SEND_SECRET`. Accepts `{ subject, html, text }`, resolves the subscriber list from EspoCRM, and delivers one email per recipient via `sendEmail()` (SES). Returns `{ sent, failed, total }`. The `%UNSUBSCRIBELINK%` token in the body is replaced per recipient with `/api/unsubscribe?email=...`, and a matching `List-Unsubscribe` header is added.
 
 ### CMS
 
-- Notion database **Blog** — fetched at runtime via [src/lib/notion-blog.ts](../src/lib/notion-blog.ts). 5-min ISR on `/blog` and `/blog/[slug]`.
+- Notion database **Blog** — fetched at runtime via [src/lib/notion-blog.ts](../../src/lib/notion-blog.ts). 5-min ISR on `/blog` and `/blog/[slug]`.
 - Schema (workflow-relevant fields):
   - `Status` — select: Draft / Approved / Published. Editorial state machine.
   - `Published` — checkbox. Public visibility flag (set atomically with Status=Published).
@@ -57,8 +57,8 @@ If nothing is approved by 09:00 UTC, the publisher exits cleanly with no newslet
 
 ### Cron scripts (self-contained: read env directly, no `src/lib/*` imports)
 
-- [scripts/generate-weekly-article.ts](../scripts/generate-weekly-article.ts) picks the least-recently-used category, calls Claude with a brand-voice system prompt plus the last 8 titles to avoid, parses the JSON response, inserts as a Notion Draft, Slack-pings the editor.
-- [scripts/publish-and-send-newsletter.ts](../scripts/publish-and-send-newsletter.ts) finds Approved rows, renders Notion blocks to HTML and plaintext (including a category-matched "This Week at Cloudless" service offer section), marks Published with `Date` and `PublishedAt`, hits the existing Notion webhook to revalidate ISR, then POSTs the rendered email to `/api/newsletter/send`, and Slack-confirms with the delivered/failed counts.
+- [scripts/generate-weekly-article.ts](../../scripts/generate-weekly-article.ts) picks the least-recently-used category, calls Claude with a brand-voice system prompt plus the last 8 titles to avoid, parses the JSON response, inserts as a Notion Draft, Slack-pings the editor.
+- [scripts/publish-and-send-newsletter.ts](../../scripts/publish-and-send-newsletter.ts) finds Approved rows, renders Notion blocks to HTML and plaintext (including a category-matched "This Week at Cloudless" service offer section), marks Published with `Date` and `PublishedAt`, hits the existing Notion webhook to revalidate ISR, then POSTs the rendered email to `/api/newsletter/send`, and Slack-confirms with the delivered/failed counts.
 - `scripts/weekly-subscriber-report.ts` _(decommissioned with EspoCRM in PR #1043; equivalent reporting now flows from the espocrm-to-lake ETL → Athena)_ — historically queried EspoCRM for total active subscribers, new signups this week, and total unsubscribed contacts; posted a formatted Block Kit summary to Slack `#subscribers`; and inserted a timestamped row into a Notion "Newsletter Reports" database.
 
 ### Workflows

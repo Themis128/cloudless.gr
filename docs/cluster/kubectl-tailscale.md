@@ -62,7 +62,7 @@ kubectl get pods -n monitoring
 
 ## Off-LAN: kube-apiserver ProxyGroup
 
-After [`infrastructure/tailscale/deploy.sh`](../infrastructure/tailscale/deploy.sh)
+After [`infrastructure/tailscale/deploy.sh`](../../infrastructure/tailscale/deploy.sh)
 (see fabric doc §8):
 
 ```bash
@@ -96,7 +96,7 @@ devices owned by the operator (`k3s-subnet-router-*`, `ingress-*`, `kube-*`).
 **Safe to delete when offline forever:** old per-app proxies
 (`monitoring-proxies-*`, `ts-n8n-*`, `appflowy`, `grafana`, …) from before
 shared `proxy-group` annotations. Details:
-[`OFFLINE-DEVICE-TROUBLESHOOTING.md`](../infrastructure/tailscale/OFFLINE-DEVICE-TROUBLESHOOTING.md).
+[`OFFLINE-DEVICE-TROUBLESHOOTING.md`](../../infrastructure/tailscale/OFFLINE-DEVICE-TROUBLESHOOTING.md).
 
 ## Notes
 
@@ -104,4 +104,4 @@ shared `proxy-group` annotations. Details:
 - Subnet routes (`10.42.0.0/16`, `10.43.0.0/16`) are optional — only for direct
   ClusterIP access from a laptop with `--accept-routes`.
 - DB ports stay ClusterIP — use `pnpm db:forward` / port-forward
-  ([databases/omv-cluster.md](databases/omv-cluster.md)).
+  ([databases/omv-cluster.md](../databases/omv-cluster.md)).

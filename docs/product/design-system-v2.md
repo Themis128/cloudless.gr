@@ -1,7 +1,7 @@
 # Cloudless Design System v2 — "Calm Cloud"
 
 **Status**: Phase 1 (Foundation) — additive, not yet wired to production.
-**Replaces**: the cyberpunk/neon-terminal language in [src/app/globals.css](../src/app/globals.css).
+**Replaces**: the cyberpunk/neon-terminal language in [src/app/globals.css](../../src/app/globals.css).
 
 ## Why we are rebranding
 

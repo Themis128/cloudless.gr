@@ -42,7 +42,7 @@ Trade-off: lost the typewriter streaming effect on responses that _use_ a tool �
 
 **Tests** (19 added): see `docs/ANTHROPIC.md` for the full table. Covers tool round-trip with `tool_result`, iteration-cap fallback, schema declarations, and per-tool match / no-match / no-config / throw paths.
 
-Detail: see [`docs/ANTHROPIC.md`](ANTHROPIC.md#tools-phase-2a-of-docsagents_roadmapmd) for the loop diagram and tool table.
+Detail: see [`docs/ANTHROPIC.md`](../integrations/ANTHROPIC.md#tools-phase-2a-of-docsagents_roadmapmd) for the loop diagram and tool table.
 
 ### Phase 2b — booking agent — SHIPPED
 

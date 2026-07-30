@@ -109,7 +109,7 @@ The system prompt positions Claude as "Cloudless Assistant" with knowledge of se
 
 #### Tools (Phase 2a of [`docs/AGENTS_ROADMAP.md`](../roadmap/AGENTS_ROADMAP.md))
 
-Tool definitions and the `runTool` dispatcher live in [`src/lib/chat-tools.ts`](../src/lib/chat-tools.ts). Each tool's executor returns a plain string — errors are converted to user-facing nudges so a thrown tool never crashes the loop.
+Tool definitions and the `runTool` dispatcher live in [`src/lib/chat-tools.ts`](../../src/lib/chat-tools.ts). Each tool's executor returns a plain string — errors are converted to user-facing nudges so a thrown tool never crashes the loop.
 
 | Tool | Input | What it does | Backed by |
 |------|-------|--------------|-----------|

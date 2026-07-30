@@ -1,0 +1,188 @@
+# PR auto-merge to main
+#
+# Architect intent (GitHub docs):
+# - Repo has "Allow auto-merge" enabled
+#   https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-auto-merge-for-pull-requests-in-your-repository
+# - Auto-merge runs only after required checks / reviews pass
+#   https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/automatically-merging-a-pull-request
+# - main uses strict required status checks ("up to date with base")
+#   → when main moves, open PRs go BEHIND; we call Update Branch
+#   https://docs.github.com/en/rest/pulls/pulls#update-a-pull-request-branch
+#
+# Safety rails:
+# - Never force-merge failing CI
+# - Never invent conflict resolutions (label needs-rebase instead)
+# - Skip drafts, forks, dependabot (handled by dependabot-automerge.yml),
+#   and PRs labeled no-automerge / do-not-merge / wip
+
+name: PR auto-merge to main
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - unlabeled
+    branches: [main]
+  # When main advances, refresh every open auto-merge PR so strict
+  # "up to date" protection does not leave them stranded BEHIND.
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Optional PR number to (re)arm; empty = all open PRs to main"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: pr-automerge-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  arm-pr:
+    name: Arm squash auto-merge
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]' &&
+      !startsWith(github.head_ref, 'dependabot/') &&
+      !contains(join(github.event.pull_request.labels.*.name, ','), 'no-automerge') &&
+      !contains(join(github.event.pull_request.labels.*.name, ','), 'do-not-merge') &&
+      !contains(join(github.event.pull_request.labels.*.name, ','), 'wip')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update branch with main (strict protection)
+        id: update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch
+          # 202 = accepted, 422 = conflict or already up to date-ish
+          HTTP=$(gh api -X PUT "repos/${{ github.repository }}/pulls/${PR}/update-branch" \
+            -f expected_head_sha="${{ github.event.pull_request.head.sha }}" \
+            --include 2>&1 | tee /tmp/update-branch.out | head -1 | awk '{print $2}')
+          echo "http=$HTTP" >> "$GITHUB_OUTPUT"
+          if grep -qi "merge conflict" /tmp/update-branch.out; then
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          fi
+          cat /tmp/update-branch.out || true
+
+      - name: Label + comment on merge conflicts
+        if: steps.update.outputs.conflict == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr edit "$PR" --add-label "needs-rebase" || \
+            gh label create "needs-rebase" --color B60205 --description "PR conflicts with main; auto-merge paused" || true
+          gh pr edit "$PR" --add-label "needs-rebase" || true
+          gh pr comment "$PR" --body "$(cat <<'EOF'
+          ## Auto-merge paused — conflicts with `main`
+
+          GitHub cannot update this branch automatically ([Update a pull request branch](https://docs.github.com/en/rest/pulls/pulls#update-a-pull-request-branch)).
+
+          Resolve locally, then push:
+
+          ```bash
+          git fetch origin main
+          git checkout <your-branch>
+          git rebase origin/main   # or: git merge origin/main
+          # fix conflicts, then:
+          git push --force-with-lease
+          ```
+
+          After the branch is clean, this workflow re-arms squash auto-merge.
+          Remove the `needs-rebase` label once resolved (or leave it — unlabeled events re-run arming).
+          EOF
+          )"
+
+      - name: Enable squash auto-merge
+        if: steps.update.outputs.conflict != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr edit "$PR" --remove-label "needs-rebase" || true
+          # Idempotent: succeeds if already enabled or merges when already green.
+          gh pr merge --squash --auto "$PR_URL"
+          echo "Armed squash auto-merge for $PR_URL"
+
+  refresh-open:
+    name: Refresh open PRs after main push
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && inputs.pr_number == '')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update + re-arm open PRs to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Open, non-draft PRs targeting main (exclude dependabot + opt-out labels)
+          mapfile -t PRS < <(gh pr list --base main --state open --json number,isDraft,labels,headRefName,author \
+            --jq '.[]
+              | select(.isDraft == false)
+              | select(.author.login != "dependabot")
+              | select(.headRefName | startswith("dependabot/") | not)
+              | select(([.labels[].name] | index("no-automerge") | not))
+              | select(([.labels[].name] | index("do-not-merge") | not))
+              | select(([.labels[].name] | index("wip") | not))
+              | .number')
+
+          if [ "${#PRS[@]}" -eq 0 ]; then
+            echo "No eligible open PRs"
+            exit 0
+          fi
+
+          for PR in "${PRS[@]}"; do
+            echo "::group::PR #$PR"
+            if ! OUT=$(gh api -X PUT "repos/${{ github.repository }}/pulls/${PR}/update-branch" 2>&1); then
+              if echo "$OUT" | grep -qi "merge conflict"; then
+                echo "Conflict on #$PR — labeling needs-rebase"
+                gh label create "needs-rebase" --color B60205 --description "PR conflicts with main; auto-merge paused" 2>/dev/null || true
+                gh pr edit "$PR" --add-label "needs-rebase" || true
+              else
+                echo "update-branch: $OUT"
+              fi
+            else
+              echo "Updated #$PR with main"
+              gh pr edit "$PR" --remove-label "needs-rebase" || true
+              URL=$(gh pr view "$PR" --json url -q .url)
+              gh pr merge --squash --auto "$URL" || echo "auto-merge arm note for #$PR (may already be mergeable/merged)"
+            fi
+            echo "::endgroup::"
+          done
+
+  refresh-one:
+    name: Refresh single PR (dispatch)
+    if: github.event_name == 'workflow_dispatch' && inputs.pr_number != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update + arm PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          gh api -X PUT "repos/${{ github.repository }}/pulls/${PR}/update-branch" || true
+          URL=$(gh pr view "$PR" --json url -q .url)
+          gh pr merge --squash --auto "$URL"
+          echo "Armed $URL"

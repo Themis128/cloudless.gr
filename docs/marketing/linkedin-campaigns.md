@@ -5,7 +5,7 @@ End-to-end implementation reference for the LinkedIn paid-acquisition stack on
 debugging missing conversions in LinkedIn Campaign Manager.
 
 For the agent-facing workflow (file paths, "add a new campaign in 6 steps",
-operating notes) see [`skills/linkedin-campaigns/SKILL.md`](../skills/linkedin-campaigns/SKILL.md).
+operating notes) see [`skills/linkedin-campaigns/SKILL.md`](../../skills/linkedin-campaigns/SKILL.md).
 
 ## Architecture at a glance
 
@@ -104,7 +104,7 @@ hasn't changed when you upgrade:
 
 ## Adding a new campaign
 
-See [`skills/linkedin-campaigns/SKILL.md`](../skills/linkedin-campaigns/SKILL.md)
+See [`skills/linkedin-campaigns/SKILL.md`](../../skills/linkedin-campaigns/SKILL.md)
 for the 6-step recipe. Quick version:
 
 1. New slug in `src/data/campaigns.ts` (extend the `CampaignSlug` type).

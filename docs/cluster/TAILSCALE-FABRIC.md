@@ -463,7 +463,7 @@ Offline / orphaned devices: [`OFFLINE-DEVICE-TROUBLESHOOTING.md`](../../infrastr
 |-----|------|
 | [`kubectl-tailscale.md`](kubectl-tailscale.md) | Day-2 kubectl from WSL / LAN |
 | [`infrastructure/tailscale/README.md`](../../infrastructure/tailscale/README.md) | Manifest index + quick deploy |
-| [`databases/omv-cluster.md`](databases/omv-cluster.md) | DB access rules (no TS exposure) |
+| [`databases/omv-cluster.md`](../databases/omv-cluster.md) | DB access rules (no TS exposure) |
 | [`CLUSTER-MAP.md`](../../CLUSTER-MAP.md) | Live pod map (refresh periodically) |
 | Cloudflare tunnel ops skill | Public `*.cloudless.gr` ingress |
 
