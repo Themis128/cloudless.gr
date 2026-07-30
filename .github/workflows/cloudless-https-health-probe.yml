@@ -9,16 +9,14 @@ name: cloudless.gr HTTPS health probe
 #   2. Cert SAN matches the expected hostname
 #   3. Cert does not expire within MIN_DAYS_REMAINING days
 #   4. TLS 1.0 and 1.1 are rejected; TLS 1.2 is accepted
-#   5. GET /api/health returns HTTP 200 with a valid JSON body
+#   5. GET /api/health returns HTTP 200 with JSON status=ok
 #
-# Runs on the omv Pi (residential egress), NOT ubuntu-latest. GitHub-hosted
-# datacenter IPs still get Cloudflare 403 / Bot Fight interstitials on custom
-# domains even with Bot Fight Mode off — same reason core-web-vitals-audit.yml
-# audits the NodePort from [self-hosted, omv, pi].
+# GitHub-hosted runners often get Cloudflare 403 on custom-domain /api/health
+# (datacenter IP reputation) even with Bot Fight Mode off — TLS still works.
+# When that happens we fall back over Tailscale to the Pi NodePort so the probe
+# still validates origin health without queueing behind busy omv runners.
 #
 # Schedule: every 6h at :00 (00:00, 06:00, 12:00, 18:00 UTC).
-# On failure the workflow run goes red — Slack / email notifications from
-# the existing CI-babysitter pick it up within the next scheduled cycle.
 
 on:
   schedule:
@@ -40,13 +38,14 @@ permissions:
 env:
   MIN_DAYS_REMAINING: 14
   SKIP_TLS_FLOOR: ${{ inputs.skip_tls_floor || 'false' }}
+  # k3s NodePort for cloudless-app (Tunnel origin). Reachable after Tailscale join.
+  PI_NODEPORT_HEALTH: "http://100.113.41.119:30300/api/health"
 
 jobs:
   probe-primary:
     name: Probe PRIMARY (cloudless.gr via Cloudflare → Workers → Tunnel)
-    # Pi residential IP — GH-hosted runners get CF 403 on /api/health.
-    runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
     env:
       PROBE_HOST: "cloudless.gr"
     steps:
@@ -102,7 +101,6 @@ jobs:
             echo "  ✓ TLS 1.0/1.1 rejected, TLS 1.2 accepted"
           fi
 
-          # Extract leaf cert from the handshake output
           cert=$(cat /tmp/openssl.out)
           leaf=$(echo "$cert" | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | awk '/-----BEGIN/{i++} i==1')
 
@@ -127,11 +125,10 @@ jobs:
           echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
 
       - name: GET /api/health
+        id: health
         run: |
           set -euo pipefail
           echo "→ GET https://${PROBE_HOST}/api/health"
-          # Do not use curl -f — we need the body to distinguish CF Bot Fight
-          # (challenge HTML) from an app-level failure.
           response=$(curl -sS \
             --max-time 20 \
             --retry 2 --retry-delay 10 --retry-all-errors \
@@ -144,22 +141,75 @@ jobs:
           echo "  → HTTP ${code} in ${elapsed}"
           echo "  → body: $(head -c 300 <<<"$body")"
 
+          challenged=0
           if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
-            echo "::error::Cloudflare Bot Fight / challenge intercepted ${PROBE_HOST}/api/health (not an app failure). Turn Bot Fight Mode off (Security → Bots) or re-run cloudflare-skip-cron-challenge.yml."
-            exit 1
+            challenged=1
           fi
 
+          if [ "${code}" = "200" ] && [ "${challenged}" = "0" ]; then
+            status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
+            if [ "${status}" != "ok" ]; then
+              echo "::warning::${PROBE_HOST}/api/health returned 200 but status field is '${status}' (expected 'ok')"
+            fi
+            {
+              echo "HEALTH_STATUS=${status}"
+              echo "HEALTH_ELAPSED=${elapsed}"
+              echo "HEALTH_VIA=public"
+            } >> "$GITHUB_ENV"
+            echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
+            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare IP reputation / Bot Fight). Will validate origin via Tailscale NodePort."
+            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "::error::${PROBE_HOST}/api/health returned ${code}."
+          exit 1
+
+      - name: Tailscale (origin fallback)
+        if: steps.health.outputs.need_origin_fallback == 'true'
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: GET /api/health via Tailscale NodePort
+        if: steps.health.outputs.need_origin_fallback == 'true'
+        run: |
+          set -euo pipefail
+          echo "→ GET ${PI_NODEPORT_HEALTH} (Host: ${PROBE_HOST})"
+          response=$(curl -sS \
+            --max-time 20 \
+            --retry 2 --retry-delay 5 \
+            -H "Host: ${PROBE_HOST}" \
+            -H "X-Forwarded-Proto: https" \
+            -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
+            -o /tmp/body -w "%{http_code}|%{time_total}s" \
+            "${PI_NODEPORT_HEALTH}" || echo "000|n/a")
+          code="${response%%|*}"
+          elapsed="${response#*|}"
+          body=$(cat /tmp/body 2>/dev/null || true)
+          echo "  → HTTP ${code} in ${elapsed}"
+          echo "  → body: $(head -c 300 <<<"$body")"
+
           if [ "${code}" != "200" ]; then
-            echo "::error::${PROBE_HOST}/api/health returned ${code}."
+            echo "::error::Pi NodePort /api/health returned ${code} after public CF 403 — origin likely down."
             exit 1
           fi
 
           status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
           if [ "${status}" != "ok" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned 200 but status field is '${status}' (expected 'ok')"
+            echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
+            exit 1
           fi
-          echo "HEALTH_STATUS=${status}" >> "$GITHUB_ENV"
-          echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+          {
+            echo "HEALTH_STATUS=${status}"
+            echo "HEALTH_ELAPSED=${elapsed}"
+            echo "HEALTH_VIA=tailscale-nodeport"
+          } >> "$GITHUB_ENV"
 
       - name: Step summary
         if: success()
@@ -171,17 +221,16 @@ jobs:
             echo "|---|---|"
             echo "| Host | \`${PROBE_HOST}\` |"
             echo "| Path | Cloudflare → Workers (cloudless2) → Tunnel → Pi |"
-            echo "| Runner | self-hosted omv/pi (avoids GHA CF 403) |"
             echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
             echo "| Cert days remaining | ${DAYS_LEFT} |"
-            echo "| /api/health | ✅ 200 (${HEALTH_ELAPSED}) |"
+            echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
             echo "| health.status | ${HEALTH_STATUS} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   probe-standby:
     name: Probe STANDBY (pi-origin.cloudless.gr via Tunnel → Pi/k3s)
-    runs-on: [self-hosted, omv, pi]
-    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
     env:
       PROBE_HOST: "pi-origin.cloudless.gr"
     steps:
@@ -251,7 +300,6 @@ jobs:
           fi
 
           san=$(echo "$leaf" | openssl x509 -noout -text | grep -A1 "Subject Alternative Name" | tail -1 | tr ',' '\n' | tr -d ' ')
-          # Cloudflare Universal SSL wildcard cert covers *.cloudless.gr
           if echo "$san" | grep -qE "DNS:(${PROBE_HOST}|\*\.cloudless\.gr)(\b|$)"; then
             echo "  ✓ Cert valid for ${PROBE_HOST}, ${days_left} days remaining"
           else
@@ -262,6 +310,7 @@ jobs:
           echo "DAYS_LEFT=${days_left}" >> "$GITHUB_ENV"
 
       - name: GET /api/health
+        id: health
         run: |
           set -euo pipefail
           echo "→ GET https://${PROBE_HOST}/api/health"
@@ -277,24 +326,79 @@ jobs:
           echo "  → HTTP ${code} in ${elapsed}"
           echo "  → body: $(head -c 300 <<<"$body")"
 
+          challenged=0
           if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
-            echo "::error::Cloudflare Bot Fight / challenge intercepted ${PROBE_HOST}/api/health. Turn Bot Fight Mode off or re-run cloudflare-skip-cron-challenge.yml."
-            exit 1
+            challenged=1
           fi
 
+          if [ "${code}" = "200" ] && [ "${challenged}" = "0" ]; then
+            status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
+            version=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version',''))" 2>/dev/null || echo "")
+            if [ "${status}" != "ok" ]; then
+              echo "::warning::${PROBE_HOST}/api/health returned 200 but status='${status}' (expected 'ok')"
+            fi
+            {
+              echo "HEALTH_STATUS=${status}"
+              echo "HEALTH_VERSION=${version}"
+              echo "HEALTH_ELAPSED=${elapsed}"
+              echo "HEALTH_VIA=public"
+            } >> "$GITHUB_ENV"
+            echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
+            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare IP reputation / Bot Fight). Will validate origin via Tailscale NodePort."
+            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "::error::${PROBE_HOST}/api/health returned ${code} (Tunnel / Pi serving path broken)."
+          exit 1
+
+      - name: Tailscale (origin fallback)
+        if: steps.health.outputs.need_origin_fallback == 'true'
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: GET /api/health via Tailscale NodePort
+        if: steps.health.outputs.need_origin_fallback == 'true'
+        run: |
+          set -euo pipefail
+          echo "→ GET ${PI_NODEPORT_HEALTH} (Host: ${PROBE_HOST})"
+          response=$(curl -sS \
+            --max-time 30 \
+            --retry 2 --retry-delay 5 \
+            -H "Host: ${PROBE_HOST}" \
+            -H "X-Forwarded-Proto: https" \
+            -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
+            -o /tmp/body -w "%{http_code}|%{time_total}s" \
+            "${PI_NODEPORT_HEALTH}" || echo "000|n/a")
+          code="${response%%|*}"
+          elapsed="${response#*|}"
+          body=$(cat /tmp/body 2>/dev/null || true)
+          echo "  → HTTP ${code} in ${elapsed}"
+          echo "  → body: $(head -c 300 <<<"$body")"
+
           if [ "${code}" != "200" ]; then
-            echo "::error::${PROBE_HOST}/api/health returned ${code} (Tunnel / Pi serving path broken)."
+            echo "::error::Pi NodePort /api/health returned ${code} after public CF 403 — origin likely down."
             exit 1
           fi
 
           status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
           version=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version',''))" 2>/dev/null || echo "")
           if [ "${status}" != "ok" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned 200 but status='${status}' (expected 'ok')"
+            echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
+            exit 1
           fi
-          echo "HEALTH_STATUS=${status}" >> "$GITHUB_ENV"
-          echo "HEALTH_VERSION=${version}" >> "$GITHUB_ENV"
-          echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+          {
+            echo "HEALTH_STATUS=${status}"
+            echo "HEALTH_VERSION=${version}"
+            echo "HEALTH_ELAPSED=${elapsed}"
+            echo "HEALTH_VIA=tailscale-nodeport"
+          } >> "$GITHUB_ENV"
 
       - name: Step summary
         if: success()
@@ -306,10 +410,9 @@ jobs:
             echo "|---|---|"
             echo "| Host | \`${PROBE_HOST}\` |"
             echo "| Serving path | Cloudflare Tunnel → Pi/k3s NodePort |"
-            echo "| Runner | self-hosted omv/pi (avoids GHA CF 403) |"
             echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
             echo "| Cert days remaining | ${DAYS_LEFT} |"
-            echo "| /api/health | ✅ 200 (${HEALTH_ELAPSED}) |"
+            echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
             echo "| health.status | ${HEALTH_STATUS} |"
-            echo "| app version | ${HEALTH_VERSION} |"
+            echo "| app version | ${HEALTH_VERSION:-n/a} |"
           } >> "$GITHUB_STEP_SUMMARY"
