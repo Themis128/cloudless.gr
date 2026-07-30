@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       portal.lastReportAt = now.toISOString();
       sent.push(portal.clientEmail);
     } catch (err) {
-      console.error("[ClientReports] send failed for", portal.clientEmail, err);
+      console.error("[ClientReports] send failed for %s", portal.clientEmail, err);
       failed.push(portal.clientEmail);
     }
   }
