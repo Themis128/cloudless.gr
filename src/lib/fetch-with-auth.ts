@@ -2,14 +2,11 @@
 
 /**
  * Fetch wrapper for admin/API calls.
- * Relies on the HttpOnly `session_token` cookie (D1 auth) — same-origin
- * fetch sends cookies. Cognito Bearer tokens were removed (PR-05).
+ * Cookie session only — same-origin fetch sends the HttpOnly `session_token`.
  */
 
-/** Invalidate any client session cache. Call after sign-in / sign-out or on 401. */
-export function clearSessionCache(): void {
-  /* no Cognito session cache */
-}
+/** No-op retained for API stability (call after sign-in / sign-out or on 401). */
+export function clearSessionCache(): void {}
 
 export async function fetchWithAuth(url: string, init?: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {

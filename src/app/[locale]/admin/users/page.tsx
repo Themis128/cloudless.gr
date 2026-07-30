@@ -184,7 +184,7 @@ export default function AdminUsersPage() {
         <div className="bg-void-light/50 rounded-xl border border-red-900/30 p-6 text-center">
           <p className="font-mono text-sm text-red-400">{error}</p>
           <p className="mt-2 text-xs text-slate-500">
-            Check that Cognito is configured correctly in SSM.
+            Check that Cloudflare D1 auth is reachable (AUTH_DB_* / session).
           </p>
         </div>
       ) : (

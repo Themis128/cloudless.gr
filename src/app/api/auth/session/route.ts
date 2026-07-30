@@ -14,28 +14,7 @@ function getDb(_request: NextRequest): AuthDatabase | null {
 export async function GET(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    // Fallback to next-auth when D1 is not configured (Pi / Cognito path).
-    // Auth.js SessionProvider expects JSON `null` with HTTP 200 — never HTML
-    // and never a 4xx that triggers ClientFetchError in the browser poller.
-    try {
-      const { handlers } = await import("@/lib/auth");
-      const res = await handlers.GET(req);
-      const ct = res.headers.get("content-type") ?? "";
-      if (!ct.includes("application/json")) {
-        return NextResponse.json(null);
-      }
-      const text = await res.text();
-      if (!text || text === "null") {
-        return NextResponse.json(null);
-      }
-      try {
-        return NextResponse.json(JSON.parse(text) as unknown);
-      } catch {
-        return NextResponse.json(null);
-      }
-    } catch {
-      return NextResponse.json(null);
-    }
+    return NextResponse.json({ user: null });
   }
 
   const sessionId = req.cookies.get("session_token")?.value;
@@ -75,16 +54,9 @@ export async function HEAD() {
 export async function DELETE(req: NextRequest) {
   const db = getDb(req);
   if (!db) {
-    try {
-      const { handlers } = await import("@/lib/auth");
-      const signOut = (
-        handlers as unknown as { signOut?: (...args: unknown[]) => Promise<unknown> }
-      ).signOut;
-      if (signOut) return signOut(req) as Promise<Response>;
-    } catch {
-      // fall through to response
-    }
-    return NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true });
+    response.cookies.delete("session_token");
+    return response;
   }
 
   const sessionId = req.cookies.get("session_token")?.value;

@@ -301,7 +301,7 @@
     "dataUseTitle": "5. Verwendung Ihrer Daten",
     "dataUse": "Wir verwenden Ihre Daten für: Beantwortung von Kontaktanfragen, Auftragsabwicklung, Newsletter-Versand (nur mit Einwilligung), Verbesserung unserer Dienste, Einhaltung gesetzlicher Vorschriften und Betrugsprävention.",
     "dataSharingTitle": "6. Datenweitergabe & Dritte",
-    "dataSharing": "Wir teilen Daten nur mit notwendigen Verarbeitern: Stripe (Zahlungsabwicklung), Amazon Web Services (Hosting & E-Mail), AWS Cognito (Authentifizierung). Wir verkaufen Ihre Daten nicht.",
+    "dataSharing": "Wir teilen Daten nur mit notwendigen Verarbeitern: Stripe (Zahlungsabwicklung), Amazon Web Services (Hosting & E-Mail), Cloudflare (D1-Kontoauthentifizierung und Edge-Auslieferung). Wir verkaufen Ihre Daten nicht.",
     "dataTransfersTitle": "7. Internationale Datenübertragungen",
     "dataTransfers": "Einige Verarbeiter befinden sich in den USA. Übertragungen sind durch das EU-US-Datenschutzrahmenwerk oder SCCs geschützt.",
     "retentionTitle": "8. Datenspeicherung",

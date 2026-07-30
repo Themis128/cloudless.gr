@@ -22,8 +22,6 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 /** Same-origin route that reads (GET) and writes (POST) user profile attributes. */
 const PROFILE_ENDPOINT = "/api/user/profile";
 
-const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-
 export interface AuthUser {
   username: string;
   email?: string;
@@ -33,23 +31,14 @@ export interface AuthUser {
   preferences: UserPreferences;
 }
 
-interface SignInResult {
-  needsNewPassword?: boolean;
-  needsConfirmation?: boolean;
-}
-
 interface AuthContextType {
   user: AuthUser | null;
   isAdmin: boolean;
   isLoading: boolean;
   configError: string | null;
-  signIn: (email: string, password: string) => Promise<SignInResult>;
-  signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  confirmSignUp: (email: string, code: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  confirmForgotPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-  completeNewPassword: (newPassword: string) => Promise<void>;
   updateProfile: (attrs: { name?: string; company?: string; phone?: string }) => Promise<void>;
   updatePreferences: (prefs: Partial<UserPreferences>) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -60,13 +49,9 @@ const DEFAULT_AUTH_CONTEXT: AuthContextType = {
   isAdmin: false,
   isLoading: true,
   configError: null,
-  signIn: async () => ({}),
-  signUp: async () => {},
+  signIn: async () => {},
   signOut: async () => {},
-  confirmSignUp: async () => {},
   forgotPassword: async () => {},
-  confirmForgotPassword: async () => {},
-  completeNewPassword: async () => {},
   updateProfile: async () => {},
   updatePreferences: async () => {},
   refreshProfile: async () => {},
@@ -79,11 +64,9 @@ function isAdminFromSession(user: { groups?: string[] }): boolean {
 }
 
 /**
- * Pull the user's stored profile attributes (company/phone/preferences) that
- * the session token does not carry, merging them onto the base user. Served by
- * the provider-agnostic /api/user/profile route (DynamoDB, keyed by sub).
- * Returns the base unchanged on any failure so auth state never depends on it.
- * Without this, the Profile/Settings forms render blank on every load.
+ * Merge stored profile attributes (company/phone/preferences) onto the session
+ * user. Served by /api/user/profile (D1, keyed by user id). Returns the base
+ * unchanged on any failure so auth state never depends on it.
  */
 async function enrichWithProfile(base: AuthUser): Promise<AuthUser> {
   try {
@@ -186,15 +169,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           preferences: { ...DEFAULT_PREFERENCES },
         };
         setIsAdmin(Boolean(data.isAdmin) || isAdminFromSession(data.user));
-        // Render the session-only user immediately so isLoading flips false
-        // and the admin layout stops showing the centred spinner. The profile
-        // enrichment (company/phone/preferences) runs without await — when it
-        // resolves it patches the state in. Avoids blocking the whole admin
-        // boot on /api/user/profile, which returns 413 today because the
-        // Cognito-cookie + headers combo exceeds the edge header limit
-        // (documented in src/lib/auth.ts:172). The 413 itself is harmless —
-        // enrichWithProfile swallows it and returns the base — but awaiting
-        // it added a full request RTT to every admin page load.
+        // Render session user immediately; enrich profile in the background so
+        // admin layout isLoading flips without waiting on /api/user/profile.
         setUser(base);
         void enrichWithProfile(base).then((enriched) => {
           if (enriched !== base) setUser(enriched);
@@ -216,7 +192,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [checkAuth]);
 
   // D1: email/password → POST /api/auth/login (session_token cookie).
-  const handleSignIn = async (email: string, password: string): Promise<SignInResult> => {
+  const handleSignIn = async (email: string, password: string): Promise<void> => {
     const res = await globalThis.fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -246,11 +222,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     void enrichWithProfile(base).then((enriched) => {
       if (enriched !== base) setUser(enriched);
     });
-    return {};
-  };
-
-  const handleSignUp = async (_email: string, _password: string, _name?: string) => {
-    // D1 signup is handled by the signup page → /api/auth/register*
   };
 
   const handleSignOut = async () => {
@@ -258,10 +229,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsAdmin(false);
     clearSessionCache();
     await globalThis.fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
-  };
-
-  const handleConfirmSignUp = async (_email: string, _code: string) => {
-    // D1: activate routes on signup page.
   };
 
   const handleForgotPassword = async (email: string) => {
@@ -276,26 +243,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const handleConfirmForgotPassword = async (
-    _email: string,
-    _code: string,
-    _newPassword: string
-  ) => {
-    // D1 reset-confirm page.
-  };
-
-  const handleCompleteNewPassword = async (_newPassword: string) => {
-    // Unused — Cognito Hosted UI removed.
-  };
-
   const handleUpdateProfile = async (attrs: {
     name?: string;
     company?: string;
     phone?: string;
   }) => {
-    // Go through our own same-origin API route, which persists the profile in
-    // DynamoDB keyed by the Cognito user sub. Retry once on 502/503 (Pi origin
-    // may lack DynamoDB; retry hits AWS via Cloudflare Worker failover).
+    // Persist via /api/user/profile (D1). Retry once on 502/503 in case the
+    // Worker failover needs a second attempt.
     const doFetch = () =>
       globalThis.fetch(PROFILE_ENDPOINT, {
         method: "POST",
@@ -308,7 +262,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       (res.status === 502 || res.status === 503) &&
       res.headers.get("x-served-by") !== "aws-fallback"
     ) {
-      // Retry once — the Worker may route to AWS on the second attempt
       res = await doFetch();
     }
     if (!res.ok) {
@@ -334,7 +287,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       ...prefs,
     };
     setUser((prev) => (prev ? { ...prev, preferences: merged } : prev));
-    // Persist via our same-origin route.
     try {
       await globalThis.fetch(PROFILE_ENDPOINT, {
         method: "POST",
@@ -358,12 +310,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading,
         configError,
         signIn: handleSignIn,
-        signUp: handleSignUp,
         signOut: handleSignOut,
-        confirmSignUp: handleConfirmSignUp,
         forgotPassword: handleForgotPassword,
-        confirmForgotPassword: handleConfirmForgotPassword,
-        completeNewPassword: handleCompleteNewPassword,
         updateProfile: handleUpdateProfile,
         updatePreferences: handleUpdatePreferences,
         refreshProfile: handleRefreshProfile,
