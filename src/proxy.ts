@@ -396,6 +396,13 @@ export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const { pathname } = request.nextUrl;
 
+  // Defense in depth: never locale-prefix Next internals. A broken matcher
+  // that lets `/_next/static/*` through here used to 307 → `/en/_next/...`,
+  // which then 404s as text/html and breaks every stylesheet/script load.
+  if (pathname.startsWith("/_next/")) {
+    return NextResponse.next();
+  }
+
   // Canonical host: cloudless.gr (apex). 308-redirect www.cloudless.gr → apex
   // so the LinkedIn Insight Tag, GA4, and search-engine canonical signal are
   // all consolidated on one host. Done before HTTPS upgrade so we don't

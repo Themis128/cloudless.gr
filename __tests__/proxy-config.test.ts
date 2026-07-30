@@ -9,9 +9,12 @@ describe("proxy config matcher", () => {
     expect(matcher).toContain("offline\\.html");
   });
 
-  it("excludes all Next.js internals from intl middleware", () => {
+  it("excludes /_next/static and /_next/image as separate alternatives", () => {
+    // Regression: `_next/static/_next/image` (missing `|`) lets locale
+    // middleware 307 `/_next/static/*.css` → `/en/_next/static/...` (HTML 404).
     const matcher = config.matcher?.[0] ?? "";
-    expect(matcher).toContain("_next");
+    expect(matcher).toContain("_next/static|_next/image");
+    expect(matcher).not.toContain("_next/static/_next/image");
   });
 
   it("excludes common static file extensions", () => {
