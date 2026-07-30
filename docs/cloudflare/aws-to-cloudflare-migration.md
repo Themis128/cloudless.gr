@@ -22,9 +22,11 @@
 1. Email (Node/Pi) — **Cloudflare Email Sending LIVE** from the app pod (`CLOUDFLARE_EMAIL_API_TOKEN` + `CLOUDFLARE_API_TOKEN` in `cloudless-secrets`). `RESEND_API_KEY` still optional and **not set**.
 2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET**; Workers AI embed smoke (`bge-small` → **384**) OK from app pod.
 3. Meili reindex — **done** (4 docs / 4 embeddings; `workers-ai-bge-small` @ 384; in-cluster `MEILI_HOST`). `CRON_SECRET` rotated after earlier job-log leak.
-4. **Next:** apply D1 migration `0014-ad-analytics-bookmarks.sql` on remote `user-auth-db`; confirm Pi `AUTH_DB` bound; then PR-14 (`pnpm remove` remaining `@aws-sdk/*`).
-5. Cognito is retired; tear down the User Pool in AWS when ready (PR-16).
-6. **Out of band:** Tailscale Operator deploy fails with `namespaces "tailscale-operator" not found` — fabric/docs issue, not cutover-blocking.
+4. **D1 migration 0014:** applied on remote `user-auth-db` (`d1_migrations` id=14 @ 2026-07-30 15:00:53).
+5. **AUTH_DB on Pi:** Workers binding is edge-only. Pi Node uses `src/lib/d1-http.ts` (D1 REST) when `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` are in `cloudless-secrets`. Verify: `GET /api/health` → `dbConnected: true`; `POST /api/auth/login` must not return `503 Auth not configured`.
+6. **Next after AUTH_DB verified:** PR-14 (`pnpm remove` remaining `@aws-sdk/*`).
+7. Cognito is retired; tear down the User Pool in AWS when ready (PR-16).
+8. **Out of band:** Tailscale Operator deploy fails with `namespaces "tailscale-operator" not found` — fabric/docs issue, not cutover-blocking.
 
 ---
 

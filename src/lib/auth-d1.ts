@@ -492,7 +492,8 @@ export function validateSessionSecret(): { valid: boolean; error?: string } {
  * 1. process.env.AUTH_DB — Workers/OpenNext polyfill or tests
  * 2. globalThis.__AUTH_DB__ — mirrored binding for Node libs
  * 3. OpenNext Cloudflare context (`initOpenNextCloudflareForDev` / Worker entry)
- * 4. Local wrangler D1 sqlite shim (`auth-db-local`) in development only
+ * 4. D1 HTTP (Pi/Node) via CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN
+ * 5. Local wrangler D1 sqlite shim (`auth-db-local`) in development only
  */
 export function getAuthDbFromEnv(): AuthDatabase | null {
   const fromEnv = (process as unknown as { env?: { AUTH_DB?: AuthDatabase } }).env?.AUTH_DB;
@@ -508,6 +509,17 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
   }
   const db = fromEnv ?? fromGlobal ?? fromCf;
   if (db && typeof db.prepare === "function") return db;
+
+  // Pi / Node production: native Workers binding is absent — use D1 REST.
+  try {
+    const { getHttpAuthDb } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- keep Workers bundle free of Node-only paths
+      require("@/lib/d1-http") as typeof import("@/lib/d1-http");
+    const httpDb = getHttpAuthDb();
+    if (httpDb) return httpDb;
+  } catch {
+    // Module unavailable or misconfigured — fall through.
+  }
 
   if (process.env.NODE_ENV === "development") {
     // Lazy require avoids pulling node:sqlite into Workers/edge bundles.
