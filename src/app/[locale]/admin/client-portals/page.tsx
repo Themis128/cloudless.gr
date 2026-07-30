@@ -1256,7 +1256,7 @@ export default function ClientPortalsPage() {
                 <code className="bg-void text-neon-cyan rounded px-1">/auth/signup?plan=...</code>
               </li>
               <li>
-                Cognito sign-up + email verification → client lands in{" "}
+                Account sign-up + email verification → client lands in{" "}
                 <code className="bg-void text-neon-cyan rounded px-1">/portal/waiting</code>
               </li>
               <li>

@@ -296,7 +296,7 @@
     "dataUseTitle": "5. How We Use Your Data",
     "dataUse": "We use your data to: respond to your contact form enquiries, process and fulfil orders, send newsletter updates (only with consent), improve our website and services, comply with legal obligations, prevent fraud and ensure security, and — with consent — personalise content and advertising.",
     "dataSharingTitle": "6. Data Sharing & Third Parties",
-    "dataSharing": "We share data only with processors that are necessary to deliver our services: Stripe (payment processing, US — EU-US Data Privacy Framework certified), Amazon Web Services (hosting and email via SES, EU region), and AWS Cognito (authentication). We do not sell your personal data. Each third-party processor is bound by a Data Processing Agreement (DPA) and processes data only on our instructions.",
+    "dataSharing": "We share data only with processors that are necessary to deliver our services: Stripe (payment processing, US — EU-US Data Privacy Framework certified), Amazon Web Services (hosting and email via SES, EU region), and Cloudflare (D1 account authentication and edge delivery). We do not sell your personal data. Each third-party processor is bound by a Data Processing Agreement (DPA) and processes data only on our instructions.",
     "dataTransfersTitle": "7. International Data Transfers",
     "dataTransfers": "Some of our processors (e.g. Stripe) are based in the United States. These transfers are protected by the EU-US Data Privacy Framework, Standard Contractual Clauses (SCCs), or your explicit consent, in accordance with GDPR Chapter V.",
     "retentionTitle": "8. Data Retention",

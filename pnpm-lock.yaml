@@ -36,9 +36,6 @@ importers:
       '@aws-sdk/client-bedrock-runtime':
         specifier: ^3.1073.0
         version: 3.1095.0
-      '@aws-sdk/client-cognito-identity-provider':
-        specifier: ^3.1073.0
-        version: 3.1095.0
       '@aws-sdk/client-cost-explorer':
         specifier: ^3.1073.0
         version: 3.1095.0
@@ -420,10 +417,6 @@ packages:
 
   '@aws-sdk/client-cloudfront@3.984.0':
     resolution: {integrity: sha512-couDuDLpJtoeWne/nYyJ+I+5ntBVdNgBVRTCoDaXuVV7OC3u/wz5Ps0+GogspEwMLEFoOJ8t691h3YXQtnpQTw==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/client-cognito-identity-provider@3.1095.0':
-    resolution: {integrity: sha512-RRS2OrmKJsykmkmJKSCx2pWFbKNtcpH3UP+aNhVSF3zIKBCJ3W/8prSKAgPPAhIGTy97lLe7RIfAnmMPpjDNEg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-cost-explorer@3.1095.0':
@@ -7323,17 +7316,6 @@ snapshots:
       '@smithy/util-stream': 4.7.14
       '@smithy/util-utf8': 4.4.14
       '@smithy/util-waiter': 4.5.14
-      tslib: 2.8.1
-
-  '@aws-sdk/client-cognito-identity-provider@3.1095.0':
-    dependencies:
-      '@aws-sdk/core': 3.977.1
-      '@aws-sdk/credential-provider-node': 3.972.72
-      '@aws-sdk/types': 3.974.2
-      '@smithy/core': 3.30.0
-      '@smithy/fetch-http-handler': 5.6.11
-      '@smithy/node-http-handler': 4.9.11
-      '@smithy/types': 4.16.1
       tslib: 2.8.1
 
   '@aws-sdk/client-cost-explorer@3.1095.0':

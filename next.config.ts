@@ -58,7 +58,6 @@ const nextConfig: NextConfig = {
   transpilePackages: ["next-auth"],
   serverExternalPackages: [
     "@aws-sdk/client-bedrock-runtime",
-    "@aws-sdk/client-cognito-identity-provider",
     "@aws-sdk/client-dynamodb",
     "@aws-sdk/client-sesv2",
     "@aws-sdk/client-ssm",

@@ -171,7 +171,7 @@ const NAV_GROUPS: NavGroup[] = [
         s.errors === null ? null : `${s.errors} unresolved`
       ),
       card("KPI Dashboard", "GSC, analytics, projects, tasks in one view", "📊", "/admin/kpi"),
-      card("Users", "Cognito accounts and admin access", "👤", "/admin/users"),
+      card("Users", "Account users and admin access", "👤", "/admin/users"),
       card("Notifications", "Slack routing and test sends", "🔔", "/admin/notifications"),
       card("Settings", "Site configuration and preferences", "⚙️", "/admin/settings"),
     ],

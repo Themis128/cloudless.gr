@@ -34,12 +34,9 @@ vi.mock("@/context/AuthContext", () => ({
     user: null,
     isAdmin: false,
     isLoading: false,
-    signIn: vi.fn().mockResolvedValue({}),
-    completeNewPassword: vi.fn().mockResolvedValue({}),
-    signUp: vi.fn().mockResolvedValue({}),
-    confirmSignUp: vi.fn().mockResolvedValue({}),
-    forgotPassword: vi.fn().mockResolvedValue({}),
-    confirmForgotPassword: vi.fn().mockResolvedValue({}),
+    signIn: vi.fn().mockResolvedValue(undefined),
+    forgotPassword: vi.fn().mockResolvedValue(undefined),
+    signOut: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 

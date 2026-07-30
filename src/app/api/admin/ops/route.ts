@@ -73,16 +73,6 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      case "sync-users": {
-        // Trigger user sync (placeholder - actual implementation would use Cognito)
-        result = {
-          ok: true,
-          command,
-          result: { message: "User sync initiated" },
-        };
-        break;
-      }
-
       default:
         return NextResponse.json({ error: `Unknown command: ${command}` }, { status: 400 });
     }

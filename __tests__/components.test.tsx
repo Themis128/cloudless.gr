@@ -36,14 +36,10 @@ vi.mock("@/context/AuthContext", () => ({
   useAuth: () => ({
     user: null,
     isAdmin: false,
-    loading: false,
+    isLoading: false,
     signIn: vi.fn(),
-    signUp: vi.fn(),
     signOut: vi.fn(),
-    confirmSignUp: vi.fn(),
-    resetPassword: vi.fn(),
-    confirmResetPassword: vi.fn(),
-    confirmSignIn: vi.fn(),
+    forgotPassword: vi.fn(),
   }),
 }));
 

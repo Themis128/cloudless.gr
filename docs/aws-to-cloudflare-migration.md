@@ -2,7 +2,7 @@
 
 | PR    | Status           | Notes                                                                                               |
 | ----- | ---------------- | --------------------------------------------------------------------------------------------------- |
-| PR-01 | **Done in tree** | SSM fetch removed from `getConfig` + instrumentation; Cognito needs `ALLOW_LEGACY_COGNITO=1`        |
+| PR-01 | **Done in tree** | SSM fetch removed from `getConfig` + instrumentation; default auth is D1                            |
 | PR-02 | **Done in tree** | `email.ts` Resend / Workers Email only — no SES                                                     |
 | PR-03 | **Done in tree** | `ses-suppression.ts` → D1 only                                                                      |
 | PR-07 | **Done in tree** | Portals / pending / workspaces / AB / voice-brief → D1 `app_config` via `app-config-json.ts`        |
@@ -12,14 +12,15 @@
 | PR-12 | **Done in tree** | Deleted athena/sns/amplify/logger stubs + cron-invoker; kept `athena-d1.ts`                         |
 | PR-13 | **Done in tree** | R2 I/O via `aws4fetch` (`r2-upload.ts`, `scripts/etl/_r2-config.mjs`); `@aws-sdk/client-s3` removed |
 | PR-04 | **Done in tree** | Admin users / activate / confirm / user delete → D1 only; Cognito SDK removed from those routes |
+| PR-05 | **Done in tree** | Cognito surface removed: no Hosted UI, no JWKS, no Cognito SDK, no fake sync-users; D1 cookie auth only; Cognito operator scripts archived under `scripts/archive/cognito/` |
 
 **Operator follow-ups before / after merge to main:**
 
 1. Email (Node/Pi) — **Cloudflare Email Sending LIVE** from the app pod (`CLOUDFLARE_EMAIL_API_TOKEN` + `CLOUDFLARE_API_TOKEN` in `cloudless-secrets`). `RESEND_API_KEY` still optional and **not set**.
 2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET**; Workers AI embed smoke (`bge-small` → **384**) OK from app pod.
 3. Meili reindex — **done** (4 docs / 4 embeddings; `workers-ai-bge-small` @ 384; in-cluster `MEILI_HOST`). `CRON_SECRET` rotated after earlier job-log leak.
-4. **Next:** Wave B (PR-04…06), then PR-14 (`pnpm remove` remaining `@aws-sdk/*`). Do not run PR-14 until Cognito/Dynamo call sites are gone.
-5. Wave B still gated on Cognito/Dynamo data cutover verification.
+4. **Next:** PR-06 (Dynamo → D1), then PR-14 (`pnpm remove` remaining `@aws-sdk/*`). Do not run PR-14 until Dynamo call sites are gone.
+5. Cognito is retired; tear down the User Pool in AWS when ready (PR-16).
 
 ---
 
@@ -59,7 +60,7 @@ PR-15 → PR-16 → PR-17       (archive → AWS teardown → Cost Explorer)
 | PR        | Title                         | Replace                                                                              | With                                                                            | Risk | Depends                               | Done when                                         |
 | --------- | ----------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ---- | ------------------------------------- | ------------------------------------------------- |
 | **PR-04** | Auth admin Cognito → D1       | `/api/admin/users*`, confirm/activate/delete Cognito                                 | D1 users + admin role; drop `@aws-sdk/client-cognito-identity-provider`         | High | PR-01; **admin users migrated to D1** | Admin user CRUD works on D1; Cognito API unused   |
-| **PR-05** | Delete Cognito client surface | `cognito-auth.ts`, next-auth Cognito provider, Amplify shim, `NEXT_PUBLIC_COGNITO_*` | `auth-d1` + cookie sessions only                                                | High | PR-04                                 | Login/signup/logout D1-only; no Cognito Hosted UI |
+| **PR-05** | Delete Cognito client surface | `cognito-auth.ts`, next-auth Cognito provider, Amplify shim, `NEXT_PUBLIC_COGNITO_*` | `auth-d1` + cookie sessions only                                                | High | PR-04                                 | **Done** — Login/signup D1-only; Cognito SDK removed from app |
 | **PR-06** | DynamoDB → D1                 | profiles, admin-notifications, GSC cache, Stripe txs, session store, bookmarks       | D1 tables + `*-d1` helpers; `scripts/migrate-dynamodb-to-d1.ts` if data remains | High | PR-01; **data verified in D1/R2**     | No `@aws-sdk/client-dynamodb` imports             |
 
 **Gate:** Do not start Wave B until a one-time export confirms D1 (or R2) holds production rows that Dynamo still owns.

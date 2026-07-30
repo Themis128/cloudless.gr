@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { signIn as nextAuthSignIn } from "next-auth/react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { isValidPlan } from "@/lib/plans";
-
-const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-const USE_COGNITO = AUTH_PROVIDER === "cognito";
 
 function SignUpForm() {
   const [locale] = useCurrentLocale();
@@ -55,20 +51,6 @@ function SignUpForm() {
   // 5-min countdown — seconds remaining until auto-resend fires
   const [secondsLeft, setSecondsLeft] = useState(0);
   const autoResendFiredRef = useRef(false);
-
-  const handleCognitoSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      // Cognito Hosted UI handles both sign-in and sign-up.
-      // Redirect to it so the user can create an account there.
-      const callbackUrl = postSignupDestination ?? "/auth/post-login";
-      await nextAuthSignIn("cognito", { callbackUrl });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Sign up failed");
-      setSubmitting(false);
-    }
-  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,37 +176,7 @@ function SignUpForm() {
         </div>
 
         <div className="bg-void-light/50 rounded-xl border border-slate-800 p-8">
-          {USE_COGNITO ? (
-            // Cognito Hosted UI handles sign-up — redirect there.
-            <form onSubmit={handleCognitoSignUp} className="space-y-5">
-              {error && (
-                <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta rounded-lg border p-3 font-mono text-sm">
-                  {error}
-                </div>
-              )}
-              <p className="font-mono text-sm text-slate-400">
-                {t(
-                  "auth.cognitoSignupDesc",
-                  "Account creation is handled securely through AWS. Click below to continue."
-                )}
-              </p>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
-              >
-                {submitting
-                  ? t("auth.redirecting", "Redirecting...")
-                  : t("auth.continueWithAws", "Continue with AWS")}
-              </button>
-              <p className="text-center font-mono text-sm text-slate-500">
-                {t("auth.hasAccount", "Already have an account?")}{" "}
-                <Link href="/auth/login" className="text-neon-cyan hover:underline">
-                  {t("auth.login", "Sign In")}
-                </Link>
-              </p>
-            </form>
-          ) : step === "confirm-code" ? (
+          {step === "confirm-code" ? (
             <form onSubmit={handleConfirm} className="space-y-5">
               {error && (
                 <div className="bg-neon-magenta/10 border-neon-magenta/30 text-neon-magenta rounded-lg border p-3 font-mono text-sm">
