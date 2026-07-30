@@ -78,11 +78,18 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| SSL/TLS | Full (strict) | End-to-end encryption |
-| HSTS | 12 months | Force HTTPS via browser |
-| Minimum TLS | 1.2 | No legacy clients |
-| CNAME Flattening | On root | Allow CNAME for apex |
-| Always Use HTTPS | ✅ | Redirect HTTP → HTTPS |
+| SSL/TLS | Full | Edge ↔ origin encryption (Tunnel) |
+| HSTS (zone) | `max-age=63072000; includeSubDomains; preload` + nosniff | Force HTTPS via browser (matches app header) |
+| Minimum TLS | 1.2 | No TLS 1.0/1.1 |
+| TLS 1.3 | On (0-RTT) | Modern clients |
+| HTTP/3 | On | QUIC |
+| Always Use HTTPS | On | Redirect HTTP → HTTPS |
+| Security Level | medium | Challenge medium+ threat scores (was `essentially_off`) |
+| Browser Integrity Check | On | Block obvious forged browsers |
+| Email Obfuscation | Off | Avoid React #418 hydration from CF email rewrite |
+| Bot Fight Mode | Off (dashboard) | Free: not API-toggleable; leave off — crons use `pi-origin` |
+| Apply / verify (TLS) | `scripts/cf-zone-tls-harden.sh` | Idempotent zone TLS posture |
+| Apply / verify (WAF) | `scripts/cf-zone-waf-harden.sh` | Idempotent Free-plan WAF posture |
 | Page Rules | (see below) | Custom behaviors |
 
 #### Page Rules
@@ -399,25 +406,24 @@ Cloudflare automatically mitigates Layer 3/4 (network) and Layer 7 (application)
 
 ### Custom WAF Rules
 
-Example rule to block requests from certain countries:
+Custom rulesets require **Zone → Firewall Services** on `CLOUDFLARE_API_TOKEN`.
+Without that scope, `GET /zones/:id/rulesets` returns Authentication error
+(token is valid for Zone Settings/DNS/Workers but not Firewall). Rotate via
+`skills/cloudflare-token-doctor/SKILL.md` Stage 1 (Firewall Services: Edit
+is now in the mint table).
 
-```
-(cf.country != "GR" AND cf.country != "DE" AND cf.country != "US") 
-AND 
-(cf.threat_score > 50)
-→ Block
-```
+Until the token is rotated, manage rules in the dashboard
+(Security → WAF) or after Stage 1+2 of the token doctor.
 
 ### SSL/TLS Settings
 
 | Setting | Value | Purpose |
 |---------|-------|---------|
-| SSL Mode | Full (Strict) | End-to-end encryption |
+| SSL Mode | Full | Edge ↔ Tunnel origin |
 | HTTP to HTTPS | Redirect | Force secure connections |
 | Minimum TLS | 1.2 | No legacy clients |
-| HSTS | 12 months | Prevent downgrade attacks |
-| HSTS Subdomains | Included | Protect subdomains too |
-| Preload | ✅ | Include in browser preload lists |
+| HSTS (zone + app) | `max-age=63072000; includeSubDomains; preload` | Prevent downgrade attacks |
+| Apply | `scripts/cf-zone-tls-harden.sh` | Idempotent |
 
 ---
 

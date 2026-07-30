@@ -75,6 +75,7 @@ and store the output. This is the path you'll take if every prior token is gone.
    | Zone | Analytics | Read |
    | Zone | Zone Settings | Edit |
    | Zone | DNS | Edit |
+   | Zone | Firewall Services | Edit |
    | Zone | Load Balancing: Monitors and Pools | Edit |
    | Zone | Load Balancing: Load Balancers | Edit |
 

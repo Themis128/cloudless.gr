@@ -160,7 +160,7 @@ jobs:
           A11Y_MIN=0.90
           BP_MIN=0.90
           SEO_MIN=0.90
-          
+
           FAILED=$(echo "$MEDIANS" | jq -r --argjson page "$PAGE_PERF_MIN" \
             --argjson a11y "$A11Y_MIN" --argjson bp "$BP_MIN" --argjson seo "$SEO_MIN" '
             [.[] | . as $row |

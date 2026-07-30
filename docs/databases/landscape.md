@@ -210,7 +210,7 @@ flowchart LR
   Dev["pnpm db:d1:pull"] -->|export snapshot| Local[".local/db/*.sqlite"]
 ```
 
-Retired orphan D1 `cloudless-auth` — `pnpm d1:retire:cloudless-auth`.
+Retired orphan D1 `cloudless-auth` — deleted 2026-07-30. Orphan KV `HEALTH_CACHE` deleted the same day.
 
 ### Embedded SQLite apps
 

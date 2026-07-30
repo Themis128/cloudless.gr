@@ -61,12 +61,12 @@ jobs:
         if: ${{ inputs.restart_tailscale_daemon == 'true' }}
         run: |
           echo "=== Attempting to restart tailscaled on Pi host ==="
-          
+
           mkdir -p ~/.ssh
           echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 192.168.1.128 >> ~/.ssh/known_hosts 2>/dev/null || true
-          
+
           # Try LAN SSH (Pi may be online locally but off tailnet)
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
             tbaltzakis@192.168.1.128 \
@@ -80,7 +80,7 @@ jobs:
         run: |
           echo "Waiting 10s for Tailscale to establish connections..."
           sleep 10
-          
+
           # Check if we can now reach Pi on tailnet
           if ping -c 1 100.113.41.119 2>/dev/null; then
             echo "✅ Pi is now reachable on Tailscale"
@@ -100,18 +100,18 @@ jobs:
         if: ${{ inputs.target == 'all' || inputs.target == 'operator' }}
         run: |
           echo "=== Deploying Tailscale Operator ==="
-          
+
           # Add Helm repo
           helm repo add tailscale https://pkgs.tailscale.com/helmcharts
           helm repo update
-          
+
           # Check if cluster is reachable before attempting deployment
           if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
             echo "⚠️ k3s API unreachable - skipping Helm deploy"
             echo "Operator will be deployed when cluster comes online"
             exit 0
           fi
-          
+
           # Install or upgrade operator
           helm upgrade --install tailscale-operator tailscale/tailscale-operator \
             --namespace tailscale-operator \
@@ -127,20 +127,20 @@ jobs:
         if: ${{ inputs.target == 'all' || inputs.target == 'proxies' }}
         run: |
           echo "=== Restarting Tailscale Proxy pods ==="
-          
+
           # Check if cluster is reachable
           if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
             echo "⚠️ k3s API unreachable - skipping proxy restart"
             exit 0
           fi
-          
+
           # Delete existing proxy pods to force recreation
           kubectl delete pods -n tailscale-operator -l tailscale=proxy --ignore-not-found=true || true
           kubectl delete pods -n monitoring -l tailscale=proxy --ignore-not-found=true || true
-          
+
           # Wait for recreation
           sleep 5
-          
+
           # Check new proxy status
           kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
           kubectl get pods -n monitoring -o wide || echo "Could not reach cluster"
@@ -149,33 +149,33 @@ jobs:
         if: ${{ inputs.target == 'all' || inputs.target == 'subnet-router' }}
         run: |
           echo "=== Restarting Tailscale Subnet Router ==="
-          
+
           # Check if cluster is reachable
           if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
             echo "⚠️ k3s API unreachable - skipping subnet router restart"
             exit 0
           fi
-          
+
           kubectl delete pods -n tailscale-operator -l tailscale=subnet-router --ignore-not-found=true || true
           kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
 
       - name: Verify Tailscale connectivity
         run: |
           echo "=== Tailscale Verification ==="
-          
+
           # Check if cluster is reachable
           if ! nc -zv -w3 100.74.191.58 6443 2>/dev/null; then
             echo "⚠️ k3s API unreachable - skipping verification"
             exit 0
           fi
-          
+
           echo "Tailscale Operator pods:"
           kubectl get pods -n tailscale-operator -o wide || echo "Could not reach cluster"
-          
+
           echo ""
           echo "ProxyGroup status:"
           kubectl get ProxyGroup -n tailscale-operator -o wide 2>/dev/null || echo "No ProxyGroups found"
-          
+
           echo ""
           echo "Endpoints with Tailscale ingress:"
           kubectl get endpoints -A -o wide 2>/dev/null | grep -E "ts_proxy|tailscale" || echo "No Tailscale endpoints found"
@@ -193,7 +193,7 @@ jobs:
               --body "Automated Tailscale reconnect report" \
               --label "tailscale,cluster" 2>/dev/null || echo "382")
           fi
-          
+
           {
             echo "# Tailscale Reconnect Agent - $(date -u '+%Y-%m-%d %H:%M:%SZ')"
             echo ""

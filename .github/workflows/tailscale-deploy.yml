@@ -107,15 +107,15 @@ jobs:
         run: |
           echo "=== Tailscale Operator Pods ==="
           kubectl get pods -n tailscale-operator -o wide
-          
+
           echo ""
           echo "=== ProxyGroups ==="
           kubectl get ProxyGroup -n tailscale-operator -o wide
-          
+
           echo ""
           echo "=== Tailscale Ingresses ==="
           kubectl get ingress -A -o wide | grep tailscale || echo "No tailscale ingresses found"
-          
+
           echo ""
           echo "=== Tailscale Ingress Class ==="
           kubectl get ingressclass tailscale

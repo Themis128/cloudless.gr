@@ -1,7 +1,7 @@
 name: Monitoring Node Selector Fix
 
-# Patch monitoring pods (Prometheus, Alertmanager, kube-state-metrics, cloudwatch-exporter) 
-# to add nodeSelector targeting the `omv` hostname. Fixes pods stuck in Pending due to 
+# Patch monitoring pods (Prometheus, Alertmanager, kube-state-metrics, cloudwatch-exporter)
+# to add nodeSelector targeting the `omv` hostname. Fixes pods stuck in Pending due to
 # NoSchedule taint on omv-ha node.
 #
 # Trigger by touching this file or via dispatch.

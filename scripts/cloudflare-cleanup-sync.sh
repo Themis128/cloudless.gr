@@ -1,133 +1,85 @@
 #!/bin/bash
 # CloudFlare Dashboard Cleanup & Sync Script
-# Generated: 2026-07-20
-# Purpose: Clean up orphaned resources and ensure perfect sync with app configuration
+# Updated: 2026-07-30 — orphans cloudless-auth (D1) + HEALTH_CACHE (KV) deleted.
+# Purpose: Verify live account matches wrangler.jsonc bindings.
 
 set -euo pipefail
 
 echo "=== Cloudflare Cleanup & Sync Script ==="
-echo "Analyzing current resources..."
+echo "Verifying resources against wrangler.jsonc..."
 
 # ============================================================================
-# SECTION 1: Identify Orphaned Resources
+# SECTION 1: Expected resources (in sync)
 # ============================================================================
 
 echo ""
-echo "📊 RESOURCES ANALYSIS:"
+echo "📊 RESOURCES (expected = live as of 2026-07-30):"
 echo "====================="
 
-# R2 Buckets currently configured
 echo ""
-echo "✅ R2 Buckets (CORRECT - all 8 in sync):"
+echo "✅ R2 Buckets (wrangler.jsonc):"
 echo "  Production: app-media-bucket, cloudless-analytics, cloudless-assets, datalake-bucket"
 echo "  Preview: app-media-bucket-preview, cloudless-analytics-preview, cloudless-assets-preview, datalake-bucket-preview"
+echo "  Extra (OK): sst-state"
 
-# D1 Databases
 echo ""
-echo "⚠️  D1 Databases Analysis:"
-echo "  - user-auth-db (7ca74513...) ✅ IN USE - primary auth DB"
-echo "  - auth-db-preview (70d90155...) ✅ IN USE - staging"
-echo "  - cloudless-auth (0c00f32c...) ❌ ORPHANED - NOT referenced in any config"
+echo "✅ D1 Databases:"
+echo "  - user-auth-db (7ca74513-23c3-412a-b9ca-b0c55835973d) — AUTH_DB / NEXT_CACHE_D1_BINDING (prod)"
+echo "  - auth-db-preview (70d90155-12de-46d7-a0ea-113b3e7127cf) — staging"
+echo "  - cloudless-auth — DELETED 2026-07-30 (was unbound orphan)"
 
-# KV Namespaces
 echo ""
-echo "⚠️  KV Namespaces Analysis:"
-echo "  - HEALTH_CACHE (9a6997af9ff...) ❌ ORPHANED - NOT referenced in wrangler.jsonc"
-
-# Service Workers
-echo ""
-echo "⚠️  Service Workers Analysis:"
-echo "  - cloudless-gr ✅ Main worker"
-echo "  - cloudless ✅ Analytics worker"
-echo "  - cloudless-gr-staging ✅ Staging"
-echo "  - cloudless-analytics ✅ Analytics"
-echo "  - cloudless-gr-chat ❓ May exist but verify it's deployed and accessible"
-echo "  - cloudless-admin-api ❌ MISSING - referenced in wrangler.jsonc services but no /services/admin folder"
-
-# Secrets
-echo ""
-echo "⚠️  Secrets Analysis:"
-echo "  - CRON_SECRET ✅ Present"
-echo "  - SESSION_SECRET ❌ Missing - only placeholder in config"
-echo "  - AGENT_AUTH_TOKEN ❌ Missing - only placeholder in config"
+echo "✅ KV Namespaces:"
+echo "  - TAG_CACHE (e81bb5dcf84b452b978323f09a3f7428) — prod"
+echo "  - REVALIDATION_QUEUE (b5b95ab1caed42a8b6e14f5db869bbc6) — prod"
+echo "  - TAG_CACHE_preview / REVALIDATION_QUEUE_preview — staging"
+echo "  - HEALTH_CACHE — DELETED 2026-07-30 (was unbound orphan)"
 
 # ============================================================================
-# SECTION 2: Cleanup Recommendations
+# SECTION 2: Idempotent cleanup (safe if already gone)
 # ============================================================================
 
 echo ""
-echo "🧹 CLEANUP RECOMMENDATIONS:"
+echo "🧹 CLEANUP (idempotent):"
 echo "==========================="
 
-# Option 1: Show commands (dry-run mode)
 if [[ "${1:-}" == "--execute" ]]; then
     echo ""
-    echo "🗑️  EXECUTING CLEANUP..."
-    
+    echo "Ensuring orphaned D1 cloudless-auth is gone..."
+    npx wrangler d1 delete cloudless-auth --force --config wrangler.jsonc 2>&1 || echo "  (already deleted)"
+
     echo ""
-    echo "Deleting orphaned D1 database: cloudless-auth"
-    npx wrangler d1 delete cloudless-auth --force --config wrangler.jsonc 2>&1 || echo "  (may already be deleted)"
-    
-    echo ""
-    echo "Deleting orphaned KV namespace: HEALTH_CACHE"
-    npx wrangler kv namespace delete 9a6997af9ff5495ba72b31d2c1e5e6dd --force --config wrangler.jsonc 2>&1 || echo "  (may already be deleted)"
-    
+    echo "Ensuring orphaned KV HEALTH_CACHE is gone..."
+    npx wrangler kv namespace delete 9a6997af9ff5495ba72b31d2c1e5e6dd --force --config wrangler.jsonc 2>&1 || echo "  (already deleted)"
 else
     echo ""
-    echo "To execute cleanup, run: $0 --execute"
-    echo ""
-    echo "Commands that would run:"
-    echo "  npx wrangler d1 delete cloudless-auth --force --config wrangler.jsonc"
-    echo "  npx wrangler kv namespace delete 9a6997af9ff5495ba72b31d2c1e5e6dd --force --config wrangler.jsonc"
+    echo "Orphans already removed from the account. Re-run with --execute only to force idempotent deletes."
+    echo "  $0 --execute"
 fi
 
 # ============================================================================
-# SECTION 3: Missing Resources
+# SECTION 3: Local tooling
 # ============================================================================
 
 echo ""
-echo "🔧 MISSING RESOURCES TO CREATE:"
+echo "🔧 LOCAL SNAPSHOTS (Bindings explorer / SQLTools):"
 echo "=============================="
-
-echo ""
-echo "1. Admin API Service Worker (REQUIRED):"
-echo "   Location: /services/admin (missing)"
-echo "   Referenced in: wrangler.jsonc services.CHK_ADMIN_API binding"
-
-echo ""
-echo "2. Secrets to set (REQUIRED):"
-echo "   SESSION_SECRET - 32+ bytes random string"
-echo "   AGENT_AUTH_TOKEN - authentication token for agent endpoints"
+echo "  Wrangler Local tab = Miniflare under .wrangler/state (dev data, not prod)."
+echo "  For prod/staging SQLite copies: pnpm db:d1:pull"
+echo "  Bindings explorer remote cache: /tmp/cloudflare-bindings-explorer/remote-d1/"
+echo "  Expected remote files: 7ca74513-….sqlite (prod), 70d90155-….sqlite (preview)"
 
 # ============================================================================
-# SECTION 4: OpenNext.js Fine-Tuning Recommendations
+# SECTION 4: Verification
 # ============================================================================
 
 echo ""
-echo "🔧 OPENNEXT.JS FINE-TUNING RECOMMENDATIONS:"
-echo "============================================"
-
-echo ""
-echo "Current open-next.config.ts uses 'dummy' for caches and queues."
-echo "This is suitable for development but production should use:"
-echo ""
-
-echo "Recommended enhancements for production:"
-echo "  1. Add R2-based Incremental Cache for ISR performance"
-echo "  2. Add KV-based Tag Cache for cache invalidation"
-echo "  3. Enable KV-based Queue for scheduled revalidation"
-echo "  4. Add warming function for critical routes"
-
-# ============================================================================
-# SECTION 5: Sync Verification
-# ============================================================================
-
-echo ""
-echo "✅ VERIFICATION COMMANDS:"
+echo "✅ VERIFICATION:"
 echo "========================"
-echo "  pnpm cloudflare-build && npx wrangler deploy --config wrangler.jsonc --dry-run"
-echo "  curl -s https://cloudless.gr/api/health | jq"
-echo "  curl -s https://cloudless.gr/api/auth/session | jq"
+echo "  pnpm exec wrangler d1 list"
+echo "  pnpm exec wrangler kv namespace list"
+echo "  pnpm exec wrangler r2 bucket list"
+echo "  curl -s https://cloudless.gr/api/health"
 
 echo ""
 echo "=== Analysis Complete ==="

@@ -41,8 +41,8 @@ type: Opaque
 stringData:
   # MEILI_MASTER_KEY for Meilisearch authentication
   # Generated 2026-07-19 via: openssl rand -hex 32
-   # Apply secret before deployment: kubectl apply -f infrastructure/meilisearch/k8s.yaml
-   MEILI_MASTER_KEY: "21a2f74ace52d154f75ae8b2008126196b19486eef187e4df7e08fc23004a5a9"
+  # Apply secret before deployment: kubectl apply -f infrastructure/meilisearch/k8s.yaml
+  MEILI_MASTER_KEY: "21a2f74ace52d154f75ae8b2008126196b19486eef187e4df7e08fc23004a5a9"
 
 ---
 apiVersion: apps/v1

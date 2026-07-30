@@ -2,6 +2,15 @@
   // cloudless.gr — workspace editor + extension tuning
   // Stack: Next 16 · React 19 · Tailwind 4 · Vitest · Playwright · D1/Wrangler
 
+  // Cloudflare Bindings Explorer (takline) — non-secret only.
+  // Account ID matches wrangler.jsonc. API token / R2 access keys go in
+  // SecretStorage via Command Palette → "Cloudflare: Update R2 Endpoint & Credentials"
+  // (D1/KV also accept process.env.CLOUDFLARE_API_TOKEN if the extension host has it).
+  "cloudflare.accountId": "fb7dc7b69b662480cd5961a4d1913c78",
+  "r2.endpointUrl": "https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com",
+  "r2.region": "auto",
+  "r2.forcePathStyle": true,
+
   "npm.packageManager": "pnpm",
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,

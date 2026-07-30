@@ -47,7 +47,7 @@ curl -fsSL https://raw.githubusercontent.com/Themis128/cloudless.gr/main/scripts
 | X Ads | `X_AD_ACCOUNT_ID` — **blocked upstream**: verified 2026-06-12 that the X app returns `UNAUTHORIZED_CLIENT_APPLICATION` (no Ads API access). Apply for Ads API access at developer.x.com first; the account ID alone won't help | ads.x.com URL after login (`/accounts/<id>/...`) | X campaign insights + ROI channel |
 | Postiz | `POSTIZ_API_URL`, `POSTIZ_API_KEY` | Postiz UI → Settings → Public API (instance: https://postiz.cloudless.gr) | One-click social publishing from the calendar |
 | Slack delivery | ✅ DONE 2026-06-12 — bot invited to `#general` (`C09AF5W3X16`) via browser automation; digest verified `sent:true` | — | Weekly digest + all default-channel notifications |
-| Cloudflare | `CLOUDFLARE_API_TOKEN` | CF dashboard → API Tokens (scopes: Zone:Read, LB Monitors/Pools+LBs:Edit, DNS:Edit, Zone Settings:Edit for cloudless.gr) | HA load balancing + email-obfuscation workflows |
+| Cloudflare | `CLOUDFLARE_API_TOKEN` | CF dashboard → API Tokens (scopes: Zone:Read, Zone Settings:Edit, DNS:Edit, Firewall Services:Edit, LB Monitors/Pools+LBs:Edit for cloudless.gr) | HA load balancing + WAF/rulesets + email-obfuscation workflows |
 
 ## Handling secrets in a session
 

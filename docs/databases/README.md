@@ -57,7 +57,7 @@ pnpm db:forward:stop
 
 After `pnpm db:ready`, open the **SQLTools** sidebar in Cursor (not SQL Server), connect a profile under `omv` / `omv-sqlite` / `cloudflare-d1`, and paste the matching password from `pnpm db:passwords` when prompted. Reload the Cursor window once if connections do not appear after pulling this branch.
 
-Orphan D1 cleanup: `pnpm d1:retire:cloudless-auth` (dry-run) / `CONFIRM=1 pnpm d1:retire:cloudless-auth`.
+Orphan D1 `cloudless-auth` and KV `HEALTH_CACHE` were deleted 2026-07-30. `pnpm d1:retire:cloudless-auth` remains an idempotent guard only.
 
 Scripts: `scripts/db-port-forward.sh`, `scripts/db-sqlite-pull.sh`, `scripts/db-d1-pull.sh`.  
 SQLTools config: `.vscode/settings.json` (`sqltools.connections`).  

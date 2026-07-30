@@ -26,21 +26,21 @@ data:
     # Connection settings
     max_connections = 200
     superuser_reserved_connections = 10
-    
+
     # Memory settings (Pi-optimized)
     shared_buffers = 1GB
     effective_cache_size = 2GB
     maintenance_work_mem = 256MB
     work_mem = 64MB
-    
+
     # Compression (save space)
     wal_compression = on
-    
+
     # High availability
     wal_level = replica
     max_wal_senders = 10
     wal_keep_size = 1GB
-    
+
     # Logging
     log_min_duration_statement = 1000
     log_checkpoints = on

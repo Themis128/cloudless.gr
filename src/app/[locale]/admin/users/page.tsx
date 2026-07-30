@@ -170,7 +170,7 @@ export default function AdminUsersPage() {
         <button
           onClick={fetchUsers}
           disabled={loading}
-          className="border-neon-magenta/20 text-neon-magenta hover:bg-neon-magenta/10 min-h-[44px] rounded-lg border px-4 py-2 font-mono text-xs transition-colors disabled:opacity-50"
+          className="border-neon-magenta/20 text-neon-magenta hover:bg-neon-magenta/10 min-h-11 rounded-lg border px-4 py-2 font-mono text-xs transition-colors disabled:opacity-50"
         >
           {loading ? "Loading…" : "Refresh"}
         </button>
@@ -276,7 +276,7 @@ export default function AdminUsersPage() {
                           <button
                             onClick={() => handleAction("disable", user.username)}
                             disabled={actionLoading !== null}
-                            className="min-h-[32px] rounded-lg border border-red-900/30 px-2 py-1 font-mono text-[10px] text-red-400 transition-colors hover:bg-red-400/10 disabled:opacity-50"
+                            className="min-h-8 rounded-lg border border-red-900/30 px-2 py-1 font-mono text-[10px] text-red-400 transition-colors hover:bg-red-400/10 disabled:opacity-50"
                           >
                             {actionLoading === `disable-${user.username}` ? "…" : "Disable"}
                           </button>
@@ -284,7 +284,7 @@ export default function AdminUsersPage() {
                           <button
                             onClick={() => handleAction("enable", user.username)}
                             disabled={actionLoading !== null}
-                            className="border-neon-green/20 text-neon-green hover:bg-neon-green/10 min-h-[32px] rounded-lg border px-2 py-1 font-mono text-[10px] transition-colors disabled:opacity-50"
+                            className="border-neon-green/20 text-neon-green hover:bg-neon-green/10 min-h-8 rounded-lg border px-2 py-1 font-mono text-[10px] transition-colors disabled:opacity-50"
                           >
                             {actionLoading === `enable-${user.username}` ? "…" : "Enable"}
                           </button>
@@ -294,7 +294,7 @@ export default function AdminUsersPage() {
                           <button
                             onClick={() => handleAction("promote", user.username)}
                             disabled={actionLoading !== null}
-                            className="border-neon-magenta/20 text-neon-magenta hover:bg-neon-magenta/10 min-h-[32px] rounded-lg border px-2 py-1 font-mono text-[10px] transition-colors disabled:opacity-50"
+                            className="border-neon-magenta/20 text-neon-magenta hover:bg-neon-magenta/10 min-h-8 rounded-lg border px-2 py-1 font-mono text-[10px] transition-colors disabled:opacity-50"
                           >
                             {actionLoading === `promote-${user.username}` ? "…" : "→ Admin"}
                           </button>
@@ -302,7 +302,7 @@ export default function AdminUsersPage() {
                           <button
                             onClick={() => handleAction("demote", user.username)}
                             disabled={actionLoading !== null}
-                            className="min-h-[32px] rounded-lg border border-slate-700 px-2 py-1 font-mono text-[10px] text-slate-400 transition-colors hover:bg-slate-800 disabled:opacity-50"
+                            className="min-h-8 rounded-lg border border-slate-700 px-2 py-1 font-mono text-[10px] text-slate-400 transition-colors hover:bg-slate-800 disabled:opacity-50"
                           >
                             {actionLoading === `demote-${user.username}` ? "…" : "→ User"}
                           </button>

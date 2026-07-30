@@ -1,6 +1,38 @@
 {
   "zone_id": "7025298073d6a5c645a6ad9add0cbf0e",
   "name": "cloudless.gr",
+  "tls": {
+    "ssl": "full",
+    "always_use_https": "on",
+    "min_tls_version": "1.2",
+    "tls_1_3": "zrt",
+    "http3": "on",
+    "security_header": {
+      "strict_transport_security": {
+        "enabled": true,
+        "max_age": 63072000,
+        "include_subdomains": true,
+        "preload": true,
+        "nosniff": true
+      }
+    },
+    "apply": "bash scripts/cf-zone-tls-harden.sh",
+    "check": "bash scripts/cf-zone-tls-harden.sh --check"
+  },
+  "waf": {
+    "security_level": "medium",
+    "browser_check": "on",
+    "email_obfuscation": "off",
+    "email_obfuscation_reason": "CF rewrite injects email-protection spans → React #418 hydration; see cloudflare-disable-email-obfuscation.yml",
+    "bot_fight_mode": "off",
+    "bot_fight_mode_note": "Dashboard-only on Free; leave OFF. Cron/GHA use pi-origin.cloudless.gr to bypass edge challenges.",
+    "firewall_services": {
+      "required_token_permission": "Zone → Firewall Services → Read (+ Edit to manage rulesets)",
+      "current_token_gap": "CLOUDFLARE_API_TOKEN returns Authentication error on /zones/:id/rulesets until token is rotated with Firewall Services scope"
+    },
+    "apply": "bash scripts/cf-zone-waf-harden.sh",
+    "check": "bash scripts/cf-zone-waf-harden.sh --check"
+  },
   "dns_records": [
     {
       "type": "A",

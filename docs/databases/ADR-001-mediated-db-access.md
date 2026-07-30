@@ -18,7 +18,7 @@ cloudless.gr’s durable state spans Pi k3s SOR engines and Cloudflare D1/R2. De
 4. **Secrets:** `askForPassword` + `pnpm db:passwords` — never commit passwords.
 5. **DR on 2-node k3s:** Accept warm restore from R2; do not invent shared HA Postgres until a third node enables odd Raft quorum.
 6. **Backups:** Daily R2 covers AppFlowy PG, EspoCRM, Postiz, n8n, AppFlowy MinIO (R10b), Uptime Kuma (R10c). Grafana persists on PVC + in-repo dashboards.
-7. **D1:** Only `user-auth-db` + `auth-db-preview`. Orphan `cloudless-auth` is retired via `pnpm d1:retire:cloudless-auth`.
+7. **D1:** Only `user-auth-db` + `auth-db-preview`. Orphan `cloudless-auth` deleted 2026-07-30 (`pnpm d1:retire:cloudless-auth` is an idempotent guard).
 
 ## Consequences
 

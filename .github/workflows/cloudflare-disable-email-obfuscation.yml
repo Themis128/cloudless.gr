@@ -1,4 +1,4 @@
-name: Disable Cloudflare Email Obfuscation (fix React #418)
+name: "Disable Cloudflare Email Obfuscation (fix React #418)"
 
 # Cloudflare's "Email Obfuscation" (Scrape Shield) rewrites email addresses in
 # the HTML at the edge, AFTER Next.js SSR — injecting __cf_email__ placeholders

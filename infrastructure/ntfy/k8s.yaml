@@ -93,19 +93,19 @@ data:
   ntfy.yml: |
     # ntfy configuration
     base_url: "https://ntfy.cloudless.gr"
-    
+
     # Listen on port 80
     listen_http: ":80"
-    
+
     # Cache directory
     attachment_cache_dir: "/var/cache/ntfy"
-    
+
     # Enable attachments
     attachment_cache_max_size: "5GiB"
     attachment_total_max_size: "10GiB"
-    
+
     # Keep messages for 14 days
     message_cache_duration: "168h"
-    
+
     # Disable auth for public access (restricted via Cloudflare Access)
     auth_file: "/app/data/accounts.db"

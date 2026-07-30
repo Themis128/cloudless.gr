@@ -27,7 +27,5 @@ data:
       disable_master_key_return: true
 kind: ConfigMap
 metadata:
-  annotations:
-      {"apiVersion":"v1","data":{"config.yaml":"model_list:\n  # Postiz Copilot — routes to local Ollama (qwen2.5-coder via Tailscale)\n  - model_name: gpt-4.1\n    litellm_params:\n      model: ollama/qwen2.5-coder\n      api_base: http://100.121.191.7:11434\n      max_tokens: 8192\n\n  # Postiz built-in image gen — no image model on Ollama currently\n  - model_name: chatgpt-image-latest\n    litellm_params:\n      model: ollama/qwen2.5-coder\n      api_base: http://100.121.191.7:11434\n\nlitellm_settings:\n  drop_params: true\n  modify_params: true\n  request_timeout: 120\n  set_verbose: false\n\ngeneral_settings:\n  master_key: os.environ/LITELLM_MASTER_KEY\n  disable_spend_logs: true\n  disable_master_key_return: true\n"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"postiz-litellm-config","namespace":"postiz"}}
   name: postiz-litellm-config
   namespace: postiz

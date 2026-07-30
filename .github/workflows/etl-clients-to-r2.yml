@@ -14,7 +14,9 @@ permissions:
 jobs:
   etl:
     name: Run Clients → R2 sync
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted","omv","build"]') }}
+    # Always Pi — Cloudflare blocks GH-hosted/data-center IPs for this ETL.
+    # Do not use vars.RUNNER_GENERIC failover (hosted = blocked).
+    runs-on: [self-hosted, omv, build]
     timeout-minutes: 20
 
     steps:

@@ -125,7 +125,7 @@ function LoginContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
+                className="bg-void focus:border-neon-cyan/50 min-h-11 w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
               />
             </div>
             <div>
@@ -139,7 +139,7 @@ function LoginContent() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
+                className="bg-void focus:border-neon-cyan/50 min-h-11 w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
               />
             </div>
             <p className="text-right">
@@ -153,7 +153,7 @@ function LoginContent() {
             <button
               type="submit"
               disabled={submitting}
-              className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
+              className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-11 w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
             >
               {submitting ? t("auth.signingIn", "Signing In...") : t("auth.login", "Sign In")}
             </button>

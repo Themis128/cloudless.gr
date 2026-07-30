@@ -5,6 +5,7 @@ import { useState } from "react";
 import { formatPrice } from "@/lib/format-price";
 import ProductIcon from "@/components/store/ProductIcon";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { getProductById } from "@/lib/store-products";
 
 export default function CartSlideOver() {
   const {
@@ -116,11 +117,16 @@ export default function CartSlideOver() {
 
                     {/* Info */}
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-sm font-semibold text-white">
-                        {item.product.name}
-                      </h3>
-                      <p className="text-neon-cyan mt-1 font-mono text-sm font-medium">
-                        {formatPrice(item.product.price, item.product.currency)}
+      <h3 className="truncate text-sm font-semibold text-white">
+        {item.product.name}
+      </h3>
+      {item.product.unknown && (
+        <p className="text-neon-magenta bg-neon-magenta/10 border-neon-magenta/20 rounded-lg border px-3 py-2 font-mono text-xs">
+          Unknown product in cart. Please remove this item.
+        </p>
+      )}
+      <p className="text-neon-cyan mt-1 font-mono text-sm font-medium">
+        {item.product.unknown ? "Unknown price" : formatPrice(item.product.price, item.product.currency)}
                         {item.product.recurring && `/${item.product.interval}`}
                       </p>
 
@@ -146,9 +152,10 @@ export default function CartSlideOver() {
                           </div>
                         )}
 
-                        <button
-                          onClick={() => removeItem(item.product.id)}
-                          className="text-neon-magenta/60 hover:text-neon-magenta active:text-neon-magenta ml-auto flex min-h-[44px] items-center font-mono text-xs transition-colors"
+      <button
+        onClick={() => removeItem(item.product.id)}
+        className="text-neon-magenta/60 hover:text-neon-magenta active:text-neon-magenta ml-auto flex min-h-[44px] items-center font-mono text-xs transition-colors"
+        disabled={item.product.unknown}
                         >
                           Remove
                         </button>

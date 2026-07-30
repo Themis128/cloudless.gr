@@ -1,0 +1,76 @@
+# yamllint — general YAML syntax + style for cloudless.gr
+# Run: pnpm lint:yaml
+# Docs: https://yamllint.readthedocs.io/
+#
+# Philosophy (same as lint:md): catch real mistakes (syntax, duplicate keys,
+# broken indentation) — not cosmetic wrapping of long GH expression lines.
+
+extends: default
+
+ignore: |
+  .git/
+  .next/
+  .open-next/
+  .playwright-cli/
+  .tools/
+  .venv/
+  .wrangler/
+  .codacy/
+  coverage/
+  node_modules/
+  playwright-report/
+  test-results/
+  tools/**/node_modules/
+  pnpm-lock.yaml
+  **/pnpm-lock.yaml
+  **/.modules.yaml
+  # Helm Go templates are not valid YAML until rendered
+  **/helm/**/templates/**
+  # Generated / vendor lock workflows — still covered by actionlint on hand-edited flows
+  .github/workflows/*.lock.yml
+
+yaml-files:
+  - "*.yaml"
+  - "*.yml"
+  - ".yamllint"
+  - ".yamllint.yaml"
+  - ".yamllint.yml"
+
+rules:
+  # Workflows, kubectl, and Helm values routinely exceed 80/120 cols.
+  line-length: disable
+
+  # Most repo YAML omits the optional --- document marker.
+  document-start: disable
+
+  # GitHub Actions uses on: / off: as keys; allow common YAML 1.1 truthy forms.
+  truthy:
+    allowed-values: ["true", "false", "on", "off", "yes", "no"]
+    check-keys: false
+
+  comments:
+    min-spaces-from-content: 1
+    require-starting-space: true
+
+  comments-indentation: enable
+
+  indentation:
+    spaces: 2
+    indent-sequences: whatever
+    check-multi-line-strings: false
+
+  # K8s / Helm / Compose often use compact `{key: value}` and uneven colon spacing.
+  braces: disable
+  brackets: disable
+  colons: disable
+  commas: disable
+
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  trailing-spaces: enable
+  new-line-at-end-of-file: enable
+  key-duplicates: enable
+  octal-values: enable

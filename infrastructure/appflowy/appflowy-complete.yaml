@@ -28,18 +28,18 @@ data:
       min_idle: 5
       max_size: 20
       connection_timeout: 30s
-    
+
     # Compression for exports
     export:
       format: "parquet"
       compression: "snappy"
-  
+
   appflowy.yaml: |
     # Workspace settings
     workspace:
       compression: enabled
       encryption: aes-256-cbc
-    
+
     # Document versioning (keep last 30 days)
     versions:
       retention_days: 30

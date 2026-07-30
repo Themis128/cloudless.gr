@@ -236,3 +236,6 @@ RUN-MIGRATION.md
 
 # Local DB snapshots + kubectl port-forward PIDs (SQLTools)
 .local/
+
+# Local lint tool caches (yamllint / actionlint)
+.tools/

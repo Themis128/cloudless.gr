@@ -143,7 +143,7 @@ kuma:
 
 terraform:
   cloudflare_zone_id: "${CLOUDFLARE_ZONE_ID}"  # Get from Cloudflare dashboard
-  
+
   # Access Groups
   access_groups:
     - name: "admins"
@@ -151,7 +151,7 @@ terraform:
       include:
         - email:
           - "themisbaltzakis@gmail.com"
-    
+
     - name: "authenticated"
       description: "All authenticated users"
       include:

@@ -31,6 +31,8 @@ on:
       - "prettier.config.*"
       - ".markdownlint-cli2.*"
       - ".markdownlint.*"
+      - ".yamllint.yml"
+      - ".yamllint.yaml"
       # Python tooling config + sources linted by the python-lint job
       # (ruff/mypy). Without these, a Python-only change never fires CI.
       - "pyproject.toml"
@@ -87,6 +89,23 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm lint:md
+
+  yaml-lint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Install yamllint + actionlint
+        run: |
+          pipx install yamllint==1.38.0
+          mkdir -p "$HOME/.local/bin"
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: bash scripts/lint-yaml.sh
 
   python-lint:
     name: Python Lint & Types

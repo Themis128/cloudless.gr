@@ -58,6 +58,7 @@ const adminGroups: AdminGroup[] = [
     links: [
       { href: "/admin", label: "Dashboard", Icon: LayoutDashboard },
       { href: "/admin/analytics/datalake", label: "Datalake", Icon: LayoutGrid },
+      { href: "/admin/analytics/explore", label: "Lake Explore", Icon: Activity },
       { href: "/admin/analytics", label: "Analytics", Icon: BarChart2 },
       { href: "/admin/analytics/unified", label: "Unified View", Icon: Layers },
       { href: "/admin/analytics/seo", label: "SEO", Icon: BarChart2 },

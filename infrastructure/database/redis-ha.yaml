@@ -15,19 +15,19 @@ data:
     # Memory optimization
     maxmemory 2gb
     maxmemory-policy allkeys-lru
-    
+
     # Compression
     client-output-buffer-limit normal 0 0 0
     client-output-buffer-limit replica 256mb 64mb 60
     client-output-buffer-limit pubsub 32mb 8mb 60
-    
+
     # Persistence (RDB with compression)
     save 900 1
     save 300 10
     save 60 10000
     rdbcompression yes
     rdbchecksum yes
-    
+
     # Logging
     loglevel notice
 ---

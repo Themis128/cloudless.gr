@@ -468,12 +468,16 @@ sudo systemctl disable --now cloudless-cleanup.timer
 
 ## k3s Tuning (omv control plane, applied 2026-06-16)
 
-The USB3-SATA SSD on omv is misdetected as rotational by the kernel.
-Persistent fix in `/etc/udev/rules.d/60-ssd-rotational.rules` sets
-`queue/rotational=0`, `nr_requests=256`, `read_ahead_kb=128` on sda
-add/change. Mount opts on `/dev/sda1` plus both k3s bind-mounts changed
-to `noatime,nodiratime` (apply at OMV UI too, so OMV's config rewrite
-doesn't reset them).
+Both USB3-SATA SSDs on omv are misdetected as rotational by the kernel
+(bridges omit the ATA flag). Persistent fix in
+`/etc/udev/rules.d/60-ssd-rotational.rules` sets `queue/rotational=0`,
+`nr_requests=256`, `read_ahead_kb=128` on `sd[ab]` add/change (SanDisk
+k3s data + Samsung user data; extended to `sdb` 2026-07-30 after a
+watchdog reboot storm). OMV’s `RuntimeWatchdogSec=15` is overridden to
+`60` via `/etc/systemd/system.conf.d/zz-cloudless-watchdog.conf` (must
+sort after `openmediavault-watchdog.conf`). Mount opts on `/dev/sda1`
+plus both k3s bind-mounts use `noatime,nodiratime` (apply at OMV UI too,
+so OMV's config rewrite doesn't reset them).
 
 etcd config in `/etc/rancher/k3s/config.yaml`:
 
