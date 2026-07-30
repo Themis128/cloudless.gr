@@ -507,8 +507,8 @@ export function getAuthDbFromEnv(): AuthDatabase | null {
 
   if (process.env.NODE_ENV === "development") {
     // Lazy require avoids pulling node:sqlite into Workers/edge bundles.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- local next-dev D1 shim only
     const { getLocalAuthDb } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- local next-dev D1 shim only
       require("@/lib/auth-db-local") as typeof import("@/lib/auth-db-local");
     return getLocalAuthDb();
   }
