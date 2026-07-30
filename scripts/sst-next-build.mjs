@@ -21,6 +21,7 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const serverDir = path.join(root, ".next", "server");
 const nftPath = path.join(serverDir, "middleware.js.nft.json");
 const middlewareJsPath = path.join(serverDir, "middleware.js");
+const standaloneServerJs = path.join(root, ".next", "standalone", "server.js");
 
 if (process.env.OPEN_NEXT_BUILD_ACTIVE === "1") {
   const hasManifest = fs.existsSync(path.join(serverDir, "middleware-manifest.json"));
@@ -81,20 +82,39 @@ child.on("exit", (code, signal) => {
       process.kill(process.pid, signal);
       return;
     }
-    // If Next only failed because the stub was briefly missing, but the build
-    // tree + nft stub now exist, treat as success so OpenNext can continue.
-    if (
-      code !== 0 &&
-      fs.existsSync(nftPath) &&
-      fs.existsSync(middlewareJsPath) &&
-      fs.existsSync(path.join(serverDir, "middleware-manifest.json"))
-    ) {
-      console.warn(
-        "[sst-next-build] next build exited non-zero but middleware stubs + manifest exist; continuing.",
-      );
-      process.exit(0);
-      return;
+
+    // If next build failed, check whether we're in standalone mode and the
+    // output is missing. In that case the error is real — don't swallow it.
+    if (code !== 0) {
+      const wantsStandalone = process.env.NEXT_OUTPUT_STANDALONE === "1";
+      const standaloneExists = fs.existsSync(standaloneServerJs);
+
+      if (wantsStandalone && !standaloneExists) {
+        console.error(
+          "[sst-next-build] next build failed and standalone output is missing.\n" +
+            `  Expected: ${standaloneServerJs}\n` +
+            "  The build likely hit an error that was masked by middleware stub recovery.\n" +
+            "  Check the next build output above for the real failure.",
+        );
+        process.exit(code);
+        return;
+      }
+
+      // If Next only failed because the stub was briefly missing, but the build
+      // tree + nft stub now exist, treat as success so OpenNext can continue.
+      if (
+        fs.existsSync(nftPath) &&
+        fs.existsSync(middlewareJsPath) &&
+        fs.existsSync(path.join(serverDir, "middleware-manifest.json"))
+      ) {
+        console.warn(
+          "[sst-next-build] next build exited non-zero but middleware stubs + manifest exist; continuing.",
+        );
+        process.exit(0);
+        return;
+      }
     }
+
     process.exit(code ?? 1);
   });
 });

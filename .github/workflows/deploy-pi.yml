@@ -117,7 +117,10 @@ jobs:
           DEST="${{ env.STANDALONE_HOSTPATH }}"
           STAGE="${DEST}.next-${GITHUB_SHA::12}"
           SRC=".next/standalone"
-          test -f "${SRC}/server.js"
+          if [ ! -f "${SRC}/server.js" ]; then
+            echo "::error::Standalone build output not found at ${SRC}/server.js. The 'Build Next.js standalone' step may have failed. Check the build logs above for errors."
+            exit 1
+          fi
           sudo rm -rf "${STAGE}"
           sudo mkdir -p "${STAGE}"
           sudo rsync -a "${SRC}/" "${STAGE}/"
@@ -132,7 +135,10 @@ jobs:
           sudo mkdir -p "${DEST}"
           sudo rsync -a --delete "${STAGE}/" "${DEST}/"
           sudo rm -rf "${STAGE}"
-          sudo test -f "${DEST}/server.js"
+          if [ ! -f "${DEST}/server.js" ]; then
+            echo "::error::Sync completed but ${DEST}/server.js does not exist — rsync failed silently."
+            exit 1
+          fi
           echo "Synced standalone → ${DEST}"
 
       - name: Resolve kubectl
