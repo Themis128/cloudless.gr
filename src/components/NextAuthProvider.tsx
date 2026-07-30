@@ -10,8 +10,7 @@ import type { ReactNode } from "react";
  * when Cloudflare (or a misconfigured AUTH_URL) returns HTML, Auth.js throws
  * ClientFetchError: Unexpected token '<' … is not valid JSON.
  */
-const USE_NEXTAUTH_SESSION =
-  process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
+const USE_NEXTAUTH_SESSION = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
 
 export default function NextAuthProvider({ children }: { children: ReactNode }) {
   if (!USE_NEXTAUTH_SESSION) {
