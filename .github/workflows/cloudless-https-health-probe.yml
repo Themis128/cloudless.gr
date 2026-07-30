@@ -5,7 +5,7 @@ name: cloudless.gr HTTPS health probe
 #   STANDBY  — pi-origin.cloudless.gr (Cloudflare Tunnel → Pi/k3s NodePort)
 #
 # Per probe:
-#   1. TLS handshake succeeds
+#   1. TLS handshake succeeds (public custom domain — Cloudflare edge)
 #   2. Cert SAN matches the expected hostname
 #   3. Cert does not expire within MIN_DAYS_REMAINING days
 #   4. TLS 1.0 and 1.1 are rejected; TLS 1.2 is accepted
@@ -13,8 +13,12 @@ name: cloudless.gr HTTPS health probe
 #
 # GitHub-hosted runners often get Cloudflare 403 on custom-domain /api/health
 # (datacenter IP reputation) even with Bot Fight Mode off — TLS still works.
-# On 403/challenge, fall back to the Pi MagicDNS Funnel host (public HTTPS,
-# no Tailscale join, no rotating CGNAT NodePort). See docs/TAILSCALE-FABRIC.md.
+#
+# Architect rule (docs/TAILSCALE-FABRIC.md D8): do NOT use public Funnel as the
+# CI reliability path — Funnel is DERP-mediated and flaky. On CF 403, join the
+# tailnet (TS_AUTHKEY) and probe the production origin over private fabric L4:
+#   http://github-omv.tail4ecae1.ts.net:30300/api/health
+# MagicDNS resolves to the live CGNAT address only after Tailscale is up.
 #
 # Schedule: every 6h at :00 (00:00, 06:00, 12:00, 18:00 UTC).
 
@@ -25,6 +29,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/cloudless-https-health-probe.yml"
+      - "docs/TAILSCALE-FABRIC.md"
   workflow_dispatch:
     inputs:
       skip_tls_floor:
@@ -38,15 +43,16 @@ permissions:
 env:
   MIN_DAYS_REMAINING: 14
   SKIP_TLS_FLOOR: ${{ inputs.skip_tls_floor || 'false' }}
-  # Diagnostic Funnel on github-omv — bypasses CF Bot Fight for GHA IPs.
-  # Prefer MagicDNS over CGNAT literals (IPs rotate). Not the production edge.
-  ORIGIN_FALLBACK_HEALTH: "https://github-omv.tail4ecae1.ts.net/api/health"
+  # Private fabric — MagicDNS host for github-omv (never hardcode CGNAT).
+  TS_ORIGIN_HOST: "github-omv.tail4ecae1.ts.net"
+  # Same NodePort Cloudflare Tunnel terminates on (prod origin).
+  TS_ORIGIN_NODEPORT: "30300"
 
 jobs:
   probe-primary:
     name: Probe PRIMARY (cloudless.gr via Cloudflare → Workers → Tunnel)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       PROBE_HOST: "cloudless.gr"
     steps:
@@ -162,7 +168,7 @@ jobs:
           fi
 
           if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare IP reputation / Bot Fight). Falling back to MagicDNS Funnel."
+            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
             echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
             echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
             exit 0
@@ -171,18 +177,42 @@ jobs:
           echo "::error::${PROBE_HOST}/api/health returned ${code}."
           exit 1
 
-      - name: GET /api/health via MagicDNS Funnel
+      - name: Tailscale (private fabric)
+        if: steps.health.outputs.need_origin_fallback == 'true'
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: GET /api/health via private fabric (MagicDNS NodePort)
         if: steps.health.outputs.need_origin_fallback == 'true'
         run: |
           set -euo pipefail
-          echo "→ GET ${ORIGIN_FALLBACK_HEALTH}"
+
+          echo "→ tailscale status (snippet)"
+          tailscale status | head -20 || true
+
+          # Resolve MagicDNS only after join — CGNAT addresses rotate.
+          echo "→ resolve ${TS_ORIGIN_HOST}"
+          getent hosts "${TS_ORIGIN_HOST}" || true
+          IP=$(getent hosts "${TS_ORIGIN_HOST}" | awk '{print $1; exit}')
+          if [ -z "${IP}" ]; then
+            echo "::error::MagicDNS ${TS_ORIGIN_HOST} did not resolve after Tailscale join."
+            exit 1
+          fi
+          echo "  ✓ ${TS_ORIGIN_HOST} → ${IP}"
+
+          # L4: same NodePort Cloudflare Tunnel uses (production origin).
+          URL="http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}/api/health"
+          echo "→ GET ${URL} (Host: ${PROBE_HOST})"
           : > /tmp/body
           response=$(curl -sS \
-            --max-time 20 \
-            --retry 2 --retry-delay 5 \
+            --max-time 25 \
+            --retry 3 --retry-delay 5 \
+            -H "Host: ${PROBE_HOST}" \
+            -H "X-Forwarded-Proto: https" \
             -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
             -o /tmp/body -w "%{http_code}|%{time_total}s" \
-            "${ORIGIN_FALLBACK_HEALTH}" || echo "000|n/a")
+            "${URL}" || echo "000|n/a")
           code="${response%%|*}"
           elapsed="${response#*|}"
           body=$(cat /tmp/body 2>/dev/null || true)
@@ -190,19 +220,20 @@ jobs:
           echo "  → body: $(head -c 300 <<<"$body")"
 
           if [ "${code}" != "200" ]; then
-            echo "::error::MagicDNS Funnel /api/health returned ${code} after public CF 403 — origin likely down."
+            echo "::error::Private fabric NodePort /api/health returned ${code} (IP=${IP}). Origin down or :${TS_ORIGIN_NODEPORT} not listening on Tailscale iface."
             exit 1
           fi
 
           status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
           if [ "${status}" != "ok" ]; then
-            echo "::error::Funnel health JSON status='${status}' (expected 'ok')"
+            echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
             exit 1
           fi
           {
             echo "HEALTH_STATUS=${status}"
             echo "HEALTH_ELAPSED=${elapsed}"
-            echo "HEALTH_VIA=magicdns-funnel"
+            echo "HEALTH_VIA=tailscale-nodeport-magicdns"
+            echo "HEALTH_TS_IP=${IP}"
           } >> "$GITHUB_ENV"
 
       - name: Step summary
@@ -219,12 +250,13 @@ jobs:
             echo "| Cert days remaining | ${DAYS_LEFT} |"
             echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
             echo "| health.status | ${HEALTH_STATUS} |"
+            echo "| fabric IP (if fallback) | ${HEALTH_TS_IP:-n/a} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   probe-standby:
     name: Probe STANDBY (pi-origin.cloudless.gr via Tunnel → Pi/k3s)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     env:
       PROBE_HOST: "pi-origin.cloudless.gr"
     steps:
@@ -342,7 +374,7 @@ jobs:
           fi
 
           if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
-            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare IP reputation / Bot Fight). Falling back to MagicDNS Funnel."
+            echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
             echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
             echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
             exit 0
@@ -351,18 +383,40 @@ jobs:
           echo "::error::${PROBE_HOST}/api/health returned ${code} (Tunnel / Pi serving path broken)."
           exit 1
 
-      - name: GET /api/health via MagicDNS Funnel
+      - name: Tailscale (private fabric)
+        if: steps.health.outputs.need_origin_fallback == 'true'
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: GET /api/health via private fabric (MagicDNS NodePort)
         if: steps.health.outputs.need_origin_fallback == 'true'
         run: |
           set -euo pipefail
-          echo "→ GET ${ORIGIN_FALLBACK_HEALTH}"
+
+          echo "→ tailscale status (snippet)"
+          tailscale status | head -20 || true
+
+          echo "→ resolve ${TS_ORIGIN_HOST}"
+          getent hosts "${TS_ORIGIN_HOST}" || true
+          IP=$(getent hosts "${TS_ORIGIN_HOST}" | awk '{print $1; exit}')
+          if [ -z "${IP}" ]; then
+            echo "::error::MagicDNS ${TS_ORIGIN_HOST} did not resolve after Tailscale join."
+            exit 1
+          fi
+          echo "  ✓ ${TS_ORIGIN_HOST} → ${IP}"
+
+          URL="http://${TS_ORIGIN_HOST}:${TS_ORIGIN_NODEPORT}/api/health"
+          echo "→ GET ${URL} (Host: ${PROBE_HOST})"
           : > /tmp/body
           response=$(curl -sS \
             --max-time 30 \
-            --retry 2 --retry-delay 5 \
+            --retry 3 --retry-delay 5 \
+            -H "Host: ${PROBE_HOST}" \
+            -H "X-Forwarded-Proto: https" \
             -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
             -o /tmp/body -w "%{http_code}|%{time_total}s" \
-            "${ORIGIN_FALLBACK_HEALTH}" || echo "000|n/a")
+            "${URL}" || echo "000|n/a")
           code="${response%%|*}"
           elapsed="${response#*|}"
           body=$(cat /tmp/body 2>/dev/null || true)
@@ -370,21 +424,22 @@ jobs:
           echo "  → body: $(head -c 300 <<<"$body")"
 
           if [ "${code}" != "200" ]; then
-            echo "::error::MagicDNS Funnel /api/health returned ${code} after public CF 403 — origin likely down."
+            echo "::error::Private fabric NodePort /api/health returned ${code} (IP=${IP}). Origin down or :${TS_ORIGIN_NODEPORT} not listening on Tailscale iface."
             exit 1
           fi
 
           status=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',''))" 2>/dev/null || echo "")
           version=$(echo "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version',''))" 2>/dev/null || echo "")
           if [ "${status}" != "ok" ]; then
-            echo "::error::Funnel health JSON status='${status}' (expected 'ok')"
+            echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
             exit 1
           fi
           {
             echo "HEALTH_STATUS=${status}"
             echo "HEALTH_VERSION=${version}"
             echo "HEALTH_ELAPSED=${elapsed}"
-            echo "HEALTH_VIA=magicdns-funnel"
+            echo "HEALTH_VIA=tailscale-nodeport-magicdns"
+            echo "HEALTH_TS_IP=${IP}"
           } >> "$GITHUB_ENV"
 
       - name: Step summary
@@ -402,4 +457,5 @@ jobs:
             echo "| /api/health | ✅ 200 via ${HEALTH_VIA} (${HEALTH_ELAPSED}) |"
             echo "| health.status | ${HEALTH_STATUS} |"
             echo "| app version | ${HEALTH_VERSION:-n/a} |"
+            echo "| fabric IP (if fallback) | ${HEALTH_TS_IP:-n/a} |"
           } >> "$GITHUB_STEP_SUMMARY"
