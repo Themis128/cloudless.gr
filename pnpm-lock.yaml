@@ -33,12 +33,6 @@ importers:
 
   .:
     dependencies:
-      '@aws-lambda-powertools/logger':
-        specifier: ^2.33.1
-        version: 2.34.0
-      '@aws-sdk/client-athena':
-        specifier: ^3.1073.0
-        version: 3.1095.0
       '@aws-sdk/client-bedrock-runtime':
         specifier: ^3.1073.0
         version: 3.1095.0
@@ -416,26 +410,8 @@ packages:
   '@aws-crypto/util@5.2.0':
     resolution: {integrity: sha512-4RkU9EsI6ZpBve5fseQlGNUWKMa1RLPQ1dnjnQoe07ldfIzcsGb5hC5W0Dm7u423KWzawlrpbjXBrXCEv9zazQ==}
 
-  '@aws-lambda-powertools/commons@2.34.0':
-    resolution: {integrity: sha512-ga89L3UznCwkApsrVAYGywifAh9PpccXZAVE053B6IdKvZrwjv+L+ja1WyzU9sy9UR3wPEdh0LFiUCRZRhTfvQ==}
-
-  '@aws-lambda-powertools/logger@2.34.0':
-    resolution: {integrity: sha512-FIWQcdX/dqfKE+4H8N9w7y7/3/ANmDpKDgMlMc+yPNx2XDpKK6Ou1zLFYoNt5mV6dOZunFQcKbRWUy6zIDdE0w==}
-    peerDependencies:
-      '@aws-lambda-powertools/jmespath': 2.34.0
-      '@middy/core': 4.x || 5.x || 6.x || 7.x
-    peerDependenciesMeta:
-      '@aws-lambda-powertools/jmespath':
-        optional: true
-      '@middy/core':
-        optional: true
-
   '@aws-sdk/checksums@3.1000.20':
     resolution: {integrity: sha512-uc5PMNcLcs+UBSLGsRjbMZKi3mgnPSalXpABw9Xjo0DMrv4gjIa/E4a02yJsuU4FF6Tmvis/JgGdKNIOoN4DQw==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/client-athena@3.1095.0':
-    resolution: {integrity: sha512-FABuyQh2VLlwhxMqf5sjNiTTvUrIOnRaxtmsVRVGX7PSH3KZeU1xyIJxXGME42rocZS/6YIbR+HgORxbNGYcWg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-bedrock-runtime@3.1095.0':
@@ -7286,31 +7262,11 @@ snapshots:
       '@smithy/util-utf8': 2.3.0
       tslib: 2.8.1
 
-  '@aws-lambda-powertools/commons@2.34.0':
-    dependencies:
-      '@aws/lambda-invoke-store': 0.3.0
-
-  '@aws-lambda-powertools/logger@2.34.0':
-    dependencies:
-      '@aws-lambda-powertools/commons': 2.34.0
-      '@aws/lambda-invoke-store': 0.3.0
-
   '@aws-sdk/checksums@3.1000.20':
     dependencies:
       '@aws-sdk/core': 3.977.1
       '@aws-sdk/types': 3.974.2
       '@smithy/core': 3.30.0
-      '@smithy/types': 4.16.1
-      tslib: 2.8.1
-
-  '@aws-sdk/client-athena@3.1095.0':
-    dependencies:
-      '@aws-sdk/core': 3.977.1
-      '@aws-sdk/credential-provider-node': 3.972.72
-      '@aws-sdk/types': 3.974.2
-      '@smithy/core': 3.30.0
-      '@smithy/fetch-http-handler': 5.6.11
-      '@smithy/node-http-handler': 4.9.11
       '@smithy/types': 4.16.1
       tslib: 2.8.1
 

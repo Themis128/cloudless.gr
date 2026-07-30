@@ -9,14 +9,14 @@
 | PR-08 | **Done in tree** | Chat + agents + embeddings → Workers AI REST; Bedrock stubbed |
 | PR-10 | **Done in tree** | `deploy-pi.yml` hostPath-only; `build-pi-image.yml` workflow_dispatch emergency only |
 | PR-11 | **Done in tree** | `store-cloudflare-token.yml` → `gh secret set` (no SSM) |
-| PR-12 | **Partial** | athena/sns/amplify stubbed; full dead-code sweep continues |
+| PR-12 | **Done in tree** | Deleted athena/sns/amplify/logger stubs + cron-invoker; kept `athena-d1.ts` |
 
 **Operator follow-ups before / after merge to main:**
 
 1. Email (Node/Pi) — **cleared via Cloudflare Email Service REST** (`email-cloudflare.ts`); uses existing `CLOUDFLARE_*` secrets. `RESEND_API_KEY` optional fallback only.
-2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET** in `cloudless-secrets`; Workers AI embed smoke (`bge-small` → 384-dim) OK from app pod.
-3. After Wave A deploy: `POST /api/admin/search/reindex` — Meili `products` index is empty; embedder is now `workers-ai-bge-small` @ 384-dim (was Titan 512). Ensure `MEILI_HOST` is in-cluster DNS (`http://meilisearch.meilisearch.svc.cluster.local:7700`), not Access-gated `meili.cloudless.gr`.
-4. **Do not** run PR-14 (`pnpm remove @aws-sdk/*`) until PR-12/PR-13 call sites are gone.
+2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET** in `cloudless-secrets`; Workers AI + Email Sending OK on Pi.
+3. Meili reindex — **done** (`workers-ai-bge-small` @ 384-dim; in-cluster `MEILI_HOST`).
+4. **Next:** PR-13 (R2 without `@aws-sdk/client-s3`), then PR-14 uninstall. Do not run PR-14 until PR-13 call sites are gone.
 5. Wave B (PR-04…06) still gated on Cognito/Dynamo data migration.
 
 ---

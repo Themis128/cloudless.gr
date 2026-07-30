@@ -100,8 +100,6 @@
     "cf:upload": "opennextjs-cloudflare upload"
   },
   "dependencies": {
-    "@aws-lambda-powertools/logger": "^2.33.1",
-    "@aws-sdk/client-athena": "^3.1073.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1073.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1073.0",
     "@aws-sdk/client-cost-explorer": "^3.1073.0",
@@ -112,6 +110,7 @@
     "@langchain/langgraph-sdk": "^1.9.28",
     "@opennextjs/cloudflare": "^1.20.2",
     "@sentry/nextjs": "^10.59.0",
+    "agents": "^0.20.1",
     "ai": "^7.0.42",
     "cmdk": "^1.1.1",
     "countup.js": "^2.10.0",
@@ -129,8 +128,7 @@
     "resend": "^6.18.1",
     "stripe": "^22.2.2",
     "undici": "^8.5.0",
-    "workers-ai-provider": "^4.0.0",
-    "agents": "^0.20.1"
+    "workers-ai-provider": "^4.0.0"
   },
   "devDependencies": {
     "@aws-sdk/client-iam": "3.1098.0",

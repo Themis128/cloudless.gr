@@ -6,7 +6,7 @@
  * the cluster is offline. Intended to be invoked either:
  *
  *   - On-demand by the admin UI (button) — POST
- *   - On a schedule by cron-invoker.ts                       — POST with X-Cron-Secret
+ *   - On a schedule (k8s CronJob / CF Cron)                  — POST with X-Cron-Secret
  *   - For reading the latest Notion-cached snapshot          — GET
  *
  * Returns the synced device id(s) or the cached snapshot list.
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // Allow either an authenticated admin OR a server-to-server cron call with
-  // the shared secret. Cron path is used by cron-invoker.ts in Lambda.
+  // the shared secret (k8s CronJob / Cloudflare Cron).
   const ssmCfg = await getConfig().catch(() => null);
   const cronSecret = ssmCfg?.CRON_SECRET ?? process.env.CRON_SECRET;
   const headerSecret = request.headers.get("x-cron-secret");

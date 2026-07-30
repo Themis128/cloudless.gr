@@ -14,19 +14,3 @@ declare module "@duckdb/duckdb-wasm" {
     instantiate(workerUrl: string): Promise<void>;
   }
 }
-
-declare module "@aws-sdk/client-sns" {
-  export class SNSClient {
-    constructor(config?: { region?: string });
-    send(command: PublishCommand): Promise<unknown>;
-  }
-
-  export class PublishCommand {
-    constructor(input: {
-      TopicArn: string;
-      Subject?: string;
-      Message: string;
-      MessageAttributes?: Record<string, { DataType: string; StringValue: string }>;
-    });
-  }
-}
