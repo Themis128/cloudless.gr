@@ -27,9 +27,7 @@ export type CoalesceFlush = {
 };
 
 export type CoalesceResult =
-  | { action: "passthrough" }
-  | { action: "buffered" }
-  | { action: "flush"; flush: CoalesceFlush };
+  { action: "passthrough" } | { action: "buffered" } | { action: "flush"; flush: CoalesceFlush };
 
 type Batch = {
   status: "DOWN" | "UP";
@@ -53,7 +51,7 @@ const DEFAULT_CLOCK: CoalesceClock = {
 
 export class KumaDnsCoalescer {
   private batch: Batch | null = null;
-  private recentDnsDown = new Set<string>();
+  private readonly recentDnsDown = new Set<string>();
   private recentDnsDownTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly clock: CoalesceClock;
   private readonly onFlush: (flush: CoalesceFlush) => void;
@@ -122,7 +120,7 @@ export class KumaDnsCoalescer {
 
     const flush: CoalesceFlush = {
       status,
-      names: [...names].sort(),
+      names: [...names].sort((a, b) => a.localeCompare(b)),
       sampleMsg,
       urls: [...urls],
     };

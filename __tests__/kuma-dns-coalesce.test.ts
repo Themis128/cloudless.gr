@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  DNS_FAILURE_RE,
-  formatDnsFlapSlack,
-  KumaDnsCoalescer,
-} from "@/lib/kuma-dns-coalesce";
+import { DNS_FAILURE_RE, formatDnsFlapSlack, KumaDnsCoalescer } from "@/lib/kuma-dns-coalesce";
 
 describe("KumaDnsCoalescer", () => {
   beforeEach(() => {
@@ -22,9 +18,7 @@ describe("KumaDnsCoalescer", () => {
   it("passes non-DNS alerts through", () => {
     const flushes: unknown[] = [];
     const c = new KumaDnsCoalescer(90_000, undefined, (f) => flushes.push(f));
-    expect(c.ingest({ name: "n8n", status: "DOWN", msg: "timeout" }).action).toBe(
-      "passthrough"
-    );
+    expect(c.ingest({ name: "n8n", status: "DOWN", msg: "timeout" }).action).toBe("passthrough");
     expect(flushes).toHaveLength(0);
   });
 
@@ -78,9 +72,7 @@ describe("KumaDnsCoalescer", () => {
     vi.advanceTimersByTime(90_000);
     expect(flushes).toHaveLength(1);
 
-    expect(c.ingest({ name: "EspoCRM", status: "UP", msg: "200 - OK" }).action).toBe(
-      "buffered"
-    );
+    expect(c.ingest({ name: "EspoCRM", status: "UP", msg: "200 - OK" }).action).toBe("buffered");
     expect(c.ingest({ name: "n8n", status: "UP", msg: "200 - OK" }).action).toBe("buffered");
     vi.advanceTimersByTime(90_000);
     expect(flushes).toHaveLength(2);

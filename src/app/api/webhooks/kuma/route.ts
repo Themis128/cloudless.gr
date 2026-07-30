@@ -17,11 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getConfig } from "@/lib/ssm-config";
 import { SlackClient } from "@/lib/slack-notify";
-import {
-  formatDnsFlapSlack,
-  KumaDnsCoalescer,
-  type CoalesceFlush,
-} from "@/lib/kuma-dns-coalesce";
+import { formatDnsFlapSlack, KumaDnsCoalescer, type CoalesceFlush } from "@/lib/kuma-dns-coalesce";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -122,7 +118,8 @@ export async function POST(request: NextRequest) {
   }
 
   const title = `Kuma ${status}: ${name}`;
-  const text = msg || `${name} is ${status}${url ? ` (${url})` : ""}`;
+  const urlSuffix = url ? " (" + url + ")" : "";
+  const text = msg || name + " is " + status + urlSuffix;
   await postSlack(title, text, url || undefined);
 
   return NextResponse.json({ ok: true });
