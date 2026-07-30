@@ -1,8 +1,8 @@
 name: cloudless.gr HTTPS health probe
 
 # Probes the two live HTTPS serving paths end-to-end and asserts:
-#   PRIMARY  — cloudless.gr (Cloudflare LB → CloudFront)
-#   STANDBY  — pi-origin.cloudless.gr (Tailscale Funnel → Pi/k3s)
+#   PRIMARY  — cloudless.gr (Cloudflare → Workers Free pi-origin-proxy → Tunnel → Pi)
+#   STANDBY  — pi-origin.cloudless.gr (Cloudflare Tunnel → Pi/k3s NodePort)
 #
 # Per probe:
 #   1. TLS handshake succeeds
@@ -11,9 +11,10 @@ name: cloudless.gr HTTPS health probe
 #   4. TLS 1.0 and 1.1 are rejected; TLS 1.2 is accepted
 #   5. GET /api/health returns HTTP 200 with a valid JSON body
 #
-# This workflow complements pi-tls-cert-check.yml (which probes the legacy
-# APIGW secondary path) by covering the live Cloudflare-fronted paths that
-# serve real traffic.
+# Runs on the omv Pi (residential egress), NOT ubuntu-latest. GitHub-hosted
+# datacenter IPs still get Cloudflare 403 / Bot Fight interstitials on custom
+# domains even with Bot Fight Mode off — same reason core-web-vitals-audit.yml
+# audits the NodePort from [self-hosted, omv, pi].
 #
 # Schedule: every 6h at :00 (00:00, 06:00, 12:00, 18:00 UTC).
 # On failure the workflow run goes red — Slack / email notifications from
@@ -42,8 +43,9 @@ env:
 
 jobs:
   probe-primary:
-    name: Probe PRIMARY (cloudless.gr via Cloudflare → CloudFront)
-    runs-on: ubuntu-latest
+    name: Probe PRIMARY (cloudless.gr via Cloudflare → Workers → Tunnel)
+    # Pi residential IP — GH-hosted runners get CF 403 on /api/health.
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 5
     env:
       PROBE_HOST: "cloudless.gr"
@@ -128,16 +130,24 @@ jobs:
         run: |
           set -euo pipefail
           echo "→ GET https://${PROBE_HOST}/api/health"
-          response=$(curl -fsS \
+          # Do not use curl -f — we need the body to distinguish CF Bot Fight
+          # (challenge HTML) from an app-level failure.
+          response=$(curl -sS \
             --max-time 20 \
             --retry 2 --retry-delay 10 --retry-all-errors \
             -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
-            "https://${PROBE_HOST}/api/health" -o /tmp/body -w "%{http_code}|%{time_total}s")
+            -o /tmp/body -w "%{http_code}|%{time_total}s" \
+            "https://${PROBE_HOST}/api/health" || echo "000|n/a")
           code="${response%%|*}"
           elapsed="${response#*|}"
+          body=$(cat /tmp/body 2>/dev/null || true)
           echo "  → HTTP ${code} in ${elapsed}"
-          body=$(cat /tmp/body)
-          echo "  → body: ${body}"
+          echo "  → body: $(head -c 300 <<<"$body")"
+
+          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
+            echo "::error::Cloudflare Bot Fight / challenge intercepted ${PROBE_HOST}/api/health (not an app failure). Turn Bot Fight Mode off (Security → Bots) or re-run cloudflare-skip-cron-challenge.yml."
+            exit 1
+          fi
 
           if [ "${code}" != "200" ]; then
             echo "::error::${PROBE_HOST}/api/health returned ${code}."
@@ -160,6 +170,8 @@ jobs:
             echo "| Field | Value |"
             echo "|---|---|"
             echo "| Host | \`${PROBE_HOST}\` |"
+            echo "| Path | Cloudflare → Workers (cloudless2) → Tunnel → Pi |"
+            echo "| Runner | self-hosted omv/pi (avoids GHA CF 403) |"
             echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
             echo "| Cert days remaining | ${DAYS_LEFT} |"
             echo "| /api/health | ✅ 200 (${HEALTH_ELAPSED}) |"
@@ -167,8 +179,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   probe-standby:
-    name: Probe STANDBY (pi-origin.cloudless.gr via Tailscale Funnel → Pi/k3s)
-    runs-on: ubuntu-latest
+    name: Probe STANDBY (pi-origin.cloudless.gr via Tunnel → Pi/k3s)
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 5
     env:
       PROBE_HOST: "pi-origin.cloudless.gr"
@@ -179,7 +191,7 @@ jobs:
 
           echo "→ Pre-check: TCP/443 reachability of ${PROBE_HOST}"
           if ! timeout 15 bash -c "exec 3<>/dev/tcp/${PROBE_HOST}/443" 2>/dev/null; then
-            echo "::error::${PROBE_HOST}:443 not reachable — Tailscale Funnel or Pi/k3s offline."
+            echo "::error::${PROBE_HOST}:443 not reachable — Cloudflare Tunnel or Pi/k3s offline."
             exit 1
           fi
           echo "  ✓ TCP 443 open"
@@ -253,21 +265,25 @@ jobs:
         run: |
           set -euo pipefail
           echo "→ GET https://${PROBE_HOST}/api/health"
-          # Pi/k3s can be slower to respond (cold k3s pod, DERP relay hop).
-          # Generous timeouts: 30s per attempt, 3 retries, 15s backoff.
-          response=$(curl -fsS \
+          response=$(curl -sS \
             --max-time 30 \
             --retry 3 --retry-delay 15 --retry-all-errors \
             -H "User-Agent: cloudless-https-health-probe (gh-actions)" \
-            "https://${PROBE_HOST}/api/health" -o /tmp/body -w "%{http_code}|%{time_total}s")
+            -o /tmp/body -w "%{http_code}|%{time_total}s" \
+            "https://${PROBE_HOST}/api/health" || echo "000|n/a")
           code="${response%%|*}"
           elapsed="${response#*|}"
+          body=$(cat /tmp/body 2>/dev/null || true)
           echo "  → HTTP ${code} in ${elapsed}"
-          body=$(cat /tmp/body)
-          echo "  → body: ${body}"
+          echo "  → body: $(head -c 300 <<<"$body")"
+
+          if grep -qiE 'Just a moment|cf-browser-verification|challenge-platform' <<<"$body"; then
+            echo "::error::Cloudflare Bot Fight / challenge intercepted ${PROBE_HOST}/api/health. Turn Bot Fight Mode off or re-run cloudflare-skip-cron-challenge.yml."
+            exit 1
+          fi
 
           if [ "${code}" != "200" ]; then
-            echo "::error::${PROBE_HOST}/api/health returned ${code} (Pi/k3s serving path broken)."
+            echo "::error::${PROBE_HOST}/api/health returned ${code} (Tunnel / Pi serving path broken)."
             exit 1
           fi
 
@@ -289,7 +305,8 @@ jobs:
             echo "| Field | Value |"
             echo "|---|---|"
             echo "| Host | \`${PROBE_HOST}\` |"
-            echo "| Serving path | Tailscale Funnel → Pi/k3s |"
+            echo "| Serving path | Cloudflare Tunnel → Pi/k3s NodePort |"
+            echo "| Runner | self-hosted omv/pi (avoids GHA CF 403) |"
             echo "| TLS policy | TLS 1.0/1.1 rejected; TLS 1.2 accepted |"
             echo "| Cert days remaining | ${DAYS_LEFT} |"
             echo "| /api/health | ✅ 200 (${HEALTH_ELAPSED}) |"
