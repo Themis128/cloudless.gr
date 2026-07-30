@@ -242,15 +242,12 @@ export async function createUser(
       .bind(id, email, email, name || null, passwordHash, now, now)
       .run();
 
-    // Default to 'user' role
     await db.prepare("INSERT INTO user_role (user_id, role) VALUES (?, ?)").bind(id, "user").run();
 
     return {
       user: { id, email, name, password_hash: passwordHash, created_at: now, updated_at: now },
     };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[auth-d1] createUser failed:", message);
+  } catch {
     return { error: "Failed to create user" };
   }
 }
@@ -414,16 +411,22 @@ export async function createPasswordResetToken(
 
   const token = generateResetToken();
   const expiresAt = Math.floor(Date.now() / 1000) + RESET_TOKEN_EXPIRY_SECONDS;
+  await storePasswordResetToken(db, user.id, token, expiresAt);
+  return { token };
+}
 
-  // Store reset token on this user only (never broadcast to every row).
+async function storePasswordResetToken(
+  db: AuthDatabase,
+  userId: string,
+  token: string,
+  expiresAt: number
+): Promise<void> {
   await db
     .prepare(
       "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.reset_token', ?, '$.reset_expires', ?) WHERE id = ?"
     )
-    .bind(token, expiresAt, user.id)
+    .bind(token, expiresAt, userId)
     .run();
-
-  return { token };
 }
 
 export async function consumePasswordResetToken(
