@@ -13,7 +13,8 @@ env:
 #   - GH Actions runner inventory (self-hosted Pi fleet)
 #   - Tailscale connectivity matrix
 #
-# Runs from a self-hosted Pi build runner (has SSH + kubectl context).
+# Runs from a self-hosted Pi runner (has SSH + kubectl context).
+# Uses [omv, pi] — not exclusive `build` (reserved for deploy-pi / build-pi-image).
 
 on:
   schedule:
@@ -37,7 +38,7 @@ jobs:
   audit:
     name: Cluster Status
     # Self-hosted Pi runner — has kubeconfig + tailscale + SSH keys.
-    runs-on: [self-hosted, omv, build]
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 10
 
     steps:

@@ -38,7 +38,8 @@ concurrency:
 
 jobs:
   build-and-rollout:
-    runs-on: [self-hosted, omv, pi, build]
+    # omv + pi only — do not take the exclusive `build` label (deploy-pi).
+    runs-on: [self-hosted, omv, pi]
     timeout-minutes: 15
     env:
       TAG: ${{ inputs.version_tag || 'v3.4' }}

@@ -158,10 +158,20 @@ Current active fleet (as of 2026-05-23):
 | omv-main | 192.168.1.128   | `omv-build`   | `self-hosted, Linux, ARM64, omv, build` | online  |
 | omv-ha   | 192.168.1.130   | `omv-2-build` | `self-hosted, Linux, ARM64, omv, build` | online  |
 
-The `pi` label is reserved for cluster-bound jobs (the `build-and-push` job in
-`deploy-pi.yml`) and must never overlap with `build` — that gating is what
-keeps a future non-Pi host added to the `omv` group from accidentally taking
-a deploy job it can't run.
+The `pi` label is for cluster-local jobs (NodePort audits, kubectl, CWV).
+The `build` label is **exclusive** for heavy compile / hostPath sync:
+
+| Labels | Purpose | Workflows |
+| ------ | ------- | --------- |
+| `self-hosted, omv, build` | Next standalone build + hostPath sync; emergency ECR image build | `deploy-pi.yml`, `build-pi-image.yml` |
+| `self-hosted, omv, pi` | Cluster reachability, NodePort Lighthouse, alert-api import | `core-web-vitals-audit.yml`, `cluster-status-audit.yml`, `deploy-alert-api.yml` |
+
+Do **not** put CWV, cluster-status, or ETL on exclusive `build` — one busy
+Lighthouse run previously queued `deploy-pi` for tens of minutes.
+
+`deploy-pi` concurrency uses `cancel-in-progress: false` + `queue: max` so
+rapid main merges **serialize** instead of aborting mid-build. A skip step
+no-ops when `/api/health` already reports `version == github.sha`.
 
 ## Caveat: Pi runners share resources with production
 
