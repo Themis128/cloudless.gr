@@ -70,6 +70,20 @@ Approve the tag in the admin console if prompted. Apps go green at
 https://login.tailscale.com/admin/apps once a connector is online.
 Copy **Egress IPs** into SaaS IP allowlists when you tighten access.
 
+### Tailscale SSH
+
+ACL includes `ssh` rules: members → `autogroup:self` (check mode); admins →
+`tag:app-connector` / `tag:k8s` / `tag:k8s-operator` (accept). After ACL apply:
+
+```bash
+# From any tailnet device (Windows / WSL / phone)
+ssh tbaltzakis@github-omv
+# or
+ssh tbaltzakis@github-omv.tail4ecae1.ts.net
+```
+
+Host must have `--ssh` enabled (`tailscale set --ssh` / already on github-omv).
+
 **Do not** put public `*.cloudless.gr` or Grafana/Meili Serve hosts in Apps —
 those stay on Cloudflare Tunnel / ProxyGroup.
 

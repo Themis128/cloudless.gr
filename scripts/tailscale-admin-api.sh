@@ -116,6 +116,19 @@ if "grants" in patch:
     if key == "grants" and "Grants" in cur and "grants" in cur:
         del cur["Grants"]
 
+# ssh: append missing by stable JSON identity (same pattern as grants)
+if "ssh" in patch:
+    existing = cur.get("ssh") or []
+    have = {json.dumps(r, sort_keys=True) for r in existing}
+    merged = list(existing)
+    for r in patch["ssh"]:
+        sig = json.dumps(r, sort_keys=True)
+        if sig not in have:
+            merged.append(r)
+            have.add(sig)
+    cur["ssh"] = merged
+    print("ssh rules:", len(merged))
+
 # nodeAttrs: merge tailscale.com/app-connectors by name into target "*"
 if "nodeAttrs" in patch:
     cur_attrs = cur.setdefault("nodeAttrs", [])
