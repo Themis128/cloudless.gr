@@ -83,7 +83,11 @@ function daysAgoUnix(days: number): number {
   return Math.floor(Date.now() / 1000) - days * 24 * 60 * 60;
 }
 
-async function safeD1<T>(label: string, fallback: T, fn: (db: AuthDatabase) => Promise<T>): Promise<T> {
+async function safeD1<T>(
+  label: string,
+  fallback: T,
+  fn: (db: AuthDatabase) => Promise<T>
+): Promise<T> {
   const db = getAuthDbFromEnv();
   if (!db) return fallback;
   return fn(db).catch((err: unknown) => {

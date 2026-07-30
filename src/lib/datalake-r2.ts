@@ -119,7 +119,10 @@ export async function loadDatalakeSnapshotFromR2(): Promise<DatalakeDashboardPay
 
 function sectionUsable(section: DatalakeSectionResult | undefined): boolean {
   return Boolean(
-    section && !section.error && Array.isArray(section.rows) && (section.rowCount ?? section.rows.length) >= 0
+    section &&
+    !section.error &&
+    Array.isArray(section.rows) &&
+    (section.rowCount ?? section.rows.length) >= 0
   );
 }
 
