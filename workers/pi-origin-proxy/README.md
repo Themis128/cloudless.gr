@@ -24,3 +24,7 @@ User → Cloudflare → cloudless2 (this Worker, <50 KiB)
   → https://pi-origin.cloudless.gr
     → Tunnel → omv:30300 → cloudless-app
 ```
+
+Idempotent methods (`GET`/`HEAD`/`OPTIONS`) retry once on network failure or
+upstream `502` (Tunnel flaps). Failures still return `502` with
+`x-served-by: pi-tunnel-proxy` or `pi-tunnel-proxy-error`.

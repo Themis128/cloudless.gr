@@ -164,12 +164,25 @@ jobs:
               echo "HEALTH_VIA=public"
             } >> "$GITHUB_ENV"
             echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
+            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
             echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
             echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
+            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          # 502/503 from Worker/Tunnel while TLS works = edge hop flap or origin down.
+          # Probe fabric next so the error message distinguishes the two.
+          if [ "${code}" = "502" ] || [ "${code}" = "503" ] || [ "${code}" = "000" ]; then
+            echo "::warning::${PROBE_HOST}/api/health returned ${code} (Tunnel/Worker hop). Checking private fabric to see if origin is up."
+            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+            echo "public_path_broken=true" >> "$GITHUB_OUTPUT"
+            echo "PUBLIC_CODE=${code}" >> "$GITHUB_ENV"
             echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
             exit 0
           fi
@@ -229,6 +242,13 @@ jobs:
             echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
             exit 1
           fi
+
+          # Public path was 502/503 but origin is healthy → Tunnel/Worker flap (not app crash).
+          if [ "${{ steps.health.outputs.public_path_broken }}" = "true" ]; then
+            echo "::error::Public ${PROBE_HOST} returned ${PUBLIC_CODE:-5xx} but origin is healthy via Tailscale NodePort (${IP}). Likely Cloudflare Tunnel / Worker hop flap — check cloudflared + cloudless2."
+            exit 1
+          fi
+
           {
             echo "HEALTH_STATUS=${status}"
             echo "HEALTH_ELAPSED=${elapsed}"
@@ -370,12 +390,23 @@ jobs:
               echo "HEALTH_VIA=public"
             } >> "$GITHUB_ENV"
             echo "need_origin_fallback=false" >> "$GITHUB_OUTPUT"
+            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           if [ "${code}" = "403" ] || [ "${challenged}" = "1" ]; then
             echo "::warning::${PROBE_HOST}/api/health returned ${code} from GHA (Cloudflare). Falling back to private Tailscale fabric (NodePort via MagicDNS) — not Funnel."
             echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+            echo "public_path_broken=false" >> "$GITHUB_OUTPUT"
+            echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          if [ "${code}" = "502" ] || [ "${code}" = "503" ] || [ "${code}" = "000" ]; then
+            echo "::warning::${PROBE_HOST}/api/health returned ${code} (Tunnel/Worker hop). Checking private fabric to see if origin is up."
+            echo "need_origin_fallback=true" >> "$GITHUB_OUTPUT"
+            echo "public_path_broken=true" >> "$GITHUB_OUTPUT"
+            echo "PUBLIC_CODE=${code}" >> "$GITHUB_ENV"
             echo "HEALTH_ELAPSED=${elapsed}" >> "$GITHUB_ENV"
             exit 0
           fi
@@ -434,6 +465,12 @@ jobs:
             echo "::error::NodePort health JSON status='${status}' (expected 'ok')"
             exit 1
           fi
+
+          if [ "${{ steps.health.outputs.public_path_broken }}" = "true" ]; then
+            echo "::error::Public ${PROBE_HOST} returned ${PUBLIC_CODE:-5xx} but origin is healthy via Tailscale NodePort (${IP}). Likely Cloudflare Tunnel / Worker hop flap — check cloudflared + cloudless2."
+            exit 1
+          fi
+
           {
             echo "HEALTH_STATUS=${status}"
             echo "HEALTH_VERSION=${version}"
