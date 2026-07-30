@@ -11,13 +11,15 @@
 | PR-11 | **Done in tree** | `store-cloudflare-token.yml` → `gh secret set` (no SSM) |
 | PR-12 | **Partial** | athena/sns/amplify stubbed; full dead-code sweep continues |
 
-**Operator follow-ups before merge to main:**
-1. Add `RESEND_API_KEY` to k8s `cloudless-secrets` (Node email path).
-2. Confirm `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` already in secrets (Workers AI).
-3. Wave B (PR-04…06) still gated on Cognito/Dynamo data migration.
+**Operator follow-ups before / after merge to main:**
+
+1. Add `RESEND_API_KEY` to k8s `cloudless-secrets` (Node email path) — **still missing** on Pi (2026-07-30).
+2. `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` — **SET** in `cloudless-secrets`; Workers AI embed smoke (`bge-small` → 384-dim) OK from app pod.
+3. After Wave A deploy: `POST /api/admin/search/reindex` — Meili `products` index is empty; embedder is now `workers-ai-bge-small` @ 384-dim (was Titan 512). Ensure `MEILI_HOST` is in-cluster DNS (`http://meilisearch.meilisearch.svc.cluster.local:7700`), not Access-gated `meili.cloudless.gr`.
+4. **Do not** run PR-14 (`pnpm remove @aws-sdk/*`) until PR-12/PR-13 call sites are gone.
+5. Wave B (PR-04…06) still gated on Cognito/Dynamo data migration.
 
 ---
-
 
 Merge **one service family per PR**. Do not merge **PR-14** (SDK uninstall) until call sites from PR-02…PR-13 are gone.
 
@@ -109,7 +111,7 @@ PR-15 → PR-16 → PR-17       (archive → AWS teardown → Cost Explorer)
 | AWS surface | Primary files | CF replacement already in tree |
 |-------------|---------------|--------------------------------|
 | SES | `src/lib/email.ts`, `ses-suppression.ts` | `email-resend.ts`, Email binding, `ses-suppression-d1.ts` |
-| Cognito | `cognito-auth.ts`, `api/admin/users*`, `api/auth/confirm|activate` | `auth-d1.ts`, `api/auth/*-d1/*` |
+| Cognito | `cognito-auth.ts`, `api/admin/users*`, `api/auth/confirm` / `activate` | `auth-d1.ts`, `api/auth/*-d1/*` |
 | SSM | `ssm-config.ts`, portals/pending-clients/voice-brief/AB | `ssm-config-d1.ts`, k8s secrets |
 | DynamoDB | `user-profile`, `admin-notifications`, `gsc-cache`, `stripe-transactions`, `session-token-store` | D1 + `session-token-store-d1.ts` |
 | Bedrock | `bedrock-*.ts`, `agent-*.ts` | Workers AI admin routes, `recommendations.ts` |
