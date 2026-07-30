@@ -21,7 +21,8 @@ data:
   POSTIZ_API_URL: "https://postiz.cloudless.gr"
   N8N_API_URL: "https://n8n.cloudless.gr"
   APPFLOWY_API_URL: "https://appflowy.cloudless.gr"
-  MEILI_HOST: "https://meili.cloudless.gr"
+  MEILI_HOST: "http://meilisearch.meilisearch.svc.cluster.local:7700"
+  # Public URL meili.cloudless.gr is CF-proxied; pods must use in-cluster DNS.
   # In-cluster only — public https://ntfy.cloudless.gr is CF-challenged from pods.
   # cloudless-secrets may also set NTFY_BASE_URL (secretRef wins over this ConfigMap).
   NTFY_BASE_URL: "http://ntfy.ntfy.svc.cluster.local"

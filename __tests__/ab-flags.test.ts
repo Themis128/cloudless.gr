@@ -1,15 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DEFAULT_FLAGS, assignVariant, getABFlags } from "@/lib/ab-flags";
 import type { ABFlag } from "@/lib/ab-flags";
-
-// Mock the entire module at the top level
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: vi.fn(),
-  resetSsmCache: vi.fn(),
-}));
-
-import { getConfig } from "@/lib/ssm-config";
-const mockGetConfig = vi.mocked(getConfig);
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
 
 describe("DEFAULT_FLAGS", () => {
   it("is a non-empty array of ABFlag objects", () => {
@@ -89,17 +81,15 @@ describe("assignVariant()", () => {
 
 describe("getABFlags()", () => {
   beforeEach(() => {
-    vi.resetModules();
-    vi.resetAllMocks();
+    resetJsonConfigMemory();
   });
 
-  it("returns DEFAULT_FLAGS when SSM returns no AB_FLAGS_JSON", async () => {
-    vi.mocked(mockGetConfig).mockResolvedValue({});
+  it("returns DEFAULT_FLAGS when D1 app_config has no AB_FLAGS_JSON", async () => {
     const result = await getABFlags();
     expect(result).toEqual(DEFAULT_FLAGS);
   });
 
-  it("returns parsed flags from SSM when AB_FLAGS_JSON is set", async () => {
+  it("returns flags stored in D1 app_config", async () => {
     const customFlags: ABFlag[] = [
       {
         id: "custom",
@@ -110,27 +100,19 @@ describe("getABFlags()", () => {
         variants: { a: "A", b: "B" },
       },
     ];
-    vi.mocked(mockGetConfig).mockResolvedValue({
-      AB_FLAGS_JSON: JSON.stringify(customFlags),
-    });
+    await writeJsonConfig("AB_FLAGS_JSON", customFlags);
     const result = await getABFlags();
     expect(result).toEqual(customFlags);
   });
 
-  it("falls back to DEFAULT_FLAGS when AB_FLAGS_JSON is invalid JSON", async () => {
-    vi.mocked(mockGetConfig).mockResolvedValue({ AB_FLAGS_JSON: "not-json{" });
+  it("falls back to DEFAULT_FLAGS when stored value is not an array", async () => {
+    await writeJsonConfig("AB_FLAGS_JSON", { key: "value" });
     const result = await getABFlags();
     expect(result).toEqual(DEFAULT_FLAGS);
   });
 
-  it("falls back to DEFAULT_FLAGS when AB_FLAGS_JSON is not an array", async () => {
-    vi.mocked(mockGetConfig).mockResolvedValue({ AB_FLAGS_JSON: '{"key": "value"}' });
-    const result = await getABFlags();
-    expect(result).toEqual(DEFAULT_FLAGS);
-  });
-
-  it("falls back to DEFAULT_FLAGS when getConfig throws", async () => {
-    vi.mocked(mockGetConfig).mockRejectedValue(new Error("SSM unavailable"));
+  it("falls back to DEFAULT_FLAGS when stored array is empty", async () => {
+    await writeJsonConfig("AB_FLAGS_JSON", []);
     const result = await getABFlags();
     expect(result).toEqual(DEFAULT_FLAGS);
   });

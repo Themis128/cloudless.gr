@@ -2,7 +2,7 @@
 /**
  * Tests the full /api/contact pipeline with campaign tier context
  * (the payload shape produced by the inline TierTable form).
- * Verifies SES, Slack, EspoCRM, and Notion all receive the tier data.
+ * Verifies Resend, Slack, EspoCRM, and Notion all receive the tier data.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -12,15 +12,11 @@ vi.mock("@/lib/rate-limit", () => ({
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
-// Mock SES
-const mockSend = vi.fn().mockResolvedValue({});
-vi.mock("@aws-sdk/client-sesv2", () => ({
-  SESv2Client: class {
-    send = mockSend;
-  },
-  SendEmailCommand: class {
-    constructor(public input: unknown) {}
-  },
+// Mock Resend delivery path
+const mockSendEmailResend = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/email-resend", () => ({
+  isResendConfigured: vi.fn(() => true),
+  sendEmailResend: (...args: unknown[]) => mockSendEmailResend(...args),
 }));
 
 // Mock Slack
@@ -75,7 +71,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockSend.mockResolvedValue({});
+    mockSendEmailResend.mockResolvedValue(undefined);
     const mod = await import("@/app/api/contact/route");
     POST = mod.POST;
   });
@@ -94,7 +90,7 @@ describe("POST /api/contact — campaign tier pipeline", () => {
     expect(data.eventId).toBeTruthy();
   });
 
-  it("sends SES email with campaign/tier context in subject and body", async () => {
+  it("sends Resend email with campaign/tier context in subject and body", async () => {
     const request = new Request("http://localhost/api/contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -103,11 +99,9 @@ describe("POST /api/contact — campaign tier pipeline", () => {
 
     await POST(request);
 
-    // SES SendEmailCommand was called at least once (team email)
-    expect(mockSend).toHaveBeenCalled();
-    const emailInput = mockSend.mock.calls[0][0].input;
-    // Subject contains the service (campaign — tier)
-    const subject = emailInput.Content?.Simple?.Subject?.Data ?? "";
+    expect(mockSendEmailResend).toHaveBeenCalled();
+    const emailInput = mockSendEmailResend.mock.calls[0][0];
+    const subject = emailInput.subject;
     expect(subject).toContain("shop-online — E-shop Launch");
     expect(subject).toContain("Γιώργος");
   });
