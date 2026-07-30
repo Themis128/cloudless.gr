@@ -162,20 +162,27 @@ if (configured.experimental && typeof configured.experimental === "object") {
 
 export default withBundleAnalyzer(configured);
 
-// Bind wrangler D1/R2/KV into `next dev` via OpenNext's platform proxy so
-// getAuthDbFromEnv() / AUTH_DB work without Cognito. No-op outside next dev.
-import { initOpenNextCloudflareForDev, getCloudflareContext } from "@opennextjs/cloudflare";
+// Bind wrangler D1/R2/KV into `next dev` only — never during `next build` / CI
+// (initOpenNextCloudflareForDev talks to wrangler and needs CLOUDFLARE_API_TOKEN
+// when bindings are remote, which breaks non-interactive builds).
+const isNextDevCli = !process.env.CI && process.argv.includes("dev");
 
-void initOpenNextCloudflareForDev().then(() => {
-  try {
-    const { env } = getCloudflareContext();
-    const authDb = (env as { AUTH_DB?: { prepare: (q: string) => unknown } }).AUTH_DB;
-    if (authDb && typeof authDb.prepare === "function") {
-      (globalThis as { __AUTH_DB__?: typeof authDb }).__AUTH_DB__ = authDb;
-      (process as unknown as { env: { AUTH_DB?: typeof authDb } }).env.AUTH_DB = authDb;
+if (isNextDevCli) {
+  void import("@opennextjs/cloudflare").then(
+    ({ initOpenNextCloudflareForDev, getCloudflareContext }) => {
+      void initOpenNextCloudflareForDev().then(() => {
+        try {
+          const { env } = getCloudflareContext();
+          const authDb = (env as { AUTH_DB?: { prepare: (q: string) => unknown } }).AUTH_DB;
+          if (authDb && typeof authDb.prepare === "function") {
+            (globalThis as { __AUTH_DB__?: typeof authDb }).__AUTH_DB__ = authDb;
+            (process as unknown as { env: { AUTH_DB?: typeof authDb } }).env.AUTH_DB = authDb;
+          }
+        } catch {
+          // Context not ready in this config-load process — request handlers still
+          // resolve AUTH_DB via Symbol.for("__cloudflare-context__") / auth-db-local.
+        }
+      });
     }
-  } catch {
-    // Context not ready in this config-load process — request handlers still
-    // resolve AUTH_DB via Symbol.for("__cloudflare-context__") in auth-d1.
-  }
-});
+  );
+}
