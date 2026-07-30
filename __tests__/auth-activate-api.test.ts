@@ -1,29 +1,22 @@
 // @vitest-environment node
 /**
- * POST /api/auth/activate — Cognito when pool set; D1 email_verified otherwise.
+ * POST /api/auth/activate — D1 email_verified only (PR-04).
  */
 import { createHmac } from "crypto";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 const getAuthDbMock = vi.fn();
+const markEmailVerified = vi.fn();
 
 vi.mock("@/lib/auth-d1", () => ({
   getAuthDbFromEnv: (...a: unknown[]) => getAuthDbMock(...a),
+  markEmailVerified: (...a: unknown[]) => markEmailVerified(...a),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
   rateLimit: () => ({ ok: true }),
   getClientIp: () => "127.0.0.1",
-}));
-
-vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
-  CognitoIdentityProviderClient: class {
-    send = vi.fn().mockResolvedValue({});
-  },
-  AdminConfirmSignUpCommand: class {
-    constructor(public input: unknown) {}
-  },
 }));
 
 const SECRET = "test-activate-secret";
@@ -54,9 +47,8 @@ function req(body: unknown) {
   });
 }
 
-describe("POST /api/auth/activate (D1 fallback)", () => {
+describe("POST /api/auth/activate (D1)", () => {
   const prevSecret = process.env.AUTH_SECRET;
-  const prevPool = process.env.COGNITO_USER_POOL_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,12 +60,11 @@ describe("POST /api/auth/activate (D1 fallback)", () => {
   afterEach(() => {
     if (prevSecret === undefined) delete process.env.AUTH_SECRET;
     else process.env.AUTH_SECRET = prevSecret;
-    if (prevPool === undefined) delete process.env.COGNITO_USER_POOL_ID;
-    else process.env.COGNITO_USER_POOL_ID = prevPool;
   });
 
-  it("returns 503 when Cognito unset and AUTH_DB missing", async () => {
+  it("returns 503 when AUTH_DB missing", async () => {
     getAuthDbMock.mockReturnValue(null);
+    markEmailVerified.mockResolvedValue(false);
     const email = "user@cloudless.gr";
     const { token, otp } = makeToken(email);
     const { POST } = await import("@/app/api/auth/activate/route");
@@ -81,11 +72,9 @@ describe("POST /api/auth/activate (D1 fallback)", () => {
     expect(res.status).toBe(503);
   });
 
-  it("marks email_verified in D1 when Cognito unset", async () => {
-    const run = vi.fn().mockResolvedValue({ success: true });
-    const bind = vi.fn().mockReturnValue({ run });
-    const prepare = vi.fn().mockReturnValue({ bind });
-    getAuthDbMock.mockReturnValue({ prepare });
+  it("marks email_verified in D1", async () => {
+    getAuthDbMock.mockReturnValue({ prepare: vi.fn() });
+    markEmailVerified.mockResolvedValue(true);
 
     const email = "user@cloudless.gr";
     const { token, otp } = makeToken(email);
@@ -93,9 +82,7 @@ describe("POST /api/auth/activate (D1 fallback)", () => {
     const res = await POST(req({ email, otp, token }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
-    expect(prepare).toHaveBeenCalled();
-    expect(bind).toHaveBeenCalledWith(email);
-    expect(run).toHaveBeenCalled();
+    expect(markEmailVerified).toHaveBeenCalled();
   });
 
   it("returns 400 for bad OTP", async () => {
