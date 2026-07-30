@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserBySession, deleteSession, isAdmin, getAuthDbFromEnv } from "@/lib/auth-d1";
 
-function getDb(_request: NextRequest) {
-  return getAuthDbFromEnv();
-}
-
 export async function GET(req: NextRequest) {
-  const db = getDb(req);
+  const db = getAuthDbFromEnv();
   if (!db) {
     return NextResponse.json({ user: null });
   }
@@ -39,7 +35,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const db = getDb(req);
+  const db = getAuthDbFromEnv();
   if (!db) {
     return NextResponse.json({ ok: true });
   }

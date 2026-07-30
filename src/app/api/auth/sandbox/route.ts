@@ -19,10 +19,6 @@ import {
 } from "@/lib/auth-d1";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
-function getDb(_request: NextRequest) {
-  return getAuthDbFromEnv();
-}
-
 // Check if sandbox is enabled (only in development)
 function isSandboxEnabled(): boolean {
   return process.env.NODE_ENV === "development";
@@ -34,7 +30,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Auth sandbox is disabled in production" }, { status: 403 });
   }
 
-  const db = getDb(req);
+  const db = getAuthDbFromEnv();
   if (!db) {
     // In test/dev we treat missing D1 bindings as "service unavailable"
     // rather than a missing route/contract (the Playwright tests accept
@@ -101,7 +97,7 @@ export async function POST(req: NextRequest) {
   const ipRl = rateLimit(`auth-sandbox:ip:${getClientIp(req)}`, 5, 60_000);
   if (!ipRl.ok) return ipRl.response;
 
-  const db = getDb(req);
+  const db = getAuthDbFromEnv();
   if (!db) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
   }

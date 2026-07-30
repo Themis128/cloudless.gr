@@ -234,15 +234,13 @@ export async function createUser(
   const now = Math.floor(Date.now() / 1000);
 
   try {
-    // Production D1 requires NOT NULL UNIQUE `username` (email used as username).
-    // Legacy local DBs from migrations/0001 omit the column — insertUserRow falls back.
-    await insertUserRow(db, {
-      id,
-      email,
-      name: name || null,
-      passwordHash,
-      now,
-    });
+    // Production + migrated local D1 require NOT NULL UNIQUE `username` (email used as username).
+    await db
+      .prepare(
+        "INSERT INTO user (id, username, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(id, email, email, name || null, passwordHash, now, now)
+      .run();
 
     // Default to 'user' role
     await db.prepare("INSERT INTO user_role (user_id, role) VALUES (?, ?)").bind(id, "user").run();
@@ -253,34 +251,6 @@ export async function createUser(
   } catch (err) {
     console.error("[auth-d1] createUser failed:", err);
     return { error: "Failed to create user" };
-  }
-}
-
-/** Insert user row; prefer schema with `username`, fall back to email-only. */
-async function insertUserRow(
-  db: AuthDatabase,
-  row: {
-    id: string;
-    email: string;
-    name: string | null;
-    passwordHash: string;
-    now: number;
-  }
-): Promise<void> {
-  try {
-    await db
-      .prepare(
-        "INSERT INTO user (id, username, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-      )
-      .bind(row.id, row.email, row.email, row.name, row.passwordHash, row.now, row.now)
-      .run();
-  } catch {
-    await db
-      .prepare(
-        "INSERT INTO user (id, email, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-      .bind(row.id, row.email, row.name, row.passwordHash, row.now, row.now)
-      .run();
   }
 }
 
