@@ -26,13 +26,14 @@ was retired as primary.
 | Use | How |
 |-----|-----|
 | Admin GUIs (Grafana, Meili) | Private **Serve** via `ProxyGroup/ingress` — fabric doc §5.4 |
-| Break-glass node HTTPS | MagicDNS e.g. `https://github-omv.tail4ecae1.ts.net/…` (diagnostic) |
-| GHA health when CF returns 403 | Prefer MagicDNS Serve after `TS_AUTHKEY`, not Funnel-as-CDN |
+| Break-glass node HTTPS | MagicDNS e.g. `https://github-omv.tail4ecae1.ts.net/…` (diagnostic only) |
+| GHA health when CF returns 403 | **Join Tailscale** → `http://github-omv.tail4ecae1.ts.net:30300/api/health` (private L4). Do **not** use public Funnel as the CI SLA — see fabric ADR **D8**. |
 
 ## Do not
 
 - Point Cloudflare origin or LB health checks at `*.ts.net` Funnel hosts as the
   long-term primary.
+- Use public Funnel as the GitHub Actions “origin up?” contract (DERP timeouts).
 - Expose databases or kube-apiserver via Funnel.
 - Reintroduce one Funnel hostname per app Service.
 

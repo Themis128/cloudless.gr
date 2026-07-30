@@ -195,8 +195,35 @@ sequenceDiagram
 GHA `ubuntu-latest` often gets **HTTP 403** on custom-domain `/api/health`
 (datacenter reputation / Bot Fight) even when TLS succeeds and the site is fine
 from residential IPs. That is a **Cloudflare** problem, not a Tailscale one.
-Health probes should fall back to MagicDNS Serve/Funnel or NodePort **after**
-joining the tailnet — never assume `100.x:30300` is open without verifying.
+
+**Correct fallback (fabric L4 — used by `cloudless-https-health-probe.yml`):**
+
+```mermaid
+sequenceDiagram
+  participant GHA as ubuntu-latest
+  participant CF as cloudless.gr
+  participant TS as Tailscale Action
+  participant Omv as github-omv MagicDNS
+  participant NP as :30300 cloudless-app
+
+  GHA->>CF: GET /api/health
+  CF-->>GHA: 403 / challenge HTML
+  Note over GHA: TLS already proved edge is up
+  GHA->>TS: join with TS_AUTHKEY
+  TS-->>GHA: MagicDNS works
+  GHA->>Omv: resolve github-omv.tail4ecae1.ts.net
+  GHA->>NP: GET http://MagicDNS:30300/api/health
+  NP-->>GHA: 200 status=ok
+```
+
+| Do | Don't |
+|----|-------|
+| Join the tailnet, then hit **NodePort `:30300` via MagicDNS** | Use public **Funnel** as the CI SLA path (DERP-mediated, flaky timeouts) |
+| Prefer MagicDNS over CGNAT literals | Hardcode `100.x` (rotates; e.g. stale `100.113.41.119`) |
+| Treat CF 403 + healthy fabric NodePort as “edge blocked bots, origin up” | Soft-pass 403 without validating origin |
+
+Funnel (`https://github-omv.…ts.net` from the public internet) may still answer
+sometimes — it is **break-glass / diagnostic only**, not an availability contract.
 
 ### 5.2 kubectl on the office LAN (preferred)
 
@@ -267,6 +294,7 @@ Typical secrets: `TS_AUTHKEY` (ephemeral, pre-authorized), `KUBECONFIG_B64`,
 | D5 | kube ProxyGroup for off-LAN kubectl | Avoids k3s TLS SAN churn and WSL userspace TCP pain |
 | D6 | No AWS SSM in `deploy.sh` | Free-tier / Cloudflare-first policy — OAuth env only |
 | D7 | Prefer MagicDNS over CGNAT literals | Tailscale IPs rotate; docs and new automation must not hardcode |
+| D8 | CI origin fallback = private fabric L4, not Funnel | Funnel is public Serve over DERP — intermittent timeouts from GHA; NodePort via MagicDNS after `TS_AUTHKEY` is the same origin Cloudflare Tunnel uses |
 
 ---
 
@@ -278,6 +306,9 @@ mindmap
     Funnel as prod edge
       Bot Fight vs GHA
       Split-brain with CF Tunnel
+    Funnel as CI health SLA
+      DERP timeouts
+      False red / false green
     One TS device per Service
       Missing proxy-group annotation
       Pi RAM death
@@ -296,6 +327,7 @@ Checklist before merging Tailscale changes:
 - [ ] Public URL still goes Cloudflare → Worker/Tunnel?
 - [ ] New Ingress has `tailscale.com/proxy-group: ingress`?
 - [ ] No new Funnel-primary path for `cloudless.gr`?
+- [ ] CI origin checks use **private** MagicDNS NodePort (not public Funnel)?
 - [ ] Scripts use MagicDNS or document IP refresh?
 - [ ] ACL `tag:k8s` / `tag:k8s-operator` still own the tags?
 
@@ -393,8 +425,9 @@ flowchart TD
   Q -->|ping 100.x OK, TCP fail| A2[WSL userspace — switch TUN<br/>or ProxyGroup]
   Q -->|Ingress ADDRESS empty| A3[HTTPS certs + host approval<br/>+ http-endpoint annotation]
   Q -->|Many new Machines| A4[Missing proxy-group annotation<br/>delete stale devices]
-  Q -->|GHA 403 on cloudless.gr| A5[CF Bot Fight — not Tailscale<br/>fallback MagicDNS/NodePort]
-  Q -->|NodePort timeout on 100.x| A6[Wrong/stale IP — use MagicDNS<br/>or SSH then curl 127.0.0.1:30300]
+  Q -->|GHA 403 on cloudless.gr| A5[CF Bot Fight — not Tailscale<br/>join TS → MagicDNS:30300]
+  Q -->|Funnel HTTPS times out| A5b[Expected — Funnel is not SLA<br/>use private NodePort path]
+  Q -->|NodePort timeout on 100.x| A6[Stale CGNAT — resolve MagicDNS<br/>after Tailscale join]
   Q -->|Offline tagged device| A7[Delete in admin UI<br/>see OFFLINE-DEVICE-TROUBLESHOOTING]
 ```
 
