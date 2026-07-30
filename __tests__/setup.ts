@@ -15,31 +15,6 @@ import {
 } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
 
-// ── D1 auth for API contract tests (opaque session ids) ───────────────────────
-vi.mock("@/lib/auth-d1", () => {
-  const stmt = {
-    bind: vi.fn().mockReturnThis(),
-    run: vi.fn().mockResolvedValue({ success: true }),
-    first: vi.fn().mockResolvedValue(null),
-    all: vi.fn().mockResolvedValue({ results: [] }),
-  };
-  return {
-    getAuthDbFromEnv: vi.fn(() => ({
-      prepare: vi.fn(() => stmt),
-    })),
-    getUserBySession: vi.fn(async (_db: unknown, sessionId: string) => {
-      if (sessionId === "test-admin-session") {
-        return { id: "test-admin-sub", email: "admin@cloudless.gr", name: "Admin" };
-      }
-      if (sessionId === "test-user-session") {
-        return { id: "test-user-sub", email: "user@cloudless.gr", name: "User" };
-      }
-      return null;
-    }),
-    isAdmin: vi.fn(async (_db: unknown, userId: string) => userId === "test-admin-sub"),
-  };
-});
-
 // ── Notion ────────────────────────────────────────────────────────────────────
 process.env.NOTION_API_KEY = "secret_test_key_12345";
 process.env.NOTION_BLOG_DB_ID = "blog-db-123";

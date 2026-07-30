@@ -7,6 +7,64 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
+vi.mock("@/lib/api-auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api-auth")>();
+  const { NextResponse } = await import("next/server");
+  const adminUser = {
+    sub: "test-admin-sub",
+    email: "admin@cloudless.gr",
+    groups: ["admin"],
+    email_verified: true,
+  };
+  const plainUser = {
+    sub: "test-user-sub",
+    email: "user@cloudless.gr",
+    groups: [] as string[],
+    email_verified: true,
+  };
+
+  function userFromRequest(request: { headers: { get: (k: string) => string | null } }) {
+    const h = request.headers.get("authorization") ?? "";
+    const token = h.startsWith("Bearer ") ? h.slice(7) : "";
+    if (token === "test-admin-session") return adminUser;
+    if (token === "test-user-session") return plainUser;
+    // Allow email-bearing opaque tokens used by user-route tests: "user-session:<email>"
+    if (token.startsWith("user-session:")) {
+      const email = token.slice("user-session:".length) || "user@cloudless.gr";
+      return { ...plainUser, email, sub: `user-${email}` };
+    }
+    if (token.startsWith("admin-session:")) {
+      const email = token.slice("admin-session:".length) || "admin@cloudless.gr";
+      return { ...adminUser, email, sub: `admin-${email}` };
+    }
+    return null;
+  }
+
+  return {
+    ...actual,
+    requireAuth: async (request: Parameters<typeof actual.requireAuth>[0]) => {
+      const user = userFromRequest(request);
+      if (user) return { ok: true as const, user };
+      return actual.requireAuth(request);
+    },
+    requireAdmin: async (request: Parameters<typeof actual.requireAdmin>[0]) => {
+      const user = userFromRequest(request);
+      if (!user) return actual.requireAdmin(request);
+      if (!user.groups.includes("admin")) {
+        return {
+          ok: false as const,
+          response: NextResponse.json({ error: "Admin access required" }, { status: 403 }),
+        };
+      }
+      return { ok: true as const, user };
+    },
+    requireVerifiedAuth: async (request: Parameters<typeof actual.requireVerifiedAuth>[0]) => {
+      const user = userFromRequest(request);
+      if (user) return { ok: true as const, user };
+      return actual.requireVerifiedAuth(request);
+    },
+  };
+});
 // ---------------------------------------------------------------------------
 // Hoisted mocks
 // ---------------------------------------------------------------------------
@@ -71,15 +129,7 @@ const BOOK_ROUTE = "@/app/api/agent/book/route";
 // ---------------------------------------------------------------------------
 
 function makeUserToken(email = "user@example.com"): string {
-  const payload = {
-    sub: "test-user",
-    email,
-    preferred_username: email.split("@")[0],
-    exp: Math.floor(Date.now() / 1000) + 3600,
-  };
-  const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${header}.${body}.fake-sig`;
+  return `user-session:${email}`;
 }
 
 function authPost(body?: unknown, email?: string): NextRequest {
