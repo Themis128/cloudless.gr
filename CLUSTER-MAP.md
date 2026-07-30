@@ -1,5 +1,10 @@
 # k3s Cluster Map
 
+> **Tailscale architecture (trust boundaries, ProxyGroups, MagicDNS):**
+> [`docs/TAILSCALE-FABRIC.md`](docs/TAILSCALE-FABRIC.md).  
+> The Tailscale rows below are a **snapshot** and may list stale per-Service
+> proxies — prefer shared `ProxyGroup/ingress` devices from the fabric doc.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         omv-ha (192.168.1.130)                              │
@@ -75,15 +80,15 @@
 
 | Hostname / Path | Service | Port | Access Method |
 |-----------------|---------|------|---------------|
-| `cloudless.gr` | cloudless Worker | 80 | Cloudflare Worker (Edge) |
-| `manage.cloudless.gr` | cloudless Worker | 80 | Cloudflare Worker |
-| `*.cloudless.gr` | cloudless Worker | 80 | Cloudflare Worker |
-| `n8n.cloudless.gr` | n8n | 80, 443 | Traefik LB |
-| `grafana.cloudless.gr` | Grafana | 80 | Traefik IngressRoute |
-| `grafana.ts.cloudless.gr` | Grafana | 80 | Tailscale Ingress |
-| `loki.ts.cloudless.gr` | Loki | 80 | Tailscale Ingress |
+| `cloudless.gr` | cloudless-app via Worker+Tunnel | 443 | Cloudflare → `:30300` |
+| `manage.cloudless.gr` | same | 443 | Cloudflare |
+| `pi-origin.cloudless.gr` | Tunnel origin | 443 | Cloudflare Tunnel → `:30300` |
+| `n8n.cloudless.gr` | n8n | 80, 443 | Traefik / Tunnel |
+| `grafana.cloudless.gr` | Grafana | 80 | Traefik IngressRoute / Tunnel |
+| `grafana.tail4ecae1.ts.net` | Grafana | 443 | Tailscale Serve (`ProxyGroup/ingress`) — see fabric doc |
 | `192.168.1.128:18080` | Traefik Dashboard | - | Direct (LAN) |
 | `192.168.1.128:18443` | Traefik HTTPS | - | Direct (LAN) |
+| `192.168.1.128:30300` | cloudless-app | 80 | NodePort (Tunnel origin) |
 | `192.168.1.128:30850` | Grafana | 80 | NodePort |
 
 ### Monitoring Endpoints

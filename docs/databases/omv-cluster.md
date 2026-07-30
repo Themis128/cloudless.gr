@@ -13,7 +13,7 @@ Verified live 2026-07-30. Passwords are **never** stored in this doc — pull th
 | DB ports | **ClusterIP only** — not exposed via Cloudflare tunnels |
 | App HTTP | Cloudflare (`*.cloudless.gr`) / NodePorts — apps, not DBs |
 | From WSL / Cursor | `kubectl port-forward` → localhost (see [Developer access](#developer-access)) |
-| kube-apiserver | LAN `https://192.168.1.128:6443` (preferred in office) — [kubectl-tailscale.md](../kubectl-tailscale.md) |
+| kube-apiserver | LAN `https://192.168.1.128:6443` (preferred in office) — [kubectl-tailscale.md](../kubectl-tailscale.md) · fabric: [TAILSCALE-FABRIC.md](../TAILSCALE-FABRIC.md) |
 | Shared `database` / `cache` NS | **Do not exist** on the live cluster (manifests under `infrastructure/database/` are unused) |
 
 ```mermaid

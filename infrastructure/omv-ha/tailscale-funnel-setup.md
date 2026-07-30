@@ -1,40 +1,48 @@
-# Tailscale Funnel Setup for omv-ha Standby Node
+# Tailscale Funnel on omv / omv-ha — historical note
 
-**STATUS: MIGRATED TO CLOUDFLARE WORKERS** (July 2026)
+> **Status:** not the production edge (updated 2026-07-30)  
+> **Canonical architecture:** [`docs/TAILSCALE-FABRIC.md`](../../docs/TAILSCALE-FABRIC.md)
 
-The cloudless.gr application has been migrated from k3s to Cloudflare Workers. The Tailscale Funnel failover is no longer required as the primary application is now served directly by Cloudflare.
+## What changed
 
-## Current Architecture
+Public `cloudless.gr` traffic is:
 
+```text
+Client → Cloudflare → Worker cloudless2 (pi-origin-proxy)
+       → Tunnel hostname pi-origin.cloudless.gr
+       → omv NodePort :30300 (cloudless-app on k3s)
 ```
-                     ┌─────────────────────┐
-                     │   Cloudflare Worker   │
-                     │  cloudless.gr (primary)│
-                     │  /api/health: 200 OK   │
-                     └─────────────────────┘
-```
 
-## Migration Complete (July 2026)
+Tailscale **Funnel** is not part of that path. Using Funnel as a primary or HA
+origin caused trust-boundary confusion (Bot Fight vs GHA, split-brain with the
+Cloudflare Tunnel, SEO/CI noise).
 
-- Main application: `https://cloudless.gr` → Cloudflare Workers ✓
-- Health endpoint: `/api/health` returns `{"status":"ok","authProvider":"d1"}` ✓
-- k3s `cloudless-app` deployment removed (was pulling from AWS ECR) ✓
-- `pi-origin.cloudless.gr` no longer serves the application
+The Pi app **still runs on k3s** — only the public front door moved to
+Cloudflare. Do not delete NodePort `:30300` or the Tunnel ingress because Funnel
+was retired as primary.
 
-## Alternative: Proxy to Workers (Optional)
+## When Funnel / Serve is still useful
 
-If Tailscale Funnel is still desired for internal access, configure nginx to proxy to the Workers endpoint:
+| Use | How |
+|-----|-----|
+| Admin GUIs (Grafana, Meili) | Private **Serve** via `ProxyGroup/ingress` — fabric doc §5.4 |
+| Break-glass node HTTPS | MagicDNS e.g. `https://github-omv.tail4ecae1.ts.net/…` (diagnostic) |
+| GHA health when CF returns 403 | Prefer MagicDNS Serve after `TS_AUTHKEY`, not Funnel-as-CDN |
 
-```nginx
-# /etc/nginx/sites-available/cloudless-workers
-server {
-    listen 8080;
-    server_name pi-origin.cloudless.gr;
+## Do not
 
-    location / {
-        proxy_pass https://cloudless.gr;
-        proxy_set_header Host cloudless.gr;
-        proxy_ssl_server_name on;
-        proxy_ssl_name cloudless.gr;
-    }
-}
+- Point Cloudflare origin or LB health checks at `*.ts.net` Funnel hosts as the
+  long-term primary.
+- Expose databases or kube-apiserver via Funnel.
+- Reintroduce one Funnel hostname per app Service.
+
+## Legacy names (drift)
+
+| Name | Notes |
+|------|-------|
+| `omv.tail8eb71.ts.net` | Old tailnet / Funnel hostname — do not use in new automation |
+| `*.ts.cloudless.gr` | Abandoned public Tailscale DNS idea |
+| `100.113.41.119` | Stale CGNAT — current SoT uses MagicDNS + `100.74.191.58` for github-omv |
+
+If you need public HTTP, use Cloudflare Tunnel + Worker. If you need private
+admin HTTP, use the fabric ProxyGroups.

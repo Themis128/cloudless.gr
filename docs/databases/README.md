@@ -66,6 +66,7 @@ Use **SQLTools**, not the Microsoft SQL Server extension (`ms-mssql`).
 | Doc | Topic |
 |-----|--------|
 | [kubectl-tailscale.md](../kubectl-tailscale.md) | Cluster API access (LAN / Tailscale) |
+| [TAILSCALE-FABRIC.md](../TAILSCALE-FABRIC.md) | Tailscale admin fabric architecture (trust boundaries, ProxyGroups) |
 | [datalake.md](../datalake.md) | Analytics / lake layout |
 | [etl.md](../etl.md) | ETL jobs |
 | [appflowy-deploy.md](../appflowy-deploy.md) | AppFlowy (Postgres + Redis + MinIO) |
