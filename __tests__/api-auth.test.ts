@@ -477,74 +477,30 @@ describe("api-auth.ts (coverage backfill)", () => {
     delete process.env.AWS_REGION;
   });
 
-  describe("verifyToken with COGNITO_ISSUER configured (JWKS branch)", () => {
-    it("returns payload when jwtVerify succeeds", async () => {
-      vi.resetModules();
-      vi.doMock("jose", async () => {
-        const real = await vi.importActual<typeof import("jose")>("jose");
-        return {
-          ...real,
-          jwtVerify: vi.fn().mockResolvedValue({
-            payload: { sub: "verified-user", email: "v@cloudless.gr" },
-          }),
-          createRemoteJWKSet: vi.fn(() => "jwks-stub" as unknown),
-        };
-      });
+  describe("verifyToken after Cognito removal (PR-05)", () => {
+    it("isCognitoAuthEnabled is always false even with legacy env", async () => {
       process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
       process.env.ALLOW_LEGACY_COGNITO = "1";
-      process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
-      const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
+      vi.resetModules();
+      const { isCognitoAuthEnabled, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
-      const decoded = await verifyToken("any.fake.jwt");
-      expect(decoded?.sub).toBe("verified-user");
+      expect(isCognitoAuthEnabled()).toBe(false);
       delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
       delete process.env.ALLOW_LEGACY_COGNITO;
-      vi.doUnmock("jose");
     });
 
-    it("returns null when jwtVerify throws", async () => {
+    it("verifyToken still decodes unsigned JWT in non-production", async () => {
       vi.resetModules();
-      vi.doMock("jose", async () => {
-        const real = await vi.importActual<typeof import("jose")>("jose");
-        return {
-          ...real,
-          jwtVerify: vi.fn().mockRejectedValue(new Error("invalid sig")),
-          createRemoteJWKSet: vi.fn(() => "jwks-stub" as unknown),
-        };
-      });
-      process.env.NEXT_PUBLIC_AUTH_PROVIDER = "cognito";
-      process.env.ALLOW_LEGACY_COGNITO = "1";
-      process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
       const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
       resetJwksCache();
-      const decoded = await verifyToken("any.fake.jwt");
-      expect(decoded).toBeNull();
-      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-      delete process.env.ALLOW_LEGACY_COGNITO;
-      vi.doUnmock("jose");
-    });
-
-    it("skips JWKS when AUTH_PROVIDER is not cognito even if issuer is set", async () => {
-      vi.resetModules();
-      delete process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-      delete process.env.ALLOW_LEGACY_COGNITO;
-      process.env.COGNITO_ISSUER = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_TEST";
-      const createRemoteJWKSet = vi.fn();
-      vi.doMock("jose", async () => {
-        const real = await vi.importActual<typeof import("jose")>("jose");
-        return { ...real, createRemoteJWKSet };
-      });
-      const { verifyToken, resetJwksCache } = await import("@/lib/api-auth");
-      resetJwksCache();
-      // Dev decode-only path (no JWKS) — must not call createRemoteJWKSet
-      const decoded = await verifyToken(makeValidJwt({ email: "d1@test.com" }));
-      expect(createRemoteJWKSet).not.toHaveBeenCalled();
-      expect(decoded?.email).toBe("d1@test.com");
-      delete process.env.COGNITO_ISSUER;
-      vi.doUnmock("jose");
+      const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
+      const body = Buffer.from(JSON.stringify({ sub: "dev-user", exp: Math.floor(Date.now()/1000)+3600 })).toString("base64url");
+      const decoded = await verifyToken(`${header}.${body}.sig`);
+      expect(decoded?.sub).toBe("dev-user");
     });
   });
 
+  
   describe("decodeTokenUnverified (JSON.parse catch branch)", () => {
     it("returns null when payload is not valid base64-encoded JSON", async () => {
       vi.resetModules();

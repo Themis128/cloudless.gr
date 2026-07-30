@@ -1,7 +1,6 @@
 {
   "type": "module",
   "dependencies": {
-    "@aws-sdk/client-cognito-identity-provider": "^3.1071.0",
     "@aws-sdk/client-cost-explorer": "^3.1071.0",
     "@dsnp/parquetjs": "^1.8.7",
     "aws4fetch": "^1.0.20",

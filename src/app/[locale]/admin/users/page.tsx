@@ -38,7 +38,7 @@ const userStatusClasses: Record<string, string> = {
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [provider, setProvider] = useState<string>("cognito");
+  const [provider, setProvider] = useState<string>("d1");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -326,7 +326,7 @@ export default function AdminUsersPage() {
 
       <p className="mt-4 font-mono text-xs text-slate-600">
         Powered by{" "}
-        <span className="text-slate-500">{provider === "cognito" ? "AWS Cognito" : "—"}</span>
+        <span className="text-slate-500">{provider === "d1" ? "Cloudflare D1" : provider}</span>
       </p>
     </div>
   );

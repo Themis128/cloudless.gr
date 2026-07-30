@@ -1,57 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { auth } from "@/lib/auth";
 
 /**
  * Server-side authentication helpers for API routes.
  *
  * Auth paths (tried in order after E2E bypass):
- *   1. Bearer — Cognito JWKS only when `NEXT_PUBLIC_AUTH_PROVIDER=cognito`;
- *      otherwise opaque D1 `session_token` (header or cookie)
+ *   1. Bearer — opaque D1 `session_token` (header or cookie)
  *   2. D1 `session_token` cookie — email/password login (`auth-d1`)
- *   3. next-auth session cookie — Cognito Hosted UI (cognito provider only)
+ *   3. next-auth session cookie — D1-backed Auth.js session
  *
- * Admin: Cognito `cognito:groups` / `groups` includes `admin`, or D1 admin role.
+ * Admin: `groups` includes `admin`, or D1 admin role projected into groups.
  */
 
-/** Cognito JWKS + Hosted UI only when explicitly opted in (legacy Pi/Lambda). */
+/** @deprecated Cognito Hosted UI / JWKS removed (PR-05). Always false. */
 export function isCognitoAuthEnabled(): boolean {
-  return (
-    process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito" &&
-    process.env.ALLOW_LEGACY_COGNITO === "1"
-  );
+  return false;
 }
 
-function getIssuer(): string {
-  if (!isCognitoAuthEnabled()) return "";
-  return (process.env.COGNITO_ISSUER ?? "").replace(/\/+$/, "");
-}
-
-/** JWKS URL for Cognito. */
-function getCertsUrl(issuer: string): string {
-  return `${issuer}/.well-known/jwks.json`;
-}
-
-let jwksCache: ReturnType<typeof createRemoteJWKSet> | null | undefined;
-
-function getJWKS() {
-  if (jwksCache !== undefined) return jwksCache;
-  if (!isCognitoAuthEnabled()) {
-    jwksCache = null;
-    return null;
-  }
-  const issuer = getIssuer();
-  if (!issuer) {
-    jwksCache = null;
-    return null;
-  }
-  jwksCache = createRemoteJWKSet(new URL(getCertsUrl(issuer)));
-  return jwksCache;
-}
-
-/** Reset the cached JWKS (for tests that change env vars). */
+/** Reset cached JWKS (no-op after Cognito removal; kept for tests). */
 export function resetJwksCache(): void {
-  jwksCache = undefined;
+  /* Cognito JWKS cache removed */
 }
 
 export interface DecodedToken {
@@ -141,40 +109,12 @@ async function readD1SessionCookie(request: NextRequest): Promise<DecodedToken |
 }
 
 /**
- * Verify a Cognito JWT with full RS256 signature verification against the
- * user pool JWKS, enforcing the issuer.
- *
- * Falls back to decode + expiry only when no issuer is configured AND the
- * runtime is not production (dev/test environments without Cognito).
+ * Verify a Bearer token. Cognito JWKS verification was removed (PR-05).
+ * Non-production: allow unsigned JWT decode for unit tests.
+ * Production: only opaque D1 session ids are accepted via resolveD1Session.
  */
 export async function verifyToken(token: string): Promise<DecodedToken | null> {
-  const jwks = getJWKS();
-  const issuer = getIssuer();
-  if (jwks) {
-    try {
-      const { payload } = await jwtVerify(token, jwks, {
-        ...(issuer ? { issuer } : {}),
-      });
-      const decoded = payload as unknown as DecodedToken;
-      // Audience check (fix #4 from audit). Cognito ID tokens carry `aud`
-      // (the app client_id); access tokens carry `client_id`. Either must
-      // match COGNITO_CLIENT_ID when set. This stops cross-app-client tokens
-      // from the same user pool from authenticating against this app.
-      const expectedAud =
-        process.env.COGNITO_CLIENT_ID ?? process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID;
-      if (expectedAud) {
-        const aud = Array.isArray(decoded.aud) ? decoded.aud : decoded.aud ? [decoded.aud] : [];
-        const audMatch = aud.includes(expectedAud) || decoded.client_id === expectedAud;
-        if (!audMatch) return null;
-      }
-      return decoded;
-    } catch {
-      return null;
-    }
-  }
-
   if (process.env.NODE_ENV === "production") return null;
-
   return decodeTokenUnverified(token);
 }
 
@@ -210,28 +150,14 @@ export function isAdmin(decoded: DecodedToken | undefined | null): boolean {
  * Authenticate a request that carries a Bearer token. Returns an AuthResult
  * on a definitive pass/fail, or `null` to signal "fall through to cookie auth".
  *
- * Cognito mode: full RS256/JWKS verification; any failure → 401.
- * D1 mode: prefer the session_token cookie first (guards against stale
- *   Cognito JWTs), then treat Bearer as an opaque D1 session id.
- *   Non-production only: fall back to unsigned JWT decode for unit tests.
+ * Prefer the session_token cookie first, then treat Bearer as an opaque D1
+ * session id. Non-production only: fall back to unsigned JWT decode for unit tests.
  */
 async function authenticateBearer(
   request: NextRequest,
   token: string,
 ): Promise<AuthResult | null> {
-  if (isCognitoAuthEnabled()) {
-    const decoded = await verifyToken(token);
-    if (decoded) return { ok: true, user: decoded };
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Invalid or expired token" },
-        { status: 401 },
-      ),
-    };
-  }
-
-  // D1 mode: prefer session cookie over a leftover Cognito JWT Bearer.
+  // Prefer session cookie over a leftover JWT Bearer.
   const d1CookieFirst = await readD1SessionCookie(request);
   if (d1CookieFirst) return { ok: true, user: d1CookieFirst };
 
@@ -239,8 +165,7 @@ async function authenticateBearer(
   const bearerD1 = await resolveD1Session(token);
   if (bearerD1) return { ok: true, user: bearerD1 };
 
-  // Non-production: allow unsigned JWT decode (unit tests clear COGNITO_ISSUER
-  // and send fake-sig tokens). Production never takes this path without JWKS.
+  // Non-production: allow unsigned JWT decode for unit tests.
   if (process.env.NODE_ENV !== "production") {
     const decoded = await verifyToken(token);
     if (decoded) return { ok: true, user: decoded };
@@ -304,11 +229,9 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   const d1User = await readD1SessionCookie(request);
   if (d1User) return { ok: true, user: d1User };
 
-  // next-auth / Cognito Hosted UI — only when Cognito is the active provider
-  if (isCognitoAuthEnabled()) {
-    const sessionUser = await readSessionCookie();
-    if (sessionUser) return { ok: true, user: sessionUser };
-  }
+  // next-auth session cookie (D1-backed Auth.js — Cognito Hosted UI removed)
+  const sessionUser = await readSessionCookie();
+  if (sessionUser) return { ok: true, user: sessionUser };
 
   return {
     ok: false,

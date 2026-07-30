@@ -9,7 +9,8 @@ import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
 const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-const USE_COGNITO = AUTH_PROVIDER === "cognito";
+/** Cognito removed — always show D1 email/password form. */
+const USE_COGNITO = false;
 
 /**
  * Returns true when `path` is a safe same-origin internal path that the

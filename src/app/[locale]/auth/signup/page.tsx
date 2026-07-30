@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { signIn as nextAuthSignIn } from "next-auth/react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -9,8 +8,8 @@ import { translate } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 import { isValidPlan } from "@/lib/plans";
 
-const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-const USE_COGNITO = AUTH_PROVIDER === "cognito";
+/** Cognito removed — always D1 registration form. */
+const USE_COGNITO = false;
 
 function SignUpForm() {
   const [locale] = useCurrentLocale();
@@ -56,18 +55,8 @@ function SignUpForm() {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const autoResendFiredRef = useRef(false);
 
-  const handleCognitoSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      // Cognito Hosted UI handles both sign-in and sign-up.
-      // Redirect to it so the user can create an account there.
-      const callbackUrl = postSignupDestination ?? "/auth/post-login";
-      await nextAuthSignIn("cognito", { callbackUrl });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Sign up failed");
-      setSubmitting(false);
-    }
+  const handleCognitoSignUp = async (_e: React.FormEvent) => {
+    // Cognito Hosted UI removed — unused.
   };
 
   const handleSignUp = async (e: React.FormEvent) => {

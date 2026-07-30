@@ -1,6 +1,6 @@
 // Service connectivity check script for Cloudless.gr
-// Checks actual connectivity for AWS SSM, SES, Stripe, Notion, EspoCRM, Google Calendar, Slack, Sentry,
-// Cognito OIDC (when COGNITO_ISSUER is set).
+// Checks Stripe, Notion, EspoCRM, Google Calendar, Slack, Sentry, and legacy SES/SSM if configured.
+// Auth is Cloudflare D1 (no Cognito check).
 
 const fs = require('fs');
 const path = require('path');
@@ -85,20 +85,6 @@ async function checkGoogleCalendar() {
   }
 }
 
-async function checkCognito() {
-  if (!process.env.COGNITO_ISSUER) {
-    console.log('  (Cognito: skipped — COGNITO_ISSUER not set)');
-    return;
-  }
-  const {
-    CognitoIdentityProviderClient,
-    ListUserPoolsCommand,
-  } = require('@aws-sdk/client-cognito-identity-provider');
-  const region = process.env.AWS_REGION || 'us-east-1';
-  const client = new CognitoIdentityProviderClient({ region });
-  await client.send(new ListUserPoolsCommand({ MaxResults: 1 }));
-}
-
 async function checkSES() {
   const { SESClient, GetSendQuotaCommand } = require('@aws-sdk/client-ses');
   const region = process.env.AWS_SES_REGION || process.env.AWS_REGION || 'us-east-1';
@@ -147,7 +133,6 @@ async function main() {
     [checkHubSpot, 'EspoCRM', false],
     [checkNotion, 'Notion', false],
     [checkGoogleCalendar, 'Google Calendar', false],
-    [checkCognito, 'Cognito', false],
     [checkSES, 'SES', true],
     [checkSSM, 'SSM', true],
     [checkSentry, 'Sentry', false],
