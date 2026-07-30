@@ -283,7 +283,7 @@ function addSecurityHeaders(response: NextResponse, nonce: string): void {
       "microphone=()",
       "midi=()",
       "payment=(self)",
-      "picture-in-picture=()",
+      "picture-in-picture=(self)",
       "publickey-credentials-get=(self)",
       "screen-wake-lock=()",
       "serial=()",

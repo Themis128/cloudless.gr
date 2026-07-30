@@ -116,8 +116,13 @@ export async function getProductsByCategoryAsync(
 export function getProductById(id: string): StoreProduct | undefined {
   // Check cache first (includes Stripe products if previously fetched)
   if (productCache) {
-    return productCache.products.find((p) => p.id === id);
+    const cached = productCache.products.find((p) => p.id === id);
+    if (cached) return cached;
   }
+  // Fall back to default products — the client-side store uses
+  // defaultProducts (hardcoded IDs like "srv-cloud"), so we need to
+  // check them even when the cache is populated with Stripe products
+  // (IDs like "prod_xxx").
   return defaultProducts.find((p) => p.id === id);
 }
 

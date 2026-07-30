@@ -56,8 +56,8 @@ async function callGemini(messages: ChatRequest["messages"], max_tokens: number)
 
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
   try {

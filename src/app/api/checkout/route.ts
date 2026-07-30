@@ -21,8 +21,8 @@ function pickLocale(request: NextRequest): string {
 
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
   let parsed: { items?: CheckoutItem[] };
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
+  if (!authResult.ok) {
+    return authResult.response;
   }
 
   const slug = request.nextUrl.searchParams.get("campaign");
