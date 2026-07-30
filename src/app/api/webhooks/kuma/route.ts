@@ -9,11 +9,15 @@
  * or `?token=` query for providers that cannot set headers.
  *
  * Kuma default body: `{ msg, heartbeat, monitor }`.
+ *
+ * DNS flaps (`getaddrinfo EAI_AGAIN`, etc.) that hit many monitors at once
+ * are coalesced into a single Slack message (see kuma-dns-coalesce).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getConfig } from "@/lib/ssm-config";
 import { SlackClient } from "@/lib/slack-notify";
+import { formatDnsFlapSlack, KumaDnsCoalescer, type CoalesceFlush } from "@/lib/kuma-dns-coalesce";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,12 +37,46 @@ function extractToken(request: NextRequest): string {
   return (request.nextUrl.searchParams.get("token") || "").trim();
 }
 
-function statusLabel(raw: unknown): string {
+function statusLabel(raw: unknown): "DOWN" | "UP" | "PENDING" | "MAINTENANCE" | "UNKNOWN" {
   if (raw === 0 || raw === "0") return "DOWN";
   if (raw === 1 || raw === "1") return "UP";
   if (raw === 2 || raw === "2") return "PENDING";
   if (raw === 3 || raw === "3") return "MAINTENANCE";
   return "UNKNOWN";
+}
+
+async function postSlack(title: string, text: string, url?: string): Promise<void> {
+  const slack = new SlackClient({ channel: "#general" });
+  await slack.post({
+    text: title,
+    blocks: [
+      { type: "header", text: { type: "plain_text", text: title.slice(0, 150), emoji: true } },
+      { type: "section", text: { type: "mrkdwn", text: text.slice(0, 2000) } },
+      ...(url
+        ? [
+            {
+              type: "context" as const,
+              elements: [{ type: "mrkdwn" as const, text: `<${url}|probe target>` }],
+            },
+          ]
+        : []),
+    ],
+  });
+}
+
+async function flushDnsBatch(flush: CoalesceFlush): Promise<void> {
+  const { title, text } = formatDnsFlapSlack(flush);
+  await postSlack(title, text, flush.urls[0]);
+}
+
+/** Process-local coalescer (Pi deploy is single-replica). */
+const coalescer = new KumaDnsCoalescer(90_000, undefined, (flush) => {
+  flushDnsBatch(flush).catch(() => {});
+});
+
+/** Exposed for unit tests. */
+export function __resetKumaDnsCoalescerForTests(): void {
+  coalescer.reset();
 }
 
 export async function POST(request: NextRequest) {
@@ -73,25 +111,16 @@ export async function POST(request: NextRequest) {
   const name = typeof monitor.name === "string" ? monitor.name : "monitor";
   const url = typeof monitor.url === "string" ? monitor.url : "";
   const status = statusLabel(heartbeat.status);
-  const title = `Kuma ${status}: ${name}`;
-  const text = msg || `${name} is ${status}${url ? ` (${url})` : ""}`;
 
-  const slack = new SlackClient({ channel: "#general" });
-  await slack.post({
-    text: title,
-    blocks: [
-      { type: "header", text: { type: "plain_text", text: title.slice(0, 150), emoji: true } },
-      { type: "section", text: { type: "mrkdwn", text: text.slice(0, 2000) } },
-      ...(url
-        ? [
-            {
-              type: "context" as const,
-              elements: [{ type: "mrkdwn" as const, text: `<${url}|probe target>` }],
-            },
-          ]
-        : []),
-    ],
-  });
+  const result = coalescer.ingest({ name, status, msg, url: url || undefined });
+  if (result.action === "buffered") {
+    return NextResponse.json({ ok: true, coalesced: true });
+  }
+
+  const title = `Kuma ${status}: ${name}`;
+  const urlSuffix = url ? " (" + url + ")" : "";
+  const text = msg || name + " is " + status + urlSuffix;
+  await postSlack(title, text, url || undefined);
 
   return NextResponse.json({ ok: true });
 }

@@ -12,6 +12,29 @@ doesn't blind us. Slack is loud, Kuma is the deduplicated history + uptime %.
 UI: https://kuma.cloudless.gr (admin = tbaltzakis@cloudless.gr / unified
 self-hosted password, see project memory `project_unified_admin_creds`).
 
+## HTTP probe hardening (DNS flaps)
+
+Control-plane stalls on omv produce mass `getaddrinfo EAI_AGAIN` across every
+HTTP monitor (cluster.local + public hostnames). Mitigations:
+
+| Layer | Setting | Effect |
+|-------|---------|--------|
+| Monitor | `maxretries=5`, `retry_interval=60`, `resend_interval=30` | ~6 min continuous failure before DOWN; remind every 30 min while down |
+| Slack webhook | `src/lib/kuma-dns-coalesce.ts` via `/api/webhooks/kuma` | One Slack message per DNS burst instead of N |
+
+Bootstrap defaults live in `scripts/kuma-bootstrap.cjs` (`httpMonitor`).
+To re-apply on a running instance:
+
+```bash
+sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl -n uptime-kuma exec deploy/uptime-kuma -- \
+  sqlite3 /app/data/kuma.db \
+  "UPDATE monitor SET maxretries=5, retry_interval=60, resend_interval=30 WHERE type='http' AND active=1;"
+sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl -n uptime-kuma rollout restart deploy/uptime-kuma
+```
+
+Push monitors (backups / watchdogs) are left alone — one missed nightly
+heartbeat is a real alert.
+
 ## Quick health check
 
 ```bash

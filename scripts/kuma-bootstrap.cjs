@@ -60,6 +60,10 @@ function emit(socket, event, ...args) {
 }
 
 function httpMonitor(partial) {
+  // Tuned against omv control-plane DNS flaps (EAI_AGAIN storms):
+  // maxretries=5 @ 60s ≈ 6 min continuous failure before DOWN notify.
+  // resendInterval=30 → remind every 30 min while still down (not every check).
+  // Slack webhook also coalesces DNS bursts (src/lib/kuma-dns-coalesce.ts).
   return {
     type: "http",
     name: partial.name,
@@ -67,8 +71,8 @@ function httpMonitor(partial) {
     method: "GET",
     interval: 60,
     retryInterval: 60,
-    resendInterval: 0,
-    maxretries: 2,
+    resendInterval: 30,
+    maxretries: 5,
     upsideDown: false,
     ignoreTls: false,
     maxredirects: 5,
