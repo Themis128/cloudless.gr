@@ -5,31 +5,29 @@ import { requireAdmin } from "@/lib/api-auth";
  * POST /api/pi-proxy
  * Admin-only proxy to preconfigured Tailscale / internal bases.
  *
- * Clients pass a target *key* (not a free-form URL). Bases come from env so
- * the fetch destination is never user-controlled (CodeQL js/request-forgery).
+ * Free-form URLs and paths are rejected. Clients pick a target + pathKey from
+ * fixed allowlists; bases come from env. This keeps the fetch URL free of
+ * request-tainted data (CodeQL js/request-forgery).
  *
- * Body: { target: "omv" | "funnel" | ...; method?; path?; body? }
+ * Body: { target: "omv" | "funnel"; pathKey?: "root" | "health"; method?; body? }
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]);
 
-/** Map of public target keys → env vars holding the absolute base URL. */
-const TARGET_ENV_KEYS = {
-  omv: "PI_PROXY_TARGET_OMV",
-  funnel: "PI_PROXY_TARGET_FUNNEL",
+/** Fixed path keys → literal path strings (never from the request). */
+const PATHS = {
+  root: "/",
+  health: "/api/health",
 } as const;
 
-type ProxyTarget = keyof typeof TARGET_ENV_KEYS;
+type PathKey = keyof typeof PATHS;
 
-function resolveBase(target: string): string | null {
-  if (!(target in TARGET_ENV_KEYS)) return null;
-  const envName = TARGET_ENV_KEYS[target as ProxyTarget];
-  const base = process.env[envName]?.trim();
-  if (!base) return null;
+function readOrigin(raw: string | undefined): string | null {
+  if (!raw) return null;
   try {
-    const u = new URL(base);
+    const u = new URL(raw.trim());
     if (u.protocol !== "http:" && u.protocol !== "https:") return null;
     return u.origin;
   } catch {
@@ -37,13 +35,26 @@ function resolveBase(target: string): string | null {
   }
 }
 
-/** Path must be absolute on the origin — no scheme-relative `//` pivots. */
-function normalizePath(path: unknown): string | null {
-  if (path === undefined || path === null || path === "") return "/";
-  if (typeof path !== "string") return null;
-  if (!path.startsWith("/") || path.startsWith("//")) return null;
-  if (path.includes("\\") || path.includes("\0")) return null;
-  return path;
+/** Resolve base via switch so env lookup keys are literals, not request data. */
+function resolveOrigin(target: string): string | null {
+  switch (target) {
+    case "omv":
+      return readOrigin(process.env.PI_PROXY_TARGET_OMV);
+    case "funnel":
+      return readOrigin(process.env.PI_PROXY_TARGET_FUNNEL);
+    default:
+      return null;
+  }
+}
+
+function resolvePath(pathKey: unknown): string | null {
+  if (pathKey === undefined || pathKey === null || pathKey === "") {
+    return PATHS.root;
+  }
+  if (typeof pathKey !== "string") return null;
+  if (pathKey === "root") return PATHS.root;
+  if (pathKey === "health") return PATHS.health;
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -51,21 +62,21 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const { target, method, path, body } = (await request.json()) as {
+    const payload = (await request.json()) as {
       target?: string;
+      pathKey?: PathKey | string;
       method?: string;
-      path?: string;
       body?: unknown;
     };
 
-    if (!target || typeof target !== "string") {
+    if (!payload.target || typeof payload.target !== "string") {
       return NextResponse.json(
-        { error: `target is required. Valid: ${Object.keys(TARGET_ENV_KEYS).join(", ")}` },
+        { error: 'target is required. Valid: "omv", "funnel"' },
         { status: 400 }
       );
     }
 
-    const origin = resolveBase(target);
+    const origin = resolveOrigin(payload.target);
     if (!origin) {
       return NextResponse.json(
         {
@@ -76,24 +87,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const safePath = normalizePath(path);
-    if (!safePath) {
-      return NextResponse.json({ error: "path must be a root-absolute path" }, { status: 400 });
+    const path = resolvePath(payload.pathKey);
+    if (!path) {
+      return NextResponse.json({ error: 'pathKey must be "root" or "health"' }, { status: 400 });
     }
 
-    const verb = (method || "GET").toUpperCase();
+    const verb = (payload.method || "GET").toUpperCase();
     if (!ALLOWED_METHODS.has(verb)) {
       return NextResponse.json({ error: "method not allowed" }, { status: 400 });
     }
 
-    // `origin` is from env (trusted); path is constrained to `/…` — never a free URL.
-    const url = new URL(safePath, `${origin}/`);
+    // Both origin (env) and path (string literal from PATHS) are untainted.
+    const url = new URL(path, `${origin}/`);
 
-    const response = await fetch(url, {
+    const response = await fetch(url.href, {
       method: verb,
       headers: { "Content-Type": "application/json" },
       body:
-        body !== undefined && verb !== "GET" && verb !== "HEAD" ? JSON.stringify(body) : undefined,
+        payload.body !== undefined && verb !== "GET" && verb !== "HEAD"
+          ? JSON.stringify(payload.body)
+          : undefined,
       redirect: "manual",
     });
 
