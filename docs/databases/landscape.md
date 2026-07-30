@@ -11,6 +11,8 @@ Inventory detail: [omv-cluster.md](omv-cluster.md). Folder index: [README.md](RE
 4. **R2 is the off-box backup plane** — daily logical dumps for the primary RDBMS + n8n.
 5. **Developer access is mediated** — `kubectl port-forward` or snapshot pull; never tunnel DB ports through Cloudflare.
 
+Decision record: [ADR-001 — Mediated database access](ADR-001-mediated-db-access.md).
+
 ---
 
 ## 1. Logical landscape
@@ -344,5 +346,6 @@ Do not expand AWS RDS / S3 backup paths for new work; R2 + existing CronJobs are
 
 - [omv-cluster.md](omv-cluster.md) — field-level inventory, ports, secrets
 - [README.md](README.md) — commands and SQLTools
+- [ADR-001](ADR-001-mediated-db-access.md) — mediated access decision
 - [../kubectl-tailscale.md](../kubectl-tailscale.md) — API access
 - [../../infrastructure/backup/README.md](../../infrastructure/backup/README.md) — CronJob details

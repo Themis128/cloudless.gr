@@ -89,7 +89,7 @@ All four are listed in `.vscode/extensions.json` (workspace recommendations). Co
 | `omv · Grafana SQLite` | SQLite | `${workspaceFolder}/.local/db/grafana.db` | — |
 | `cf · user-auth-db (D1 snapshot)` | SQLite | `${workspaceFolder}/.local/db/user-auth-db.sqlite` | — |
 | `cf · auth-db-preview (D1 snapshot)` | SQLite | `${workspaceFolder}/.local/db/auth-db-preview.sqlite` | — |
-| `cf · cloudless-auth (D1 snapshot)` | SQLite | `${workspaceFolder}/.local/db/cloudless-auth.sqlite` | — |
+| `cf · cloudless-auth (D1 unused/empty)` | SQLite | `${workspaceFolder}/.local/db/cloudless-auth.sqlite` | — |
 
 #### Connect from Cursor
 
@@ -338,7 +338,7 @@ D1 has no localhost TCP port. Use snapshots for SQLTools:
 |---------|------|---------|----------------|
 | `user-auth-db` | `7ca74513-23c3-412a-b9ca-b0c55835973d` | `AUTH_DB` / `NEXT_CACHE_D1_BINDING` (prod) | `cf · user-auth-db (D1 snapshot)` |
 | `auth-db-preview` | `70d90155-12de-46d7-a0ea-113b3e7127cf` | preview env | `cf · auth-db-preview (D1 snapshot)` |
-| `cloudless-auth` | `0c00f32c-374b-447a-8f0a-af337004449d` | unused / empty | `cf · cloudless-auth (D1 snapshot)` |
+| `cloudless-auth` | `0c00f32c-374b-447a-8f0a-af337004449d` | unused / empty | `cf · cloudless-auth (D1 unused/empty)` |
 
 ```bash
 pnpm db:d1:pull                 # all three

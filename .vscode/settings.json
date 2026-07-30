@@ -335,7 +335,7 @@
     },
     {
       "id": "cf-cloudless-auth",
-      "name": "cf · cloudless-auth (D1 snapshot)",
+      "name": "cf · cloudless-auth (D1 unused/empty)",
       "group": "cloudflare-d1",
       "driver": "SQLite",
       "database": "${workspaceFolder}/.local/db/cloudless-auth.sqlite",

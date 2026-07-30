@@ -10,6 +10,7 @@ Passwords are **never** stored in these docs. Use `pnpm db:passwords` (k8s Secre
 |-----|----------------|
 | [landscape.md](landscape.md) | **Start here** — logical/physical diagrams, trust boundaries, backup RPO, per-product data planes |
 | [omv-cluster.md](omv-cluster.md) | Field inventory (engines, NS, PVCs, secrets, SQLTools ports, D1 IDs, backup schedule) |
+| [ADR-001-mediated-db-access.md](ADR-001-mediated-db-access.md) | **Accepted** — mediated SQLTools access; reject public DB TCP and ms-mssql |
 
 ## Landscape at a glance
 
