@@ -249,6 +249,14 @@ jobs:
           DEST="${{ env.STANDALONE_HOSTPATH }}"
           STAGE="${DEST}.next-${SHORT_SHA}"
 
+          echo "==> Ensuring ECR docker auth for pull"
+          # amazon-ecr-login can succeed while the subsequent `docker pull`
+          # still sees an empty auths map on this self-hosted runner (shared
+          # dockerd + intermittent credential-helper state). Re-login with the
+          # OIDC session password immediately before pull.
+          aws ecr get-login-password --region "${{ env.AWS_REGION }}" \
+            | docker login --username AWS --password-stdin "${{ env.ECR_REGISTRY }}"
+
           echo "==> Pulling ${IMAGE}"
           docker pull "${IMAGE}"
 
