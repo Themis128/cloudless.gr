@@ -5,6 +5,7 @@
 -- Stores user profile data including preferences
 CREATE TABLE IF NOT EXISTS user (
   id TEXT NOT NULL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
   email TEXT NOT NULL UNIQUE,
   name TEXT,
   company TEXT,
