@@ -19,13 +19,13 @@
  * Daily refresh — overwrites the file.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
+
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const ACCOUNT = process.env.LINKEDIN_AD_ACCOUNT_ID || "512642510";
 const SSM_PREFIX = process.env.SSM_PREFIX || "/cloudless/production";
 
@@ -63,7 +63,6 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-const s3 = new S3Client({ region: REGION });
 const LI_BASE = "https://api.linkedin.com/rest";
 const LI_HEADERS = {
   Authorization: `Bearer ${TOKEN}`,
@@ -165,14 +164,7 @@ async function main() {
   for (const r of rows) await writer.appendRow(r);
   await writer.close();
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: "lake/linkedin-ads/insights.parquet",
-      Body: readFileSync(tmp),
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put("lake/linkedin-ads/insights.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
   unlinkSync(tmp);
   console.log(`✅ Uploaded ${rows.length} rows → s3://${BUCKET}/lake/linkedin-ads/`);
 }

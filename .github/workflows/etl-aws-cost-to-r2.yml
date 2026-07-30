@@ -67,16 +67,7 @@ jobs:
           npx wrangler d1 execute user-auth-db --remote --file=migrations/0013-aws-cost-daily.sql --config wrangler.jsonc || true
           npx wrangler d1 execute user-auth-db --remote --file="${{ runner.temp }}/aws-cost-d1.sql" --config wrangler.jsonc
 
-      - name: Materialize datalake admin snapshot
-        working-directory: scripts/etl
-        env:
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
-          CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-          ANALYTICS_BUCKET: datalake-bucket
-        run: node materialize-datalake-snapshots.mjs
-        continue-on-error: true
+      # Gold snapshots: etl-materialize-snapshots.yml (07:00 UTC daily).
 
       - name: Notify Slack on failure
         if: failure()

@@ -6,20 +6,17 @@
  */
 
 import { CognitoIdentityProviderClient, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetReader, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync, writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put, r2Get } from "./_r2-config.mjs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
 const USER_POOL_ID = process.env.COGNITO_USER_POOL_ID || "us-east-1_1Bq3Mpqer";
 const AUTH_DB_URL = process.env.AUTH_DB_URL || "http://localhost:8787/api/config";
 
 const cognito = new CognitoIdentityProviderClient({ region: REGION });
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 const TMP = "/tmp/clients.parquet";
 
 const schema = new ParquetSchema({
@@ -99,8 +96,7 @@ async function loadConfigFromD1(key) {
 async function loadScores(key) {
        let dir;
        try {
-               const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-               const buf = Buffer.from(await res.Body.transformToByteArray());
+               const buf = await r2Get(key);
                dir = mkdtempSync(join(tmpdir(), "scores-"));
                const tmp = join(dir, "data.parquet");
                writeFileSync(tmp, buf);
@@ -138,8 +134,14 @@ async function main() {
 
        console.log("Loading ML scores...");
        const rfmScores = await loadScores("ml-parquet/scores_rfm.parquet");
-       const rfmMap = new Map(rfmScores.map(r => [r.email?.toLowerCase() || r.user_id, r]));
        const churnScores = await loadScores("ml-parquet/scores_churn.parquet");
+       if (rfmScores.length === 0 || churnScores.length === 0) {
+               console.warn(
+                       "[etl/clients] RFM/churn parquet empty or missing — clients will land without scores. " +
+                               "Run compute-rfm-churn-to-r2.mjs after stripe-to-r2.mjs (workflow etl-compute-rfm-to-r2)."
+               );
+       }
+       const rfmMap = new Map(rfmScores.map(r => [r.email?.toLowerCase() || r.user_id, r]));
        const churnMap = new Map(churnScores.map(r => [r.email?.toLowerCase() || r.user_id, r]));
 
        const writer = await ParquetWriter.openFile(schema, TMP);
@@ -175,7 +177,7 @@ async function main() {
        await writer.close();
 
        const body = readFileSync(TMP);
-       await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: "lake/clients/clients.parquet", Body: body }));
+       await r2Put("lake/clients/clients.parquet", body);
        unlinkSync(TMP);
        console.log(`✅ Uploaded ${cognitoUsers.length} clients → R2://${BUCKET}/lake/clients/clients.parquet`);
 }

@@ -1,31 +1,68 @@
 /**
- * R2 Client Factory - S3-compatible API for Node.js ETLs
- *
- * R2 supports the S3 API via aws-sdk - just change the endpoint and credentials.
- * No code changes needed in ETL logic; only configuration differs.
+ * R2 Node helpers via aws4fetch (S3-compatible API, no @aws-sdk/client-s3).
  */
 
-import { S3Client } from "@aws-sdk/client-s3";
+import { AwsClient } from "aws4fetch";
 
-/**
- * Create an S3 client configured for R2 endpoint
- * This allows existing ETL code to work unchanged - just set R2_* env vars
- */
-export function createR2ClientFromEnv(): S3Client {
+function requireR2Env() {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || process.env.CF_ACCOUNT_ID;
   const accessKeyId = process.env.CF_R2_ACCESS_KEY_ID || process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.CF_R2_SECRET_ACCESS_KEY || process.env.R2_SECRET_ACCESS_KEY;
-
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error(
       "Missing R2 credentials: CLOUDFLARE_ACCOUNT_ID and CF_R2_ACCESS_KEY_ID/CF_R2_SECRET_ACCESS_KEY required"
     );
   }
+  return { accountId, accessKeyId, secretAccessKey };
+}
 
-  return new S3Client({
+export function createR2ClientFromEnv(): AwsClient {
+  const { accessKeyId, secretAccessKey } = requireR2Env();
+  return new AwsClient({
+    accessKeyId,
+    secretAccessKey,
+    service: "s3",
     region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    forcePathStyle: true,
-    credentials: { accessKeyId, secretAccessKey },
   });
+}
+
+export function r2ObjectUrl(key: string, bucket: string): string {
+  const { accountId } = requireR2Env();
+  const encoded = key
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  return `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${encoded}`;
+}
+
+export async function r2PutObject(options: {
+  bucket: string;
+  key: string;
+  body: Buffer | Uint8Array | string;
+  contentType?: string;
+}): Promise<void> {
+  const client = createR2ClientFromEnv();
+  const res = await client.fetch(r2ObjectUrl(options.key, options.bucket), {
+    method: "PUT",
+    headers: { "Content-Type": options.contentType || "application/octet-stream" },
+    body: options.body,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `R2 PUT ${options.bucket}/${options.key} → ${res.status}: ${text.slice(0, 300)}`
+    );
+  }
+}
+
+export async function r2GetObject(options: { bucket: string; key: string }): Promise<Buffer> {
+  const client = createR2ClientFromEnv();
+  const res = await client.fetch(r2ObjectUrl(options.key, options.bucket), { method: "GET" });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `R2 GET ${options.bucket}/${options.key} → ${res.status}: ${text.slice(0, 300)}`
+    );
+  }
+  return Buffer.from(await res.arrayBuffer());
 }

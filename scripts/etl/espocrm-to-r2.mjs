@@ -5,10 +5,9 @@
  * Same logic as espocrm-to-lake.mjs - only client configuration differs.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 
 const PAGE_SIZE = 100;
 const BASE = (process.env.ESPOCRM_BASE_URL || "").replace(/\/$/, "");
@@ -26,8 +25,6 @@ if (!BASE || (!KEY && !API_PASSWORD)) {
 	process.exit(1);
 }
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 
 // ---------------------------------------------------------------------------
 // Schemas — flat + typed, aligned with Glue/Athena column types.
@@ -190,14 +187,7 @@ async function writeParquetAndUpload(filename, schema, rows, s3Key) {
 	const writer = await ParquetWriter.openFile(schema, `/tmp/${filename}`);
 	for (const r of rows) await writer.appendRow(r);
 	await writer.close();
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: s3Key,
-			Body: readFileSync(`/tmp/${filename}`),
-			ContentType: "application/octet-stream",
-		})
-	);
+	await r2Put(s3Key, readFileSync(`/tmp/${filename}`), { contentType: "application/octet-stream" });
 	unlinkSync(`/tmp/${filename}`);
 	console.log(`✓ ${rows.length} rows → R2://${BUCKET}/${s3Key}`);
 }

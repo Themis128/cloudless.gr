@@ -25,15 +25,14 @@
  *
  * Runs daily via .github/workflows/etl-selfhosted-to-lake.yml.
  */
+
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 import { execSync } from "node:child_process";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 
-const s3 = new S3Client({ region: REGION });
 
 // `kubectl exec` into the postgres pod and run a psql query, returning
 // the rows as an array of objects. The pod name varies, so we resolve it
@@ -85,14 +84,7 @@ async function writeParquet(rows, schema, localPath) {
 }
 
 async function uploadToS3(key, body) {
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: body,
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put(key, body, { contentType: "application/octet-stream" });
   console.log(`✓ uploaded s3://${BUCKET}/${key} (${body.length} bytes)`);
 }
 

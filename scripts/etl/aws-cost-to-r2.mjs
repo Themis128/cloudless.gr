@@ -9,18 +9,16 @@
  */
 
 import { CostExplorerClient, GetCostAndUsageCommand } from "@aws-sdk/client-cost-explorer";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 import { shapeResults } from "./aws-cost-to-lake.mjs";
 
 const LOOKBACK_DAYS = Number.parseInt(process.env.AWS_COST_LOOKBACK_DAYS || "60", 10);
 
 const ce = new CostExplorerClient({ region: "us-east-1" });
-const s3 = getS3Client();
 
 const schema = new ParquetSchema({
 	cost_date: { type: "UTF8" },
@@ -101,23 +99,11 @@ async function main() {
 		for (const r of rows) await writer.appendRow(r);
 		await writer.close();
 
-		await s3.send(
-			new PutObjectCommand({
-				Bucket: BUCKET,
-				Key: "lake/aws-cost/cost.parquet",
-				Body: readFileSync(parquetPath),
-				ContentType: "application/octet-stream",
-			})
-		);
+		await r2Put("lake/aws-cost/cost.parquet", readFileSync(parquetPath), { contentType: "application/octet-stream" });
 
-		await s3.send(
-			new PutObjectCommand({
-				Bucket: BUCKET,
-				Key: "lake/aws-cost/cost.json",
-				Body: Buffer.from(JSON.stringify(payload), "utf8"),
-				ContentType: "application/json",
-			})
-		);
+		await r2Put("lake/aws-cost/cost.json", Buffer.from(JSON.stringify(payload), "utf8"), {
+			contentType: "application/json",
+		});
 
 		if (d1SqlOut) {
 			writeFileSync(d1SqlOut, buildD1Sql(rows, syncedAt), "utf8");

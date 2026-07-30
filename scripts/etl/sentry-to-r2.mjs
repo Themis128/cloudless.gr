@@ -5,10 +5,9 @@
  * Same logic as sentry-to-lake.mjs - only client configuration differs.
  */
 
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
-import { getS3Client, BUCKET } from "./_r2-config.mjs";
+import { BUCKET, r2Put } from "./_r2-config.mjs";
 const TOKEN = process.env.SENTRY_AUTH_TOKEN;
 const ORG = process.env.SENTRY_ORG || "baltzakisthemiscom";
 const PROJECT = process.env.SENTRY_PROJECT || "cloudless-gr";
@@ -18,8 +17,6 @@ if (!TOKEN) {
 	process.exit(1);
 }
 
-// R2 S3-compatible client (uses shared config helper)
-const s3 = getS3Client();
 
 const SENTRY_API = "https://sentry.io/api/0";
 
@@ -89,14 +86,7 @@ async function main() {
 	for (const r of rows) await writer.appendRow(r);
 	await writer.close();
 
-	await s3.send(
-		new PutObjectCommand({
-			Bucket: BUCKET,
-			Key: "lake/sentry-issues/issues.parquet",
-			Body: readFileSync(tmp),
-			ContentType: "application/octet-stream",
-		})
-	);
+	await r2Put("lake/sentry-issues/issues.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
 	unlinkSync(tmp);
 	console.log(`✅ Uploaded ${rows.length} issues → R2://${BUCKET}/lake/sentry-issues/`);
 }

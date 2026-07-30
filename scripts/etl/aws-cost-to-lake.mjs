@@ -35,19 +35,18 @@
  * Runtime: ~3-5 s for 60d * N services. Idempotent — overwrites the file.
  */
 
+import { BUCKET, r2Put } from "./_r2-config.mjs";
+
 import { CostExplorerClient, GetCostAndUsageCommand } from "@aws-sdk/client-cost-explorer";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs";
 import { readFileSync, unlinkSync } from "fs";
 
 const REGION = process.env.AWS_REGION || "us-east-1";
-const BUCKET = process.env.ANALYTICS_BUCKET || "cloudless-analytics-data";
 const LOOKBACK_DAYS = Number.parseInt(process.env.AWS_COST_LOOKBACK_DAYS || "60", 10);
 
 // Cost Explorer is a global service — but the SDK still requires *a* region.
 // us-east-1 is the canonical home (and matches our existing AWS_REGION).
 const ce = new CostExplorerClient({ region: "us-east-1" });
-const s3 = new S3Client({ region: REGION });
 
 const schema = new ParquetSchema({
   /** ISO date — YYYY-MM-DD, partition-friendly. */
@@ -121,14 +120,7 @@ async function main() {
   for (const r of rows) await writer.appendRow(r);
   await writer.close();
 
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: "lake/aws-cost/cost.parquet",
-      Body: readFileSync(tmp),
-      ContentType: "application/octet-stream",
-    })
-  );
+  await r2Put("lake/aws-cost/cost.parquet", readFileSync(tmp), { contentType: "application/octet-stream" });
   unlinkSync(tmp);
   console.log(`✅ Uploaded ${rows.length} rows → s3://${BUCKET}/lake/aws-cost/cost.parquet`);
 }
