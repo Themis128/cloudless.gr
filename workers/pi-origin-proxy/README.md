@@ -28,3 +28,17 @@ User → Cloudflare → cloudless2 (this Worker, <50 KiB)
 Idempotent methods (`GET`/`HEAD`/`OPTIONS`) retry once on network failure or
 upstream `502` (Tunnel flaps). Failures still return `502` with
 `x-served-by: pi-tunnel-proxy` or `pi-tunnel-proxy-error`.
+
+## GHA cron callers (Bot Fight bypass)
+
+GitHub Actions runners hitting `https://cloudless.gr/api/cron/*` often get a
+**Cloudflare Bot Fight Mode** interstitial (`403`) before the app can check
+`CRON_SECRET`. Cron workflows therefore call the **tunnel hostname** instead:
+
+```text
+https://pi-origin.cloudless.gr/api/cron/...
+```
+
+That path is Tunnel → Pi NodePort (this Worker is not on that hop). The app
+still enforces `CRON_SECRET`. See `platform-crons.yml`, `postiz-crons.yml`, and
+`linkedin-poll.yml` (`BASE_URL` / `SITE_ORIGIN` defaulting to pi-origin).

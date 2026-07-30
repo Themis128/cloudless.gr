@@ -13,7 +13,7 @@ These require access outside GitHub and cannot be automated from a cloud session
 | -------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `OMV_SSH_KEY`                    | **SET** ✅          | Key for `tbaltzakis@omv` (host omv, user tbaltzakis). SSH workflows updated to `PI_USER: "tbaltzakis"`. k3s watchdog (`Restart=always`) deployed 2026-06-02T18:56Z — auto-restart active.                                                                                                                                                                                                                                                                                                                                                                          |
 | ESP32 page content               | **PARTIAL RESTORE** | Full content requires Notion UI: open page → ••• → Page history → restore pre-15:19 UTC 2026-06-02. ESP32 Devices + Telemetry databases (IDs confirmed correct, integration has access) are **empty** — no data was ever populated there to restore.                                                                                                                                                                                                                                                                                                               |
-| Admin password                   | **N/A**             | Auth is Cognito (PR #677, 2026-06-08). Manage admin users in the Cognito User Pool console; there is no separate IdP admin to bootstrap.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Admin password                   | **N/A**             | Auth is Cloudflare D1 (not Cognito). Promote admins via `/api/admin/users/promote` or the admin Users UI against `user-auth-db`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Cloudflare HA LB                 | **TOKEN NEEDED**    | `setup-cloudflare-lb.yml` (merged PR #548) needs `CLOUDFLARE_API_TOKEN` — use the `cloudflare-token-doctor` skill, mint a token with the full scope set (skill Stage 1), then `gh workflow run store-cloudflare-token.yml -f cloudflare_token=… -f apply=true`.                                                                                                                                                                                                                                                                                                    |
 | Cloudflare Email Obfuscation fix | **TOKEN NEEDED**    | `cloudflare-disable-email-obfuscation.yml` (merged PR #745) fixes React #418 hydration errors. Same token as HA LB above.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Cloudflare infra MCP token       | **NEEDS ROTATION**  | Existing `CLOUDFLARE_API_TOKEN` in cloud-session secrets is invalid (every `mcp__cloudless-infra__cloudflare_*` tool returns 401). Use the `cloudflare-token-doctor` skill: Stage 1 mint, Stage 2 store (SSM + session secret), Stage 3 run `bash scripts/cf-token-smoketest.sh`, Stage 4 verify with `mcp__cloudless-infra__cloudflare_list_tokens()`. CI verify available via `gh workflow run verify-cloudflare-token.yml`. SSM half **is set ✅** as of 2026-06-13; only the Cowork session-secret store half is pending — see `cowork-session-secrets` skill. |
@@ -297,19 +297,15 @@ See `infrastructure/espocrm/README.md` for the full deploy + verify runbook.
 
 ## Authentication
 
-Auth is **Cognito**, full-stop (PR #677, 2026-06-08). There is no Keycloak, no
-JVM heap, no realm config to maintain. App admin = membership in the Cognito
-group `admin`, surfaced via the `cognito:groups` claim and checked by
-`api-auth.ts` `requireAdmin`. Manage users in the Cognito User Pool console.
-The `[...nextauth]` route uses the Cognito provider; `NEXT_PUBLIC_COGNITO_*`
-client IDs are baked at build time.
+Auth is **Cloudflare D1** (`user-auth-db`) — email/password with PBKDF2 hashes and
+opaque `session_token` cookies. Cognito / Keycloak are gone. App admin = row in the
+D1 `roles` table, surfaced as `groups: ["admin"]` and checked by `api-auth.ts`
+`requireAdmin`. Promote via `/api/admin/users/promote`. Session resolution lives in
+`src/lib/auth-d1.ts` + `src/lib/api-auth.ts` (cookie or Bearer).
 
-- **CloudWatch `SERVERLESS-APP_MAIN-Errors`** (custom metric
-  `CloudlessApp/ServerlessErrors`) is a **CloudWatch Logs metric filter** on the
-  Lambda log group — NOT Sentry. It counts next-auth
-  `[auth][error] Configuration` lines, which fire on a bare **GET** to
-  `/api/auth/signin/<provider>` (real login POSTs and is fine). Threshold
-  is 1 error / 5 min (very noisy). The alarm/filter are not in this repo.
+- Legacy CloudWatch metric filters that counted next-auth Cognito
+  `[auth][error] Configuration` lines are obsolete noise if still present in AWS;
+  do not expand them. Prefer app/Sentry signals on the Pi path.
 
 ## Deployment to Pi
 
@@ -323,7 +319,7 @@ client IDs are baked at build time.
 - **`NEXT_PUBLIC_*` vars** are baked into the Next.js client bundle at Docker build time as `--build-arg`. They are NOT available as runtime env vars — changes require a full image rebuild.
 - **SSM config** (API keys, Notion DB IDs, etc.) is fetched at runtime by the app via `getIntegrationsAsync()` using the `pi-standby-aws-creds` k8s Secret.
 
-**GitHub Secrets needed:** `AWS_DEPLOY_ROLE_ARN`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`, `NEXT_PUBLIC_HUBSPOT_PORTAL_ID`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_LINKEDIN_PARTNER_ID`
+**GitHub Secrets needed:** `AWS_DEPLOY_ROLE_ARN`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` (plus Wrangler/D1 bind for `AUTH_DB` on the Pi/Workers path — Cognito `NEXT_PUBLIC_COGNITO_*` build-args are retired)
 
 ## CI Runner Failover
 
@@ -538,7 +534,7 @@ which automates Stages 0-3 from the Pi.
 
 - **URL:** https://cloudless.gr
 - **Stack:** Next.js (App Router), deployed on Pi5 k3s cluster + Vercel
-- **Auth:** Cognito
+- **Auth:** Cloudflare D1 (`user-auth-db`)
 - **CMS:** Notion databases
 
 ### Available Skill Categories
