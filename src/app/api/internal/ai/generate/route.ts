@@ -1,39 +1,16 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getConfig } from "@/lib/ssm-config";
-import {
-  getBedrockClient,
-  runBedrockTurn,
-  joinAssistantText,
-  BEDROCK_MODEL_ID,
-} from "@/lib/bedrock-shared";
 
 /**
  * POST /api/internal/ai/generate — service-to-service text generation.
  *
- * Used by the weekly newsletter draft cron (and any future internal job)
- * to generate text without needing an Anthropic.com API key. Tries
- * Cloudflare Workers AI first (free tier covers our usage); falls back
- * to AWS Bedrock Claude on any Cloudflare error so a CF outage or quota
- * exhaustion doesn't kill the Monday draft.
+ * Cloudflare Workers AI only (AWS Bedrock removed in CF cutover).
  *
  * Auth: shared secret in `x-internal-secret`, compared in constant time
- * with `AI_GENERATE_SECRET` from SSM. Returns 503 if the secret isn't
- * configured (refuses to run open).
+ * with `AI_GENERATE_SECRET`. Returns 503 if the secret isn't configured.
  *
- * Body:
- *   {
- *     system?: string,                       // optional system prompt
- *     messages: { role, content: string }[], // required
- *     maxTokens?: number,                    // default 4096
- *     model?: string,                        // CF model id (ignored on Bedrock fallback)
- *   }
- *
- * Response 200:
- *   { result: string, source: "cloudflare" | "bedrock", model: string }
- *
- * NOT in /api/admin/* on purpose: this is machine-to-machine, the secret
- * IS the auth, and we don't want the admin rate limit on cron traffic.
+ * Response 200: { result: string, source: "cloudflare", model: string }
  */
 
 export const runtime = "nodejs";
@@ -125,34 +102,9 @@ async function callCloudflare(
     const reason = data.errors?.[0]?.message ?? `status ${res.status}`;
     throw new Error(`Cloudflare Workers AI: ${reason}`);
   }
-  // Workers AI usually returns `result.response` as a string, but some models
-  // (and some failure modes) put a non-string there. Coerce defensively so a
-  // bad shape doesn't crash the handler — it just becomes "fall back to Bedrock".
   const raw = data.result?.response;
   const text = typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
   if (!text.trim()) throw new Error("Cloudflare Workers AI returned empty response");
-  return text;
-}
-
-async function callBedrock(
-  system: string | undefined,
-  messages: ChatMessage[],
-  maxTokens: number
-): Promise<string> {
-  const bedrockMessages = messages
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: [{ text: m.content }],
-    }));
-  const content = await runBedrockTurn({
-    client: getBedrockClient(),
-    system: system ?? "",
-    messages: bedrockMessages,
-    maxTokens,
-  });
-  const text = joinAssistantText(content);
-  if (!text) throw new Error("Bedrock returned empty response");
   return text;
 }
 
@@ -198,52 +150,47 @@ export async function POST(request: NextRequest): Promise<Response> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 
-  // Primary: Cloudflare Workers AI (free tier).
-  if (accountId && apiToken) {
-    try {
-      const result = await callCloudflare(
-        accountId,
-        apiToken,
-        cfModel,
-        body.system,
-        messages,
-        maxTokens
-      );
-      return NextResponse.json({ result, source: "cloudflare", model: cfModel });
-    } catch (err) {
-      console.warn("[internal/ai/generate] Cloudflare failed, trying Bedrock:", err);
-      // Try the fallback CF model once before going to Bedrock.
-      if (cfModel !== FALLBACK_CF_MODEL) {
-        try {
-          const result = await callCloudflare(
-            accountId,
-            apiToken,
-            FALLBACK_CF_MODEL,
-            body.system,
-            messages,
-            maxTokens
-          );
-          return NextResponse.json({
-            result,
-            source: "cloudflare",
-            model: FALLBACK_CF_MODEL,
-          });
-        } catch (err2) {
-          console.warn("[internal/ai/generate] fallback CF model also failed:", err2);
-        }
-      }
-    }
+  if (!accountId || !apiToken) {
+    return NextResponse.json(
+      { error: "Cloudflare Workers AI not configured." },
+      { status: 503 }
+    );
   }
 
-  // Fallback: Bedrock (uses Lambda IAM, no API key).
   try {
-    const result = await callBedrock(body.system, messages, maxTokens);
-    return NextResponse.json({ result, source: "bedrock", model: BEDROCK_MODEL_ID });
+    const result = await callCloudflare(
+      accountId,
+      apiToken,
+      cfModel,
+      body.system,
+      messages,
+      maxTokens
+    );
+    return NextResponse.json({ result, source: "cloudflare", model: cfModel });
   } catch (err) {
-    console.error("[internal/ai/generate] Bedrock also failed:", err);
+    console.warn("[internal/ai/generate] Cloudflare failed, trying fallback model:", err);
+    if (cfModel !== FALLBACK_CF_MODEL) {
+      try {
+        const result = await callCloudflare(
+          accountId,
+          apiToken,
+          FALLBACK_CF_MODEL,
+          body.system,
+          messages,
+          maxTokens
+        );
+        return NextResponse.json({
+          result,
+          source: "cloudflare",
+          model: FALLBACK_CF_MODEL,
+        });
+      } catch (err2) {
+        console.error("[internal/ai/generate] fallback CF model also failed:", err2);
+      }
+    }
     return NextResponse.json(
       {
-        error: "All AI providers failed.",
+        error: "Workers AI failed.",
         detail: (err as Error)?.message ?? String(err),
       },
       { status: 502 }

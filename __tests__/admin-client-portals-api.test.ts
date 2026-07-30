@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { ClientPortal } from "@/app/api/admin/client-portals/route";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
+
 const CLIENT_PORTALS_URL = "http://localhost/api/admin/client-portals";
+const PORTALS_CONFIG_KEY = "CLIENT_PORTALS_JSON";
 const TEST_NAME = "Themis";
 const ACTION_UPDATE_STEP = "update-step";
-
-// ---------------------------------------------------------------------------
-// Hoist mocks
-// ---------------------------------------------------------------------------
-const { mockSSMSend } = vi.hoisted(() => ({
-  mockSSMSend: vi.fn(),
-}));
 
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
@@ -22,16 +18,6 @@ vi.mock("jose", async () => {
       const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
       return { payload, protectedHeader: { alg: "RS256" } };
     },
-  };
-});
-
-vi.mock("@aws-sdk/client-ssm", async () => {
-  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
-  return {
-    ...actual,
-    SSMClient: vi.fn().mockImplementation(function () {
-      return { send: mockSSMSend };
-    }),
   };
 });
 
@@ -89,9 +75,9 @@ const MOCK_PORTAL: ClientPortal = {
 // Tests — GET
 // ---------------------------------------------------------------------------
 describe("GET /api/admin/client-portals", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
+  beforeEach(async () => {
+    resetJsonConfigMemory();
+    await writeJsonConfig(PORTALS_CONFIG_KEY, [MOCK_PORTAL]);
   });
 
   it("returns 401 without token", async () => {
@@ -101,7 +87,6 @@ describe("GET /api/admin/client-portals", () => {
   });
 
   it("returns portal list for admin", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
     const { GET } = await import("@/app/api/admin/client-portals/route");
     const res = await GET(adminReq(CLIENT_PORTALS_URL));
     expect(res.status).toBe(200);
@@ -113,8 +98,8 @@ describe("GET /api/admin/client-portals", () => {
     });
   });
 
-  it("returns empty array when SSM throws", async () => {
-    mockSSMSend.mockRejectedValue(new Error("Not found"));
+  it("returns empty array when nothing is stored", async () => {
+    resetJsonConfigMemory();
     const { GET } = await import("@/app/api/admin/client-portals/route");
     const res = await GET(adminReq(CLIENT_PORTALS_URL));
     expect(res.status).toBe(200);
@@ -128,10 +113,7 @@ describe("GET /api/admin/client-portals", () => {
 // ---------------------------------------------------------------------------
 describe("POST /api/admin/client-portals", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } }) // GET (readPortals)
-      .mockResolvedValue({}); // PUT (writePortals)
+    resetJsonConfigMemory();
   });
 
   it("returns 400 when clientEmail is missing", async () => {
@@ -157,9 +139,6 @@ describe("POST /api/admin/client-portals", () => {
   });
 
   it("creates a portal and returns it with a token", async () => {
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
-      .mockResolvedValue({});
     const { POST } = await import("@/app/api/admin/client-portals/route");
     const res = await POST(
       adminReq(CLIENT_PORTALS_URL, {
@@ -182,13 +161,9 @@ describe("POST /api/admin/client-portals", () => {
     expect(data.portal.token.length).toBeGreaterThan(10);
   });
 
-  it("returns 502 (not an opaque 500) when the SSM write fails", async () => {
-    // Regression: writePortals had no error handling, so an SSM PutParameter
-    // failure (e.g. value over the size cap) surfaced as an unhandled 500.
-    mockSSMSend.mockReset();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } }) // readPortals
-      .mockRejectedValueOnce(new Error("ParameterMaxValueExceeded")); // writePortals
+  it("returns 502 (not an opaque 500) when the config write fails", async () => {
+    const appConfig = await import("@/lib/app-config-json");
+    vi.spyOn(appConfig, "writeJsonConfig").mockRejectedValueOnce(new Error("store down"));
     const { POST } = await import("@/app/api/admin/client-portals/route");
     const res = await POST(
       adminReq(CLIENT_PORTALS_URL, {
@@ -204,9 +179,7 @@ describe("POST /api/admin/client-portals", () => {
 // Tests — POST creates portal with default steps
 // ---------------------------------------------------------------------------
 it("created portal includes default steps", async () => {
-  mockSSMSend
-    .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
-    .mockResolvedValue({});
+  resetJsonConfigMemory();
   const { POST } = await import("@/app/api/admin/client-portals/route");
   const res = await POST(
     adminReq(CLIENT_PORTALS_URL, {
@@ -225,11 +198,9 @@ it("created portal includes default steps", async () => {
 // Tests — PATCH (step management)
 // ---------------------------------------------------------------------------
 describe("PATCH /api/admin/client-portals", () => {
-  beforeEach(() => {
-    mockSSMSend.mockReset();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } })
-      .mockResolvedValue({});
+  beforeEach(async () => {
+    resetJsonConfigMemory();
+    await writeJsonConfig(PORTALS_CONFIG_KEY, [MOCK_PORTAL]);
   });
 
   it("returns 400 when token is missing", async () => {
@@ -380,11 +351,9 @@ describe("PATCH /api/admin/client-portals", () => {
 // Tests — DELETE (revoke)
 // ---------------------------------------------------------------------------
 describe("DELETE /api/admin/client-portals", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } })
-      .mockResolvedValue({});
+  beforeEach(async () => {
+    resetJsonConfigMemory();
+    await writeJsonConfig(PORTALS_CONFIG_KEY, [MOCK_PORTAL]);
   });
 
   it("returns 400 when token is missing", async () => {
@@ -399,9 +368,6 @@ describe("DELETE /api/admin/client-portals", () => {
   });
 
   it("revokes a portal and returns ok", async () => {
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } })
-      .mockResolvedValue({});
     const { DELETE } = await import("@/app/api/admin/client-portals/route");
     const res = await DELETE(
       adminReq(CLIENT_PORTALS_URL, {

@@ -34,7 +34,7 @@ failover automatically when the AWS health check fails 2× in a row (~2 min late
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `store-cloudflare-token.yml` | `workflow_dispatch` | Accepts token as input → masks → SSM → apply LB |
+| `store-cloudflare-token.yml` | `workflow_dispatch` | Accepts token as input → masks → GitHub Secret → optional apply LB |
 | `cloudflare-lb.yml` | `push` (path) or `dispatch` | report-only by default, apply on `apply=true` dispatch |
 | `apply-cloudflare-lb.yml` | `push` (path) or `dispatch` | always apply mode |
 
@@ -55,10 +55,11 @@ Zone Resources: Include → Specific zone → cloudless.gr
 
 | Location | Value |
 |---|---|
-| SSM param | `/cloudless/production/CLOUDFLARE_API_TOKEN` (SecureString) |
-| GitHub Secret | `CLOUDFLARE_API_TOKEN` (optional fallback — SSM takes priority in the script) |
+| GitHub Secret | `CLOUDFLARE_API_TOKEN` (**source of truth** for CI) |
 
-Both paths work. SSM is preferred from cloud sessions.
+Store via `store-cloudflare-token.yml` (requires repo secret `GH_PAT` with
+`repo` scope so the workflow can `gh secret set`). Do **not** use
+`aws ssm put-parameter` for this token.
 
 ## Setup flow (cloud session — no GitHub UI needed)
 
@@ -101,8 +102,9 @@ DNS cloudless.gr:          CNAME → LB: done
 
 ### `BLOCKED: no CLOUDFLARE_API_TOKEN`
 
-The token is not in SSM or GitHub Secrets. Run the `/cloudflare-lb` command or
-dispatch `store-cloudflare-token.yml` with the token.
+The token is not in GitHub Secrets (or not passed as env to the script).
+Run the `/cloudflare-lb` command or dispatch `store-cloudflare-token.yml`
+with the token.
 
 ### Pool is UNHEALTHY
 

@@ -320,7 +320,7 @@ Known state at time of writing (2026-06-21):
 The active token lives at:
 
 - k8s: `kubectl -n cloudless get secret cloudless-cloudflare -o yaml`
-- SSM: `/cloudless/production/CLOUDFLARE_API_TOKEN` (per CLAUDE.md)
+- GitHub Actions secret: `CLOUDFLARE_API_TOKEN` (CI source of truth)
 
 To rotate:
 
@@ -328,9 +328,10 @@ To rotate:
    scope set from `skills/cloudflare-token-doctor/SKILL.md` Stage 1.
 2. `kubectl -n cloudless edit secret cloudless-cloudflare` and replace the
    base64-encoded `CLOUDFLARE_API_TOKEN` value.
-3. Mirror to SSM:
-   `aws ssm put-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN
-   --value <token> --type SecureString --overwrite`.
+3. Mirror to CI via GitHub Secret (do **not** use `aws ssm put-parameter`):
+   `gh workflow run store-cloudflare-token.yml -f cloudflare_token=<token> -f apply=false`
+   (requires repo secret `GH_PAT`), or locally:
+   `echo -n '<token>' | gh secret set CLOUDFLARE_API_TOKEN --repo Themis128/cloudless.gr --body -`
 4. Delete the old token in the Cloudflare dashboard.
 5. Verify via the cf-dns-add pod template above (token verify step at the
    top — `https://api.cloudflare.com/client/v4/user/tokens/verify`).

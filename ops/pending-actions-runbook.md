@@ -389,7 +389,7 @@ curl -I https://postiz.cloudless.gr/ | head -1
 ## Related Files
 
 - `.github/workflows/monitoring-node-selector-fix.yml` - Patches Prometheus/Alertmanager StatefulSets
-- `.github/workflows/store-cloudflare-token.yml` - Stores token to SSM + applies LB
+- `.github/workflows/store-cloudflare-token.yml` - Stores token as GitHub Secret `CLOUDFLARE_API_TOKEN` + optionally applies LB
 - `.github/workflows/verify-cloudflare-token.yml` - Smoke tests token scopes
 - `infrastructure/postiz/k8s/postiz.yaml` - Postiz manifest (PVC definition)
 - `infrastructure/monitoring/kube-prom-stack-values.yaml` - Helm values with nodeSelectors

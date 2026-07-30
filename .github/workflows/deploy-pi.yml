@@ -1,4 +1,8 @@
-name: Deploy to Pi (ECR build → hostPath rollout)
+name: Deploy to Pi (hostPath standalone — no ECR)
+
+# Cloudflare-first: build Next standalone on the Pi runner and sync into
+# /home/tbaltzakis/cloudless-standalone (k8s/cloudless-app-hostpath.yaml).
+# Does not use AWS ECR, OIDC, or SSM.
 
 on:
   push:
@@ -11,10 +15,7 @@ on:
       - "pnpm-workspace.yaml"
       - "next.config.ts"
       - "patches/**"
-      - "Dockerfile"
-      - ".dockerignore"
       - ".github/workflows/deploy-pi.yml"
-      - ".github/workflows/build-pi-image.yml"
   workflow_dispatch:
 
 concurrency:
@@ -22,203 +23,77 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  id-token: write # required for OIDC
   contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 278585680617.dkr.ecr.us-east-1.amazonaws.com
-  ECR_REPOSITORY: cloudless-pi-app
   K3S_NAMESPACE: cloudless
-  # Live Free-tier origin is hostPath standalone (k8s/cloudless-app-hostpath.yaml),
-  # not the legacy ECR Deployment named "cloudless".
   K3S_DEPLOYMENT: cloudless-app
   STANDALONE_HOSTPATH: /home/tbaltzakis/cloudless-standalone
-  # omv Tailscale IP (cert SAN includes this — see docs/kubectl-tailscale.md)
-  OMV_TAILSCALE_IP: "100.74.191.58"
 
 jobs:
-  build-and-push:
-    name: Build arm64 image and push to ECR
-    # Native arm64 on omv-build (USB-SSD). QEMU on ubuntu-latest fails at
-    # `pnpm build` (seen 2026-07-27). Labels: omv-build = [self-hosted, omv, build].
+  build-and-rollout:
+    name: Build standalone + roll out hostPath
     runs-on: [self-hosted, omv, build]
-    timeout-minutes: 45
-    outputs:
-      short_sha: ${{ steps.check_ecr.outputs.short_sha }}
-      # Image is in ECR if the pre-build check found it OR our push step
-      # observed it already present (concurrent build-pi-image.yml won the
-      # race to the immutable tag). Either way the rollout can proceed.
-      image_exists: ${{ steps.check_ecr.outputs.exists == 'true' && 'true' || steps.push_ecr.outputs.pushed_or_exists }}
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          node-version: "22"
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
-
-      - name: Check if image tag already exists in ECR
-        id: check_ecr
+      - name: Enable corepack / pnpm
         run: |
-          SHORT_SHA="${GITHUB_SHA::12}"
-          if aws ecr describe-images \
-            --repository-name ${{ env.ECR_REPOSITORY }} \
-            --image-ids imageTag="${SHORT_SHA}" \
-            --region ${{ env.AWS_REGION }} \
-            --query 'imageDetails[0].imageTags' \
-            --output text 2>/dev/null | grep -q "${SHORT_SHA}"; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Image ${SHORT_SHA} already in ECR — skipping build."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Image ${SHORT_SHA} not found — will build and push."
+          corepack enable
+          corepack prepare pnpm@latest --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js standalone
+        env:
+          NEXT_OUTPUT_STANDALONE: "1"
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_STAGE: production
+          NEXT_PUBLIC_AUTH_PROVIDER: d1
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: pi-standby
+          NEXT_PUBLIC_SENTRY_ENVIRONMENT: pi-standby
+          NEXT_PUBLIC_META_PIXEL_ID: ${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
+          NEXT_PUBLIC_LINKEDIN_PARTNER_ID: ${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
+          APP_VERSION: ${{ github.sha }}
+          NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
+          NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
+        run: pnpm build
+
+      - name: Sync standalone → hostPath
+        run: |
+          set -euo pipefail
+          DEST="${{ env.STANDALONE_HOSTPATH }}"
+          STAGE="${DEST}.next-${GITHUB_SHA::12}"
+          SRC=".next/standalone"
+          test -f "${SRC}/server.js"
+          sudo rm -rf "${STAGE}"
+          sudo mkdir -p "${STAGE}"
+          sudo rsync -a "${SRC}/" "${STAGE}/"
+          if [ -d .next/static ]; then
+            sudo mkdir -p "${STAGE}/.next/static"
+            sudo rsync -a .next/static/ "${STAGE}/.next/static/"
           fi
-          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-
-      - name: Remove stale buildx builder
-        if: steps.check_ecr.outputs.exists != 'true'
-        run: docker buildx rm --all-inactive --force 2>/dev/null || true
-
-      - name: Set up Docker Buildx
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-        with:
-          # Increase gRPC keepalive to prevent "no active session / context
-          # deadline exceeded" during long Next.js builds on the Pi.
-          # The Next.js build can take 25+ min on arm64; set to 3600s (1h)
-          # to cover the full build + export phase.
-          buildkitd-config-inline: |
-            [grpc]
-              keepalive = 3600
-            [worker.oci]
-              max-parallelism = 2
-
-      - name: ensure local cache dirs exist
-        if: steps.check_ecr.outputs.exists != 'true'
-        run: |
-          sudo mkdir -p /opt/docker-cache
-          sudo chmod 777 /opt/docker-cache
-
-      - name: warm base image into Docker daemon cache
-        if: steps.check_ecr.outputs.exists != 'true'
-        run: docker pull node:22-alpine
-
-      # Build with load:true (not push:true) — see the long comment in
-      # build-pi-image.yml for the rationale. Push happens via plain
-      # `docker push` in the next step, bypassing the buildkit/ECR
-      # manifest-HEAD bug that caused the 2026-05-29 401 failures.
-      - name: Build and load to dockerd
-        if: steps.check_ecr.outputs.exists != 'true'
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: .
-          platforms: linux/arm64
-          load: true
-          push: false
-          # SHA tag only — ECR has immutable tags, :latest is never pushed.
-          # Rollout uses kubectl set image with this SHA for pinned, reproducible deploys.
-          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}
-          cache-from: type=local,src=/opt/docker-cache
-          cache-to: type=local,dest=/opt/docker-cache,mode=max
-          # Disable provenance/SBOM attestation manifests — they require a
-          # separate Buildx session push that times out on the Pi runner when
-          # ECR is slow (no active session / context deadline exceeded).
-          provenance: false
-          sbom: false
-          build-args: |
-            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
-            NEXT_PUBLIC_STAGE=production
-            NEXT_PUBLIC_AUTH_PROVIDER=cognito
-            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-            SENTRY_ENVIRONMENT=pi-standby
-            NEXT_PUBLIC_SENTRY_ENVIRONMENT=pi-standby
-            NEXT_PUBLIC_META_PIXEL_ID=${{ secrets.NEXT_PUBLIC_META_PIXEL_ID }}
-            NEXT_PUBLIC_LINKEDIN_PARTNER_ID=${{ secrets.NEXT_PUBLIC_LINKEDIN_PARTNER_ID }}
-            APP_VERSION=${{ github.sha }}
-            NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=LXkyzmWrAYuY1C6XD6TKaqA31KB72xbUlkimE0vKI8w
-
-      # Login + push in one step — avoids credential-store issues on self-hosted
-      # Pi runners where `amazon-ecr-login` writes to secretservice/pass but
-      # dockerd reads only ~/.docker/config.json.
-      # `aws ecr get-login-password | docker login --password-stdin` writes
-      # directly to config.json, bypassing any credential helper.
-      - name: Push to ECR
-        id: push_ecr
-        if: steps.check_ecr.outputs.exists != 'true'
-        run: |
-          set -uo pipefail
-          TAG="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.check_ecr.outputs.short_sha }}"
-          echo "==> docker login via get-login-password"
-          aws ecr get-login-password --region ${{ env.AWS_REGION }} \
-            | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
-          echo "==> docker push ${TAG}"
-          # Capture output so we can distinguish the immutable-tag race (the
-          # concurrent build-pi-image.yml already pushed this exact SHA) from a
-          # genuine push failure. ECR repos use immutable tags, so a same-SHA
-          # re-push returns: "tag invalid: ... already exists ... cannot be
-          # overwritten because the tag is immutable." That means the image IS
-          # in ECR — success for our purposes, so the rollout must still run.
-          #
-          # IMPORTANT — `if ! push_log=$(...)` pattern, not `push_log=$(...); rc=$?`:
-          # GitHub's default shell is `bash -e {0}`, so a bare command
-          # substitution whose command exits non-zero aborts the whole script
-          # BEFORE we ever reach the rc check. Wrapping in `if` is the only
-          # way to capture both stdout/stderr AND the non-zero exit without
-          # tripping -e. Same pattern used by build-pi-image.yml's push step.
-          # Lost-race seen 2026-06-16 (deploy run 27596604011 on c880628):
-          # build-pi-image.yml pushed first at 05:49:18, deploy-pi.yml's push
-          # failed at 05:50:18, but the old code never saw the error string.
-          if push_log=$(docker push "${TAG}" 2>&1); then
-            echo "${push_log}"
-            echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
-            echo "Pushed ${TAG}."
-          else
-            echo "${push_log}"
-            if echo "${push_log}" | grep -qiE 'already exists.*immutable|tag.*immutable'; then
-              echo "pushed_or_exists=true" >> "$GITHUB_OUTPUT"
-              echo "::notice::Tag already present (immutable) — concurrent build won the race; image is in ECR, proceeding to rollout."
-            else
-              echo "pushed_or_exists=false" >> "$GITHUB_OUTPUT"
-              echo "::error::docker push failed for a reason other than the immutable-tag race."
-              exit 1
-            fi
+          if [ -d public ]; then
+            sudo mkdir -p "${STAGE}/public"
+            sudo rsync -a public/ "${STAGE}/public/"
           fi
-
-      - name: Update SSM Pi image tracking
-        run: |
-          aws ssm put-parameter \
-            --name "/cloudless/production/pi-sha" \
-            --value "${{ steps.check_ecr.outputs.short_sha }}" \
-            --type String \
-            --description 'Latest Pi (k3s) deploy SHA — written by deploy-pi.yml.' \
-            --overwrite
-
-  rollout:
-    name: Sync hostPath standalone + roll out
-    # Prefer the Pi build runner: LAN kubectl + docker (ECR→hostPath extract).
-    # Avoids stale KUBECONFIG_B64 / Tailscale TLS issues on ubuntu-latest.
-    # Override with vars.RUNNER_GENERIC only when deliberately forcing GH-hosted.
-    runs-on: ${{ fromJSON(vars.RUNNER_GENERIC || '["self-hosted","omv","build"]') }}
-    needs: build-and-push
-    if: always() && needs.build-and-push.result != 'cancelled' && (needs.build-and-push.result == 'success' || needs.build-and-push.outputs.image_exists == 'true')
-
-    steps:
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
+          sudo mkdir -p "${DEST}"
+          sudo rsync -a --delete "${STAGE}/" "${DEST}/"
+          sudo rm -rf "${STAGE}"
+          sudo test -f "${DEST}/server.js"
+          echo "Synced standalone → ${DEST}"
 
       - name: Resolve kubectl
         id: kubectl
@@ -229,75 +104,25 @@ jobs:
           elif sudo kubectl get --raw /readyz --request-timeout=5s >/dev/null 2>&1; then
             echo "bin=sudo kubectl" >> "$GITHUB_OUTPUT"
           else
-            mkdir -p ~/.kube
-            echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-            chmod 600 ~/.kube/config
-            # Prefer Tailscale SAN IP if kubeconfig still points at 127.0.0.1
-            sed -i "s|server: https://127.0.0.1:6443|server: https://${{ env.OMV_TAILSCALE_IP }}:6443|" ~/.kube/config || true
-            kubectl get --raw /readyz --request-timeout=10s
-            echo "bin=kubectl" >> "$GITHUB_OUTPUT"
+            echo "::error::kubectl cannot reach the cluster"
+            exit 1
           fi
 
-      - name: Extract ECR image into hostPath standalone
+      - name: Roll out cloudless-app
         env:
           KUBECTL: ${{ steps.kubectl.outputs.bin }}
         run: |
           set -euo pipefail
-          SHORT_SHA="${{ needs.build-and-push.outputs.short_sha }}"
           FULL_SHA="${{ github.sha }}"
-          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${SHORT_SHA}"
-          DEST="${{ env.STANDALONE_HOSTPATH }}"
-          STAGE="${DEST}.next-${SHORT_SHA}"
-
-          echo "==> Ensuring ECR docker auth for pull"
-          # amazon-ecr-login can succeed while the subsequent `docker pull`
-          # still sees an empty auths map on this self-hosted runner (shared
-          # dockerd + intermittent credential-helper state). Re-login with the
-          # OIDC session password immediately before pull.
-          aws ecr get-login-password --region "${{ env.AWS_REGION }}" \
-            | docker login --username AWS --password-stdin "${{ env.ECR_REGISTRY }}"
-
-          echo "==> Pulling ${IMAGE}"
-          docker pull "${IMAGE}"
-
-          echo "==> Extracting /app → ${STAGE}"
-          # Stage + DEST are under /home/tbaltzakis and may be root-owned from
-          # prior runs — always use sudo for mkdir/cp/rsync/cleanup.
-          sudo rm -rf "${STAGE}"
-          sudo mkdir -p "${STAGE}"
-          CID=$(docker create "${IMAGE}")
-          sudo docker cp "${CID}:/app/." "${STAGE}/"
-          docker rm "${CID}" >/dev/null
-          sudo test -f "${STAGE}/server.js"
-
-          echo "==> Atomic swap into ${DEST}"
-          sudo mkdir -p "${DEST}"
-          sudo rsync -a --delete "${STAGE}/" "${DEST}/"
-          sudo rm -rf "${STAGE}"
-
-          echo "==> Set APP_VERSION=${FULL_SHA} and restart ${{ env.K3S_DEPLOYMENT }}"
-          # Keep node:22-bookworm-slim + hostPath; only refresh files + env.
           $KUBECTL set env "deployment/${{ env.K3S_DEPLOYMENT }}" \
             -n "${{ env.K3S_NAMESPACE }}" \
             "APP_VERSION=${FULL_SHA}" \
-            "NEXT_PUBLIC_APP_VERSION=${FULL_SHA}"
+            "NEXT_PUBLIC_APP_VERSION=${FULL_SHA}" \
+            "NEXT_PUBLIC_AUTH_PROVIDER=d1" \
+            "SSM_DISABLED=1"
           $KUBECTL rollout restart "deployment/${{ env.K3S_DEPLOYMENT }}" \
             -n "${{ env.K3S_NAMESPACE }}"
           $KUBECTL rollout status "deployment/${{ env.K3S_DEPLOYMENT }}" \
             -n "${{ env.K3S_NAMESPACE }}" --timeout=600s
-
-      - name: Ensure NodePort 30300 for Tunnel origin
-        env:
-          KUBECTL: ${{ steps.kubectl.outputs.bin }}
-        run: |
-          set -euo pipefail
-          if $KUBECTL get svc cloudless-app -n "${{ env.K3S_NAMESPACE }}" >/dev/null 2>&1; then
-            echo "Patching svc/cloudless-app → NodePort 30300"
-            $KUBECTL patch svc cloudless-app -n "${{ env.K3S_NAMESPACE }}" --type merge -p \
-              '{"spec":{"type":"NodePort","ports":[{"name":"http","port":80,"targetPort":3000,"nodePort":30300,"protocol":"TCP"}]}}' \
-              || true
-            $KUBECTL get svc cloudless-app -n "${{ env.K3S_NAMESPACE }}" -o wide
-          fi
           curl -sS --max-time 5 http://127.0.0.1:30300/api/health || true
           echo
-# re-triggered 2026-06-04T20:50Z — run #319 OIDC auth transient failure

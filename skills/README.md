@@ -21,7 +21,7 @@ This README is the entry table to find the right one fast.
 | [anthropic](anthropic/SKILL.md) | claude api, anthropic sdk, model invoke, bedrock | Claude/Bedrock model invocation patterns + the Nova Micro switch (Marketplace gotcha). |
 | [appflowy-operator](appflowy-operator/SKILL.md) | appflowy, notion replacement, 9-pod stack, jemalloc, gotrue | Full AppFlowy Cloud stack ops on the 9-pod Phase 1 deploy. **Worker pin to omv-ha is mandatory** (16K/4K-page kernel). |
 | [audit-routine](audit-routine/SKILL.md) | audit, security audit, stack health, regular check | The "address all issues" loop the operator runs end-of-session. |
-| [cloudflare-token-doctor](cloudflare-token-doctor/SKILL.md) | cloudflare token, 401 on cloudflare_*, mint cloudflare token, ssm cloudflare | 4-stage Cloudflare API token mint + verify + store (SSM half + cloud-session half). |
+| [cloudflare-token-doctor](cloudflare-token-doctor/SKILL.md) | cloudflare token, 401 on cloudflare_*, mint cloudflare token | 4-stage Cloudflare API token mint + verify + store (GitHub Secret + cloud-session). |
 | [cloudflare-tunnel-ops](cloudflare-tunnel-ops/SKILL.md) | cloudflare tunnel, ingress add/remove, DNS CNAME, tunnel 404 | Add/remove ingress for the shared cloudless.gr tunnel (UUID `e977a490-58c5-...`) — works from Kubernetes_MCP only. |
 | [cluster-bash](cluster-bash/SKILL.md) | cluster_run_command, cluster_run_fanout, SFTP, ssh-mcp | Two-node SSH ops via `mcp__cloudless-infra__cluster_*` tools. Read before any cluster SSH. |
 | [cowork-session-secrets](cowork-session-secrets/SKILL.md) | session secret, OMV_SSH_KEY, TAILSCALE_AUTH_KEY, GITHUB_PAT, cloud-session secret | Cloud-session secret bootstrap so MCP tools work after Claude restarts. |

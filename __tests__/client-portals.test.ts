@@ -1,23 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-
-const { mockSSMSend, putCalls } = vi.hoisted(() => ({
-  mockSSMSend: vi.fn(),
-  putCalls: [] as unknown[],
-}));
-
-vi.mock("@aws-sdk/client-ssm", () => ({
-  SSMClient: vi.fn().mockImplementation(function () {
-    return { send: mockSSMSend };
-  }),
-  GetParameterCommand: vi.fn().mockImplementation(function (input: unknown) {
-    return { __cmd: "Get", input };
-  }),
-  PutParameterCommand: vi.fn().mockImplementation(function (input: unknown) {
-    putCalls.push(input);
-    return { __cmd: "Put", input };
-  }),
-}));
-
+import { describe, it, expect, beforeEach } from "vitest";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
 import {
   readPortals,
   writePortals,
@@ -30,6 +12,8 @@ import {
   type ClientPortal,
 } from "@/lib/client-portals";
 
+const CONFIG_KEY = "CLIENT_PORTALS_JSON";
+
 const SAMPLE_PORTAL: ClientPortal = {
   token: "tok-1",
   label: "Acme",
@@ -41,24 +25,17 @@ const SAMPLE_PORTAL: ClientPortal = {
 
 describe("client-portals", () => {
   beforeEach(() => {
-    mockSSMSend.mockReset();
-    putCalls.length = 0;
+    resetJsonConfigMemory();
   });
 
   describe("readPortals", () => {
     it("returns parsed array on success", async () => {
-      mockSSMSend.mockResolvedValueOnce({
-        Parameter: { Value: JSON.stringify([SAMPLE_PORTAL]) },
-      });
+      await writeJsonConfig(CONFIG_KEY, [SAMPLE_PORTAL]);
       const r = await readPortals();
-      // readPortals normalizes records, so the array fields are always present.
       expect(r).toEqual([{ ...SAMPLE_PORTAL, deliverables: [], paymentLinks: [] }]);
     });
 
     it("normalizes legacy records missing array fields (regression: 500 on GET)", async () => {
-      // A pre-deliverables record with no steps array (and a step missing its
-      // comments) must be coerced to valid arrays so scoreClientHealth and the
-      // admin route can iterate without throwing an unhandled TypeError.
       const legacy = {
         token: "tok-legacy",
         label: "Legacy",
@@ -67,9 +44,7 @@ describe("client-portals", () => {
         createdAt: "2026-01-01T00:00:00Z",
         steps: [{ id: "s1", name: "Audit", status: "pending" }],
       };
-      mockSSMSend.mockResolvedValueOnce({
-        Parameter: { Value: JSON.stringify([legacy]) },
-      });
+      await writeJsonConfig(CONFIG_KEY, [legacy]);
       const [p] = await readPortals();
       expect(p.steps[0].comments).toEqual([]);
       expect(p.deliverables).toEqual([]);
@@ -77,40 +52,21 @@ describe("client-portals", () => {
     });
 
     it("returns empty array when the stored value is not an array", async () => {
-      mockSSMSend.mockResolvedValueOnce({
-        Parameter: { Value: JSON.stringify({ not: "an array" }) },
-      });
+      await writeJsonConfig(CONFIG_KEY, { not: "an array" });
       await expect(readPortals()).resolves.toEqual([]);
     });
 
-    it("returns empty array on SSM error", async () => {
-      mockSSMSend.mockRejectedValueOnce(new Error("ParameterNotFound"));
-      await expect(readPortals()).resolves.toEqual([]);
-    });
-
-    it("returns empty array when parameter has no Value", async () => {
-      mockSSMSend.mockResolvedValueOnce({ Parameter: {} });
+    it("returns empty array when nothing is stored", async () => {
       await expect(readPortals()).resolves.toEqual([]);
     });
   });
 
   describe("writePortals", () => {
-    it("calls PutParameter with JSON payload and Overwrite=true", async () => {
-      mockSSMSend.mockResolvedValueOnce({});
+    it("persists portals to app_config memory", async () => {
       await writePortals([SAMPLE_PORTAL]);
-      expect(putCalls).toHaveLength(1);
-      const input = putCalls[0] as {
-        Value: string;
-        Overwrite: boolean;
-        Type: string;
-        Tier: string;
-      };
-      expect(input.Overwrite).toBe(true);
-      expect(input.Type).toBe("String");
-      // Intelligent-Tiering auto-upgrades past the 4KB Standard cap as the
-      // portals JSON grows, instead of throwing (which surfaced as a 500).
-      expect(input.Tier).toBe("Intelligent-Tiering");
-      expect(JSON.parse(input.Value)).toHaveLength(1);
+      const stored = await readPortals();
+      expect(stored).toHaveLength(1);
+      expect(stored[0].token).toBe(SAMPLE_PORTAL.token);
     });
   });
 
@@ -135,15 +91,13 @@ describe("client-portals", () => {
         { ...SAMPLE_PORTAL, token: "AAA", label: "A" },
         { ...SAMPLE_PORTAL, token: "BBB", label: "B" },
       ];
-      mockSSMSend.mockResolvedValueOnce({
-        Parameter: { Value: JSON.stringify(portals) },
-      });
+      await writeJsonConfig(CONFIG_KEY, portals);
       const found = await findPortalByToken("BBB");
       expect(found?.label).toBe("B");
     });
 
     it("returns null when no portal matches", async () => {
-      mockSSMSend.mockResolvedValueOnce({ Parameter: { Value: "[]" } });
+      await writeJsonConfig(CONFIG_KEY, []);
       expect(await findPortalByToken("nope")).toBeNull();
     });
   });

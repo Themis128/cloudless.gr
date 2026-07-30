@@ -1,16 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
+import { persistVoiceBrief } from "@/lib/voice-brief-store";
+
 const VOICE_BRIEF_URL = "http://localhost/api/admin/voice-brief";
 
-// ---------------------------------------------------------------------------
-// Hoist mocks
-// ---------------------------------------------------------------------------
-const { mockGetConfig, mockSSMSend, mockFetch, mockRunAgent, mockPersist } = vi.hoisted(() => ({
-  mockGetConfig: vi.fn(),
-  mockSSMSend: vi.fn(),
-  mockFetch: vi.fn(),
+const { mockRunAgent, mockFetch } = vi.hoisted(() => ({
   mockRunAgent: vi.fn(),
-  mockPersist: vi.fn(),
+  mockFetch: vi.fn(),
 }));
 
 vi.mock("jose", async () => {
@@ -26,29 +23,12 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@/lib/ssm-config", () => ({ getConfig: mockGetConfig }));
 vi.mock("@/lib/agent-voice-brief", () => ({
   runVoiceBriefAgent: (...a: unknown[]) => mockRunAgent(...a),
 }));
-vi.mock("@/lib/voice-brief-store", () => ({
-  VOICE_BRIEF_SSM_NAME: "/cloudless/production/VOICE_BRIEF_LATEST",
-  persistVoiceBrief: (...a: unknown[]) => mockPersist(...a),
-}));
+
 vi.stubGlobal("fetch", mockFetch);
 
-vi.mock("@aws-sdk/client-ssm", async () => {
-  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
-  return {
-    ...actual,
-    SSMClient: vi.fn().mockImplementation(function () {
-      return { send: mockSSMSend };
-    }),
-  };
-});
-
-// ---------------------------------------------------------------------------
-// JWT helpers
-// ---------------------------------------------------------------------------
 function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
@@ -99,21 +79,9 @@ const MOCK_BRIEF = {
   week: "2026-W17",
 };
 
-const BASE_CFG = {
-  AWS_REGION: "eu-central-1",
-  CRON_SECRET: "test-cron-secret",
-};
-
-// ---------------------------------------------------------------------------
-// Tests — GET (admin reads latest brief from SSM)
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/voice-brief", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue(BASE_CFG);
-    mockSSMSend.mockResolvedValue({
-      Parameter: { Value: JSON.stringify(MOCK_BRIEF) },
-    });
+    resetJsonConfigMemory();
   });
 
   it("returns 401 without token", async () => {
@@ -128,10 +96,8 @@ describe("GET /api/admin/voice-brief", () => {
     expect(res.status).toBe(403);
   });
 
-  it("returns brief from SSM when present", async () => {
-    mockSSMSend.mockResolvedValue({
-      Parameter: { Value: JSON.stringify(MOCK_BRIEF) },
-    });
+  it("returns brief from app_config when present", async () => {
+    await persistVoiceBrief(MOCK_BRIEF);
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(adminReq(VOICE_BRIEF_URL));
     expect(res.status).toBe(200);
@@ -142,8 +108,7 @@ describe("GET /api/admin/voice-brief", () => {
     });
   });
 
-  it("returns null brief when SSM parameter missing", async () => {
-    mockSSMSend.mockRejectedValue(new Error("ParameterNotFound"));
+  it("returns null brief when nothing is stored", async () => {
     const { GET } = await import("@/app/api/admin/voice-brief/route");
     const res = await GET(adminReq(VOICE_BRIEF_URL));
     expect(res.status).toBe(200);
@@ -152,18 +117,14 @@ describe("GET /api/admin/voice-brief", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Tests — POST (admin triggers on-demand generation)
-// ---------------------------------------------------------------------------
 describe("POST /api/admin/voice-brief", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue(BASE_CFG);
+    resetJsonConfigMemory();
     mockRunAgent.mockResolvedValue({
       text: "AI-enhanced brief.",
       sources: [],
     });
-    mockPersist.mockResolvedValue(undefined);
   });
 
   it("returns 401 without token", async () => {
@@ -193,11 +154,11 @@ describe("POST /api/admin/voice-brief", () => {
     expect(data.brief.week).toBe("on-demand");
     expect(typeof data.brief.generatedAt).toBe("string");
     expect(mockRunAgent).toHaveBeenCalledTimes(1);
-    expect(mockPersist).toHaveBeenCalledTimes(1);
   });
 
   it("returns the brief even when persist fails (best-effort)", async () => {
-    mockPersist.mockRejectedValueOnce(new Error("ssm down"));
+    const appConfig = await import("@/lib/app-config-json");
+    vi.spyOn(appConfig, "writeJsonConfig").mockRejectedValueOnce(new Error("store down"));
     const { POST } = await import("@/app/api/admin/voice-brief/route");
     const res = await POST(adminReq(VOICE_BRIEF_URL, { method: "POST" }));
     expect(res.status).toBe(200);

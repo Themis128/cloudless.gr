@@ -1,54 +1,46 @@
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+/**
+ * Text embeddings via Cloudflare Workers AI.
+ *
+ * Primary model: @cf/baai/bge-small-en-v1.5 (384-dim).
+ * Fail-closed when CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN are unset.
+ * No Bedrock / Titan fallback.
+ */
 
-const REGION = process.env.AWS_REGION || "us-east-1";
+import { callWorkersAiEmbed, isWorkersAiConfigured } from "@/lib/workers-ai-client";
 
-export const BEDROCK_TITAN_EMBED_MODEL_ID =
-  process.env.BEDROCK_EMBED_MODEL_ID || "amazon.titan-embed-text-v2:0";
+export const WORKERS_AI_EMBED_MODEL =
+  process.env.WORKERS_AI_EMBED_MODEL || "@cf/baai/bge-small-en-v1.5";
 
-export const BEDROCK_EMBED_DIMENSIONS = Number.parseInt(
-  process.env.BEDROCK_EMBED_DIMENSIONS || "512",
+export const WORKERS_AI_EMBED_DIMENSIONS = Number.parseInt(
+  process.env.WORKERS_AI_EMBED_DIMENSIONS || "384",
   10
 );
 
-let client: BedrockRuntimeClient | null = null;
+/** @deprecated alias — use WORKERS_AI_EMBED_DIMENSIONS */
+export const BEDROCK_EMBED_DIMENSIONS = WORKERS_AI_EMBED_DIMENSIONS;
 
-function getBedrockClient(): BedrockRuntimeClient {
-  client ??= new BedrockRuntimeClient({ region: REGION });
-  return client;
-}
+/** @deprecated alias — use WORKERS_AI_EMBED_MODEL */
+export const BEDROCK_TITAN_EMBED_MODEL_ID = WORKERS_AI_EMBED_MODEL;
 
 export function normalizeEmbeddingInput(input: string): string {
   return input.replace(/\s+/g, " ").trim().slice(0, 50_000);
 }
 
-export async function embedTextWithTitan(input: string): Promise<number[]> {
-  const inputText = normalizeEmbeddingInput(input);
+export function isEmbeddingsConfigured(): boolean {
+  return isWorkersAiConfigured();
+}
 
+/**
+ * Embed text with Workers AI. Throws when CF credentials are missing or the
+ * API returns an unusable payload.
+ */
+export async function embedTextWithWorkersAi(input: string): Promise<number[]> {
+  const inputText = normalizeEmbeddingInput(input);
   if (!inputText) {
     throw new Error("Cannot embed empty text");
   }
-
-  const body = JSON.stringify({
-    inputText,
-    dimensions: BEDROCK_EMBED_DIMENSIONS,
-    normalize: true,
-  });
-
-  const res = await getBedrockClient().send(
-    new InvokeModelCommand({
-      modelId: BEDROCK_TITAN_EMBED_MODEL_ID,
-      contentType: "application/json",
-      accept: "application/json",
-      body: new TextEncoder().encode(body),
-    })
-  );
-
-  const text = new TextDecoder().decode(res.body as Uint8Array);
-  const parsed = JSON.parse(text) as { embedding?: unknown };
-
-  if (!Array.isArray(parsed.embedding)) {
-    throw new Error("Titan embedding response did not include embedding[]");
-  }
-
-  return parsed.embedding.map((v) => Number(v));
+  return callWorkersAiEmbed(inputText, { model: WORKERS_AI_EMBED_MODEL });
 }
+
+/** @deprecated alias — use embedTextWithWorkersAi */
+export const embedTextWithTitan = embedTextWithWorkersAi;

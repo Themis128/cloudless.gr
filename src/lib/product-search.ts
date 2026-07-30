@@ -1,5 +1,8 @@
 import { getProducts, type StoreProduct } from "@/lib/store-products";
-import { BEDROCK_EMBED_DIMENSIONS, embedTextWithTitan } from "@/lib/bedrock-embeddings";
+import {
+  WORKERS_AI_EMBED_DIMENSIONS,
+  embedTextWithWorkersAi,
+} from "@/lib/bedrock-embeddings";
 import {
   PRODUCT_EMBEDDER,
   PRODUCTS_INDEX,
@@ -160,7 +163,7 @@ export async function ensureProductsSearchIndex(): Promise<void> {
         embedders: {
           [PRODUCT_EMBEDDER]: {
             source: "userProvided",
-            dimensions: BEDROCK_EMBED_DIMENSIONS,
+            dimensions: WORKERS_AI_EMBED_DIMENSIONS,
           },
         },
       }),
@@ -188,7 +191,7 @@ export async function reindexProductsWithEmbeddings(): Promise<{
   const docs = await Promise.all(
     products.map(async (product) => {
       const doc = productToSearchDocument(product);
-      const embedding = await embedTextWithTitan(doc.text || doc.name);
+      const embedding = await embedTextWithWorkersAi(doc.text || doc.name);
 
       return {
         ...doc,
@@ -221,7 +224,7 @@ export async function searchProductsWithMeili(
   query: string,
   limit = 8
 ): Promise<ProductSearchHit[]> {
-  const vector = await embedTextWithTitan(query);
+  const vector = await embedTextWithWorkersAi(query);
 
   const res = await meiliRequest<{ hits?: ProductSearchHit[] }>(
     `/indexes/${PRODUCTS_INDEX}/search`,

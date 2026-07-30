@@ -125,10 +125,12 @@ all start with `cfut_` — if it starts with a quote, retype.
 The MCP being green is a convenience, not a requirement. Every secret
 in the Cloud Session Secrets table is also available in one of:
 
-- **AWS SSM** at `/cloudless/production/<KEY>` (for Cloudflare, Anthropic,
-  Notion, EspoCRM, Stripe, etc.) — readable via the bash tool with
-  `aws ssm get-parameter --with-decryption ...`
-- **GitHub Secrets** (for `AWS_DEPLOY_ROLE_ARN`, OIDC roles)
+- **GitHub Secrets** — `CLOUDFLARE_API_TOKEN` is the CI source of truth
+  (store via `store-cloudflare-token.yml`; requires `GH_PAT`). Also used
+  for `AWS_DEPLOY_ROLE_ARN`, OIDC roles, etc.
+- **AWS SSM** at `/cloudless/production/<KEY>` (legacy path for some
+  Anthropic / Notion / EspoCRM / Stripe keys — do **not** use SSM for
+  `CLOUDFLARE_API_TOKEN`)
 - **Direct env in the bash sandbox** (for `GITHUB_PAT` — the agent
   already has it embedded in remote URLs)
 
@@ -136,7 +138,7 @@ So if Stage 2 is blocked because the user can't find Cowork's settings
 UI, switch to:
 
 ```bash
-# Example: every Cloudflare workflow uses the SSM token, not the MCP.
+# Example: Cloudflare workflows use the GitHub Secret, not the MCP.
 gh workflow run verify-cloudflare-token.yml
 gh workflow run store-cloudflare-token.yml -f cloudflare_token=... -f apply=true
 # Example: direct curl with the value from Stage 1 — no MCP needed.
@@ -177,11 +179,11 @@ expected current value (or at least its mint date).
   for Managed Agents, not the Cowork desktop app. Different product.
   See Stage 2 — the Cowork settings are in the desktop app itself.
 
-- **"The verify workflow still fails after I updated the SSM token"** →
+- **"The verify workflow still fails after I updated the GitHub Secret"** →
   Different store. The MCP reads from the cloud-session secret store,
-  workflows read from SSM. Both need the same value. Run
-  `store-cloudflare-token.yml -f apply=false` to sync SSM independently
-  of the MCP store.
+  workflows read `CLOUDFLARE_API_TOKEN` from GitHub Secrets. Both need the
+  same value. Run `store-cloudflare-token.yml -f apply=false` to sync the
+  GitHub Secret independently of the MCP store (requires `GH_PAT`).
 
 ## Related skills
 

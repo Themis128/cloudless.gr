@@ -1,8 +1,23 @@
-# AWS → Cloudflare cutover — sequenced PRs
+## Wave A status (2026-07-30)
 
-> Status: **inventory → ordered PRs** (2026-07-30).  
-> Rule: Cloudflare first. Do **not** install AWS CLI/SDK for new work.  
-> Live Pi already: `hostPath` standalone, `SSM_DISABLED=1`, `NEXT_PUBLIC_AUTH_PROVIDER=d1`, R2 datalake, CF Tunnel.
+| PR | Status | Notes |
+|----|--------|-------|
+| PR-01 | **Done in tree** | SSM fetch removed from `getConfig` + instrumentation; Cognito needs `ALLOW_LEGACY_COGNITO=1` |
+| PR-02 | **Done in tree** | `email.ts` Resend / Workers Email only — no SES |
+| PR-03 | **Done in tree** | `ses-suppression.ts` → D1 only |
+| PR-07 | **Done in tree** | Portals / pending / workspaces / AB / voice-brief → D1 `app_config` via `app-config-json.ts` |
+| PR-08 | **Done in tree** | Chat + agents + embeddings → Workers AI REST; Bedrock stubbed |
+| PR-10 | **Done in tree** | `deploy-pi.yml` hostPath-only; `build-pi-image.yml` workflow_dispatch emergency only |
+| PR-11 | **Done in tree** | `store-cloudflare-token.yml` → `gh secret set` (no SSM) |
+| PR-12 | **Partial** | athena/sns/amplify stubbed; full dead-code sweep continues |
+
+**Operator follow-ups before merge to main:**
+1. Add `RESEND_API_KEY` to k8s `cloudless-secrets` (Node email path).
+2. Confirm `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` already in secrets (Workers AI).
+3. Wave B (PR-04…06) still gated on Cognito/Dynamo data migration.
+
+---
+
 
 Merge **one service family per PR**. Do not merge **PR-14** (SDK uninstall) until call sites from PR-02…PR-13 are gone.
 

@@ -1,8 +1,8 @@
 name: Rotate Cloudflare API token
 
-# Programmatically rotate the Cloudflare API token currently stored in:
-#   - AWS SSM at /cloudless/production/CLOUDFLARE_API_TOKEN
-#   - GitHub Actions secret CLOUDFLARE_API_TOKEN
+# Programmatically rotate the Cloudflare API token stored as the GitHub
+# Actions secret CLOUDFLARE_API_TOKEN (source of truth — Cloudflare-first).
+# Do NOT use AWS SSM / aws CLI for this token.
 #
 # Uses Cloudflare's `PUT /user/tokens/{token_id}/value` endpoint, which
 # regenerates the token *secret* while keeping the same id and scopes.
@@ -12,13 +12,18 @@ name: Rotate Cloudflare API token
 # Auth: the current token must have "API Tokens Write" perm group
 # (User-scope, perm id 4755a26eedb94da69e1066d98aa820be). If the
 # rotation call returns 9007, the current token lacks that scope —
-# you'll need to mint a new one with that perm group, then run this
-# workflow with apply=true to swap it in.
+# you'll need to mint a new one with that perm group, then run
+# store-cloudflare-token.yml with apply=true to swap it in.
+#
+# REQUIRED SECRETS:
+#   CLOUDFLARE_API_TOKEN — current token (read for verify + rotate)
+#   GH_PAT — personal access token with `repo` scope (secrets:write).
+#   GITHUB_TOKEN cannot write Actions secrets ("403 Resource not accessible
+#   by integration"). Without GH_PAT the rotated value cannot be stored.
 #
 # After the workflow runs:
-#   - SSM updated ✅ (automatic)
-#   - GH Actions secret updated ✅ (automatic via gh CLI)
-#   - Cowork session secret update — STILL MANUAL (see skill)
+#   - GH Actions secret CLOUDFLARE_API_TOKEN updated ✅ (via gh secret set)
+#   - Cowork session secret update — STILL MANUAL (see cloudflare-token-rotation skill)
 
 on:
   workflow_dispatch:
@@ -29,7 +34,6 @@ on:
         default: false
 
 permissions:
-  id-token: write
   contents: read
 
 concurrency:
@@ -41,22 +45,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Fetch current token from SSM
+      - name: Load current token from GitHub Secret
         id: current
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -e
-          TOKEN=$(aws ssm get-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --with-decryption --region us-east-1 \
-            --query 'Parameter.Value' --output text)
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
-            echo "::error::No current token in SSM"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::No CLOUDFLARE_API_TOKEN GitHub secret. Run store-cloudflare-token.yml first."
             exit 1
           fi
           echo "::add-mask::$TOKEN"
@@ -94,10 +90,9 @@ jobs:
             echo ""
             echo "Rotation will:"
             echo "1. Call \`PUT /user/tokens/$TOKEN_ID/value\` — Cloudflare returns a new secret value"
-            echo "2. Update SSM at \`/cloudless/production/CLOUDFLARE_API_TOKEN\`"
-            echo "3. Update GitHub Actions secret \`CLOUDFLARE_API_TOKEN\`"
-            echo "4. Verify new token works with /user/tokens/verify"
-            echo "5. Old token is invalidated **immediately** on the rotate call"
+            echo "2. Update GitHub Actions secret \`CLOUDFLARE_API_TOKEN\` via \`gh secret set\` (requires \`GH_PAT\`)"
+            echo "3. Verify new token works with /user/tokens/verify"
+            echo "4. Old token is invalidated **immediately** on the rotate call"
             echo ""
             echo "Still manual: Cowork session secret (use \`cloudflare-token-rotation\` skill)"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -144,50 +139,25 @@ jobs:
           fi
           echo "✅ New token verified active"
 
-      - name: Update SSM
-        if: ${{ inputs.apply == true }}
-        env:
-          NEW_TOKEN: ${{ steps.rotate.outputs.new_token }}
-        run: |
-          set -e
-          aws ssm put-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --value "$NEW_TOKEN" \
-            --type SecureString \
-            --overwrite \
-            --region us-east-1 \
-            --description "Rotated by cloudflare-token-rotate.yml run ${{ github.run_id }}"
-          echo "✅ SSM updated"
-
       - name: Update GH Actions secret
         if: ${{ inputs.apply == true }}
         env:
-          # GITHUB_TOKEN is read-only on the secrets API ("403 Resource not
-          # accessible by integration"). Use the GH_PAT secret which has
-          # `repo` scope. If GH_PAT isn't set, this step warns but doesn't
-          # fail — SSM is the source of truth and can be synced manually
-          # via:  echo -n "$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-          #         --with-decryption --region us-east-1 --query Parameter.Value --output text)" \
-          #         | gh secret set CLOUDFLARE_API_TOKEN --repo Themis128/cloudless.gr --body -
-          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN cannot write secrets — need GH_PAT with repo scope.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
           NEW_TOKEN: ${{ steps.rotate.outputs.new_token }}
           GH_PAT_SET: ${{ secrets.GH_PAT != '' }}
-        continue-on-error: true
         run: |
-          # All consumer workflows now read CF token from SSM directly.
-          # GH secret is optional/legacy; failure here is not a real outage.
-          set +e
+          set -e
           if [ "$GH_PAT_SET" != "true" ]; then
-            echo "::notice::GH_PAT not set - skipping GH secret update. SSM is source of truth."
-            exit 0
+            echo "::error::GH_PAT secret is not set. Add a repo-scoped PAT as GH_PAT so this workflow can write CLOUDFLARE_API_TOKEN. The rotated Cloudflare secret is already live — recover via store-cloudflare-token.yml with a freshly minted token if needed."
+            exit 1
           fi
-          if echo -n "$NEW_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN \
-            --repo ${{ github.repository }} --body - 2>&1; then
-            echo "GitHub Actions secret updated"
-          else
-            echo "::warning::Failed to update GH Actions secret. Not blocking."
-            exit 0
+          if ! echo -n "$NEW_TOKEN" | gh secret set CLOUDFLARE_API_TOKEN \
+            --repo "${{ github.repository }}" --body -; then
+            echo "::error::Failed to update GitHub Actions secret CLOUDFLARE_API_TOKEN"
+            exit 1
           fi
+          echo "✅ GitHub Actions secret CLOUDFLARE_API_TOKEN updated"
 
       - name: Apply summary
         if: ${{ inputs.apply == true }}
@@ -199,12 +169,11 @@ jobs:
             echo ""
             echo "- Token id (unchanged): \`$TOKEN_ID\`"
             echo "- New secret value rotated and verified active"
-            echo "- SSM updated: \`/cloudless/production/CLOUDFLARE_API_TOKEN\` ✅"
             echo "- GitHub Actions secret \`CLOUDFLARE_API_TOKEN\` ✅"
             echo "- Old secret value: **invalidated immediately by Cloudflare**"
             echo ""
             echo "### Still manual"
-            echo "- **Cowork session secret** — copy the SSM value into your Cowork session-environment secret store. See the \`cloudflare-token-rotation\` skill for the exact UI steps."
+            echo "- **Cowork session secret** — paste the new token into your Cowork session-environment secret store (re-mint + \`store-cloudflare-token.yml\` if you no longer have the value). See the \`cloudflare-token-rotation\` skill."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Failure notification

@@ -1,15 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-
-const { mockSend } = vi.hoisted(() => ({ mockSend: vi.fn() }));
-
-vi.mock("@aws-sdk/client-bedrock-runtime", () => ({
-  BedrockRuntimeClient: vi.fn().mockImplementation(function () {
-    return { send: mockSend };
-  }),
-  ConverseCommand: vi.fn().mockImplementation(function (input: unknown) {
-    return { __cmd: "Converse", input };
-  }),
-}));
+import { describe, it, expect } from "vitest";
 
 import {
   BEDROCK_REGION,
@@ -22,11 +11,7 @@ import {
   type AnyBlock,
 } from "@/lib/bedrock-shared";
 
-describe("bedrock-shared", () => {
-  beforeEach(() => {
-    mockSend.mockReset();
-  });
-
+describe("bedrock-shared (fail-closed stubs + pure helpers)", () => {
   describe("env-driven constants", () => {
     it("BEDROCK_REGION resolves to a non-empty string", () => {
       expect(typeof BEDROCK_REGION).toBe("string");
@@ -40,15 +25,13 @@ describe("bedrock-shared", () => {
   });
 
   describe("getBedrockClient", () => {
-    it("returns the same singleton on subsequent calls", () => {
-      const a = getBedrockClient();
-      const b = getBedrockClient();
-      expect(a).toBe(b);
+    it("throws fail-closed — never constructs a Bedrock client", () => {
+      expect(() => getBedrockClient()).toThrow(/Bedrock is disabled/i);
     });
   });
 
   describe("buildBedrockToolConfig", () => {
-    it("maps Anthropic-shaped tools to a Bedrock ToolConfiguration", () => {
+    it("maps Anthropic-shaped tools to a tool configuration", () => {
       const cfg = buildBedrockToolConfig([
         {
           name: "book_slot",
@@ -124,98 +107,14 @@ describe("bedrock-shared", () => {
   });
 
   describe("runBedrockTurn", () => {
-    it("returns the content array from Converse output", async () => {
-      const blocks: AnyBlock[] = [{ text: "ok" } as AnyBlock];
-      mockSend.mockResolvedValueOnce({
-        output: { message: { content: blocks } },
-      });
-
-      const out = await runBedrockTurn({
-        client: getBedrockClient(),
-        system: "be helpful",
-        messages: [{ role: "user", content: [{ text: "hi" }] }],
-        maxTokens: 100,
-      });
-
-      expect(out).toEqual(blocks);
-      expect(mockSend).toHaveBeenCalledTimes(1);
-    });
-
-    it("defaults maxTokens when not provided", async () => {
-      mockSend.mockResolvedValueOnce({});
-      await runBedrockTurn({
-        client: getBedrockClient(),
-        system: "s",
-        messages: [{ role: "user", content: [{ text: "hi" }] }],
-      });
-      const cmd = mockSend.mock.calls[0][0] as {
-        input?: { inferenceConfig?: { maxTokens?: number } };
-      };
-      expect(cmd.input?.inferenceConfig?.maxTokens).toBe(400);
-    });
-
-    it("returns [] when output.message.content is missing", async () => {
-      mockSend.mockResolvedValueOnce({ output: { message: {} } });
-      const out = await runBedrockTurn({
-        client: getBedrockClient(),
-        system: "s",
-        messages: [],
-      });
-      expect(out).toEqual([]);
-    });
-
-    // Regression: Bedrock 400s with ValidationException when toolConfig.tools
-    // is an empty array. The shared helper must OMIT toolConfig in that case.
-    it("omits toolConfig from ConverseCommand when none is provided", async () => {
-      mockSend.mockResolvedValueOnce({ output: { message: { content: [] } } });
-      await runBedrockTurn({
-        client: getBedrockClient(),
-        system: "s",
-        messages: [{ role: "user", content: [{ text: "hi" }] }],
-      });
-      const cmd = mockSend.mock.calls[0][0] as {
-        input?: Record<string, unknown>;
-      };
-      expect(cmd.input).toBeDefined();
-      expect("toolConfig" in (cmd.input ?? {})).toBe(false);
-    });
-
-    it("omits toolConfig when tools array is empty", async () => {
-      mockSend.mockResolvedValueOnce({ output: { message: { content: [] } } });
-      await runBedrockTurn({
-        client: getBedrockClient(),
-        system: "s",
-        messages: [{ role: "user", content: [{ text: "hi" }] }],
-        toolConfig: { tools: [] },
-      });
-      const cmd = mockSend.mock.calls[0][0] as {
-        input?: Record<string, unknown>;
-      };
-      expect("toolConfig" in (cmd.input ?? {})).toBe(false);
-    });
-
-    it("forwards toolConfig when tools is non-empty", async () => {
-      mockSend.mockResolvedValueOnce({ output: { message: { content: [] } } });
-      await runBedrockTurn({
-        client: getBedrockClient(),
-        system: "s",
-        messages: [{ role: "user", content: [{ text: "hi" }] }],
-        toolConfig: {
-          tools: [
-            {
-              toolSpec: {
-                name: "x",
-                description: "y",
-                inputSchema: { json: {} },
-              },
-            },
-          ],
-        },
-      });
-      const cmd = mockSend.mock.calls[0][0] as {
-        input?: { toolConfig?: { tools?: unknown[] } };
-      };
-      expect(cmd.input?.toolConfig?.tools).toHaveLength(1);
+    it("throws fail-closed — never calls Bedrock", async () => {
+      await expect(
+        runBedrockTurn({
+          system: "be helpful",
+          messages: [{ role: "user", content: [{ text: "hi" }] }],
+          maxTokens: 100,
+        })
+      ).rejects.toThrow(/Bedrock is disabled/i);
     });
   });
 });

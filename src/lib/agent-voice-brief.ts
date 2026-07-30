@@ -2,13 +2,15 @@
  * Voice-brief agent — Phase 3 of docs/AGENTS_ROADMAP.md.
  *
  * Replaces the linear `Promise.all(getSeoSnapshot, getPipelineStats, …)`
- * pipeline in /api/cron/voice-brief with a Bedrock tool-use loop. The agent:
+ * pipeline in /api/cron/voice-brief with a Workers AI tool-use loop. The agent:
  *
  *   1. Decides which data sources to query (skips ones that are not
  *      configured, or that previous tool calls have made unnecessary).
  *   2. Retries each tool up to twice with exponential backoff before giving
  *      up on a source.
  *   3. Calls `emit_brief` exactly once with a polished TTS-friendly narrative.
+ *
+ * Requires CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (no Bedrock fallback).
  */
 import {
   fetchSeoMetrics,
@@ -17,15 +19,10 @@ import {
   fetchStripeMetrics,
 } from "@/lib/voice-brief-sources";
 import {
-  buildBedrockToolConfig,
-  getBedrockClient,
-  joinAssistantText,
-  pickToolUseBlocks,
-  runBedrockTurn,
-  type BedrockMessage,
-  type ToolResultBlock,
-  type ToolUseBlock,
-} from "@/lib/bedrock-shared";
+  buildWorkersAiToolProtocol,
+  callWorkersAiChat,
+  parseWorkersAiToolCall,
+} from "@/lib/workers-ai-client";
 
 const MAX_TOKENS = 600;
 const MAX_TOOL_ITERATIONS = 8;
@@ -68,33 +65,29 @@ Rules:
 - Never call emit_brief more than once. Never re-call a tool that succeeded.
 - Keep the narrative under 100 words. No headings, no markdown, no lists.`;
 
-// ---------------------------------------------------------------------------
-// Tool definitions — 4 data sources + 1 terminal emit.
-// ---------------------------------------------------------------------------
-
 const AGENT_TOOLS = [
   {
     name: "get_seo_metrics",
     description:
       "Fetch this week's Google Search Console snapshot: clicks, impressions, average CTR. Returns plain text suitable for inclusion in a narration, or a 'not configured' note.",
-    input_schema: { type: "object", properties: {}, required: [] },
+    input_schema: { type: "object", properties: {}, required: [] as string[] },
   },
   {
     name: "get_pipeline_stats",
     description: "Fetch EspoCRM open-deal pipeline totals (deal count + total value in euros).",
-    input_schema: { type: "object", properties: {}, required: [] },
+    input_schema: { type: "object", properties: {}, required: [] as string[] },
   },
   {
     name: "get_email_metrics",
     description:
       "Fetch the size of the newsletter subscriber list (EspoCRM contacts with newsletter opt-in).",
-    input_schema: { type: "object", properties: {}, required: [] },
+    input_schema: { type: "object", properties: {}, required: [] as string[] },
   },
   {
     name: "get_stripe_revenue",
     description:
       "Fetch the count of paid Stripe checkout sessions in the last 50 sessions and their total revenue in euros.",
-    input_schema: { type: "object", properties: {}, required: [] },
+    input_schema: { type: "object", properties: {}, required: [] as string[] },
   },
   {
     name: "emit_brief",
@@ -113,12 +106,6 @@ const AGENT_TOOLS = [
     },
   },
 ] as const;
-
-const AGENT_TOOL_CONFIG = buildBedrockToolConfig(AGENT_TOOLS);
-
-// ---------------------------------------------------------------------------
-// Retry helper — exponential backoff, used per tool call.
-// ---------------------------------------------------------------------------
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -140,12 +127,6 @@ async function withRetry<T>(fn: () => Promise<T>, retries = TOOL_MAX_RETRIES): P
   }
   throw lastErr;
 }
-
-// ---------------------------------------------------------------------------
-// Tool implementations — each returns a short plain-text string that the
-// model reads back. Failures are returned as "no data" strings so the model
-// can decide whether to skip the source rather than crashing the loop.
-// ---------------------------------------------------------------------------
 
 interface ToolSpec<T> {
   toolName: string;
@@ -211,25 +192,6 @@ function classifyOutcome(name: string, detail: string): ToolOutcome {
   return { name, status: "ok", detail };
 }
 
-async function runPendingTool(
-  block: ToolUseBlock,
-  outcomes: ToolOutcome[]
-): Promise<ToolResultBlock> {
-  const handler = TOOL_HANDLERS[block.toolUse.name];
-  const result = handler ? await handler() : `Unknown tool: ${block.toolUse.name}`;
-  outcomes.push(classifyOutcome(block.toolUse.name, result));
-  return {
-    toolResult: {
-      toolUseId: block.toolUse.toolUseId,
-      content: [{ text: result }] as [{ text: string }],
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -238,38 +200,37 @@ function asString(value: unknown): string {
  * Run the voice-brief agent loop. Returns the polished narrative plus a
  * per-source outcome list (used by the route handler to post a Slack summary).
  *
- * Throws on Bedrock infrastructure errors so the route handler can surface
- * a 5xx instead of writing a half-broken brief to SSM.
+ * Throws on Workers AI infrastructure errors so the route handler can surface
+ * a 5xx instead of writing a half-broken brief to storage.
  */
 export async function runVoiceBriefAgent(opts?: { dateLabel?: string }): Promise<VoiceBriefResult> {
-  const client = getBedrockClient();
   const dateLabel = opts?.dateLabel ?? new Date().toISOString().slice(0, 10);
   const outcomes: ToolOutcome[] = [];
 
-  const messages: BedrockMessage[] = [
+  const messages: { role: string; content: string }[] = [
+    {
+      role: "system",
+      content: `${SYSTEM_PROMPT}\n\n${buildWorkersAiToolProtocol(AGENT_TOOLS)}`,
+    },
     {
       role: "user",
-      content: [
-        {
-          text: `Generate this week's Cloudless brief. Date: ${dateLabel}. Decide which sources to query, gather what you can, and emit the narration.`,
-        },
-      ],
+      content: `Generate this week's Cloudless brief. Date: ${dateLabel}. Decide which sources to query, gather what you can, and emit the narration.`,
     },
   ];
 
   for (let attempt = 0; attempt < MAX_TOOL_ITERATIONS; attempt++) {
-    const assistantContent = await runBedrockTurn({
-      client,
-      system: SYSTEM_PROMPT,
-      messages,
-      toolConfig: AGENT_TOOL_CONFIG,
-      maxTokens: MAX_TOKENS,
-    });
-    const toolUseBlocks = pickToolUseBlocks(assistantContent);
+    const reply = await callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+    const toolCall = parseWorkersAiToolCall(reply);
 
-    const emitBlock = toolUseBlocks.find((b) => b.toolUse.name === "emit_brief");
-    if (emitBlock) {
-      const narrative = asString(emitBlock.toolUse.input?.narrative).trim();
+    if (!toolCall) {
+      return {
+        text: reply.length > 0 ? reply : "Agent produced no narrative this week.",
+        sources: outcomes,
+      };
+    }
+
+    if (toolCall.name === "emit_brief") {
+      const narrative = asString(toolCall.args.narrative).trim();
       return {
         text:
           narrative.length > 0
@@ -279,17 +240,15 @@ export async function runVoiceBriefAgent(opts?: { dateLabel?: string }): Promise
       };
     }
 
-    if (toolUseBlocks.length === 0) {
-      const textOut = joinAssistantText(assistantContent);
-      return {
-        text: textOut.length > 0 ? textOut : "Agent produced no narrative this week.",
-        sources: outcomes,
-      };
-    }
+    const handler = TOOL_HANDLERS[toolCall.name];
+    const result = handler ? await handler() : `Unknown tool: ${toolCall.name}`;
+    outcomes.push(classifyOutcome(toolCall.name, result));
 
-    messages.push({ role: "assistant", content: assistantContent });
-    const toolResults = await Promise.all(toolUseBlocks.map((b) => runPendingTool(b, outcomes)));
-    messages.push({ role: "user", content: toolResults });
+    messages.push({ role: "assistant", content: reply });
+    messages.push({
+      role: "user",
+      content: `TOOL_RESULT for ${toolCall.name}:\n${result}`,
+    });
   }
 
   return {
