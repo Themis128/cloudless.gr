@@ -95,39 +95,32 @@ for key in ("tagOwners", "autoApprovers"):
                 break
         cur[key] = deep_merge_dict(cur.get(key, {}), patch[key])
 
-# grants: append missing by stable JSON identity
+# grants: upsert by (src,dst) so harden passes replace old "*" rules
 if "grants" in patch:
     existing = cur.get("grants") or cur.get("Grants") or []
-    # Prefer lowercase grants (modern)
-    key = "grants" if "grants" in cur or "grants" in patch else "Grants"
+    key = "grants"
     if "grants" not in cur and "Grants" in cur:
         key = "Grants"
-    else:
-        key = "grants"
-    have = {json.dumps(g, sort_keys=True) for g in existing}
-    merged = list(existing)
-    for g in patch["grants"]:
-        sig = json.dumps(g, sort_keys=True)
-        if sig not in have:
-            merged.append(g)
-            have.add(sig)
-    cur[key] = merged
-    # Drop alternate casing duplicate if we standardized
-    if key == "grants" and "Grants" in cur and "grants" in cur:
-        del cur["Grants"]
 
-# ssh: append missing by stable JSON identity (same pattern as grants)
+    def grant_key(g):
+        src = tuple(sorted(g.get("src") or []))
+        dst = tuple(sorted(g.get("dst") or []))
+        return (src, dst)
+
+    by = {grant_key(g): g for g in existing}
+    for g in patch["grants"]:
+        by[grant_key(g)] = g
+    # Drop obsolete member→app-connector / member→k8s wide opens if patch
+    # redefined those destinations (already replaced via grant_key).
+    cur[key] = list(by.values())
+    if key == "grants" and "Grants" in cur:
+        del cur["Grants"]
+    print("grants:", len(cur[key]))
+
+# ssh: example policy is authoritative (full replace of ssh section)
 if "ssh" in patch:
-    existing = cur.get("ssh") or []
-    have = {json.dumps(r, sort_keys=True) for r in existing}
-    merged = list(existing)
-    for r in patch["ssh"]:
-        sig = json.dumps(r, sort_keys=True)
-        if sig not in have:
-            merged.append(r)
-            have.add(sig)
-    cur["ssh"] = merged
-    print("ssh rules:", len(merged))
+    cur["ssh"] = patch["ssh"]
+    print("ssh rules:", len(cur["ssh"]))
 
 # nodeAttrs: merge tailscale.com/app-connectors by name into target "*"
 if "nodeAttrs" in patch:

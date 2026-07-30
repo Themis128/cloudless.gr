@@ -72,17 +72,19 @@ Copy **Egress IPs** into SaaS IP allowlists when you tighten access.
 
 ### Tailscale SSH
 
-ACL includes `ssh` rules: members → `autogroup:self` (check mode); admins →
-`tag:app-connector` / `tag:k8s` / `tag:k8s-operator` (accept). After ACL apply:
+ACL: **admins** get accept SSH to `autogroup:self` + tagged fabric nodes;
+**members** get check-mode SSH only to their own devices. Network grants:
+admins → full access to `tag:k8s` / `tag:app-connector`; members → `tcp:80,443`
+on `tag:k8s` (Grafana/Meili/kube HTTPS) and DNS-only to the app connector.
 
 ```bash
 # From any tailnet device (Windows / WSL / phone)
 ssh tbaltzakis@github-omv
-# or
-ssh tbaltzakis@github-omv.tail4ecae1.ts.net
+ssh tbaltzakis@omv-ha
 ```
 
-Host must have `--ssh` enabled (`tailscale set --ssh` / already on github-omv).
+Hosts need `--ssh` (`tailscale set --ssh`). Keep classic `sshd` on the LAN
+for break-glass; Tailscale ACLs gate who can reach the Pis over the tailnet.
 
 **Do not** put public `*.cloudless.gr` or Grafana/Meili Serve hosts in Apps —
 those stay on Cloudflare Tunnel / ProxyGroup.
