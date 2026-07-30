@@ -98,6 +98,49 @@
       "presentation": { "reveal": "always" }
     },
     {
+      "label": "db:forward",
+      "type": "shell",
+      "command": "pnpm db:forward",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "db:forward:stop",
+      "type": "shell",
+      "command": "pnpm db:forward:stop",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "db:passwords",
+      "type": "shell",
+      "command": "pnpm db:passwords",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "db:sqlite:pull",
+      "type": "shell",
+      "command": "pnpm db:sqlite:pull",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "db:d1:pull",
+      "type": "shell",
+      "command": "pnpm db:d1:pull",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "db:ready",
+      "type": "shell",
+      "command": "pnpm db:ready",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
       "label": "cf:preview",
       "type": "shell",
       "command": "pnpm cf:preview",
