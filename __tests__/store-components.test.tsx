@@ -536,8 +536,8 @@ describe("StoreGrid", () => {
 
     for (const btn of filterButtons) {
       expect(
-        btn.className.includes("min-h-[44px]"),
-        `Filter button "${btn.textContent}" missing min-h-[44px]`
+        btn.className.includes("min-h-11"),
+        `Filter button "${btn.textContent}" missing min-h-11 (44px)`
       ).toBe(true);
     }
   });
@@ -552,8 +552,8 @@ describe("StoreGrid", () => {
     const addButtons = within(container).getAllByText("Add to Cart");
     for (const btn of addButtons) {
       expect(
-        btn.className.includes("min-h-[44px]"),
-        "Add to Cart button missing min-h-[44px]"
+        btn.className.includes("min-h-11"),
+        "Add to Cart button missing min-h-11 (44px)"
       ).toBe(true);
     }
   });

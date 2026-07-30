@@ -100,6 +100,13 @@ test.describe("security headers — cloud", () => {
     expect(csp).toContain("https://analytics.google.com");
   });
 
+  test("CSP allows LinkedIn Insight Tag hosts", async ({ request }) => {
+    const r = await request.get(PROBE);
+    const csp = r.headers()["content-security-policy"] ?? "";
+    expect(csp).toContain("https://snap.licdn.com");
+    expect(csp).toContain("https://px.ads.linkedin.com");
+  });
+
   test("Report-To header advertises the csp-endpoint group", async ({ request }) => {
     const r = await request.get(PROBE);
     const reportTo = r.headers()["report-to"] ?? "";

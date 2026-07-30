@@ -9,7 +9,7 @@ import { useCookieConsent } from "@/context/CookieConsentContext";
  * Mirrors the `ConsentGatedPixel` pattern: the LinkedIn loader is appended to
  * the DOM only after the user accepts marketing cookies, so the tag never
  * runs without consent. No inline <script> tags are used — the LinkedIn
- * library is loaded by URL, which means we don't need a CSP nonce.
+ * library is loaded by URL (allowlisted in CSP script-src as snap.licdn.com).
  *
  * The Insight Tag fires PageView automatically on load. Conversion events are
  * triggered manually via `window.lintrk("track", { conversion_id: NNN })`

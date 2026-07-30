@@ -1,0 +1,109 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev",
+      "type": "shell",
+      "command": "pnpm dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*(starting|Ready|Local:).*",
+          "endsPattern": ".*(Ready in|Local:).*|"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": false },
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "dev:restart:clean",
+      "type": "shell",
+      "command": "pnpm run dev:restart:clean",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "pnpm lint",
+      "problemMatcher": ["$eslint-stylish"],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "lint:fix",
+      "type": "shell",
+      "command": "pnpm lint:fix",
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "format",
+      "type": "shell",
+      "command": "pnpm format",
+      "problemMatcher": []
+    },
+    {
+      "label": "typecheck",
+      "type": "shell",
+      "command": "pnpm exec tsc --noEmit -p tsconfig.json",
+      "problemMatcher": ["$tsc"],
+      "group": "build"
+    },
+    {
+      "label": "test:unit",
+      "type": "shell",
+      "command": "pnpm test:ci",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "test:unit:watch",
+      "type": "shell",
+      "command": "pnpm test",
+      "isBackground": true,
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "test:unit:coverage",
+      "type": "shell",
+      "command": "pnpm test:unit:coverage",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "e2e:smoke",
+      "type": "shell",
+      "command": "pnpm e2e:smoke",
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "e2e:ui",
+      "type": "shell",
+      "command": "pnpm test:e2e:ui",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "d1:migrate:local",
+      "type": "shell",
+      "command": "pnpm exec wrangler d1 migrations apply user-auth-db --local",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "cf:preview",
+      "type": "shell",
+      "command": "pnpm cf:preview",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    }
+  ]
+}
