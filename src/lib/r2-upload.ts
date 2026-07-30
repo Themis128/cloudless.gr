@@ -35,6 +35,16 @@ export function r2ObjectUrl(key: string, bucket: string): string {
   return `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${encoded}`;
 }
 
+/** DOM BodyInit rejects Uint8Array<ArrayBufferLike> (TS 5.7+); copy onto ArrayBuffer. */
+function toBodyInit(body: Buffer | Uint8Array | string): BodyInit {
+  if (typeof body === "string") return body;
+  // Explicit ArrayBuffer backing — see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-9.html
+  const ab = new ArrayBuffer(body.byteLength);
+  const view: Uint8Array<ArrayBuffer> = new Uint8Array(ab);
+  view.set(body);
+  return view;
+}
+
 export async function r2PutObject(options: {
   bucket: string;
   key: string;
@@ -42,10 +52,11 @@ export async function r2PutObject(options: {
   contentType?: string;
 }): Promise<void> {
   const client = createR2ClientFromEnv();
+  const contentType = options.contentType || "application/octet-stream";
   const res = await client.fetch(r2ObjectUrl(options.key, options.bucket), {
     method: "PUT",
-    headers: { "Content-Type": options.contentType || "application/octet-stream" },
-    body: options.body,
+    headers: { "Content-Type": contentType },
+    body: toBodyInit(options.body),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
