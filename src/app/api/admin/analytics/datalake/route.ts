@@ -1,13 +1,12 @@
 /**
  * GET /api/admin/analytics/datalake
  *
- * Cloudflare-first dashboard payload for /admin/analytics/datalake:
+ * Cloudflare-only dashboard payload for /admin/analytics/datalake:
  *   - D1 analytics_events for acquisition / attribution when AUTH_DB bound
  *   - R2 lake/snapshots/admin-datalake.json for GSC / Sentry / LinkedIn / EspoCRM
- *   - Legacy Athena views only for missing sections
  *
  * Query params:
- *   ?refresh=1  — skip R2 snapshot cache; re-query Athena for gaps
+ *   ?refresh=1  — skip R2 snapshot cache (D1 sections still served live)
  */
 
 import { NextRequest, NextResponse } from "next/server";

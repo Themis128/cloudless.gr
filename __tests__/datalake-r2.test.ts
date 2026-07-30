@@ -39,7 +39,7 @@ function makeDb(rows: Array<Record<string, unknown>>): AuthDatabase {
   };
 }
 
-describe("getDatalakeDashboard Cloudflare-first", () => {
+describe("getDatalakeDashboard Cloudflare-only", () => {
   beforeEach(() => {
     vi.resetModules();
     delete (globalThis as { __AUTH_DB__?: unknown }).__AUTH_DB__;
@@ -51,7 +51,7 @@ describe("getDatalakeDashboard Cloudflare-first", () => {
     delete (globalThis as { __DATALAKE_BUCKET__?: unknown }).__DATALAKE_BUCKET__;
   });
 
-  it("prefers D1 + R2 snapshot without calling Athena", async () => {
+  it("merges D1 acquisition/attribution with R2 snapshot sections", async () => {
     (globalThis as { __AUTH_DB__?: AuthDatabase }).__AUTH_DB__ = makeDb([
       { day: "2026-07-28", sessions: 5, signups: 1, purchasers: 0, revenue: 0 },
     ]);
@@ -62,7 +62,7 @@ describe("getDatalakeDashboard Cloudflare-first", () => {
         text: async () =>
           JSON.stringify({
             generated_at: "2026-07-29T10:00:00.000Z",
-            cache: "r2-snapshot",
+            cache: "cloudflare",
             sections: [
               {
                 section: "top_keywords",
@@ -84,24 +84,33 @@ describe("getDatalakeDashboard Cloudflare-first", () => {
                 rows: [{ lead_source: "web", contact_count: 4 }],
                 rowCount: 1,
               },
+              {
+                section: "acquisition_funnel",
+                error: "stale snapshot stub — should be ignored",
+              },
             ],
           }),
       }),
     };
 
-    const athena = vi.fn();
-    vi.doMock("@/lib/athena", () => ({
-      runAthenaQuery: athena,
-      resetAthenaCache: vi.fn(),
-    }));
-
     const { getDatalakeDashboard } = await import("@/lib/datalake-r2");
     const payload = await getDatalakeDashboard({});
-    expect(athena).not.toHaveBeenCalled();
     expect(payload.cache).toBe("cloudflare");
     const keywords = payload.sections.find((s) => s.section === "top_keywords");
     expect(keywords?.rows?.[0]?.query).toBe("cloud greece");
     const acquisition = payload.sections.find((s) => s.section === "acquisition_funnel");
     expect(acquisition?.rows?.[0]?.sessions).toBe(5);
+    const attribution = payload.sections.find((s) => s.section === "attribution");
+    expect(attribution?.rows?.[0]?.utm_source).toBe("linkedin");
+  });
+
+  it("returns section errors when D1 and R2 are unbound", async () => {
+    const { getDatalakeDashboard } = await import("@/lib/datalake-r2");
+    const payload = await getDatalakeDashboard({});
+    expect(payload.cache).toBe("cloudflare");
+    for (const section of payload.sections) {
+      expect(section.error).toContain("not available");
+      expect(section.rows).toBeUndefined();
+    }
   });
 });
