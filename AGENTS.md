@@ -15,12 +15,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - **3D:** @react-three/fiber + @react-three/drei + three.js
 - **Animation:** GSAP (ScrollTrigger) + Lenis smooth scroll
 - **Command palette:** cmdk
-- **Auth:** AWS Cognito + next-auth v5
+- **Auth:** Cloudflare D1 (`user-auth-db`) + opaque session cookies (next-auth helpers retained where useful)
 - **Payments:** Stripe (webhooks, checkout)
 - **Email:** AWS SES
-- **Secrets:** AWS SSM Parameter Store (no .env files in prod)
+- **Secrets:** AWS SSM Parameter Store (Pi) / Wrangler secrets (Workers); no `.env` files in prod
 - **Testing:** Vitest + @testing-library/react + jsdom
-- **Deployment target:** AWS (serverless)
+- **Deployment target:** Pi k3s (primary) + Cloudflare Workers proxy (`pi-origin`)
 
 ## Design System (Cyberpunk × Quantum Devflow)
 
@@ -63,7 +63,7 @@ src/
 │   │   │   ├── [id]/page.tsx    # Product detail + JSON-LD
 │   │   │   └── success/         # Order confirmation
 │   │   ├── contact/             # Contact form (SES + Slack + EspoCRM + Notion)
-│   │   ├── auth/                # Login · Signup · Forgot Password (Cognito + next-auth)
+│   │   ├── auth/                # Login · Signup · Forgot Password (D1 email/password)
 │   │   ├── dashboard/           # Customer portal (auth-protected, cyan accent)
 │   │   │   ├── profile/         # Edit name, company, phone
 │   │   │   ├── purchases/       # Stripe order history
@@ -77,7 +77,7 @@ src/
 │   │       ├── notion/          # Notion DB explorer
 │   │       ├── notifications/   # Slack test panel
 │   │       ├── settings/        # App config viewer
-│   │       └── users/           # Cognito user management
+│   │       └── users/           # D1 user management / promote-to-admin
 │   └── api/
 │       ├── contact/             # POST → SES + Slack + EspoCRM + Notion
 │       ├── checkout/            # POST → Stripe Checkout Session
@@ -108,7 +108,7 @@ src/
 │           ├── notion/          # Blog/docs/tasks/projects/submissions/search
 │           ├── ops/errors/      # Sentry issues
 │           ├── orders/          # Stripe orders summary
-│           └── users/           # Cognito user list
+│           └── users/           # D1 user list / promote
 │
 ├── components/
 │   ├── Navbar.tsx · Footer.tsx
@@ -125,15 +125,17 @@ src/
 │       ├── CartButton.tsx · AddToCartButton.tsx · ProductIcon.tsx
 │
 ├── context/
-│   ├── AuthContext.tsx           # Auth state (next-auth session): signIn/signOut, admin detection, profile
+│   ├── AuthContext.tsx           # Auth state (D1 session cookie): signIn/signOut, admin detection, profile
 │   ├── CartContext.tsx           # Cart (useReducer, in-memory)
 │   └── CookieConsentContext.tsx
 │
 ├── lib/                         # Server + shared utilities (see docs/ARCHITECTURE.md §9)
 │   ├── ssm-config.ts            # SSM secrets loader (5-min TTL, fails fast on required keys)
 │   ├── integrations.ts          # isConfigured() guards for all optional integrations
-│   ├── api-auth.ts              # requireAuth() / requireAdmin() — OIDC JWKS verification (Cognito)
-│   ├── auth.ts                  # next-auth v5 config — Cognito
+│   ├── api-auth.ts              # requireAuth() / requireAdmin() — D1 opaque session (cookie or Bearer)
+│   ├── auth-d1.ts               # D1 user/session/password/lockout helpers
+│   ├── auth-middleware.ts       # Thin shim re-exporting api-auth (compat)
+│   ├── auth.ts                  # next-auth helpers + D1 session wiring
 │   ├── email.ts                 # SES: sendEmail, sendOrderConfirmation, notifyTeam
 │   ├── ses-suppression.ts       # SES suppression list management
 │   ├── stripe.ts                # Stripe client, product/session helpers
@@ -164,7 +166,7 @@ src/
 │   ├── server-locale.ts         # getServerLocale() — reads NEXT_LOCALE cookie server-side
 │   ├── use-locale.ts            # useCurrentLocale() — client hook
 │   ├── locale-defaults.ts       # DEFAULT_LOCALE = 'en-IE' · DEFAULT_CURRENCY = 'EUR'
-│   ├── fetch-with-auth.ts       # Adds next-auth idToken as Bearer header to client-side API calls
+│   ├── fetch-with-auth.ts       # Adds session Bearer header to client-side API calls
 │   ├── format-price.ts          # Currency formatter (imports from locale-defaults)
 │   ├── validation.ts            # isValidEmail() and other validators
 │   └── escape-html.ts           # HTML sanitiser for email bodies
@@ -195,45 +197,45 @@ __tests__/
 └── service-worker.test.tsx  # SW registration + push notification tests
 ```
 
-## Authentication (Cognito + next-auth v5)
+## Authentication (Cloudflare D1)
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant App as Next.js Client
-    participant KC as Cognito (Hosted UI)
+    participant API as /api/auth/*
+    participant D1 as Cloudflare D1 (user-auth-db)
 
-    U->>App: Click "Sign in"
-    App->>KC: Authorization Code + PKCE redirect
-    KC-->>U: Hosted login / registration UI
-    U->>KC: Enter credentials
-    KC-->>App: /api/auth/callback/cognito
-    App->>KC: Exchange code for tokens
-    KC-->>App: access_token + id_token + refresh_token
-    App->>App: Decode id_token, check groups claim
-    alt admin group
+    U->>App: Open /auth/login
+    App->>App: Email/password form
+    U->>App: Enter credentials
+    App->>API: POST /api/auth/login
+    API->>D1: Verify PBKDF2 hash + roles
+    D1-->>API: User record
+    API-->>App: Set opaque session_token cookie
+    App-->>U: Redirect
+    alt admin role
         App->>U: Show /admin panel
     else regular user
         App->>U: Show /dashboard
     end
 ```
 
-- **Provider:** AWS Cognito (Hosted UI) — the sole provider since the 2026-06 migration
-- **Env vars required:** `COGNITO_ISSUER` + `COGNITO_CLIENT_ID` + `COGNITO_CLIENT_SECRET` + `COGNITO_DOMAIN` + `AUTH_SECRET`. See `.env.example`
-- **Admin group:** `admin` — checked via the JWT `cognito:groups` claim
-- **AuthProvider:** Wraps entire app in `layout.tsx`; exposes `signIn`/`signOut`/`useAuth()` via `src/context/AuthContext.tsx` (delegates to next-auth `signIn`/`signOut`)
-- **Route protection:** Server-side via `src/proxy.ts` middleware (before the page renders) + client-side layout guards
-  - `/dashboard/*` → redirects to `/auth/login` if not authenticated
-  - `/admin/*` → redirects to `/dashboard` if not in admin group, `/auth/login` if not authenticated
-- **Token refresh:** next-auth transparently refreshes expired access tokens at the provider's token endpoint
-- **Logout:** RP-Initiated Logout — terminates the Cognito SSO session, not just the local cookie
-- **Form UX:** All auth forms include `autoComplete` attributes (`email`, `current-password`, `new-password`) for password manager integration
-- **Navbar integration:** Shows "Sign In" button when logged out, user avatar dropdown when logged in (Dashboard, Admin Panel if admin, Sign Out)
-- **Color coding:** Cyan for user-facing auth, magenta for admin
-- **i18n:** All pages fully translated in 3 locales (en, el, fr)
-- **User personalization:** AuthUser interface includes `name`, `company`, `phone`, `preferences` (theme, language, notifications)
-  - `updateProfile()` and `updatePreferences()` methods exposed via `useAuth()` hook
-  - Dashboard overview shows time-based greeting with user's name + live stats
+- **Store:** Cloudflare D1 `user-auth-db` — users, sessions, roles, password hashes (PBKDF2). Cognito is retired.
+- **Session:** Opaque `session_token` cookie (or Bearer) resolved by `src/lib/api-auth.ts` via `auth-d1.ts`. Default 30 days; 60 days with "remember me".
+- **Admin:** Membership in D1 `roles` → projected as `groups: ["admin"]`. Promote via `/api/admin/users/promote` (or admin Users UI).
+- **AuthProvider:** `src/context/AuthContext.tsx` — `signIn` / `signOut` / `useAuth()` against the D1 login/session APIs.
+- **Route protection:** `src/proxy.ts` (before render) + layout guards
+  - `/dashboard/*` → `/auth/login` if unauthenticated
+  - `/admin/*` → `/dashboard` if not admin, `/auth/login` if unauthenticated
+  - Locale prefixes (`/en/…`) are stripped before the auth check
+- **Password rules:** ≥8 chars with upper, lower, digit, and special character. Lockout after 5 failed attempts in 15 minutes.
+- **Email verification:** Activation token + OTP via SES (`auth-activation.ts` / `sendActivationEmail`).
+- **Form UX:** `autoComplete` on auth forms (`email`, `current-password`, `new-password`).
+- **Navbar:** Sign In when logged out; avatar menu (Dashboard, Admin if admin, Sign Out) when logged in.
+- **Color coding:** Cyan for user-facing auth, magenta for admin.
+- **i18n:** Auth pages translated (en / el / fr / de where enabled).
+- **Profile:** `name`, `company`, `phone`, `preferences` (theme, language, notifications) via `updateProfile()` / `updatePreferences()`.
 
 ## SEO
 
@@ -274,13 +276,13 @@ graph TB
         Headers --> Checkout["Checkout: server-side price lookup"]
         Headers --> Stripe["Stripe WH: signature verification"]
         Headers --> SlackV["Slack: HMAC-SHA256 verification"]
-        Headers --> Auth["Auth: JWT + Cognito groups"]
+        Headers --> Auth["Auth: D1 session + admin role"]
     end
 
     subgraph Secrets["Secret Management"]
         SSM["SSM Parameter Store"] -->|getConfig| Routes["API Routes"]
         SSM -->|throws on missing| Required["STRIPE_SECRET_KEY etc"]
-        Amplify["configureAmplify()"] -->|throws on missing| CogVars["COGNITO env vars"]
+        D1Auth["AUTH_DB / SESSION_SECRET"] -->|getAuthDbFromEnv| AuthRoutes["Auth + requireAuth"]
     end
 
     subgraph Output["Output Security"]
@@ -293,7 +295,7 @@ graph TB
 - **Headers:** X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, Strict-Transport-Security (HSTS with preload).
 - **Checkout validation:** Server-side product lookup by ID; client cannot set prices.
 - **SSM secrets:** `getConfig()` throws on missing required secrets (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`). Validates SES email fields.
-- **Amplify config:** `configureAmplify()` throws if `NEXT_PUBLIC_COGNITO_*` env vars are missing (no hardcoded fallbacks).
+- **Auth DB:** `getAuthDbFromEnv()` requires a live D1 binding (Workers) or local D1 HTTP / SQLite path in dev. Missing `AUTH_DB` fails closed on primary auth paths.
 - **Email bodies:** HTML-escaped via `escapeHtml()` to prevent injection.
 
 ## Internationalization (i18n)

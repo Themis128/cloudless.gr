@@ -49,11 +49,11 @@ Key features of the auth system:
 
 - **Email/password authentication** — credentials verified against D1 `user-auth-db` with PBKDF2 secure hashing.
 - **Session management** — server-side sessions stored in D1 with configurable expiry (30 days default, 60 days with "remember me").
-- **Admin detection** — server-side via `roles` table in D1. Admin routes are checked by `src/lib/auth-middleware.ts` before rendering.
+- **Admin detection** — server-side via `roles` table in D1. Admin/API routes use `src/lib/api-auth.ts` (`requireAdmin` / `requireAuth`); `auth-middleware.ts` is a thin compat shim.
 - **Password security** — minimum 8 characters with mixed case, numbers, and symbols. Account lockout after 5 failed attempts in 15 minutes.
 - **Email verification** — OTP via Cloudflare Email binding on registration.
 - Route protection is **server-side** via middleware (all unauthenticated requests to `/dashboard` and `/admin` are redirected to login before the page renders) and additionally client-side via layout guards. Locale-prefixed routes (e.g. `/en/dashboard`, `/el/admin/orders`) are normalized before authorization checks.
-- Theme preference (`dark` / `light` / `system`) is exposed via a navbar `ThemeSwitcher` (popover on desktop, inline radios on mobile) and the dashboard settings form. Anonymous visitors persist to `localStorage["cloudless-theme-pref"]`; signed-in users also sync to `user.preferences.theme`. Selection priority: admin path (locked dark) → user preference → localStorage → route default. Cross-tab sync via the `storage` event. See `docs/design-system-v2.md` § "Theme switcher".
+- Theme preference (`dark` / `light` / `system`) is exposed via a navbar `ThemeSwitcher` (popover on desktop, inline radios on mobile) and the dashboard settings form. Anonymous visitors persist to `localStorage["cloudless-theme-pref"]`; signed-in users also sync to `user.preferences.theme`. Selection priority: admin path (locked dark) → user preference → localStorage → route default. Cross-tab sync via the `storage` event. See `docs/product/design-system-v2.md` § "Theme switcher".
 
 ## Architecture
 
