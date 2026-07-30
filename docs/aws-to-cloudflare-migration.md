@@ -11,6 +11,7 @@
 | PR-11 | **Done in tree** | `store-cloudflare-token.yml` → `gh secret set` (no SSM)                                             |
 | PR-12 | **Done in tree** | Deleted athena/sns/amplify/logger stubs + cron-invoker; kept `athena-d1.ts`                         |
 | PR-13 | **Done in tree** | R2 I/O via `aws4fetch` (`r2-upload.ts`, `scripts/etl/_r2-config.mjs`); `@aws-sdk/client-s3` removed |
+| PR-04 | **Done in tree** | Admin users / activate / confirm / user delete → D1 only; Cognito SDK removed from those routes |
 
 **Operator follow-ups before / after merge to main:**
 

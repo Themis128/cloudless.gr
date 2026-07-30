@@ -279,6 +279,10 @@ export async function authenticateUser(
     return { error: "Invalid credentials" };
   }
 
+  if (readPreferenceFlag(user.preferences_json, "disabled")) {
+    return { error: "Account disabled" };
+  }
+
   // Create session with appropriate expiry
   const sessionId = crypto.randomUUID();
   const expirySeconds = rememberMe ? SESSION_EXPIRY_REMEMBER_SECONDS : SESSION_EXPIRY_SECONDS;
@@ -524,6 +528,20 @@ export async function getUserById(db: AuthDatabase, userId: string): Promise<D1U
     .first<D1User>();
 }
 
+function readPreferenceFlag(
+  preferencesJson: string | null | undefined,
+  key: "disabled" | "email_verified"
+): boolean {
+  if (!preferencesJson) return key === "email_verified";
+  try {
+    const prefs = JSON.parse(preferencesJson) as Record<string, unknown>;
+    if (prefs[key] === undefined) return key === "email_verified";
+    return prefs[key] === true || prefs[key] === "true";
+  } catch {
+    return key === "email_verified";
+  }
+}
+
 export interface ListedD1User {
   id: string;
   email: string;
@@ -532,6 +550,9 @@ export interface ListedD1User {
   phone: string | null;
   created_at: number;
   role: "admin" | "user";
+  preferences_json?: string | null;
+  disabled: boolean;
+  emailVerified: boolean;
 }
 
 export async function listUsers(
@@ -541,10 +562,21 @@ export async function listUsers(
   const limit = Math.max(1, Math.min(opts.limit ?? 20, 60));
   const prefix = opts.emailPrefix?.trim().toLowerCase() ?? "";
 
+  type Row = {
+    id: string;
+    email: string;
+    name: string | null;
+    company: string | null;
+    phone: string | null;
+    created_at: number;
+    role: string;
+    preferences_json: string | null;
+  };
+
   const rows = prefix
     ? await db
         .prepare(
-          `SELECT u.id, u.email, u.name, u.company, u.phone, u.created_at,
+          `SELECT u.id, u.email, u.name, u.company, u.phone, u.created_at, u.preferences_json,
                   CASE WHEN r.role = 'admin' THEN 'admin' ELSE 'user' END AS role
            FROM user u
            LEFT JOIN user_role r ON r.user_id = u.id AND r.role = 'admin'
@@ -553,10 +585,10 @@ export async function listUsers(
            LIMIT ?`
         )
         .bind(`${prefix}%`, limit)
-        .all<ListedD1User>()
+        .all<Row>()
     : await db
         .prepare(
-          `SELECT u.id, u.email, u.name, u.company, u.phone, u.created_at,
+          `SELECT u.id, u.email, u.name, u.company, u.phone, u.created_at, u.preferences_json,
                   CASE WHEN r.role = 'admin' THEN 'admin' ELSE 'user' END AS role
            FROM user u
            LEFT JOIN user_role r ON r.user_id = u.id AND r.role = 'admin'
@@ -564,11 +596,19 @@ export async function listUsers(
            LIMIT ?`
         )
         .bind(limit)
-        .all<ListedD1User>();
+        .all<Row>();
 
   return (rows.results ?? []).map((r) => ({
-    ...r,
+    id: r.id,
+    email: r.email,
+    name: r.name,
+    company: r.company,
+    phone: r.phone,
+    created_at: r.created_at,
+    preferences_json: r.preferences_json,
     role: r.role === "admin" ? "admin" : "user",
+    disabled: readPreferenceFlag(r.preferences_json, "disabled"),
+    emailVerified: readPreferenceFlag(r.preferences_json, "email_verified"),
   }));
 }
 
@@ -592,6 +632,52 @@ export async function setUserAdminRole(
       .run();
   }
   return true;
+}
+
+/** Soft-disable / re-enable via preferences_json.disabled. */
+export async function setUserDisabled(
+  db: AuthDatabase,
+  userId: string,
+  disabled: boolean
+): Promise<boolean> {
+  const user = await getUserById(db, userId);
+  if (!user) return false;
+  const now = Math.floor(Date.now() / 1000);
+  await db
+    .prepare(
+      "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.disabled', ?), updated_at = ? WHERE id = ?"
+    )
+    .bind(disabled ? "true" : "false", now, userId)
+    .run();
+  if (disabled) {
+    await db.prepare("DELETE FROM session WHERE user_id = ?").bind(userId).run();
+  }
+  return true;
+}
+
+/** GDPR erase — sessions, roles, then user row. */
+export async function deleteUserAccount(db: AuthDatabase, userId: string): Promise<boolean> {
+  const user = await getUserById(db, userId);
+  if (!user) return false;
+  await db.prepare("DELETE FROM session WHERE user_id = ?").bind(userId).run();
+  await db.prepare("DELETE FROM user_role WHERE user_id = ?").bind(userId).run();
+  await db.prepare("DELETE FROM user WHERE id = ?").bind(userId).run();
+  return true;
+}
+
+/** Mark email verified in preferences_json (signup activation). */
+export async function markEmailVerified(db: AuthDatabase, email: string): Promise<boolean> {
+  try {
+    const res = await db
+      .prepare(
+        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?"
+      )
+      .bind(email)
+      .run();
+    return (res.meta?.changes ?? 0) > 0 || true;
+  } catch {
+    return false;
+  }
 }
 
 /** Partial profile update — only provided fields change; "" clears to null. */

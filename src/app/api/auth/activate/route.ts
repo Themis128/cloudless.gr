@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  CognitoIdentityProviderClient,
-  AdminConfirmSignUpCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
 import { createHmac, timingSafeEqual } from "crypto";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
-import { getAuthDbFromEnv } from "@/lib/auth-d1";
-
-function makeClient(): CognitoIdentityProviderClient {
-  const issuer = process.env.COGNITO_ISSUER ?? "";
-  const region = issuer.match(/cognito-idp\.([^.]+)\.amazonaws\.com/)?.[1] ?? "us-east-1";
-  return new CognitoIdentityProviderClient({ region });
-}
+import { getAuthDbFromEnv, markEmailVerified } from "@/lib/auth-d1";
 
 function verifyToken(email: string, token: string): boolean {
   const parts = token.split(".");
@@ -29,8 +19,6 @@ function verifyToken(email: string, token: string): boolean {
 }
 
 function verifyOtp(email: string, otp: string, token: string): boolean {
-  // Must pass full token verification first (HMAC + expiry),
-  // then recompute the OTP from the same nonce+exp material.
   if (!verifyToken(email, token)) return false;
   const [nonce, expStr] = token.split(".");
   const exp = parseInt(expStr, 10);
@@ -48,36 +36,10 @@ function verifyOtp(email: string, otp: string, token: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-async function confirmUser(userPoolId: string, email: string): Promise<boolean> {
-  try {
-    await makeClient().send(
-      new AdminConfirmSignUpCommand({ UserPoolId: userPoolId, Username: email })
-    );
-    return true;
-  } catch (err: unknown) {
-    const name = (err as { name?: string }).name;
-    // Already confirmed — treat as success
-    if (name === "NotAuthorizedException" || name === "InvalidParameterException") return true;
-    console.error("[auth/activate] AdminConfirmSignUp failed:", err);
-    return false;
-  }
-}
-
 async function confirmUserD1(email: string): Promise<boolean> {
   const db = getAuthDbFromEnv();
   if (!db) return false;
-  try {
-    await db
-      .prepare(
-        "UPDATE user SET preferences_json = json_set(COALESCE(preferences_json, '{}'), '$.email_verified', 'true') WHERE email = ?"
-      )
-      .bind(email)
-      .run();
-    return true;
-  } catch (err) {
-    console.error("[auth/activate] D1 verify failed:", err);
-    return false;
-  }
+  return markEmailVerified(db, email);
 }
 
 /** GET /api/auth/activate?email=...&token=...  — one-tap link from email */
@@ -89,21 +51,14 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get("email")?.toLowerCase().trim();
   const token = searchParams.get("token");
 
-  // Auth pages are under /[locale]/auth/*, default to /en
   const base = new URL(req.url);
   const origin = base.origin;
 
   if (!email || !token || !verifyToken(email, token))
     return NextResponse.redirect(`${origin}/en/auth/signup?activated=invalid`);
 
-  const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (userPoolId) {
-    const ok = await confirmUser(userPoolId, email);
-    if (!ok) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
-  } else {
-    const ok = await confirmUserD1(email);
-    if (!ok) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
-  }
+  const ok = await confirmUserD1(email);
+  if (!ok) return NextResponse.redirect(`${origin}/en/auth/signup?activated=error`);
 
   return NextResponse.redirect(`${origin}/en/auth/login?activated=1`);
 }
@@ -131,14 +86,8 @@ export async function POST(req: NextRequest) {
   if (!verifyOtp(email, otp, token))
     return NextResponse.json({ error: "Invalid or expired code" }, { status: 400 });
 
-  const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  if (userPoolId) {
-    const ok = await confirmUser(userPoolId, email);
-    if (!ok) return NextResponse.json({ error: "Activation failed" }, { status: 500 });
-  } else {
-    const ok = await confirmUserD1(email);
-    if (!ok) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
-  }
+  const ok = await confirmUserD1(email);
+  if (!ok) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
 
   return NextResponse.json({ ok: true });
 }
