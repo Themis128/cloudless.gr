@@ -25,6 +25,7 @@ flowchart LR
   Internet((Internet)) --> CF[Cloudflare]
   CF -->|HTTP only| Apps[App pods]
   CF -.->|no DB TCP| Maria
+
 ```
 
 ## Quick reference
@@ -57,6 +58,7 @@ pnpm db:passwords        # print usernames + passwords from Secrets (do not comm
 pnpm db:sqlite:pull      # copy n8n / Kuma / Grafana SQLite → .local/db/
 pnpm db:d1:pull          # export Cloudflare D1 → .local/db/*.sqlite
 pnpm db:forward:stop
+
 ```
 
 Scripts: `scripts/db-port-forward.sh`, `scripts/db-sqlite-pull.sh`, `scripts/db-d1-pull.sh`.
@@ -96,12 +98,15 @@ All four are listed in `.vscode/extensions.json` (workspace recommendations). Co
 1. Install the four SQLTools extensions above (accept workspace recommendations if prompted).
 2. Open the **SQLTools** sidebar — not the SQL Server Object Explorer.
 3. Start TCP forwards and pull snapshots:
+
    ```bash
    pnpm db:forward
    pnpm db:passwords          # paste when SQLTools asks for MariaDB/Postgres password
    pnpm db:sqlite:pull        # required before the three omv-sqlite connections work
    pnpm db:d1:pull            # required before the three cloudflare-d1 connections work
+
    ```
+
 4. Click a connection under group `omv`, `omv-sqlite`, or `cloudflare-d1` and authenticate when prompted.
 5. When done: `pnpm db:forward:stop`.
 
@@ -155,6 +160,7 @@ VS Code tasks also exist: `db:forward`, `db:forward:stop`, `db:passwords`, `db:s
 ```bash
 kubectl -n espocrm port-forward svc/espocrm-mariadb 13306:3306
 # password: pnpm db:passwords  (or secret key mariadb-password)
+
 ```
 
 ---
@@ -272,6 +278,7 @@ Note: `postiz-providers` Secret is referenced by the app but was **missing** on 
 ```bash
 curl -sH "Authorization: Bearer $(kubectl -n meilisearch get secret meilisearch-secret -o jsonpath='{.data.MEILI_MASTER_KEY}' | base64 -d)" \
   http://127.0.0.1:17700/health
+
 ```
 
 ---
@@ -345,6 +352,7 @@ pnpm db:d1:pull                 # all three
 pnpm db:d1:pull user-auth-db    # one
 # live query without snapshot:
 pnpm exec wrangler d1 execute user-auth-db --remote --command 'SELECT name FROM sqlite_master'
+
 ```
 
 Snapshots under `.local/db/*.sqlite` are **copies** — re-pull after remote writes. For ad-hoc remote SQL, prefer `wrangler d1 execute` or the Cloudflare bindings MCP (`d1_database_query`).

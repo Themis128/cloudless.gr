@@ -54,9 +54,7 @@ async function setCorsPolicy() {
     console.log(`✅ CORS policy set on ${BUCKET_NAME}`);
   } catch (error) {
     console.error("❌ CORS setup failed:", error instanceof Error ? error.message : error);
-    console.log(
-      "\nManual alternative: Cloudflare Dashboard → R2 → bucket → Settings → CORS"
-    );
+    console.log("\nManual alternative: Cloudflare Dashboard → R2 → bucket → Settings → CORS");
     process.exit(1);
   }
 }
