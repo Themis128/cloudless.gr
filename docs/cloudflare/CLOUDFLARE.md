@@ -1,6 +1,6 @@
 # Cloudflare Configuration & Architecture
 
-**Last Updated:** July 6, 2026  
+**Last Updated:** July 31, 2026  
 **Status:** ✅ Production Ready  
 **Maintainer:** DevOps / Infrastructure Team
 
@@ -12,7 +12,7 @@
 2. [Account & Zone Configuration](#account--zone-configuration)
 3. [DNS Records](#dns-records)
 4. [Cloudflare Tunnel](#cloudflare-tunnel)
-5. [Cloudflare Workers & Failover](#cloudflare-workers--failover)
+5. [Cloudflare Workers](#cloudflare-workers)
 6. [Security & DDoS Protection](#security--ddos-protection)
 7. [API Token Management](#api-token-management)
 8. [Monitoring & Alerts](#monitoring--alerts)
@@ -27,37 +27,45 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 
 1. **DNS Management** - Zone records with Cloudflare nameservers
 2. **Tunnel (Private Network)** - Secure connection to Raspberry Pi k3s cluster
-3. **Workers (Serverless)** - Failover orchestration between Pi and AWS Lambda
+3. **Workers (Serverless)** - Two Workers: pi-origin-proxy (Free) and cloudless-failover (Paid)
 4. **DDoS & WAF Protection** - Managed security layer
-5. **HA Failover** - Automatic DNS switching between primary and standby
+5. **HA Failover** - Automatic failover between Pi origin and AWS CloudFront via cloudless-failover Worker
 
 ### Service Architecture
 
 ```
-                      ┌─────────────────────────────┐
-                      │   Cloudflare Zone (global)  │
-                      │   cloudless.gr              │
-                      └──────────────┬──────────────┘
-                                     │
-                      ┌──────────────┴──────────────┐
-                      │                             │
+                    ┌─────────────────────────────┐
+                    │   Cloudflare Zone (global)  │
+                    │   cloudless.gr              │
+                    └──────────────┬──────────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
         ┌───────────▼─────────────┐  ┌──────────▼──────────────┐
-        │  DNS Records            │  │  Failover Worker       │
-        │  • cloudless.gr         │  │  • cloudless-failover  │
-        │  • *.cloudless.gr       │  │  • Routes to Pi/AWS    │
-        │  • Tunnel endpoints     │  └──────────┬─────────────┘
-        └────────────────────────┘             │
-                                                 │
-               ┌────────────────────────────────┼────────────────────────────────┐
-               │                                │                                │
-         ┌─────▼──────────────────┐    ┌────────▼─────────────┐    ┌──────────▼──────────┐
-         │  Cloudflare Tunnel     │    │  AWS CloudFront      │    │  DNS Failover       │
-         │  (Pi k3s origin)       │    │  (Lambda fallback)   │    │  (Watchdog)         │
-         │  • piorigin-tunnel     │    │  • d3k7muo3c6lw6s    │    │  • Swaps CNAME      │
-         │  • HTTP/QUIC           │    │  • d9c1d2e3f4g5h6i7  │    │  • Per-minute check │
-         │  • Egress from Pi      │    │  • Primary: 2xx-3xx  │    │  • DNS-level HA     │
-         └────────────────────────┘    └────────────────────┘    └─────────────────────┘
+        │  DNS Records            │  │  Workers & Failover   │
+        │  • cloudless.gr         │  │  • cloudless2 (pi-origin-proxy)│
+        │  • *.cloudless.gr       │  │  • cloudless-failover │
+        │  • Tunnel endpoints     │  │  • Routes to Pi/AWS    │
+        └────────────────────────┘  └──────────┬─────────────┘
+                                               │
+                ┌────────────────────────────────┼────────────────────────────────┐
+                │                                │                                │
+          ┌─────▼──────────────────┐    ┌────────▼─────────────┐    ┌──────────▼──────────┐
+          │  Cloudflare Tunnel     │    │  AWS CloudFront      │    │  DNS Failover       │
+          │  (Pi k3s origin)       │    │  (Lambda fallback)   │    │  (Watchdog)         │
+          │  • omv-main-tunnel     │    │  • d3k7muo3c6lw6s    │    │  • Swaps CNAME      │
+          │  • HTTP/QUIC           │    │  • d9c1d2e3f4g5h6i7  │    │  • Per-minute check │
+          │  • Egress from Pi      │    │  • Primary: 2xx-3xx  │    │  • DNS-level HA     │
+          └────────────────────────┘    └────────────────────┘    └─────────────────────┘
 ```
+
+### Worker Architecture
+
+The infrastructure uses **two Workers** with different purposes:
+
+1. **`cloudless2` (pi-origin-proxy)** — Free-tier Worker (<50 KiB) that proxies all traffic from `cloudless.gr`, `www.cloudless.gr`, and `manage.cloudless.gr` to the Pi origin via Tunnel (`pi-origin.cloudless.gr` → NodePort 30300). This Worker stays under the 3 MiB gzip Free tier limit. Full OpenNext SSR (~5.5 MiB) cannot be deployed on Free.
+
+2. **`cloudless-failover`** — Paid-tier Worker that implements request-level HA failover. It tries AWS CloudFront first (primary), and falls back to the Pi origin via Tunnel if AWS returns >= 400 or times out. Routes: `cloudless.gr/*` and `www.cloudless.gr/*`.
 
 ---
 
@@ -68,10 +76,11 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 | Property | Value |
 |----------|-------|
 | Account Name | cloudless (via baltzakisthemis@gmail.com) |
+| Account ID | `fb7dc7b69b662480cd5961a4d1913c78` |
 | Zone | cloudless.gr |
 | Zone ID | `7025298073d6a5c645a6ad9add0cbf0e` |
 | Nameservers | `nova.ns.cloudflare.com` / `watson.ns.cloudflare.com` |
-| Plan | Free / Pro (escalate as needed) |
+| Plan | Free |
 | Two-Factor Auth | ✅ Enabled |
 
 ### Zone Settings
@@ -87,18 +96,9 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 | Security Level | medium | Challenge medium+ threat scores (was `essentially_off`) |
 | Browser Integrity Check | On | Block obvious forged browsers |
 | Email Obfuscation | Off | Avoid React #418 hydration from CF email rewrite |
-| Bot Fight Mode | Off (dashboard) | Free: not API-toggleable; leave off — crons use `pi-origin` |
+| Bot Fight Mode | Off | Free: not API-toggleable; leave off — crons use `pi-origin` |
 | Apply / verify (TLS) | `scripts/cf-zone-tls-harden.sh` | Idempotent zone TLS posture |
 | Apply / verify (WAF) | `scripts/cf-zone-waf-harden.sh` | Idempotent Free-plan WAF posture |
-| Page Rules | (see below) | Custom behaviors |
-
-#### Page Rules
-
-| Path | Rule | Purpose |
-|------|------|---------|
-| `api.cloudless.gr/*` | Cache Level: Bypass | API responses not cached |
-| `*.cloudless.gr/*` | Security Level: High | Stricter bot checking |
-| `docs.cloudless.gr/*` | Browser Cache TTL: 30m | Documentation caching |
 
 ---
 
@@ -106,22 +106,32 @@ Cloudflare provides a multi-layer infrastructure for cloudless.gr:
 
 ### Current Records
 
-All production records point to Cloudflare Tunnel with orange cloud (proxied).
+All production records point to Cloudflare Tunnel with orange cloud (proxied), except the apex/root which is served by the `cloudless2` Worker.
 
-| Type | Name | Value | Status | TTL | Proxied |
-|------|------|-------|--------|-----|---------|
-| CNAME | @ (root) | d3k7muo3c6lw6s.cloudfront.net | 🔵 Active | Auto | ✅ Yes |
-| CNAME | www | d3k7muo3c6lw6s.cloudfront.net | 🔵 Active | Auto | ✅ Yes |
-| CNAME | pi-origin | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
-| CNAME | omv | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
-| CNAME | ftp | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
-| CNAME | docs | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | ✅ Active | Auto | ✅ Yes |
-| CNAME | meili | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | ✅ Active | Auto | ✅ Yes |
-| CNAME | tftp | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
-| CNAME | api | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com | 🔵 Active | Auto | ✅ Yes |
-| TXT | _acme-challenge | (Letsencrypt cert validation) | 🔵 Active | Auto | ❌ No |
-| MX | @ | mail.cloudless.gr (priority 10) | 🔵 Active | 3600 | ❌ No |
-| TXT | @ | v=spf1 include:sendgrid.net ~all | 🔵 Active | 3600 | ❌ No |
+| Type | Name | Value | Status | TTL | Proxied | Notes |
+|------|------|-------|--------|-----|---------|-------|
+| CNAME | @ (root) | cloudless2 Worker route | 🔵 Active | Auto | ✅ Yes | Served by pi-origin-proxy Worker |
+| CNAME | www | cloudless2 Worker route | 🔵 Active | Auto | ✅ Yes | Served by pi-origin-proxy Worker |
+| CNAME | manage | cloudless2 Worker route | 🔵 Active | Auto | ✅ Yes | Served by pi-origin-proxy Worker |
+| CNAME | pi-origin | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | Direct Tunnel origin for Worker proxy |
+| CNAME | omv | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | OMV admin panel |
+| CNAME | ftp | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | FTP web interface |
+| CNAME | docs | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Documentation portal |
+| CNAME | meili | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Meilisearch search engine |
+| CNAME | tftp | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | Returns 404 (UDP not supported via HTTP tunnel) |
+| CNAME | api | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | 🔵 Active | Auto | ✅ Yes | API gateway (fallback) |
+| CNAME | n8n | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Workflow automation (port 30900) |
+| CNAME | ntfy | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Notification service (port 30080) |
+| CNAME | espocrm | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | CRM system (port 30700) |
+| CNAME | postiz | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Social publishing (port 30500) |
+| CNAME | appflowy | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | CMS (port 30810) |
+| CNAME | kuma | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Uptime Kuma (port 32501) |
+| CNAME | logs | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | ESP32 alert API (port 30820) |
+| CNAME | agent | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Agent API (port 30924) |
+| CNAME | vibe | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` | ✅ Active | Auto | ✅ Yes | Vibe agent (port 30301) |
+| TXT | _acme-challenge | (Letsencrypt cert validation) | 🔵 Active | Auto | ❌ No | |
+| MX | @ | mail.cloudless.gr (priority 10) | 🔵 Active | 3600 | ❌ No | |
+| TXT | @ | v=spf1 include:_spf.mx.cloudflare.net ~all | 🔵 Active | 3600 | ❌ No | Updated from sendgrid to Cloudflare Email |
 
 ### DNS Update Process
 
@@ -168,11 +178,12 @@ Cloudflare Tunnel (formerly Argo Tunnel) provides a secure, outbound-only connec
 
 | Property | Value |
 |----------|-------|
-| Tunnel ID | `75f644ea-4f45-4cb6-a992-6173dbc9ea93` |
-| Tunnel Name | cloudless-services |
-| Account | cloudless (Cloudflare account) |
+| Tunnel ID | `e977a490-58c5-4fdb-9155-86832e3e636a` |
+| Tunnel Name | omv-main-tunnel |
+| Account ID | `fb7dc7b69b662480cd5961a4d1913c78` |
+| Account Name | cloudless (via baltzakisthemis@gmail.com) |
 | Status | ✅ Active |
-| Origin | 75f644ea-4f45-4cb6-a992-6173dbc9ea93.cfargotunnel.com |
+| Origin | `e977a490-58c5-4fdb-9155-86832e3e636a.cfargotunnel.com` |
 | Egress Location | EU (sof01, vie02) |
 | DNS Access | Enabled (Tailscale DNS integration) |
 
@@ -180,64 +191,54 @@ Cloudflare Tunnel (formerly Argo Tunnel) provides a secure, outbound-only connec
 
 The tunnel uses a credentials file stored on the Pi:
 
-**File:** `/root/.cloudflared/75f644ea-4f45-4cb6-a992-6173dbc9ea93.json`
+**File:** `/etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json`
 
 ⚠️ **SECURITY**: This file is:
-
-- Private to root user (600 permissions)
+- Private to root user (644 permissions — fixed 2026-07-20)
 - NOT committed to git
 - Rotated automatically by Cloudflare
 - Contains certificate for Pi → Cloudflare connection
 
 ### Tunnel Configuration File
 
-**Location:** `/home/tbaltzakis/.cloudflared/config.yml`
+**Location:** `/etc/cloudflared/config.yml` (on omv-main Pi at 192.168.1.128)
+
+The canonical configuration is maintained in the repo at:
+`infrastructure/cloudflare-tunnels/cloudflared-config.yml`
+
+Key ingress rules (excerpt):
 
 ```yaml
-tunnel: 75f644ea-4f45-4cb6-a992-6173dbc9ea93
-credentials-file: /root/.cloudflared/75f644ea-4f45-4cb6-a992-6173dbc9ea93.json
+tunnel: e977a490-58c5-4fdb-9155-86832e3e636a
+credentials-file: /etc/cloudflared/e977a490-58c5-4fdb-9155-86832e3e636a.json
 
 ingress:
+  # Main app — Worker handles apex; tunnel serves pi-origin
+  - hostname: pi-origin.cloudless.gr
+    service: http://192.168.1.128:30300
+    originRequest:
+      connectTimeout: 30s
+      httpHostHeader: pi-origin.cloudless.gr
+
   # OMV UI & Services
   - hostname: omv.cloudless.gr
-    service: http://127.0.0.1:80
+    service: http://localhost:80
     originRequest:
-      noTLSVerify: true
+      connectTimeout: 15s
+      httpHostHeader: omv.cloudless.gr
 
-  # Documentation Server (k3s)
-  - hostname: docs.cloudless.gr
-    service: http://127.0.0.1:30901
-    originRequest:
-      noTLSVerify: true
-
-  # FTP Web Interface
-  - hostname: ftp.cloudless.gr
-    service: http://127.0.0.1:80
-    originRequest:
-      noTLSVerify: true
-
-  # Meilisearch Search Engine
-  - hostname: meili.cloudless.gr
-    service: http://127.0.0.1:30902
+  # Grafana monitoring
+  - hostname: grafana.cloudless.gr
+    service: http://192.168.1.128:30850
     originRequest:
       noTLSVerify: true
       connectTimeout: 15s
+      tcpKeepAlive: 30s
 
-  # TFTP (UDP) - Returns 404 via HTTP tunnel
-  - hostname: tftp.cloudless.gr
-    service: http_status:404
-
-  # API Gateway (fallback)
-  - hostname: api.cloudless.gr
-    service: http://127.0.0.1:80
-    originRequest:
-      noTLSVerify: true
+  # ... (see full config in infrastructure/cloudflare-tunnels/ingress-rules.yaml)
 
   # Default fallback
   - service: http_status:404
-
-loglevel: info
-logfile: /var/log/cloudflared/tunnel.log
 ```
 
 ### Tunnel Management
@@ -252,7 +253,7 @@ ssh tbaltzakis@192.168.1.128
 sudo journalctl -u cloudflared -f
 
 # Verify tunnel is connected
-cloudflared tunnel info 75f644ea-4f45-4cb6-a992-6173dbc9ea93
+cloudflared tunnel info e977a490-58c5-4fdb-9155-86832e3e636a
 
 # List active tunnel connections
 curl -s http://localhost:7844/metrics | grep tunnel
@@ -279,7 +280,7 @@ The credentials auto-rotate, but to manually re-generate:
 
 ```bash
 # On local machine with Cloudflare CLI access
-cloudflared tunnel token 75f644ea-4f45-4cb6-a992-6173dbc9ea93
+cloudflared tunnel token e977a490-58c5-4fdb-9155-86832e3e636a
 
 # Copy output to Pi credentials file
 ```
@@ -290,94 +291,129 @@ Each ingress rule maps a hostname to an origin service:
 
 | Hostname | Service | Port | Notes |
 |----------|---------|------|-------|
+| pi-origin.cloudless.gr | cloudless-app (NodePort) | 30300 | Direct Tunnel origin for Worker proxy |
 | omv.cloudless.gr | OMV Web UI | 80 | ProFTPD + TFTP management |
-| docs.cloudless.gr | k3s docs service | 30901 | Returns 301 redirects to GitHub wiki |
+| docs.cloudless.gr | k3s docs service | 30901 | Documentation portal |
 | ftp.cloudless.gr | FTP Web UI | 80 | Same as OMV |
 | meili.cloudless.gr | Meilisearch search engine | 30902 | Runs on omv-main (120GB SSD) |
 | tftp.cloudless.gr | N/A | 404 | UDP not supported via HTTP tunnel |
 | api.cloudless.gr | API Gateway | 80 | Fallback service |
+| grafana.cloudless.gr | Grafana | 30850 | Monitoring dashboard |
+| kuma.cloudless.gr | Uptime Kuma | 32501 | Uptime monitoring |
+| n8n.cloudless.gr | n8n | 30900 | Workflow automation |
+| ntfy.cloudless.gr | ntfy | 30080 | Notification service |
+| espocrm.cloudless.gr | EspoCRM | 30700 | CRM system |
+| postiz.cloudless.gr | Postiz | 30500 | Social publishing |
+| appflowy.cloudless.gr | AppFlowy | 30810 | CMS |
+| logs.cloudless.gr | ESP32 alert API | 30820 | Alert API (WebSocket) |
+| agent.cloudless.gr | Agent API | 30924 | Agent API |
+| vibe.cloudless.gr | Vibe agent | 30301 | Vibe agent |
 
 ---
 
-## Cloudflare Workers & Failover
+## Cloudflare Workers
 
-### Worker: cloudless-failover
+### Worker 1: cloudless2 (pi-origin-proxy)
 
-The `cloudless-failover` Worker implements intelligent failover between the Pi origin and AWS Lambda.
+**Purpose:** Free-tier origin proxy that forwards all traffic from `cloudless.gr`, `www.cloudless.gr`, and `manage.cloudless.gr` to the Pi via Tunnel.
 
-#### Worker Purpose
+**Configuration** (`workers/pi-origin-proxy/wrangler.jsonc`):
 
-1. **Route requests** to Pi origin (Tunnel)
-2. **Check response status** - if < 400, serve directly
-3. **Fallback to AWS** - if >= 400 or timeout
-4. **Add response headers** - `x-served-by: pi-origin` or `aws-fallback`
+| Property | Value |
+|----------|-------|
+| Worker Name | cloudless2 |
+| Type | HTTP Handler |
+| Routes | `cloudless.gr`, `www.cloudless.gr`, `manage.cloudless.gr` |
+| Plan | Free |
+| Environment Variables | `PI_ORIGIN_HOST` = `pi-origin.cloudless.gr`, `PI_TIMEOUT_MS` = `30000` |
+| Size | <50 KiB (stays under Free tier 3 MiB gzip limit) |
 
-#### Worker Configuration
+**Traffic Flow:**
+```
+User → Cloudflare → cloudless2 (Worker, <50 KiB)
+  → https://pi-origin.cloudless.gr
+    → Tunnel → omv:30300 → cloudless-app
+```
+
+**Key Features:**
+- Idempotent methods (GET/HEAD/OPTIONS) retry once on network failure or upstream 502
+- Sets `x-served-by: pi-tunnel-proxy` or `pi-tunnel-proxy-error` headers
+- GitHub Actions crons bypass this Worker by calling `pi-origin.cloudless.gr` directly
+
+**Deployment:**
+```bash
+npx wrangler deploy --config workers/pi-origin-proxy/wrangler.jsonc --minify
+```
+
+### Worker 2: cloudless-failover
+
+**Purpose:** Paid-tier Worker implementing request-level HA failover between AWS CloudFront (primary) and Pi origin (standby).
+
+**Configuration** (`workers/cloudless-failover/wrangler.toml`):
 
 | Property | Value |
 |----------|-------|
 | Worker Name | cloudless-failover |
 | Type | HTTP Handler |
-| Routes | cloudless.gr/* |
-| Environment Variables | `AWS_FALLBACK_HOST` = d3k7muo3c6lw6s.cloudfront.net |
-| Timeout | 10 seconds |
-| CPU Time | ✅ Unlimited (paid plan) |
+| Routes | `cloudless.gr/*`, `www.cloudless.gr/*` |
+| Environment Variables | `AWS_FALLBACK_HOST` = `d3k7muo3c6lw6s.cloudfront.net`, `PI_ORIGIN_HOST` = `pi-origin.cloudless.gr`, `PI_TIMEOUT_MS` = `10000` |
 
-#### Failover Logic (Pseudocode)
+**Failover Logic:**
 
 ```javascript
 async function handleRequest(request) {
-  const piOrigin = 'pi-origin.cloudless.gr';
-  const awsFallback = env.AWS_FALLBACK_HOST; // d3k7muo3c6lw6s.cloudfront.net
-  const timeout = 10000; // 10 seconds
-  
-  try {
-    // Try Pi first
-    const piResponse = await fetchWithTimeout(
-      `https://${piOrigin}${request.url.pathname}`,
-      timeout
-    );
-    
-    // If Pi returned < 400, serve it
-    if (piResponse.status < 400) {
-      piResponse.headers.set('x-served-by', 'pi-origin');
-      return piResponse;
-    }
-    
-    // Pi returned 4xx/5xx, fall through to AWS
-  } catch (error) {
-    // Timeout or connection error, fall through to AWS
-    console.log('Pi origin failed:', error.message);
+  const url = new URL(request.url);
+  const requestBody = hasBody(request.method) ? await request.arrayBuffer() : null;
+
+  // --- Attempt 1: AWS CloudFront (primary) ---
+  const awsResponse = await fetchOrigin(request, url, env.AWS_FALLBACK_HOST, requestBody, 30000);
+
+  if (awsResponse && awsResponse.status < 400) {
+    return tagResponse(awsResponse, "aws-primary");
   }
-  
-  // AWS Fallback
-  const awsResponse = await fetch(
-    `https://${awsFallback}${request.url.pathname}`
-  );
-  awsResponse.headers.set('x-served-by', 'aws-fallback');
-  return awsResponse;
+
+  // --- Attempt 2: Pi standby ---
+  const piTimeout = parseInt(env.PI_TIMEOUT_MS || "10000", 10);
+  const piResponse = await fetchOrigin(request, url, env.PI_ORIGIN_HOST, requestBody, piTimeout);
+
+  if (piResponse && piResponse.status < 400) {
+    return tagResponse(piResponse, "pi-standby");
+  }
+
+  // Serve the best available response
+  if (awsResponse) return tagResponse(awsResponse, "aws-primary");
+  if (piResponse) return tagResponse(piResponse, "pi-standby");
+
+  return new Response("Service unavailable — both origins failed", {
+    status: 503,
+    headers: { "x-served-by": "cloudless-failover-error" },
+  });
 }
 ```
 
-#### Deployment
+**Key Features:**
+- All HTTP methods fail over (body is buffered and replayed on retry)
+- AWS has 30s timeout, Pi has 10s timeout (configurable)
+- Returns real error responses (4xx/5xx) rather than generic 503 when possible
+- Sets `x-served-by: aws-primary` or `pi-standby` headers
 
+**Deployment:**
 ```bash
-# Publish worker changes (via Wrangler CLI)
-npm install -D wrangler
-wrangler publish src/worker.ts
-
-# Or via dashboard: Cloudflare → Workers → cloudless-failover → Edit
+cd workers/cloudless-failover
+npx wrangler deploy
 ```
 
-#### Monitoring Worker
+### Worker 3: Analytics Engine (index-analytics.ts)
 
-```bash
-# View worker analytics
-cloudflare-cli analytics worker cloudless-failover --period 24h
+**Purpose:** Handles analytics data export to parquet format in R2.
 
-# Check error rate
-# In Cloudflare Dashboard: cloudless.gr → Workers → cloudless-failover → Analytics
-```
+**Configuration** (`workers/wrangler.json`):
+
+| Property | Value |
+|----------|-------|
+| Worker Name | cloudless-analytics |
+| Routes | `/api/analytics/export`, `/api/analytics/query`, `/api/analytics/rollup` |
+| Bindings | `ANALYTICS` (Analytics Engine dataset), `DATALAKE_BUCKET` (R2), `ANALYTICS_BUCKET` (R2) |
 
 ---
 
@@ -410,7 +446,7 @@ Custom rulesets require **Zone → Firewall Services** on `CLOUDFLARE_API_TOKEN`
 Without that scope, `GET /zones/:id/rulesets` returns Authentication error
 (token is valid for Zone Settings/DNS/Workers but not Firewall). Rotate via
 `skills/cloudflare-token-doctor/SKILL.md` Stage 1 (Firewall Services: Edit
-is now in the mint table).
+is now included in the recommended token permissions).
 
 Until the token is rotated, manage rules in the dashboard
 (Security → WAF) or after Stage 1+2 of the token doctor.
@@ -435,18 +471,18 @@ Until the token is rotated, manage rules in the dashboard
 |----------|-------|
 | Token Name | cloudless2 |
 | Type | User API Token |
-| Prefix | cfut_(vs cfat_ for API keys) |
-| Permissions | Zone.Zone:Read + Zone.DNS:Edit |
+| Prefix | cfut_ (vs cfat_ for API keys) |
+| Permissions | Zone.Zone:Read + Zone.DNS:Edit + Zone.SSL:Edit |
 | Scopes | cloudless.gr zone only |
 | Status | ✅ Active |
-| Storage | AWS SSM `/cloudless/production/CLOUDFLARE_API_TOKEN` |
+| Storage | GitHub Secret `CLOUDFLARE_API_TOKEN` |
 | Rotation Policy | Annual or on compromise |
 
 ### Token Verification
 
 ```bash
 # Test token validity
-TOKEN=$(aws ssm get-parameter --name /cloudless/production/CLOUDFLARE_API_TOKEN --query 'Parameter.Value' --output text)
+TOKEN=$(gh secret view CLOUDFLARE_API_TOKEN --repo Themis128/cloudless.gr --json -t - | jq -r .value)
 
 curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
   -H "Authorization: Bearer $TOKEN" \
@@ -463,6 +499,9 @@ curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
 | Zone.Zone:Read | cloudless.gr | Read zone settings |
 | Zone.DNS:Edit | cloudless.gr | Modify DNS records |
 | Zone.SSL:Edit | cloudless.gr | Manage SSL/TLS |
+| Zone.Zone:Edit | cloudless.gr | (Recommended) Zone-level operations |
+| Zone.Firewall Services:Edit | cloudless.gr | (Recommended) Manage WAF rulesets |
+| Zone.Load Balancing:Edit | cloudless.gr | (Optional) If using Load Balancer |
 
 ### Creating New Token
 
@@ -470,19 +509,21 @@ curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
 2. Go to My Profile → API Tokens
 3. Click "Create Token"
 4. Choose "Custom Token" (not "API Key")
-5. Grant permissions: `Zone.Zone:Read`, `Zone.DNS:Edit`
-6. Specify zone: cloudless.gr
-7. Click "Create Token"
-8. Copy token immediately (not shown again)
-9. Store in AWS SSM: `/cloudless/production/CLOUDFLARE_API_TOKEN`
+5. Grant permissions: `Zone.Zone:Read`, `Zone.DNS:Edit`, `Zone.SSL:Edit`
+6. (Recommended) Add `Zone.Firewall Services:Edit` for WAF management
+7. Specify zone: cloudless.gr
+8. Click "Create Token"
+9. Copy token immediately (not shown again)
+10. Store as GitHub Secret: `gh secret set CLOUDFLARE_API_TOKEN --repo Themis128/cloudless.gr`
 
 ### Token Rotation Checklist
 
 When rotating (e.g., quarterly):
 
 - [ ] Create new token in Cloudflare Dashboard
-- [ ] Test new token with API call
-- [ ] Update `/cloudless/production/CLOUDFLARE_API_TOKEN` in AWS SSM
+- [ ] Test new token with `scripts/cf-token-smoketest.sh`
+- [ ] Update `CLOUDFLARE_API_TOKEN` GitHub Secret
+- [ ] Update cloud session secret (for MCP tools)
 - [ ] Test terraform/CLI tools still work
 - [ ] Wait 24 hours before deleting old token
 - [ ] Delete old token in Cloudflare Dashboard
@@ -527,7 +568,6 @@ When rotating (e.g., quarterly):
 **Cloudflare Analytics:** cloudless.gr → Analytics
 
 Displays:
-
 - Requests over time
 - Cache performance
 - Bandwidth usage
@@ -558,7 +598,7 @@ sudo systemctl status cloudflared
 sudo journalctl -u cloudflared -n 50
 
 # Verify credentials file exists
-ls -la /root/.cloudflared/75f644ea-*.json
+ls -la /etc/cloudflared/e977a490-*.json
 ```
 
 **Solutions:**
@@ -582,16 +622,56 @@ ls -la /root/.cloudflared/75f644ea-*.json
 3. **Regenerate credentials (if corrupted):**
 
    ```bash
-   sudo rm /root/.cloudflared/75f644ea-*.json
+   sudo rm /etc/cloudflared/e977a490-*.json
    cloudflared tunnel login
    sudo systemctl restart cloudflared
+   ```
+
+### Issue: cloudless.gr Returns 502 via Worker
+
+**Symptoms:**
+
+- Worker returns 502 even though Tunnel is active
+- `x-served-by: pi-tunnel-proxy-error` header present
+
+**Root Causes:**
+
+- Pi origin (NodePort 30300) not responding
+- cloudless-app pod not running on omv node
+- Network connectivity issues between Worker and Tunnel
+
+**Diagnosis:**
+
+```bash
+# SSH to Pi
+ssh tbaltzakis@192.168.1.128
+
+# Check cloudless-app pod
+kubectl get pods -n cloudless | grep cloudless
+kubectl get svc cloudless-service -n cloudless -o wide
+
+# Test NodePort directly (bypass Tunnel)
+curl -I http://192.168.1.128:30300/api/health
+```
+
+**Solutions:**
+
+1. **Restart cloudless-app deployment:**
+   ```bash
+   kubectl rollout restart deployment/cloudless-app -n cloudless
+   ```
+
+2. **Check Pi resources:**
+   ```bash
+   free -h
+   df -h
    ```
 
 ### Issue: docs.cloudless.gr Returns 502 Bad Gateway
 
 **Symptoms:**
 
-- Other services (omv, ftp) return 200
+- Other services (omv, n8n) return 200
 - Only docs.cloudless.gr returns 502
 - Tunnel logs show no connection errors
 
@@ -610,9 +690,6 @@ ssh tbaltzakis@192.168.1.128
 # Check k3s service
 kubectl get svc docs-service -o wide -n cloudless
 
-# Expected output: docs-service NodePort 10.43.xxx.xxx:80/TCP
-# Note: Port changed from 30900 to 30901 on 2026-07-05
-
 # Check if pod is running
 kubectl get pods -n cloudless | grep docs
 
@@ -620,27 +697,23 @@ kubectl get pods -n cloudless | grep docs
 kubectl describe pod docs-server-* -n cloudless
 
 # Test connectivity directly from Pi
-curl http://127.0.0.1:30901 -v
+curl http://192.168.1.128:30901 -v
 ```
 
 **Solutions:**
 
 1. **Update tunnel config to correct port:**
-
    ```bash
-   sudo nano /home/tbaltzakis/.cloudflared/config.yml
-   # Change service port from 30900 to 30901
+   sudo nano /etc/cloudflared/config.yml
    sudo systemctl restart cloudflared
    ```
 
 2. **Restart the docs pod:**
-
    ```bash
    kubectl rollout restart deployment/docs-server -n cloudless
    ```
 
 3. **Check pod logs:**
-
    ```bash
    kubectl logs -f deployment/docs-server -n cloudless
    ```
@@ -668,7 +741,7 @@ kubectl get pods -n meilisearch
 kubectl get svc meilisearch -n meilisearch
 
 # Test local connectivity
-curl http://127.0.0.1:30902 -v
+curl http://192.168.1.128:30902 -v
 ```
 
 ### Issue: "cert not yet valid" Error
@@ -692,6 +765,20 @@ sudo timedatectl
 sudo systemctl restart cloudflared
 ```
 
+### Issue: Bot Fight Mode Interstitial on API Calls
+
+**Symptoms:**
+
+- GitHub Actions or cron jobs receive 403 "Just a moment..." interstitial
+- Direct curl works fine
+
+**Solution:**
+
+Bot Fight Mode is intentionally kept OFF on the Free plan. If it gets enabled:
+1. Cloudflare Dashboard → cloudless.gr → Security → Bots
+2. Set "Bot Fight Mode" to OFF
+3. For cron workflows, use `pi-origin.cloudless.gr` directly instead of `cloudless.gr`
+
 ---
 
 ## Runbooks
@@ -703,7 +790,7 @@ sudo systemctl restart cloudflared
 ```bash
 # 1. Check tunnel status
 curl -s https://omv.cloudless.gr -I | head -1
-curl -s https://ftp.cloudless.gr -I | head -1
+curl -s https://docs.cloudless.gr -I | head -1
 curl -s https://meili.cloudless.gr -I | head -1
 
 # 2. Check for errors in logs
@@ -801,9 +888,12 @@ dig omv.cloudless.gr +short
 | 2026-07-04 | Kiro CLI | Initial comprehensive documentation |
 | 2026-07-05 | tbaltzakis | Fixed docs.cloudless.gr port (30900 → 30901), updated DNS status table |
 | 2026-07-06 | Cline | Updated meili.cloudless.gr to omv-main (127.0.0.1), removed omv-ha nodeSelector |
+| 2026-07-20 | Cline | Fixed tunnel credentials permissions (400 → 644), updated tunnel ID |
+| 2026-07-26 | Cline | Updated DNS records with all active services, added Worker architecture |
+| 2026-07-31 | Cline | Comprehensive update: corrected tunnel ID, added missing DNS records, documented both Workers, updated token storage to GitHub Secrets |
 
 ---
 
 **Status:** ✅ Production Ready  
-**Last Reviewed:** 2026-07-06  
-**Next Review:** 2026-08-04 (monthly)
+**Last Reviewed:** 2026-07-31  
+**Next Review:** 2026-08-31 (monthly)
