@@ -117,7 +117,12 @@ async function deleteProductsIndexIfExists(): Promise<void> {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
 
-    if (!message.includes("404") && !message.includes("index_not_found")) {
+    // Meili may say "Index `products` not found" without code index_not_found.
+    if (
+      !message.includes("404") &&
+      !message.includes("index_not_found") &&
+      !message.toLowerCase().includes("not found")
+    ) {
       throw err;
     }
   }
