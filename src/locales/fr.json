@@ -296,7 +296,7 @@
     "dataUseTitle": "5. Utilisation des Données",
     "dataUse": "Nous utilisons vos données pour : répondre à vos demandes, traiter les commandes, envoyer la newsletter, améliorer nos services, respecter la loi et assurer la sécurité.",
     "dataSharingTitle": "6. Partage des Données",
-    "dataSharing": "Nous partageons les données uniquement avec : Stripe (paiements), Amazon Web Services (hébergement, email) et AWS Cognito (authentification). Nous ne vendons pas vos données.",
+    "dataSharing": "Nous partageons les données uniquement avec : Stripe (paiements), Amazon Web Services (hébergement, email) et Cloudflare (authentification de compte D1 et livraison edge). Nous ne vendons pas vos données.",
     "dataTransfersTitle": "7. Transferts Internationaux",
     "dataTransfers": "Certains sous-traitants sont aux États-Unis. Les transferts sont protégés par le EU-US Data Privacy Framework et les Clauses Contractuelles Types.",
     "retentionTitle": "8. Conservation des Données",

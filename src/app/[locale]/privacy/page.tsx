@@ -156,7 +156,7 @@ export default async function PrivacyPolicyPage() {
                 <p>
                   {t(
                     "legal.dataSharing",
-                    "We share data only with processors that are necessary to deliver our services: Stripe (payment processing, US — EU-US Data Privacy Framework certified), and Amazon Web Services (hosting, email via SES, and authentication via Amazon Cognito — EU region). We do not sell your personal data. Each third-party processor is bound by a Data Processing Agreement (DPA) and processes data only on our instructions."
+                    "We share data only with processors that are necessary to deliver our services: Stripe (payment processing, US — EU-US Data Privacy Framework certified), Amazon Web Services (hosting and email via SES, EU region), and Cloudflare (D1 account authentication and edge delivery). We do not sell your personal data. Each third-party processor is bound by a Data Processing Agreement (DPA) and processes data only on our instructions."
                   )}
                 </p>
               </Section>

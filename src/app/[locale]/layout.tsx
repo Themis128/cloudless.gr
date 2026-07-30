@@ -6,7 +6,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
-import NextAuthProvider from "@/components/NextAuthProvider";
 import JsonLd from "@/components/JsonLd";
 import { getOrganizationSchema } from "@/lib/structured-data";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
@@ -84,29 +83,27 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <NextAuthProvider>
-        <AuthProvider>
-          <CartProvider>
-            <CookieConsentProvider>
-              <GoogleAnalyticsConsent />
-              {META_PIXEL_ID && <ConsentGatedPixel pixelId={META_PIXEL_ID} />}
-              {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
-              <AttributionCapture />
-              <JsonLd data={getOrganizationSchema()} />
-              <Navbar />
-              <main id="main-content" className="flex-1">
-                {children}
-              </main>
-              <Footer />
-              <ClientCartSlideOver />
-              <ServiceWorkerRegistration />
-              <ClientDecorators />
-              <CookieConsent />
-              <ClientChatWidget />
-            </CookieConsentProvider>
-          </CartProvider>
-        </AuthProvider>
-      </NextAuthProvider>
+      <AuthProvider>
+        <CartProvider>
+          <CookieConsentProvider>
+            <GoogleAnalyticsConsent />
+            {META_PIXEL_ID && <ConsentGatedPixel pixelId={META_PIXEL_ID} />}
+            {LINKEDIN_PARTNER_ID && <LinkedInInsightTag />}
+            <AttributionCapture />
+            <JsonLd data={getOrganizationSchema()} />
+            <Navbar />
+            <main id="main-content" className="flex-1">
+              {children}
+            </main>
+            <Footer />
+            <ClientCartSlideOver />
+            <ServiceWorkerRegistration />
+            <ClientDecorators />
+            <CookieConsent />
+            <ClientChatWidget />
+          </CookieConsentProvider>
+        </CartProvider>
+      </AuthProvider>
     </NextIntlClientProvider>
   );
 }

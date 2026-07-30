@@ -8,9 +8,6 @@ import { useAuth } from "@/context/AuthContext";
 import { translate, type Locale, isSupportedLocale } from "@/lib/i18n";
 import { useCurrentLocale } from "@/lib/use-locale";
 
-const AUTH_PROVIDER = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-const USE_COGNITO = AUTH_PROVIDER === "cognito";
-
 /**
  * Returns true when `path` is a safe same-origin internal path that the
  * router can push to. Defeats open-redirect attempts via:
@@ -23,9 +20,7 @@ const USE_COGNITO = AUTH_PROVIDER === "cognito";
 function isSafeRedirectPath(path: string | null | undefined): path is string {
   if (typeof path !== "string" || path.length === 0 || path.length > 2048) return false;
   if (!path.startsWith("/")) return false;
-  // Defang protocol-relative URLs ("//evil") and Chrome's backslash variant.
   if (path.startsWith("//") || path.startsWith("/\\")) return false;
-  // Defang header-injection / control codepoints (\r, \n, \0, space, DEL).
   if (/[\x00-\x20\x7F]/.test(path)) return false;
   return true;
 }
@@ -48,7 +43,6 @@ function LoginContent() {
   const { user, isAdmin, isLoading, signIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  // ?next= (preferred) or ?redirect= (legacy / AdminLayoutClient compat)
   const nextParam = searchParams.get("next") ?? searchParams.get("redirect");
   const activated = searchParams.get("activated") === "1";
   const [error, setError] = useState("");
@@ -71,15 +65,11 @@ function LoginContent() {
     setError("");
     setSubmitting(true);
     try {
-      if (USE_COGNITO) {
-        await signIn("", "");
-      } else {
-        if (!email.trim() || !password) {
-          setError(t("auth.emailPasswordRequired", "Email and password are required"));
-          return;
-        }
-        await signIn(email.trim(), password);
+      if (!email.trim() || !password) {
+        setError(t("auth.emailPasswordRequired", "Email and password are required"));
+        return;
       }
+      await signIn(email.trim(), password);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -101,9 +91,7 @@ function LoginContent() {
         <div className="mb-8 text-center">
           <div className="bg-neon-cyan/10 border-neon-cyan/20 mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="bg-neon-cyan h-2 w-2 animate-pulse rounded-full" />
-            <span className="text-neon-cyan font-mono text-xs">
-              {USE_COGNITO ? "SECURE_AUTH" : "D1_AUTH"}
-            </span>
+            <span className="text-neon-cyan font-mono text-xs">D1_AUTH</span>
           </div>
           <h1 className="font-heading text-3xl font-bold text-white">
             {t("auth.login", "Sign In")}
@@ -126,56 +114,48 @@ function LoginContent() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
-            {!USE_COGNITO && (
-              <>
-                <div>
-                  <label htmlFor="email" className="mb-2 block font-mono text-xs text-slate-400">
-                    {t("auth.email", "Email")}
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="password" className="mb-2 block font-mono text-xs text-slate-400">
-                    {t("auth.password", "Password")}
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
-                  />
-                </div>
-                <p className="text-right">
-                  <Link
-                    href="/auth/reset-password"
-                    className="hover:text-neon-cyan font-mono text-xs text-slate-500"
-                  >
-                    {t("auth.forgotPassword", "Forgot Password?")}
-                  </Link>
-                </p>
-              </>
-            )}
+            <div>
+              <label htmlFor="email" className="mb-2 block font-mono text-xs text-slate-400">
+                {t("auth.email", "Email")}
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="mb-2 block font-mono text-xs text-slate-400">
+                {t("auth.password", "Password")}
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-void focus:border-neon-cyan/50 min-h-[44px] w-full rounded-lg border border-slate-800 px-4 py-2.5 font-mono text-sm text-white focus:outline-none"
+              />
+            </div>
+            <p className="text-right">
+              <Link
+                href="/auth/reset-password"
+                className="hover:text-neon-cyan font-mono text-xs text-slate-500"
+              >
+                {t("auth.forgotPassword", "Forgot Password?")}
+              </Link>
+            </p>
             <button
               type="submit"
               disabled={submitting}
               className="bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 min-h-[44px] w-full rounded-lg border py-3 font-mono font-semibold transition-all hover:shadow-[0_0_15px_rgba(0,255,245,0.2)] disabled:opacity-50"
             >
-              {submitting
-                ? t("auth.signingIn", "Signing In...")
-                : USE_COGNITO
-                  ? t("auth.continueWithCognito", "Continue with AWS")
-                  : t("auth.login", "Sign In")}
+              {submitting ? t("auth.signingIn", "Signing In...") : t("auth.login", "Sign In")}
             </button>
           </form>
 

@@ -14,7 +14,6 @@ import {
   resetSlackConfigCache,
 } from "@/lib/integrations";
 import { resetSsmCache } from "@/lib/ssm-config";
-import { resetJwksCache } from "@/lib/api-auth";
 
 // ── Notion ────────────────────────────────────────────────────────────────────
 process.env.NOTION_API_KEY = "secret_test_key_12345";
@@ -88,7 +87,6 @@ process.env.COGNITO_CLIENT_SECRET = "test-client-secret";
 
 // ── next-auth ─────────────────────────────────────────────────────────────────
 process.env.AUTH_SECRET = "test-auth-secret-32-chars-padded!!";
-process.env.SESSION_TOKEN_STORE_TABLE = "test-session-token-store";
 
 // ── Cache resets ──────────────────────────────────────────────────────────────
 // Reset all in-memory caches before each test and restore env vars that tests
@@ -106,16 +104,11 @@ beforeEach(() => {
   process.env.NOTION_REPORTS_DB_ID = "reports-db-123";
   process.env.SLACK_SIGNING_SECRET = "test-signing-secret-32chars-padded";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_123";
-  // Clear COGNITO_ISSUER so api-auth.ts uses the decode-only fallback
-  // for fake-sig test tokens. Without this, CI (where COGNITO_ISSUER may be
-  // set as a GH secret) tries real JWKS verification and rejects them.
-  // Tests that need JWKS verification set the issuer explicitly.
   delete process.env.COGNITO_ISSUER;
   resetIntegrationCache();
   resetIntegrationCacheAsync();
   resetSlackConfigCache();
   resetSsmCache();
-  resetJwksCache();
 });
 
 afterEach(() => {

@@ -18,11 +18,7 @@ function ResetPasswordForm() {
     setError("");
     setSubmitting(true);
     try {
-      // Check if D1 auth is available (NEXT_PUBLIC_AUTH_PROVIDER = "d1")
-      const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER;
-      const endpoint = authProvider === "d1" ? "/api/auth/reset-password" : "/api/auth/register"; // Cognito fallback
-
-      const res = await globalThis.fetch(endpoint, {
+      const res = await globalThis.fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
