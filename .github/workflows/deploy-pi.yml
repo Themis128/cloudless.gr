@@ -3,6 +3,13 @@ name: Deploy to Pi (hostPath standalone — no ECR)
 # Cloudflare-first: build Next standalone on the Pi runner and sync into
 # /home/tbaltzakis/cloudless-standalone (k8s/cloudless-app-hostpath.yaml).
 # Does not use AWS ECR, OIDC, or SSM.
+#
+# Runner: exclusive [self-hosted, omv, build]. Do not put audits/CWV/ETL on
+# the `build` label — they starve this workflow (see docs/runners.md).
+#
+# Concurrency: serialize (cancel-in-progress: false + queue: max). Rapid main
+# merges used to abort mid-build ("Canceling since a higher priority waiting
+# request for deploy-pi exists") and leave hostPath on a stale SHA.
 
 on:
   push:
@@ -20,7 +27,8 @@ on:
 
 concurrency:
   group: deploy-pi
-  cancel-in-progress: true
+  cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
@@ -41,21 +49,52 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
+      - name: Skip if SHA already live
+        id: skip
+        run: |
+          set -euo pipefail
+          WANT="${{ github.sha }}"
+          LIVE=""
+          for candidate in http://127.0.0.1:30300/api/health http://192.168.1.128:30300/api/health; do
+            BODY=$(curl -sS --max-time 5 "$candidate" || true)
+            if echo "$BODY" | jq -e .version >/dev/null 2>&1; then
+              LIVE=$(echo "$BODY" | jq -r .version)
+              echo "health $candidate → version=${LIVE}"
+              break
+            fi
+            echo "health $candidate → unreachable or invalid"
+          done
+          if [ -n "$LIVE" ] && [ "$LIVE" = "$WANT" ]; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Deploy skipped"
+              echo "Live hostPath already serves \`${WANT}\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Already deployed ${WANT} — skipping build/rollout"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+            echo "Need deploy: live=${LIVE:-unknown} want=${WANT}"
+          fi
+
       - name: Setup Node
+        if: steps.skip.outputs.already != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
       - name: Enable corepack / pnpm
+        if: steps.skip.outputs.already != 'true'
         run: |
           corepack enable
           corepack prepare pnpm@latest --activate
           pnpm --version
 
       - name: Install dependencies
+        if: steps.skip.outputs.already != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build Next.js standalone
+        if: steps.skip.outputs.already != 'true'
         env:
           NEXT_OUTPUT_STANDALONE: "1"
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
@@ -72,6 +111,7 @@ jobs:
         run: pnpm build
 
       - name: Sync standalone → hostPath
+        if: steps.skip.outputs.already != 'true'
         run: |
           set -euo pipefail
           DEST="${{ env.STANDALONE_HOSTPATH }}"
@@ -96,6 +136,7 @@ jobs:
           echo "Synced standalone → ${DEST}"
 
       - name: Resolve kubectl
+        if: steps.skip.outputs.already != 'true'
         id: kubectl
         run: |
           set -euo pipefail
@@ -109,6 +150,7 @@ jobs:
           fi
 
       - name: Roll out cloudless-app
+        if: steps.skip.outputs.already != 'true'
         env:
           KUBECTL: ${{ steps.kubectl.outputs.bin }}
         run: |
