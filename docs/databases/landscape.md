@@ -11,6 +11,8 @@ Inventory detail: [omv-cluster.md](omv-cluster.md). Folder index: [README.md](RE
 4. **R2 is the off-box backup plane** — daily logical dumps for the primary RDBMS + n8n.
 5. **Developer access is mediated** — `kubectl port-forward` or snapshot pull; never tunnel DB ports through Cloudflare.
 
+Decision record: [ADR-001 — Mediated database access](ADR-001-mediated-db-access.md).
+
 ---
 
 ## 1. Logical landscape
@@ -51,7 +53,7 @@ flowchart TB
     MinIO["MinIO · AppFlowy blobs"]
     Meili["Meilisearch"]
     SQkuma["SQLite · Uptime Kuma"]
-    SQg["SQLite · Grafana emptyDir"]
+    SQg["SQLite · Grafana PVC"]
   end
 
   subgraph Platform["Platform"]
@@ -85,10 +87,10 @@ flowchart TB
 | Tier | Stores | Durability expectation |
 |------|--------|------------------------|
 | System of record | MariaDB, AppFlowy PG, Postiz PG, n8n SQLite, D1 | Daily R2 (cluster) or CF-managed (D1) |
-| Blob / object | MinIO | PVC; R2 backup **not yet** (R10b) |
+| Blob / object | MinIO | PVC + daily R2 mirror (`pvc-backups/appflowy-minio/`) |
 | Cache / queue | Redis ×2 | Ephemeral or AOF-local; rebuildable |
 | Search index | Meilisearch | Rebuildable from source |
-| Ops UI state | Kuma SQLite, Grafana SQLite | Kuma PVC; Grafana **lost on restart** |
+| Ops UI state | Kuma SQLite, Grafana SQLite | Kuma → daily R2; Grafana → PVC 2Gi |
 | Control plane | etcd, Prometheus, Loki | Separate platform backup story |
 
 ---
@@ -205,9 +207,10 @@ flowchart LR
   Worker["Workers / OpenNext"] --> AUTH["AUTH_DB binding"]
   AUTH --> D1[(user-auth-db · EU)]
   Preview["Preview env"] --> D1p[(auth-db-preview)]
-  Orphan[(cloudless-auth)] -.->|empty / unused| X[ ]
   Dev["pnpm db:d1:pull"] -->|export snapshot| Local[".local/db/*.sqlite"]
 ```
+
+Retired orphan D1 `cloudless-auth` — `pnpm d1:retire:cloudless-auth`.
 
 ### Embedded SQLite apps
 
@@ -215,10 +218,10 @@ flowchart LR
 flowchart LR
   N8N["n8n pod"] --> F1["/home/node/.n8n/database.sqlite"]
   Kuma["Uptime Kuma"] --> F2["/app/data/kuma.db"]
-  Graf["Grafana"] --> F3["grafana.db on emptyDir"]
+  Graf["Grafana"] --> F3["grafana.db on PVC"]
   F1 -->|sqlite3 .backup| R2[(R2)]
-  F2 -.->|R10c pending| R2
-  F3 -.->|disposable| Trash["lost on pod restart"]
+  F2 -->|sqlite3 .backup| R2
+  F3 -.->|PVC + ConfigMaps| Keep["survives restart"]
 ```
 
 ---
@@ -239,6 +242,10 @@ gantt
   pg_dump custom     :a3, 04:00, 15m
   section n8n
   sqlite3 .backup    :a4, 04:15, 15m
+  section AppFlowy MinIO
+  rclone sync        :a5, 04:30, 15m
+  section Uptime Kuma
+  sqlite3 .backup    :a6, 04:45, 15m
 ```
 
 | Store | Method | R2 prefix | Gap |
@@ -247,13 +254,14 @@ gantt
 | EspoCRM MariaDB | `mariadb-dump` | `pvc-backups/espocrm/daily/` | — |
 | Postiz Postgres | `pg_dump` | `pvc-backups/postiz/daily/` | — |
 | n8n SQLite | `sqlite3 .backup` | `pvc-backups/n8n/daily/` | — |
-| MinIO | — | — | **R10b** |
-| Uptime Kuma | — | — | **R10c** |
-| Meilisearch / Redis / Grafana | — | — | rebuild or accept loss |
+| AppFlowy MinIO | `rclone sync` | `pvc-backups/appflowy-minio/daily/` | — |
+| Uptime Kuma | `sqlite3 .backup` | `pvc-backups/uptime-kuma/daily/` | — |
+| Meilisearch / Redis | — | — | rebuild / accept loss (by design) |
+| Grafana | PVC 2Gi | — | dashboards also in-repo ConfigMaps |
 | D1 | Cloudflare Time Travel / export | — | use `wrangler d1` |
 
 **RPO (covered stores):** ~24h for logical dumps (tighter for AppFlowy if WAL-G continuous path is healthy).  
-**RTO:** restore dump into a new PVC + point Service; no automated multi-AZ DB failover (2-node k3s ≠ HA Postgres).
+**RTO:** restore dump into a new PVC + point Service. **Accepted:** 2-node k3s is not HA Postgres — warm restore from R2 is the DR story until a third Pi enables odd Raft quorum.
 
 ```mermaid
 flowchart TB
@@ -284,7 +292,7 @@ sequenceDiagram
   Dev->>ST: connect 127.0.0.1:13306|15432|15433
   ST->>Eng: query via forward
 
-  Note over Dev,ST: SQLite / D1: pull snapshot to .local/db then open file
+  Note over Dev,ST: SQLite / D1: pnpm db:refresh-snapshots then open .local/db
 ```
 
 | Local | Engine | Auth source |
@@ -292,7 +300,7 @@ sequenceDiagram
 | `:13306` | EspoCRM MariaDB | `espocrm-secrets` |
 | `:15432` | AppFlowy Postgres | `appflowy-secrets` |
 | `:15433` | Postiz Postgres | `postiz-secrets` |
-| `.local/db/*.sqlite` | n8n / Kuma / Grafana / D1 | file snapshot |
+| `.local/db/*.sqlite` | n8n / Kuma / Grafana / D1 | file snapshot (stale until refresh) |
 
 ---
 
@@ -321,7 +329,7 @@ flowchart TB
 | EspoCRM MariaDB | 4Gi | CRM volume |
 | Postiz Postgres | 2Gi | Moderate |
 | Postiz Redis | 512Mi | AOF |
-| Grafana | none | emptyDir — not durable |
+| Grafana | 2Gi PVC | Dashboards + prefs |
 
 ---
 
@@ -344,5 +352,6 @@ Do not expand AWS RDS / S3 backup paths for new work; R2 + existing CronJobs are
 
 - [omv-cluster.md](omv-cluster.md) — field-level inventory, ports, secrets
 - [README.md](README.md) — commands and SQLTools
+- [ADR-001](ADR-001-mediated-db-access.md) — mediated access decision
 - [../kubectl-tailscale.md](../kubectl-tailscale.md) — API access
 - [../../infrastructure/backup/README.md](../../infrastructure/backup/README.md) — CronJob details

@@ -1,0 +1,136 @@
+# R10b — AppFlowy MinIO daily mirror to Cloudflare R2
+#
+# rclone sync MinIO bucket `appflowy` → r2://datalake-bucket/pvc-backups/appflowy-minio/daily/<date>/
+# at 04:30 UTC. In-cluster MinIO S3 API (same NS as minio pods). No AWS CLI.
+#
+# DevOps notes:
+# - CronJob NS = workload NS (appflowy) so Service DNS + Secrets resolve locally
+# - Pod labels mirror CronJob labels → kubectl get pods -l app.kubernetes.io/name=pvc-backup -n appflowy
+# - ttlSecondsAfterFinished cleans finished Jobs after 24h
+# - Empty MinIO is success (writes .backup-ok.txt marker)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-backup-appflowy-minio
+  namespace: appflowy
+  labels:
+    app.kubernetes.io/name: pvc-backup
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: cloudless-backup
+    backup.cloudless.gr/target: appflowy-minio
+spec:
+  schedule: "30 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 7
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pvc-backup
+        app.kubernetes.io/component: backup
+        app.kubernetes.io/part-of: cloudless-backup
+        backup.cloudless.gr/target: appflowy-minio
+    spec:
+      ttlSecondsAfterFinished: 86400
+      activeDeadlineSeconds: 1800
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: pvc-backup
+            app.kubernetes.io/component: backup
+            app.kubernetes.io/part-of: cloudless-backup
+            backup.cloudless.gr/target: appflowy-minio
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              # Prebuilt rclone — no apk on every run
+              image: rclone/rclone:1.69.1
+              env:
+                - name: R2_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-r2
+                      key: ACCESS_KEY_ID
+                - name: R2_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: pvc-backup-r2
+                      key: SECRET_ACCESS_KEY
+                - name: R2_ENDPOINT
+                  value: "https://fb7dc7b69b662480cd5961a4d1913c78.r2.cloudflarestorage.com"
+                - name: R2_BUCKET
+                  value: "datalake-bucket"
+                - name: MINIO_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: appflowy-secrets
+                      key: APPFLOWY_S3_ACCESS_KEY
+                - name: MINIO_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: appflowy-secrets
+                      key: APPFLOWY_S3_SECRET_KEY
+                - name: MINIO_ENDPOINT
+                  value: "http://minio.appflowy.svc.cluster.local:9000"
+                - name: MINIO_BUCKET
+                  value: "appflowy"
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  DATE=$(date -u +%Y-%m-%dT%H%M%SZ)
+                  PREFIX="pvc-backups/appflowy-minio/daily/${DATE}"
+                  echo "→ mirroring minio://${MINIO_BUCKET} → r2://${R2_BUCKET}/${PREFIX}/"
+
+                  export RCLONE_CONFIG_MINIO_TYPE=s3
+                  export RCLONE_CONFIG_MINIO_PROVIDER=Minio
+                  export RCLONE_CONFIG_MINIO_ACCESS_KEY_ID="${MINIO_ACCESS_KEY}"
+                  export RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY="${MINIO_SECRET_KEY}"
+                  export RCLONE_CONFIG_MINIO_ENDPOINT="${MINIO_ENDPOINT}"
+                  export RCLONE_CONFIG_MINIO_REGION=us-east-1
+                  export RCLONE_CONFIG_MINIO_FORCE_PATH_STYLE=true
+                  export RCLONE_CONFIG_MINIO_NO_CHECK_BUCKET=true
+
+                  export RCLONE_CONFIG_R2_TYPE=s3
+                  export RCLONE_CONFIG_R2_PROVIDER=Cloudflare
+                  export RCLONE_CONFIG_R2_ACCESS_KEY_ID="${R2_ACCESS_KEY_ID}"
+                  export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY="${R2_SECRET_ACCESS_KEY}"
+                  export RCLONE_CONFIG_R2_ENDPOINT="${R2_ENDPOINT}"
+                  export RCLONE_CONFIG_R2_REGION=auto
+                  export RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
+
+                  rclone sync "minio:${MINIO_BUCKET}" "r2:${R2_BUCKET}/${PREFIX}" \
+                    --s3-no-check-bucket --fast-list
+
+                  MARKER=/tmp/backup-ok.txt
+                  OBJ_COUNT=$(rclone ls "minio:${MINIO_BUCKET}" 2>/dev/null | wc -l | tr -d ' ')
+                  {
+                    echo "ok $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                    echo "source=minio:${MINIO_BUCKET}"
+                    echo "objects=${OBJ_COUNT:-0}"
+                  } > "${MARKER}"
+                  rclone copyto "${MARKER}" "r2:${R2_BUCKET}/${PREFIX}/.backup-ok.txt" --s3-no-check-bucket
+                  REMOTE_COUNT=$(rclone ls "r2:${R2_BUCKET}/${PREFIX}" | wc -l | tr -d ' ')
+                  echo "OK mirrored objects=${OBJ_COUNT:-0}; remote entries under ${PREFIX}: ${REMOTE_COUNT}"
+                  if [ "${REMOTE_COUNT:-0}" -lt 1 ]; then
+                    echo "ERROR nothing landed in R2 — failing job for retry" >&2
+                    exit 1
+                  fi
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault

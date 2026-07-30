@@ -332,15 +332,6 @@
       "database": "${workspaceFolder}/.local/db/auth-db-preview.sqlite",
       "connectionTimeout": 30,
       "previewLimit": 50
-    },
-    {
-      "id": "cf-cloudless-auth",
-      "name": "cf · cloudless-auth (D1 snapshot)",
-      "group": "cloudflare-d1",
-      "driver": "SQLite",
-      "database": "${workspaceFolder}/.local/db/cloudless-auth.sqlite",
-      "connectionTimeout": 30,
-      "previewLimit": 50
     }
   ],
 

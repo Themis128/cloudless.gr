@@ -10,6 +10,7 @@ Passwords are **never** stored in these docs. Use `pnpm db:passwords` (k8s Secre
 |-----|----------------|
 | [landscape.md](landscape.md) | **Start here** — logical/physical diagrams, trust boundaries, backup RPO, per-product data planes |
 | [omv-cluster.md](omv-cluster.md) | Field inventory (engines, NS, PVCs, secrets, SQLTools ports, D1 IDs, backup schedule) |
+| [ADR-001-mediated-db-access.md](ADR-001-mediated-db-access.md) | **Accepted** — mediated SQLTools access; reject public DB TCP and ms-mssql |
 
 ## Landscape at a glance
 
@@ -48,10 +49,13 @@ pnpm db:forward:status
 pnpm db:passwords        # usernames + passwords from Secrets (do not commit)
 pnpm db:sqlite:pull      # n8n / Kuma / Grafana → .local/db/
 pnpm db:d1:pull          # Cloudflare D1 → .local/db/*.sqlite
+pnpm db:refresh-snapshots # sqlite + d1 (avoid stale SQLTools views)
 pnpm db:forward:stop
 ```
 
-After `pnpm db:ready`, open the **SQLTools** sidebar in Cursor (not SQL Server), connect a profile under `omv` / `omv-sqlite` / `cloudflare-d1`, and paste the matching password from `pnpm db:passwords` when prompted. Reload the Cursor window once if the 10 connections do not appear after pulling this branch.
+After `pnpm db:ready`, open the **SQLTools** sidebar in Cursor (not SQL Server), connect a profile under `omv` / `omv-sqlite` / `cloudflare-d1`, and paste the matching password from `pnpm db:passwords` when prompted. Reload the Cursor window once if connections do not appear after pulling this branch.
+
+Orphan D1 cleanup: `pnpm d1:retire:cloudless-auth` (dry-run) / `CONFIRM=1 pnpm d1:retire:cloudless-auth`.
 
 Scripts: `scripts/db-port-forward.sh`, `scripts/db-sqlite-pull.sh`, `scripts/db-d1-pull.sh`.  
 SQLTools config: `.vscode/settings.json` (`sqltools.connections`).  
