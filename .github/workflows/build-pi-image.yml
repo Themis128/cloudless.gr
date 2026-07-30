@@ -1,38 +1,16 @@
-name: build pi image
+name: build pi image (DEPRECATED — ECR retired)
 
-# Builds an arm64 image for the Pi HA standby and pushes it to ECR
-# (cloudless-pi-app in us-east-1). Triggered on every push to main and
-# on manual dispatch.
-#
-# Auth: OIDC role arn:aws:iam::278585680617:role/cloudless-github-actions
-# (trust restricted to repo Themis128/cloudless.gr).
+# DEPRECATED 2026-07-30 (AWS → Cloudflare cutover PR-10).
+# Live origin uses hostPath standalone via deploy-pi.yml (no ECR).
+# Kept as workflow_dispatch-only for emergency rollback; do not enable push triggers.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'next.config.ts'
-      - 'patches/**'
-      - 'Dockerfile'
-      - '.dockerignore'
-      - '.github/workflows/build-pi-image.yml'
   workflow_dispatch:
     inputs:
       target_sha:
-        description: "Optional commit SHA to build (used by HA sync orchestrator)"
+        description: "Optional commit SHA to build (emergency ECR rollback only)"
         required: false
         default: ""
-  pull_request:
-    branches: [main]
-    paths:
-      - 'Dockerfile'
-      - '.dockerignore'
-      - '.github/workflows/build-pi-image.yml'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

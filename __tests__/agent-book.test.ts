@@ -12,14 +12,10 @@ vi.mock("@/lib/google-calendar", () => ({
   getAvailableSlots: vi.fn(),
 }));
 
-vi.mock("@/lib/bedrock-shared", () => ({
-  BEDROCK_MODEL_ID: "model",
-  buildBedrockToolConfig: vi.fn(),
-  getBedrockClient: vi.fn(),
-}));
-
-vi.mock("@aws-sdk/client-bedrock-runtime", () => ({
-  ConverseCommand: vi.fn(),
+vi.mock("@/lib/workers-ai-client", () => ({
+  buildWorkersAiToolProtocol: () => "tools",
+  callWorkersAiChat: vi.fn(),
+  parseWorkersAiToolCall: vi.fn(),
 }));
 
 import { isAgentBookConfigured } from "@/lib/agent-book";

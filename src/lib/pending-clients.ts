@@ -1,18 +1,11 @@
 /**
- * Pending clients — clients who have signed up + selected a plan but
- * are waiting for an admin to review and provision their portal.
- *
- * Stored in SSM under /cloudless/PENDING_CLIENTS_JSON as a JSON array.
- * The admin approves a pending client which creates a ClientPortal
- * entry and links the portal token back here.
+ * Pending clients — signed up + selected a plan, awaiting admin review.
+ * Stored in D1 app_config key PENDING_CLIENTS_JSON (Cloudflare-first).
  */
 
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
+import { readJsonConfig, writeJsonConfig } from "@/lib/app-config-json";
 
-const SSM_KEY = "/cloudless/PENDING_CLIENTS_JSON";
-const REGION = process.env.AWS_REGION || "eu-central-1";
-
-const ssmClient = new SSMClient({ region: REGION });
+const CONFIG_KEY = "PENDING_CLIENTS_JSON";
 
 export type PendingStatus = "waiting" | "approved" | "declined";
 
@@ -36,29 +29,16 @@ export interface PendingClient {
 // PLAN_LABELS lives in the shared, dependency-free `./plans` module so
 // the client-side waiting room (which must not pull AWS SDK into the
 // browser bundle) and the server enroll route both consume the same map.
-// We import + re-export so callers of this file get the same name they
-// always did AND we can use it ourselves below.
 import { PLAN_LABELS } from "./plans";
 export { PLAN_LABELS };
 
 export async function readPendingClients(): Promise<PendingClient[]> {
-  try {
-    const res = await ssmClient.send(new GetParameterCommand({ Name: SSM_KEY }));
-    return JSON.parse(res.Parameter?.Value ?? "[]");
-  } catch {
-    return [];
-  }
+  const parsed = await readJsonConfig<unknown>(CONFIG_KEY, []);
+  return Array.isArray(parsed) ? (parsed as PendingClient[]) : [];
 }
 
 export async function writePendingClients(clients: PendingClient[]): Promise<void> {
-  await ssmClient.send(
-    new PutParameterCommand({
-      Name: SSM_KEY,
-      Value: JSON.stringify(clients),
-      Type: "String",
-      Overwrite: true,
-    })
-  );
+  await writeJsonConfig(CONFIG_KEY, clients, "Pending client enrollments");
 }
 
 /**

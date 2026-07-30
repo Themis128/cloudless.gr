@@ -1,61 +1,65 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const mockSend = vi.fn();
-const mockGetConfig = vi.fn();
+const mockRun = vi.fn();
+const mockBind = vi.fn(() => ({ run: mockRun }));
+const mockPrepare = vi.fn(() => ({ bind: mockBind }));
 
-vi.mock("@aws-sdk/client-sesv2", () => ({
-  // Must be a proper function (not arrow) so it can be called with `new`
-  SESv2Client: vi.fn(function (this: { send: typeof mockSend }) {
-    this.send = mockSend;
-  }),
-  PutSuppressedDestinationCommand: vi.fn(function (this: { input: unknown }, input: unknown) {
-    this.input = input;
-  }),
-}));
+const mockDb = {
+  prepare: mockPrepare,
+};
 
-vi.mock("@/lib/ssm-config", () => ({
-  getConfig: () => mockGetConfig(),
-  resetSsmCache: vi.fn(),
-}));
+interface WorkersGlobal {
+  __AUTH_DB__?: typeof mockDb;
+}
 
-describe("ses-suppression.ts", () => {
+function bindMockDb(): void {
+  (globalThis as WorkersGlobal).__AUTH_DB__ = mockDb;
+}
+
+function clearMockDb(): void {
+  delete (globalThis as WorkersGlobal).__AUTH_DB__;
+}
+
+describe("ses-suppression.ts (D1)", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
-    mockGetConfig.mockResolvedValue({ AWS_SES_REGION: "us-east-1" });
+    mockRun.mockResolvedValue({});
+    bindMockDb();
   });
 
-  it("returns true and calls SES when suppression succeeds", async () => {
-    mockSend.mockResolvedValueOnce({});
+  afterEach(() => {
+    clearMockDb();
+  });
+
+  it("returns true when D1 insert succeeds", async () => {
     const { addToSuppressionList } = await import("@/lib/ses-suppression");
     const result = await addToSuppressionList("unsubscribed@example.com");
     expect(result).toBe(true);
-    expect(mockSend).toHaveBeenCalledOnce();
-  });
-
-  it("passes the correct email address to PutSuppressedDestinationCommand", async () => {
-    const { PutSuppressedDestinationCommand } = await import("@aws-sdk/client-sesv2");
-    mockSend.mockResolvedValueOnce({});
-    const { addToSuppressionList } = await import("@/lib/ses-suppression");
-    await addToSuppressionList("user@test.com");
-    expect(PutSuppressedDestinationCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ EmailAddress: "user@test.com", Reason: "COMPLAINT" })
+    expect(mockPrepare).toHaveBeenCalled();
+    expect(mockBind).toHaveBeenCalledWith(
+      "unsubscribed@example.com",
+      expect.any(Number),
+      expect.any(Number)
     );
   });
 
-  it("returns false when SES throws an error", async () => {
-    mockSend.mockRejectedValueOnce(new Error("SES error"));
+  it("uses INSERT with ON CONFLICT for upsert", async () => {
+    const { addToSuppressionList } = await import("@/lib/ses-suppression");
+    await addToSuppressionList("user@test.com");
+    expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining("ON CONFLICT"));
+  });
+
+  it("returns false when D1 throws an error", async () => {
+    mockRun.mockRejectedValueOnce(new Error("D1 error"));
     const { addToSuppressionList } = await import("@/lib/ses-suppression");
     const result = await addToSuppressionList("fail@example.com");
     expect(result).toBe(false);
   });
 
-  it("uses the configured AWS region from getConfig", async () => {
-    const { SESv2Client } = await import("@aws-sdk/client-sesv2");
-    mockGetConfig.mockResolvedValue({ AWS_SES_REGION: "eu-west-1" });
-    mockSend.mockResolvedValueOnce({});
+  it("returns false when AUTH_DB is not bound", async () => {
+    clearMockDb();
     const { addToSuppressionList } = await import("@/lib/ses-suppression");
-    await addToSuppressionList("test@example.com");
-    expect(SESv2Client).toHaveBeenCalledWith({ region: "eu-west-1" });
+    const result = await addToSuppressionList("test@example.com");
+    expect(result).toBe(false);
   });
 });

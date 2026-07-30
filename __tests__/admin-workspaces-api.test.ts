@@ -1,22 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { Workspace } from "@/app/api/admin/workspaces/route";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
+import { WORKSPACES_CONFIG_KEY, resetWorkspaceCache } from "@/lib/workspace-server";
+
 const WORKSPACES_URL = "http://localhost/api/admin/workspaces";
 const ACME_WORKSPACE = "Acme Workspace";
 
-// The workspaces route holds a module-level cache (cachedWorkspaces).
-// Reset the module registry before every test so each test starts with
-// cachedWorkspaces = null — preventing stale data leaking between tests.
 beforeEach(() => {
-  vi.resetModules();
+  resetJsonConfigMemory();
+  resetWorkspaceCache();
 });
-
-// ---------------------------------------------------------------------------
-// Hoist mocks
-// ---------------------------------------------------------------------------
-const { mockSSMSend } = vi.hoisted(() => ({
-  mockSSMSend: vi.fn(),
-}));
 
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
@@ -28,16 +22,6 @@ vi.mock("jose", async () => {
       const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
       return { payload, protectedHeader: { alg: "RS256" } };
     },
-  };
-});
-
-vi.mock("@aws-sdk/client-ssm", async () => {
-  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
-  return {
-    ...actual,
-    SSMClient: vi.fn().mockImplementation(function () {
-      return { send: mockSSMSend };
-    }),
   };
 });
 
@@ -77,9 +61,8 @@ const MOCK_WS: Workspace = {
 // Tests — GET
 // ---------------------------------------------------------------------------
 describe("GET /api/admin/workspaces", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_WS]) } });
+  beforeEach(async () => {
+    await writeJsonConfig(WORKSPACES_CONFIG_KEY, [MOCK_WS]);
   });
 
   it("returns 401 without token", async () => {
@@ -89,7 +72,6 @@ describe("GET /api/admin/workspaces", () => {
   });
 
   it("returns workspace list for admin", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_WS]) } });
     const { GET } = await import("@/app/api/admin/workspaces/route");
     const res = await GET(adminReq(WORKSPACES_URL));
     expect(res.status).toBe(200);
@@ -102,8 +84,8 @@ describe("GET /api/admin/workspaces", () => {
     });
   });
 
-  it("returns empty array when SSM throws", async () => {
-    mockSSMSend.mockRejectedValue(new Error("Not found"));
+  it("returns empty array when nothing is stored", async () => {
+    resetJsonConfigMemory();
     const { GET } = await import("@/app/api/admin/workspaces/route");
     const res = await GET(adminReq(WORKSPACES_URL));
     expect(res.status).toBe(200);
@@ -117,10 +99,7 @@ describe("GET /api/admin/workspaces", () => {
 // ---------------------------------------------------------------------------
 describe("POST /api/admin/workspaces", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
-      .mockResolvedValue({});
+    resetJsonConfigMemory();
   });
 
   it("returns 400 when name is missing", async () => {
@@ -135,9 +114,6 @@ describe("POST /api/admin/workspaces", () => {
   });
 
   it("creates a workspace with auto-generated slug", async () => {
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
-      .mockResolvedValue({});
     const { POST } = await import("@/app/api/admin/workspaces/route");
     const res = await POST(
       adminReq(WORKSPACES_URL, {
@@ -158,10 +134,7 @@ describe("POST /api/admin/workspaces", () => {
   });
 
   it("returns 409 when slug already exists", async () => {
-    mockSSMSend.mockReset();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
-      .mockResolvedValue({});
+    await writeJsonConfig(WORKSPACES_CONFIG_KEY, [MOCK_WS]);
     const { POST } = await import("@/app/api/admin/workspaces/route");
     const res = await POST(
       adminReq(WORKSPACES_URL, {
@@ -177,11 +150,8 @@ describe("POST /api/admin/workspaces", () => {
 // Tests — PATCH (update)
 // ---------------------------------------------------------------------------
 describe("PATCH /api/admin/workspaces", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
-      .mockResolvedValue({});
+  beforeEach(async () => {
+    await writeJsonConfig(WORKSPACES_CONFIG_KEY, [MOCK_WS]);
   });
 
   it("returns 400 when id is missing", async () => {
@@ -207,9 +177,6 @@ describe("PATCH /api/admin/workspaces", () => {
   });
 
   it("updates workspace name and slug", async () => {
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
-      .mockResolvedValue({});
     const { PATCH } = await import("@/app/api/admin/workspaces/route");
     const res = await PATCH(
       adminReq(WORKSPACES_URL, {
@@ -228,11 +195,8 @@ describe("PATCH /api/admin/workspaces", () => {
 // Tests — DELETE
 // ---------------------------------------------------------------------------
 describe("DELETE /api/admin/workspaces", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
-      .mockResolvedValue({});
+  beforeEach(async () => {
+    await writeJsonConfig(WORKSPACES_CONFIG_KEY, [MOCK_WS]);
   });
 
   it("returns 400 when id is missing", async () => {
@@ -247,9 +211,6 @@ describe("DELETE /api/admin/workspaces", () => {
   });
 
   it("deletes workspace and returns ok", async () => {
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([MOCK_WS]) } })
-      .mockResolvedValue({});
     const { DELETE } = await import("@/app/api/admin/workspaces/route");
     const res = await DELETE(
       adminReq(WORKSPACES_URL, {

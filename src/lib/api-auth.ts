@@ -14,9 +14,12 @@ import { auth } from "@/lib/auth";
  * Admin: Cognito `cognito:groups` / `groups` includes `admin`, or D1 admin role.
  */
 
-/** Cognito JWKS + Hosted UI only when explicitly selected. */
+/** Cognito JWKS + Hosted UI only when explicitly opted in (legacy Pi/Lambda). */
 export function isCognitoAuthEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito";
+  return (
+    process.env.NEXT_PUBLIC_AUTH_PROVIDER === "cognito" &&
+    process.env.ALLOW_LEGACY_COGNITO === "1"
+  );
 }
 
 function getIssuer(): string {

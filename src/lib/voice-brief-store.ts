@@ -1,16 +1,12 @@
-import { SSMClient, PutParameterCommand } from "@aws-sdk/client-ssm";
+import { readJsonConfig, writeJsonConfig } from "@/lib/app-config-json";
 
 /**
- * Single source of truth for where the weekly voice brief is persisted.
- *
- * History: the original implementation used "/cloudless/VOICE_BRIEF_LATEST"
- * with a default region of eu-central-1 — but production SSM lives in
- * us-east-1 under the /cloudless/production/ prefix. Both writer (cron) and
- * reader (admin route) silently disagreed with the environment, so the
- * persisted parameter was never visible to the reader. The constants here
- * keep them aligned forever.
+ * Weekly voice brief persistence — D1 app_config (Cloudflare-first).
+ * Key kept as VOICE_BRIEF_LATEST for continuity with prior SSM name suffix.
  */
-export const VOICE_BRIEF_SSM_NAME = "/cloudless/production/VOICE_BRIEF_LATEST";
+export const VOICE_BRIEF_CONFIG_KEY = "VOICE_BRIEF_LATEST";
+/** @deprecated alias kept for callers/tests that still import the old name */
+export const VOICE_BRIEF_SSM_NAME = VOICE_BRIEF_CONFIG_KEY;
 
 export interface VoiceBriefRecord {
   text: string;
@@ -19,14 +15,11 @@ export interface VoiceBriefRecord {
 }
 
 export async function persistVoiceBrief(brief: VoiceBriefRecord): Promise<void> {
-  const region = process.env.AWS_REGION || "us-east-1";
-  const client = new SSMClient({ region });
-  await client.send(
-    new PutParameterCommand({
-      Name: VOICE_BRIEF_SSM_NAME,
-      Value: JSON.stringify(brief),
-      Type: "String",
-      Overwrite: true,
-    })
-  );
+  await writeJsonConfig(VOICE_BRIEF_CONFIG_KEY, brief, "Weekly voice brief");
+}
+
+export async function readVoiceBrief(): Promise<VoiceBriefRecord | null> {
+  const brief = await readJsonConfig<VoiceBriefRecord | null>(VOICE_BRIEF_CONFIG_KEY, null);
+  if (!brief || typeof brief !== "object" || !("text" in brief)) return null;
+  return brief;
 }

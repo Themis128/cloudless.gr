@@ -1,27 +1,10 @@
 /**
  * Unit tests for the Lambda cron-invoker.
  *
- * The handler fetches CRON_SECRET from SSM, then GETs a route on the public
- * site with the secret in an Authorization header. These tests cover the
- * env-validation branches, the SSM lookup, the HTTP path, and the error
- * messages — without touching the network or AWS.
+ * Cloudflare-first: CRON_SECRET comes from env (k8s / Wrangler), not SSM.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-const sendMock = vi.fn();
-
-vi.mock("@aws-sdk/client-ssm", () => ({
-  SSMClient: class {
-    send = sendMock;
-  },
-  GetParameterCommand: class {
-    input: unknown;
-    constructor(input: unknown) {
-      this.input = input;
-    }
-  },
-}));
 
 async function loadHandler() {
   const mod = await import("../src/lambda/cron-invoker");
@@ -33,12 +16,11 @@ describe("cron-invoker handler", () => {
 
   beforeEach(() => {
     vi.resetModules();
-    sendMock.mockReset();
     process.env = {
       ...ORIGINAL_ENV,
       SITE_URL: "https://example.test",
       CRON_ROUTE: "/api/cron/foo",
-      SSM_PREFIX: "/test/prefix",
+      CRON_SECRET: "s3cret",
       AWS_REGION: "us-east-1",
     };
     globalThis.fetch = vi.fn();
@@ -61,14 +43,13 @@ describe("cron-invoker handler", () => {
     await expect(handler()).rejects.toThrow(/CRON_ROUTE=undefined/);
   });
 
-  it("throws when SSM returns no secret value", async () => {
-    sendMock.mockResolvedValueOnce({ Parameter: { Value: "" } });
+  it("throws when CRON_SECRET is missing", async () => {
+    delete process.env.CRON_SECRET;
     const handler = await loadHandler();
-    await expect(handler()).rejects.toThrow("CRON_SECRET not found at /test/prefix/CRON_SECRET");
+    await expect(handler()).rejects.toThrow(/CRON_SECRET env is required/);
   });
 
-  it("calls the route with the SSM secret and returns the parsed body", async () => {
-    sendMock.mockResolvedValueOnce({ Parameter: { Value: "s3cret" } });
+  it("calls the route with the env secret and returns the parsed body", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -93,23 +74,7 @@ describe("cron-invoker handler", () => {
     });
   });
 
-  it("uses default SSM_PREFIX when env var is unset", async () => {
-    delete process.env.SSM_PREFIX;
-    sendMock.mockResolvedValueOnce({ Parameter: { Value: "x" } });
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(null),
-      text: () => Promise.resolve(""),
-    });
-    const handler = await loadHandler();
-    await handler();
-    const ssmCallArg = sendMock.mock.calls[0][0];
-    expect(ssmCallArg.input.Name).toBe("/cloudless/production/CRON_SECRET");
-  });
-
   it("throws with a truncated body when the route responds non-OK", async () => {
-    sendMock.mockResolvedValueOnce({ Parameter: { Value: "s" } });
     const longBody = "x".repeat(500);
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -122,7 +87,6 @@ describe("cron-invoker handler", () => {
   });
 
   it("returns a null payload when the response body is not JSON", async () => {
-    sendMock.mockResolvedValueOnce({ Parameter: { Value: "s" } });
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 204,

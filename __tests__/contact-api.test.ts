@@ -7,26 +7,27 @@ vi.mock("@/lib/rate-limit", () => ({
   resetRateLimitStore: vi.fn(),
 }));
 
-const mockSend = vi.fn().mockResolvedValue({});
+const mockSendEmailResend = vi.fn().mockResolvedValue(undefined);
 
-// Mock AWS SES v2 before importing the route — email.ts now uses client-sesv2
-vi.mock("@aws-sdk/client-sesv2", () => {
-  return {
-    SESv2Client: class MockSESv2Client {
-      send = mockSend;
-    },
-    SendEmailCommand: class MockSendEmailCommand {
-      constructor(public input: unknown) {}
-    },
-  };
-});
+vi.mock("@/lib/email-resend", () => ({
+  isResendConfigured: vi.fn(() => true),
+  sendEmailResend: (...args: unknown[]) => mockSendEmailResend(...args),
+}));
+
+vi.mock("@/lib/ssm-config-d1", () => ({
+  getConfig: vi.fn().mockResolvedValue({
+    SES_TO_EMAIL: "team@cloudless.gr",
+  }),
+}));
 
 describe("POST /api/contact", () => {
   let POST: (request: Request) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockSend.mockResolvedValue({});
+    mockSendEmailResend.mockResolvedValue(undefined);
+    const { isResendConfigured } = await import("@/lib/email-resend");
+    vi.mocked(isResendConfigured).mockReturnValue(true);
     const mod = await import("@/app/api/contact/route");
     POST = mod.POST;
   });
@@ -57,8 +58,8 @@ describe("POST /api/contact", () => {
 
     const data = await response.json();
     expect(data.error).toBe("Invalid request body.");
-    // A malformed body must short-circuit before any SES work.
-    expect(mockSend).not.toHaveBeenCalled();
+    // A malformed body must short-circuit before any email work.
+    expect(mockSendEmailResend).not.toHaveBeenCalled();
   });
 
   it("returns 200 with valid fields", async () => {
@@ -77,6 +78,7 @@ describe("POST /api/contact", () => {
 
     const data = await response.json();
     expect(data.success).toBe(true);
+    expect(mockSendEmailResend).toHaveBeenCalled();
   });
 
   it("returns 200 with all optional fields included", async () => {
@@ -94,5 +96,6 @@ describe("POST /api/contact", () => {
 
     const response = await POST(request);
     expect(response.status).toBe(200);
+    expect(mockSendEmailResend).toHaveBeenCalled();
   });
 });

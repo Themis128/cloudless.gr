@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
 const PENDING_URL = "http://localhost/api/admin/pending-clients";
 const ENROLL_URL = "http://localhost/api/portal/enroll";
 const PORTAL_ME_URL = "http://localhost/api/portal/me";
@@ -12,8 +13,7 @@ const STATUS_APPROVED = "approved";
 // ---------------------------------------------------------------------------
 // Hoisted mocks
 // ---------------------------------------------------------------------------
-const { mockSSMSend, mockSendEmail, mockSlackPost } = vi.hoisted(() => ({
-  mockSSMSend: vi.fn(),
+const { mockSendEmail, mockSlackPost } = vi.hoisted(() => ({
   mockSendEmail: vi.fn().mockResolvedValue(undefined),
   mockSlackPost: vi.fn().mockResolvedValue(true),
 }));
@@ -28,16 +28,6 @@ vi.mock("jose", async () => {
       const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
       return { payload, protectedHeader: { alg: "RS256" } };
     },
-  };
-});
-
-vi.mock("@aws-sdk/client-ssm", async () => {
-  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
-  return {
-    ...actual,
-    SSMClient: vi.fn().mockImplementation(function () {
-      return { send: mockSSMSend };
-    }),
   };
 });
 
@@ -90,18 +80,21 @@ function unauthReq(url: string, init?: { method?: string; body?: string }): Next
   return new NextRequest(url, { method: init?.method, body: init?.body, headers });
 }
 
+const PENDING_CONFIG_KEY = "PENDING_CLIENTS_JSON";
+const PORTALS_CONFIG_KEY = "CLIENT_PORTALS_JSON";
+
+async function seedPendingClients(clients: unknown[]): Promise<void> {
+  await writeJsonConfig(PENDING_CONFIG_KEY, clients);
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/portal/enroll
 // ---------------------------------------------------------------------------
 describe("POST /api/portal/enroll", () => {
   beforeEach(() => {
-    mockSSMSend.mockReset();
+    resetJsonConfigMemory();
     mockSendEmail.mockClear();
     mockSlackPost.mockClear();
-    // Default: empty pending list, write succeeds
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
-      .mockResolvedValue({});
   });
 
   it("returns 401 when no auth token", async () => {
@@ -167,10 +160,7 @@ describe("POST /api/portal/enroll", () => {
     );
     expect(res1.status).toBe(201);
 
-    mockSSMSend.mockReset();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify([]) } })
-      .mockResolvedValue({});
+    resetJsonConfigMemory();
 
     const res2 = await POST(
       authReq(ENROLL_URL, {
@@ -188,7 +178,7 @@ describe("POST /api/portal/enroll", () => {
 // ---------------------------------------------------------------------------
 describe("GET /api/portal/me", () => {
   beforeEach(() => {
-    mockSSMSend.mockReset();
+    resetJsonConfigMemory();
   });
 
   it("returns 401 without auth", async () => {
@@ -198,7 +188,6 @@ describe("GET /api/portal/me", () => {
   });
 
   it("returns status: none when user has no pending entry", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([]) } });
     const { GET } = await import("@/app/api/portal/me/route");
     const res = await GET(authReq(PORTAL_ME_URL));
     expect(res.status).toBe(200);
@@ -217,7 +206,7 @@ describe("GET /api/portal/me", () => {
         status: STATUS_WAITING,
       },
     ];
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
+    await seedPendingClients(pending);
     const { GET } = await import("@/app/api/portal/me/route");
     const res = await GET(authReq(PORTAL_ME_URL, { email: "bob@example.com" }));
     expect(res.status).toBe(200);
@@ -240,7 +229,7 @@ describe("GET /api/portal/me", () => {
         portalToken: "abc-portal-token-1234567890",
       },
     ];
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
+    await seedPendingClients(pending);
     const { GET } = await import("@/app/api/portal/me/route");
     const res = await GET(authReq(PORTAL_ME_URL, { email: "carol@example.com" }));
     expect(res.status).toBe(200);
@@ -258,7 +247,7 @@ describe("GET /api/portal/me", () => {
         status: STATUS_WAITING,
       },
     ];
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
+    await seedPendingClients(pending);
     const { GET } = await import("@/app/api/portal/me/route");
     const res = await GET(authReq(PORTAL_ME_URL, { email: "dan@example.com" }));
     const data = await res.json();
@@ -271,7 +260,7 @@ describe("GET /api/portal/me", () => {
 // ---------------------------------------------------------------------------
 describe("GET /api/admin/pending-clients", () => {
   beforeEach(() => {
-    mockSSMSend.mockReset();
+    resetJsonConfigMemory();
   });
 
   it("returns 401 without auth", async () => {
@@ -303,7 +292,7 @@ describe("GET /api/admin/pending-clients", () => {
       },
       { email: "c@x.com", plan: "web", status: STATUS_WAITING, submittedAt: now.toISOString() },
     ];
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
+    await seedPendingClients(pending);
     const { GET } = await import("@/app/api/admin/pending-clients/route");
     const res = await GET(authReq(PENDING_URL, { admin: true }));
     expect(res.status).toBe(200);
@@ -317,7 +306,7 @@ describe("GET /api/admin/pending-clients", () => {
 
 describe("POST /api/admin/pending-clients (approve)", () => {
   beforeEach(() => {
-    mockSSMSend.mockReset();
+    resetJsonConfigMemory();
     mockSendEmail.mockClear();
   });
 
@@ -345,7 +334,6 @@ describe("POST /api/admin/pending-clients (approve)", () => {
   });
 
   it("returns 404 when pending client not found", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([]) } });
     const { POST } = await import("@/app/api/admin/pending-clients/route");
     const res = await POST(
       authReq(PENDING_URL, {
@@ -368,21 +356,8 @@ describe("POST /api/admin/pending-clients (approve)", () => {
         submittedAt: new Date().toISOString(),
       },
     ];
-    // Need to track call count to set up the right mock for each call
-    // 1. readPendingClients (find pending)
-    // 2. readPortals (load existing portals)
-    // 3. writePortals (save new portal)
-    // 4. readPendingClients (approvePendingClient)
-    // 5. writePendingClients (approvePendingClient)
-    let callCount = 0;
-    mockSSMSend.mockImplementation(async () => {
-      callCount++;
-      if (callCount === 1) return { Parameter: { Value: JSON.stringify(pending) } };
-      if (callCount === 2) return { Parameter: { Value: JSON.stringify([]) } };
-      if (callCount === 3) return {};
-      if (callCount === 4) return { Parameter: { Value: JSON.stringify(pending) } };
-      return {};
-    });
+    await seedPendingClients(pending);
+    await writeJsonConfig(PORTALS_CONFIG_KEY, []);
 
     const { POST } = await import("@/app/api/admin/pending-clients/route");
     const res = await POST(
@@ -412,7 +387,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
         submittedAt: new Date().toISOString(),
       },
     ];
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(pending) } });
+    await seedPendingClients(pending);
     const { POST } = await import("@/app/api/admin/pending-clients/route");
     const res = await POST(
       authReq(PENDING_URL, {
@@ -427,7 +402,7 @@ describe("POST /api/admin/pending-clients (approve)", () => {
 
 describe("DELETE /api/admin/pending-clients", () => {
   beforeEach(() => {
-    mockSSMSend.mockReset();
+    resetJsonConfigMemory();
   });
 
   it("declines a pending client (removes from list)", async () => {
@@ -445,9 +420,7 @@ describe("DELETE /api/admin/pending-clients", () => {
         submittedAt: new Date().toISOString(),
       },
     ];
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(pending) } })
-      .mockResolvedValue({});
+    await seedPendingClients(pending);
 
     const { DELETE } = await import("@/app/api/admin/pending-clients/route");
     const res = await DELETE(

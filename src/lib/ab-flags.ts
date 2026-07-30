@@ -1,4 +1,4 @@
-import { getConfig } from "@/lib/ssm-config";
+import { readJsonConfig } from "@/lib/app-config-json";
 
 export interface ABFlag {
   id: string;
@@ -12,7 +12,7 @@ export interface ABFlag {
   };
 }
 
-// Default flag definitions — overridden by SSM AB_FLAGS_JSON when configured
+// Default flag definitions — overridden by D1 app_config AB_FLAGS_JSON
 export const DEFAULT_FLAGS: ABFlag[] = [
   {
     id: "hero-cta",
@@ -62,12 +62,8 @@ export const DEFAULT_FLAGS: ABFlag[] = [
 
 export async function getABFlags(): Promise<ABFlag[]> {
   try {
-    const cfg = await getConfig();
-    const raw = (cfg as unknown as Record<string, string | undefined>).AB_FLAGS_JSON;
-    if (raw) {
-      const parsed = JSON.parse(raw) as ABFlag[];
-      if (Array.isArray(parsed)) return parsed;
-    }
+    const parsed = await readJsonConfig<ABFlag[]>("AB_FLAGS_JSON", DEFAULT_FLAGS);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
   } catch {
     // fall through to defaults
   }

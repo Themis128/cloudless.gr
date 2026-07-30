@@ -1,13 +1,12 @@
 /**
- * /api/internal/ai/generate — provider routing tests.
+ * /api/internal/ai/generate — Cloudflare Workers AI only.
  *
  * Covers the contract that the weekly newsletter cron depends on:
  *   - 401 without the shared secret
  *   - 503 when the secret isn't configured
  *   - 400 with no user message
  *   - Cloudflare success path
- *   - Cloudflare failure → Bedrock fallback
- *   - Both providers failing → 502
+ *   - Both CF models failing → 502 (no Bedrock fallback)
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -16,16 +15,9 @@ vi.mock("@/lib/ssm-config", async () => {
   const actual = await vi.importActual<typeof import("@/lib/ssm-config")>("@/lib/ssm-config");
   return { ...actual, getConfig: vi.fn() };
 });
-vi.mock("@/lib/bedrock-shared", () => ({
-  getBedrockClient: vi.fn(),
-  runBedrockTurn: vi.fn(),
-  joinAssistantText: (blocks: { text?: string }[]) => blocks.map((b) => b.text ?? "").join(""),
-  BEDROCK_MODEL_ID: "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-}));
 
 import { POST } from "../src/app/api/internal/ai/generate/route";
 import { getConfig } from "@/lib/ssm-config";
-import { runBedrockTurn } from "@/lib/bedrock-shared";
 
 const SECRET = "test-internal-secret";
 
@@ -93,22 +85,19 @@ describe("POST /api/internal/ai/generate", () => {
     expect(body.result).toBe("Hello world");
   });
 
-  it("falls back to Bedrock when Cloudflare returns 500", async () => {
+  it("falls back to the secondary CF model when the primary returns 500", async () => {
     globalThis.fetch = vi
       .fn()
-      // First CF call (default model) → 500
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ errors: [{ message: "boom" }] }), {
           status: 500,
         })
       )
-      // Fallback CF model → also 500
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ errors: [{ message: "boom" }] }), {
-          status: 500,
+        new Response(JSON.stringify({ result: { response: "From fallback CF" } }), {
+          status: 200,
         })
       ) as typeof fetch;
-    vi.mocked(runBedrockTurn).mockResolvedValueOnce([{ text: "From Bedrock" }]);
     const res = await POST(
       reqWith({
         messages: [{ role: "user", content: "fallback please" }],
@@ -116,17 +105,19 @@ describe("POST /api/internal/ai/generate", () => {
     );
     const body = (await res.json()) as { result: string; source: string };
     expect(res.status).toBe(200);
-    expect(body.source).toBe("bedrock");
-    expect(body.result).toBe("From Bedrock");
+    expect(body.source).toBe("cloudflare");
+    expect(body.result).toBe("From fallback CF");
   });
 
-  it("returns 502 when every provider fails", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ errors: [{ message: "down" }] }), {
-        status: 500,
-      })
+  it("returns 502 when every CF model fails (no Bedrock)", async () => {
+    globalThis.fetch = vi.fn().mockImplementation(
+      () =>
+        Promise.resolve(
+          new Response(JSON.stringify({ errors: [{ message: "down" }] }), {
+            status: 500,
+          })
+        )
     ) as typeof fetch;
-    vi.mocked(runBedrockTurn).mockRejectedValueOnce(new Error("bedrock down"));
     const res = await POST(
       reqWith({
         messages: [{ role: "user", content: "try" }],
@@ -136,10 +127,6 @@ describe("POST /api/internal/ai/generate", () => {
   });
 });
 
-// Regression: in production we saw Workers AI sometimes return a non-string
-// `result.response`, which crashed the handler with `text.trim is not a function`.
-// The route must coerce defensively and either return a stringified value or
-// fall through to Bedrock cleanly.
 describe("POST /api/internal/ai/generate — non-string Cloudflare response", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -150,11 +137,6 @@ describe("POST /api/internal/ai/generate — non-string Cloudflare response", ()
     process.env.CLOUDFLARE_API_TOKEN = "token-test";
   });
 
-  // SSRF defense — CodeQL alert #1784. The `model` body field is
-  // interpolated into the Cloudflare URL, so any value outside the
-  // strict `@<provider>/<vendor>/<name>` allowlist must be rejected
-  // BEFORE `fetch` runs. We assert (a) the fetch never gets called,
-  // and (b) the response is a clean 400.
   it.each([
     ["../../@evil.example.com/x", "path traversal + URL rehosting"],
     ["@cf/meta/../../../etc/passwd", "path traversal"],

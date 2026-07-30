@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { ClientPortal } from "@/app/api/admin/client-portals/route";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
 
 // ---------------------------------------------------------------------------
 // Hoist mocks
 // ---------------------------------------------------------------------------
-const { mockSSMSend, mockCustomersList, mockInvoicesList, mockSubsList } = vi.hoisted(() => ({
-  mockSSMSend: vi.fn(),
+const { mockCustomersList, mockInvoicesList, mockSubsList } = vi.hoisted(() => ({
   mockCustomersList: vi.fn(),
   mockInvoicesList: vi.fn(),
   mockSubsList: vi.fn(),
@@ -19,16 +19,6 @@ vi.mock("@/lib/ssm-config", () => ({
     NOTION_PROJECTS_DB_ID: "",
   }),
 }));
-
-vi.mock("@aws-sdk/client-ssm", async () => {
-  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
-  return {
-    ...actual,
-    SSMClient: vi.fn().mockImplementation(function () {
-      return { send: mockSSMSend };
-    }),
-  };
-});
 
 vi.mock("@/lib/stripe", () => ({
   getStripe: vi.fn().mockResolvedValue({
@@ -82,9 +72,10 @@ function makeReq(token: string): NextRequest {
 // Tests
 // ---------------------------------------------------------------------------
 describe("GET /api/portal/[token]", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
+    resetJsonConfigMemory();
+    await writeJsonConfig("CLIENT_PORTALS_JSON", [MOCK_PORTAL]);
     mockCustomersList.mockResolvedValue({ data: [{ id: "cus_test" }] });
     mockInvoicesList.mockResolvedValue({ data: [] });
     mockSubsList.mockResolvedValue({ data: [] });
@@ -97,7 +88,7 @@ describe("GET /api/portal/[token]", () => {
   });
 
   it("returns 404 for unknown token", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([]) } });
+    await writeJsonConfig("CLIENT_PORTALS_JSON", []);
     const { GET } = await import("@/app/api/portal/[token]/route");
     const res = await GET(makeReq(VALID_TOKEN), {
       params: Promise.resolve({ token: VALID_TOKEN }),
@@ -105,8 +96,8 @@ describe("GET /api/portal/[token]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 404 when SSM throws", async () => {
-    mockSSMSend.mockRejectedValue(new Error("SSM error"));
+  it("returns 404 when D1 app_config has no portals", async () => {
+    await writeJsonConfig("CLIENT_PORTALS_JSON", []);
     const { GET } = await import("@/app/api/portal/[token]/route");
     const res = await GET(makeReq(VALID_TOKEN), {
       params: Promise.resolve({ token: VALID_TOKEN }),
@@ -115,7 +106,6 @@ describe("GET /api/portal/[token]", () => {
   });
 
   it("returns client data for valid token", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
     const { GET } = await import("@/app/api/portal/[token]/route");
     const res = await GET(makeReq(VALID_TOKEN), {
       params: Promise.resolve({ token: VALID_TOKEN }),
@@ -137,7 +127,6 @@ describe("GET /api/portal/[token]", () => {
   });
 
   it("returns empty invoices when no Stripe customer found", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
     mockCustomersList.mockResolvedValue({ data: [] });
     const { GET } = await import("@/app/api/portal/[token]/route");
     const res = await GET(makeReq(VALID_TOKEN), {
@@ -150,7 +139,6 @@ describe("GET /api/portal/[token]", () => {
   });
 
   it("returns invoices for matching Stripe customer", async () => {
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify([MOCK_PORTAL]) } });
     mockInvoicesList.mockResolvedValue({
       data: [
         {

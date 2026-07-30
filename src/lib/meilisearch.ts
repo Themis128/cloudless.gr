@@ -1,5 +1,5 @@
 export const PRODUCTS_INDEX = "products";
-export const PRODUCT_EMBEDDER = "bedrock-titan-v2";
+export const PRODUCT_EMBEDDER = "workers-ai-bge-small";
 
 export interface ProductDocument {
   id: string;

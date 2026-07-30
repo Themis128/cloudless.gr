@@ -1,14 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { DEFAULT_FLAGS } from "@/lib/ab-flags";
-const ABTEST_URL = "http://localhost/api/admin/ab-tests";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
 
-// ---------------------------------------------------------------------------
-// Hoist mocks
-// ---------------------------------------------------------------------------
-const { mockSSMSend } = vi.hoisted(() => ({
-  mockSSMSend: vi.fn(),
-}));
+const ABTEST_URL = "http://localhost/api/admin/ab-tests";
+const CONFIG_KEY = "AB_FLAGS_JSON";
 
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof import("jose")>("jose");
@@ -23,17 +19,6 @@ vi.mock("jose", async () => {
   };
 });
 
-vi.mock("@aws-sdk/client-ssm", async () => {
-  const actual = await vi.importActual<typeof import("@aws-sdk/client-ssm")>("@aws-sdk/client-ssm");
-  return {
-    ...actual,
-    SSMClient: vi.fn().mockImplementation(() => ({ send: mockSSMSend })),
-  };
-});
-
-// ---------------------------------------------------------------------------
-// JWT helpers
-// ---------------------------------------------------------------------------
 function makeAdminToken(): string {
   const payload = {
     sub: "admin-sub",
@@ -72,13 +57,9 @@ function userReq(url: string): NextRequest {
   return new NextRequest(url, { headers: { Authorization: `Bearer ${makeUserToken()}` } });
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 describe("GET /api/admin/ab-tests", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(DEFAULT_FLAGS) } });
+    resetJsonConfigMemory();
   });
 
   it("returns 401 without token", async () => {
@@ -94,6 +75,7 @@ describe("GET /api/admin/ab-tests", () => {
   });
 
   it("returns flags array for admin", async () => {
+    await writeJsonConfig(CONFIG_KEY, DEFAULT_FLAGS);
     const { GET } = await import("@/app/api/admin/ab-tests/route");
     const res = await GET(adminReq(ABTEST_URL));
     expect(res.status).toBe(200);
@@ -105,8 +87,7 @@ describe("GET /api/admin/ab-tests", () => {
     expect(data.flags[0]).toHaveProperty("trafficSplit");
   });
 
-  it("falls back to DEFAULT_FLAGS when SSM throws", async () => {
-    mockSSMSend.mockRejectedValue(new Error("SSM unavailable"));
+  it("falls back to DEFAULT_FLAGS when nothing is stored", async () => {
     const { GET } = await import("@/app/api/admin/ab-tests/route");
     const res = await GET(adminReq(ABTEST_URL));
     expect(res.status).toBe(200);
@@ -116,11 +97,9 @@ describe("GET /api/admin/ab-tests", () => {
 });
 
 describe("PATCH /api/admin/ab-tests", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(DEFAULT_FLAGS) } }) // getABFlags read
-      .mockResolvedValue({}); // putSSMParam write
+  beforeEach(async () => {
+    resetJsonConfigMemory();
+    await writeJsonConfig(CONFIG_KEY, structuredClone(DEFAULT_FLAGS));
   });
 
   it("returns 400 when id is missing", async () => {
@@ -164,8 +143,7 @@ describe("PATCH /api/admin/ab-tests", () => {
 
 describe("POST /api/admin/ab-tests (reset)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockSSMSend.mockResolvedValue({});
+    resetJsonConfigMemory();
   });
 
   it("resets to default flags", async () => {

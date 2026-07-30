@@ -1,10 +1,8 @@
 /**
  * D1-based email suppression list — Cloudflare Workers migration path.
  *
- * Replaces AWS SESv2 suppression list with application-level suppression in D1.
- * Cloudflare Email Service doesn't have a native suppression list API, so we manage
- * suppression at the application layer. This ensures consistent behavior across
- * Workers (primary) and Lambda/SES (fallback) environments.
+ * Application-level suppression in D1. Cloudflare Email Service has no native
+ * suppression list API, so we manage suppression at the application layer.
  *
  * Used by subscribe/unsubscribe routes for newsletter suppression management.
  */
@@ -43,9 +41,8 @@ function getD1Binding(): AuthDatabase | null {
 export async function addToSuppressionList(email: string): Promise<boolean> {
   const db = getD1Binding();
   if (!db) {
-    // Fall back to SES suppression when D1 unavailable
-    const { addToSuppressionList: addToSesSuppression } = await import("@/lib/ses-suppression");
-    return addToSesSuppression(email);
+    console.warn("[ses-suppression-d1] AUTH_DB not bound — cannot suppress email");
+    return false;
   }
 
   try {
@@ -82,10 +79,8 @@ export async function addToSuppressionList(email: string): Promise<boolean> {
 export async function removeFromSuppressionList(email: string): Promise<boolean> {
   const db = getD1Binding();
   if (!db) {
-    // Fall back to SES suppression when D1 unavailable
-    const { removeFromSuppressionList: removeFromSesSuppression } =
-      await import("@/lib/ses-suppression");
-    return removeFromSesSuppression(email);
+    console.warn("[ses-suppression-d1] AUTH_DB not bound — cannot remove suppression");
+    return false;
   }
 
   try {
@@ -107,8 +102,6 @@ export async function removeFromSuppressionList(email: string): Promise<boolean>
 export async function isSuppressed(email: string): Promise<boolean> {
   const db = getD1Binding();
   if (!db) {
-    // In Lambda/SES environment, we consider it not suppressed
-    // (SES will handle the actual suppression)
     return false;
   }
 

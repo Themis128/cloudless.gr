@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { getConfig } from "@/lib/ssm-config";
+import { isCloudflareEmailConfigured, sendEmailCloudflare } from "@/lib/email-cloudflare";
 import { isResendConfigured, sendEmailResend } from "@/lib/email-resend";
 
 interface CloudflareEmailBinding {
@@ -18,8 +18,8 @@ const isWorkers =
 
 /**
  * Send an email using the configured email provider.
- * @param options - Email options
- * @returns Promise<NextResponse>
+ * Node/Pi: Cloudflare Email Service REST (preferred) → Resend fallback.
+ * Workers: EMAIL_BINDING when present.
  */
 export async function sendEmail(options: {
   to: string;
@@ -54,47 +54,34 @@ export async function sendEmail(options: {
       });
     } catch (err) {
       console.error("[email-sender] Cloudflare Email failed:", err);
-      throw new Error(`SES failure: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(`Email send failed: ${err instanceof Error ? err.message : String(err)}`);
     }
-  } else {
-    // AWS SES or R2-based email
-    try {
-      const cfg = await getConfig();
-      const client = new SESv2Client({ region: cfg.AWS_SES_REGION || "eu-west-1" });
-
-      const command = new SendEmailCommand({
-        Destination: {
-          ToAddresses: [options.to],
-        },
-        Content: {
-          Simple: {
-            Body: {
-              Html: { Data: options.html },
-              Text: { Data: options.text },
-            },
-            Subject: { Data: options.subject },
-            Headers: options.listUnsubscribeUrl
-              ? [{ Name: "List-Unsubscribe", Value: `<${options.listUnsubscribeUrl}>` }]
-              : undefined,
-          },
-        },
-        FromEmailAddress: `${options.fromLabel || "Cloudless"} <noreply@cloudless.gr>`,
-        ReplyToAddresses: options.replyTo ? [options.replyTo] : undefined,
-      });
-
-      await client.send(command);
-    } catch (err) {
-      // SES sometimes returns HTTP 200 with a body the SDK XML parser rejects —
-      // treat that as success (message was accepted by SES).
-      const status =
-        err && typeof err === "object" && "$metadata" in err
-          ? (err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode
-          : undefined;
-      if (status === 200) return;
-      console.error("[email-sender] SES failed:", err);
-      throw new Error(`SES failure: ${err instanceof Error ? err.message : String(err)}`);
-    }
+    return;
   }
+
+  const payload = {
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    text: options.text,
+    fromLabel: options.fromLabel,
+    replyTo: options.replyTo ? [options.replyTo] : undefined,
+    listUnsubscribeUrl: options.listUnsubscribeUrl,
+  };
+
+  if (isCloudflareEmailConfigured()) {
+    await sendEmailCloudflare(payload);
+    return;
+  }
+
+  if (isResendConfigured()) {
+    await sendEmailResend(payload);
+    return;
+  }
+
+  throw new Error(
+    "Email is not configured — set CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (Email Sending) or RESEND_API_KEY"
+  );
 }
 
 /**
@@ -207,23 +194,6 @@ We appreciate your business and look forward to serving you again.
     `,
     fromLabel: "Cloudless Shop",
   };
-
-  // R23 pilot: prefer Resend for order-confirmation flow when configured,
-  // then fall back to the existing email path for reliability.
-  if (!isWorkers && isResendConfigured()) {
-    try {
-      await sendEmailResend({
-        to: payload.to,
-        subject: payload.subject,
-        html: payload.html,
-        text: payload.text,
-        fromLabel: payload.fromLabel,
-      });
-      return;
-    } catch (err) {
-      console.warn("[email-sender] Resend pilot failed, falling back to SES:", err);
-    }
-  }
 
   await sendEmail(payload);
 }
@@ -499,5 +469,3 @@ export async function sendUnsubscribeConfirmation(email: string): Promise<void> 
 /**
  * Account activation email with link + optional OTP fallback.
  */
-
-export type { SendEmailCommandInput } from "@aws-sdk/client-sesv2";

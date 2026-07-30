@@ -6,24 +6,21 @@
  * caller must POST back to /api/agent/book with {confirm: true, start, end}
  * to actually create the calendar event.
  *
+ * Uses Cloudflare Workers AI (JSON tool protocol). Requires
+ * CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN.
+ *
  * Differences from the unauth'd chat book_slot tool:
  *   - email is forced to the authenticated user (no impersonation)
  *   - two-phase (propose → confirm) so the model can't fire the booking solo
  *   - tighter system prompt scoped to scheduling only
  */
-import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { getAvailableSlots } from "@/lib/google-calendar";
 import { isConfiguredAsync } from "@/lib/integrations";
 import {
-  BEDROCK_MODEL_ID,
-  buildBedrockToolConfig,
-  getBedrockClient,
-  type AnyBlock,
-  type BedrockMessage,
-  type TextBlock,
-  type ToolResultBlock,
-  type ToolUseBlock,
-} from "@/lib/bedrock-shared";
+  buildWorkersAiToolProtocol,
+  callWorkersAiChat,
+  parseWorkersAiToolCall,
+} from "@/lib/workers-ai-client";
 import {
   MIN_DAYS_AHEAD,
   MAX_DAYS_AHEAD,
@@ -51,10 +48,6 @@ Rules:
 - Athens local time. Business hours are 09:00–17:00 weekdays.
 - Be concise in reasoning — one or two sentences.`;
 
-// ---------------------------------------------------------------------------
-// Tool definitions
-// ---------------------------------------------------------------------------
-
 const AGENT_TOOLS = [
   {
     name: "check_calendar_availability",
@@ -70,7 +63,7 @@ const AGENT_TOOLS = [
           maximum: MAX_DAYS_AHEAD,
         },
       },
-      required: [],
+      required: [] as string[],
     },
   },
   {
@@ -98,17 +91,8 @@ const AGENT_TOOLS = [
   },
 ] as const;
 
-const AGENT_TOOL_CONFIG = buildBedrockToolConfig(AGENT_TOOLS);
-
-// ---------------------------------------------------------------------------
-// Slot fetching for the model
-// ---------------------------------------------------------------------------
-
-async function runCheckAvailability(raw: unknown): Promise<string> {
-  const input = (typeof raw === "object" && raw !== null ? raw : {}) as {
-    days_ahead?: unknown;
-  };
-  const days = clampDaysAhead(input.days_ahead);
+async function runCheckAvailability(raw: Record<string, unknown>): Promise<string> {
+  const days = clampDaysAhead(raw.days_ahead);
   try {
     const slots = (await getAvailableSlots(days)).slice(0, MAX_SLOT_RESULTS);
     if (slots.length === 0) {
@@ -128,15 +112,10 @@ function asStringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-/**
- * Convert the model's terminal `propose_slot` tool call into a ProposeResult.
- * Centralised so the main loop stays at a low cognitive-complexity score.
- */
-function resolveProposeBlock(block: ToolUseBlock): ProposeResult {
-  const input = block.toolUse.input ?? {};
-  const start = asStringField(input.start);
-  const end = asStringField(input.end);
-  const reasoning = asStringField(input.reasoning);
+function resolveProposeArgs(args: Record<string, unknown>): ProposeResult {
+  const start = asStringField(args.start);
+  const end = asStringField(args.end);
+  const reasoning = asStringField(args.reasoning);
   if (!start || !end) {
     return {
       status: STATUS_NO_MATCH,
@@ -149,23 +128,6 @@ function resolveProposeBlock(block: ToolUseBlock): ProposeResult {
     reasoning,
   };
 }
-
-async function runPendingTool(block: ToolUseBlock): Promise<ToolResultBlock> {
-  const result =
-    block.toolUse.name === "check_calendar_availability"
-      ? await runCheckAvailability(block.toolUse.input)
-      : `Unknown tool: ${block.toolUse.name}`;
-  return {
-    toolResult: {
-      toolUseId: block.toolUse.toolUseId,
-      content: [{ text: result }] as [{ text: string }],
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 export interface ProposedSlot {
   start: string;
@@ -182,8 +144,8 @@ export type ProposeResult =
   | { status: typeof STATUS_NO_MATCH; reasoning: string };
 
 /**
- * Returns true when the slot lib + Bedrock are wired up.
- * Calendar credentials are checked first to fail fast in unconfigured envs.
+ * Returns true when Google Calendar credentials are wired up.
+ * Workers AI credentials are checked at propose time (fail closed).
  */
 export async function isAgentBookConfigured(): Promise<boolean> {
   return isConfiguredAsync("GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY");
@@ -192,49 +154,47 @@ export async function isAgentBookConfigured(): Promise<boolean> {
 /**
  * Run the booking agent against a natural-language intent.
  * Returns the proposed slot (or no_match) — never books on its own.
- * May throw on Bedrock API errors; caller maps to HTTP status.
+ * May throw on Workers AI API errors; caller maps to HTTP status.
  */
 export async function proposeBookingSlot(intent: string): Promise<ProposeResult> {
-  const client = getBedrockClient();
-  const messages: BedrockMessage[] = [{ role: "user", content: [{ text: intent }] }];
+  const messages: { role: string; content: string }[] = [
+    {
+      role: "system",
+      content: `${SYSTEM_PROMPT}\n\n${buildWorkersAiToolProtocol(AGENT_TOOLS)}`,
+    },
+    { role: "user", content: intent },
+  ];
 
   for (let attempt = 0; attempt < MAX_TOOL_ITERATIONS; attempt++) {
-    const cmd = new ConverseCommand({
-      modelId: BEDROCK_MODEL_ID,
-      system: [{ text: SYSTEM_PROMPT }],
-      messages,
-      toolConfig: AGENT_TOOL_CONFIG,
-      inferenceConfig: { maxTokens: MAX_TOKENS },
-    });
+    const reply = await callWorkersAiChat(messages, { maxTokens: MAX_TOKENS });
+    const toolCall = parseWorkersAiToolCall(reply);
 
-    const response = await client.send(cmd);
-    const assistantContent: AnyBlock[] = (response.output?.message?.content as AnyBlock[]) ?? [];
-
-    const toolUseBlocks = assistantContent.filter(
-      (b): b is ToolUseBlock => "toolUse" in b && typeof b.toolUse?.toolUseId === "string"
-    );
-
-    // Terminal tool — propose_slot. Bind the result and return.
-    const proposeBlock = toolUseBlocks.find((b) => b.toolUse.name === "propose_slot");
-    if (proposeBlock) return resolveProposeBlock(proposeBlock);
-
-    if (toolUseBlocks.length === 0) {
-      // Model returned plain text without proposing — treat as no_match.
-      const textOut = assistantContent
-        .filter((b): b is TextBlock => "text" in b && typeof b.text === "string")
-        .map((b) => b.text)
-        .join(" ")
-        .trim();
+    if (!toolCall) {
       return {
         status: STATUS_NO_MATCH,
-        reasoning: textOut.length > 0 ? textOut : "Model did not propose a slot.",
+        reasoning: reply.length > 0 ? reply : "Model did not propose a slot.",
       };
     }
 
-    // Append assistant turn + run pending availability tool calls.
-    messages.push({ role: "assistant", content: assistantContent });
-    const toolResults = await Promise.all(toolUseBlocks.map(runPendingTool));
-    messages.push({ role: "user", content: toolResults });
+    if (toolCall.name === "propose_slot") {
+      return resolveProposeArgs(toolCall.args);
+    }
+
+    if (toolCall.name === "check_calendar_availability") {
+      messages.push({ role: "assistant", content: reply });
+      const result = await runCheckAvailability(toolCall.args);
+      messages.push({
+        role: "user",
+        content: `TOOL_RESULT for ${toolCall.name}:\n${result}`,
+      });
+      continue;
+    }
+
+    messages.push({ role: "assistant", content: reply });
+    messages.push({
+      role: "user",
+      content: `TOOL_RESULT for ${toolCall.name}:\nUnknown tool: ${toolCall.name}`,
+    });
   }
 
   return {

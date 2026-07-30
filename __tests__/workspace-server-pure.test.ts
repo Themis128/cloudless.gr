@@ -90,7 +90,7 @@ describe("constants", () => {
     expect(WORKSPACE_COOKIE).toBe("cloudless_workspace_id");
   });
 
-  it("SSM_KEY is defined", () => {
-    expect(SSM_KEY).toBe("/cloudless/WORKSPACES_JSON");
+  it("SSM_KEY aliases the D1 workspaces config key", () => {
+    expect(SSM_KEY).toBe("WORKSPACES_JSON");
   });
 });

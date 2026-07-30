@@ -1,22 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// SSMClient is instantiated at module level in pending-clients.ts, so mockSend
-// must be hoisted to be available when the vi.mock factory executes at module init.
-const mockSend = vi.hoisted(() => vi.fn());
-
-vi.mock("@aws-sdk/client-ssm", () => ({
-  SSMClient: vi.fn(function (this: { send: typeof mockSend }) {
-    this.send = mockSend;
-  }),
-  GetParameterCommand: vi.fn(function (this: { input: unknown }, input: unknown) {
-    this.input = input;
-  }),
-  PutParameterCommand: vi.fn(function (this: { input: unknown }, input: unknown) {
-    this.input = input;
-  }),
-}));
-
-// Static import — works with the module-level ssmClient singleton
+import { describe, it, expect, beforeEach } from "vitest";
+import { resetJsonConfigMemory, writeJsonConfig } from "@/lib/app-config-json";
 import {
   PLAN_LABELS,
   readPendingClients,
@@ -25,6 +8,8 @@ import {
   findPendingByEmail,
   approvePendingClient,
 } from "@/lib/pending-clients";
+
+const CONFIG_KEY = "PENDING_CLIENTS_JSON";
 
 const sampleClients = [
   {
@@ -64,26 +49,23 @@ describe("PLAN_LABELS", () => {
 
 describe("readPendingClients()", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetJsonConfigMemory();
   });
 
-  it("returns parsed clients from SSM", async () => {
-    mockSend.mockResolvedValue({
-      Parameter: { Value: JSON.stringify(sampleClients) },
-    });
+  it("returns parsed clients from app_config memory", async () => {
+    await writeJsonConfig(CONFIG_KEY, sampleClients);
     const result = await readPendingClients();
     expect(result).toHaveLength(2);
     expect(result[0].email).toBe("alice@example.com");
   });
 
-  it("returns empty array when SSM has no value", async () => {
-    mockSend.mockResolvedValue({ Parameter: { Value: undefined } });
+  it("returns empty array when nothing is stored", async () => {
     const result = await readPendingClients();
     expect(result).toEqual([]);
   });
 
-  it("returns empty array when SSM throws", async () => {
-    mockSend.mockRejectedValue(new Error("SSM error"));
+  it("returns empty array when stored value is not an array", async () => {
+    await writeJsonConfig(CONFIG_KEY, { not: "an array" });
     const result = await readPendingClients();
     expect(result).toEqual([]);
   });
@@ -91,25 +73,22 @@ describe("readPendingClients()", () => {
 
 describe("writePendingClients()", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetJsonConfigMemory();
   });
 
-  it("calls SSM PutParameterCommand with serialized clients", async () => {
-    mockSend.mockResolvedValue({});
+  it("persists clients to app_config memory", async () => {
     await writePendingClients(sampleClients);
-    expect(mockSend).toHaveBeenCalledOnce();
+    const stored = await readPendingClients();
+    expect(stored).toEqual(sampleClients);
   });
 });
 
 describe("upsertPendingClient()", () => {
   beforeEach(() => {
-    mockSend.mockReset();
+    resetJsonConfigMemory();
   });
 
   it("creates a new client when email does not exist", async () => {
-    mockSend
-      .mockResolvedValueOnce({ Parameter: { Value: "[]" } }) // read
-      .mockResolvedValueOnce({}); // write
     const result = await upsertPendingClient({ email: "new@example.com", plan: "cloud" });
     expect(result.email).toBe("new@example.com");
     expect(result.status).toBe("waiting");
@@ -127,9 +106,7 @@ describe("upsertPendingClient()", () => {
         portalToken: "tok_123",
       },
     ];
-    mockSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(existing) } })
-      .mockResolvedValueOnce({});
+    await writePendingClients(existing);
     const result = await upsertPendingClient({ email: "approved@example.com", plan: "cloud" });
     expect(result.status).toBe("approved");
   });
@@ -144,16 +121,13 @@ describe("upsertPendingClient()", () => {
         status: "waiting" as const,
       },
     ];
-    mockSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(existing) } })
-      .mockResolvedValueOnce({});
+    await writePendingClients(existing);
     const result = await upsertPendingClient({ email: "waiting@example.com", plan: "serverless" });
     expect(result.plan).toBe("serverless");
     expect(result.planLabel).toBe(PLAN_LABELS.serverless);
   });
 
   it("uses provided planLabel when given", async () => {
-    mockSend.mockResolvedValueOnce({ Parameter: { Value: "[]" } }).mockResolvedValueOnce({});
     const result = await upsertPendingClient({
       email: "custom@example.com",
       plan: "custom",
@@ -165,17 +139,17 @@ describe("upsertPendingClient()", () => {
 
 describe("findPendingByEmail()", () => {
   beforeEach(() => {
-    mockSend.mockReset();
+    resetJsonConfigMemory();
   });
 
   it("returns the matching client (case-insensitive)", async () => {
-    mockSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(sampleClients) } });
+    await writePendingClients(sampleClients);
     const result = await findPendingByEmail("ALICE@EXAMPLE.COM");
     expect(result?.email).toBe("alice@example.com");
   });
 
   it("returns null when no client matches", async () => {
-    mockSend.mockResolvedValue({ Parameter: { Value: JSON.stringify(sampleClients) } });
+    await writePendingClients(sampleClients);
     const result = await findPendingByEmail("nobody@example.com");
     expect(result).toBeNull();
   });
@@ -183,7 +157,7 @@ describe("findPendingByEmail()", () => {
 
 describe("approvePendingClient()", () => {
   beforeEach(() => {
-    mockSend.mockReset();
+    resetJsonConfigMemory();
   });
 
   it("sets status to approved and stores portalToken", async () => {
@@ -196,9 +170,7 @@ describe("approvePendingClient()", () => {
         status: "waiting" as const,
       },
     ];
-    mockSend
-      .mockResolvedValueOnce({ Parameter: { Value: JSON.stringify(existing) } })
-      .mockResolvedValueOnce({});
+    await writePendingClients(existing);
     const result = await approvePendingClient("client@example.com", "tok_newportal");
     expect(result?.status).toBe("approved");
     expect(result?.portalToken).toBe("tok_newportal");
@@ -206,7 +178,6 @@ describe("approvePendingClient()", () => {
   });
 
   it("returns null when client does not exist", async () => {
-    mockSend.mockResolvedValue({ Parameter: { Value: "[]" } });
     const result = await approvePendingClient("nobody@example.com", "tok_x");
     expect(result).toBeNull();
   });

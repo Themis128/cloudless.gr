@@ -5,14 +5,15 @@ import {
   approvePendingClient,
   writePendingClients,
 } from "@/lib/pending-clients";
+import {
+  readPortals,
+  writePortals,
+  type ClientPortal,
+  type PortalStep,
+} from "@/lib/client-portals";
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/escape-html";
-import { SSMClient, GetParameterCommand, PutParameterCommand } from "@aws-sdk/client-ssm";
 import { randomUUID } from "node:crypto";
-import type { ClientPortal, PortalStep } from "@/app/api/admin/client-portals/route";
-
-const PORTALS_SSM_KEY = "/cloudless/CLIENT_PORTALS_JSON";
-const REGION = process.env.AWS_REGION ?? "eu-central-1";
 
 const DEFAULT_STEP_NAMES = [
   "Free Audit",
@@ -27,31 +28,9 @@ function makeDefaultSteps(): PortalStep[] {
   return DEFAULT_STEP_NAMES.map((name) => ({
     id: randomUUID(),
     name,
-    status: "pending",
+    status: "pending" as const,
     comments: [],
   }));
-}
-
-async function readPortals(): Promise<ClientPortal[]> {
-  try {
-    const client = new SSMClient({ region: REGION });
-    const res = await client.send(new GetParameterCommand({ Name: PORTALS_SSM_KEY }));
-    return JSON.parse(res.Parameter?.Value ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-async function writePortals(portals: ClientPortal[]): Promise<void> {
-  const client = new SSMClient({ region: REGION });
-  await client.send(
-    new PutParameterCommand({
-      Name: PORTALS_SSM_KEY,
-      Value: JSON.stringify(portals),
-      Type: "String",
-      Overwrite: true,
-    })
-  );
 }
 
 /** GET — list all pending clients for admin review */
