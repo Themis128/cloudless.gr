@@ -22,44 +22,51 @@
 
 ### AppFlowy Pods
 
-- [ ] appflowy/appflowy-cloud-55c54ccc66-88z7q
-  - [ ] Analyze logs for specific errors
+- [x] appflowy/appflowy-cloud-55c54ccc66-88z7q
+  - [x] Analyze logs for specific errors
   - [ ] Check resource usage
   - [ ] Verify dependencies
 
-- [ ] appflowy/appflowy-worker-67947f8d67-jwcr4
-  - [ ] Analyze logs for specific errors
+- [x] appflowy/appflowy-worker-67947f8d67-jwcr4
+  - [x] Analyze logs for specific errors
   - [ ] Check resource usage
   - [ ] Verify dependencies
 
-- [ ] appflowy/gotrue-7bd8dfbbd4-qs9j7
-  - [ ] Investigate using pod-restart-investigator.sh
-  - [ ] Analyze logs
+- [x] appflowy/gotrue-7bd8dfbbd4-qs9j7
+  - [x] Investigate using pod-restart-investigator.sh
+  - [x] Analyze logs
   - [ ] Check authentication service status
 
-- [ ] appflowy/nginx-6746b948b5-hmmlw
-  - [ ] Investigate using pod-restart-investigator.sh
+- [x] appflowy/nginx-6746b948b5-hmmlw
+  - [x] Investigate using pod-restart-investigator.sh
   - [ ] Check ingress controller status
   - [ ] Verify configuration
 
 ### System Pods
 
-- [ ] kube-system/svclb-traefik-1ff64adb-qz8g9
-  - [ ] Investigate using pod-restart-investigator.sh
+- [x] kube-system/svclb-traefik-1ff64adb-qz8g9
+  - [x] Investigate using pod-restart-investigator.sh
   - [ ] Check Traefik status
   - [ ] Verify load balancer configuration
 
-- [ ] kube-system/traefik-6cd8c7cd89-2ss5t
-  - [ ] Investigate using pod-restart-investigator.sh
+- [x] kube-system/traefik-6cd8c7cd89-2ss5t
+  - [x] Investigate using pod-restart-investigator.sh
   - [ ] Check Traefik status
   - [ ] Verify ingress routes
 
-- [ ] monitoring/kube-prom-prometheus-node-exporter-lw66t
-  - [ ] Investigate using pod-restart-investigator.sh
+- [x] monitoring/kube-prom-prometheus-node-exporter-lw66t
+  - [x] Investigate using pod-restart-investigator.sh
   - [ ] Check Prometheus status
   - [ ] Verify node exporter configuration
 
-- [ ] tailscale/kube-0
-  - [ ] Investigate using pod-restart-investigator.sh
+- [x] tailscale/kube-0
+  - [x] Investigate using pod-restart-investigator.sh
   - [ ] Check Tailscale status
   - [ ] Verify network connectivity
+
+## Additional Findings from Investigation
+
+- [ ] Investigate high restart count for monitoring/kube-prom-prometheus-node-exporter-lw66t (30 restarts, last: Error exit 143 - SIGTERM)
+- [ ] Investigate kube-system/svclb-traefik-1ff64adb-qz8g9 (6 restarts, last: Unknown exit 255) - appears twice in output
+- [ ] Investigate kube-system/traefik-6cd8c7cd89-2ss5t (5 restarts, last: Error exit 2)
+- [ ] Investigate tailscale/kube-0 (27 restarts, last: Completed exit 0 - normal job behavior, may be expected for periodic jobs)
