@@ -63,7 +63,8 @@ jobs:
       - name: Connect to tailnet
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
+          client_id: {{ secrets.TS_CLIENT_ID }}
+          client_secret: {{ secrets.TS_CLIENT_SECRET }} }}
 
       - name: Verify Pi is reachable via Tailscale
         run: |

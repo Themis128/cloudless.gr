@@ -44,7 +44,8 @@ jobs:
         if: steps.tailscale.outcome == 'failure'
         uses: tailscale/github-action@v0.2.1
         with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
+          client_id: {{ secrets.TS_CLIENT_ID }}
+          client_secret: {{ secrets.TS_CLIENT_SECRET }} }}
 
       - name: Configure kubectl
         run: |

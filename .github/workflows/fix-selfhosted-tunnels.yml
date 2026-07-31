@@ -17,7 +17,8 @@ jobs:
       - name: Join Tailscale
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
+          client_id: ${{ secrets.TS_CLIENT_ID }}
+          client_secret: ${{ secrets.TS_CLIENT_SECRET }}
 
       - name: Setup SSH key
         run: |

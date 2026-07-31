@@ -194,7 +194,8 @@ jobs:
         if: steps.health.outputs.need_origin_fallback == 'true'
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
+          client_id: {{ secrets.TS_CLIENT_ID }}
+          client_secret: {{ secrets.TS_CLIENT_SECRET }} }}
 
       - name: GET /api/health via private fabric (MagicDNS NodePort)
         if: steps.health.outputs.need_origin_fallback == 'true'
@@ -418,7 +419,8 @@ jobs:
         if: steps.health.outputs.need_origin_fallback == 'true'
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
-          authkey: ${{ secrets.TS_AUTHKEY }}
+          client_id: {{ secrets.TS_CLIENT_ID }}
+          client_secret: {{ secrets.TS_CLIENT_SECRET }} }}
 
       - name: GET /api/health via private fabric (MagicDNS NodePort)
         if: steps.health.outputs.need_origin_fallback == 'true'
