@@ -6,13 +6,18 @@ test.describe("Authentication", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("login page shows Continue with AWS button", async ({ page }) => {
+  test("login page shows email and password fields", async ({ page }) => {
     await page.goto("/auth/login");
     await expect(page).toHaveURL(/\/auth\/login/);
     await page.waitForLoadState("networkidle").catch(() => {});
-    const hasAws = await page.getByRole("button", { name: /continue with aws/i }).isVisible({ timeout: 10_000 }).catch(() => false);
-    const hasEmail = await page.getByLabel(/email/i).isVisible({ timeout: 5_000 }).catch(() => false);
-    expect(hasAws || hasEmail, "login page must show Continue with AWS button or email field").toBeTruthy();
+    
+    // Check for email and password fields (D1 auth)
+    await expect(page.getByLabel(/email/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel(/^password/i)).toBeVisible({ timeout: 10_000 });
+    
+    // Check for forgot password link
+    const forgotLink = page.getByRole("link", { name: /forgot/i });
+    await expect(forgotLink).toBeVisible({ timeout: 5_000 });
   });
 
   test("signup page exposes name, email and password fields", async ({ page }) => {
@@ -26,14 +31,10 @@ test.describe("Authentication", () => {
   test("forgot-password page is reachable from login", async ({ page }) => {
     await page.goto("/auth/login");
     await page.waitForLoadState("networkidle").catch(() => {});
-    // With Cognito there is no forgot-password link on the login page; navigate directly.
+    // Click forgot password link
     const forgotLink = page.getByRole("link", { name: /forgot/i });
-    const hasLink = await forgotLink.isVisible({ timeout: 5_000 }).catch(() => false);
-    if (hasLink) {
-      await forgotLink.click();
-    } else {
-      await page.goto("/auth/forgot-password");
-    }
+    await expect(forgotLink).toBeVisible({ timeout: 5_000 });
+    await forgotLink.click();
     await expect(page).toHaveURL(/\/auth\/forgot-password/, { timeout: 10_000 });
   });
 });
