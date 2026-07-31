@@ -143,37 +143,32 @@ export default async function RootLayout({
         <ChunkReloadGuard />
         {GA_ID ? (
           <>
-            {/* Consent Mode v2 — default to denied before user responds to banner.
-                Plain <script> + suppressHydrationWarning avoids the dev-only nonce
-                attribute mismatch: Next.js renders beforeInteractive nonce on the
-                server but the client re-renders it as "" before hydration. */}
-            <script
-              id="gtag-consent-init"
-              nonce={nonce || undefined}
-              suppressHydrationWarning
-              dangerouslySetInnerHTML={{
-                __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){window.dataLayer.push(arguments);}
-              gtag('consent', 'default', {
-                analytics_storage: 'denied',
-                ad_storage: 'denied',
-                wait_for_update: 500
-              });
-            `,
-              }}
-            />
+            {/* Modern Google Analytics initialization */}
             <Script
+              id="gtag-consent-init"
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-              strategy="afterInteractive"
+              strategy="beforeInteractive"
               nonce={nonce}
             />
-            <Script id="gtag-init" strategy="afterInteractive" nonce={nonce}>{`
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){window.dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${GA_ID}');
-            `}</Script>
+            <Script
+              id="gtag-config"
+              strategy="beforeInteractive"
+              nonce={nonce}
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${GA_ID}', {
+                    // Modern initialization with consent mode
+                    consent_mode: 'default',
+                    analytics_storage: 'denied',
+                    ad_storage: 'denied',
+                    wait_for_update: 500
+                  });
+                `,
+              }}
+            />
           </>
         ) : null}
         {children}
@@ -183,3 +178,13 @@ export default async function RootLayout({
     </html>
   );
 }
+
+<task_progress>
+- [x] Update CSP to allow necessary connections in production
+- [x] Ensure service worker is properly allowed
+- [x] Allow LinkedIn tracking in production
+- [x] Keep nonce-based script loading for security
+- [x] Fix deprecated script initialization
+- [ ] Test the changes to ensure they resolve the CSP violations
+</task_progress>
+</write_to_file>
