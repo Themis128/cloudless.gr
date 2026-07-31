@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Sans, Work_Sans, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
@@ -11,30 +10,47 @@ import "./globals.css";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
 
-const instrumentSans = Instrument_Sans({
-  variable: "--font-instrument-sans",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-  fallback: ["system-ui", "Arial"],
-  adjustFontFallback: false,
-});
+const instrumentSans = (() => {
+  try {
+    return require("next/font/local").default({
+      variable: "--font-instrument-sans",
+      src: "./fonts/instrument-sans.woff2",
+      display: "swap",
+      fallback: ["system-ui", "Arial"],
+      adjustFontFallback: false,
+    });
+  } catch {
+    return { variable: "--font-instrument-sans" };
+  }
+})();
 
-const workSans = Work_Sans({
-  variable: "--font-work-sans",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-  fallback: ["system-ui", "Arial"],
-  adjustFontFallback: false,
-});
+const workSans = (() => {
+  try {
+    return require("next/font/local").default({
+      variable: "--font-work-sans",
+      src: "./fonts/work-sans.woff2",
+      display: "swap",
+      fallback: ["system-ui", "Arial"],
+      adjustFontFallback: false,
+    });
+  } catch {
+    return { variable: "--font-work-sans" };
+  }
+})();
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-});
+const geistMono = (() => {
+  try {
+    return require("next/font/local").default({
+      variable: "--font-geist-mono",
+      src: "./fonts/geist-mono.woff2",
+      display: "swap",
+      fallback: ["system-ui", "monospace"],
+      adjustFontFallback: false,
+    });
+  } catch {
+    return { variable: "--font-geist-mono" };
+  }
+})();
 
 export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",

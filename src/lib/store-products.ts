@@ -22,6 +22,7 @@ export interface StoreProduct {
   features?: string[];
   recurring?: boolean;
   interval?: "month" | "year";
+  unknown?: boolean;
 }
 
 // ---------------------------------------------------------------------------
