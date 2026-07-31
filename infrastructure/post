@@ -1,0 +1,25 @@
+# Production overrides for the cloudless.gr k3s cluster on omv.
+# Currently identical to defaults — kept separate so a future env (staging,
+# laptop dev) can fork without touching values.yaml.
+#
+# Apply with:
+#   helm upgrade --install postiz infrastructure/postiz/helm/postiz \
+#     -n postiz \
+#     -f infrastructure/postiz/helm/postiz/values-prod.yaml
+
+postiz:
+  mainUrl: "https://postiz.cloudless.gr"
+  frontendUrl: "https://postiz.cloudless.gr"
+  backendUrl: "https://postiz.cloudless.gr/api"
+  disableRegistration: "true"
+
+service:
+  type: NodePort
+  port: 5000
+  nodePort: 30500
+
+ingress:
+  enabled: false
+
+nodeSelector:
+  kubernetes.io/hostname: "omv"

@@ -80,13 +80,33 @@ spec:
               mountPath: /uploads
           resources:
             {{- toYaml .Values.postiz.resources | nindent 12 }}
-          readinessProbe:
+          # Startup probe — gives the backend generous time to finish Prisma
+          # migrations and NestJS bootstrap before liveness checks kick in.
+          startupProbe:
             httpGet:
               path: /
               port: 5000
             initialDelaySeconds: 30
             periodSeconds: 15
+            failureThreshold: 20  # 5 min grace period
+            timeoutSeconds: 5
+          # Liveness probe — auto-restarts the pod if the backend gets stuck
+          # (as happened on 2026-07-31 when the NestJS process entered a
+          # sleeping state without binding to port 3000).
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            periodSeconds: 30
+            failureThreshold: 3  # 90s of failures → restart
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            periodSeconds: 15
             failureThreshold: 6
+            timeoutSeconds: 5
       volumes:
         - name: uploads
           persistentVolumeClaim:
