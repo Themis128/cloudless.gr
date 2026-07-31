@@ -28,6 +28,9 @@ import type { CalendarPlatform } from "@/lib/content-calendar";
  * Both share the same `postizFetch` / `getPostizConfig` plumbing.
  */
 
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY = 1000 // 1 second
+
 async function getPostizConfig(): Promise<{ baseUrl: string; apiKey: string }> {
   const cfg = await getConfig();
   if (!cfg.POSTIZ_API_URL || !cfg.POSTIZ_API_KEY) throw new PostizNotConfiguredError();
@@ -52,6 +55,43 @@ async function postizFetch(
     },
     signal: AbortSignal.timeout(timeoutMs ?? 10_000),
   });
+}
+
+async function fetchWithRetry(
+  url: string,
+  token: string,
+  maxRetries: number,
+  retryDelay: number
+): Promise<any> {
+  let lastError = null
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ token })
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      lastError = error
+      if (i < maxRetries - 1) {
+        console.log(`Retry ${i + 1}/${maxRetries} after ${retryDelay}ms...`)
+        await new Promise(resolve => setTimeout(resolve, retryDelay))
+        retryDelay *= 2 // Exponential backoff
+      }
+    }
+  }
+
+  throw lastError
 }
 
 // --- Typed errors used by the admin console -------------------------------
