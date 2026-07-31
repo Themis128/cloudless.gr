@@ -125,5 +125,14 @@
         outputEl.textContent = error.stack || String(error);
       });
     </script>
-  </body>
+  <script>
+  window.addEventListener('error', function(event) {
+    console.error('Error:', event.message, event.filename, event.lineno, event.colno);
+  });
+
+  window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled Rejection:', event.reason);
+  });
+</script>
+</body>
 </html>
