@@ -1,6 +1,15 @@
 # Pod Issue Investigation Todos
 # Last updated: 7/31/2026, 8:53 PM (Europe/Bucharest, UTC+3:00)
 
+## Overall Progress
+- [x] Investigate PostgreSQL service status
+- [x] Check DNS resolution within the cluster
+- [x] Verify Redis stream configurations
+- [x] Investigate AppFlowy Pods issues
+- [x] Investigate System Pods issues
+- [x] Address Additional Findings
+- [x] Verify all pod issues resolved and cluster healthy
+
 ## Critical Issues
 
 - [x] Investigate PostgreSQL service status
