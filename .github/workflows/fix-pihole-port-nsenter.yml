@@ -161,14 +161,20 @@ jobs:
       - name: Post report
         if: always()
         run: |
-          NGINX_STATUS=$(grep "^nginx:" /tmp/pihole-nsenter.txt | tail -1 || echo "unknown")
+          if [ -f /tmp/pihole-nsenter.txt ]; then
+            NGINX_STATUS=$(grep "^nginx:" /tmp/pihole-nsenter.txt | tail -1 || echo "unknown")
+            POD_OUTPUT=$(cat /tmp/pihole-nsenter.txt)
+          else
+            NGINX_STATUS="unknown (pod failed or did not complete)"
+            POD_OUTPUT="Pod logs not available — the fix pod may have failed to run or complete."
+          fi
           {
             echo "# Pi-hole Port Fix (nsenter) — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
             echo ""
             echo "nginx status: **$NGINX_STATUS**"
             echo ""
             echo '```'
-            cat /tmp/pihole-nsenter.txt
+            echo "$POD_OUTPUT"
             echo '```'
           } > /tmp/pihole-nsenter-report.md
           gh issue comment 382 --repo "${{ github.repository }}" \

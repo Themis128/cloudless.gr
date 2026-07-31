@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      PI_HOST: "100.74.191.58"
+      PI_USER: "tbaltzakis"
+      KUBECMD: "sudo kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml"
     steps:
       - uses: actions/checkout@v4
 
@@ -27,14 +30,16 @@ jobs:
         uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
         with:
           oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
           tags: tag:k8s
 
-      - name: Configure kubectl
+      - name: Setup SSH key
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "SSH key configured for $PI_USER@$PI_HOST"
 
       - name: Write pod manifest
         run: |
@@ -92,12 +97,25 @@ jobs:
 
       - name: Fix log path on omv
         run: |
-          kubectl delete pod fix-health-log -n default --ignore-not-found --wait=true
-          kubectl create -f /tmp/fix-pod.yaml
-          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded \
-            pod/fix-health-log -n default --timeout=60s
-          kubectl logs -n default fix-health-log
-          kubectl delete pod fix-health-log -n default --ignore-not-found
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD delete pod fix-health-log -n default --ignore-not-found --wait=true" 2>&1 || true
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD create -f -" < /tmp/fix-pod.yaml 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD wait --for=jsonpath='{.status.phase}'=Succeeded pod/fix-health-log -n default --timeout=60s" 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD logs -n default fix-health-log" 2>&1
+
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_HOST" \
+            "$KUBECMD delete pod -n default fix-health-log --ignore-not-found" 2>&1 || true
 
       - name: Report result
         if: always()
