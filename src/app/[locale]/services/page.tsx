@@ -149,47 +149,50 @@ export default async function ServicesPage() {
             <div className="from-neon-cyan/40 via-neon-magenta/40 to-neon-green/40 absolute top-5 right-[calc(16.67%+2rem)] left-[calc(16.67%+2rem)] hidden h-px bg-gradient-to-r sm:block" />
 
             {/* Step 1 */}
-            <a
-              href="#audit"
-              className="group relative flex flex-1 flex-col items-center text-center"
-            >
-              <div className="border-neon-cyan/30 bg-void text-neon-cyan ring-neon-cyan/20 group-hover:bg-neon-cyan/10 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-1 transition-all duration-200 group-hover:scale-110">
-                01
-              </div>
-              <span className="text-neon-cyan font-mono text-xs font-semibold">Free Audit</span>
-              <span className="mt-1 text-xs text-slate-500">30-min strategy call</span>
-            </a>
+<a
+  href="#audit"
+  className="group relative flex flex-1 flex-col items-center text-center"
+  aria-label="Free Audit: 30-min strategy call"
+>
+  <div className="border-neon-cyan/30 bg-void text-neon-cyan ring-neon-cyan/20 group-hover:bg-neon-cyan/10 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-1 transition-all duration-200 group-hover:scale-110">
+    01
+  </div>
+  <span className="text-neon-cyan font-mono text-xs font-semibold">Free Audit</span>
+  <span className="mt-1 text-xs text-slate-500">30-min strategy call</span>
+</a>
 
             {/* Step 2 — active (this page) */}
-            <a
-              href="#services"
-              className="group relative flex flex-1 flex-col items-center text-center"
-            >
-              <div className="border-neon-magenta bg-neon-magenta/15 text-neon-magenta ring-neon-magenta/25 group-hover:bg-neon-magenta/25 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-2 transition-all duration-200">
-                02
-              </div>
-              <span className="text-neon-magenta font-mono text-xs font-semibold">
-                Choose Your Scope
-              </span>
-              <span className="mt-1 text-xs text-slate-500">Services or bundle</span>
-              <span className="bg-neon-magenta/10 text-neon-magenta mt-1.5 rounded-full px-2 py-0.5 font-mono text-[9px]">
-                You are here
-              </span>
-            </a>
+<a
+  href="#services"
+  className="group relative flex flex-1 flex-col items-center text-center"
+  aria-label="Choose Your Scope: Services or bundle"
+>
+  <div className="border-neon-magenta bg-neon-magenta/15 text-neon-magenta ring-neon-magenta/25 group-hover:bg-neon-magenta/25 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-2 transition-all duration-200">
+    02
+  </div>
+  <span className="text-neon-magenta font-mono text-xs font-semibold">
+    Choose Your Scope
+  </span>
+  <span className="mt-1 text-xs text-slate-500">Services or bundle</span>
+  <span className="bg-neon-magenta/10 text-neon-magenta mt-1.5 rounded-full px-2 py-0.5 font-mono text-[9px]">
+    You are here
+  </span>
+</a>
 
             {/* Step 3 */}
-            <a
-              href="#results"
-              className="group relative flex flex-1 flex-col items-center text-center"
-            >
-              <div className="border-neon-green/30 bg-void text-neon-green ring-neon-green/20 group-hover:bg-neon-green/10 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-1 transition-all duration-200 group-hover:scale-110">
-                03
-              </div>
-              <span className="text-neon-green font-mono text-xs font-semibold">
-                Results in 14 Days
-              </span>
-              <span className="mt-1 text-xs text-slate-500">Measurable progress</span>
-            </a>
+<a
+  href="#results"
+  className="group relative flex flex-1 flex-col items-center text-center"
+  aria-label="Results in 14 Days: Measurable progress"
+>
+  <div className="border-neon-green/30 bg-void text-neon-green ring-neon-green/20 group-hover:bg-neon-green/10 relative z-10 mb-3 flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-bold ring-1 transition-all duration-200 group-hover:scale-110">
+    03
+  </div>
+  <span className="text-neon-green font-mono text-xs font-semibold">
+    Results in 14 Days
+  </span>
+  <span className="mt-1 text-xs text-slate-500">Measurable progress</span>
+</a>
           </div>
         </div>
       </section>
@@ -237,13 +240,15 @@ export default async function ServicesPage() {
                   ))}
                 </ul>
                 <div className="mt-8">
-                  <Link
-                    href="/contact"
-                    className="group/link border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-2 rounded-lg border px-6 py-3 font-mono text-sm font-semibold transition-all duration-300"
-                  >
-                    Book Free Audit
-                    <Arrow />
-                  </Link>
+<Link
+  href="/contact"
+  className="group/link border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 inline-flex items-center gap-2 rounded-lg border px-6 py-3 font-mono text-sm font-semibold transition-all duration-300"
+  aria-label="Book a free audit call"
+  role="button"
+>
+  Book Free Audit
+  <Arrow />
+</Link>
                 </div>
               </div>
 
@@ -376,12 +381,13 @@ export default async function ServicesPage() {
                           {service.unit}
                         </span>
                       </div>
-                      <Link
-                        href={`/auth/signup?plan=${service.planKey}`}
-                        className={`${colors.link} group/link inline-flex items-center gap-1.5 font-mono text-sm font-semibold transition-colors`}
-                      >
-                        {t("servicesPage.getStarted", "Get started")}
-                        <Arrow />
+                        <Link
+                          href={`/auth/signup?plan=${service.planKey}`}
+                          className={`${colors.link} group/link inline-flex items-center gap-1.5 font-mono text-sm font-semibold transition-colors`}
+                          aria-label={`Get started with ${service.title}`}
+                        >
+                          {t("servicesPage.getStarted", "Get started")}
+                          <Arrow />
                       </Link>
                     </div>
                   </div>
@@ -447,29 +453,30 @@ export default async function ServicesPage() {
 
       {/* ── Pricing Comparison Table ────────────────────────── */}
       <section className="bg-void py-16 lg:py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <ScrollReveal>
-            <div className="mb-10 text-center">
-              <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
-                {t("servicesPage.compareTitle", "Individual services or")}{" "}
-                <span className="text-neon-cyan">
-                  {t("servicesPage.compareTitleHighlight", "full bundle?")}
-                </span>
-              </h2>
-              <p className="mt-3 text-slate-400">
-                {t(
-                  "servicesPage.compareSubtitle",
-                  "All four services. One team. One engagement. 30% less."
-                )}
-              </p>
-            </div>
+<div className="mx-auto max-w-6xl px-6">
+  <ScrollReveal>
+    <div className="mb-10 text-center">
+      <h2 className="font-heading text-2xl font-bold text-white md:text-3xl">
+        {t("servicesPage.compareTitle", "Individual services or")}{" "}
+        <span className="text-neon-cyan">
+          {t("servicesPage.compareTitleHighlight", "full bundle?")}
+        </span>
+      </h2>
+      <p className="mt-3 text-slate-400">
+        {t(
+          "servicesPage.compareSubtitle",
+          "All four services. One team. One engagement. 30% less."
+        )}
+      </p>
+    </div>
 
-            <div
-              className="overflow-x-auto rounded-xl border border-slate-800"
-              tabIndex={0}
-              role="region"
-              aria-label={t("servicesPage.compareTableLabel", "Service comparison table")}
-            >
+    <div
+      className="overflow-x-auto rounded-xl border border-slate-800"
+      tabIndex={0}
+      role="region"
+      aria-label={t("servicesPage.compareTableLabel", "Service comparison table")}
+      aria-describedby="servicesPage.compareTableDescription"
+    >
               <table className="w-full min-w-[540px] text-left">
                 <thead>
                   <tr className="bg-void-light/30 border-b border-slate-800">
@@ -657,12 +664,13 @@ export default async function ServicesPage() {
                   {t("servicesPage.bundleSave", "SAVE 30%")}
                 </span>
               </div>
-              <Link
-                href="/auth/signup?plan=bundle"
-                className="group/link bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse mt-6 inline-flex items-center gap-2 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
-              >
-                {t("servicesPage.bundleCta", "Get the bundle")}
-                <Arrow />
+                      <Link
+                        href="/auth/signup?plan=bundle"
+                        className="group/link bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse mt-6 inline-flex items-center gap-2 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
+                        aria-label="Get the full-stack growth engine bundle"
+                      >
+                        {t("servicesPage.bundleCta", "Get the bundle")}
+                        <Arrow />
               </Link>
             </div>
 
@@ -846,19 +854,21 @@ export default async function ServicesPage() {
               )}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="/contact"
-                className="group/link bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse inline-flex items-center gap-2 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
-              >
-                {t("servicesPage.ctaPrimary", "Book Free Audit")}
-                <Arrow />
+                        <Link
+                          href="/contact"
+                          className="group/link bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan/20 animate-glow-pulse inline-flex items-center gap-2 rounded-lg border px-8 py-3.5 font-mono font-semibold transition-all duration-300 hover:shadow-[0_0_25px_rgba(0,255,245,0.2)]"
+                          aria-label="Book a free audit call"
+                        >
+                          {t("servicesPage.ctaPrimary", "Book Free Audit")}
+                          <Arrow />
               </Link>
-              <Link
-                href="/store"
-                className="group/link inline-flex items-center gap-1.5 font-mono text-sm font-semibold text-slate-400 transition-colors hover:text-white"
-              >
-                {t("servicesPage.ctaSecondary", "Browse store")}
-                <Arrow />
+                        <Link
+                          href="/store"
+                          className="group/link inline-flex items-center gap-1.5 font-mono text-sm font-semibold text-slate-400 transition-colors hover:text-white"
+                          aria-label="Browse our store"
+                        >
+                          {t("servicesPage.ctaSecondary", "Browse store")}
+                          <Arrow />
               </Link>
             </div>
           </ScrollReveal>
