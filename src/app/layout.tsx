@@ -178,13 +178,3 @@ export default async function RootLayout({
     </html>
   );
 }
-
-<task_progress>
-- [x] Update CSP to allow necessary connections in production
-- [x] Ensure service worker is properly allowed
-- [x] Allow LinkedIn tracking in production
-- [x] Keep nonce-based script loading for security
-- [x] Fix deprecated script initialization
-- [ ] Test the changes to ensure they resolve the CSP violations
-</task_progress>
-</write_to_file>

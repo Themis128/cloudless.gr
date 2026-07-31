@@ -28,6 +28,11 @@ export default defineConfig({
 
   // Longer timeouts — production has network latency
   timeout: 60_000,
+  // Match local + k3s configs: 15s for expect() assertions.
+  // Production Lambda cold starts + Cloudflare edge can briefly elevate p95,
+  // so we keep this in sync with the other configs rather than relying on
+  // the 5s default.
+  expect: { timeout: 15_000 },
 
   // No webServer — we test the live site directly
   use: {

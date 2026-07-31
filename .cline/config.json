@@ -1,56 +1,168 @@
 {
-  "provider": "ollama",
-  "model": "qwen2.5-coder",
-  "baseUrl": "http://localhost:11434",
-  "apiKey": "dummy",
-  "models": [
-    {
-      "name": "ollama-local",
-      "provider": "ollama",
-      "baseUrl": "http://localhost:11434",
-      "model": "qwen2.5-coder",
-      "supports": ["functions", "streaming"]
+  "version": "1.0.0",
+  "project": "cloudless.gr",
+  "description": "Next.js 16 + Cloudflare Workers full-stack application",
+  "settings": {
+    "maxTokensPerTask": 64000,
+    "defaultModel": "claude-sonnet-4-20250514",
+    "autoApprove": {
+      "readOperations": true,
+      "fileOperations": false,
+      "commandExecution": false,
+      "networkOperations": false
     },
-    {
-      "name": "ollama-llama3",
-      "provider": "ollama",
-      "baseUrl": "http://localhost:11434",
-      "model": "llama3.1",
-      "supports": ["functions", "streaming"]
+    "context": {
+      "maxFilesToRead": 15,
+      "maxSearchResults": 20,
+      "autoIncludeFiles": [
+        "AGENTS.md",
+        "package.json",
+        "wrangler.jsonc",
+        "next.config.ts",
+        "open-next.config.ts"
+      ]
     },
-    {
-      "name": "ollama-mistral",
-      "provider": "ollama",
-      "baseUrl": "http://localhost:11434",
-      "model": "mistral",
-      "supports": ["functions", "streaming"]
-    }
-  ],
-  "tools": {
-    "include": ["ollama-tools"],
-    "configs": [
-      {
-        "name": "ollama-tools",
-        "type": "python-module",
-        "module": "integrations.cline_adapter",
-        "available_tools": [
-          "list_files",
-          "read_file",
-          "write_file",
-          "run_command",
-          "ask_agent",
-          "list_models",
-          "pull_model",
-          "check_ollama",
-          "search_files",
-          "get_file_info",
-          "analyze_code",
-          "generate_test"
-        ],
-        "default_context": {
-          "project_path": "/home/tbaltzakis/cloudless.gr"
-        }
+    "hooks": {
+      "enabled": true,
+      "directory": ".cline/hooks"
+    },
+    "rules": {
+      "enabled": true,
+      "directory": ".cline/rules"
+    },
+    "mcp": {
+      "autoStartServers": [
+        "fast-markdown",
+        "cloudflare-bindings",
+        "cloudflare",
+        "sequentialthinking",
+        "github",
+        "github.com/modelcontextprotocol/servers/tree/main/src/filesystem"
+      ],
+      "alwaysAllowTools": {
+        "fast-markdown": ["list_files", "read_file", "search_files", "get_toc"],
+        "cloudflare-bindings": ["kv_namespaces_list", "r2_buckets_list", "workers_list"],
+        "cloudflare": ["*"],
+        "sequentialthinking": ["sequentialthinking"],
+        "github": ["search_repos", "search_code", "search_issues", "get_file_contents", "get_issue", "list_issues", "get_pull_request", "list_pull_requests", "get_repo", "list_branches", "list_commits", "get_workflow_run", "list_workflow_runs"],
+        "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": ["read_text_file", "read_multiple_files", "write_file", "edit_file", "create_directory", "list_directory", "search_files", "directory_tree", "get_file_info"]
       }
-    ]
+    },
+    "skills": {
+      "autoLoad": [
+        "cloudflare",
+        "workers-best-practices",
+        "wrangler",
+        "opennext-build-deploy",
+        "e2e-testing",
+        "playwright-cli",
+        "slack-app-routes-nextjs",
+        "turnstile-spin",
+        "durable-objects",
+        "agents-sdk",
+        "cloudflare-email-service",
+        "cloudflare-one",
+        "web-perf",
+        "schema-markup",
+        "seo-audit",
+        "i18n",
+        "cloudless-design-system",
+        "deploy-pipeline",
+        "pi-image-rollout",
+        "cluster-incident-response",
+        "analytics-stack",
+        "pr-event-triage",
+        "pr-conflict-resolve",
+        "sonarcloud-triage",
+        "workflow-failover-migrate",
+        "stripe-dispute",
+        "meta-capi-pixel",
+        "bedrock-chat",
+        "chat-booking",
+        "calendar-notion-reshare",
+        "notion-database-management",
+        "notion-page-blocks",
+        "notion-search-users",
+        "activecampaign",
+        "google-ads-api",
+        "x-ads-api",
+        "google-analytics",
+        "search-console",
+        "semrush-research",
+        "keyword-research",
+        "backlink-audit",
+        "serp-analyzer",
+        "seo-content-brief",
+        "content-gap-analysis",
+        "similarweb-traffic",
+        "google-reviews",
+        "brand-monitor",
+        "competitor-analysis",
+        "geo-query-finder",
+        "content-strategy",
+        "copywriting",
+        "copy-editing",
+        "write-blog",
+        "write-landing",
+        "email-sequence",
+        "email-subject-lines",
+        "newsletter",
+        "social-content",
+        "thread-writer",
+        "linkedin-content",
+        "bluesky",
+        "reddit-marketing",
+        "discord-bot",
+        "telegram-bot",
+        "feishu-lark",
+        "slack-bot",
+        "facebook-ads",
+        "google-ads",
+        "linkedin-ads",
+        "video-ad-analysis",
+        "marketing-data-hub",
+        "windsor-ai",
+        "supermetrics",
+        "ifttt-automation",
+        "apollo-outreach",
+        "hubspot",
+        "content-calendar",
+        "content-repurposing",
+        "lead-magnet",
+        "onboarding-cro",
+        "signup-flow-cro",
+        "page-cro",
+        "pricing-strategy",
+        "product-marketing",
+        "launch-strategy",
+        "growth-strategy",
+        "demand-gen",
+        "referral-program",
+        "icp-builder",
+        "podcast-marketing",
+        "podcast-edit",
+        "youtube-analytics",
+        "affiliate-marketing",
+        "ab-test-setup",
+        "domain-research",
+        "domain-decommission",
+        "chrome-browser-automation",
+        "cloudflare-lb",
+        "cloudflare-token-rotation",
+        "cloudless-cowork-workflow",
+        "esp32-notion-restore",
+        "integration-activation",
+        "meta-business-help",
+        "omv-ssh-key-setup",
+        "runner-harden",
+        "runner-ops",
+        "slack-app-builder",
+        "slack-app-debugging",
+        "workers-ai",
+        "audit-reports",
+        "marketing-ideas",
+        "google-ads-report"
+      ]
+    }
   }
 }

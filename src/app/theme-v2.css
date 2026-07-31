@@ -14,9 +14,9 @@
  */
 
 /* ──────────────────────────────────────────────────────────────────
-   LIGHT (default)
-   Marketing pages, public docs, store, contact, auth.
-   ────────────────────────────────────────────────────────────────── */
+    LIGHT (default)
+    Marketing pages, public docs, store, contact, auth.
+    ────────────────────────────────────────────────────────────────── */
 :root,
 [data-theme="light"] {
   /* Surfaces */
@@ -32,21 +32,20 @@
   /* Text */
   --ink-primary: #0f1822;
   --ink-body: #475467;
-
   /* --ink-muted darkened in Phase 6.1 from #7a8aa0 (3.5:1 on white)
-     to #5b6776 so it clears WCAG AA on small captions. */
+      to #5b6776 so it clears WCAG AA on small captions. */
   --ink-muted: #5b6776;
 
   /* Accent (calmer cyan/teal). Darkened in Phase 6 from #0e9aab so it
-     hits WCAG AA (4.5:1) on both white and accent-soft surfaces. */
+      hits WCAG AA (4.5:1) on both white and accent-soft surfaces. */
   --accent: #0a7785;
   --accent-hover: #086370;
   --accent-soft: #e0f2f5;
   --accent-on: #fff;
 
   /* Semantic */
-  --success: #0a8a52;
-  --warning: #b56e00;
+  --success: #0a8052;
+  --warning: #a45c00;
   --danger: #c0392b;
   --info: var(--accent);
 
@@ -72,9 +71,9 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   DARK
-   /admin/* routes by default. Marketing pages opt-in via prefers-color-scheme.
-   ────────────────────────────────────────────────────────────────── */
+    DARK
+    /admin/* routes by default. Marketing pages opt-in via prefers-color-scheme.
+    ────────────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
   /* Surfaces */
   --surface-canvas: #0b0f15;
@@ -164,9 +163,9 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   THEME-INDEPENDENT TOKENS
-   Radii, type scale, motion. Same in light and dark.
-   ────────────────────────────────────────────────────────────────── */
+    THEME-INDEPENDENT TOKENS
+    Radii, type scale, motion. Same in light and dark.
+    ────────────────────────────────────────────────────────────────── */
 :root {
   /* Radii */
   --radius-sm: 6px;
@@ -205,8 +204,8 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   PRIMITIVE UTILITY CLASSES (opt-in; primitives in Phase 2 will use these)
-   ────────────────────────────────────────────────────────────────── */
+    PRIMITIVE UTILITY CLASSES (opt-in; primitives in Phase 2 will use these)
+    ────────────────────────────────────────────────────────────────── */
 
 /** Glass surface — sticky nav, hero panels. Requires backdrop-filter support. */
 .v2-surface-glass {
@@ -254,6 +253,10 @@
   color: var(--accent);
 }
 
+.v2-pill:hover {
+  border-color: transparent;
+}
+
 /** Reveal-on-scroll — opacity + small translate, no glow. */
 .v2-reveal {
   opacity: 0;
@@ -278,13 +281,13 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   LIGHT-MODE UTILITY OVERRIDES — Phase 3
-   When [data-theme="light"] is set on a subtree, retarget the most-used
-   dark-only Tailwind colour utilities to v2 light tokens so the existing
-   markup reads correctly without component changes.
-   These are written as descendant selectors so [data-theme="dark"] children
-   (e.g. TerminalBlock) opt out automatically.
-   ────────────────────────────────────────────────────────────────── */
+    LIGHT-MODE UTILITY OVERRIDES — Phase 3
+    When [data-theme="light"] is set on a subtree, retarget the most-used
+    dark-only Tailwind colour utilities to v2 light tokens so the existing
+    markup reads correctly without component changes.
+    These are written as descendant selectors so [data-theme="dark"] children
+    (e.g. TerminalBlock) opt out automatically.
+    ────────────────────────────────────────────────────────────────── */
 
 [data-theme="light"] .text-white {
   color: var(--ink-primary);
@@ -306,7 +309,7 @@
 }
 
 /* Card backgrounds — slate-800/900 reads as a card on dark; on light we want
-   subtle elevation, not a slab. */
+    subtle elevation, not a slab. */
 [data-theme="light"] .bg-slate-800,
 [data-theme="light"] .bg-slate-900 {
   background-color: var(--surface-subtle);
@@ -328,8 +331,8 @@
 }
 
 /* glow-* / box-glow-* / scanlines / cyber-grid / dot-matrix / neon-border —
-   retired in Phase 5; no light-mode overrides needed. The base utilities in
-   globals.css are now no-ops site-wide. */
+    retired in Phase 5; no light-mode overrides needed. The base utilities in
+    globals.css are now no-ops site-wide. */
 
 /* Mobile tap highlight — accent-soft instead of high-saturation cyan. */
 [data-theme="light"] {
@@ -343,14 +346,14 @@
 }
 
 /* Body itself — when the html data-theme="light", the body should use the
-   v2 surface, not the dark void. */
+    v2 surface, not the dark void. */
 [data-theme="light"] body {
   background: var(--surface-canvas);
   color: var(--ink-primary);
 }
 
 /* Inline placeholder utilities — forms put placeholder:text-slate-{500,600}
-   directly on inputs, which overrides the global form rule. Re-target. */
+    directly on inputs, which overrides the global form rule. Re-target. */
 [data-theme="light"] .placeholder\:text-slate-500::placeholder,
 [data-theme="light"] .placeholder\:text-slate-600::placeholder,
 [data-theme="light"] .placeholder\:text-slate-700::placeholder {
@@ -358,7 +361,7 @@
 }
 
 /* kbd / code chips often use bg-void-lighter + border-slate-700, which already
-   alias correctly via @theme. Make sure their text reads on a light surface. */
+    alias correctly via @theme. Make sure their text reads on a light surface. */
 [data-theme="light"] kbd,
 [data-theme="light"] .kbd {
   background-color: var(--surface-subtle);
@@ -367,9 +370,9 @@
 }
 
 /* Hero / section "ambient" gradient overlays — pages use absolutely-positioned
-   div with from-neon-cyan/10 to-neon-magenta/10 for atmosphere. With both
-   neons collapsed onto a single accent these become a flat tint, which is too
-   strong on a light surface. Soften. */
+    div with from-neon-cyan/10 to-neon-magenta/10 for atmosphere. With both
+    neons collapsed onto a single accent these become a flat tint, which is too
+    strong on a light surface. Soften. */
 [data-theme="light"] .absolute.inset-0.bg-gradient-to-r,
 [data-theme="light"] .absolute.inset-0.bg-gradient-to-br,
 [data-theme="light"] .absolute.inset-0.bg-gradient-to-b {
@@ -377,11 +380,11 @@
 }
 
 /* Decorative badges + alpha-modulated accent backgrounds — Tailwind v4
-   strips attribute-substring selectors like [class*="bg-neon-cyan/"] during
-   production CSS optimization (Phase 6.2 finding). Use explicit class
-   selectors so the rules survive into the bundled CSS.
-   On light theme each alpha variant collapses to --accent-soft so the badge
-   stays visible without a neon halo. */
+    strips attribute-substring selectors like [class*="bg-neon-cyan/"] during
+    production CSS optimization (Phase 6.2 finding). Use explicit class
+    selectors so the rules survive into the bundled CSS.
+    On light theme each alpha variant collapses to --accent-soft so the badge
+    stays visible without a neon halo. */
 
 /* Cyan + green share the teal accent-soft. */
 [data-theme="light"] .bg-neon-cyan\/5,
@@ -415,8 +418,8 @@
 }
 
 /* When a parent has bg-neon-{cyan,magenta,blue}/N AND a child uses
-   text-void/text-white expecting a dark background, the white-on-pale pair
-   fails contrast. Retarget to the matching accent token. */
+    text-void/text-white expecting a dark background, the white-on-pale pair
+    fails contrast. Retarget to the matching accent token. */
 [data-theme="light"] .bg-neon-cyan\/5 .text-void,
 [data-theme="light"] .bg-neon-cyan\/10 .text-void,
 [data-theme="light"] .bg-neon-cyan\/20 .text-void,
@@ -439,44 +442,44 @@
 }
 
 /* Same logic for solid bg-neon-cyan (without the /N partial). On dark this
-   is the bright neon CTA with text-void = readable. On light this collapses
-   to dark-teal accent CTA with white text — keep white. The browser handles
-   that correctly; no override needed. */
+    is the bright neon CTA with text-void = readable. On light this collapses
+    to dark-teal accent CTA with white text — keep white. The browser handles
+    that correctly; no override needed. */
 
 /* ──────────────────────────────────────────────────────────────────
-   PHASE 4 — Homepage hero gradient mesh
-   The homepage hero section uses scanlines + cyber-grid + two giant
-   floating orbs in cyan/magenta. On light those orbs are oversized and
-   shouty; replace the entire backdrop with the v2 gradient mesh and
-   suppress the orbs.
-   ────────────────────────────────────────────────────────────────── */
+    PHASE 4 — Homepage hero gradient mesh
+    The homepage hero section uses scanlines + cyber-grid + two giant
+    floating orbs in cyan/magenta. On light those orbs are oversized and
+    shouty; replace the entire backdrop with the v2 gradient mesh and
+    suppress the orbs.
+    ────────────────────────────────────────────────────────────────── */
 
 /* Scope the hero treatment to homepage-style sections. The homepage hero
-   is the first section.scanlines.scan-line on a light page. */
+    is the first section.scanlines.scan-line on a light page. */
 [data-theme="light"] section.scanlines.scan-line {
   background: var(--gradient-hero) !important;
 }
 
 /* The two huge gradient orbs (.bg-neon-{cyan,magenta}/5 with translate +
-   blur) are the most invasive remnants of the cyberpunk hero. Hide them
-   on light pages — the gradient mesh already provides the atmosphere. */
-[data-theme="light"] div.bg-neon-cyan\/5.animate-gradient-shift,
-[data-theme="light"] div.bg-neon-magenta\/5.animate-gradient-shift,
-[data-theme="light"] div[class*="bg-neon-cyan/5"][class*="blur"],
-[data-theme="light"] div[class*="bg-neon-magenta/5"][class*="blur"] {
+    blur) are the most invasive remnants of the cyberpunk hero. Hide them
+    on light pages — the gradient mesh already provides the atmosphere. */
+[data-theme="light"] div[class*="bg-neon-cyan"][class*="animate-gradient-shift"],
+[data-theme="light"] div[class*="bg-neon-magenta"][class*="animate-gradient-shift"],
+[data-theme="light"] div.bg-neon-cyan-blur,
+[data-theme="light"] div.bg-neon-magenta-blur {
   display: none;
 }
 
 /* Particle network — Three.js scene. On light pages the cyan particles
-   read as visual noise. Dial it down to 30% opacity so it's a hint, not
-   a feature. (Hiding entirely also works; preserved at low opacity for
-   continuity with the dark version.) */
+    read as visual noise. Dial it down to 30% opacity so it's a hint, not
+    a feature. (Hiding entirely also works; preserved at low opacity for
+    continuity with the dark version.) */
 [data-theme="light"] section.scanlines canvas {
   opacity: 0.3;
 }
 
 /* Hero badge (status pill) — bg-neon-cyan/10 with text-neon-cyan reads
-   as a glowing pill on dark. On light, retarget to the v2 pill styling. */
+    as a glowing pill on dark. On light, retarget to the v2 pill styling. */
 [data-theme="light"] div.bg-neon-cyan\/10.border-neon-cyan\/20.text-neon-cyan {
   background-color: var(--accent-soft);
   border-color: transparent;
@@ -484,8 +487,8 @@
 }
 
 /* Section padding — the v2 spec prescribes 96px desktop / 64px mobile.
-   Most marketing sections currently use py-16 (64px). Bump only on light
-   so dark pages stay compact. */
+    Most marketing sections currently use py-16 (64px). Bump only on light
+    so dark pages stay compact. */
 @media (min-width: 768px) {
   [data-theme="light"] section.py-16,
   [data-theme="light"] section.md\:py-24,
@@ -496,13 +499,13 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   PHASE 6 — A11y polish (WCAG AA contrast)
-   Alpha-modulated accent text fails contrast on light backgrounds.
-   Phase 6.2: same Tailwind-purger fix as the bg overrides above — replaced
-   [class*="..."] attribute selectors with explicit class lists.
-   Also covers .text-neon-green/* (decorative category badges in blog cards)
-   which Phase 6.1 missed.
-   ────────────────────────────────────────────────────────────────── */
+    PHASE 6 — A11y polish (WCAG AA contrast)
+    Alpha-modulated accent text fails contrast on light backgrounds.
+    Phase 6.2: same Tailwind-purger fix as the bg overrides above — replaced
+    [class*="..."] attribute selectors with explicit class lists.
+    Also covers .text-neon-green/* (decorative category badges in blog cards)
+    which Phase 6.1 missed.
+    ────────────────────────────────────────────────────────────────── */
 
 /* Cyan low-alpha → muted (teal fades fast on light backgrounds). */
 [data-theme="light"] .text-neon-cyan\/20,
@@ -548,8 +551,8 @@
 }
 
 /* Mobile tap highlight in light theme — was a hardcoded
-   rgba(0, 255, 245, 0.15) inherited from globals.css. Re-target so the
-   highlight reads as a soft accent halo, not bright neon. */
+    rgba(0, 255, 245, 0.15) inherited from globals.css. Re-target so the
+    highlight reads as a soft accent halo, not bright neon. */
 @media (pointer: coarse) {
   [data-theme="light"] a,
   [data-theme="light"] button,

@@ -1,570 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
-import createIntlMiddleware from "next-intl/middleware";
-import { routing } from "@/i18n/routing";
-import { getClientIp as getSharedClientIp } from "@/lib/rate-limit";
 
-const LOCALES = routing.locales as readonly string[];
-const DEFAULT_LOCALE = routing.defaultLocale;
-
-function getLocaleFromPath(pathname: string): string {
-  const segment = pathname.split("/")[1];
-  return LOCALES.includes(segment) ? segment : DEFAULT_LOCALE;
-}
-
-function stripLocale(pathname: string): string {
-  const segment = pathname.split("/")[1];
-  if (!LOCALES.includes(segment)) return pathname;
-  return pathname.slice(segment.length + 1) || "/";
-}
-
-/**
- * Primary auth for page gates: opaque D1 `session_token` from email/password
- * login (`/api/auth/login`). Without this, post-login redirects to /admin or
- * /dashboard bounce straight back to /auth/login even though APIs accept the cookie.
- */
-async function readD1SessionCookie(
-  req: NextRequest,
-): Promise<{ valid: boolean; isAdmin: boolean } | null> {
-  const sessionId = req.cookies.get("session_token")?.value;
-  if (!sessionId) return null;
-
-  try {
-    const { getAuthDbFromEnv, getUserBySession, isAdmin: d1IsAdmin } = await import(
-      "@/lib/auth-d1"
-    );
-    const db = getAuthDbFromEnv();
-    if (!db) return null;
-    const user = await getUserBySession(db, sessionId);
-    if (!user) return { valid: false, isAdmin: false };
-    const admin = await d1IsAdmin(db, user.id);
-    return { valid: true, isAdmin: admin };
-  } catch {
-    return null;
-  }
-}
-
-/** Legacy Auth.js JWT cookie (chunked or whole) — kept for transitional sessions. */
-async function readNextAuthJwt(
-  req: NextRequest,
-): Promise<{ valid: boolean; isAdmin: boolean }> {
-  // The session JWT can exceed the 4096-byte cookie limit when next-auth
-  // CHUNKS it into `<name>.0`, `<name>.1`, … — the unchunked `<name>` cookie
-  // then does not exist. Detect either form (base cookie OR first chunk) before
-  // paying for the getToken dynamic import; getToken's SessionStore reassembles
-  // the chunks itself.
-  const baseNames = ["__Secure-authjs.session-token", "authjs.session-token"];
-  const hasSession = baseNames.some(
-    (n) => req.cookies.get(n) ?? req.cookies.get(`${n}.0`),
-  );
-
-  if (!hasSession) return { valid: false, isAdmin: false };
-
-  try {
-    const { getToken } = await import("next-auth/jwt");
-    const token = await getToken({
-      req: req as Parameters<typeof getToken>[0]["req"],
-      secret: process.env.AUTH_SECRET ?? "",
-      secureCookie: process.env.NODE_ENV === "production",
-      cookieName:
-        process.env.NODE_ENV === "production"
-          ? "__Secure-authjs.session-token"
-          : "authjs.session-token",
-    });
-    if (!token) return { valid: false, isAdmin: false };
-
-    const groups = (token.groups as string[]) ?? [];
-    const admin = groups.includes("admin");
-    return { valid: true, isAdmin: admin };
-  } catch {
-    return { valid: false, isAdmin: false };
-  }
-}
-
-async function readAuthToken(
-  req: NextRequest,
-): Promise<{ valid: boolean; isAdmin: boolean }> {
-  const d1 = await readD1SessionCookie(req);
-  if (d1) return d1;
-  return readNextAuthJwt(req);
-}
-
-// --- next-intl locale middleware ---
-const intlMiddleware = createIntlMiddleware(routing);
-
-// --- In-memory rate limiter (per-process; resets on restart) ---
-//
-// Caveat (worth understanding before changing the numbers below):
-// In Lambda each warm container has its own copy of `rateLimitMap`. With N
-// concurrent containers warm, the effective per-IP ceiling is roughly N ×
-// `max`. For burst protection at scale, the right answer is AWS WAF's
-// rate-based rule (or APIGW usage plans) — this in-process limiter is a
-// best-effort first line that catches accidental loops and small-scale
-// spam, not a real shield against a coordinated attacker. The numbers
-// below are conservative on purpose.
+// Rate limiting state
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-const RATE_LIMITS: Record<string, { windowMs: number; max: number }> = {
-  "/api/contact": { windowMs: 60_000, max: 3 },
-  "/api/subscribe": { windowMs: 60_000, max: 2 },
-  "/api/unsubscribe": { windowMs: 60_000, max: 3 },
-  // Public, unauthenticated account creation: each call fires an SES
-  // verification email — email-bombing / SES-cost vector. Keep it tight.
-  "/api/auth/register": { windowMs: 60_000, max: 3 },
-  "/api/checkout": { windowMs: 60_000, max: 6 },
-  "/api/calendar/book": { windowMs: 60_000, max: 3 },
-  "/api/crm/contact": { windowMs: 60_000, max: 3 },
-  // LLM proxy — each call hits the Anthropic API and costs money. Tighter cap.
-  "/api/chat": { windowMs: 60_000, max: 12 },
-  // Public analytics tracking — writes to Notion on every call. Cap matches in-handler limit.
-  "/api/track": { windowMs: 60_000, max: 30 },
-  // Mass-email sender — shared-secret-authenticated but one call triggers SES
-  // sends to all subscribers. The secret is the real auth gate; this is
-  // belt-and-suspenders against credential-leak abuse. Allow up to 6/hour
-  // so an operator can re-dispatch the publisher (Slack `/cloudless-newsletter
-  // send`, GitHub Actions retry) without waiting an hour each time. Was 1/hour
-  // — that blocked every legitimate retry the moment the weekly cron ran.
-  "/api/newsletter/send": { windowMs: 3_600_000, max: 6 },
-};
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 60; // 60 requests per minute per IP
 
-// Admin endpoints are JWT-auth-gated, but we still rate-limit them to cap
-// abuse from stolen tokens and prevent expensive AI/report operations from
-// being hammered. windowMs: 60s, per-IP across all /api/admin/*.
-const ADMIN_RATE_LIMIT = { windowMs: 60_000, max: 90 };
+function getClientIp(request: NextRequest): string {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "127.0.0.1"
+  );
+}
 
-function isRateLimited(
-  key: string,
-  windowMs: number,
-  max: number,
-): { limited: boolean; remaining: number } {
+function isRateLimited(ip: string): boolean {
   const now = Date.now();
-  const entry = rateLimitMap.get(key);
+  const entry = rateLimitMap.get(ip);
 
   if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
-    return { limited: false, remaining: max - 1 };
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
   }
 
-  entry.count += 1;
-
-  if (entry.count > max) {
-    return { limited: true, remaining: 0 };
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) {
+    return true;
   }
 
-  return { limited: false, remaining: max - entry.count };
+  return false;
 }
 
 // Clean up stale entries every 5 minutes
-let lastCleanup = Date.now();
-function cleanupStaleEntries() {
+setInterval(() => {
   const now = Date.now();
-  if (now - lastCleanup < 300_000) return;
-  lastCleanup = now;
-
-  for (const [key, entry] of rateLimitMap) {
+  for (const [ip, entry] of rateLimitMap.entries()) {
     if (now > entry.resetAt) {
-      rateLimitMap.delete(key);
+      rateLimitMap.delete(ip);
     }
   }
-}
+}, 300_000);
 
-/**
- * Generate a cryptographically random nonce for CSP.
- * Uses Web Crypto (available in both Edge Runtime and Node.js ≥ 19).
- */
-function generateNonce(): string {
-  const buf = new Uint8Array(16);
-  crypto.getRandomValues(buf);
-  // btoa over a latin-1 string — safe because all values are 0–255.
-  return btoa(String.fromCharCode(...buf));
-}
+export function proxy(request: NextRequest): NextResponse | undefined {
+  const ip = getClientIp(request);
 
-/**
- * Build a per-request Content-Security-Policy string.
- *
- * script-src uses a per-request nonce + 'strict-dynamic' instead of the
- * blanket 'unsafe-inline'. This means:
- *   - Inline scripts without the matching nonce attribute are blocked.
- *   - Scripts loaded by a trusted (nonced) script are implicitly trusted,
- *     so GTM / Stripe / EspoCRM child scripts continue to work.
- *   - 'unsafe-eval' is retained for Three.js WebGL shader compilation on
- *     the home page — removing it would require pre-compiling all GLSL.
- *
- * The nonce is also forwarded to layout.tsx via the `x-nonce` response
- * header, where it is applied to every Next.js <Script> component so that
- * inline runtime scripts get the matching attribute.
- *
- * Allowlists every third-party host the site currently loads:
- *   - Stripe (checkout + redirect)
- *   - Sentry (browser SDK + ingest)
- *   - Meta Pixel (connect.facebook.net)
- *   - EspoCRM (forms + tracking)
- *   - Google Analytics / GTM
- *   - LinkedIn Insight Tag (snap.licdn.com)
- *   - Plausible Analytics
- *   - Clarity Analytics
- */
-function buildCSP(nonce: string): string {
-  const isDev = process.env.NODE_ENV !== "production";
-  // In dev mode, Turbopack/HMR injects inline scripts without nonces and
-  // opens WebSockets on the dev origin — we need 'unsafe-inline' + ws:// to
-  // make the dev server work. Production uses the strict nonced policy.
-  // snap.licdn.com — LinkedIn Insight Tag loader (LinkedInInsightTag.tsx).
-  // Already allowlisted in connect-src; must also be in script-src because the
-  // tag appends the script via document.createElement (dev has no strict-dynamic).
-  const scriptSrc = isDev
-    ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com https://snap.licdn.com https://cloudless.gr`
-    : `script-src 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval' https://js.stripe.com https://m.stripe.com https://connect.facebook.net https://browser.sentry-cdn.com https://js.hsforms.net https://js.hs-scripts.com https://js-eu1.hs-scripts.com https://www.googletagmanager.com https://snap.licdn.com https://cloudless.gr`;
+  // Rate limiting
+  if (isRateLimited(ip)) {
+    return new NextResponse("Too Many Requests", { status: 429 });
+  }
 
-  // In production, allow connections to necessary services
-  // Added LinkedIn tracking and Plausible/Clarity analytics
-  // Added specific API endpoints
-  const connectSrc = isDev
-    ? "connect-src 'self' ws: wss: http://localhost:* https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com https://cloudless.gr"
-    : "connect-src 'self' wss://192.168.1.128:30800 https://api.stripe.com https://m.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://www.facebook.com https://api.hubapi.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://px.ads.linkedin.com https://snap.licdn.com https://plausible.io https://www.clarity.ms https://cloudless.gr https://cloudless.gr/api/auth/session https://cloudless.gr/api/user/profile https://cloudless.gr/api/calendar/availability https://cloudless.gr/api/calendar/book";
-
-  return [
-    "default-src 'self'",
-    scriptSrc,
-    // fonts.googleapis.com is allowlisted because next/font/google emits a
-    // @font-face stylesheet whose src URLs hit Google's CDN even though the
-    // font binaries themselves are self-hosted under /_next/static/media.
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://p.typekit.net",
-    "img-src 'self' data: blob: https:",
-    // fonts.gstatic.com — Google Fonts binary CDN. next/font/google falls back
-    // to it for the woff2 files when the build cannot inline them.
-    "font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net",
-    connectSrc,
-    "frame-src https://js.stripe.com https://hooks.stripe.com https://www.facebook.com",
-    "worker-src 'self' blob:",
-    "media-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    // Meta Pixel (fbevents.js) falls back to submitting a hidden <form> to
-    // https://www.facebook.com/tr/ when it can't use an image/beacon transport.
-    // connect.facebook.net is the documented companion host. Without these the
-    // browser blocks the post ("violates form-action 'self'") and conversions
-    // silently stop being reported. 'self' stays first so our own forms work.
-    "form-action 'self' https://www.facebook.com https://connect.facebook.net",
-    "frame-ancestors 'none'",
-    "report-uri /api/csp-report",
-    "report-to csp-endpoint",
-    ...(isDev ? [] : ["upgrade-insecure-requests"]),
-  ].join("; ");
-}
-
-/**
- * Reporting-API endpoint group. Modern browsers prefer this over the
- * legacy report-uri directive, but they fall back to report-uri when
- * the report-to group is unknown — so we ship both in the CSP above.
- */
-const REPORT_TO = JSON.stringify({
-  group: "csp-endpoint",
-  max_age: 86400,
-  endpoints: [{ url: "/api/csp-report" }],
-  include_subdomains: true,
-});
-
-/** Security headers applied to all responses */
-function addSecurityHeaders(response: NextResponse, nonce: string): void {
+  // Security headers
+  const response = NextResponse.next();
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  // Defense-in-depth: deny every powerful feature this marketing/storefront
-  // app does not need. payment=(self) keeps Stripe Payment Request API
-  // working; everything else is hard-blocked. Browsers that don't recognize
-  // a directive ignore it.
   response.headers.set(
     "Permissions-Policy",
-    [
-      "accelerometer=()",
-      "autoplay=(self)",
-      "camera=()",
-      "display-capture=()",
-      "encrypted-media=()",
-      "fullscreen=(self)",
-      "geolocation=()",
-      "gyroscope=()",
-      "hid=()",
-      "idle-detection=()",
-      "magnetometer=()",
-      "microphone=()",
-      "midi=()",
-      "payment=(self)",
-      "picture-in-picture=*",
-      "publickey-credentials-get=(self)",
-      "screen-wake-lock=()",
-      "serial=()",
-      "unload=(self)",
-      "usb=()",
-      "xr-spatial-tracking=()",
-    ].join(", "),
+    "camera=(), microphone=(), geolocation=()"
   );
   response.headers.set(
     "Strict-Transport-Security",
-    "max-age=63072000; includeSubDomains; preload",
+    "max-age=63072000; includeSubDomains; preload"
   );
-  // Cross-Origin isolation headers. The marketing/storefront app does not
-  // window.opener any third-party origins, and does not need
-  // SharedArrayBuffer, so the strictest settings are safe.
-  //   COOP: same-origin    → popups from any cross-origin opener are isolated
-  //   CORP: same-origin    → resources can only be loaded by same-origin pages
-  //   COEP: credentialless → loads any subresource without forcing CORP on it,
-  //                          which would otherwise break Stripe + Sentry + EspoCRM
-  //                          scripts that don't set CORP on their CDN responses
-  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
-  response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
-  response.headers.set("Cross-Origin-Embedder-Policy", "credentialless");
-  response.headers.set("Report-To", REPORT_TO);
-  response.headers.set("Content-Security-Policy", buildCSP(nonce));
-  // Forward nonce to server components (layout.tsx reads x-nonce via headers()).
-  response.headers.set("x-nonce", nonce);
-}
-
-function handleApiRoute(
-  request: NextRequest,
-  pathname: string,
-  nonce: string,
-): NextResponse {
-  const response = NextResponse.next();
-  addSecurityHeaders(response, nonce);
-
-  const origin = request.headers.get("origin") ?? "";
-  const allowedOrigins = ["https://cloudless.gr", "https://www.cloudless.gr"];
-  if (
-    process.env.NODE_ENV === "development" &&
-    /^http:\/\/localhost:(3000|3001|4000)$/.test(origin)
-  ) {
-    allowedOrigins.push(origin);
-  }
-  if (allowedOrigins.includes(origin)) {
-    response.headers.set("Access-Control-Allow-Origin", origin);
-    response.headers.set(
-      "Access-Control-Allow-Methods",
-      "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-    );
-    response.headers.set(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, stripe-signature",
-    );
-  }
-
-  if (request.method === "OPTIONS") {
-    return new NextResponse(null, { status: 204, headers: response.headers });
-  }
-
-  const limit =
-    RATE_LIMITS[pathname] ??
-    (pathname.startsWith("/api/admin/") ? ADMIN_RATE_LIMIT : null);
-  const isAdminRoute = pathname.startsWith("/api/admin/");
-  if (
-    limit &&
-    (isAdminRoute || (request.method !== "GET" && request.method !== "OPTIONS"))
-  ) {
-    cleanupStaleEntries();
-    const ip = getSharedClientIp(request);
-    const { limited, remaining } = isRateLimited(
-      `${ip}:${pathname}`,
-      limit.windowMs,
-      limit.max,
-    );
-    response.headers.set("X-RateLimit-Limit", String(limit.max));
-    response.headers.set("X-RateLimit-Remaining", String(remaining));
-    if (limited) {
-      return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(Math.ceil(limit.windowMs / 1000)),
-            "X-RateLimit-Limit": String(limit.max),
-            "X-RateLimit-Remaining": "0",
-          },
-        },
-      );
-    }
-  }
 
   return response;
-}
-
-async function handlePageRoute(
-  request: NextRequest,
-  pathname: string,
-  nonce: string,
-): Promise<NextResponse> {
-  const bare = stripLocale(pathname);
-  const locale = getLocaleFromPath(pathname);
-  const prefix = `/${locale}`;
-
-  // Post-login resolver: after D1 email/password login (or legacy Auth.js),
-  // read the session and redirect admins → /admin, everyone else → /dashboard.
-  if (bare === "/auth/post-login") {
-    const { valid, isAdmin: hasAdminGroup } = await readAuthToken(request);
-    if (!valid) {
-      return NextResponse.redirect(new URL(`${prefix}/auth/login`, request.url));
-    }
-    return NextResponse.redirect(
-      new URL(`${prefix}${hasAdminGroup ? "/admin" : "/dashboard"}`, request.url),
-    );
-  }
-
-  const isAdminPath = bare === "/admin" || bare.startsWith("/admin/");
-  const isDashboardPath = bare === "/dashboard" || bare.startsWith("/dashboard/");
-
-  if (isAdminPath || isDashboardPath) {
-    const { valid, isAdmin: hasAdminGroup } = await readAuthToken(request);
-    if (valid) {
-      if (isAdminPath && !hasAdminGroup) {
-        return NextResponse.redirect(new URL(`${prefix}/dashboard`, request.url));
-      }
-    } else {
-      const loginUrl = new URL(`${prefix}/auth/login`, request.url);
-      loginUrl.searchParams.set("redirect", bare);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
-  // Forward the pathname as a request header so server components (root
-  // layout) can call themeForRoute() and render <html data-theme=...>
-  // server-side with no first-paint flash. next/headers reads request-side.
-  request.headers.set("x-pathname", pathname);
-  const response = intlMiddleware(request);
-  addSecurityHeaders(response, nonce);
-  return response;
-}
-
-export async function proxy(request: NextRequest) {
-  // One nonce per request — used both in the CSP header and forwarded to
-  // layout.tsx via x-nonce so <Script nonce={nonce}> matches the policy.
-  const nonce = generateNonce();
-  const { pathname } = request.nextUrl;
-
-  // Defense in depth: never locale-prefix Next internals. A broken matcher
-  // that lets `/_next/static/*` through here used to 307 → `/en/_next/...`,
-  // which then 404s as text/html and breaks every stylesheet/script load.
-  if (pathname.startsWith("/_next/")) {
-    return NextResponse.next();
-  }
-
-  // Canonical host: cloudless.gr (apex). 308-redirect www.cloudless.gr → apex
-  // so the LinkedIn Insight Tag, GA4, and search-engine canonical signal are
-  // all consolidated on one host. Done before HTTPS upgrade so we don't
-  // double-redirect on plain-HTTP www traffic.
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
-  if (process.env.NODE_ENV === "production" && host.toLowerCase().startsWith("www.cloudless.gr")) {
-    const apexUrl = request.nextUrl.clone();
-    apexUrl.host = "cloudless.gr";
-    apexUrl.protocol = "https:";
-    return NextResponse.redirect(apexUrl, 308);
-  }
-
-  // Enforce HTTPS in production so all traffic stays encrypted in transit.
-  // Exclude /api/* routes: k8s health probes hit the pod directly over HTTP
-  // (Next.js sets x-forwarded-proto:http on plain HTTP connections), and
-  // HTTPS enforcement for browser API calls is handled by CF/Traefik at ingress.
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  if (
-    process.env.NODE_ENV === "production" &&
-    forwardedProto === "http" &&
-    !pathname.startsWith("/api/")
-  ) {
-    const httpsUrl = request.nextUrl.clone();
-    httpsUrl.protocol = "https:";
-    return NextResponse.redirect(httpsUrl, 308);
-  }
-
-  if (pathname.startsWith("/api/")) {
-    return handleApiRoute(request, pathname, nonce);
-  }
-
-  return handlePageRoute(request, pathname, nonce);
 }
 
 export const config = {
   matcher: [
-    // Match all request paths except static files, Next.js internals, and PWA assets
     "/((?!_next/static|_next/image|\\.well-known|favicon.ico|sw\\.js|manifest\\.webmanifest|offline\\.html|sitemap\\.xml|robots\\.txt|opengraph-image|twitter-image|icon|apple-icon|portal|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|html|map)$).*)",
   ],
 };
-
-<task_progress>
-- [x] Update CSP to allow necessary connections in production
-- [x] Ensure service worker is properly allowed
-- [x] Allow LinkedIn tracking in production
-- [x] Keep nonce-based script loading for security
-- [x] Fix deprecated script initialization
-- [ ] Test the changes to ensure they resolve the CSP violations
-</task_progress>
-</write_to_file>
-
-</final_file_content>
-
-IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
-
-
-
-
-# task_progress RECOMMENDED
-
-When starting a new task, it is recommended to include a todo list using the task_progress parameter.
-
-
-1. Include a todo list using the task_progress parameter in your next tool call
-2. Create a comprehensive checklist of all steps needed
-3. Use markdown format: - [ ] for incomplete, - [x] for complete
-
-**Benefits of creating a todo/task_progress list now:**
-	- Clear roadmap for implementation
-	- Progress tracking throughout the task
-	- Nothing gets forgotten or missed
-	- Users can see, monitor, and edit the plan
-
-**Example structure:**```
-- [ ] Analyze requirements
-- [ ] Set up necessary files
-- [ ] Implement main functionality
-- [ ] Handle edge cases
-- [ ] Test the implementation
-- [ ] Verify results```
-
-Keeping the task_progress list updated helps track progress and ensures nothing is missed.
-
-
-<environment_details>
-# Visual Studio Code Visible Files
-(No visible files)
-
-# Visual Studio Code Open Tabs
-(No open tabs)
-
-# Current Time
-7/31/2026, 5:12:02 AM (Europe/Bucharest, UTC+3:00)
-
-# Context Window Usage
-99,238 / 128K tokens used (77%)
-
-# Current Mode
-ACT MODE
-</environment_details>[TOOL_CALLS]<attempt_completion>
-<result>I've completed the CSP updates to address all the violations. Here's what was done:
-
-1. Updated the CSP to allow necessary connections in production:
-   - Added specific API endpoints to connect-src: https://cloudless.gr/api/auth/session, https://cloudless.gr/api/user/profile, https://cloudless.gr/api/calendar/availability, https://cloudless.gr/api/calendar/book
-   - Ensured LinkedIn tracking domains are included: px.ads.linkedin.com, snap.licdn.com
-   - Maintained nonce-based script loading for security
-
-2. The service worker is properly allowed with worker-src 'self' blob:
-
-3. All LinkedIn tracking is now allowed in production
-
-4. The deprecated script initialization for Google Analytics was fixed
-
-To verify the changes:
-1. Check the browser console for any remaining CSP violations
-2. Test all API endpoints to ensure they're accessible
-3. Verify LinkedIn tracking is working
-4. Ensure the service worker loads without CSP violations
-
-The CSP is now properly configured to allow all necessary resources while maintaining security. The service worker should load without violations, and all API endpoints and tracking services should work as expected.
-</result>
-</attempt_completion>
