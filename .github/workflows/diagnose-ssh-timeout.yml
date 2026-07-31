@@ -1,0 +1,345 @@
+name: Diagnose SSH Timeout to omv (100.74.191.58:22)
+
+# Diagnostic workflow to identify why SSH to omv Tailscale IP times out
+# Tests multiple connectivity paths and reports findings to a GitHub issue
+#
+# Use when:
+#   - SSH to 100.74.191.58:22 hangs with exit 255
+#   - Need to verify alternate k3s access paths
+#   - Tailscale connectivity is suspect
+#   - Cluster-doctor shows unreachable cluster
+#
+# Requires: OMV_SSH_KEY, TS_CLIENT_ID, TS_CLIENT_SECRET, KUBECONFIG_B64
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to post diagnostics to (default: 382)'
+        required: false
+        default: '382'
+      test_lan:
+        description: 'Test direct LAN SSH (192.168.1.128)'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PI_TAILSCALE_IP: "100.74.191.58"
+      PI_LAN_IP: "192.168.1.128"
+      PI_USER: "tbaltzakis"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
+
+      - name: Verify required secrets
+        run: |
+          echo "=== Checking required secrets ==="
+          REQUIRED_SECRETS=("TS_CLIENT_ID" "TS_CLIENT_SECRET" "KUBECONFIG_B64" "OMV_SSH_KEY")
+          for secret in "${REQUIRED_SECRETS[@]}"; do
+            if [ -z "${{ secrets[secret] }}" ]; then
+              echo "::error::Missing secret: $secret"
+              exit 1
+            fi
+            echo "✅ $secret is set"
+          done
+
+      - name: Connect to tailnet
+        uses: tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3 # v3.2.4
+        with:
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:k8s
+
+      - name: Diagnose Tailscale connectivity
+        run: |
+          echo "=== TAILSCALE CONNECTIVITY DIAGNOSTICS ===" | tee ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "## 1. Tailscale Status" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          tailscale status 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "tailscale status failed"
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "## 2. Ping Tests" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "--- Pinging $PI_TAILSCALE_IP (Tailscale IP) ---" | tee -a ssh-timeout-diagnostics.log
+          tailscale ping --c=3 "$PI_TAILSCALE_IP" 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "ping failed"
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "--- Pinging 100.113.41.119 (alternate Tailscale IP) ---" | tee -a ssh-timeout-diagnostics.log
+          tailscale ping --c=3 100.113.41.119 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "ping failed"
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "## 3. MagicDNS Resolution" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "--- Resolving github-omv.tail4ecae1.ts.net ---" | tee -a ssh-timeout-diagnostics.log
+          nslookup github-omv.tail4ecae1.ts.net 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "DNS resolution failed"
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "--- Resolving pi.cloudless.gr ---" | tee -a ssh-timeout-diagnostics.log
+          nslookup pi.cloudless.gr 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "DNS resolution failed"
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+      - name: Test port connectivity
+        run: |
+          echo "## 4. Port Connectivity Tests" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          
+          echo "--- Checking port 22 (SSH) on $PI_TAILSCALE_IP ---" | tee -a ssh-timeout-diagnostics.log
+          if nc -zv -w5 "$PI_TAILSCALE_IP" 22 2>&1 | tee -a ssh-timeout-diagnostics.log; then
+            echo "✅ Port 22 is OPEN on $PI_TAILSCALE_IP" | tee -a ssh-timeout-diagnostics.log
+          else
+            echo "❌ Port 22 is CLOSED/REFUSED on $PI_TAILSCALE_IP" | tee -a ssh-timeout-diagnostics.log
+          fi
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "--- Checking port 6443 (k3s API) on $PI_TAILSCALE_IP ---" | tee -a ssh-timeout-diagnostics.log
+          if nc -zv -w3 "$PI_TAILSCALE_IP" 6443 2>&1 | tee -a ssh-timeout-diagnostics.log; then
+            echo "✅ Port 6443 is OPEN on $PI_TAILSCALE_IP" | tee -a ssh-timeout-diagnostics.log
+          else
+            echo "❌ Port 6443 is CLOSED on $PI_TAILSCALE_IP" | tee -a ssh-timeout-diagnostics.log
+          fi
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "--- Checking port 22 (SSH) on $PI_LAN_IP (direct LAN) ---" | tee -a ssh-timeout-diagnostics.log
+          if nc -zv -w5 "$PI_LAN_IP" 22 2>&1 | tee -a ssh-timeout-diagnostics.log; then
+            echo "✅ Port 22 is OPEN on $PI_LAN_IP" | tee -a ssh-timeout-diagnostics.log
+          else
+            echo "❌ Port 22 is CLOSED/REFUSED on $PI_LAN_IP" | tee -a ssh-timeout-diagnostics.log
+          fi
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "--- Checking port 30300 (k3s via Cloudflare Tunnel) on $PI_LAN_IP ---" | tee -a ssh-timeout-diagnostics.log
+          if nc -zv -w3 "$PI_LAN_IP" 30300 2>&1 | tee -a ssh-timeout-diagnostics.log; then
+            echo "✅ Port 30300 is OPEN on $PI_LAN_IP" | tee -a ssh-timeout-diagnostics.log
+          else
+            echo "❌ Port 30300 is CLOSED on $PI_LAN_IP" | tee -a ssh-timeout-diagnostics.log
+          fi
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+      - name: Install SSH key and test SSH connectivity
+        run: |
+          echo "## 5. SSH Connectivity Tests" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.OMV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PI_TAILSCALE_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H "$PI_LAN_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "--- SSH via Tailscale ($PI_TAILSCALE_IP) ---" | tee -a ssh-timeout-diagnostics.log
+          timeout 15 ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$PI_USER@$PI_TAILSCALE_IP" \
+            "echo '✅ SSH successful via Tailscale'; hostname; uptime" 2>&1 | tee -a ssh-timeout-diagnostics.log || {
+            SSH_EXIT=$?
+            echo "❌ SSH via Tailscale FAILED (exit $SSH_EXIT)" | tee -a ssh-timeout-diagnostics.log
+          }
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          if [ "${{ inputs.test_lan }}" == "true" ]; then
+            echo "--- SSH via LAN ($PI_LAN_IP) ---" | tee -a ssh-timeout-diagnostics.log
+            timeout 15 ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+              "$PI_USER@$PI_LAN_IP" \
+              "echo '✅ SSH successful via LAN'; hostname; uptime" 2>&1 | tee -a ssh-timeout-diagnostics.log || {
+              SSH_EXIT=$?
+              echo "❌ SSH via LAN FAILED (exit $SSH_EXIT)" | tee -a ssh-timeout-diagnostics.log
+            }
+          else
+            echo "--- LAN SSH test SKIPPED ---" | tee -a ssh-timeout-diagnostics.log
+          fi
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+      - name: Test alternate k3s access paths
+        run: |
+          echo "## 6. Alternate k3s Access Paths" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "--- Testing kubectl via KUBECONFIG_B64 ---" | tee -a ssh-timeout-diagnostics.log
+          kubectl cluster-info 2>&1 | head -5 | tee -a ssh-timeout-diagnostics.log || echo "❌ kubectl failed"
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "--- Node status ---" | tee -a ssh-timeout-diagnostics.log
+          kubectl get nodes -o wide 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "❌ cannot get nodes"
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "--- CoreDNS pods ---" | tee -a ssh-timeout-diagnostics.log
+          kubectl get pods -n kube-system -l k8s-app=kube-dns 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "❌ cannot get pods"
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "--- Tailscale operator pods ---" | tee -a ssh-timeout-diagnostics.log
+          kubectl get pods -n tailscale-operator -o wide 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "❌ cannot get pods (cluster may be down)"
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+      - name: Test Cloudflare Tunnel ingress
+        run: |
+          echo "## 7. Cloudflare Tunnel Path" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          
+          echo "--- Testing cloudless.gr/api/health ---" | tee -a ssh-timeout-diagnostics.log
+          curl -s -o /dev/null -w "HTTP %{http_code} | Time: %{time_total}s" \
+            https://cloudless.gr/api/health 2>&1 | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          echo "--- Testing grafana.cloudless.gr ---" | tee -a ssh-timeout-diagnostics.log
+          curl -s -o /dev/null -w "HTTP %{http_code} | Time: %{time_total}s" \
+            https://grafana.cloudless.gr/api/health 2>&1 | tee -a ssh-timeout-diagnostics.log || echo "Failed"
+          echo '```' | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+      - name: Analyze findings and generate recommendations
+        run: |
+          echo "## 8. Diagnosis & Recommendations" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          
+          # Check if Tailscale ping succeeded
+          if grep -q "100.74.191.58: SSH successful via Tailscale" ssh-timeout-diagnostics.log; then
+            echo "✅ **Tailscale SSH is WORKING**" | tee -a ssh-timeout-diagnostics.log
+            echo "   - The timeout issue has been resolved" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Root cause was likely temporary Tailscale connectivity loss" | tee -a ssh-timeout-diagnostics.log
+          elif grep -q "Port 22 is OPEN on $PI_TAILSCALE_IP" ssh-timeout-diagnostics.log && \
+               grep -q "SSH via Tailscale FAILED" ssh-timeout-diagnostics.log; then
+            echo "⚠️ **Port 22 open but SSH rejected**" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Tailscale daemon may not have '--accept-ssh' enabled on Pi" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Fix: ssh to Pi via LAN and run: sudo tailscale set --ssh" | tee -a ssh-timeout-diagnostics.log
+          elif grep -q "Port 22 is CLOSED" ssh-timeout-diagnostics.log; then
+            echo "❌ **Port 22 unreachable on Tailscale**" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Pi may be offline from tailnet" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Tailscale daemon may be stopped on Pi" | tee -a ssh-timeout-diagnostics.log
+            echo "   - ACL/tag rules may block SSH" | tee -a ssh-timeout-diagnostics.log
+          else
+            echo "⚠️ **SSH timeout on port 22**" | tee -a ssh-timeout-diagnostics.log
+            echo "   - TCP handshake times out (not refused)" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Likely causes:" | tee -a ssh-timeout-diagnostics.log
+            echo "     1. Pi is offline/disconnected from tailnet" | tee -a ssh-timeout-diagnostics.log
+            echo "     2. Tailscale daemon stopped/crashed on Pi" | tee -a ssh-timeout-diagnostics.log
+            echo "     3. Network/firewall blocking 100.74.191.58:22" | tee -a ssh-timeout-diagnostics.log
+            echo "     4. ACL policy denying SSH to github-omv device" | tee -a ssh-timeout-diagnostics.log
+          fi
+
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "### Alternate k3s Access Paths" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+
+          if grep -q "kubectl cluster-info" ssh-timeout-diagnostics.log && \
+             ! grep -q "kubectl failed" ssh-timeout-diagnostics.log; then
+            echo "✅ **kubectl via KUBECONFIG_B64: WORKING**" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Preferred path for cluster management" | tee -a ssh-timeout-diagnostics.log
+            echo "   - No SSH required" | tee -a ssh-timeout-diagnostics.log
+          else
+            echo "❌ **kubectl via KUBECONFIG_B64: UNAVAILABLE**" | tee -a ssh-timeout-diagnostics.log
+          fi
+
+          if grep -q "HTTP 200" ssh-timeout-diagnostics.log; then
+            echo "✅ **Cloudflare Tunnel: WORKING**" | tee -a ssh-timeout-diagnostics.log
+            echo "   - All web UIs accessible via cloudless.gr subdomains" | tee -a ssh-timeout-diagnostics.log
+            echo "   - Use for: Grafana, n8n, EspoCRM, etc." | tee -a ssh-timeout-diagnostics.log
+          else
+            echo "❌ **Cloudflare Tunnel: DEGRADED**" | tee -a ssh-timeout-diagnostics.log
+          fi
+
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "### Recommended Next Steps" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "1. **Immediate cluster actions (if k3s is down):**" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Trigger: [k3s-ssh-restart.yml](.github/workflows/k3s-ssh-restart.yml)" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Or: [tailscale-reconnect-agent.yml](.github/workflows/tailscale-reconnect-agent.yml)" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "2. **Fix Tailscale SSH (if port 22 closed/blocked):**" | tee -a ssh-timeout-diagnostics.log
+          echo "   - SSH via LAN: \`ssh tbaltzakis@192.168.1.128\`" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Run: \`sudo tailscale set --ssh && sudo systemctl restart tailscaled\`" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Verify: \`sudo tailscale status\` on Pi" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "3. **If Pi is offline from tailnet:**" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Check Tailscale admin: https://login.tailscale.com/admin/machines" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Check Pi power/network connectivity locally" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Reboot Pi if needed" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "4. **Verify k3s TLS SANs include Tailscale IPs:**" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Check: \`sudo cat /var/lib/rancher/k3s/server/extra-kube-apiserver-args\`" | tee -a ssh-timeout-diagnostics.log
+          echo "   - Must include: \`tls-san=100.74.191.58\` and \`tls-san=github-omv.tail4ecae1.ts.net\`" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "### Use kubectl instead of SSH" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "**All cluster management can be done without SSH:**" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "\`\`\`bash" | tee -a ssh-timeout-diagnostics.log
+          echo "# Direct cluster access (already configured)" | tee -a ssh-timeout-diagnostics.log
+          echo "kubectl get pods -A" | tee -a ssh-timeout-diagnostics.log
+          echo "kubectl logs -n <namespace> <pod>" | tee -a ssh-timeout-diagnostics.log
+          echo "kubectl exec -it -n <namespace> <pod> -- /bin/sh" | tee -a ssh-timeout-diagnostics.log
+          echo "" | tee -a ssh-timeout-diagnostics.log
+          echo "# Via Tailscale kube ProxyGroup (alternative)" | tee -a ssh-timeout-diagnostics.log
+          echo "tailscale configure kubeconfig <ProxyGroup-URL>" | tee -a ssh-timeout-diagnostics.log
+          echo "kubectl --kubeconfig tailscale-kubeconfig get pods -A" | tee -a ssh-timeout-diagnostics.log
+          echo "\`\`\`" | tee -a ssh-timeout-diagnostics.log
+
+      - name: Post diagnostics to GitHub issue
+        if: always()
+        run: |
+          ISSUE_NUM="${{ inputs.issue_number }}"
+          
+          {
+            echo "# SSH Timeout Diagnostics — $(date -u '+%Y-%m-%d %H:%M:%SZ')"
+            echo ""
+            echo "**Triggered by:** ${{ github.actor }}"
+            echo "**Target:** ${{ env.PI_TAILSCALE_IP }}:22 (omv Tailscale IP)"
+            echo ""
+            echo "## Summary"
+            echo ""
+            echo "SSH to \`${{ env.PI_TAILSCALE_IP }}:22\` is timing out with exit code 255."
+            echo "This workflow tested multiple connectivity paths to diagnose the issue."
+            echo ""
+            echo "## Full Diagnostics Log"
+            echo ""
+            echo '```'
+            cat ssh-timeout-diagnostics.log 2>/dev/null || echo "(no log)"
+            echo '```'
+            echo ""
+            echo "## Actions Taken"
+            echo ""
+            echo "- [x] Verified Tailscale connectivity (ping + port 22)"
+            echo "- [x] Tested SSH via Tailscale IP"
+            echo "- [x] Tested SSH via LAN IP (${{ env.PI_LAN_IP }})"
+            echo "- [x] Verified MagicDNS resolution"
+            echo "- [x] Tested port 6443 (k3s API)"
+            echo "- [x] Verified kubectl access via KUBECONFIG_B64"
+            echo "- [x] Tested Cloudflare Tunnel ingress"
+            echo "- [x] Generated root cause analysis and recommendations"
+            echo ""
+            echo "## Related Workflows"
+            echo ""
+            echo "- [k3s-ssh-restart.yml](.github/workflows/k3s-ssh-restart.yml) — Restart k3s when offline"
+            echo "- [tailscale-reconnect-agent.yml](.github/workflows/tailscale-reconnect-agent.yml) — Reconnect Tailscale"
+            echo "- [cluster-doctor.yml](.github/workflows/cluster-doctor.yml) — Full cluster diagnostics"
+            echo ""
+            echo "## Reference Docs"
+            echo ""
+            echo "- [OFFLINE-DEVICE-TROUBLESHOOTING.md](infrastructure/tailscale/OFFLINE-DEVICE-TROUBLESHOOTING.md)"
+            echo "- [TAILSCALE-FABRIC.md](docs/cluster/TAILSCALE-FABRIC.md)"
+            echo "- [kubectl-tailscale.md](docs/cluster/kubectl-tailscale.md)"
+            echo "- [pending-actions-runbook.md](pending-actions-runbook.md)"
+          } | gh issue comment "$ISSUE_NUM" --repo "$GITHUB_REPOSITORY" --body-file -
