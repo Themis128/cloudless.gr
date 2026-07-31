@@ -27,8 +27,8 @@ jobs:
       - name: Connect to tailnet
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
-          oauth-client-id: $${{ secrets.TS_CLIENT_ID }}
-          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
+          oauth-client-id: $$${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: $$${{ secrets.TS_CLIENT_SECRET }}
 
       - name: Configure kubectl
         run: |
