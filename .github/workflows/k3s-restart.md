@@ -52,7 +52,7 @@ Restart the k3s cluster on the Pi node when the API server is unresponsive.
 
 ## Workflow
 
-1. Connect to Tailscale tailnet using `tailscale/github-action@v4.1.2`
+1. Connect to Tailscale tailnet using `tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3` # v3.2.4
 2. Install SSH key for Pi access
 3. Check k3s status BEFORE restart (systemctl status, port 6443 check)
 4. Capture k3s journal (last 80 lines) for crash analysis

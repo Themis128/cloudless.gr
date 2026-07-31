@@ -51,7 +51,7 @@ Patch monitoring pods (Prometheus, Alertmanager, kube-state-metrics, cloudwatch-
 
 ## Workflow
 
-1. Connect to Tailscale using `tailscale/github-action@v4.1.2`
+1. Connect to Tailscale using `tailscale/github-action@0263d9e6d793eaefcf1de98ff7fde47abe6664d3` # v3.2.4
 2. Decode and configure kubectl from secret
 3. List all non-Running pods in monitoring namespace
 4. For each monitoring component found pending:
