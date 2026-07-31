@@ -40,12 +40,6 @@ jobs:
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
         continue-on-error: true
 
-      - name: Connect to tailnet (fallback to authkey)
-        if: steps.tailscale.outcome == 'failure'
-        uses: tailscale/github-action@v0.2.1
-        with:
-          client_id: {{ secrets.TS_CLIENT_ID }}
-          client_secret: {{ secrets.TS_CLIENT_SECRET }} }}
 
       - name: Configure kubectl
         run: |

@@ -25,8 +25,8 @@ jobs:
       - name: Check required secrets
         run: |
           # Support both naming conventions: TS_* (preferred) and TAILSCALE_OAUTH_* (legacy)
-          TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}"
-          TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}"
+          TS_CLIENT_ID="$${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}"
+          TS_CLIENT_SECRET="$${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}"
           if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then
             echo "::error::Tailscale OAuth credentials missing"
             echo "Need: TS_CLIENT_ID/TS_CLIENT_SECRET or TAILSCALE_OAUTH_CLIENT_ID/TAILSCALE_OAUTH_SECRET"
@@ -37,8 +37,8 @@ jobs:
       - name: Join Tailscale for cluster access
         uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # v4.1.2
         with:
-          client_id: ${{ secrets.TS_CLIENT_ID }}
-          client_secret: ${{ secrets.TS_CLIENT_SECRET }}
+          oauth-client-id: $${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: $${{ secrets.TS_CLIENT_SECRET }}
 
       - name: Setup kubectl
         run: |
@@ -71,8 +71,8 @@ jobs:
           # Use TS_CLIENT_ID env var set above (falls back to TAILSCALE_OAUTH_* if TS_* not set)
           kubectl create secret generic tailscale-operator-secrets \
             -n tailscale-operator \
-            --from-literal=TS_CLIENT_ID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
-            --from-literal=TS_CLIENT_SECRET="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
+            --from-literal=TS_CLIENT_ID="$${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
+            --from-literal=TS_CLIENT_SECRET="$${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy Tailscale Operator via Helm
@@ -81,8 +81,8 @@ jobs:
           helm upgrade --install tailscale-operator tailscale/tailscale-operator \
             --namespace tailscale-operator \
             --create-namespace \
-            --set-string oauth.clientID="${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
-            --set-string oauth.clientSecret="${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
+            --set-string oauth.clientID="$${{ secrets.TS_CLIENT_ID }}${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}" \
+            --set-string oauth.clientSecret="$${{ secrets.TS_CLIENT_SECRET }}${{ secrets.TAILSCALE_OAUTH_SECRET }}" \
             --set operatorLogLevel=info \
             --wait
 
