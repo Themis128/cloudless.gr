@@ -75,7 +75,8 @@ jobs:
           echo "CACHE_VERSION bumped to ${VERSION} (sha: ${SHORT_SHA})"
           grep "CACHE_VERSION" public/sw.js
 
-      - name: Configure AWS credentials (OIDC)
+      - name: (Optional) Configure AWS credentials (OIDC)
+        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
@@ -99,16 +100,13 @@ jobs:
       - name: Clear any stale SST lock
         run: pnpm sst unlock --stage production || true
 
-      - name: Resolve Cloudflare token from SSM
+      - name: Resolve Cloudflare token from repo secrets
         id: cftoken
         run: |
-          set -e
-          TOKEN=$(aws ssm get-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --with-decryption --region us-east-1 \
-            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
-            echo "::warning::SSM CLOUDFLARE_API_TOKEN empty - Workers AI not wired"
+          set -euo pipefail
+          TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN not set in repo secrets - Workers AI not wired"
           fi
           echo "::add-mask::$TOKEN"
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"

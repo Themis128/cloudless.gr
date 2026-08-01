@@ -28,24 +28,68 @@
     },
     "rules": {
       "enabled": true,
-      "directory": ".cline/rules"
+      "directory": ".clinerules"
     },
     "mcp": {
       "autoStartServers": [
         "fast-markdown",
         "cloudflare-bindings",
-        "cloudflare",
-        "sequentialthinking",
-        "github",
-        "github.com/modelcontextprotocol/servers/tree/main/src/filesystem"
+        "github.com/AgentDeskAI/browser-tools-mcp",
+        "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+        "github.com/modelcontextprotocol/servers/tree/main/src/git",
+        "github.com/github/github-mcp-server"
       ],
       "alwaysAllowTools": {
         "fast-markdown": ["list_files", "read_file", "search_files", "get_toc"],
-        "cloudflare-bindings": ["kv_namespaces_list", "r2_buckets_list", "workers_list"],
-        "cloudflare": ["*"],
-        "sequentialthinking": ["sequentialthinking"],
-        "github": ["search_repos", "search_code", "search_issues", "get_file_contents", "get_issue", "list_issues", "get_pull_request", "list_pull_requests", "get_repo", "list_branches", "list_commits", "get_workflow_run", "list_workflow_runs"],
-        "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": ["read_text_file", "read_multiple_files", "write_file", "edit_file", "create_directory", "list_directory", "search_files", "directory_tree", "get_file_info"]
+        "cloudflare-bindings": [
+          "kv_namespaces_list",
+          "kv_namespace_create",
+          "kv_namespace_delete",
+          "kv_namespace_get",
+          "kv_namespace_update",
+          "workers_list",
+          "workers_get_worker",
+          "workers_get_worker_code",
+          "r2_buckets_list",
+          "r2_bucket_create",
+          "r2_bucket_get",
+          "r2_bucket_delete",
+          "d1_databases_list",
+          "d1_database_create",
+          "d1_database_delete",
+          "d1_database_get",
+          "d1_database_query",
+          "hyperdrive_configs_list",
+          "hyperdrive_config_create",
+          "hyperdrive_config_delete",
+          "hyperdrive_config_get"
+        ],
+        "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking": [
+          "sequentialthinking"
+        ],
+        "github.com/github/github-mcp-server": [
+          "search_repos",
+          "search_code",
+          "search_issues",
+          "get_file_contents",
+          "get_issue",
+          "list_issues",
+          "get_commit",
+          "list_commits",
+          "get_workflow_run",
+          "list_workflow_runs"
+        ],
+        "github.com/modelcontextprotocol/servers/tree/main/src/git": [
+          "read_text_file",
+          "read_multiple_files",
+          "write_file",
+          "edit_file",
+          "create_directory",
+          "list_directory",
+          "search_files",
+          "directory_tree",
+          "get_file_info"
+        ]
       }
     },
     "skills": {

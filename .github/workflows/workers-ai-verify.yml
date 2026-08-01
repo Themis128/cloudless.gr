@@ -29,25 +29,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Configure AWS credentials (OIDC)
-        continue-on-error: true
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Resolve Cloudflare token from SSM
+      - name: Read Cloudflare token from repository secrets (no AWS)
         id: cftoken
         run: |
-          set -e
-          TOKEN=$(aws ssm get-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --with-decryption --region us-east-1 \
-            --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+          TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
           if [ -z "$TOKEN" ] || [ "$TOKEN" = "None" ]; then
-            echo "::warning::SSM CLOUDFLARE_API_TOKEN empty - skipping CF checks"
+            echo "::warning::CLOUDFLARE_API_TOKEN secret missing — skipping CF checks"
           fi
-          echo "::add-mask::$TOKEN"
+          if [ -n "$TOKEN" ]; then
+            echo "::add-mask::$TOKEN"
+          fi
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
       - name: Run Workers AI doctor

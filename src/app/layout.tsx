@@ -6,6 +6,7 @@ import { themeForRoute } from "@/components/ThemeProvider";
 import ChunkReloadGuard from "@/components/ChunkReloadGuard";
 import PlausibleAnalytics from "@/components/PlausibleAnalytics";
 import ClarityAnalytics from "@/components/ClarityAnalytics";
+import WebMCPProvider from "@/components/WebMCPProvider";
 import "./globals.css";
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "";
@@ -171,9 +172,10 @@ export default async function RootLayout({
             />
           </>
         ) : null}
-        {children}
-        <PlausibleAnalytics />
-        <ClarityAnalytics />
+         {children}
+         <WebMCPProvider />
+         <PlausibleAnalytics />
+         <ClarityAnalytics />
       </body>
     </html>
   );

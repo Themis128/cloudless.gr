@@ -58,21 +58,15 @@ jobs:
       - name: Install Anthropic SDK (CI-only dep for review script)
         run: pnpm add -D @anthropic-ai/sdk --no-lockfile
 
-      # Reuse the OIDC role already configured for deploys
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Fetch Anthropic API key from SSM
+      - name: Read Anthropic API key from repository secrets
         run: |
-          KEY=$(aws ssm get-parameter \
-            --name /cloudless/production/ANTHROPIC_API_KEY \
-            --with-decryption \
-            --query Parameter.Value \
-            --output text)
-          echo "ANTHROPIC_API_KEY=$KEY" >> "$GITHUB_ENV"
+          KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+          if [ -z "$KEY" ] || [ "$KEY" = "None" ]; then
+            echo "::warning::ANRTHOPIC_API_KEY not set in repo secrets — PR review will run without Anthropic and may skip some analyses."
+          else
+            echo "::add-mask::$KEY"
+            echo "ANTHROPIC_API_KEY=$KEY" >> "$GITHUB_ENV"
+          fi
 
       - name: Build diff (src/ + root configs vs base branch)
         run: |

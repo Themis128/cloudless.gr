@@ -44,25 +44,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Read CRON_SECRET from SSM
+      - name: Read CRON_SECRET from repository secrets (no AWS)
         id: secret
         run: |
-          SECRET=$(aws ssm get-parameter \
-            --name "/cloudless/production/CRON_SECRET" \
-            --with-decryption \
-            --query "Parameter.Value" --output text 2>/dev/null || echo "")
+          # Prefer GitHub Actions secret to avoid AWS SSM dependency
+          SECRET="${{ secrets.CRON_SECRET }}"
           if [ -z "$SECRET" ] || [ "$SECRET" = "None" ]; then
-            echo "::error::/cloudless/production/CRON_SECRET is not set in SSM — Postiz crons cannot authenticate."
-            exit 1
+            echo "::warning::CRON_SECRET not set in repository secrets — Postiz cron endpoints will be skipped."
+            # Expose empty value so subsequent steps can conditionally skip
+            echo "value=" >> "$GITHUB_OUTPUT"
+          else
+            echo "::add-mask::$SECRET"
+            echo "value=$SECRET" >> "$GITHUB_OUTPUT"
           fi
-          echo "::add-mask::$SECRET"
-          echo "value=$SECRET" >> "$GITHUB_OUTPUT"
 
       - name: Decide targets
         id: targets
@@ -87,7 +81,7 @@ jobs:
           echo "oauth=$RUN_OAUTH" >> "$GITHUB_OUTPUT"
 
       - name: Trigger postiz-sync
-        if: steps.targets.outputs.sync == 'true'
+        if: steps.targets.outputs.sync == 'true' && steps.secret.outputs.value != ''
         run: |
           echo "Calling $BASE_URL/api/cron/postiz-sync"
           RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 60 \
@@ -100,7 +94,7 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Trigger postiz-oauth-check
-        if: steps.targets.outputs.oauth == 'true'
+        if: steps.targets.outputs.oauth == 'true' && steps.secret.outputs.value != ''
         run: |
           echo "Calling $BASE_URL/api/cron/postiz-oauth-check"
           RESPONSE=$(curl -fsS --retry 3 --retry-delay 5 --max-time 30 \

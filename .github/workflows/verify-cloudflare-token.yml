@@ -21,7 +21,7 @@ on:
         default: cloudless.gr
 
 permissions:
-  id-token: write   # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:GetParameter
+  id-token: write # OIDC → AWS_DEPLOY_ROLE_ARN for ssm:GetParameter
   contents: read
 
 concurrency:
@@ -39,35 +39,18 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Fetch Cloudflare token from SSM
+      - name: Read Cloudflare token from repository secrets
         id: fetch
-        env:
-          AWS_DEFAULT_REGION: us-east-1
         run: |
-          set -uo pipefail
-          CF="$(aws ssm get-parameter \
-            --name /cloudless/production/CLOUDFLARE_API_TOKEN \
-            --with-decryption \
-            --query Parameter.Value \
-            --output text 2>/dev/null || echo '')"
+          CF="${{ secrets.CLOUDFLARE_API_TOKEN }}"
           if [ -z "$CF" ] || [ "$CF" = "None" ]; then
-            echo "::error::No Cloudflare token in SSM. Run store-cloudflare-token.yml first."
+            echo "::error::No Cloudflare token in repository secrets. Please add CLOUDFLARE_API_TOKEN to repo Secrets."
             exit 1
           fi
           echo "::add-mask::$CF"
-          # Hand the token to subsequent steps via env, not outputs (outputs
-          # are visible in run metadata even when masked from logs).
-          {
-            echo "CLOUDFLARE_API_TOKEN<<EOF"
-            echo "$CF"
-            echo "EOF"
-          } >> "$GITHUB_ENV"
+          echo "CLOUDFLARE_API_TOKEN<<EOF" >> "$GITHUB_ENV"
+          echo "$CF" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
           echo "token_present=true" >> "$GITHUB_OUTPUT"
 
       - name: Run smoke-test

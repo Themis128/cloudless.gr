@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 // Rate limiting state
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
+function isHomepagePath(pathname: string): boolean {
+  return pathname === "/" || /^\/(en|el|fr|de)$/.test(pathname);
+}
+
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
 const RATE_LIMIT_MAX = 60; // 60 requests per minute per IP
 
@@ -43,10 +47,15 @@ setInterval(() => {
 
 export function proxy(request: NextRequest): NextResponse | undefined {
   const ip = getClientIp(request);
+  const { pathname } = request.nextUrl;
 
   // Rate limiting
   if (isRateLimited(ip)) {
     return new NextResponse("Too Many Requests", { status: 429 });
+  }
+
+  if (request.headers.get("accept")?.includes("text/markdown") && isHomepagePath(pathname)) {
+    return NextResponse.rewrite(new URL("/api/home-markdown", request.url));
   }
 
   // Security headers
@@ -62,6 +71,15 @@ export function proxy(request: NextRequest): NextResponse | undefined {
     "Strict-Transport-Security",
     "max-age=63072000; includeSubDomains; preload"
   );
+
+  if (isHomepagePath(pathname)) {
+    response.headers.set(
+      "Link",
+      '</.well-known/api-catalog>; rel="api-catalog", </auth.md>; rel="auth-md", </.well-known/mcp/server-card.json>; rel="mcp-server-card"'
+    );
+  } else if (request.headers.get("accept")?.includes("text/markdown")) {
+    response.headers.set("X-Agent-Markdown-Supported", "true");
+  }
 
   return response;
 }

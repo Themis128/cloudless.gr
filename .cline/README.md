@@ -20,28 +20,28 @@ The configuration in `config.json` provides:
 
 ## Available Models
 
-| Name | Model | Description |
-|------|-------|-------------|
-| ollama-local | qwen2.5-coder | Primary coding model |
-| ollama-llama3 | llama3.1 | Alternative model |
-| ollama-mistral | mistral | Lightweight model |
+| Name           | Model         | Description          |
+| -------------- | ------------- | -------------------- |
+| ollama-local   | qwen2.5-coder | Primary coding model |
+| ollama-llama3  | llama3.1      | Alternative model    |
+| ollama-mistral | mistral       | Lightweight model    |
 
 ## Available Tools
 
-| Tool | Description |
-|------|-------------|
-| list_files | List project files |
-| read_file | Read file content |
-| write_file | Write to files |
-| run_command | Execute shell commands |
-| ask_agent | Query Ollama LLM |
-| list_models | Show available models |
-| pull_model | Download new models |
-| check_ollama | Verify server status |
-| search_files | Find files by pattern |
-| get_file_info | Get file metadata |
-| analyze_code | Analyze project structure |
-| generate_test | Create test scaffolding |
+| Tool          | Description               |
+| ------------- | ------------------------- |
+| list_files    | List project files        |
+| read_file     | Read file content         |
+| write_file    | Write to files            |
+| run_command   | Execute shell commands    |
+| ask_agent     | Query Ollama LLM          |
+| list_models   | Show available models     |
+| pull_model    | Download new models       |
+| check_ollama  | Verify server status      |
+| search_files  | Find files by pattern     |
+| get_file_info | Get file metadata         |
+| analyze_code  | Analyze project structure |
+| generate_test | Create test scaffolding   |
 
 ## Manual Configuration
 
@@ -60,3 +60,5 @@ The integration automatically provides context for:
 - 8 DeepAgents skills
 - 4 specialized subagents
 - 8 Cloudflare skills (if configured)
+
+Note: Project rule documents and migration playbooks live in the repository under `.clinerules/` (this is the rules directory configured in `.cline/config.json`).

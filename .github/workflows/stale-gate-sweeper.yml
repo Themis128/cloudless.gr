@@ -25,8 +25,8 @@ jobs:
 
     permissions:
       contents: read
-      issues: write     # post to tracking issue #382
-      id-token: write   # OIDC → AWS SSM for ANTHROPIC_API_KEY
+      issues: write # post to tracking issue #382
+      id-token: write # OIDC → AWS SSM for ANTHROPIC_API_KEY
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.3.1
@@ -43,21 +43,13 @@ jobs:
       - name: Install Anthropic SDK
         run: pnpm add -D @anthropic-ai/sdk --no-lockfile
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Fetch ANTHROPIC_API_KEY from SSM
+      - name: Read ANTHROPIC_API_KEY from repository secrets (no AWS)
         id: ssm
         run: |
-          KEY=$(aws ssm get-parameter \
-            --name "/cloudless/production/ANTHROPIC_API_KEY" \
-            --with-decryption \
-            --query "Parameter.Value" \
-            --output text 2>/dev/null || echo "")
-          echo "::add-mask::$KEY"
+          KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+          if [ -n "$KEY" ]; then
+            echo "::add-mask::$KEY"
+          fi
           echo "key=$KEY" >> "$GITHUB_OUTPUT"
 
       - name: Scan and report
