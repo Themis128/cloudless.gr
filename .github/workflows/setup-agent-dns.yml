@@ -1,0 +1,39 @@
+name: Setup Agent DNS
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-dns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Agent Index Record
+        run: |
+          curl -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dns_records" \
+               -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+               -H "Content-Type: application/json" \
+               --data '{
+                 "type": "HTTPS",
+                 "name": "_index._agents.cloudless.gr",
+                 "content": "1 . alpn=\"http/1.1,h2\" endpoint=https://cloudless.gr",
+                 "ttl": 3600,
+                 "proxied": false
+               }'
+
+      - name: Create Agent-to-Agent Record
+        run: |
+          curl -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dns_records" \
+               -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+               -H "Content-Type: application/json" \
+               --data '{
+                 "type": "HTTPS",
+                 "name": "_a2a._agents.cloudless.gr",
+                 "content": "1 . alpn=\"http/1.1,h2\" endpoint=https://cloudless.gr",
+                 "ttl": 3600,
+                 "proxied": false
+               }'
+
+      - name: Check DNSSEC Status
+        run: |
+          curl -X GET "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/dnssec" \
+               -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+               -H "Content-Type: application/json"
